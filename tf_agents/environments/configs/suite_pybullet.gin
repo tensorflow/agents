@@ -1,0 +1,10 @@
+#-*-Python-*-
+import tf_agents.environments.suite_pybullet
+
+## Configure Environment
+ENVIRONMENT = @suite_pybullet.load()
+suite_pybullet.load.environment_name = %ENVIRONMENT_NAME
+# Note: The ENVIRONMENT_NAME can be overridden by passing the command line flag:
+# --binding="ENVIRONMENT_NAME='MinitaurBulletEnv-v0'"
+ENVIRONMENT_NAME = 'InvertedPendulumBulletEnv-v0'
+

@@ -1,0 +1,313 @@
+# coding=utf-8
+# Copyright 2018 The TFAgents Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+r"""Train and Eval TD3.
+
+To run:
+
+```bash
+tf_agents/agents/td3/examples/train_eval_rnn_dm \
+ --root_dir=$HOME/tmp/td3_rnn/dm/cartpole/ \
+ --alsologtostderr
+```
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import functools
+import os
+import time
+
+from absl import flags
+
+import tensorflow as tf
+
+from tf_agents.agents.ddpg import rnn_networks
+from tf_agents.agents.td3 import td3_rnn_agent
+from tf_agents.drivers import dynamic_episode_driver
+from tf_agents.environments import suite_dm_control
+from tf_agents.environments import tf_py_environment
+from tf_agents.environments import wrappers
+from tf_agents.metrics import metric_utils
+from tf_agents.metrics import py_metrics
+from tf_agents.metrics import tf_metrics
+from tf_agents.policies import py_tf_policy
+from tf_agents.replay_buffers import batched_replay_buffer
+from tf_agents.utils import common as common_utils
+import gin
+
+
+nest = tf.contrib.framework.nest
+
+flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_integer('num_iterations', 100000,
+                     'Total number train/eval iterations to perform.')
+FLAGS = flags.FLAGS
+
+
+@gin.configurable
+def train_eval(
+    root_dir,
+    env_name='cartpole',
+    task_name='balance',
+    observations_whitelist='position',
+    num_iterations=100000,
+    actor_fc_layers=(400, 300),
+    actor_output_fc_layers=(100,),
+    critic_obs_fc_layers=(400,),
+    critic_action_fc_layers=None,
+    critic_joint_fc_layers=(300,),
+    critic_output_fc_layers=(100,),
+    # Params for collect
+    initial_collect_steps=1,
+    collect_episodes_per_iteration=1,
+    replay_buffer_capacity=100000,
+    ou_stddev=0.2,
+    ou_damping=0.15,
+    # Params for target update
+    target_update_tau=0.05,
+    target_update_period=5,
+    # Params for train
+    train_steps_per_iteration=200,
+    batch_size=64,
+    actor_learning_rate=1e-4,
+    critic_learning_rate=1e-3,
+    dqda_clipping=None,
+    td_errors_loss_fn=tf.losses.huber_loss,
+    gamma=0.995,
+    reward_scale_factor=1.0,
+    # Params for eval
+    num_eval_episodes=10,
+    eval_interval=1000,
+    # Params for checkpoints, summaries, and logging
+    train_checkpoint_interval=10000,
+    policy_checkpoint_interval=5000,
+    rb_checkpoint_interval=10000,
+    log_interval=1000,
+    summary_interval=1000,
+    summaries_flush_secs=10,
+    debug_summaries=False,
+    eval_metrics_callback=None):
+
+  """A simple train and eval for DDPG."""
+  root_dir = os.path.expanduser(root_dir)
+  train_dir = os.path.join(root_dir, 'train')
+  eval_dir = os.path.join(root_dir, 'eval')
+
+  train_summary_writer = tf.contrib.summary.create_file_writer(
+      train_dir, flush_millis=summaries_flush_secs * 1000)
+  train_summary_writer.set_as_default()
+
+  eval_summary_writer = tf.contrib.summary.create_file_writer(
+      eval_dir, flush_millis=summaries_flush_secs * 1000)
+  eval_metrics = [
+      py_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
+      py_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
+  ]
+
+  # TODO(kbanoop): Figure out if it is possible to avoid the with block.
+  with tf.contrib.summary.record_summaries_every_n_global_steps(
+      summary_interval):
+    if observations_whitelist is not None:
+      env_wrappers = [
+          functools.partial(
+              wrappers.FlattenObservationsWrapper,
+              observations_whitelist=[observations_whitelist])
+      ]
+    else:
+      env_wrappers = []
+    environment = suite_dm_control.load(
+        env_name, task_name, env_wrappers=env_wrappers)
+    tf_env = tf_py_environment.TFPyEnvironment(environment)
+    eval_py_env = suite_dm_control.load(
+        env_name, task_name, env_wrappers=env_wrappers)
+
+    replay_buffer_ctor = functools.partial(
+        batched_replay_buffer.BatchedReplayBuffer,
+        batch_size=1,
+        max_length=replay_buffer_capacity)
+
+    actor_net = functools.partial(
+        rnn_networks.actor_network,
+        time_step_spec=tf_env.time_step_spec(),
+        fc_layers=actor_fc_layers,
+        output_fc_layers=actor_output_fc_layers)
+    critic_net = functools.partial(
+        rnn_networks.critic_network,
+        time_step_spec=tf_env.time_step_spec(),
+        action_spec=tf_env.action_spec(),
+        observation_fc_layers=critic_obs_fc_layers,
+        action_fc_layers=critic_action_fc_layers,
+        joint_fc_layers=critic_joint_fc_layers,
+        output_fc_layers=critic_output_fc_layers)
+
+    tf_agent = td3_rnn_agent.Td3RnnAgent(
+        tf_env.time_step_spec(),
+        tf_env.action_spec(),
+        actor_net=actor_net,
+        critic_net=critic_net,
+        replay_buffer_ctor=replay_buffer_ctor,
+        ou_stddev=ou_stddev,
+        ou_damping=ou_damping,
+        target_update_tau=target_update_tau,
+        target_update_period=target_update_period,
+        actor_optimizer=tf.train.AdamOptimizer(
+            learning_rate=actor_learning_rate),
+        critic_optimizer=tf.train.AdamOptimizer(
+            learning_rate=critic_learning_rate),
+        train_batch_size=batch_size,
+        dqda_clipping=dqda_clipping,
+        td_errors_loss_fn=td_errors_loss_fn,
+        gamma=gamma,
+        reward_scale_factor=reward_scale_factor,
+        debug_summaries=debug_summaries)
+
+    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy())
+
+    train_metrics = [
+        tf_metrics.NumberOfEpisodes(),
+        tf_metrics.EnvironmentSteps(),
+        tf_metrics.AverageReturnMetric(),
+        tf_metrics.AverageEpisodeLengthMetric(),
+    ]
+
+    # Add to replay buffer and other agent specific observers.
+    agent_observers = tf_agent.observers()
+    global_step = tf.train.get_or_create_global_step()
+
+    # TODO(oars): Refactor drivers to better handle policy states. Remove the
+    # policy reset and passing down an empyt policy state to the driver.
+    collect_policy = tf_agent.collect_policy()
+    policy_state = collect_policy.get_initial_state(tf_env.batch_size)
+    initial_collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
+        tf_env,
+        collect_policy,
+        observers=agent_observers,
+        num_episodes=initial_collect_steps).run(policy_state=policy_state)
+
+    policy_state, _ = collect_policy.get_initial_state(tf_env.batch_size)
+    collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
+        tf_env,
+        collect_policy,
+        observers=agent_observers + train_metrics,
+        num_episodes=collect_episodes_per_iteration).run(
+            policy_state=policy_state)
+
+    train_op = tf_agent.train(train_step_counter=global_step)
+
+    train_checkpointer = common_utils.Checkpointer(
+        ckpt_dir=train_dir,
+        agent=tf_agent,
+        global_step=global_step,
+        metrics=tf.contrib.checkpoint.List(train_metrics))
+    policy_checkpointer = common_utils.Checkpointer(
+        ckpt_dir=os.path.join(train_dir, 'policy'),
+        policy=tf_agent.policy(),
+        global_step=global_step)
+    rb_checkpointer = common_utils.Checkpointer(
+        ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
+        max_to_keep=1,
+        replay_buffer=tf_agent.replay_buffer)
+
+    for train_metric in train_metrics:
+      train_metric.tf_summaries(step_metrics=train_metrics[:2])
+    summary_op = tf.contrib.summary.all_summary_ops()
+
+    with eval_summary_writer.as_default(), \
+         tf.contrib.summary.always_record_summaries():
+      for eval_metric in eval_metrics:
+        eval_metric.tf_summaries()
+
+    init_agent_op = tf_agent.initialize()
+
+    with tf.Session() as sess:
+      # Initialize the graph.
+      train_checkpointer.initialize_or_restore(sess)
+      rb_checkpointer.initialize_or_restore(sess)
+      # TODO(sguada) Remove once Periodically can be saved.
+      common_utils.initialize_uninitialized_variables(sess)
+
+      sess.run(init_agent_op)
+      tf.contrib.summary.initialize(session=sess)
+      sess.run(initial_collect_op)
+
+      global_step_val = sess.run(global_step)
+      metric_utils.compute_summaries(
+          eval_metrics,
+          eval_py_env,
+          eval_py_policy,
+          num_episodes=num_eval_episodes,
+          global_step=global_step_val,
+          callback=eval_metrics_callback,
+      )
+
+      collect_call = sess.make_callable(collect_op)
+      train_step_call = sess.make_callable([train_op, summary_op, global_step])
+
+      timed_at_step = sess.run(global_step)
+      time_acc = 0
+      steps_per_second_ph = tf.placeholder(
+          tf.float32, shape=(), name='steps_per_sec_ph')
+      steps_per_second_summary = tf.contrib.summary.scalar(
+          name='global_steps/sec', tensor=steps_per_second_ph)
+
+      for _ in range(num_iterations):
+        start_time = time.time()
+        collect_call()
+        for _ in range(train_steps_per_iteration):
+          total_loss, _, global_step_val = train_step_call()
+        time_acc += time.time() - start_time
+
+        if global_step_val % log_interval == 0:
+          tf.logging.info('step = %d, loss = %f', global_step_val, total_loss)
+          steps_per_sec = (global_step_val - timed_at_step) / time_acc
+          tf.logging.info('%.3f steps/sec' % steps_per_sec)
+          sess.run(
+              steps_per_second_summary,
+              feed_dict={steps_per_second_ph: steps_per_sec})
+          timed_at_step = global_step_val
+          time_acc = 0
+
+        if global_step_val % train_checkpoint_interval == 0:
+          train_checkpointer.save(global_step=global_step_val)
+
+        if global_step_val % policy_checkpoint_interval == 0:
+          policy_checkpointer.save(global_step=global_step_val)
+
+        if global_step_val % rb_checkpoint_interval == 0:
+          rb_checkpointer.save(global_step=global_step_val)
+
+        if global_step_val % eval_interval == 0:
+          metric_utils.compute_summaries(
+              eval_metrics,
+              eval_py_env,
+              eval_py_policy,
+              num_episodes=num_eval_episodes,
+              global_step=global_step_val,
+              callback=eval_metrics_callback,
+          )
+
+
+def main(_):
+  tf.logging.set_verbosity(tf.logging.INFO)
+  train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
+
+
+if __name__ == '__main__':
+  flags.mark_flag_as_required('root_dir')
+  tf.app.run()

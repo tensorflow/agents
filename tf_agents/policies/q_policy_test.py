@@ -1,0 +1,162 @@
+# coding=utf-8
+# Copyright 2018 The TFAgents Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Test for tf_agents.policies.q_policy."""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import tensorflow as tf
+
+from tf_agents.environments import time_step as ts
+from tf_agents.networks import network
+from tf_agents.policies import q_policy
+from tf_agents.specs import tensor_spec
+from tensorflow.python.framework import test_util  # TF internal
+
+
+class DummyNet(network.Network):
+
+  def __init__(self, name=None, num_actions=2):
+    super(DummyNet, self).__init__(name, None, (), 'DummyNet')
+    self._layers.append(
+        tf.keras.layers.Dense(
+            num_actions,
+            kernel_initializer=tf.constant_initializer([[1, 1.5], [1, 1.5]]),
+            bias_initializer=tf.constant_initializer([[1], [1]])))
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    inputs = tf.cast(inputs, tf.float32)
+    for layer in self.layers:
+      inputs = layer(inputs)
+    return inputs, network_state
+
+
+class QPolicyTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(QPolicyTest, self).setUp()
+    self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
+    self._time_step_spec = ts.time_step_spec(self._obs_spec)
+    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testBuild(self):
+    policy = q_policy.QPolicy(
+        self._time_step_spec, self._action_spec, q_network=DummyNet())
+
+    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
+    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.variables(), [])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testMultipleActionsRaiseError(self):
+    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)] * 2
+    with self.assertRaisesRegexp(
+        ValueError, 'action_spec can only contain a single '
+        'BoundedTensorSpec.'):
+      q_policy.QPolicy(
+          self._time_step_spec, action_spec, q_network=DummyNet())
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testAction(self):
+    tf.set_random_seed(1)
+    policy = q_policy.QPolicy(
+        self._time_step_spec, self._action_spec, q_network=DummyNet())
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testActionScalarSpec(self):
+    tf.set_random_seed(1)
+
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
+    policy = q_policy.QPolicy(
+        self._time_step_spec, action_spec, q_network=DummyNet())
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    aaction_step = policy.action(time_step, seed=1)
+    self.assertEqual(aaction_step.action.shape.as_list(), [2])
+    self.assertEqual(aaction_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(aaction_step.action), [1, 1])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testActionList(self):
+    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
+    policy = q_policy.QPolicy(
+        self._time_step_spec, action_spec, q_network=DummyNet())
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertTrue(isinstance(action_step.action, list))
+    self.evaluate(tf.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [[[1], [1]]])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testDistribution(self):
+    tf.set_random_seed(1)
+    policy = q_policy.QPolicy(
+        self._time_step_spec, self._action_spec, q_network=DummyNet())
+
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=1)
+    distribution_step = policy.distribution(time_step)
+    mode = distribution_step.action.mode()
+    self.evaluate(tf.global_variables_initializer())
+    # All the biases and weights of the fake network are positive, so the action
+    # corresponding to observation with index 1 will have higher q value.
+    self.assertAllEqual(self.evaluate(mode), [1])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testUpdate(self):
+    tf.set_random_seed(1)
+    policy = q_policy.QPolicy(
+        self._time_step_spec, self._action_spec, q_network=DummyNet())
+    new_policy = q_policy.QPolicy(
+        self._time_step_spec, self._action_spec, q_network=DummyNet())
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+
+    self.assertEqual(policy.variables(), [])
+    self.assertEqual(new_policy.variables(), [])
+
+    action_step = policy.action(time_step, seed=1)
+    new_action_step = new_policy.action(time_step, seed=1)
+
+    self.assertEqual(len(policy.variables()), 2)
+    self.assertEqual(len(new_policy.variables()), 2)
+    self.assertEqual(action_step.action.shape, new_action_step.action.shape)
+    self.assertEqual(action_step.action.dtype, new_action_step.action.dtype)
+
+    self.evaluate(tf.global_variables_initializer())
+    self.assertEqual(self.evaluate(new_policy.update(policy)), None)
+
+    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
+    self.assertAllEqual(self.evaluate(new_action_step.action), [[1], [1]])
+
+
+if __name__ == '__main__':
+  tf.test.main()
