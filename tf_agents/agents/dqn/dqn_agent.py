@@ -264,7 +264,7 @@ class DqnAgent(tf_agent.BaseV2):
 
       # Handle action_spec.shape=(), and shape=(1,) by using the
       # multi_dim_actions param.
-      multi_dim_actions = actions.shape.ndims > 1
+      multi_dim_actions = nest.flatten(self._action_spec)[0].shape.ndims > 0
       q_values = common_utils.index_with_actions(
           q_values, tf.to_int32(actions), multi_dim_actions=multi_dim_actions)
 

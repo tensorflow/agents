@@ -112,7 +112,7 @@ class AgentTest(tf.test.TestCase):
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = [tf.constant([0, 1], dtype=tf.int32)]
+    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
