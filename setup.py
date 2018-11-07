@@ -118,8 +118,10 @@ from version import __version__  # pylint: disable=g-import-not-at-top
 REQUIRED_PACKAGES = [
     'six >= 1.10.0',
     'numpy >= 1.13.3',
-    'gin-config >= 0.1.1.2',
+    # TODO(ebrevdo): Put a version number here once gin is on pypi.
+    'gin-config',
 ]
+
 
 TEST_REQUIRED_PACKAGES = [
     # Do not include baselines; it has a dependency on non-nightly TF which
