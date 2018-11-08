@@ -22,6 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 import mock
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.environments import time_step as ts
@@ -62,9 +63,9 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
   def test_nested_kl_divergence(self):
     zero = tf.constant([0.0] * 3, dtype=tf.float32)
     one = tf.constant([1.0] * 3, dtype=tf.float32)
-    dist_neg_one = tf.distributions.Normal(loc=-one, scale=one)
-    dist_zero = tf.distributions.Normal(loc=zero, scale=one)
-    dist_one = tf.distributions.Normal(loc=one, scale=one)
+    dist_neg_one = tfp.distributions.Normal(loc=-one, scale=one)
+    dist_zero = tfp.distributions.Normal(loc=zero, scale=one)
+    dist_one = tfp.distributions.Normal(loc=one, scale=one)
 
     nested_dist1 = [dist_zero, [dist_neg_one, dist_one]]
     nested_dist2 = [dist_one, [dist_one, dist_zero]]
@@ -81,14 +82,13 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     time_step_spec = ts.time_step_spec(obs_spec)
     mock_policy = mock.create_autospec(actor_policy.ActorPolicy)
     mock_policy.distribution.return_value = policy_step.PolicyStep(
-        (tf.distributions.Categorical(logits=ones),
-         tf.distributions.Normal(ones, ones)), None)
+        (tfp.distributions.Categorical(logits=ones),
+         tfp.distributions.Normal(ones, ones)), None)
 
     class_spec = ppo_utils.get_distribution_class_spec(mock_policy,
                                                        time_step_spec)
     self.assertAllEqual(
-        (tf.distributions.Categorical, tf.distributions.Normal),
-        class_spec)
+        (tfp.distributions.Categorical, tfp.distributions.Normal), class_spec)
 
   def test_get_distribution_params_spec(self):
     ones = tf.ones(shape=[1, 2], dtype=tf.float32)
@@ -96,8 +96,8 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     time_step_spec = ts.time_step_spec(obs_spec)
     mock_policy = mock.create_autospec(actor_policy.ActorPolicy)
     mock_policy._distribution.return_value = policy_step.PolicyStep(
-        (tf.distributions.Categorical(logits=ones),
-         tf.distributions.Normal(ones, ones)))
+        (tfp.distributions.Categorical(logits=ones),
+         tfp.distributions.Normal(ones, ones)))
 
     params_spec = ppo_utils.get_distribution_params_spec(mock_policy,
                                                          time_step_spec)
@@ -108,8 +108,8 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
 
   def test_get_distribution_params(self):
     ones = tf.ones(shape=[2], dtype=tf.float32)
-    distribution = (tf.distributions.Categorical(logits=ones),
-                    tf.distributions.Normal(ones, ones))
+    distribution = (tfp.distributions.Categorical(logits=ones),
+                    tfp.distributions.Normal(ones, ones))
     params = ppo_utils.get_distribution_params(distribution)
     self.assertAllEqual([set(['logits']), set(['loc', 'scale'])],
                         [set(d.keys()) for d in params])
@@ -120,12 +120,13 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     distribution_params = ({'logits': tf.constant([1, 1], dtype=tf.float32)},
                            {'loc': tf.constant([1, 1], dtype=tf.float32),
                             'scale': tf.constant([1, 1], dtype=tf.float32)})
-    get_distribution_class_spec = (tf.distributions.Categorical,
-                                   tf.distributions.Normal)
+    get_distribution_class_spec = (tfp.distributions.Categorical,
+                                   tfp.distributions.Normal)
     nested_distribution = ppo_utils.get_distribution_from_params_and_classes(
         distribution_params, get_distribution_class_spec)
-    self.assertAllEqual([tf.distributions.Categorical, tf.distributions.Normal],
-                        [d.__class__ for d in nested_distribution])
+    self.assertAllEqual(
+        [tfp.distributions.Categorical, tfp.distributions.Normal],
+        [d.__class__ for d in nested_distribution])
     self.assertAllEqual([2], nested_distribution[0].logits.shape.as_list())
     self.assertAllEqual([2], nested_distribution[1].sample().shape.as_list())
 

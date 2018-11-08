@@ -24,6 +24,7 @@ import random
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
@@ -399,7 +400,7 @@ class LogProbabilityTest(tf.test.TestCase):
 
   def testLogProbability(self):
     action_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
-    distribution = tf.distributions.Normal([0.0, 0.0], [1.0, 1.0])
+    distribution = tfp.distributions.Normal([0.0, 0.0], [1.0, 1.0])
     actions = tf.constant([0.0, 0.0])
     log_probs = common.log_probability(distribution, actions, action_spec)
 
@@ -414,9 +415,12 @@ class LogProbabilityTest(tf.test.TestCase):
         [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
          tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]]
     distribution = [
-        tf.distributions.Normal([0.0, 0.0], [1.0, 1.0]),
-        [tf.distributions.Normal([0.5], [1.0]),
-         tf.distributions.Normal([-0.5], [1.0])]]
+        tfp.distributions.Normal([0.0, 0.0], [1.0, 1.0]),
+        [
+            tfp.distributions.Normal([0.5], [1.0]),
+            tfp.distributions.Normal([-0.5], [1.0])
+        ]
+    ]
     actions = [tf.constant([0.0, 0.0]),
                [tf.constant([0.5]), tf.constant([-0.5])]]
     log_probs = common.log_probability(distribution, actions, action_spec)
@@ -432,10 +436,13 @@ class LogProbabilityTest(tf.test.TestCase):
         [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
          tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]]
     distribution = [
-        tf.distributions.Normal([[0.0, 0.0], [0.0, 0.0]],
-                                [[1.0, 1.0], [2.0, 2.0]]),
-        [tf.distributions.Normal([[0.5], [0.5]], [[1.0], [2.0]]),
-         tf.distributions.Normal([[-0.5], [-0.5]], [[1.0], [2.0]])]]
+        tfp.distributions.Normal([[0.0, 0.0], [0.0, 0.0]],
+                                 [[1.0, 1.0], [2.0, 2.0]]),
+        [
+            tfp.distributions.Normal([[0.5], [0.5]], [[1.0], [2.0]]),
+            tfp.distributions.Normal([[-0.5], [-0.5]], [[1.0], [2.0]])
+        ]
+    ]
     actions = [tf.constant([[0.0, 0.0], [0.0, 0.0]]),
                [tf.constant([[0.5], [0.5]]), tf.constant([[-0.5], [-0.5]])]]
     log_probs = common.log_probability(distribution, actions, action_spec)
@@ -452,7 +459,7 @@ class EntropyTest(tf.test.TestCase):
 
   def testEntropy(self):
     action_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
-    distribution = tf.distributions.Normal([0.0, 0.0], [1.0, 2.0])
+    distribution = tfp.distributions.Normal([0.0, 0.0], [1.0, 2.0])
     entropies = common.entropy(distribution, action_spec)
 
     self.evaluate(tf.global_variables_initializer())
@@ -468,9 +475,12 @@ class EntropyTest(tf.test.TestCase):
         [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
          tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]]
     distribution = [
-        tf.distributions.Normal([0.0, 0.0], [1.0, 2.0]),
-        [tf.distributions.Normal([0.5], [1.0]),
-         tf.distributions.Normal([-0.5], [2.0])]]
+        tfp.distributions.Normal([0.0, 0.0], [1.0, 2.0]),
+        [
+            tfp.distributions.Normal([0.5], [1.0]),
+            tfp.distributions.Normal([-0.5], [2.0])
+        ]
+    ]
     entropies = common.entropy(distribution, action_spec)
 
     self.evaluate(tf.global_variables_initializer())
@@ -486,10 +496,13 @@ class EntropyTest(tf.test.TestCase):
         [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
          tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]]
     distribution = [
-        tf.distributions.Normal([[0.0, 0.0], [0.0, 0.0]],
-                                [[1.0, 1.0], [2.0, 2.0]]),
-        [tf.distributions.Normal([[0.5], [0.5]], [[1.0], [2.0]]),
-         tf.distributions.Normal([[-0.5], [-0.5]], [[1.0], [2.0]])]]
+        tfp.distributions.Normal([[0.0, 0.0], [0.0, 0.0]],
+                                 [[1.0, 1.0], [2.0, 2.0]]),
+        [
+            tfp.distributions.Normal([[0.5], [0.5]], [[1.0], [2.0]]),
+            tfp.distributions.Normal([[-0.5], [-0.5]], [[1.0], [2.0]])
+        ]
+    ]
     entropies = common.entropy(distribution, action_spec)
 
     self.evaluate(tf.global_variables_initializer())

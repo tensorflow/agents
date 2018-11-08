@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.distributions import layers
 from tf_agents.specs import tensor_spec
@@ -38,7 +39,7 @@ class FactoredCategoricalTest(tf.test.TestCase):
         [11, 2], tf.int32, 0, 4)
 
     distribution = layers.factored_categorical(inputs, output_spec)
-    self.assertEqual(type(distribution), tf.distributions.Categorical)
+    self.assertEqual(type(distribution), tfp.distributions.Categorical)
     logits = distribution.logits
 
     self.assertAllEqual(logits.shape.as_list(),
@@ -53,7 +54,7 @@ class NormalTest(tf.test.TestCase):
         [11, 2], tf.float32, 0, 1)
 
     distribution = layers.normal(inputs, output_spec)
-    self.assertEqual(type(distribution), tf.distributions.Normal)
+    self.assertEqual(type(distribution), tfp.distributions.Normal)
     means, stds = distribution.loc, distribution.scale
 
     self.assertAllEqual(means.shape.as_list(),
@@ -79,7 +80,7 @@ class NormalTest(tf.test.TestCase):
           mean_transform=layers.passthrough,
           projection_layer=gen_projection(2))
 
-      self.assertEqual(type(distribution), tf.distributions.Normal)
+      self.assertEqual(type(distribution), tfp.distributions.Normal)
       unsquashed_means1 = distribution.loc
 
       distribution = layers.normal(
@@ -87,7 +88,7 @@ class NormalTest(tf.test.TestCase):
           mean_transform=layers.passthrough,
           projection_layer=gen_projection(-1))
 
-      self.assertEqual(type(distribution), tf.distributions.Normal)
+      self.assertEqual(type(distribution), tfp.distributions.Normal)
       unsquashed_means2 = distribution.loc
 
       # Yes squashing.
@@ -95,14 +96,14 @@ class NormalTest(tf.test.TestCase):
           inputs, output_spec,
           projection_layer=gen_projection(2))
 
-      self.assertEqual(type(distribution), tf.distributions.Normal)
+      self.assertEqual(type(distribution), tfp.distributions.Normal)
       squashed_means1 = distribution.loc
 
       distribution = layers.normal(
           inputs, output_spec,
           projection_layer=gen_projection(-1))
 
-      self.assertEqual(type(distribution), tf.distributions.Normal)
+      self.assertEqual(type(distribution), tfp.distributions.Normal)
       squashed_means2 = distribution.loc
 
     self.evaluate(tf.global_variables_initializer())

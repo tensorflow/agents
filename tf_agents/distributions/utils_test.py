@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.distributions import layers
 from tf_agents.distributions import utils
@@ -43,7 +44,7 @@ class ProjectToOutputDistributionTest(tf.test.TestCase):
         project_to_discrete=layers.factored_categorical,
         project_to_continuous=layers.normal)
 
-    self.assertEqual(type(distribution), tf.distributions.Categorical)
+    self.assertEqual(type(distribution), tfp.distributions.Categorical)
     logits = distribution.logits
     self.assertAllEqual(logits.shape.as_list(),
                         [3] + output_spec.shape.as_list() + [2])
@@ -60,7 +61,7 @@ class ProjectToOutputDistributionTest(tf.test.TestCase):
         project_to_discrete=layers.factored_categorical,
         project_to_continuous=layers.normal)
 
-    self.assertEqual(type(distribution), tf.distributions.Categorical)
+    self.assertEqual(type(distribution), tfp.distributions.Categorical)
     logits = distribution.logits
     self.assertAllEqual(logits.shape.as_list(),
                         [3, 13] + output_spec.shape.as_list() + [2])
@@ -76,7 +77,7 @@ class ProjectToOutputDistributionTest(tf.test.TestCase):
         project_to_discrete=layers.factored_categorical,
         project_to_continuous=layers.normal)
 
-    self.assertEqual(type(distribution), tf.distributions.Categorical)
+    self.assertEqual(type(distribution), tfp.distributions.Categorical)
     logits = distribution.logits
 
     self.assertAllEqual(logits.shape.as_list(),
@@ -94,7 +95,7 @@ class ProjectToOutputDistributionTest(tf.test.TestCase):
         project_to_discrete=layers.factored_categorical,
         project_to_continuous=layers.normal)
 
-    self.assertEqual(type(distribution), tf.distributions.Normal)
+    self.assertEqual(type(distribution), tfp.distributions.Normal)
     means, stds = distribution.loc, distribution.scale
 
     self.assertAllEqual(means.shape.as_list(),
@@ -113,7 +114,7 @@ class ProjectToOutputDistributionTest(tf.test.TestCase):
         project_to_discrete=layers.factored_categorical,
         project_to_continuous=layers.normal)
 
-    self.assertEqual(type(distribution), tf.distributions.Normal)
+    self.assertEqual(type(distribution), tfp.distributions.Normal)
     means, stds = distribution.loc, distribution.scale
 
     self.assertAllEqual(means.shape.as_list(),
@@ -131,7 +132,7 @@ class ProjectToOutputDistributionsTest(tf.test.TestCase):
     distributions = utils.project_to_output_distributions(inputs, output_spec)
 
     self.assertEqual(len(distributions), 1)
-    self.assertEqual(type(distributions[0]), tf.distributions.Normal)
+    self.assertEqual(type(distributions[0]), tfp.distributions.Normal)
     means, stds = distributions[0].loc, distributions[0].scale
 
     self.assertAllEqual(means.shape.as_list(),
@@ -148,7 +149,7 @@ class ProjectToOutputDistributionsTest(tf.test.TestCase):
     distributions = utils.project_to_output_distributions(inputs, output_spec)
 
     self.assertEqual(len(distributions), 1)
-    self.assertEqual(type(distributions['motor']), tf.distributions.Normal)
+    self.assertEqual(type(distributions['motor']), tfp.distributions.Normal)
     means, stds = distributions['motor'].loc, distributions['motor'].scale
 
     self.assertAllEqual(means.shape.as_list(),
@@ -169,8 +170,8 @@ class ProjectToOutputDistributionsTest(tf.test.TestCase):
     self.assertEqual(len(distributions[1]), 1)
 
     # Check distributions.
-    self.assertEqual(type(distributions[0]), tf.distributions.Normal)
-    self.assertEqual(type(distributions[1][0]), tf.distributions.Categorical)
+    self.assertEqual(type(distributions[0]), tfp.distributions.Normal)
+    self.assertEqual(type(distributions[1][0]), tfp.distributions.Categorical)
     means, stds = distributions[0].loc, distributions[0].scale
     logits = distributions[1][0].logits
 

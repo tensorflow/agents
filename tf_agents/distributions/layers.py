@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.networks import utils
 
@@ -92,17 +93,17 @@ def factored_categorical(inputs, output_spec, outer_rank=1,
       inputs, output_shape.num_elements(), scope='logits')
   logits = tf.reshape(logits, [-1] + output_shape.as_list())
   logits = batch_squash.unflatten(logits)
-  return tf.distributions.Categorical(logits, dtype=output_spec.dtype)
+  return tfp.distributions.Categorical(logits, dtype=output_spec.dtype)
 
 
-def normal(
-    inputs, output_spec,
-    outer_rank=1,
-    projection_layer=default_fully_connected,
-    mean_transform=tanh_squash_to_spec,
-    std_initializer=tf.zeros_initializer(),
-    std_transform=tf.exp,
-    distribution_cls=tf.distributions.Normal):
+def normal(inputs,
+           output_spec,
+           outer_rank=1,
+           projection_layer=default_fully_connected,
+           mean_transform=tanh_squash_to_spec,
+           std_initializer=tf.zeros_initializer(),
+           std_transform=tf.exp,
+           distribution_cls=tfp.distributions.Normal):
   """Project a batch of inputs to a batch of means and standard deviations.
 
   Given an output spec for a single tensor continuous action, produces a
@@ -125,7 +126,7 @@ def normal(
     std_transform: The function applied to the trainable std variable. For
       example, tf.exp (default), tf.nn.softplus.
     distribution_cls: The distribution class to use for output distribution.
-      Default is tf.distributions.Normal.
+      Default is tfp.distributions.Normal.
 
   Returns:
     A tf.distribution.Normal object in which the standard deviation is not

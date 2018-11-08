@@ -63,7 +63,8 @@ def _dummy_action_distribution_net(time_steps, action_spec, network_state):
       time_steps, action_spec, network_state)
   def _action_distribution(action_mean):
     action_std = tf.ones_like(action_mean)
-    return tf.distributions.Normal(action_mean, action_std)
+    return tfp.distributions.Normal(action_mean, action_std)
+
   return nest.map_structure(_action_distribution, action_means), network_state
 
 
@@ -258,7 +259,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
         value_network=value_network)
 
     distribution_step = policy.distribution(self._time_step)
-    self.assertIsInstance(distribution_step.action, tf.distributions.Normal)
+    self.assertIsInstance(distribution_step.action, tfp.distributions.Normal)
 
 
 if __name__ == '__main__':

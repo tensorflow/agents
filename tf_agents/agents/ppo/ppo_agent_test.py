@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import mock
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.environments import time_step as ts
@@ -63,8 +64,8 @@ def get_dummy_actor_net(unbounded_actions=False, outer_rank=1):
       actions = nest.pack_sequence_as(action_spec, [actions])
       stdevs = nest.pack_sequence_as(action_spec, [stdevs])
 
-    return nest.map_structure_up_to(
-        action_spec, tf.distributions.Normal, actions, stdevs), network_state
+    return nest.map_structure_up_to(action_spec, tfp.distributions.Normal,
+                                    actions, stdevs), network_state
 
   return actor_net
 

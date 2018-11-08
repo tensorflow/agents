@@ -23,6 +23,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
@@ -101,7 +102,7 @@ class IQPolicy(tf_policy.Base):
   def _distribution(self, time_step, policy_state):
     q_values = self._q_network(time_step).q_values
     # TODO(kbanoop): Handle distributions over nests.
-    distribution_ = tf.distributions.Categorical(
+    distribution_ = tfp.distributions.Categorical(
         logits=q_values, dtype=self._action_dtype)
     distribution_ = nest.pack_sequence_as(self._action_spec, [distribution_])
     return policy_step.PolicyStep(distribution_, policy_state)

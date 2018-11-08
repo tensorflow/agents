@@ -22,6 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.environments import time_step as ts
 from tf_agents.policies import greedy_policy
@@ -64,11 +65,10 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = [
         tensor_spec.BoundedTensorSpec((1,), tf.int32, 0, len(action_probs)-1),
         tensor_spec.BoundedTensorSpec((), tf.int32, 0, len(action_probs)-1)]
-    wrapped_policy = DistributionPolicy(
-        [tf.distributions.Categorical(probs=[action_probs]),
-         tf.distributions.Categorical(probs=action_probs)],
-        self._time_step_spec,
-        action_spec)
+    wrapped_policy = DistributionPolicy([
+        tfp.distributions.Categorical(probs=[action_probs]),
+        tfp.distributions.Categorical(probs=action_probs)
+    ], self._time_step_spec, action_spec)
     policy = greedy_policy.GreedyPolicy(wrapped_policy)
 
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
@@ -97,9 +97,9 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
   def testNormalActions(self, loc, scale):
     action_spec = tensor_spec.BoundedTensorSpec(
         [1], tf.float32, tf.float32.min, tf.float32.max)
-    wrapped_policy = DistributionPolicy(tf.distributions.Normal([loc], [scale]),
-                                        self._time_step_spec,
-                                        action_spec)
+    wrapped_policy = DistributionPolicy(
+        tfp.distributions.Normal([loc], [scale]), self._time_step_spec,
+        action_spec)
     policy = greedy_policy.GreedyPolicy(wrapped_policy)
 
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)

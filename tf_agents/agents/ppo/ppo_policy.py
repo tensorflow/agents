@@ -57,7 +57,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
         passing a Template the variables will be reused, passing a function it
         will create a new template with a new set variables.  Network should
         return one of the following:
-          1. a nested tuple of tf.distributions objects matching action_spec, or
+          1. a nested tuple of tfp.distributions objects matching action_spec,
+          or
           2. a nested tuple of tf.Tensors representing actions.
       value_network: A Template from tf.make_template or a function. When
         passing a Template the variables will be reused, passing a function it

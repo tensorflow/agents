@@ -15,9 +15,10 @@
 
 """Define distributions for spaces where not all actions are valid."""
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 
-class MaskedCategorical(tf.distributions.Categorical):
+class MaskedCategorical(tfp.distributions.Categorical):
   """A categorical distribution which supports masks per step.
 
   Masked values are replaced with -inf inside the logits. This means the values

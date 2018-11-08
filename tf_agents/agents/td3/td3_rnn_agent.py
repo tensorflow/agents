@@ -27,6 +27,7 @@ from __future__ import print_function
 
 import functools
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.agents.ddpg import rnn_networks
 from tf_agents.agents.td3 import td3_agent
@@ -241,9 +242,9 @@ class Td3RnnAgent(td3_agent.Td3Agent):
 
       # Add gaussian noise to each action before computing target q values
       def add_noise_to_action(action):  # pylint: disable=missing-docstring
-        dist = tf.distributions.Normal(loc=tf.zeros_like(action),
-                                       scale=target_policy_noise * \
-                                       tf.ones_like(action))
+        dist = tfp.distributions.Normal(loc=tf.zeros_like(action),
+                                        scale=target_policy_noise * \
+                                        tf.ones_like(action))
         noise = dist.sample()
         noise = tf.clip_by_value(noise, -target_policy_noise_clip,
                                  target_policy_noise_clip)
