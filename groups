@@ -2,3 +2,5 @@
 #
 google:AI2Pq9oXNBh3KE04nJwy4mTiJHlvePZBTzucLw99t5IC7jBmt8CGGfA	google/tf-agents-team@google.com
 mdb:copybara-git-writers                                      	mdb/copybara-git-writers
+mdb:kokoro                                                    	mdb/kokoro
+mdb:kokoro-dedicated                                          	mdb/kokoro-dedicated
