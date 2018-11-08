@@ -181,6 +181,25 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
        ('WithHashing',
         py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
+  def testNumStepsNoBatching(self, rb_cls):
+    self._generate_replay_buffer(rb_cls=rb_cls)
+
+    ds = self._replay_buffer.as_dataset(num_steps=3)
+    replay_itr = ds.make_one_shot_iterator()
+    tf_trajectory = replay_itr.get_next()
+    self.assertEqual(tf_trajectory.observation.shape.as_list(),
+                     [3, 15, 15, 4])
+    self.assertEqual(tf_trajectory.action.shape.as_list(), [3])
+
+    with self.test_session() as sess:
+      traj = sess.run(tf_trajectory)
+      self.assertEqual(traj.observation.shape, (3, 15, 15, 4))
+      self.assertEqual(traj.action.shape, (3,))
+
+  @parameterized.named_parameters(
+      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+       ('WithHashing',
+        py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
   def testCheckpointable(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
     self.assertEqual(32, self._replay_buffer.size)

@@ -58,8 +58,7 @@ class NumpyStorage(tf.contrib.checkpoint.Checkpointable):
     if not all([isinstance(spec, array_spec.ArraySpec)
                 for spec in nest.flatten(data_spec)]):
       raise ValueError('The data_spec parameter must be an instance or nest of '
-                       'array_spec.ArraySpec. '
-                       'Actual: {}'.format(type(data_spec)))
+                       'array_spec.ArraySpec. Got: {}'.format(data_spec))
     self._data_spec = data_spec
     self._flat_specs = nest.flatten(data_spec)
     self._np_state = tf.contrib.checkpoint.NumpyState()
@@ -228,12 +227,13 @@ class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
                    for _ in range(batch_size)]
           item = nest_utils.stack_nested_arrays(batch)
         else:
-          item = self.get_next(num_steps=num_steps)
+          item = self.get_next(num_steps=num_steps, time_stacked=False)
         yield tuple(nest.flatten(item))
 
     def time_stack(*structures):
+      time_axis = 0 if batch_size is None else 1
       return nest.map_structure(
-          lambda *elements: tf.stack(elements, axis=1), *structures)
+          lambda *elements: tf.stack(elements, axis=time_axis), *structures)
 
     ds = tf.data.Dataset.from_generator(generator_fn, dtypes, shapes).map(
         lambda *items: nest.pack_sequence_as(data_spec, items))
