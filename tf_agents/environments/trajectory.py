@@ -408,7 +408,7 @@ def to_transition(trajectory, next_trajectory=None):
 
   Returns:
     A tuple `(time_steps, policy_steps, next_time_steps)`.  The `reward` and
-    `discount` fields of `next_time_steps` are filled with zeros because these
+    `discount` fields of `time_steps` are filled with zeros because these
     cannot be deduced.
   """
   if next_trajectory is None:
