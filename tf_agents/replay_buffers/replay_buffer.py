@@ -27,7 +27,7 @@ import tensorflow as tf
 
 @six.add_metaclass(abc.ABCMeta)
 class ReplayBuffer(tf.contrib.eager.Checkpointable):
-  """Abstract base class for TFAgents replay buffer.
+  """Abstract base class for TF-Agents replay buffer.
 
   In eager mode, methods modify the buffer or return values directly. In graph
   mode, methods return ops that do so when executed.

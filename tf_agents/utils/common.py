@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Common utilities for TFAgents."""
+"""Common utilities for TF-Agents."""
 
 from __future__ import absolute_import
 from __future__ import division

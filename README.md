@@ -1,18 +1,18 @@
-# TFAgents
+# TF-Agents
 
-TFAgents is a library for Reinforcement Learning in TensorFlow.
+TF-Agents is a library for Reinforcement Learning in TensorFlow.
 
-*NOTE:* TFAgents is under active development. Interfaces may change at any
+*NOTE:* TF-Agents is under active development. Interfaces may change at any
 time.
 
 
 ## Agents
 
-In TFAgents we implement learning methods under the name `Agent`. These
+In TF-Agents we implement learning methods under the name `Agent`. These
 encompass two main responsibilities, how the model should be updated given
 experience, and how a policy should be generated from the model.
 
-The following agents are available under TFAgents:
+The following agents are available under TF-Agents:
 
 * DQN: __Human level control through deep reinforcement learning__ Mnih et al., 2015 https://deepmind.com/research/dqn/
 * DDPG: __Continuous control with deep reinforcement learning__ Lilicrap et al.  https://arxiv.org/abs/1509.02971
@@ -42,10 +42,10 @@ To install the latest version, run the following:
 pip install --user --upgrade tfagents  # depends on TensorFlow (CPU-only)
 ```
 
-TFAgents depends on a recent stable release of
+TF-Agents depends on a recent stable release of
 [TensorFlow](https://www.tensorflow.org/install) (pip package `tensorflow`).
 
-Note: Since TensorFlow is *not* included as a dependency of the TFAgents
+Note: Since TensorFlow is *not* included as a dependency of the TF-Agents
 package (in `setup.py`), you must explicitly install the TensorFlow
 package (`tensorflow` or `tensorflow-gpu`). This allows us to maintain one
 package instead of separate packages for CPU and GPU-enabled TensorFlow.
@@ -57,7 +57,7 @@ installation guide](https://www.tensorflow.org/install).
 
 ### Nightly Builds
 
-There are also nightly builds of TFAgents under the pip package
+There are also nightly builds of TF-Agents under the pip package
 `tfagents-nightly`, which requires you install on one of `tf-nightly` and
 `tf-nightly-gpu`. Nightly builds include newer features, but may be less stable
 than the versioned releases.

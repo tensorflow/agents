@@ -32,7 +32,7 @@ import gin
 DEFAULT_ATARI_GYM_WRAPPERS = (preprocessing.AtariPreprocessing,)
 # The following is just AtariPreprocessing with frame stacking. Performance wise
 # it's much better to have stacking implemented as part of replay-buffer/agent.
-# As soon as this functionality in TFAgents is ready and verified, this set of
+# As soon as this functionality in TF-Agents is ready and verified, this set of
 # wrappers will be removed.
 DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = (preprocessing.AtariPreprocessing,
                                             atari_wrappers.FrameStack4)
