@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """Tests for tf_agents.agents.ddpg.ddpg_agent."""
 
 from __future__ import absolute_import
@@ -88,22 +87,25 @@ class DdpgAgentTest(tf.test.TestCase):
     self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]
 
   def testCreateAgent(self):
-    ddpg_agent.DdpgAgent(
+    agent = ddpg_agent.DdpgAgent(
         self._time_step_spec,
         self._action_spec,
+        actor_net=get_dummy_actor_net(unbounded_actions=False),
         critic_net=_dummy_critic_net,
-        actor_net=get_dummy_actor_net(unbounded_actions=False)
+        actor_optimizer=None,
+        critic_optimizer=None,
     )
-
-  def testCreateAgentDefaultNetwork(self):
-    ddpg_agent.DdpgAgent(self._time_step_spec, self._action_spec)
+    self.assertTrue(agent.policy() is not None)
+    self.assertTrue(agent.collect_policy() is not None)
 
   def testCriticLoss(self):
     agent = ddpg_agent.DdpgAgent(
         self._time_step_spec,
         self._action_spec,
+        actor_net=get_dummy_actor_net(unbounded_actions=True),
         critic_net=_dummy_critic_net,
-        actor_net=get_dummy_actor_net(unbounded_actions=True)
+        actor_optimizer=None,
+        critic_optimizer=None,
     )
 
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
@@ -126,8 +128,10 @@ class DdpgAgentTest(tf.test.TestCase):
     agent = ddpg_agent.DdpgAgent(
         self._time_step_spec,
         self._action_spec,
+        actor_net=get_dummy_actor_net(unbounded_actions=True),
         critic_net=_dummy_critic_net,
-        actor_net=get_dummy_actor_net(unbounded_actions=True)
+        actor_optimizer=None,
+        critic_optimizer=None,
     )
 
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
@@ -144,8 +148,10 @@ class DdpgAgentTest(tf.test.TestCase):
     agent = ddpg_agent.DdpgAgent(
         self._time_step_spec,
         self._action_spec,
+        actor_net=get_dummy_actor_net(unbounded_actions=False),
         critic_net=_dummy_critic_net,
-        actor_net=get_dummy_actor_net(unbounded_actions=False)
+        actor_optimizer=None,
+        critic_optimizer=None,
     )
 
     observations = [tf.constant([1, 2], dtype=tf.float32)]
