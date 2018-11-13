@@ -2,9 +2,8 @@
 
 TF-Agents is a library for Reinforcement Learning in TensorFlow.
 
-*NOTE:* TF-Agents is under active development. Interfaces may change at any
-time.
-
+*NOTE:* Current TF-Agents release is under active development and
+interfaces may change at any time. Feel free to provide feedback and guidance.
 
 ## Agents
 
@@ -69,6 +68,15 @@ for a guide on how to contribute. This project adheres to TensorFlow's
 [code of conduct](CODE_OF_CONDUCT.md). By participating, you are expected to
 uphold this code.
 
+## Principles
+
+This project adheres to Google's AI [principles](PRINCIPLES.md).
+By using or contributing, you are expected to adhere to these principles.
+
 ## References
 
 * # TODO(oars): How do we want to be referenced?
+
+## Disclaimer
+
+This is not an official Google product.
