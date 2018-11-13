@@ -432,9 +432,9 @@ class BoundedArraySpecTest(parameterized.TestCase):
     self.skipTest("TODO(oars): Fix this test.")
     rng = np.random.RandomState()
     spec = array_spec.BoundedArraySpec(
-        (10, 10, 10), np.uint8, minimum=0, maximum=255)
+        (100, 10, 10), np.uint8, minimum=0, maximum=255)
     sample = array_spec.sample_bounded_spec(spec, rng)
-    self.assertTupleEqual((10, 10, 10), sample.shape)
+    self.assertTupleEqual((100, 10, 10), sample.shape)
     hist, _ = np.histogram(sample, bins=256, range=(0, 255))
     self.assertTrue(np.all(hist > 0))
 
@@ -446,9 +446,9 @@ class BoundedArraySpecTest(parameterized.TestCase):
     self.skipTest("TODO(oars): Fix this test.")
     rng = np.random.RandomState()
     spec = array_spec.BoundedArraySpec(
-        (10, 10, 10), np.int8, minimum=-128, maximum=127)
+        (100, 10, 10), np.int8, minimum=-128, maximum=127)
     sample = array_spec.sample_bounded_spec(spec, rng)
-    self.assertTupleEqual((10, 10, 10), sample.shape)
+    self.assertTupleEqual((100, 10, 10), sample.shape)
     hist, _ = np.histogram(sample, bins=256, range=(-128, 127))
     self.assertTrue(np.all(hist > 0))
 
@@ -457,9 +457,9 @@ class BoundedArraySpecTest(parameterized.TestCase):
     self.skipTest("TODO(oars): Fix this test.")
     rng = np.random.RandomState()
     spec = array_spec.BoundedArraySpec(
-        (10, 10, 10), np.uint64, minimum=0, maximum=100)
+        (100, 10, 10), np.uint64, minimum=0, maximum=100)
     sample = array_spec.sample_bounded_spec(spec, rng)
-    self.assertTupleEqual((10, 10, 10), sample.shape)
+    self.assertTupleEqual((100, 10, 10), sample.shape)
     hist, _ = np.histogram(sample, bins=100, range=(0, 100))
     self.assertTrue(np.all(hist > 0))
 
@@ -468,12 +468,12 @@ class BoundedArraySpecTest(parameterized.TestCase):
   def testSampleInt64FullRange(self):
     rng = np.random.RandomState()
     spec = array_spec.BoundedArraySpec(
-        (10, 10, 10),
+        (100, 10, 10),
         np.int64,
         minimum=np.iinfo(np.int64).min,
         maximum=np.iinfo(np.int64).max)
     sample = array_spec.sample_bounded_spec(spec, rng)
-    self.assertTupleEqual((10, 10, 10), sample.shape)
+    self.assertTupleEqual((100, 10, 10), sample.shape)
     hist, _ = np.histogram(sample, bins=100, range=(np.iinfo(np.int64).min / 2,
                                                     np.iinfo(np.int64).max / 2))
     self.assertTrue(np.all(hist > 0))
@@ -482,9 +482,9 @@ class BoundedArraySpecTest(parameterized.TestCase):
   def testSampleFloat64FullRange(self):
     rng = np.random.RandomState()
     spec = array_spec.BoundedArraySpec(
-        (10, 10, 10), np.float64, minimum=0, maximum=100)
+        (100, 10, 10), np.float64, minimum=0, maximum=100)
     sample = array_spec.sample_bounded_spec(spec, rng)
-    self.assertTupleEqual((10, 10, 10), sample.shape)
+    self.assertTupleEqual((100, 10, 10), sample.shape)
     self.assertFalse(np.any(np.isinf(sample)))
     hist, _ = np.histogram(sample, bins=100, range=(0, 100))
     self.assertTrue(np.all(hist > 0))
