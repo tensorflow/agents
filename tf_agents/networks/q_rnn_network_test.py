@@ -50,15 +50,14 @@ class QRnnNetworkTest(tf.test.TestCase):
 
     time_step, _, _ = tf_env.reset()
     q_values, state = rnn_network(time_step.observation, time_step.step_type)
-    self.assertTrue(isinstance(state, list))
-    self.assertEqual(4, len(state))
-    self.assertEqual(state, nest.flatten(state))
+    self.assertTrue(isinstance(state, tuple))
+    self.assertEqual(2, len(state))
 
     self.assertEqual((1, 2), q_values.shape)
-    self.assertEqual((1, 10), state[0].shape)
-    self.assertEqual((1, 10), state[1].shape)
-    self.assertEqual((1, 5), state[2].shape)
-    self.assertEqual((1, 5), state[3].shape)
+    self.assertEqual((1, 10), state[0][0].shape)
+    self.assertEqual((1, 10), state[0][1].shape)
+    self.assertEqual((1, 5), state[1][0].shape)
+    self.assertEqual((1, 5), state[1][1].shape)
 
 
 if __name__ == '__main__':
