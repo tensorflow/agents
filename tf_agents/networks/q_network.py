@@ -20,10 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.keras import layers as keras_layers
 
+from tf_agents.networks import encoding_network
 from tf_agents.networks import network
-from tf_agents.networks import utils
+
 import gin
 
 nest = tf.contrib.framework.nest
@@ -54,6 +54,8 @@ class QNetwork(network.Network):
                conv_layer_params=None,
                fc_layer_params=(75, 40),
                activation_fn=tf.keras.activations.relu,
+               kernel_initializer=None,
+               batch_squash=True,
                name='QNetwork'):
     """Creates an instance of `QNetwork`.
 
@@ -68,6 +70,11 @@ class QNetwork(network.Network):
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
       activation_fn: Activation function, e.g. tf.keras.activations.relu,.
+      kernel_initializer: Initializer to use for the kernels of the conv and
+        dense layers. If none is provided a default variance_scaling_initializer
+      batch_squash: If True the outer_ranks of the observation are squashed into
+        the batch dimension. This allow encoding networks to be used with
+        observations with shape [BxTx...].
       name: A string representing name of the network.
 
     Raises:
@@ -78,21 +85,22 @@ class QNetwork(network.Network):
     action_spec = nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
-    layers = utils.mlp_layers(
-        conv_layer_params,
-        fc_layer_params,
+    encoder = encoding_network.EncodingNetwork(
+        observation_spec,
+        conv_layer_params=conv_layer_params,
+        fc_layer_params=fc_layer_params,
         activation_fn=activation_fn,
-        name='input_mlp')
+        kernel_initializer=kernel_initializer,
+        batch_squash=batch_squash)
 
     # TODO(kewa): consider create custom layer flattens/restores nested actions.
-    layers.append(
-        keras_layers.Dense(
-            num_actions,
-            activation=None,
-            kernel_initializer=tf.random_uniform_initializer(
-                minval=-0.03, maxval=0.03),
-            # TODO(kewa): double check if initialization is needed.
-            bias_initializer=tf.constant_initializer(-0.2)))
+    q_value_layer = tf.keras.layers.Dense(
+        num_actions,
+        activation=None,
+        kernel_initializer=tf.random_uniform_initializer(
+            minval=-0.03, maxval=0.03),
+        # TODO(kewa): double check if initialization is needed.
+        bias_initializer=tf.constant_initializer(-0.2))
 
     super(QNetwork, self).__init__(
         observation_spec=observation_spec,
@@ -100,14 +108,10 @@ class QNetwork(network.Network):
         state_spec=(),
         name=name)
 
-    self._conv_layer_params = conv_layer_params
-    self._fc_layer_params = fc_layer_params
-    self._activation_fn = activation_fn
-    self._layers = layers
+    self._encoder = encoder
+    self._q_value_layer = q_value_layer
 
-  def call(self, observation, step_type=None, network_state=None):
-    del step_type  # unused.
-    state = tf.to_float(nest.flatten(observation)[0])
-    for layer in self.layers:
-      state = layer(state)
-    return state, network_state
+  def call(self, observation, step_type=None, network_state=()):
+    state, network_state = self._encoder(
+        observation, step_type=step_type, network_state=network_state)
+    return self._q_value_layer(state), network_state

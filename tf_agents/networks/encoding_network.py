@@ -47,6 +47,7 @@ class EncodingNetwork(network.Network):
                fc_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
+               batch_squash=True,
                name='EncodingNetwork'):
     """Creates an instance of `EncodingNetwork`.
 
@@ -67,6 +68,9 @@ class EncodingNetwork(network.Network):
       activation_fn: Activation function, e.g. tf.keras.activations.relu,.
       kernel_initializer: Initializer to use for the kernels of the conv and
         dense layers. If none is provided a default variance_scaling_initializer
+      batch_squash: If True the outer_ranks of the observation are squashed into
+        the batch dimension. This allow encoding networks to be used with
+        observations with shape [BxTx...].
       name: A string representing name of the network.
 
     Raises:
@@ -115,17 +119,24 @@ class EncodingNetwork(network.Network):
         name=name)
 
     self._layers = layers
+    self._batch_squash = batch_squash
 
   def call(self, observation, step_type=None, network_state=()):
     del step_type  # unused.
 
-    outer_rank = nest_utils.get_outer_rank(observation, self.observation_spec)
-    batch_squash = utils.BatchSquash(outer_rank)
+    if self._batch_squash:
+      outer_rank = nest_utils.get_outer_rank(observation, self.observation_spec)
+      batch_squash = utils.BatchSquash(outer_rank)
 
     # Get single observation out regardless of nesting.
     states = tf.to_float(nest.flatten(observation)[0])
-    states = batch_squash.flatten(states)
+
+    if self._batch_squash:
+      states = batch_squash.flatten(states)
+
     for layer in self.layers:
       states = layer(states)
-    states = batch_squash.unflatten(states)
+
+    if self._batch_squash:
+      states = batch_squash.unflatten(states)
     return states, network_state

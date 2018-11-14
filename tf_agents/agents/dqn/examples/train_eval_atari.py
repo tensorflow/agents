@@ -75,7 +75,6 @@ flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
 flags.DEFINE_string('game_name', 'Pong', 'Name of Atari game to run.')
 FLAGS = flags.FLAGS
 
-
 # AtariPreprocessing runs 4 frames at a time, max-pooling over the last 2
 # frames. We need to account for this when computing things like update
 # intervals.
@@ -85,14 +84,13 @@ ATARI_FRAME_SKIP = 4
 class AtariQNetwork(q_network.QNetwork):
   """QNetwork subclass that divides observations by 255."""
 
-  def call(self, observation, unused_step_type=None, network_state=None):
+  def call(self, observation, step_type=None, network_state=None):
     state = tf.to_float(observation)
     # We divide the grayscale pixel values by 255 here rather than storing
     # normalized values beause uint8s are 4x cheaper to store than float32s.
     state = tf.div(state, 255.)
-    for layer in self.layers:
-      state = layer(state)
-    return state, network_state
+    return super(AtariQNetwork, self).call(
+        state, step_type=step_type, network_state=network_state)
 
 
 def log_metric(metric, prefix):
