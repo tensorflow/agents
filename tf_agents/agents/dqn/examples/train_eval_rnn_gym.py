@@ -54,6 +54,8 @@ flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_integer('num_iterations', 100000,
                      'Total number train/eval iterations to perform.')
+flags.DEFINE_integer('eval_interval', 1000,
+                     'Total number train/eval iterations to perform.')
 FLAGS = flags.FLAGS
 
 
@@ -274,7 +276,7 @@ def train_eval(
           rb_checkpointer.save(global_step=global_step_val)
 
         if global_step_val % eval_interval == 0:
-          metric_utils.compute(
+          metric_utils.compute_summaries(
               eval_metrics,
               eval_py_env,
               eval_py_policy,
@@ -287,7 +289,10 @@ def train_eval(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
-  train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
+  train_eval(
+      FLAGS.root_dir,
+      num_iterations=FLAGS.num_iterations,
+      eval_interval=FLAGS.eval_interval)
 
 
 if __name__ == '__main__':
