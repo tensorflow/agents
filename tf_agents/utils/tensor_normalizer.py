@@ -47,7 +47,9 @@ import six
 
 import tensorflow as tf
 
-from tf_agents.utils import common as common_utils
+from tf_agents.utils.common import create_counter
+
+nest = tf.contrib.framework.nest
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -61,6 +63,11 @@ class TensorNormalizer(tf.contrib.eager.Checkpointable):
     self._tensor_spec = tensor_spec
     with tf.variable_scope(self._scope):
       self._create_variables()
+
+  @property
+  def nested(self):
+    """True if tensor is nested, False otherwise."""
+    return nest.is_sequence(self._tensor_spec)
 
   @abc.abstractmethod
   def copy(self, scope=None):
@@ -111,20 +118,29 @@ class TensorNormalizer(tf.contrib.eager.Checkpointable):
     Returns:
       normalized_tensor: Tensor after applying normalization.
     """
-    tensor = tf.to_float(tensor)
+    nest.assert_same_structure(tensor, self._tensor_spec)
+    tensor = nest.map_structure(tf.to_float, tensor)
 
     with tf.name_scope(self._scope + '/normalize'):
       mean_estimate, var_estimate = self._get_mean_var_estimates()
-      mean = (mean_estimate if center_mean else tf.zeros_like(mean_estimate))
-      normalized_tensor = tf.nn.batch_normalization(
-          tensor, mean, var_estimate,
-          offset=None, scale=None, variance_epsilon=variance_epsilon,
-          name='normalized_tensor')
+      mean = (mean_estimate if center_mean else
+              nest.map_structure(tf.zeros_like, mean_estimate))
+
+      def _normalize_single_tensor(single_tensor, single_mean, single_var):
+        return tf.nn.batch_normalization(
+            single_tensor, single_mean, single_var,
+            offset=None, scale=None, variance_epsilon=variance_epsilon,
+            name='normalized_tensor')
+
+      normalized_tensor = nest.map_structure_up_to(
+          self._tensor_spec, _normalize_single_tensor,
+          tensor, mean, var_estimate)
 
       if clip_value > 0:
-        normalized_tensor = tf.clip_by_value(
-            normalized_tensor, -clip_value, clip_value,
-            name='clipped_normalized_tensor')
+        def _clip(t):
+          return tf.clip_by_value(t, -clip_value, clip_value,
+                                  name='clipped_normalized_tensor')
+        normalized_tensor = nest.map_structure(_clip, normalized_tensor)
 
     return normalized_tensor
 
@@ -147,10 +163,12 @@ class EMATensorNormalizer(TensorNormalizer):
 
   def _create_variables(self):
     """Creates the variables needed for EMATensorNormalizer."""
-    self._mean_moving_avg = common_utils.create_counter(
-        'mean', 0, self._tensor_spec.shape, tf.float32)
-    self._var_moving_avg = common_utils.create_counter(
-        'var', 1, self._tensor_spec.shape, dtype=tf.float32)
+    self._mean_moving_avg = nest.map_structure(
+        lambda spec: create_counter('mean', 0, spec.shape, tf.float32),
+        self._tensor_spec)
+    self._var_moving_avg = nest.map_structure(
+        lambda spec: create_counter('var', 1, spec.shape, tf.float32),
+        self._tensor_spec)
 
   @property
   def variables(self):
@@ -203,12 +221,15 @@ class StreamingTensorNormalizer(TensorNormalizer):
 
   def _create_variables(self):
     """Uses self._scope and creates all variables needed for the normalizer."""
-    self._count = common_utils.create_counter(
-        'count', 1e-8, self._tensor_spec.shape, tf.float32)
-    self._mean_sum = common_utils.create_counter(
-        'mean_sum', 0, self._tensor_spec.shape, tf.float32)
-    self._var_sum = common_utils.create_counter(
-        'var_sum', 0, self._tensor_spec.shape, tf.float32)
+    self._count = nest.map_structure(
+        lambda spec: create_counter('count', 1e-8, spec.shape, tf.float32),
+        self._tensor_spec)
+    self._mean_sum = nest.map_structure(
+        lambda spec: create_counter('mean_sum', 0, spec.shape, tf.float32),
+        self._tensor_spec)
+    self._var_sum = nest.map_structure(
+        lambda spec: create_counter('var_sum', 0, spec.shape, tf.float32),
+        self._tensor_spec)
 
   def copy(self, scope=None):
     """Copy constructor for StreamingTensorNormalizer."""
@@ -218,7 +239,7 @@ class StreamingTensorNormalizer(TensorNormalizer):
   @property
   def variables(self):
     """Returns a tuple of tf variables owned by this normalizer."""
-    return (self._count, self._mean_sum, self._var_sum)
+    return self._count, self._mean_sum, self._var_sum
 
   def _update_ops(self, tensor, outer_dims):
     """Returns a list of ops which update normalizer variables for tensor.
@@ -255,4 +276,8 @@ class StreamingTensorNormalizer(TensorNormalizer):
 
   def _get_mean_var_estimates(self):
     """Returns this normalizer's current estimates for mean & variance."""
-    return self._mean_sum / self._count, self._var_sum / self._count
+    mean_estimate = nest.map_structure_up_to(
+        self._tensor_spec, lambda a, b: a / b, self._mean_sum, self._count)
+    var_estimate = nest.map_structure_up_to(
+        self._tensor_spec, lambda a, b: a / b, self._var_sum, self._count)
+    return mean_estimate, var_estimate

@@ -35,6 +35,9 @@ class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     self._tensor_spec = tensor_spec.TensorSpec([3], tf.float32, 'obs')
     self._tensor_normalizer = tensor_normalizer.EMATensorNormalizer(
         tensor_spec=self._tensor_spec)
+    self._dict_tensor_spec = {'a': self._tensor_spec, 'b': self._tensor_spec}
+    self._dict_tensor_normalizer = tensor_normalizer.EMATensorNormalizer(
+        tensor_spec=self._dict_tensor_spec)
     self.evaluate(tf.global_variables_initializer())
 
   def testGetVariables(self):
@@ -86,6 +89,21 @@ class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
         tensor, variance_epsilon=0.0)
     self.assertAllClose(expected, self.evaluate(norm_obs), atol=0.0001)
 
+  def testNormalizationDictNest(self):
+    means_var, variance_var = self._dict_tensor_normalizer.variables
+    self.evaluate(  # For each var in nest, assign initial value.
+        [tf.assign(var, [10.0] * 3) for var in means_var.values()] +
+        [tf.assign(var, [.1] * 3) for var in variance_var.values()])
+
+    vector = [9.0, 10.0, 11.0]
+    expected = {'a': [-3.1622776601, 0.0, 3.1622776601],
+                'b': [-3.1622776601, 0.0, 3.1622776601]}
+    tensor = {'a': tf.constant(vector), 'b': tf.constant(vector)}
+
+    norm_obs = self._dict_tensor_normalizer.normalize(
+        tensor, variance_epsilon=0.0)
+    self.assertAllClose(expected, self.evaluate(norm_obs), atol=0.0001)
+
   def testShouldNotCenterMean(self):
     means_var, variance_var = self._tensor_normalizer.variables
     self.evaluate([tf.assign(means_var, [10.0] * 3),
@@ -105,6 +123,9 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     self._tensor_spec = tensor_spec.TensorSpec([3], tf.float32, 'obs')
     self._tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
         tensor_spec=self._tensor_spec)
+    self._dict_tensor_spec = {'a': self._tensor_spec, 'b': self._tensor_spec}
+    self._dict_tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=self._dict_tensor_spec)
     self.evaluate(tf.global_variables_initializer())
 
   def testGetVariables(self):
@@ -162,6 +183,22 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     tensor = tf.constant(vector)
 
     norm_obs = self._tensor_normalizer.normalize(
+        tensor, variance_epsilon=0.0)
+    self.assertAllClose(expected, self.evaluate(norm_obs), atol=0.0001)
+
+  def testNormalizationDictNest(self):
+    count_var, means_var, variance_var = self._dict_tensor_normalizer.variables
+    self.evaluate(  # For each var in nest, assign initial value.
+        [tf.assign(var, [1.0] * 3) for var in count_var.values()] +
+        [tf.assign(var, [10.0] * 3) for var in means_var.values()] +
+        [tf.assign(var, [.1] * 3) for var in variance_var.values()])
+
+    vector = [9.0, 10.0, 11.0]
+    expected = {'a': [-3.1622776601, 0.0, 3.1622776601],
+                'b': [-3.1622776601, 0.0, 3.1622776601]}
+    tensor = {'a': tf.constant(vector), 'b': tf.constant(vector)}
+
+    norm_obs = self._dict_tensor_normalizer.normalize(
         tensor, variance_epsilon=0.0)
     self.assertAllClose(expected, self.evaluate(norm_obs), atol=0.0001)
 
