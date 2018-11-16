@@ -331,7 +331,7 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     self.assertTrue(np.all(sample_ == dtype.max-1))
 
   def testSampleWithArrayInBounds(self, dtype):
-    spec = tf.contrib.framework.BoundedTensorSpec((2, 3), dtype, (0, 0, 0), 3)
+    spec = tensor_spec.BoundedTensorSpec((2, 3), dtype, (0, 0, 0), 3)
     sample = tensor_spec.sample_spec_nest(spec)
     self.assertEqual((2, 3), sample.shape)
     sample_ = self.evaluate(sample)
