@@ -80,7 +80,7 @@ class PPOPolicy(actor_policy.ActorPolicyKeras):
 
     self._value_network = value_network
 
-    # TODO(ebrevdo,eholly): Fix this.  Hacky way to set up info_spec.
+    # TODO(ebrevdo,eholly): Fix the way to set up info_spec.
     # Instead, the info_spec should be determined from __init__ arguments and
     # passed to super().
     if self._collect:

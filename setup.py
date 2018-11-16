@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Install tf_agents."""
+import codecs
 import datetime
 import fnmatch
 import io
@@ -113,7 +114,8 @@ class Test(TestCommandBase):
 version_path = os.path.join(
     os.path.dirname(__file__), 'tf_agents', 'python')
 sys.path.append(version_path)
-from version import __version__  # pylint: disable=g-import-not-at-top
+from version import __dev_version__  # pylint: disable=g-import-not-at-top
+from version import __rel_version__  # pylint: disable=g-import-not-at-top
 
 REQUIRED_PACKAGES = [
     'six >= 1.10.0',
@@ -136,8 +138,10 @@ REQUIRED_TENSORFLOW_VERSION = '1.10.0'
 if '--release' in sys.argv:
   release = True
   sys.argv.remove('--release')
+  version = __rel_version__
 else:
   # Build a nightly package by default.
+  version = __dev_version__
   release = False
 
 if release:
@@ -149,7 +153,7 @@ else:
   # '0.0.1.dev20180305'
   project_name = 'tf-agents-nightly'
   datestring = datetime.datetime.now().strftime('%Y%m%d')
-  __version__ += datestring
+  version += datestring
   tfp_package_name = 'tfp-nightly'
 
 REQUIRED_PACKAGES.append(tfp_package_name)
@@ -161,11 +165,15 @@ class BinaryDistribution(Distribution):
   def has_ext_modules(self):
     return False
 
+here = os.path.abspath(os.path.dirname(__file__))
+with codecs.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+  long_description = f.read()
 
 setup(
     name=project_name,
-    version=__version__,
-    description='Reinforcement Learning in TensorFlow',
+    version=version,
+    description='TF-Agents: A Reinforcement Learning Library for TensorFlow',
+    long_description=long_description,
     author='Google LLC',
     author_email='no-reply@google.com',
     url='http://github.com/tensorflow/agents',
@@ -181,7 +189,7 @@ setup(
         'test': Test,
     },
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',

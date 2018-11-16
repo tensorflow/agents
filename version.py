@@ -22,16 +22,17 @@ _PATCH_VERSION = '0'
 
 # When building releases, we can update this value on the release branch to
 # reflect the current release candidate ('rc0', 'rc1') or, finally, the official
-# stable release (indicated by `_VERSION_SUFFIX = ''`). Outside the context of a
+# stable release (indicated by `_REL_SUFFIX = ''`). Outside the context of a
 # release branch, the current version is by default assumed to be a
 # 'development' version, labeled 'dev'.
-_VERSION_SUFFIX = 'dev'
+_DEV_SUFFIX = 'dev'
+_REL_SUFFIX = 'rc0'
 
-# Example, '0.4.0-dev'
+# Example, '0.4.0.rc0'
 __version__ = '.'.join([
     _MAJOR_VERSION,
     _MINOR_VERSION,
     _PATCH_VERSION,
 ])
-if _VERSION_SUFFIX:
-  __version__ = '{}-{}'.format(__version__, _VERSION_SUFFIX)
+__dev_version__ = '{}.{}'.format(__version__, _DEV_SUFFIX)
+__rel_version__ = '{}.{}'.format(__version__, _REL_SUFFIX)
