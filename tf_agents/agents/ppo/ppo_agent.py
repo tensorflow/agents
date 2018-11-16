@@ -56,11 +56,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
-from tf_agents.agents.ppo import networks
 from tf_agents.agents.ppo import ppo_policy
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.environments import trajectory
@@ -87,14 +85,10 @@ def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
 class PPOAgent(tf_agent.Base):
   """A PPO Agent."""
 
-  ACTOR_NET_SCOPE = 'actor_net'
-  VALUE_NET_SCOPE = 'value_net'
-
   def __init__(self,
                time_step_spec,
                action_spec,
                optimizer=None,
-               policy_state_spec=(),
                actor_net=None,
                value_net=None,
                importance_ratio_clipping=0.0,
@@ -126,9 +120,6 @@ class PPOAgent(tf_agent.Base):
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
       optimizer: Optimizer to use for the agent.
-      policy_state_spec: A TensorSpec representing the hidden state shape for
-        actor and value networks. (assumes that actor and value networks have
-        the same hidden state)
       actor_net: A function actor_net(observations, action_spec) that returns
         tensor of action distribution params for each observation. Takes nested
         observation and returns nested action.
@@ -176,7 +167,6 @@ class PPOAgent(tf_agent.Base):
       summarize_grads_and_vars: If true, gradient summaries will be written.
     """
     super(PPOAgent, self).__init__(time_step_spec, action_spec)
-    self._policy_state_spec = policy_state_spec
     self._importance_ratio_clipping = importance_ratio_clipping
     self._lambda = lambda_value
     self._discount_factor = discount_factor
@@ -217,21 +207,13 @@ class PPOAgent(tf_agent.Base):
 
     self._optimizer = optimizer
 
-    if actor_net is None:
-      actor_net = functools.partial(
-          networks.actor_network, time_step_spec=self.time_step_spec())
-    if value_net is None:
-      value_net = functools.partial(
-          networks.value_network,
-          observation_spec=self.time_step_spec().observation)
+    self._actor_net = actor_net
+    self._value_net = value_net
 
-    self._actor_net = tf.make_template(
-        self.ACTOR_NET_SCOPE,
-        actor_net,
-        create_scope_now_=True)
-    self._value_net = tf.make_template(
-        self.VALUE_NET_SCOPE, value_net, create_scope_now_=True)
-
+    # TODO(oars): Fix uses of policy_state, right now code assumes ppo_policy
+    # only returns 1 state, and that actor and value networks have the same
+    # state.
+    self._policy_state_spec = self._actor_net.state_spec
     self._policy = self.collect_policy()
     self._action_distribution_class_spec = (
         ppo_utils.get_distribution_class_spec(self._policy,
@@ -499,8 +481,8 @@ class PPOAgent(tf_agent.Base):
         self._optimizer,
         global_step=train_step,
         transform_grads_fn=transform_grads_fn,
-        variables_to_train=(self._actor_net.trainable_variables +
-                            self._value_net.trainable_variables))
+        variables_to_train=(self._actor_net.trainable_weights +
+                            self._value_net.trainable_weights))
 
     return train_op, [policy_gradient_loss, value_estimation_loss,
                       l2_regularization_loss, entropy_regularization_loss,
@@ -731,8 +713,8 @@ class PPOAgent(tf_agent.Base):
 
     if self._summarize_grads_and_vars:
       with tf.name_scope('Variables/'):
-        all_vars = (self._actor_net.trainable_variables +
-                    self._value_net.trainable_variables)
+        all_vars = (self._actor_net.trainable_weights +
+                    self._value_net.trainable_weights)
         for var in all_vars:
           tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
 
@@ -743,15 +725,15 @@ class PPOAgent(tf_agent.Base):
       with tf.name_scope('l2_regularization'):
         # Regularize policy weights.
         policy_vars_to_l2_regularize = [v for v in
-                                        self._actor_net.trainable_variables
-                                        if 'weights' in v.name]
+                                        self._actor_net.trainable_weights
+                                        if 'kernel' in v.name]
         policy_l2_losses = [tf.reduce_sum(tf.square(v)) * self._policy_l2_reg
                             for v in policy_vars_to_l2_regularize]
 
         # Regularize value function weights.
         vf_vars_to_l2_regularize = [v for v in
-                                    self._value_net.trainable_variables
-                                    if 'weights' in v.name]
+                                    self._value_net.trainable_weights
+                                    if 'kernel' in v.name]
         vf_l2_losses = [tf.reduce_sum(tf.square(v)) *
                         self._value_function_l2_reg
                         for v in vf_vars_to_l2_regularize]

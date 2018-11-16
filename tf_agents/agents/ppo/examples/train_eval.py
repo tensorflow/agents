@@ -29,16 +29,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import os
 import time
 from absl import flags
 
 import tensorflow as tf
 
-from tf_agents.agents.ppo import networks
 from tf_agents.agents.ppo import ppo_agent
-from tf_agents.agents.ppo import rnn_networks
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import suite_mujoco
@@ -48,11 +45,15 @@ from tf_agents.metrics import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.metrics.py_metrics import AverageEpisodeLengthMetric
 from tf_agents.metrics.py_metrics import AverageReturnMetric
+from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import actor_distribution_rnn_network
+from tf_agents.networks import value_network
+from tf_agents.networks import value_rnn_network
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import batched_replay_buffer
 from tf_agents.utils import common as common_utils
-import gin
 
+import gin
 
 nest = tf.contrib.framework.nest
 
@@ -68,10 +69,11 @@ flags.DEFINE_integer('num_environment_steps', 10000000,
                      'Number of environment steps to run before finishing.')
 flags.DEFINE_integer('num_epochs', 25,
                      'Number of epochs for computing policy updates.')
-flags.DEFINE_integer('collect_episodes_per_iteration', 30,
-                     'The number of episodes to take in the environment before '
-                     'each update. This is the total across all parallel '
-                     'environments.')
+flags.DEFINE_integer(
+    'collect_episodes_per_iteration', 30,
+    'The number of episodes to take in the environment before '
+    'each update. This is the total across all parallel '
+    'environments.')
 flags.DEFINE_integer('num_eval_episodes', 30,
                      'The number of episodes to run eval on.')
 flags.DEFINE_boolean('use_rnns', False,
@@ -146,33 +148,30 @@ def train_eval(
     tf_env = tf_py_environment.TFPyEnvironment(
         parallel_py_environment.ParallelPyEnvironment(
             [lambda: env_load_fn(env_name)] * num_parallel_environments))
-    time_step_spec = tf_env.time_step_spec()
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
     if use_rnns:
-      # TODO(kbanoop): Handle distributions without gin.
-      actor_net = functools.partial(
-          rnn_networks.actor_network, fc_layers=actor_fc_layers,
-          time_step_spec=time_step_spec)
-      value_net = functools.partial(
-          rnn_networks.value_network, fc_layers=value_fc_layers,
-          observation_spec=time_step_spec.observation)
-      policy_state_spec = rnn_networks.get_state_spec()
+      actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+          tf_env.observation_spec(),
+          tf_env.action_spec(),
+          input_fc_layer_params=actor_fc_layers,
+          output_fc_layer_params=None)
+      value_net = value_rnn_network.ValueRnnNetwork(
+          tf_env.observation_spec(),
+          input_fc_layer_params=value_fc_layers,
+          output_fc_layer_params=None)
     else:
-      # TODO(kbanoop): Handle distributions without gin.
-      actor_net = functools.partial(
-          networks.actor_network, fc_layers=actor_fc_layers,
-          time_step_spec=time_step_spec)
-      value_net = functools.partial(
-          networks.value_network, fc_layers=value_fc_layers,
-          observation_spec=time_step_spec.observation)
-      policy_state_spec = ()
+      actor_net = actor_distribution_network.ActorDistributionNetwork(
+          tf_env.observation_spec(),
+          tf_env.action_spec(),
+          fc_layer_params=actor_fc_layers)
+      value_net = value_network.ValueNetwork(
+          tf_env.observation_spec(), fc_layer_params=value_fc_layers)
 
     tf_agent = ppo_agent.PPOAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         optimizer,
-        policy_state_spec=policy_state_spec,
         actor_net=actor_net,
         value_net=value_net,
         num_epochs=num_epochs,
@@ -218,8 +217,8 @@ def train_eval(
 
     trajectories, _ = replay_buffer.gather_all()
 
-    train_op = tf_agent.train(experience=trajectories,
-                              train_step_counter=global_step)
+    train_op = tf_agent.train(
+        experience=trajectories, train_step_counter=global_step)
 
     with tf.control_dependencies([train_op]):
       clear_replay_op = replay_buffer.clear()
@@ -293,8 +292,8 @@ def train_eval(
         global_step_val = sess.run(global_step)
         if global_step_val % log_interval == 0:
           tf.logging.info('step = %d, loss = %f', global_step_val, total_loss)
-          steps_per_sec = ((global_step_val - timed_at_step) /
-                           (collect_time + train_time))
+          steps_per_sec = (
+              (global_step_val - timed_at_step) / (collect_time + train_time))
           tf.logging.info('%.3f steps/sec' % steps_per_sec)
           sess.run(
               steps_per_second_summary,
@@ -329,7 +328,8 @@ def train_eval(
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
   train_eval(
-      FLAGS.root_dir, tf_master=FLAGS.master,
+      FLAGS.root_dir,
+      tf_master=FLAGS.master,
       env_name=FLAGS.env_name,
       replay_buffer_capacity=FLAGS.replay_buffer_capacity,
       num_environment_steps=FLAGS.num_environment_steps,

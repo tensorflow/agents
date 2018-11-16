@@ -22,7 +22,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -146,10 +145,9 @@ class ActorPolicy(tf_policy.Base):
       actor_network: A Template from tf.make_template or a function. When
         passing a Template the variables will be reused, passing a function it
         will create a new template with a new set variables.  Network should
-        return one of the following:
-          1. a nested tuple of tfp.distributions objects matching action_spec,
-          or
-          2. a nested tuple of tf.Tensors representing actions.
+        return one of the following: 1. a nested tuple of tf.distributions
+          objects matching action_spec, or 2. a nested tuple of tf.Tensors
+          representing actions.
       info_spec: A nest of TensorSpec representing the policy info.
       template_name: Name to use for the new template. Ignored if actor_network
         is already a template.
@@ -157,6 +155,7 @@ class ActorPolicy(tf_policy.Base):
       clip: Whether to clip actions to spec before returning them.  Default
         True. Most policy-based algorithms (PCL, PPO, REINFORCE) use unclipped
         continuous actions for training.
+
     Raises:
       ValueError: if actor_network is not of type callable or
         tensorflow.python.ops.template.Template.
@@ -194,18 +193,16 @@ class ActorPolicy(tf_policy.Base):
   def actor_variables(self):
     return self._actor_network.global_variables[:]
 
-  def _actor_variables(self):
+  def _variables(self):
     var_list = self._actor_network.global_variables[:]
     if self._observation_normalizer:
       var_list += self._observation_normalizer.variables
     return var_list
 
-  def _variables(self):
-    return self._actor_variables()
-
   def _action(self, time_step, policy_state, seed):
     distribution_step = self.distribution(time_step, policy_state)
     seed_stream = tfd.SeedStream(seed=seed, salt='actor_policy')
+
     def _sample(dist, action_spec):
       action = dist.sample(seed=seed_stream())
       if self._clip:
@@ -233,6 +230,7 @@ class ActorPolicy(tf_policy.Base):
 
     # Actor network outputs nested structure of distributions or actions.
     actions_or_distributions = self._apply_actor_network(time_step)
+
     def _to_distribution(action_or_distribution):
       if isinstance(action_or_distribution, tf.Tensor):
         # This is an action tensor, so wrap it in a deterministic distribution.
