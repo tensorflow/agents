@@ -28,7 +28,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import os
 import time
 
@@ -36,8 +35,9 @@ from absl import flags
 
 import tensorflow as tf
 
+from tf_agents.agents.ddpg import actor_network
+from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.ddpg import ddpg_agent
-from tf_agents.agents.ddpg import networks
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
@@ -125,19 +125,25 @@ def train_eval(
     tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
     eval_py_env = env_load_fn(env_name)
 
-    actor_net = functools.partial(
-        networks.actor_network, fc_layers=actor_fc_layers)
-    critic_net = functools.partial(
-        networks.critic_network,
-        observation_fc_layers=critic_obs_fc_layers,
-        action_fc_layers=critic_action_fc_layers,
-        joint_fc_layers=critic_joint_fc_layers,)
+    actor_net = actor_network.ActorNetwork(
+        tf_env.time_step_spec().observation,
+        tf_env.action_spec(),
+        fc_layer_params=actor_fc_layers,
+    )
+
+    critic_net = critic_network.CriticNetwork(
+        tf_env.time_step_spec().observation,
+        tf_env.action_spec(),
+        observation_fc_layer_params=critic_obs_fc_layers,
+        action_fc_layer_params=critic_action_fc_layers,
+        joint_fc_layer_params=critic_joint_fc_layers,
+    )
 
     tf_agent = ddpg_agent.DdpgAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
-        actor_net=actor_net,
-        critic_net=critic_net,
+        actor_network=actor_net,
+        critic_network=critic_net,
         actor_optimizer=tf.train.AdamOptimizer(
             learning_rate=actor_learning_rate),
         critic_optimizer=tf.train.AdamOptimizer(

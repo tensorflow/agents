@@ -18,6 +18,8 @@
 import tensorflow as tf
 from tf_agents.networks import network
 from tf_agents.networks import utils
+from tf_agents.utils import common as common_utils
+
 
 import gin
 
@@ -88,21 +90,12 @@ class ActorNetwork(network.Network):
                 minval=-0.003, maxval=0.003),
             name='action'))
 
-  def call(self, observations, step_type=None, network_state=None):
+  def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
     observations = nest.flatten(observations)
     output = tf.to_float(observations[0])
     for layer in self._mlp_layers:
       output = layer(output)
 
-    actions = tf.reshape(output,
-                         [-1] + self._single_action_spec.shape.as_list())
-    action_means = (self._single_action_spec.maximum +
-                    self._single_action_spec.minimum) / 2.0
-    action_magnitudes = (self._single_action_spec.maximum -
-                         self._single_action_spec.minimum) / 2.0
-
-    actions = action_means + action_magnitudes * actions
-    actions = tf.cast(actions, self._single_action_spec.dtype)
-
+    actions = common_utils.scale_to_spec(output, self._single_action_spec)
     return nest.pack_sequence_as(self._action_spec, [actions]), network_state

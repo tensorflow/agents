@@ -108,7 +108,7 @@ class CriticNetwork(network.Network):
                 minval=-0.003, maxval=0.003),
             name='value'))
 
-  def call(self, observations, actions, step_type=None, network_state=None):
+  def call(self, observations, actions, step_type=(), network_state=()):
     del step_type  # unused.
     observations = tf.to_float(nest.flatten(observations)[0])
     for layer in self._observation_layers:
