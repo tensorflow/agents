@@ -13,13 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A DQN Agent.
+"""A DQN Agents.
 
 Implements the DQN algorithm from
 
 "Human level control through deep reinforcement learning"
   Mnih et al., 2015
   https://deepmind.com/research/dqn/
+
+Implements the Double-DQN algorithm from
+
+"Deep Reinforcement Learning with Double Q-learning"
+ Hasselt et al., 2015
+ https://arxiv.org/abs/1509.06461
+
 """
 
 from __future__ import absolute_import
@@ -63,6 +70,12 @@ def compute_td_targets(next_q_values, rewards, discounts):
 @gin.configurable
 class DqnAgent(tf_agent.BaseV2):
   """A DQN Agent.
+
+  Implements the DQN algorithm from
+
+  "Human level control through deep reinforcement learning"
+    Mnih et al., 2015
+    https://deepmind.com/research/dqn/
 
   TODO(kbanoop): Provide a simple g3doc explaining DQN and these parameters.
   """
@@ -327,7 +340,15 @@ class DqnAgent(tf_agent.BaseV2):
 
 
 class DdqnAgent(DqnAgent):
-  """A Double DQN Agent."""
+  """A Double DQN Agent.
+
+  Implements the Double-DQN algorithm from
+
+  "Deep Reinforcement Learning with Double Q-learning"
+   Hasselt et al., 2015
+   https://arxiv.org/abs/1509.06461
+
+  """
 
   def _compute_next_q_values(self, next_time_steps):
     """Compute the q value of the next state for TD error computation.
