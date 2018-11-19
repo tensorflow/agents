@@ -2,8 +2,8 @@
 
 TF-Agents is a library for Reinforcement Learning in TensorFlow.
 
-*NOTE:* Current TF-Agents release is under active development and
-interfaces may change at any time. Feel free to provide feedback and guidance.
+*NOTE:* TF-Agents is under active development and interfaces may change at
+any time. Feel free to provide feedback and guidance.
 
 ## Agents
 
