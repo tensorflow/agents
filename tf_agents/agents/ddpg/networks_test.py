@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """Tests for tf_agents.agents.ddpg.networks."""
 
 import numpy as np
@@ -24,6 +23,8 @@ from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
 
 from tensorflow.python.framework import test_util  # TF internal
+
+# TODO(kbanoop): Delete after Keras networks have been completely integrated.
 
 
 class CriticTest(tf.test.TestCase):

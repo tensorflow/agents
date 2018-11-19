@@ -22,6 +22,8 @@ import gin
 nest = tf.contrib.framework.nest
 slim = tf.contrib.slim
 
+# TODO(kbanoop): Delete after Keras networks have been completely integrated.
+
 
 @gin.configurable
 def critic_network(time_steps,
