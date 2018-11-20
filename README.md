@@ -1,35 +1,54 @@
-# TF-Agents
+# TF-Agents: A library for Reinforcement Learning in TensorFlow
 
-TF-Agents is a library for Reinforcement Learning in TensorFlow.
+*NOTE:* Current TF-Agents pre-release is under active development and
+interfaces may change at any time. Feel free to provide feedback and comments.
 
-*NOTE:* TF-Agents is under active development and interfaces may change at
-any time. Feel free to provide feedback and guidance.
+The documentation, examples and tutorials will grow over the next few weeks.
 
+## Table of contents
+
+<a href="#Agents">Agents</a><br>
+<a href="#Tutorials">Tutorials</a><br>
+<a href='#Examples'>Examples</a><br>
+<a href="#Installation">Installation</a><br>
+<a href='#Contributing'>Contributing</a><br>
+<a href='#Principles'>Principles</a><br>
+<a href='#References'>References</a><br>
+<a href='#Disclaimer'>Disclaimer</a><br>
+
+
+<a id='Agents'></a>
 ## Agents
 
-In TF-Agents we implement learning methods under the name `Agent`. These
-encompass two main responsibilities, how the model should be updated given
-experience, and how a policy should be generated from the model.
 
-The following agents are available under TF-Agents:
+In TF-Agents, the core elements of RL algorithms are implemented as `Agents`.
+An agent encompasses two main responsibilities: defining a Policy to interact
+with the Environment, and how to learn/train that Policy from collected
+experience.
+
+Currently the following algorithms are available under TF-Agents:
 
 * DQN: __Human level control through deep reinforcement learning__ Mnih et al., 2015 https://deepmind.com/research/dqn/
+* DDQN: __Deep Reinforcement Learning with Double Q-learning__ Hasselt et al., 2015 https://arxiv.org/abs/1509.06461
 * DDPG: __Continuous control with deep reinforcement learning__ Lilicrap et al.  https://arxiv.org/abs/1509.02971
 * TD3: __Addressing Function Approximation Error in Actor-Critic Methods__ Fujimoto et al. https://arxiv.org/abs/1802.09477.
 * REINFORCE: __Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning__ Williams http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 * PPO: __Proximal Policy Optimization Algorithms__ Schulman et al.  http://arxiv.org/abs/1707.06347
 
+<a id='Tutorials'></a>
 ## Tutorials
 
-See [`tf_agents/colabs/`](https://github.com/tensorflow/tf_agents/tree/master/tf_agents/colabs/)
+See [`tf_agents/colabs/`](https://github.com/tensorflow/agents/tree/master/colabs/)
 for tutorials on the major components provided.
 
+<a id='Examples'></a>
 ## Examples
 End-to-end examples training agents can be found under each agent directory.
 e.g.:
 
-* DQN: [`tf_agents/agents/dqn/examples/train_eval_gym.py`](https://github.com/tensorflow/tf_agents/tree/master/tf_agents/agents/dqn/examples/train_eval_gym.py)
+* DQN: [`tf_agents/agents/dqn/examples/train_eval_gym.py`](https://github.com/tensorflow/agents/tree/master/agents/dqn/examples/train_eval_gym.py)
 
+<a id='Installation'></a>
 ## Installation
 
 ### Stable Builds
@@ -38,7 +57,7 @@ To install the latest version, run the following:
 
 ```shell
 # Installing with the `--upgrade` flag ensures you'll get the latest version.
-pip install --user --upgrade tfagents  # depends on TensorFlow (CPU-only)
+pip install --user --upgrade tf-agents  # depends on TensorFlow
 ```
 
 TF-Agents depends on a recent stable release of
@@ -57,10 +76,18 @@ installation guide](https://www.tensorflow.org/install).
 ### Nightly Builds
 
 There are also nightly builds of TF-Agents under the pip package
-`tfagents-nightly`, which requires you install on one of `tf-nightly` and
+`tf-agents-nightly`, which requires you install on one of `tf-nightly` and
 `tf-nightly-gpu`. Nightly builds include newer features, but may be less stable
 than the versioned releases.
 
+To install the nightly build version, run the following:
+
+```shell
+# Installing with the `--upgrade` flag ensures you'll get the latest version.
+pip install --user --upgrade tf-agents-nightly  # depends on TensorFlow
+```
+
+<a id='Contributing'></a>
 ## Contributing
 
 We're eager to collaborate with you! See [`CONTRIBUTING.md`](CONTRIBUTING.md)
@@ -68,15 +95,30 @@ for a guide on how to contribute. This project adheres to TensorFlow's
 [code of conduct](CODE_OF_CONDUCT.md). By participating, you are expected to
 uphold this code.
 
+<a id='Principles'></a>
 ## Principles
 
-This project adheres to Google's AI [principles](PRINCIPLES.md).
-By using or contributing, you are expected to adhere to these principles.
+This project adheres to [Google's AI principles](PRINCIPLES.md).
+By participating, using or contributing to this project you are expected to
+adhere to these principles.
 
+<a id='References'></a>
 ## References
 
-* # TODO(oars): How do we want to be referenced?
+If you use this code please cite it as:
 
+```
+@misc{TFAgents,
+  title = {{TF-Agents}: A library for Reinforcement Learning in TensorFlow},
+  author = "{TF-Agents Team}",
+  howpublished = {\url{https://github.com/tensorflow/agents}},
+  url = "https://github.com/tensorflow/agents",
+  year = 2018,
+  note = "[Online; accessed 20-November-2018]"
+}
+```
+
+<a id='Disclaimer'></a>
 ## Disclaimer
 
 This is not an official Google product.
