@@ -31,7 +31,7 @@ ExampleBrowser -- --start_demo_name="PhysicsServer"
 
 from tf_agents.environments import suite_gym
 
-import gin
+import gin.tf
 # pylint: disable=unused-import
 import pybullet_envs
 # pylint: enable=unused-import

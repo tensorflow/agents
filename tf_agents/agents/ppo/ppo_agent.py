@@ -69,7 +69,7 @@ from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
 import tf_agents.utils.common as common_utils
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

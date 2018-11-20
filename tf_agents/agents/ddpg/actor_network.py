@@ -21,7 +21,7 @@ from tf_agents.networks import utils
 from tf_agents.utils import common as common_utils
 
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

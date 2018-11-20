@@ -68,7 +68,7 @@ from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common_utils
 from tf_agents.utils import timer
-import gin
+import gin.tf
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

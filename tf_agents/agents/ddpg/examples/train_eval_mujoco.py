@@ -47,7 +47,7 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import batched_replay_buffer
 from tf_agents.utils import common as common_utils
-import gin
+import gin.tf
 
 
 nest = tf.contrib.framework.nest

@@ -45,7 +45,7 @@ from tf_agents.utils import common as common_utils
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

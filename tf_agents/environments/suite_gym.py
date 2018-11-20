@@ -26,7 +26,7 @@ import gym
 
 from tf_agents.environments import gym_wrapper
 from tf_agents.environments import wrappers
-import gin
+import gin.tf
 
 
 @gin.configurable

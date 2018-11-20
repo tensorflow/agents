@@ -40,7 +40,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 from tf_agents.utils import rnn_utils
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

@@ -19,7 +19,7 @@ import tensorflow as tf
 from tf_agents.networks import network
 from tf_agents.networks import utils
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

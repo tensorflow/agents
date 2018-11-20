@@ -36,7 +36,7 @@ from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.policies import policy_step
 import tf_agents.utils.common as common_utils
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

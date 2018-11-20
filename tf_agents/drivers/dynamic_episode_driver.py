@@ -23,7 +23,7 @@ import tensorflow as tf
 from tf_agents.drivers import driver
 from tf_agents.environments import trajectory
 from tf_agents.utils import nest_utils
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

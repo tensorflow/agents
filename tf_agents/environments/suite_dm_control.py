@@ -27,7 +27,7 @@ else:
   from dm_control import suite  # pylint: disable=g-import-not-at-top
 
 from tf_agents.environments import dm_control_wrapper
-import gin
+import gin.tf
 
 
 def is_available():

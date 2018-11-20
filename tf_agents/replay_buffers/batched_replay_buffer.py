@@ -35,7 +35,7 @@ from tf_agents.replay_buffers import table
 from tf_agents.specs import tensor_spec
 
 from tensorflow.python.data.util import nest as data_nest  # TF internal
-import gin
+import gin.tf
 
 
 nest = tf.contrib.framework.nest

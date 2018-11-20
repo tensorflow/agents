@@ -24,7 +24,7 @@ import tensorflow as tf
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

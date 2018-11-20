@@ -30,7 +30,7 @@ from tf_agents.policies import actor_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

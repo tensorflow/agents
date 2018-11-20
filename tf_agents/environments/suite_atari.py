@@ -25,7 +25,7 @@ import numpy as np
 
 from tf_agents.environments import atari_wrappers
 from tf_agents.environments import suite_gym
-import gin
+import gin.tf
 
 
 # Typical Atari 2600 Gym environment with some basic preprocessing.

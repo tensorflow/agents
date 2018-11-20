@@ -26,7 +26,7 @@ from tf_agents.environments import suite_pybullet
 from tf_agents.environments import wrappers
 from tf_agents.utils import test_utils
 
-import gin
+import gin.tf
 
 
 class SuitePybulletTest(absltest.TestCase):

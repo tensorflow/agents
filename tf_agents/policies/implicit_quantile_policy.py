@@ -28,7 +28,7 @@ import tensorflow_probability as tfp
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 
-import gin
+import gin.tf
 from tensorflow.python.ops import template  # TF internal
 
 nest = tf.contrib.framework.nest

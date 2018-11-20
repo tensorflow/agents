@@ -17,7 +17,7 @@
 
 import tensorflow as tf
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 slim = tf.contrib.slim

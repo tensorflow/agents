@@ -25,7 +25,7 @@ from tensorflow.keras import layers
 from tf_agents.agents.dqn import q_network
 from tf_agents.networks import lstm_encoding_network
 
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

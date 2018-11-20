@@ -29,7 +29,7 @@ import tensorflow as tf
 from tf_agents.environments import py_environment
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 

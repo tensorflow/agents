@@ -29,7 +29,7 @@ from multiprocessing import dummy as mp_threads
 import numpy as np
 import tensorflow as tf
 
-import gin
+import gin.tf
 from tf_agents.environments import py_environment
 
 nest = tf.contrib.framework.nest

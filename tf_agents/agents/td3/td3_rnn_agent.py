@@ -34,7 +34,7 @@ from tf_agents.agents.td3 import td3_agent
 from tf_agents.environments import time_step as ts
 from tf_agents.policies import actor_rnn_policy
 from tf_agents.policies import ou_noise_policy
-import gin
+import gin.tf
 
 nest = tf.contrib.framework.nest
 
