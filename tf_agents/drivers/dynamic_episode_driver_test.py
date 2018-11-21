@@ -169,7 +169,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
     for _ in range(3):
       self.evaluate(run_driver)
 
-    trajectories, _ = self.evaluate(rb_gather_all)
+    trajectories = self.evaluate(rb_gather_all)
 
     self.assertAllEqual(trajectories.step_type, [[0, 1, 2, 0, 1, 2, 0, 1, 2]])
     self.assertAllEqual(trajectories.action, [[1, 2, 1, 1, 2, 1, 1, 2, 1]])
@@ -198,7 +198,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
 
     self.evaluate(tf.global_variables_initializer())
     self.evaluate(run_driver)
-    trajectories, _ = self.evaluate(rb_gather_all)
+    trajectories = self.evaluate(rb_gather_all)
 
     self.assertAllEqual(trajectories.step_type, [[0, 1, 2, 0, 1, 2, 0, 1, 2]])
     self.assertAllEqual(trajectories.action, [[1, 2, 1, 1, 2, 1, 1, 2, 1]])

@@ -143,7 +143,7 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=collect_episodes_per_iteration).run()
 
-    experience, _ = replay_buffer.gather_all()
+    experience = replay_buffer.gather_all()
     train_op = tf_agent.train(experience, train_step_counter=global_step)
     clear_rb_op = replay_buffer.clear()
 

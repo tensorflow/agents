@@ -231,8 +231,9 @@ class Td3Agent(tf_agent.Base):
     if critic_optimizer is None:
       raise ValueError('`critic_optimizer` cannot be None.')
 
-    batch, _, _ = replay_buffer.get_next(
-        sample_batch_size=self._train_batch_size, num_steps=2)
+    batch, _ = replay_buffer.get_next(sample_batch_size=self._train_batch_size,
+                                      num_steps=2,
+                                      time_stacked=False)
     (time_steps, policy_steps, next_time_steps) = (
         trajectory.to_transition(*batch))
     train_op = self.train_from_experience(

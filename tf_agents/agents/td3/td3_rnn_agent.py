@@ -187,7 +187,7 @@ class Td3RnnAgent(td3_agent.Td3Agent):
     if critic_optimizer is None:
       raise ValueError('`critic_optimizer` cannot be None.')
 
-    batch, _, _ = replay_buffer.get_next(
+    batch, _ = replay_buffer.get_next(
         sample_batch_size=self._train_batch_size,
         num_steps=self._train_sequence_length + 1,
         time_stacked=True)

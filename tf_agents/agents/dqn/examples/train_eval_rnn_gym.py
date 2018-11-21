@@ -179,11 +179,10 @@ def train_eval(
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=batch_size,
-        num_steps=train_sequence_length + 1,
-        time_stacked=True).prefetch(3)
+        num_steps=train_sequence_length + 1).prefetch(3)
 
     iterator = dataset.make_initializable_iterator()
-    experience, unused_ids, unused_probs = iterator.get_next()
+    experience, _ = iterator.get_next()
     loss_info = tf_agent.train(
         experience=experience, train_step_counter=global_step)
 

@@ -194,8 +194,7 @@ def train_eval(
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=batch_size,
-        num_steps=2,
-        time_stacked=True).prefetch(3)
+        num_steps=2).prefetch(3)
     iterator = tfe.Iterator(dataset)
 
     for _ in range(num_iterations):
@@ -206,7 +205,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _, _ = iterator.get_next()
+        experience, _ = iterator.get_next()
         train_loss = tf_agent.train(experience, train_step_counter=global_step)
       time_acc += time.time() - start_time
 

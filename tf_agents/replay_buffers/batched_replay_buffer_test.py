@@ -78,7 +78,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         scope='rb{}'.format(batch_size))
 
     values, add_op = _get_add_op(spec, replay_buffer, batch_size)
-    sample, _, _ = replay_buffer.get_next()
+    sample, _ = replay_buffer.get_next()
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
       sess.run(add_op)
@@ -91,7 +91,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     replay_buffer = batched_replay_buffer.BatchedReplayBuffer(
         spec, batch_size=1, max_length=10)
 
-    sample, _, _ = replay_buffer.get_next()
+    sample, _ = replay_buffer.get_next()
     self.evaluate(tf.global_variables_initializer())
     with self.assertRaisesRegexp(
         tf.errors.InvalidArgumentError, 'BatchedReplayBuffer is empty. Make '
@@ -105,7 +105,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         spec, batch_size=batch_size, max_length=10)
 
     values, add_op = _get_add_op(spec, replay_buffer, batch_size)
-    sample, _, _ = replay_buffer.get_next(sample_batch_size=3)
+    sample, _ = replay_buffer.get_next(sample_batch_size=3)
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
       sess.run(add_op)
@@ -121,10 +121,10 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         spec, batch_size=batch_size, max_length=10)
 
     values, add_op = _get_add_op(spec, replay_buffer, batch_size)
-    sample, _, _ = replay_buffer.get_next(sample_batch_size=3)
+    sample, _ = replay_buffer.get_next(sample_batch_size=3)
     clear_op = replay_buffer.clear()
-    items_op, _ = replay_buffer.gather_all()
-    last_id_op = replay_buffer.get_last_id()
+    items_op = replay_buffer.gather_all()
+    last_id_op = replay_buffer._get_last_id()
 
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
@@ -162,11 +162,11 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     values_batched = nest.map_structure(lambda t: tf.stack([t] * batch_size),
                                         values)
 
-    last_id_op = replay_buffer.get_last_id()
+    last_id_op = replay_buffer._get_last_id()
     add_op = replay_buffer.add_batch(values_batched)
-    sample, _, _ = replay_buffer.get_next(sample_batch_size=3)
-    clear_op = replay_buffer.clear(clear_all_variables=True)
-    items_op, _ = replay_buffer.gather_all()
+    sample, _ = replay_buffer.get_next(sample_batch_size=3)
+    clear_op = replay_buffer._clear(clear_all_variables=True)
+    items_op = replay_buffer.gather_all()
     table_vars = [
         var for var in replay_buffer.variables() if 'Table' in var.name
     ]
@@ -212,7 +212,8 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     action = tf.stack([tf.Variable(0).count_up_to(10)] * batch_size)
 
     add_op = replay_buffer.add_batch(action)
-    (step, next_step), _, _ = replay_buffer.get_next(num_steps=2)
+    (step, next_step), _ = replay_buffer.get_next(num_steps=2,
+                                                  time_stacked=False)
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(10):
@@ -233,7 +234,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     actions = tf.stack([tf.Variable(0).count_up_to(10)] * batch_size)
 
     add_op = replay_buffer.add_batch(actions)
-    steps, _, _ = replay_buffer.get_next(num_steps=2, time_stacked=True)
+    steps, _ = replay_buffer.get_next(num_steps=2)
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(10):
@@ -254,7 +255,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     actions = tf.stack([tf.Variable(0).count_up_to(10)] * batch_size)
 
     add_op = replay_buffer.add_batch(actions)
-    steps, _, _ = replay_buffer.get_next(3, num_steps=2, time_stacked=True)
+    steps, _ = replay_buffer._get_next(3, num_steps=2, time_stacked=True)
     self.assertEqual(steps.shape, [3, 2])
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
@@ -279,7 +280,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     actions = tf.stack(action_variables)
 
     add_op = replay_buffer.add_batch(actions)
-    items, _ = replay_buffer.gather_all()
+    items = replay_buffer.gather_all()
     expected = [list(range(i, i + 10)) for i in range(0, batch_size)]
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
@@ -304,7 +305,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     ])
 
     add_op = replay_buffer.add_batch(actions)
-    items, _ = replay_buffer.gather_all()
+    items = replay_buffer.gather_all()
     expected = [
         list(range(5 + x * 100, 15 + x * 100)) for x in range(batch_size)
     ]
@@ -324,7 +325,7 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     replay_buffer = batched_replay_buffer.BatchedReplayBuffer(
         spec, batch_size=batch_size)
 
-    items, _ = replay_buffer.gather_all()
+    items = replay_buffer.gather_all()
     expected = [[]] * batch_size
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
@@ -344,8 +345,9 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     add_op = replay_buffer.add_batch(actions)
 
     sample_batch_size = 2
-    _, _, probabilities = replay_buffer.get_next(
+    _, buffer_info = replay_buffer.get_next(
         sample_batch_size=sample_batch_size)
+    probabilities = buffer_info.probabilities
     with self.test_session() as sess:
       tf.global_variables_initializer().run()
       num_adds = 3
@@ -370,7 +372,8 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     actions = tf.stack([tf.Variable(0).count_up_to(9)] * buffer_batch_size)
     add_op = replay_buffer.add_batch(actions)
 
-    _, _, probabilities = replay_buffer.get_next()
+    _, buffer_info = replay_buffer.get_next()
+    probabilities = buffer_info.probabilities
     with self.test_session() as sess:
       tf.global_variables_initializer().run()
       num_adds = 5
@@ -396,7 +399,8 @@ class BatchedReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     ds = replay_buffer.as_dataset()
     itr = ds.make_initializable_iterator()
-    _, _, probabilities = itr.get_next()
+    _, buffer_info = itr.get_next()
+    probabilities = buffer_info.probabilities
 
     with self.test_session() as sess:
       tf.global_variables_initializer().run()

@@ -215,7 +215,7 @@ def train_eval(
         num_episodes=collect_episodes_per_iteration).run(
             policy_state=policy_state)
 
-    trajectories, _ = replay_buffer.gather_all()
+    trajectories = replay_buffer.gather_all()
 
     train_op = tf_agent.train(
         experience=trajectories, train_step_counter=global_step)

@@ -171,11 +171,10 @@ def train_eval(
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=batch_size,
-        num_steps=2,
-        time_stacked=True).prefetch(3)
+        num_steps=2).prefetch(3)
 
     iterator = dataset.make_initializable_iterator()
-    trajectories, unused_ids, unused_probs = iterator.get_next()
+    trajectories, _ = iterator.get_next()
     train_op = tf_agent.train(
         experience=trajectories, train_step_counter=global_step)
 

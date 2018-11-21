@@ -168,7 +168,7 @@ def train_eval(
           step_state=step_state,
           policy_state=policy_state,
       )
-      experience, _ = replay_buffer.gather_all()
+      experience = replay_buffer.gather_all()
       total_loss = tf_agent.train(experience, train_step_counter=global_step)
       replay_buffer.clear()
       time_acc += time.time() - start_time
