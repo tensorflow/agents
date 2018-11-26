@@ -80,44 +80,26 @@ class TFPyEnvironment(tf_environment.Base):
       environment = batched_py_environment.BatchedPyEnvironment([environment])
     self._env = environment
 
-    # Convert observation_spec to TensorSpec.
-    self._observation_spec = tensor_spec.from_spec(self._env.observation_spec())
-
-    # Convert action_spec to TensorSpec.
-    self._action_spec = tensor_spec.from_spec(self._env.action_spec())
-
-    # Create a TimeStep with the specs of each part.
-    self._time_step_spec = ts.time_step_spec(self._observation_spec)
+    observation_spec = tensor_spec.from_spec(self._env.observation_spec())
+    action_spec = tensor_spec.from_spec(self._env.action_spec())
+    time_step_spec = ts.time_step_spec(observation_spec)
+    batch_size = self._env.batch_size if self._env.batch_size else 1
+    super(TFPyEnvironment, self).__init__(time_step_spec,
+                                          action_spec,
+                                          batch_size)
 
     # Gather all the dtypes of the elements in time_step.
     self._time_step_dtypes = [
-        s.dtype for s in nest.flatten(self._time_step_spec)
+        s.dtype for s in nest.flatten(self.time_step_spec())
     ]
 
     self._time_step = None
     self._lock = threading.Lock()
 
-  def action_spec(self):
-    return self._action_spec
-
-  def time_step_spec(self):
-    return self._time_step_spec
-
-  def observation_spec(self):
-    return self._observation_spec
-
   @property
   def pyenv(self):
     """Returns the underlying Python environment."""
     return self._env
-
-  @property
-  def batched(self):
-    return True
-
-  @property
-  def batch_size(self):
-    return 1 if self._env.batch_size is None else self._env.batch_size
 
   def current_time_step(self, step_state=None):
     """Returns the current ts.TimeStep.
@@ -230,7 +212,7 @@ class TFPyEnvironment(tf_environment.Base):
     def _step(*flattened_actions):
       with _check_not_called_concurrently(self._lock):
         packed = nest.pack_sequence_as(
-            structure=self._action_spec, flat_sequence=flattened_actions)
+            structure=self.action_spec(), flat_sequence=flattened_actions)
         self._time_step = self._env.step(packed)
         return nest.flatten(self._time_step)
 
@@ -276,13 +258,13 @@ class TFPyEnvironment(tf_environment.Base):
     # Give each tensor a meaningful name and set the static shape.
     named_observations = []
     for obs, spec in zip(flat_observations,
-                         nest.flatten(self._observation_spec)):
+                         nest.flatten(self.observation_spec())):
       named_observation = tf.identity(obs, name=spec.name)
       if not tfe.executing_eagerly():
         named_observation.set_shape(batch_shape.concatenate(spec.shape))
       named_observations.append(named_observation)
 
-    observations = nest.pack_sequence_as(self._observation_spec,
+    observations = nest.pack_sequence_as(self.observation_spec(),
                                          named_observations)
 
     return ts.TimeStep(step_type, reward, discount, observations)

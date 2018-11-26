@@ -112,6 +112,22 @@ class Base(object):
     sess.run(episode)
   """
 
+  def __init__(self, time_step_spec=None, action_spec=None, batch_size=1):
+    """Meant to be called by subclass constructors.
+
+    Args:
+      time_step_spec: A `TimeStep` namedtuple containing `TensorSpec`s
+        defining the tensors returned by
+        `step()` (step_type, reward, discount, and observation).
+      action_spec: A nest of BoundedTensorSpec representing the actions of the
+        environment.
+      batch_size: The batch size expected for the actions and observations.
+    """
+
+    self._time_step_spec = time_step_spec
+    self._action_spec = action_spec
+    self._batch_size = batch_size
+
   @abc.abstractmethod
   def current_time_step(self, step_state=None):
     """Returns a `TimeStep` and a step_state.
@@ -207,17 +223,15 @@ class Base(object):
     """
     raise NotImplementedError('No rendering support.')
 
-  @abc.abstractmethod
   def time_step_spec(self):
     """Describes the `TimeStep` tensors returned by `step()`.
 
     Returns:
-      A `TimeStep` namedtuple with `TensorSpec` objects instead of Tensors,
-      which describe the shape, dtype and name of each tensor returned by
-      `step()`.
+      A `TimeStep` namedtuple containing `TensorSpec`s defining the tensors
+      returned by `step()` (step_type, reward, discount, and observation).
     """
+    return self._time_step_spec
 
-  @abc.abstractmethod
   def action_spec(self):
     """Describes the TensorSpecs of the Tensors expected by `step(action)`.
 
@@ -229,13 +243,13 @@ class Base(object):
       `TensorSpec` objects, which describe the shape and
       dtype of each Tensor expected by `step()`.
     """
+    return self._action_spec
 
   def observation_spec(self):
     """Defines the TensorSpec of observations provided by the environment.
 
     Returns:
-      Same structure as returned by `time_step_spec().observation` but with
-      TensorSpec objects.
+      Same structure as returned by `time_step_spec().observation`.
     """
     return self.time_step_spec().observation
 
@@ -245,4 +259,4 @@ class Base(object):
 
   @property
   def batch_size(self):
-    raise NotImplementedError('batch_size is not implemented')
+    return self._batch_size

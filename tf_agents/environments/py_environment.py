@@ -80,8 +80,8 @@ class Base(object):
     Returns:
       A `TimeStep` namedtuple containing:
         step_type: A `StepType` of `FIRST`.
-        reward: `None`, indicating the reward is undefined.
-        discount: `None`, indicating the discount is undefined.
+        reward: 0.0, indicating the reward.
+        discount: 1.0, indicating the discount.
         observation: A NumPy array, or a nested dict, list or tuple of arrays
           corresponding to `observation_spec()`.
     """

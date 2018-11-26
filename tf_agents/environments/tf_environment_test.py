@@ -47,6 +47,10 @@ class TFEnvironmentMock(tf_environment.Base):
     self._dtype = dtype
     self._scope = scope
     self._initial_state = tf.cast(initial_state, dtype=self._dtype)
+    observation_spec = specs.TensorSpec([1], self._dtype, 'observation')
+    action_spec = specs.BoundedTensorSpec([], tf.int32, minimum=0, maximum=10)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    super(TFEnvironmentMock, self).__init__(time_step_spec, action_spec)
     with tf.variable_scope(self._scope):
       self._state = tf.Variable(initial_state, name='state', dtype=self._dtype)
       self.steps = tf.Variable(0, name='steps')
@@ -104,16 +108,6 @@ class TFEnvironmentMock(tf_environment.Base):
           self.episodes.value)
     with tf.control_dependencies([increase_steps, increase_episodes]):
       return self.current_time_step(step_state)
-
-  def action_spec(self):
-    return specs.BoundedTensorSpec([], tf.int32, minimum=0, maximum=10)
-
-  def time_step_spec(self):
-    return ts.TimeStep(
-        step_type=specs.TensorSpec([], tf.int32, 'step_type'),
-        reward=specs.TensorSpec([], tf.float32, 'reward'),
-        discount=specs.TensorSpec([], tf.float32, 'discount'),
-        observation=specs.TensorSpec([1], self._dtype, 'observation'))
 
 
 class TFEnvironmentTest(tf.test.TestCase):
