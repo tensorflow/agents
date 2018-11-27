@@ -29,7 +29,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import os
 import time
 
@@ -37,7 +36,8 @@ from absl import flags
 
 import tensorflow as tf
 
-from tf_agents.agents.ddpg import networks
+from tf_agents.agents.ddpg import actor_network
+from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.td3 import td3_agent
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
@@ -87,6 +87,7 @@ def train_eval(
     td_errors_loss_fn=tf.losses.huber_loss,
     gamma=0.995,
     reward_scale_factor=1.0,
+    gradient_clipping=None,
     # Params for eval
     num_eval_episodes=10,
     eval_interval=10000,
@@ -98,6 +99,7 @@ def train_eval(
     summary_interval=1000,
     summaries_flush_secs=10,
     debug_summaries=False,
+    summarize_grads_and_vars=False,
     eval_metrics_callback=None):
 
   """A simple train and eval for TD3."""
@@ -123,39 +125,46 @@ def train_eval(
     tf_env = tf_py_environment.TFPyEnvironment(suite_mujoco.load(env_name))
     eval_py_env = suite_mujoco.load(env_name)
 
-    replay_buffer_ctor = functools.partial(
-        batched_replay_buffer.BatchedReplayBuffer,
-        batch_size=1,
-        max_length=replay_buffer_capacity)
+    actor_net = actor_network.ActorNetwork(
+        tf_env.time_step_spec().observation,
+        tf_env.action_spec(),
+        fc_layer_params=actor_fc_layers,
+    )
 
-    actor_net = functools.partial(
-        networks.actor_network, fc_layers=actor_fc_layers)
-    critic_net = functools.partial(
-        networks.critic_network,
-        observation_fc_layers=critic_obs_fc_layers,
-        action_fc_layers=critic_action_fc_layers,
-        joint_fc_layers=critic_joint_fc_layers,)
+    critic_net = critic_network.CriticNetwork(
+        tf_env.time_step_spec().observation,
+        tf_env.action_spec(),
+        observation_fc_layer_params=critic_obs_fc_layers,
+        action_fc_layer_params=critic_action_fc_layers,
+        joint_fc_layer_params=critic_joint_fc_layers,
+    )
 
     tf_agent = td3_agent.Td3Agent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
-        actor_net=actor_net,
-        critic_net=critic_net,
-        replay_buffer_ctor=replay_buffer_ctor,
-        ou_stddev=ou_stddev,
-        ou_damping=ou_damping,
-        target_update_tau=target_update_tau,
-        target_update_period=target_update_period,
+        actor_network=actor_net,
+        critic_network=critic_net,
         actor_optimizer=tf.train.AdamOptimizer(
             learning_rate=actor_learning_rate),
         critic_optimizer=tf.train.AdamOptimizer(
             learning_rate=critic_learning_rate),
-        train_batch_size=batch_size,
+        ou_stddev=ou_stddev,
+        ou_damping=ou_damping,
+        target_update_tau=target_update_tau,
+        target_update_period=target_update_period,
         dqda_clipping=dqda_clipping,
         td_errors_loss_fn=td_errors_loss_fn,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
-        debug_summaries=debug_summaries)
+        gradient_clipping=gradient_clipping,
+        debug_summaries=debug_summaries,
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        )
+
+    replay_buffer = batched_replay_buffer.BatchedReplayBuffer(
+        tf_agent.collect_data_spec(),
+        batch_size=tf_env.batch_size,
+        max_length=replay_buffer_capacity)
 
     eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy())
 
@@ -165,25 +174,29 @@ def train_eval(
         tf_metrics.AverageReturnMetric(),
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
-
-    # Add to replay buffer and other agent specific observers.
-    agent_observers = tf_agent.observers()
     global_step = tf.train.get_or_create_global_step()
 
     collect_policy = tf_agent.collect_policy()
     initial_collect_op = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
-        observers=agent_observers,
+        observers=[replay_buffer.add_batch],
         num_steps=initial_collect_steps).run()
 
     collect_op = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
-        observers=agent_observers + train_metrics,
+        observers=[replay_buffer.add_batch] + train_metrics,
         num_steps=collect_steps_per_iteration).run()
 
-    train_op = tf_agent.train(train_step_counter=global_step)
+    dataset = replay_buffer.as_dataset(
+        num_parallel_calls=3,
+        sample_batch_size=batch_size,
+        num_steps=2).prefetch(3)
+    iterator = dataset.make_initializable_iterator()
+    trajectories, unused_info = iterator.get_next()
+    train_op = tf_agent.train(
+        experience=trajectories, train_step_counter=global_step)
 
     train_checkpointer = common_utils.Checkpointer(
         ckpt_dir=train_dir,
@@ -197,7 +210,7 @@ def train_eval(
     rb_checkpointer = common_utils.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
         max_to_keep=1,
-        replay_buffer=tf_agent.replay_buffer)
+        replay_buffer=replay_buffer)
 
     for train_metric in train_metrics:
       train_metric.tf_summaries(step_metrics=train_metrics[:2])
@@ -214,6 +227,7 @@ def train_eval(
       # Initialize the graph.
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
+      sess.run(iterator.initializer)
       # TODO(sguada) Remove once Periodically can be saved.
       common_utils.initialize_uninitialized_variables(sess)
 
@@ -245,11 +259,12 @@ def train_eval(
         start_time = time.time()
         collect_call()
         for _ in range(train_steps_per_iteration):
-          total_loss, _, global_step_val = train_step_call()
+          loss_info_value, _, global_step_val = train_step_call()
         time_acc += time.time() - start_time
 
         if global_step_val % log_interval == 0:
-          tf.logging.info('step = %d, loss = %f', global_step_val, total_loss)
+          tf.logging.info('step = %d, loss = %f', global_step_val,
+                          loss_info_value.loss)
           steps_per_sec = (global_step_val - timed_at_step) / time_acc
           tf.logging.info('%.3f steps/sec' % steps_per_sec)
           sess.run(
