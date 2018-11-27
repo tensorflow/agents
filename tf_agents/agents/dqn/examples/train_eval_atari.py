@@ -199,10 +199,8 @@ class TrainEval(object):
     self._eval_metrics_callback = eval_metrics_callback
 
     with gin.unlock_config():
-      gin.bind_parameter(
-          'dopamine.atari.preprocessing.AtariPreprocessing'
-          '.terminal_on_life_loss',
-          terminal_on_life_loss)
+      gin.bind_parameter('AtariPreprocessing.terminal_on_life_loss',
+                         terminal_on_life_loss)
 
     root_dir = os.path.expanduser(root_dir)
     train_dir = os.path.join(root_dir, 'train')

@@ -19,23 +19,23 @@ from __future__ import division
 from __future__ import print_function
 
 import atari_py  # pylint: disable=unused-import
-from dopamine.atari import preprocessing
 import gym
 import numpy as np
 
+from tf_agents.environments import atari_preprocessing
 from tf_agents.environments import atari_wrappers
 from tf_agents.environments import suite_gym
 import gin.tf
 
 
 # Typical Atari 2600 Gym environment with some basic preprocessing.
-DEFAULT_ATARI_GYM_WRAPPERS = (preprocessing.AtariPreprocessing,)
+DEFAULT_ATARI_GYM_WRAPPERS = (atari_preprocessing.AtariPreprocessing,)
 # The following is just AtariPreprocessing with frame stacking. Performance wise
 # it's much better to have stacking implemented as part of replay-buffer/agent.
 # As soon as this functionality in TF-Agents is ready and verified, this set of
 # wrappers will be removed.
-DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = (preprocessing.AtariPreprocessing,
-                                            atari_wrappers.FrameStack4)
+DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = (
+    atari_preprocessing.AtariPreprocessing, atari_wrappers.FrameStack4)
 
 
 @gin.configurable

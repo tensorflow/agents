@@ -125,12 +125,10 @@ REQUIRED_PACKAGES = [
 
 
 TEST_REQUIRED_PACKAGES = [
-    # Do not include baselines; it has a dependency on non-nightly TF which
-    # breaks everything else.
-    #    'baselines >= 0.1.5',
     'gym >= 0.10.8',
     'pybullet >= 2.3.2',
     'atari_py >= 0.1.6',
+    'opencv-python >= 3.4.1.15',
 ]
 
 REQUIRED_TENSORFLOW_VERSION = '1.10.0'
