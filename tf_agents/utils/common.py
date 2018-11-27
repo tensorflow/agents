@@ -34,7 +34,9 @@ def create_counter(name,
                    shape=(),
                    dtype=tf.int64,
                    use_local_variable=False,
-                   use_resource=True):
+                   use_resource=True,
+                   trainable=False):
+  """Create a variable."""
   collections = [tf.GraphKeys.GLOBAL_VARIABLES]
   if use_local_variable:
     collections = [tf.GraphKeys.LOCAL_VARIABLES]
@@ -45,7 +47,7 @@ def create_counter(name,
       initializer=tf.constant_initializer(initial_value, dtype=dtype),
       collections=collections,
       use_resource=use_resource,
-      trainable=False)
+      trainable=trainable)
 
 
 def soft_variables_update(source_variables, target_variables, tau=1.0,
