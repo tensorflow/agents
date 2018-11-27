@@ -139,8 +139,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     expected_advantages = returns - value_preds[:, :-1]
     advantages = agent.compute_advantages(rewards, returns, discounts,
                                           value_preds)
-    self.assertAllClose(
-        self.evaluate(expected_advantages), self.evaluate(advantages))
+    self.assertAllClose(expected_advantages, advantages)
 
   def testComputeAdvantagesWithGae(self):
     gae_lambda = 0.95
@@ -168,7 +167,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     ]])
     advantages = agent.compute_advantages(rewards, returns, discounts,
                                           value_preds)
-    self.assertAllClose(self.evaluate(gae_vals), self.evaluate(advantages))
+    self.assertAllClose(gae_vals, advantages)
 
   @parameterized.named_parameters([
       ('OneEpoch', 1),
@@ -663,42 +662,6 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(actions.shape.as_list(), [1])
     self.evaluate(tf.global_variables_initializer())
     _ = self.evaluate(actions)
-
-  def testComputeReturns(self):
-    value_net = value_network.ValueNetwork(
-        self._time_step_spec.observation, fc_layer_params=None)
-    agent = ppo_agent.PPOAgent(
-        self._time_step_spec,
-        self._action_spec,
-        tf.train.AdamOptimizer(),
-        actor_net=DummyActorNet(self._action_spec),
-        value_net=value_net)
-    rewards = tf.constant(np.ones(9), dtype=tf.float32)
-    discounts = tf.constant([1, 1, 1, 1, 0, 0.9, 0.9, 0.9, 0], dtype=tf.float32)
-    returns = agent.compute_returns(rewards, discounts)
-    expected_returns = [5, 4, 3, 2, 1, 3.439, 2.71, 1.9, 1]
-    self.evaluate(tf.global_variables_initializer())
-    returns = self.evaluate(returns)
-    self.assertAllClose(returns, expected_returns)
-
-  def testComputeReturnsRandomized(self):
-    value_net = value_network.ValueNetwork(
-        self._time_step_spec.observation, fc_layer_params=None)
-    agent = ppo_agent.PPOAgent(
-        self._time_step_spec,
-        self._action_spec,
-        tf.train.AdamOptimizer(),
-        actor_net=DummyActorNet(self._action_spec),
-        value_net=value_net)
-    rewards = tf.constant(np.random.random([20]), dtype=tf.float32)
-    discounts = tf.constant(np.random.random([20]), dtype=tf.float32)
-    returns = agent.compute_returns(rewards, discounts)
-    expected_returns = tf.py_func(_compute_returns_fn, [rewards, discounts],
-                                  tf.float32)
-    self.evaluate(tf.global_variables_initializer())
-    returns = self.evaluate(returns)
-    expected_returns = self.evaluate(expected_returns)
-    self.assertAllClose(returns, expected_returns)
 
   def testNormalizeAdvantages(self):
     advantages = np.array([1.1, 3.2, -1.5, 10.9, 5.6])

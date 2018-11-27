@@ -68,6 +68,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
+from tf_agents.utils import value_ops
 import tf_agents.utils.common as common_utils
 import gin.tf
 
@@ -292,42 +293,6 @@ class PPOAgent(tf_agent.Base):
     """
     return self._make_policy(collect=True)
 
-  def compute_returns(self,
-                      rewards,
-                      discounts,
-                      norm_variance_epsilon=1e6):
-    """Compute the Monte Carlo return from each index in an episode.
-
-    Args:
-      rewards: Tensor of per-timestep reward in the episode.
-      discounts: Tensor of per-timestep discount factor. Should be 0 for final
-        step of each episode.
-      norm_variance_epsilon: Variance epsilon to use when normalizing returns.
-
-    Returns:
-      Tensor of per-timestep cumulative returns.
-    """
-    rewards.shape.assert_is_compatible_with(discounts.shape)
-    check_shape = tf.assert_equal(
-        tf.shape(rewards), tf.shape(discounts),
-        message='rewards should have the same shape as discounts.')
-    with tf.control_dependencies([check_shape]):
-      # Transpose so that scan operates on time dimension.
-      rewards, discounts = tf.transpose(rewards), tf.transpose(discounts)
-
-    def discounted_accumulate_rewards(next_step_return, reward_and_discount):
-      reward, discount = reward_and_discount
-      return next_step_return * discount + reward
-
-    # Cumulatively sum discounted reward.
-    returns = tf.scan(discounted_accumulate_rewards,
-                      [rewards, discounts],
-                      reverse=True,
-                      initializer=tf.zeros_like(rewards[0]))
-    returns = tf.transpose(returns)
-
-    return returns
-
   def compute_advantages(self,
                          rewards,
                          returns,
@@ -351,30 +316,20 @@ class PPOAgent(tf_agent.Base):
     """
     # Arg value_preds was appended with final next_step value. Make tensors
     #   next_value_preds by stripping first and last elements respectively.
-    next_value_preds = value_preds[:, 1:]
+    final_value_pred = value_preds[:, -1]
     value_preds = value_preds[:, :-1]
 
     if not self._use_gae:
       with tf.name_scope('empirical_advantage'):
         advantages = returns - value_preds
     else:
-      with tf.name_scope('generalized_advantage_estimation'):
-        deltas = rewards + discounts * next_value_preds - value_preds
-
-        # Transpose so that scan will operate over time dimension.
-        deltas, discounts = tf.transpose(deltas), tf.transpose(discounts)
-
-        def gae_step(next_step_val, delta_and_discount):
-          delta, discount = delta_and_discount
-          return delta + discount * next_step_val * self._lambda
-
-        advantages = tf.scan(gae_step,
-                             [deltas, discounts],
-                             reverse=True,
-                             initializer=tf.zeros_like(deltas[0]))
-
-        # Undo transpose.
-        advantages = tf.transpose(advantages)
+      advantages = value_ops.generalized_advantage_estimation(
+          values=value_preds,
+          final_value=final_value_pred,
+          rewards=rewards,
+          discounts=discounts,
+          td_lambda=self._lambda,
+          time_major=False)
 
     return advantages
 
@@ -528,7 +483,7 @@ class PPOAgent(tf_agent.Base):
     discounts *= episode_mask
 
     # Compute Monte Carlo returns.
-    returns = self.compute_returns(rewards, discounts)
+    returns = value_ops.discounted_return(rewards, discounts, time_major=False)
     if self._debug_summaries:
       tf.contrib.summary.histogram('returns', returns)
 
