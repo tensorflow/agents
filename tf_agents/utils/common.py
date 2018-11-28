@@ -762,3 +762,11 @@ def assert_members_are_not_overridden(base_cls, instance, allowed_overrides=()):
     raise ValueError(
         'Subclasses of {} cannot override most of its base members, but '
         '{} overrides: {}'.format(base_cls, instance_type, overridden_members))
+
+
+def element_wise_squared_loss(x, y):
+  return tf.losses.mean_squared_error(x, y, reduction=tf.losses.Reduction.NONE)
+
+
+def element_wise_huber_loss(x, y):
+  return tf.losses.huber_loss(x, y, reduction=tf.losses.Reduction.NONE)

@@ -195,7 +195,7 @@ class CriticRnnNetwork(network.Network):
       output = layer(output)
 
     q_value = tf.reshape(output, [-1])
-    q_value = batch_squash.unflatten(output)  # [B x T, ...] -> [B, T, ...]
+    q_value = batch_squash.unflatten(q_value)  # [B x T, ...] -> [B, T, ...]
     if not has_time_dim:
       q_value = tf.squeeze(q_value, axis=1)
 

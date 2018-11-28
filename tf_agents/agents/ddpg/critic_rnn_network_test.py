@@ -54,7 +54,7 @@ class CriticRnnNetworkTest(tf.test.TestCase):
                                   time_step.step_type)
 
     self.evaluate(tf.global_variables_initializer())
-    self.assertEqual([1, 1], q_values.shape.as_list())
+    self.assertEqual([1], q_values.shape.as_list())
 
     self.assertEqual(15, len(net.variables))
     # Obs Conv Net Kernel

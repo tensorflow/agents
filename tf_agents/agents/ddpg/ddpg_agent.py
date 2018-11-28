@@ -30,6 +30,7 @@ from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
+from tf_agents.utils import nest_utils
 import tf_agents.utils.common as common_utils
 import gin.tf
 
@@ -79,7 +80,7 @@ class DdpgAgent(tf_agent.BaseV2):
         element-wise between [-dqda_clipping, dqda_clipping]. Does not perform
         clipping if dqda_clipping == 0.
       td_errors_loss_fn:  A function for computing the TD errors loss. If None,
-        a default value of tf.losses.huber_loss is used.
+        a default value of  elementwise huber_loss is used.
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       gradient_clipping: Norm length to clip gradients.
@@ -103,7 +104,8 @@ class DdpgAgent(tf_agent.BaseV2):
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._dqda_clipping = dqda_clipping
-    self._td_errors_loss_fn = td_errors_loss_fn or tf.losses.huber_loss
+    self._td_errors_loss_fn = (
+        td_errors_loss_fn or common_utils.element_wise_huber_loss)
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
@@ -175,7 +177,7 @@ class DdpgAgent(tf_agent.BaseV2):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
-    # TODO(kbanoop): Compute and apply a loss mask.
+    # TODO(kbanoop): Apply a loss mask or filter boundary transitions.
     critic_loss = self.critic_loss(time_steps, actions, next_time_steps)
     actor_loss = self.actor_loss(time_steps)
 
@@ -242,13 +244,21 @@ class DdpgAgent(tf_agent.BaseV2):
       target_q_values, _ = self._target_critic_network(
           next_time_steps.observation, target_actions,
           next_time_steps.step_type)
+
       td_targets = tf.stop_gradient(
           self._reward_scale_factor * next_time_steps.reward +
           self._gamma * next_time_steps.discount * target_q_values)
 
       q_values, _ = self._critic_network(time_steps.observation, actions,
                                          time_steps.step_type)
+
       critic_loss = self._td_errors_loss_fn(td_targets, q_values)
+      if nest_utils.is_batched_nested_tensors(
+          time_steps, self.time_step_spec(), num_outer_dims=2):
+        # Do a sum over the time dimension.
+        critic_loss = tf.reduce_sum(critic_loss, axis=1)
+      critic_loss = tf.reduce_mean(critic_loss)
+
       with tf.name_scope('Losses/'):
         tf.contrib.summary.scalar('critic_loss', critic_loss)
 
@@ -281,9 +291,15 @@ class DdpgAgent(tf_agent.BaseV2):
         if self._dqda_clipping is not None:
           dqda = tf.clip_by_value(dqda, -1 * self._dqda_clipping,
                                   self._dqda_clipping)
-        actor_losses.append(
-            tf.losses.mean_squared_error(
-                tf.stop_gradient(dqda + action), action))
+        loss = common_utils.element_wise_squared_loss(
+            tf.stop_gradient(dqda + action), action)
+        if nest_utils.is_batched_nested_tensors(
+            time_steps, self.time_step_spec(), num_outer_dims=2):
+          # Sum over the time dimension.
+          loss = tf.reduce_sum(loss, axis=1)
+        loss = tf.reduce_mean(loss)
+        actor_losses.append(loss)
+
       actor_loss = tf.add_n(actor_losses)
       with tf.name_scope('Losses/'):
         tf.contrib.summary.scalar('actor_loss', actor_loss)
