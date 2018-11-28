@@ -224,7 +224,6 @@ class PPOAgent(tf_agent.Base):
     return ppo_policy.PPOPolicy(
         time_step_spec=self.time_step_spec(),
         action_spec=self.action_spec(),
-        policy_state_spec=self.policy_state_spec(),
         actor_network=self._actor_net,
         value_network=self._value_net,
         observation_normalizer=self._observation_normalizer,
@@ -235,9 +234,8 @@ class PPOAgent(tf_agent.Base):
     # Make policy_step_spec with action_spec, empty tuple for policy_state, and
     # (act_log_prob_spec, value_pred_spec, action_distribution_params_spec) for
     # info.
-    # TODO(eholly): Get policy_step_spec from policy.
     policy_step_spec = policy_step.PolicyStep(
-        action=self.action_spec(), state=self.policy_state_spec(),
+        action=self.action_spec(), state=self._policy.policy_state_spec(),
         info=action_distribution_params_spec)
     trajectory_spec = trajectory.from_transition(
         self.time_step_spec(), policy_step_spec, self.time_step_spec())

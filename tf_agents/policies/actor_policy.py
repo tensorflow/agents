@@ -45,7 +45,6 @@ class ActorPolicyKeras(tf_policy.Base):
   def __init__(self,
                time_step_spec=None,
                action_spec=None,
-               policy_state_spec=(),
                actor_network=None,
                info_spec=(),
                observation_normalizer=None,
@@ -55,7 +54,6 @@ class ActorPolicyKeras(tf_policy.Base):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      policy_state_spec: A nest of TensorSpec representing the policy_state.
       actor_network: An instance of a tf_agents.networks.network.Network, with
         call(observation, step_type).
       info_spec: A nest of TensorSpec representing the policy info.
@@ -77,7 +75,7 @@ class ActorPolicyKeras(tf_policy.Base):
     super(ActorPolicyKeras, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        policy_state_spec=policy_state_spec,
+        policy_state_spec=actor_network.state_spec,
         info_spec=info_spec)
 
   def _apply_actor_network(self, time_step, policy_state):

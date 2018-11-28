@@ -38,7 +38,6 @@ class PPOPolicy(actor_policy.ActorPolicyKeras):
   def __init__(self,
                time_step_spec=None,
                action_spec=None,
-               policy_state_spec=(),
                actor_network=None,
                value_network=None,
                observation_normalizer=None,
@@ -49,7 +48,6 @@ class PPOPolicy(actor_policy.ActorPolicyKeras):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      policy_state_spec: A nest of TensorSpec representing policy network state.
       actor_network: An instance of a tf_agents.networks.network.Network, with
         call(observation, step_type, network_state).  Network should
         return one of the following: 1. a nested tuple of tfp.distributions
@@ -72,7 +70,6 @@ class PPOPolicy(actor_policy.ActorPolicyKeras):
     super(PPOPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        policy_state_spec=policy_state_spec,
         actor_network=actor_network,
         observation_normalizer=observation_normalizer,
         clip=clip)
