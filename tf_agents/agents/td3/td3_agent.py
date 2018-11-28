@@ -35,6 +35,7 @@ from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
+from tf_agents.utils import nest_utils
 import tf_agents.utils.common as common_utils
 import gin.tf
 
@@ -57,7 +58,7 @@ class Td3Agent(tf_agent.BaseV2):
                target_update_tau=1.0,
                target_update_period=1,
                dqda_clipping=None,
-               td_errors_loss_fn=tf.losses.huber_loss,
+               td_errors_loss_fn=None,
                gamma=1.0,
                reward_scale_factor=1.0,
                target_policy_noise=0.2,
@@ -86,7 +87,7 @@ class Td3Agent(tf_agent.BaseV2):
         between [-dqda_clipping, dqda_clipping]. Default is None representing no
         clippiing.
       td_errors_loss_fn:  A function for computing the TD errors loss. If None,
-        a default value of tf.losses.huber_loss is used.
+        a default value of elementwise huber_loss is used.
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       target_policy_noise: Scale factor on target action noise
@@ -117,7 +118,8 @@ class Td3Agent(tf_agent.BaseV2):
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._dqda_clipping = dqda_clipping
-    self._td_errors_loss_fn = td_errors_loss_fn
+    self._td_errors_loss_fn = (
+        td_errors_loss_fn or common_utils.element_wise_huber_loss)
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._target_policy_noise = target_policy_noise
@@ -202,7 +204,7 @@ class Td3Agent(tf_agent.BaseV2):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
-    # TODO(kbanoop): Compute and apply a loss mask.
+    # TODO(kbanoop): Apply a loss mask or filter boundary transitions.
     critic_loss = self.critic_loss(
         time_steps,
         actions,
@@ -328,7 +330,12 @@ class Td3Agent(tf_agent.BaseV2):
 
       critic_loss = (self._td_errors_loss_fn(td_targets, pred_td_targets_1)
                      + self._td_errors_loss_fn(td_targets, pred_td_targets_2))
-      return critic_loss
+      if nest_utils.is_batched_nested_tensors(
+          time_steps, self.time_step_spec(), num_outer_dims=2):
+        # Sum over the time dimension.
+        critic_loss = tf.reduce_sum(critic_loss, axis=1)
+
+      return tf.reduce_mean(critic_loss)
 
   def actor_loss(self, time_steps):
     """Computes the actor_loss for TD3 training.
@@ -353,8 +360,14 @@ class Td3Agent(tf_agent.BaseV2):
           # pylint: disable=invalid-unary-operand-type
           dqda = tf.clip_by_value(dqda, -self._dqda_clipping,
                                   self._dqda_clipping)
-        actor_losses.append(
-            tf.losses.mean_squared_error(
-                tf.stop_gradient(dqda + action), action))
+        loss = common_utils.element_wise_squared_loss(
+            tf.stop_gradient(dqda + action), action)
+        if nest_utils.is_batched_nested_tensors(
+            time_steps, self.time_step_spec(), num_outer_dims=2):
+          # Sum over the time dimension.
+          loss = tf.reduce_sum(loss, axis=1)
+        loss = tf.reduce_mean(loss)
+        actor_losses.append(loss)
+
       # TODO(kbanoop): Add an action norm regularizer.
       return tf.add_n(actor_losses)
