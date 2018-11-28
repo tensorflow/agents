@@ -47,7 +47,7 @@ from tf_agents.metrics import metric_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metrics
 from tf_agents.policies import py_tf_policy
-from tf_agents.replay_buffers import batched_replay_buffer
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common as common_utils
 import gin.tf
 
@@ -175,7 +175,7 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         debug_summaries=debug_summaries)
 
-    replay_buffer = batched_replay_buffer.BatchedReplayBuffer(
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec(),
         batch_size=tf_env.batch_size,
         max_length=replay_buffer_capacity)

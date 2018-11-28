@@ -50,7 +50,7 @@ from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
 from tf_agents.policies import py_tf_policy
-from tf_agents.replay_buffers import batched_replay_buffer
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common as common_utils
 
 import gin.tf
@@ -178,7 +178,7 @@ def train_eval(
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars)
 
-    replay_buffer = batched_replay_buffer.BatchedReplayBuffer(
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec(),
         batch_size=num_parallel_environments,
         max_length=replay_buffer_capacity)

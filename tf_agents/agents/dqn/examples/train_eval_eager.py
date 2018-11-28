@@ -44,7 +44,7 @@ from tf_agents.metrics import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.policies import policy_step
 from tf_agents.policies import random_tf_policy
-from tf_agents.replay_buffers import batched_replay_buffer
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 
 from tensorflow.contrib import eager as tfe  # TF internal
 
@@ -114,7 +114,7 @@ def train_eval(
         time_step=tf_env.time_step_spec(),
         action_step=policy_step.PolicyStep(action=tf_env.action_spec()),
         next_time_step=tf_env.time_step_spec())
-    replay_buffer = batched_replay_buffer.BatchedReplayBuffer(
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=trajectory_spec,
         batch_size=tf_env.batch_size,
         max_length=replay_buffer_capacity)

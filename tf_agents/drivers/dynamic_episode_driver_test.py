@@ -26,7 +26,7 @@ from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
-from tf_agents.replay_buffers import batched_replay_buffer
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 
 
@@ -83,7 +83,7 @@ def make_replay_buffer(tf_env):
       action_spec, (), tensor_spec.TensorSpec((), tf.int32))
   trajectory_spec = trajectory.from_transition(time_step_spec, action_step_spec,
                                                time_step_spec)
-  return batched_replay_buffer.BatchedReplayBuffer(
+  return tf_uniform_replay_buffer.TFUniformReplayBuffer(
       trajectory_spec, batch_size=1)
 
 

@@ -35,35 +35,34 @@ import tensorflow as tf
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.replay_buffers import table
 from tf_agents.specs import tensor_spec
-
-from tensorflow.python.data.util import nest as data_nest  # TF internal
 import gin.tf
+from tensorflow.python.data.util import nest as data_nest  # TF internal
 
 
 nest = tf.contrib.framework.nest
 
 
-BatchedBufferInfo = collections.namedtuple('BatchedBufferInfo',
-                                           ['ids', 'probabilities'])
+BufferInfo = collections.namedtuple('BufferInfo',
+                                    ['ids', 'probabilities'])
 
 
 @gin.configurable
-class BatchedReplayBuffer(replay_buffer.ReplayBuffer,
-                          tf.contrib.eager.Checkpointable):
-  """A BatchedReplayBuffer with batched adds and uniform sampling."""
+class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
+                            tf.contrib.eager.Checkpointable):
+  """A TFUniformReplayBuffer with batched adds and uniform sampling."""
 
   def __init__(self,
                data_spec,
                batch_size,
                max_length=1000,
-               scope='BatchedReplayBuffer',
+               scope='TFUniformReplayBuffer',
                device='cpu:*',
                table_fn=table.Table):
-    """Creates a BatchedReplayBuffer.
+    """Creates a TFUniformReplayBuffer.
 
     Args:
-      data_spec: A TensorSpec or a list/tuple/nest of TensorSpecs describing
-        a single item that can be stored in this buffer.
+      data_spec: A TensorSpec or a list/tuple/nest of TensorSpecs describing a
+        single item that can be stored in this buffer.
       batch_size: Batch dimension of tensors when adding to buffer.
       max_length: The maximum number of items that can be stored in a single
         batch segment of the buffer.
@@ -71,13 +70,14 @@ class BatchedReplayBuffer(replay_buffer.ReplayBuffer,
       device: A TensorFlow device to place the Variables and ops.
       table_fn: Function to create tables `table_fn(data_spec, capacity)` that
         can read/write nested tensors.
+
     Raises:
       ValueError: If batch_size does not evenly divide capacity.
     """
     self._batch_size = batch_size
     self._max_length = max_length
     capacity = self._batch_size * self._max_length
-    super(BatchedReplayBuffer, self).__init__(data_spec, capacity)
+    super(TFUniformReplayBuffer, self).__init__(data_spec, capacity)
 
     self._id_spec = tensor_spec.TensorSpec([], dtype=tf.int64, name='id')
     self._capacity_value = np.int64(self._capacity)
@@ -163,7 +163,7 @@ class BatchedReplayBuffer(replay_buffer.ReplayBuffer,
       A 2 tuple, containing:
         - An item, sequence of items, or batch thereof sampled uniformly
           from the buffer.
-        - BatchedBufferInfo NamedTuple, containing:
+        - BufferInfo NamedTuple, containing:
           - The items' ids.
           - The sampling probability of each item.
     Raises:
@@ -177,7 +177,7 @@ class BatchedReplayBuffer(replay_buffer.ReplayBuffer,
         assert_nonempty = tf.assert_greater(
             max_val,
             min_val,
-            message='BatchedReplayBuffer is empty. Make sure to add items '
+            message='TFUniformReplayBuffer is empty. Make sure to add items '
             'before sampling the buffer.')
         with tf.control_dependencies([assert_nonempty]):
           ids = tf.random_uniform(
@@ -222,12 +222,12 @@ class BatchedReplayBuffer(replay_buffer.ReplayBuffer,
             lambda: 1. / tf.to_float(num_ids * self._batch_size))
         probabilities = tf.fill(rows_shape, probability)
 
-        buffer_info = BatchedBufferInfo(ids=data_ids,
-                                        probabilities=probabilities)
+        buffer_info = BufferInfo(ids=data_ids,
+                                 probabilities=probabilities)
     return data, buffer_info
 
   @gin.configurable(
-      'tf_agents.batched_replay_buffer.BatchedReplayBuffer.as_dataset')
+      'tf_agents.tf_uniform_replay_buffer.TFUniformReplayBuffer.as_dataset')
   def as_dataset(self,
                  sample_batch_size=None,
                  num_steps=None,
