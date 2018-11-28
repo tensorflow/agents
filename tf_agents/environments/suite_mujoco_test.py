@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for dm_control_wrapper."""
+"""Tests for learning.reinforcement_learning.environments.suite_mujoco."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -22,22 +22,34 @@ from __future__ import print_function
 from absl.testing import absltest
 
 from tf_agents.environments import py_environment
-from tf_agents.environments import suite_dm_control
-from tf_agents.environments import utils
+from tf_agents.environments import suite_mujoco
+from tf_agents.environments import wrappers
+from tf_agents.utils import test_utils
+
+import gin.tf
 
 
-class SuiteDMControlTest(absltest.TestCase):
+class SuiteMujocoTest(absltest.TestCase):
 
   def setUp(self):
-    super(SuiteDMControlTest, self).setUp()
-    if not suite_dm_control.is_available():
-      self.skipTest('dm_control is not available.')
+    super(SuiteMujocoTest, self).setUp()
+    if not suite_mujoco.is_available():
+      self.skipTest('suite_mujoco is not available.')
+    else:
+      gin.clear_config()
 
-  def testEnvRegistered(self):
-    env = suite_dm_control.load('ball_in_cup', 'catch')
+  def testMujocoEnvRegistered(self):
+    env = suite_mujoco.load('HalfCheetah-v1')
     self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, wrappers.TimeLimit)
 
-    utils.validate_py_environment(env)
+  def testGinConfig(self):
+    gin.parse_config_file(
+        test_utils.test_src_dir_path('environments/configs/suite_mujoco.gin')
+    )
+    env = suite_mujoco.load()
+    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, wrappers.TimeLimit)
 
 
 if __name__ == '__main__':

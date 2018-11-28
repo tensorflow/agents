@@ -14,6 +14,11 @@
 # limitations under the License.
 
 """Suite for loading DeepMind Control Suite environments.
+
+Follow these instructions to install it:
+
+https://github.com/deepmind/dm_control#installation-and-requirements
+
 """
 
 _TRY_IMPORT = True  # pylint: disable=g-statement-before-imports
