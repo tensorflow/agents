@@ -487,6 +487,55 @@ class ActionClipWrapper(absltest.TestCase):
       np.testing.assert_array_almost_equal([3, -3], action[1][1])
 
 
+class ActionOffsetWrapperTest(absltest.TestCase):
+
+  def test_nested(self):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = [
+        array_spec.BoundedArraySpec((2,), np.int32, -1, 1), [
+            array_spec.BoundedArraySpec((2,), np.int32, -2, 2),
+            array_spec.BoundedArraySpec((2,), np.int32, -3, 3)
+        ]
+    ]
+    with self.assertRaisesRegexp(ValueError, 'single-array action specs'):
+      env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+      env = wrappers.ActionOffsetWrapper(env)
+
+  def test_unbounded(self):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.ArraySpec((2,), np.int32)
+    with self.assertRaisesRegexp(ValueError, 'bounded action specs'):
+      env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+      env = wrappers.ActionOffsetWrapper(env)
+
+  def test_continuous(self):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((2,), np.float32, -1, 1)
+    with self.assertRaisesRegexp(ValueError, 'discrete action specs'):
+      env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+      env = wrappers.ActionOffsetWrapper(env)
+
+  def test_action_spec(self):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((3,), np.int32, -1, 1)
+    env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+    env = wrappers.ActionOffsetWrapper(env)
+    self.assertEqual(array_spec.BoundedArraySpec((3,), np.int32, 0, 2),
+                     env.action_spec())
+
+  def test_step(self):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((3,), np.int32, -1, 1)
+    mock_env = mock.Mock(
+        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
+    env = wrappers.ActionOffsetWrapper(mock_env)
+
+    env.step(np.array([0, 1, 2]))
+    mock_env.step.assert_called()
+    np.testing.assert_array_equal(np.array([-1, 0, 1]),
+                                  mock_env.step.call_args[0][0])
+
+
 class FlattenObservationsWrapper(parameterized.TestCase):
 
   @parameterized.parameters((['obs1', 'obs2'], [(4,), (5,)], np.int32),

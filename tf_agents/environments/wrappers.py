@@ -57,7 +57,7 @@ class PyEnvironmentBaseWrapper(py_environment.Base):
   def action_spec(self):
     return self._env.action_spec()
 
-  def render(self, mode="rgb_array"):
+  def render(self, mode='rgb_array'):
     return self._env.render(mode)
 
   def wrapped_env(self):
@@ -110,7 +110,7 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
     super(ActionRepeat, self).__init__(env)
     if times <= 1:
       raise ValueError(
-          "Times parameter ({}) should be greater than 1".format(times))
+          'Times parameter ({}) should be greater than 1'.format(times))
     self._times = times
 
   def step(self, action):
@@ -204,14 +204,14 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     action_spec = nest.flatten(env.action_spec())
     if len(action_spec) != 1:
       raise ValueError(
-          "ActionDiscretizeWrapper only supports environments with a single "
-          "action spec. Got {}".format(env.action_spec()))
+          'ActionDiscretizeWrapper only supports environments with a single '
+          'action spec. Got {}'.format(env.action_spec()))
 
     action_spec = action_spec[0]
     self._num_actions = np.broadcast_to(num_actions, action_spec.shape)
 
     if action_spec.shape != self._num_actions.shape:
-      raise ValueError("Spec {} and limit shape do not match. Got {}".format(
+      raise ValueError('Spec {} and limit shape do not match. Got {}'.format(
           action_spec, self._num_actions.shape))
 
     self._discrete_spec, self._action_map = self._discretize_spec(
@@ -229,7 +229,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
       ValueError: If not all limits value are >=2.
     """
     if not np.all(limits >= 2):
-      raise ValueError("num_actions should all be at least size 2.")
+      raise ValueError('num_actions should all be at least size 2.')
 
     limits = np.atleast_1d(limits)
     discrete_spec = array_spec.BoundedArraySpec(
@@ -268,7 +268,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     action = np.atleast_1d(action)
     if action.shape != self._discrete_spec.shape:
       raise ValueError(
-          "Received action with incorrect shape. Got {}, expected {}".format(
+          'Received action with incorrect shape. Got {}, expected {}'.format(
               action.shape, self._discrete_spec.shape))
 
     mapped_action = [action_map[i][a] for i, a in enumerate(action.flatten())]
@@ -315,6 +315,38 @@ class ActionClipWrapper(PyEnvironmentBaseWrapper):
                                                env_action_spec, action)
 
     return self._env.step(clipped_actions)
+
+
+# TODO(b/119321125): Remove this once index_with_actions supports negative
+# actions.
+class ActionOffsetWrapper(PyEnvironmentBaseWrapper):
+  """Offsets actions to be zero-based.
+
+  This is useful for the DQN agent, which currently doesn't support
+  negative-valued actions.
+  """
+
+  def __init__(self, env):
+    super(ActionOffsetWrapper, self).__init__(env)
+    if nest.is_sequence(self._env.action_spec()):
+      raise ValueError('ActionOffsetWrapper only works with single-array '
+                       'action specs (not nested specs).')
+    if not self._env.action_spec().is_bounded():
+      raise ValueError('ActionOffsetWrapper only works with bounded '
+                       'action specs.')
+    if not self._env.action_spec().is_discrete():
+      raise ValueError('ActionOffsetWrapper only works with discrete '
+                       'action specs.')
+
+  def action_spec(self):
+    spec = self._env.action_spec()
+    minimum = np.zeros(shape=spec.shape, dtype=spec.dtype)
+    maximum = spec.maximum - spec.minimum
+    return array_spec.BoundedArraySpec(spec.shape, spec.dtype, minimum=minimum,
+                                       maximum=maximum)
+
+  def step(self, action):
+    return self._env.step(action + self._env.action_spec().minimum)
 
 
 @gin.configurable
@@ -370,16 +402,16 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     if observations_whitelist is not None:
       if not isinstance(env.observation_spec(), dict):
         raise ValueError(
-            "If you provide an observations whitelist, the current environment "
-            "must return a dictionary of observations! The returned observation"
-            " spec is type %s." % (type(env.observation_spec())))
+            'If you provide an observations whitelist, the current environment '
+            'must return a dictionary of observations! The returned observation'
+            ' spec is type %s.' % (type(env.observation_spec())))
 
       # Check that observation whitelist keys are valid observation keys.
       if not (set(observations_whitelist).issubset(
           env.observation_spec().keys())):
         raise ValueError(
-            "The observation whitelist contains keys not found in the "
-            "environment! Unknown keys: %s" % list(
+            'The observation whitelist contains keys not found in the '
+            'environment! Unknown keys: %s' % list(
                 set(observations_whitelist).difference(
                     env.observation_spec().keys())))
 
@@ -388,8 +420,8 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     env_dtypes = list(
         set([obs.dtype for obs in env.observation_spec().values()]))
     if len(env_dtypes) != 1:
-      raise ValueError("The observation spec must all have the same dtypes! "
-                       "Currently found dtypes: %s" % (env_dtypes))
+      raise ValueError('The observation spec must all have the same dtypes! '
+                       'Currently found dtypes: %s' % (env_dtypes))
     inferred_spec_dtype = env_dtypes[0]
 
     self._observation_spec_dtype = inferred_spec_dtype
@@ -410,7 +442,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     self._flattened_observation_spec = array_spec.ArraySpec(
         shape=(observation_total_len,),
         dtype=self._observation_spec_dtype,
-        name="packed_observations")
+        name='packed_observations')
 
   def _filter_observations(self, observations):
     """Filters out unwanted observations from the environment.
