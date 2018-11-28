@@ -18,14 +18,14 @@ import codecs
 import datetime
 import fnmatch
 import io
+import operator
 import os
 import subprocess
 import sys
 import unittest
 
-from setuptools import find_packages  # pylint: disable=g-import-not-at-top
+from setuptools import find_packages
 from setuptools import setup
-from setuptools.command.install import install as InstallCommandBase
 from setuptools.command.test import test as TestCommandBase
 from setuptools.dist import Distribution
 
@@ -59,9 +59,6 @@ class TestLoader(unittest.TestLoader):
 class Test(TestCommandBase):
 
   def run(self):
-    # Import absl inside run, where dependencies have been loaded already.
-    from absl import app  # pylint: disable=g-import-not-at-top
-
     def run_tests(_):
       run_separately = [
           x.rstrip() for x in open('test_individually.txt', 'r').readlines()
@@ -106,21 +103,26 @@ class Test(TestCommandBase):
       else:
         return 1
 
-    # Run inside absl.app.run to ensure flags parsing is done.
-    return app.run(run_tests)
+    installed_dists = self.install_dists(self.distribution)
+    paths = map(operator.attrgetter('location'), installed_dists)
+    with self.paths_on_pythonpath(paths):
+      with self.project_on_sys_path():
+        # Import absl inside run, where dependencies have been loaded already.
+        from absl import app  # pylint: disable=g-import-not-at-top
+
+        # Run inside absl.app.run to ensure flags parsing is done.
+        return app.run(run_tests)
 
 
-# To enable importing version.py directly, we add its path to sys.path.
-version_path = os.path.join(
-    os.path.dirname(__file__), 'tf_agents', 'python')
-sys.path.append(version_path)
-from version import __dev_version__  # pylint: disable=g-import-not-at-top
-from version import __rel_version__  # pylint: disable=g-import-not-at-top
+from tf_agents.version import __dev_version__  # pylint: disable=g-import-not-at-top
+from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at-top
 
 REQUIRED_PACKAGES = [
+    'absl-py >= 0.6.1',
     'six >= 1.10.0',
     'numpy >= 1.13.3',
     'gin-config >= 0.1.2',
+    # tensorflow-probability added below
 ]
 
 
@@ -178,12 +180,11 @@ setup(
     license='Apache 2.0',
     packages=find_packages(),
     install_requires=REQUIRED_PACKAGES,
-    tests_require=TEST_REQUIRED_PACKAGES + REQUIRED_PACKAGES,
+    tests_require=TEST_REQUIRED_PACKAGES,
     # Add in any packaged data.
     zip_safe=False,
     distclass=BinaryDistribution,
     cmdclass={
-        'pip_pkg': InstallCommandBase,
         'test': Test,
     },
     classifiers=[
