@@ -58,12 +58,12 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
   spec_shapes = [s.shape for s in nest.flatten(specs)]
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
-    raise ValueError('All specs should have ndims defined.  Saw shapes: %s'
-                     % spec_shapes)
+    raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
+                     nest.pack_sequence_as(specs, spec_shapes))
 
   if any(tensor_shape.ndims is None for tensor_shape in tensor_shapes):
-    raise ValueError('All tensors should have ndims defined.  Saw shapes: %s'
-                     % tensor_shapes)
+    raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
+                     nest.pack_sequence_as(tensors, tensor_shapes))
 
   is_unbatched = [
       spec_shape.is_compatible_with(tensor_shape)
@@ -98,11 +98,13 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
       for discrepancy in tensor_ndims_discrepancy) and all(tensor_matches_spec):
     return False
 
-  raise ValueError('Received a mix of batched and unbatched Tensors, or Tensors'
-                   ' are not compatible with Specs.  num_outer_dims: %d.\n'
-                   'Saw tensor_shapes:\n   %s\n'
-                   'And spec_shapes:\n   %s'
-                   % (num_outer_dims, tensor_shapes, spec_shapes))
+  raise ValueError(
+      'Received a mix of batched and unbatched Tensors, or Tensors'
+      ' are not compatible with Specs.  num_outer_dims: %d.\n'
+      'Saw tensor_shapes:\n   %s\n'
+      'And spec_shapes:\n   %s' %
+      (num_outer_dims, nest.pack_sequence_as(tensors, tensor_shapes),
+       nest.pack_sequence_as(specs, spec_shapes)))
 
 
 def batch_nested_tensors(tensors, specs=None):
