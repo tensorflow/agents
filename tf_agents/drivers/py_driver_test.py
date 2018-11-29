@@ -44,6 +44,7 @@ class MockReplayBufferObserver(object):
 class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
 
   def setUp(self):
+    super(PyDriverTest, self).setUp()
     f0 = np.array(0., dtype=np.float32)
     f1 = np.array(1., dtype=np.float32)
     # Order of args for trajectory methods:

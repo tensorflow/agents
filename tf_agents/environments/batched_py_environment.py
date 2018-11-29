@@ -27,10 +27,10 @@ from multiprocessing import dummy as mp_threads
 # pylint: enable=line-too-long
 
 import numpy as np
-import tensorflow as tf
 
-import gin.tf
+import tensorflow as tf
 from tf_agents.environments import py_environment
+import gin.tf
 
 nest = tf.contrib.framework.nest
 
@@ -61,8 +61,8 @@ class BatchedPyEnvironment(py_environment.Base):
       raise ValueError("envs must be a list or tuple.  Got: %s" % envs)
     batched_envs = [(i, env) for i, env in enumerate(envs) if env.batched]
     if batched_envs:
-      raise ValueError("Some of the envs are already batched: %s"
-                       % batched_envs)
+      raise ValueError(
+          "Some of the envs are already batched: %s" % batched_envs)
     self._envs = envs
     self._num_envs = len(envs)
     self._action_spec = self._envs[0].action_spec()
@@ -123,9 +123,9 @@ class BatchedPyEnvironment(py_environment.Base):
     """
     unstacked_actions = unstack_actions(actions)
     if len(unstacked_actions) != self.batch_size:
-      raise ValueError("Primary dimension of action items does not match "
-                       "batch size: %d vs. %d" % (len(unstacked_actions),
-                                                  self.batch_size))
+      raise ValueError(
+          "Primary dimension of action items does not match "
+          "batch size: %d vs. %d" % (len(unstacked_actions), self.batch_size))
     time_steps = self._pool.map(
         lambda env_action: env_action[0].step(env_action[1]),
         zip(self._envs, unstacked_actions))
