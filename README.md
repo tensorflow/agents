@@ -13,7 +13,7 @@ The documentation, examples and tutorials will grow over the next few weeks.
 <a href="#Installation">Installation</a><br>
 <a href='#Contributing'>Contributing</a><br>
 <a href='#Principles'>Principles</a><br>
-<a href='#References'>References</a><br>
+<a href='#Citation'>Citation</a><br>
 <a href='#Disclaimer'>Disclaimer</a><br>
 
 
@@ -102,19 +102,21 @@ This project adheres to [Google's AI principles](PRINCIPLES.md).
 By participating, using or contributing to this project you are expected to
 adhere to these principles.
 
-<a id='References'></a>
-## References
+<a id='Citation'></a>
+## Citation
 
 If you use this code please cite it as:
 
 ```
 @misc{TFAgents,
   title = {{TF-Agents}: A library for Reinforcement Learning in TensorFlow},
-  author = "{TF-Agents Team}",
+  author = "{Sergio Guadarrama, Anoop Korattikara, Oscar Ramirez, Pablo Castro,
+    Ethan Holly, Sam Fishman, Ke Wang, Katya Gonina,
+    Eugene Brevdo, Chris Harris,Vincent Vanhoucke}",
   howpublished = {\url{https://github.com/tensorflow/agents}},
   url = "https://github.com/tensorflow/agents",
   year = 2018,
-  note = "[Online; accessed 20-November-2018]"
+  note = "[Online; accessed 30-November-2018]"
 }
 ```
 
