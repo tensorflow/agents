@@ -60,12 +60,12 @@ class MaskedCategorical(tfp.distributions.Categorical):
     """
     logits = tf.convert_to_tensor(logits)
     mask = tf.convert_to_tensor(mask)
-    mask = tf.cast(mask, tf.bool)  # Nonzero values are True
+    self._mask = tf.cast(mask, tf.bool)  # Nonzero values are True
 
     neg_inf = tf.cast(tf.fill(dims=tf.shape(logits), value=float('-inf')),
                       logits.dtype)
 
-    logits = tf.where(mask, logits, neg_inf)
+    logits = tf.where(self._mask, logits, neg_inf)
     super(MaskedCategorical, self).__init__(
         logits=logits,
         probs=None,
@@ -73,3 +73,13 @@ class MaskedCategorical(tfp.distributions.Categorical):
         validate_args=validate_args,
         allow_nan_stats=allow_nan_stats,
         name=name)
+
+  @property
+  def mask(self):
+    return self._mask
+
+  @property
+  def parameters(self):
+    params = super(MaskedCategorical, self).parameters
+    params['mask'] = self.mask
+    return params
