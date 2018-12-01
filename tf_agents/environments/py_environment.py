@@ -13,7 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Python RL Environment API."""
+"""Python RL Environment API.
+
+Adapted from the Deepmind's Environment API as seen in:
+  https://github.com/deepmind/dm_control
+
+# TODO(b/120300176) to consider adding current_time_step()
+"""
 
 from __future__ import absolute_import
 from __future__ import division

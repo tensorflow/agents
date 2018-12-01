@@ -184,7 +184,6 @@ def train_eval(
       eval_metrics_callback(metrics, global_step.numpy())
 
     time_step = None
-    step_state = ()
     policy_state = ()
 
     timed_at_step = global_step.numpy()
@@ -199,9 +198,8 @@ def train_eval(
 
     for _ in range(num_iterations):
       start_time = time.time()
-      time_step, step_state, policy_state = collect_driver.run(
+      time_step, policy_state = collect_driver.run(
           time_step=time_step,
-          step_state=step_state,
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):

@@ -63,15 +63,6 @@ class Driver(object):
   def observers(self):
     return self._observers
 
-  def reset_env(self, step_state=None):
-    self._env.reset(step_state)
-
-  def reset_policy(self, policy_state=()):
-    return self._policy.reset(policy_state)
-
-  def reset(self, step_state=None, policy_state=()):
-    return self.reset_env(step_state) + self.reset_policy(policy_state)
-
   @abc.abstractmethod
   def run(self):
     """Takes steps in the environment and updates observers."""

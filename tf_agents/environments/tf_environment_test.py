@@ -57,9 +57,7 @@ class TFEnvironmentMock(tf_environment.Base):
       self.episodes = tf.Variable(0, name='episodes')
       self.resets = tf.Variable(0, name='resets')
 
-  def current_time_step(self, step_state=None):
-    if step_state is None:
-      step_state = [tf.constant(0, dtype=tf.int64, name='step_state')]
+  def current_time_step(self):
     def first():
       return (tf.constant(FIRST, dtype=tf.int32),
               tf.constant(0.0, dtype=tf.float32),
@@ -72,29 +70,25 @@ class TFEnvironmentMock(tf_environment.Base):
       return (tf.constant(LAST, dtype=tf.int32),
               tf.constant(1.0, dtype=tf.float32),
               tf.constant(0.0, dtype=tf.float32))
-    with tf.control_dependencies(step_state):
-      state_value = tf.mod(self._state.value(), 3)
-      step_type, reward, discount = tf.case(
-          {tf.equal(state_value, FIRST): first,
-           tf.equal(state_value, MID): mid,
-           tf.equal(state_value, LAST): last},
-          exclusive=True, strict=True)
-      time_step = ts.TimeStep(step_type, reward, discount, state_value)
-    with tf.control_dependencies(nest.flatten(time_step)):
-      step_state = nest.map_structure(tf.identity, step_state)
-    return time_step, step_state
+    state_value = tf.mod(self._state.value(), 3)
+    step_type, reward, discount = tf.case(
+        {tf.equal(state_value, FIRST): first,
+         tf.equal(state_value, MID): mid,
+         tf.equal(state_value, LAST): last},
+        exclusive=True, strict=True)
+    return ts.TimeStep(step_type, reward, discount, state_value)
 
-  def reset(self, step_state=None):
-    if step_state is None:
-      step_state = [tf.constant(0, dtype=tf.int64, name='step_state')]
+  def reset(self):
     increase_resets = self.resets.assign_add(1)
     with tf.control_dependencies([increase_resets]):
       reset_op = self._state.assign(self._initial_state)
-    time_step, step_state = self.current_time_step(step_state)
-    return time_step, step_state, reset_op
+    with tf.control_dependencies([reset_op]):
+      time_step = self.current_time_step()
+    return time_step
 
-  def step(self, action, step_state):
-    with tf.control_dependencies(step_state):
+  def step(self, action):
+    action = tf.convert_to_tensor(action)
+    with tf.control_dependencies(nest.flatten(action)):
       state_assign = self._state.assign_add(1)
     with tf.control_dependencies([state_assign]):
       state_value = self._state.value()
@@ -107,7 +101,7 @@ class TFEnvironmentMock(tf_environment.Base):
           lambda: self.episodes.assign_add(1),
           self.episodes.value)
     with tf.control_dependencies([increase_steps, increase_episodes]):
-      return self.current_time_step(step_state)
+      return self.current_time_step()
 
 
 class TFEnvironmentTest(tf.test.TestCase):
@@ -122,7 +116,7 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testMultipleReset(self):
     tf_env = TFEnvironmentMock()
-    _, _, reset_op = tf_env.reset()
+    reset_op = tf_env.reset()
     self.evaluate(tf.global_variables_initializer())
     self.evaluate(reset_op)
     self.assertEqual(1, self.evaluate(tf_env.resets))
@@ -135,7 +129,7 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testFirstTimeStep(self):
     tf_env = TFEnvironmentMock()
-    time_step, _ = tf_env.current_time_step()
+    time_step = tf_env.current_time_step()
     self.evaluate(tf.global_variables_initializer())
     time_step = self.evaluate(time_step)
     self.assertEqual(FIRST, time_step.step_type)
@@ -148,18 +142,18 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testFirstStepState(self):
     tf_env = TFEnvironmentMock()
-    _, step_state = tf_env.current_time_step()
+    tf_env.current_time_step()
     self.evaluate(tf.global_variables_initializer())
-    step_state = self.evaluate(step_state)
-    self.assertEqual([0], step_state)
     self.assertEqual(0, self.evaluate(tf_env.resets))
     self.assertEqual(0, self.evaluate(tf_env.steps))
     self.assertEqual(0, self.evaluate(tf_env.episodes))
 
   def testOneStep(self):
     tf_env = TFEnvironmentMock()
-    time_step, step_state = tf_env.current_time_step()
-    next_time_step, _ = tf_env.step(1, step_state)
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant(1)
+    next_time_step = tf_env.step(action)
     self.evaluate(tf.global_variables_initializer())
     time_step, next_time_step = self.evaluate([time_step, next_time_step])
 
@@ -179,8 +173,10 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testCurrentStep(self):
     tf_env = TFEnvironmentMock()
-    time_step, step_state = tf_env.current_time_step()
-    next_time_step, _ = tf_env.step(1, step_state)
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant(1)
+    next_time_step = tf_env.step(action)
     self.evaluate(tf.global_variables_initializer())
 
     time_step_np, next_time_step_np = self.evaluate([time_step, next_time_step])
@@ -217,10 +213,14 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testTwoStepsDependenceOnTheFirst(self):
     tf_env = TFEnvironmentMock()
-    _, step_state = tf_env.current_time_step()
+    time_step = tf_env.current_time_step()
     self.evaluate(tf.global_variables_initializer())
-    _, step_state = tf_env.step(1, step_state)
-    time_step, _ = self.evaluate(tf_env.step(2, step_state))
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant(1)
+    time_step = tf_env.step(action)
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant(2)
+    time_step = self.evaluate(tf_env.step(action))
     self.assertEqual(LAST, time_step.step_type)
     self.assertEqual(1., time_step.reward)
     self.assertEqual(0.0, time_step.discount)
@@ -231,11 +231,14 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testAutoReset(self):
     tf_env = TFEnvironmentMock()
-    _, step_state = tf_env.current_time_step()
+    time_step = tf_env.current_time_step()
     self.evaluate(tf.global_variables_initializer())
-    _, step_state = tf_env.step(1, step_state)
-    _, step_state = tf_env.step(2, step_state)
-    time_step, _ = self.evaluate(tf_env.step(3, step_state))
+    with tf.control_dependencies([time_step.step_type]):
+      time_step = tf_env.step(1)
+    with tf.control_dependencies([time_step.step_type]):
+      time_step = tf_env.step(2)
+    with tf.control_dependencies([time_step.step_type]):
+      time_step = self.evaluate(tf_env.step(3))
     self.assertEqual(FIRST, time_step.step_type)
     self.assertEqual(0.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
@@ -246,16 +249,57 @@ class TFEnvironmentTest(tf.test.TestCase):
 
   def testFirstObservationIsPreservedAfterTwoSteps(self):
     tf_env = TFEnvironmentMock()
-    time_step, step_state = tf_env.current_time_step()
+    time_step = tf_env.current_time_step()
     self.evaluate(tf.global_variables_initializer())
     time_step_np = self.evaluate(time_step)
     self.assertEqual([0], time_step_np.observation)
-    _, step_state = tf_env.step(1, step_state)
+    time_step = tf_env.step(1)
+    with tf.control_dependencies([time_step.step_type]):
+      next_time_step = tf_env.step(2)
 
-    (_, _), observation = self.evaluate(
-        [tf_env.step(2, step_state), time_step.observation])
+    observation_np, _ = self.evaluate([time_step.observation, next_time_step])
 
-    self.assertEqual([0], observation)
+    self.assertEqual([1], observation_np)
+
+  def testRandomAction(self):
+    tf_env = TFEnvironmentMock()
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.random_uniform([], minval=0, maxval=10, dtype=tf.int32)
+    next_time_step = tf_env.step(action)
+
+    self.evaluate(tf.global_variables_initializer())
+    [time_step_np, next_time_step_np] = self.evaluate(
+        [time_step, next_time_step])
+    self.assertEqual([0], time_step_np.observation)
+    self.assertEqual([1], next_time_step_np.observation)
+    self.assertEqual(0, self.evaluate(tf_env.resets))
+    self.assertEqual(1, self.evaluate(tf_env.steps))
+    self.assertEqual(0, self.evaluate(tf_env.episodes))
+
+  def testRunEpisode(self):
+    tf_env = TFEnvironmentMock()
+    time_step = tf_env.reset()
+    c = lambda t: tf.logical_not(t.is_last())
+    body = lambda t: [tf_env.step(t.observation)]
+
+    final_time_step = tf.while_loop(c, body, [time_step])
+
+    self.evaluate(tf.global_variables_initializer())
+    [final_time_step_np] = self.evaluate(final_time_step)
+    self.assertEqual([2], final_time_step_np.step_type)
+    self.assertEqual([2], final_time_step_np.observation)
+    self.assertEqual(1, self.evaluate(tf_env.resets))
+    self.assertEqual(2, self.evaluate(tf_env.steps))
+    self.assertEqual(1, self.evaluate(tf_env.episodes))
+    # Run another episode.
+    [final_time_step_np] = self.evaluate(final_time_step)
+    self.assertEqual([2], final_time_step_np.step_type)
+    self.assertEqual([2], final_time_step_np.observation)
+    self.assertEqual(2, self.evaluate(tf_env.resets))
+    self.assertEqual(4, self.evaluate(tf_env.steps))
+    self.assertEqual(2, self.evaluate(tf_env.episodes))
+
 
 if __name__ == '__main__':
   tf.test.main()

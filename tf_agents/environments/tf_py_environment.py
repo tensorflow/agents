@@ -101,14 +101,8 @@ class TFPyEnvironment(tf_environment.Base):
     """Returns the underlying Python environment."""
     return self._env
 
-  def current_time_step(self, step_state=None):
+  def current_time_step(self):
     """Returns the current ts.TimeStep.
-
-    Args:
-      step_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous step_state. It is used to chain
-        dependencies across steps, but can be used to also pass specific step
-        states across steps.
 
     Returns:
       A `TimeStep` tuple of:
@@ -118,8 +112,6 @@ class TFPyEnvironment(tf_environment.Base):
         discount: A scalar float32 tensor representing the discount [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
           corresponding to `observation_spec()`.
-      A step_state Tensor, or a nested dict, list or tuple of Tensors,
-        representing the new step state.
     """
 
     def _current_time_step():
@@ -129,31 +121,19 @@ class TFPyEnvironment(tf_environment.Base):
         return nest.flatten(self._time_step)
 
     with tf.name_scope('current_time_step'):
-      with tf.control_dependencies(step_state):
-        outputs = tf.py_func(
-            _current_time_step,
-            [],  # No inputs.
-            self._time_step_dtypes,
-            stateful=True,
-            name='current_time_step_py_func')
-        step_type, reward, discount = outputs[0:3]
-        flat_observations = outputs[3:]
-      with tf.control_dependencies(outputs):
-        if step_state is None:
-          step_state = [tf.zeros((self.batch_size,), dtype=tf.int64)]
-        else:
-          step_state = nest.map_structure(tf.identity, step_state)
-    return (self._set_names_and_shapes(step_type, reward, discount,
-                                       *flat_observations), step_state)
+      outputs = tf.py_func(
+          _current_time_step,
+          [],  # No inputs.
+          self._time_step_dtypes,
+          stateful=True,
+          name='current_time_step_py_func')
+      step_type, reward, discount = outputs[0:3]
+      flat_observations = outputs[3:]
+      return self._set_names_and_shapes(step_type, reward, discount,
+                                        *flat_observations)
 
-  def reset(self, step_state=None):
-    """Returns a `TimeStep`, a step_step and a reset_op of the environment.
-
-    Args:
-      step_state: An optional Tensor, or a nested dict, list or tuple of
-        Tensors representing the initial step_state. It is used to chain
-        dependencies across steps, but can be used to also pass specific step
-        states across steps.
+  def reset(self):
+    """Returns the current `TimeStep` after resetting the environment.
 
     Returns:
       A `TimeStep` tuple of:
@@ -163,9 +143,6 @@ class TFPyEnvironment(tf_environment.Base):
         discount: A scalar float32 tensor representing the discount [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
           corresponding to `observation_spec()`.
-      A step_state Tensor, or a nested dict, list or tuple of Tensors
-        representing the initial step_state.
-      A reset_op.
     """
 
     def _reset():
@@ -179,19 +156,15 @@ class TFPyEnvironment(tf_environment.Base):
           [],
           stateful=True,
           name='reset_py_func')
-      time_step, step_state = self.current_time_step(step_state)
-    return time_step, step_state, reset_op
+      with tf.control_dependencies([reset_op]):
+        return self.current_time_step()
 
-  def step(self, actions, step_state):
+  def step(self, actions):
     """Returns a TensorFlow op to step the environment.
 
     Args:
       actions: A Tensor, or a nested dict, list or tuple of Tensors
         corresponding to `action_spec()`.
-      step_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous step_state. It is used to chain
-        dependencies across steps, but can be used to also pass specific step
-        states across steps.
 
     Returns:
       A `TimeStep` tuple of:
@@ -201,8 +174,6 @@ class TFPyEnvironment(tf_environment.Base):
         discount: A scalar float32 tensor representing the discount [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
           corresponding to `observation_spec()`.
-      A step_state Tensor, or a nested dict, list or tuple of Tensors,
-        representing the new step state.
 
     Raises:
       ValueError: If any of the actions are scalars or their major axis is known
@@ -217,30 +188,26 @@ class TFPyEnvironment(tf_environment.Base):
         return nest.flatten(self._time_step)
 
     with tf.name_scope('step', values=[actions]):
-      with tf.control_dependencies(step_state):
-        flat_actions = [tf.identity(x) for x in nest.flatten(actions)]
-        for action in flat_actions:
-          if (action.shape.ndims == 0 or
-              (action.shape[0].value is not None and
-               action.shape[0].value != self.batch_size)):
-            raise ValueError(
-                'Expected actions whose major dimension is batch_size (%d), '
-                'but saw action with shape %s:\n   %s' % (self.batch_size,
-                                                          action.shape, action))
-        outputs = tf.py_func(
-            _step,
-            flat_actions,
-            self._time_step_dtypes,
-            stateful=True,
-            name='step_py_func')
-        step_type, reward, discount = outputs[0:3]
-        flat_observations = outputs[3:]
+      flat_actions = [tf.identity(x) for x in nest.flatten(actions)]
+      for action in flat_actions:
+        if (action.shape.ndims == 0 or
+            (action.shape[0].value is not None and
+             action.shape[0].value != self.batch_size)):
+          raise ValueError(
+              'Expected actions whose major dimension is batch_size (%d), '
+              'but saw action with shape %s:\n   %s' % (self.batch_size,
+                                                        action.shape, action))
+      outputs = tf.py_func(
+          _step,
+          flat_actions,
+          self._time_step_dtypes,
+          stateful=True,
+          name='step_py_func')
+      step_type, reward, discount = outputs[0:3]
+      flat_observations = outputs[3:]
 
-      with tf.control_dependencies(outputs):
-        step_state = nest.map_structure(tf.identity, step_state)
-
-      return (self._set_names_and_shapes(step_type, reward, discount,
-                                         *flat_observations), step_state)
+      return self._set_names_and_shapes(step_type, reward, discount,
+                                        *flat_observations)
 
   def _set_names_and_shapes(self, step_type, reward, discount,
                             *flat_observations):

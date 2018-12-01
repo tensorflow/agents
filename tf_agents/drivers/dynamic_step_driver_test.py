@@ -85,9 +85,9 @@ class DynamicStepDriverTest(tf.test.TestCase):
 
     with self.session() as session:
       session.run(tf.global_variables_initializer())
-      _, _, policy_state = session.run(run_driver)
+      _, policy_state = session.run(run_driver)
       for _ in range(4):
-        _, _, policy_state = session.run(
+        _, policy_state = session.run(
             run_driver, feed_dict={policy_state_ph: policy_state})
       self.assertEqual(self.evaluate(num_episodes_observer.num_episodes), 2)
 
@@ -149,9 +149,9 @@ class DynamicStepDriverTest(tf.test.TestCase):
 
     with self.session() as session:
       session.run(tf.global_variables_initializer())
-      _, _, policy_state = session.run(run_driver)
+      _, policy_state = session.run(run_driver)
       for _ in range(5):
-        _, _, policy_state = session.run(
+        _, policy_state = session.run(
             run_driver, feed_dict={policy_state_ph: policy_state})
 
       trajectories = self.evaluate(rb_gather_all)

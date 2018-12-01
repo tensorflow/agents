@@ -15,12 +15,13 @@
 
 """TensorFlow RL Environment API.
 
-# TODO(78251218): Should we reference deepmind's dmsuite package?
-Follows the same API as Deepmind's Environment API as seen in:
-  https://github.com/deepmind/dm_control
+Represents a task to be solved, an environment has to define three methods:
+`reset()`, `current_time_step()` and `step()`.
 
-The reset() method returns timestep, step_state and reset_op
-The step(action, step_state) method returns timestep and step_state
+The reset() method returns current timestep after resetting the environment.
+The current_time_step() method returns current timestep initializing the
+environmet if needed. Only needed in Graph-Mode.
+The step(action) method applies the action and returns the new timestep.
 """
 
 from __future__ import absolute_import
@@ -35,81 +36,84 @@ import six
 class Base(object):
   """Abstract base class for TF RL environments.
 
-  The `reset()` method returns `timestep, step_state, reset_op`
-  The `step(action, step_state)` method returns the new `timestep, step_state`
+  The `current_time_step()` method returns current `time_step`, resetting the
+  environment if necessary.
 
-  The `reset_op` is only needed for explicit resets, in general the Environment
-  will reset automatically.
+  The `step(action)` method applies the action and returns the new `time_step`.
+  This method will also reset the environment if needed and ignore the action in
+  that case.
 
-  Example of simple use:
+  The `reset()` method returns `time_step` that results from an environment
+  reset and is guaranteed to have step_type=ts.FIRST
+
+  The `reset()` is only needed for explicit resets, in general the Environment
+  will reset automatically when needed, for example, when no episode was started
+  or when stepped after the end of the episode was reached
+  (i.e. step_type=ts.LAST).
+
+  Example for collecting an episode in Eager mode:
 
     tf_env = TFEnvironment()
 
-    # reset() creates the initial timestep and step_state, plus a reset_op
-    timestep, step_state, _ = tf_env.reset()
-    # TODO(kbanoop): Fix docs using policy to be explicit about policy_action.
-    action = policy.action(timestep)
+    # reset() creates the initial time_step and resets the Environment.
+    time_step = tf_env.reset()
+    while not time_step.is_last():
+      action_step = policy.action(time_step)
+      time_step = tf_env.step(action_step.action)
+
+  Example of simple use in Graph Mode:
+
+    tf_env = TFEnvironment()
+
+    # current_time_step() creates the initial TimeStep.
+    time_step = tf_env.current_time_step()
+    action_step = policy.action(time_step)
     # It applies the action and returns the new TimeStep.
-    next_timestep, _ = tf_env.step(action, step_state)
+    next_time_step = tf_env.step(action_step.action)
 
-    sess.run([timestep, action, next_timestep])
+    sess.run([time_step, action_step, next_time_step])
 
-  Example with multiple steps:
+  Example with explicit resets in Graph-Mode:
 
-    tf_env = TFEnvironment()
-
-    # reset() creates the initial timestep and step_state, plus a reset_op
-    timestep, step_state, reset_op = tf_env.reset()
-    n_step = [timestep]
-    for i in range(n):
-      action = policy.action(timestep)
-      n_step.append(action)
-      timestep, step_state = tf_env.step(action, step_state)
-      n_step.append(timestep)
-
-    # n_step contains [timestep, action, timestep, action, ...]
-    sess.run(n_step)
-
-  Example with explicit resets:
-
-    timestep, step_state, reset_op = tf_env.reset()
-    action = policy.action(timestep)
+    reset_op = tf_env.reset()
+    time_step = tf_env.current_time_step()
+    action_step = policy.action(time_step)
     # It applies the action and returns the new TimeStep.
-    next_timestep, _ = tf_env.step(action, step_state)
+    next_time_step = tf_env.step(action_step.action)
 
-    # The Environment would be reset before starting.
-    sess.run([timestep, action, next_timestep])
-    # Will force reset the Environment.
+    # The Environment will initialize before starting.
+    sess.run([time_step, action_step, next_time_step])
+    # This will force reset the Environment.
     sess.run(reset_op)
-    sess.run([timestep, action, next_timestep])
+    # This will apply a new action in the Environment.
+    sess.run([time_step, action_step, next_time_step])
 
 
-  Example of random actions:
+  Example of random actions in Graph mode:
 
     tf_env = TFEnvironment()
 
-    # reset() creates the initial timestep and step_state, plus a reset_op
-    timestep, step_state, reset_op = tf_env.reset()
-    # The action doesn't need to depend on timestep because the tf_env add the
-    # needed control_dependencies.
-    action = tf.random_normal()
-    next_timestep, _ = tf_env.step(action, step_state)
+    # The action needs to depend on time_step using control_dependencies.
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tensor_spec.sample_bounded_spec(tf_env.action_spec())
+    next_time_step = tf_env.step(action)
 
-    sess.run(reset_op)
     sess.run([timestep, action, next_timestep])
 
-  Example of collecting an episode with while_loop:
+  Example of collecting full episodes with a while_loop:
 
     tf_env = TFEnvironment()
 
-    # reset() creates the initial timestep and step_state, plus a reset_op
-    timestep, step_state, reset_op = tf_env.reset()
-    c = lambda t, s: t.is_last()
-    body = lambda t, s: tf_env.step(policy.action(t), s)
+    # reset() creates the initial time_step
+    time_step = tf_env.reset()
+    c = lambda t: tf.logical_not(t.is_last())
+    body = lambda t: [tf_env.step(t.observation)]
 
-    episode = tf.while_loop(c, body, (timestep, step_state))
+    final_time_step = tf.while_loop(c, body, [time_step])
 
-    sess.run(episode)
+    sess.run(final_time_step)
+
   """
 
   def __init__(self, time_step_spec=None, action_spec=None, batch_size=1):
@@ -129,15 +133,8 @@ class Base(object):
     self._batch_size = batch_size
 
   @abc.abstractmethod
-  def current_time_step(self, step_state=None):
-    """Returns a `TimeStep` and a step_state.
-
-    Args:
-      step_state: An optional initial Tensor, or a nested dict, list or tuple of
-        Tensors representing the initial step_state. It is used to chain
-        dependencies across steps, but can be used to also pass specific step
-        states across steps. If it is None a `tf.constant(0)` Tensor would be
-        used.
+  def current_time_step(self):
+    """Returns the current `TimeStep`.
 
     Returns:
       A `TimeStep` namedtuple containing:
@@ -146,20 +143,11 @@ class Base(object):
         discount: A discount in the range [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
           corresponding to `observation_spec()`.
-      A step_state initial Tensor, or a nested dict, list or tuple of Tensors,
-        representing the step state.
     """
 
   @abc.abstractmethod
-  def reset(self, step_state=None):
-    """Returns a `TimeStep`, a step_state and a reset_op of the environment.
-
-    Args:
-      step_state: An optional initial Tensor, or a nested dict, list or tuple of
-        Tensors representing the initial step_state. It is used to chain
-        dependencies across steps, but can be used to also pass specific step
-        states across steps. If it is None a `tf.constant(0)` Tensor would be
-        used.
+  def reset(self):
+    """Resets the environment and returns the current_time_step.
 
     Returns:
       A `TimeStep` namedtuple containing:
@@ -168,40 +156,29 @@ class Base(object):
         discount: A discount in the range [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
           corresponding to `observation_spec()`.
-      A step_state initial Tensor, or a nested dict, list or tuple of Tensors,
-        representing the step state.
-      A reset_op.
     """
 
   @abc.abstractmethod
-  def step(self, action, step_state):
-    """Updates the environment according to the action.
+  def step(self, action):
+    """Steps the environment according to the action.
 
     If the environment returned a `TimeStep` with `StepType.LAST` at the
     previous step, this call to `step` will start a new sequence and `action`
     will be ignored.
 
     This method will also start a new sequence if called after the environment
-    has been constructed and `reset` has not been called. Again, in this case
+    has been constructed and `reset` has not been called. In this case
     `action` will be ignored.
 
-    This method should include a control_dependency on step_state before
-    applying the action, and then create a new step_state with a
-    control_dependency on the timestep produced by the action.
+    Expected sequences look like:
 
-      step_state -> action -> time_step -> new_step_state
+      time_step -> action -> next_time_step
 
-    This chain of control dependencies make sure that previous steps are
-    executed before this one, whether the action depends on the previous
-    time_step or not.
+    The action should depend on the previous time_step for correctness.
 
     Args:
       action: A Tensor, or a nested dict, list or tuple of Tensors
         corresponding to `action_spec()`.
-      step_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous step_state. It is used to chain
-        dependencies across steps, but can be used to also pass specific step
-        states across steps.
 
     Returns:
       A `TimeStep` namedtuple containing:
@@ -210,9 +187,6 @@ class Base(object):
         discount: A discount in the range [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
           corresponding to `observation_spec()`.
-      A step_state Tensor, or a nested dict, list or tuple of Tensors,
-        representing the new step state.
-
     """
 
   def render(self):

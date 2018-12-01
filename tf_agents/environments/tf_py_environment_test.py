@@ -148,8 +148,8 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    _, _, reset_op = tf_env.reset()
-    self.evaluate(reset_op)
+    reset = tf_env.reset()
+    self.evaluate(reset)
     self.assertEqual(1, py_env.resets)
     self.assertEqual(0, py_env.steps)
     self.assertEqual(0, py_env.episodes)
@@ -162,12 +162,12 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    _, _, reset_op = tf_env.reset()
-    self.evaluate(reset_op)
+    reset = tf_env.reset()
+    self.evaluate(reset)
     self.assertEqual(1, py_env.resets)
-    self.evaluate(reset_op)
+    self.evaluate(reset)
     self.assertEqual(2, py_env.resets)
-    self.evaluate(reset_op)
+    self.evaluate(reset)
     self.assertEqual(3, py_env.resets)
 
   @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
@@ -178,13 +178,12 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    time_step, step_data = tf_env.current_time_step()
-    time_step, step_data = self.evaluate([time_step, step_data])
+    time_step = tf_env.current_time_step()
+    time_step = self.evaluate(time_step)
     self.assertAllEqual([ts.StepType.FIRST], time_step.step_type)
     self.assertAllEqual([0.0], time_step.reward)
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([0], time_step.observation)
-    self.assertAllEqual([np.array([0])], step_data)
     self.assertAllEqual([], py_env.actions_taken)
     self.assertEqual(1, py_env.resets)
     self.assertEqual(0, py_env.steps)
@@ -198,15 +197,15 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    _, step_data = tf_env.current_time_step()
-    time_step, step_data = self.evaluate(
-        tf_env.step([np.array([1])], step_data))
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant([1])
+    time_step = self.evaluate(tf_env.step(action))
 
     self.assertAllEqual([ts.StepType.MID], time_step.step_type)
     self.assertAllEqual([0.], time_step.reward)
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([1], time_step.observation)
-    self.assertAllEqual([np.array([0])], step_data)
     self.assertAllEqual([1], py_env.actions_taken)
     self.assertEqual(1, py_env.resets)
     self.assertEqual(1, py_env.steps)
@@ -217,29 +216,27 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     batched_py_env = batched_py_environment.BatchedPyEnvironment(py_envs)
     tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     self.assertEqual(tf_env.batch_size, 3)
-    time_step_0, step_data_0 = tf_env.current_time_step()
-    time_step_0_val, step_data_0_val = self.evaluate([time_step_0, step_data_0])
+    time_step_0 = tf_env.current_time_step()
+    time_step_0_val = self.evaluate(time_step_0)
 
     self.assertAllEqual([ts.StepType.FIRST] * 3, time_step_0_val.step_type)
     self.assertAllEqual([0.0] * 3, time_step_0_val.reward)
     self.assertAllEqual([1.0] * 3, time_step_0_val.discount)
     self.assertAllEqual(np.array([0, 0, 0]), time_step_0_val.observation)
-    self.assertAllEqual(np.array([[0, 0, 0]]), step_data_0_val)
     for py_env in py_envs:
       self.assertEqual([], py_env.actions_taken)
       self.assertEqual(1, py_env.resets)
       self.assertEqual(0, py_env.steps)
       self.assertEqual(0, py_env.episodes)
 
-    time_step_1, step_data_1 = tf_env.step(np.array([1, 1, 1]), step_data_0)
+    time_step_1 = tf_env.step(np.array([1, 1, 1]))
 
-    time_step_1_val, step_data_1_val = self.evaluate([time_step_1, step_data_1])
+    time_step_1_val = self.evaluate(time_step_1)
 
     self.assertAllEqual([ts.StepType.MID] * 3, time_step_1_val.step_type)
     self.assertAllEqual([0.] * 3, time_step_1_val.reward)
     self.assertAllEqual([1.0] * 3, time_step_1_val.discount)
     self.assertAllEqual(np.array([1, 1, 1]), time_step_1_val.observation)
-    self.assertAllEqual(np.array([[0, 0, 0]]), step_data_1_val)
     for py_env in py_envs:
       self.assertEqual([1], py_env.actions_taken)
       self.assertEqual(1, py_env.resets)
@@ -254,15 +251,18 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    _, step_data = tf_env.current_time_step()
-    _, step_data = tf_env.step(np.array([1]), step_data)
-    time_step, step_data = self.evaluate(tf_env.step(np.array([2]), step_data))
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant([1])
+    time_step = tf_env.step(action)
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant([2])
+    time_step = self.evaluate(tf_env.step(action))
 
     self.assertEqual(ts.StepType.LAST, time_step.step_type)
     self.assertEqual([2], time_step.observation)
     self.assertEqual(1., time_step.reward)
     self.assertEqual(0., time_step.discount)
-    self.assertEqual(np.array([0]), step_data)
     self.assertEqual([1, 2], py_env.actions_taken)
 
   @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
@@ -273,10 +273,13 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    (_, _, _, observation_t), step_data = tf_env.current_time_step()
-    _, step_data = tf_env.step(np.array([1]), step_data)
-    _, observation = self.evaluate(
-        [tf_env.step(np.array([2]), step_data), observation_t])
+    time_step = tf_env.current_time_step()
+    with tf.control_dependencies([time_step.step_type]):
+      action = tf.constant([1])
+    next_time_step = tf_env.step(action)
+    with tf.control_dependencies([next_time_step.step_type]):
+      action = tf.constant([2])
+    _, observation = self.evaluate([tf_env.step(action), time_step.observation])
 
     self.assertEqual(np.array([0]), observation)
 

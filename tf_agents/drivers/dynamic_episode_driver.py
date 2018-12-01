@@ -61,13 +61,8 @@ class DynamicEpisodeDriver(driver.Driver):
         If env is not a tf_environment.Base or policy is not an instance of
         tf_policy.Base.
     """
-    super(DynamicEpisodeDriver, self).__init__(env, policy)
-    self._observers = observers or []
+    super(DynamicEpisodeDriver, self).__init__(env, policy, observers)
     self._num_episodes = num_episodes
-
-  @property
-  def observers(self):
-    return self._observers
 
   def _loop_condition_fn(self):
     """Returns a function with the condition needed for tf.while_loop."""
@@ -86,13 +81,12 @@ class DynamicEpisodeDriver(driver.Driver):
 
   def _loop_body_fn(self):
     """Returns a function with the driver's loop body ops."""
-    def loop_body(counter, time_step, step_state, policy_state):
+    def loop_body(counter, time_step, policy_state):
       """Runs a step in environment. While loop will call multiple times.
 
       Args:
         counter: Episode counters per batch index. Shape [batch_size].
         time_step: TimeStep tuple with elements shape [batch_size, ...].
-        step_state: Step state tensor shape [batch_size, step_state_dim].
         policy_state: Poicy state tensor shape [batch_size, policy_state_dim].
           Pass empty tuple for non-recurrent policies.
       Returns:
@@ -100,8 +94,7 @@ class DynamicEpisodeDriver(driver.Driver):
       """
       action_step = self._policy.action(time_step, policy_state)
       policy_state = action_step.state
-      next_time_step, step_state = self._env.step(action_step.action,
-                                                  step_state)
+      next_time_step = self._env.step(action_step.action)
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]
@@ -110,16 +103,15 @@ class DynamicEpisodeDriver(driver.Driver):
             tf.identity, (time_step, next_time_step, policy_state))
 
       # While loop counter is only incremented for episode reset episodes.
-      counter += tf.to_int32(traj.is_boundary())
+      counter += tf.cast(traj.is_boundary(), dtype=tf.int32)
 
-      return [counter, next_time_step, step_state, policy_state]
+      return [counter, next_time_step, policy_state]
 
     return loop_body
 
   # TODO(b/113529538): Add tests for policy_state.
   def run(self,
           time_step=None,
-          step_state=None,
           policy_state=(),
           maximum_iterations=None):
     """Takes episodes in the environment using the policy and update observers.
@@ -127,8 +119,6 @@ class DynamicEpisodeDriver(driver.Driver):
     Args:
       time_step: optional initial time_step. If None, it will be obtained by
         resetting the environment. Elements should be shape [batch_size, ...].
-      step_state: optional initial step state for the environment. Should be
-        shape [batch_size, ...].
       policy_state: optional initial state for the policy.
       maximum_iterations: Optional maximum number of iterations of the while
         loop to run. If provided, the cond output is AND-ed with an additional
@@ -137,11 +127,10 @@ class DynamicEpisodeDriver(driver.Driver):
 
     Returns:
       time_step: TimeStep named tuple with final observation, reward, etc.
-      step_state: Tensor with final step step_state.
       policy_state: Tensor with final step policy state.
     """
     if time_step is None:
-      time_step, step_state, _ = self._env.reset(step_state)
+      time_step = self._env.reset()
 
     # Batch dim should be first index of tensors during data
     # collection.
@@ -149,17 +138,16 @@ class DynamicEpisodeDriver(driver.Driver):
         time_step, self._env.time_step_spec())
     counter = tf.zeros(batch_dims, tf.int32)
 
-    [_, time_step, step_state, policy_state] = tf.while_loop(
+    [_, time_step, policy_state] = tf.while_loop(
         cond=self._loop_condition_fn(),
         body=self._loop_body_fn(),
         loop_vars=[
             counter,
             time_step,
-            step_state,
             policy_state],
         back_prop=False,
         parallel_iterations=1,
         maximum_iterations=maximum_iterations,
         name='driver_loop'
     )
-    return time_step, step_state, policy_state
+    return time_step, policy_state

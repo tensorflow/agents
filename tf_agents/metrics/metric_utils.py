@@ -32,8 +32,6 @@ def log_metrics(metrics, prefix=''):
   tf.logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
 
 
-# TODO(sfishman): Remove summary computation and move to callers using
-# run_summaries.
 def compute(metrics,
             environment,
             policy,
@@ -115,9 +113,8 @@ def eager_compute(metrics,
 
   *NOTE*: Because placeholders are not compatible with Eager mode we can not use
   python policies. Because we use tf_policies we need the environment time_steps
-  to be tensors making it easier to use a tf_env for evaluations. This in turn
-  requires us to handle the step_state token. Otherwise this method mirrors
-  `compute` directly.
+  to be tensors making it easier to use a tf_env for evaluations. Otherwise this
+  method mirrors `compute` directly.
 
   Args:
     metrics: List of metrics to compute.
@@ -132,7 +129,7 @@ def eager_compute(metrics,
   for metric in metrics:
     metric.reset()
 
-  time_step, step_state, _ = environment.reset()
+  time_step = environment.reset()
   policy_state = policy.get_initial_state(environment.batch_size)
 
   driver = dynamic_episode_driver.DynamicEpisodeDriver(
@@ -140,9 +137,10 @@ def eager_compute(metrics,
       policy,
       observers=metrics,
       num_episodes=num_episodes)
-  driver.run(time_step, step_state, policy_state)
+  driver.run(time_step, policy_state)
 
   results = [(metric.name, metric.result()) for metric in metrics]
+  # TODO(b/120301678) remove the summaries and merge with compute
   if summary_writer:
     with summary_writer.as_default():
       for m in metrics:
