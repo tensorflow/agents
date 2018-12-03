@@ -584,6 +584,28 @@ class NestedArraysTest(tf.test.TestCase):
     assert_shapes = lambda a: self.assertEqual(a.shape, batched_shape)
     nest.map_structure(assert_shapes, stacked_array)
 
+  def testGetOuterArrayShape(self):
+    spec = (
+        array_spec.ArraySpec([5, 8], np.float32),
+        (array_spec.ArraySpec([1], np.int32),
+         array_spec.ArraySpec([2, 2, 2], np.float32))
+    )
+
+    batch_size = 3
+    unstacked_arrays = [self.zeros_from_spec(spec) for _ in range(batch_size)]
+
+    outer_dims = nest_utils.get_outer_array_shape(unstacked_arrays[0], spec)
+    self.assertEqual((), outer_dims)
+
+    stacked_array = nest_utils.stack_nested_arrays(unstacked_arrays)
+    outer_dims = nest_utils.get_outer_array_shape(stacked_array, spec)
+    self.assertEqual((batch_size,), outer_dims)
+
+    time_dim = [nest_utils.batch_nested_array(arr) for arr in unstacked_arrays]
+    batch_time = nest_utils.stack_nested_arrays(time_dim)
+    outer_dims = nest_utils.get_outer_array_shape(batch_time, spec)
+    self.assertEqual((batch_size, 1), outer_dims)
+
 
 if __name__ == '__main__':
   tf.test.main()

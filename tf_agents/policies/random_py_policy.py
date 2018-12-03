@@ -25,16 +25,9 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
+from tf_agents.utils import nest_utils
 
 nest = tf.contrib.framework.nest
-
-
-# TODO(kbanoop): Move to nest utils.
-def _get_outer_shape(nested_array, specs):
-  first_spec_shape = nest.flatten(specs)[0].shape
-  first_array_shape = nest.flatten(nested_array)[0].shape
-  num_outer_dims = len(first_array_shape) - len(first_spec_shape)
-  return first_spec_shape[:num_outer_dims]
 
 
 class RandomPyPolicy(py_policy.Base):
@@ -59,7 +52,7 @@ class RandomPyPolicy(py_policy.Base):
     outer_dims = self._outer_dims
     if outer_dims is None:
       if self.time_step_spec().observation:
-        outer_dims = _get_outer_shape(
+        outer_dims = nest_utils.get_outer_array_shape(
             time_step.observation,
             self.time_step_spec().observation)
       else:

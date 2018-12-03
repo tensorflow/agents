@@ -439,3 +439,11 @@ def stack_nested_arrays(nested_arrays):
       np.stack(a) for a in zip(*nested_arrays_flattened)
   ]
   return nest.pack_sequence_as(nested_arrays[0], batched_nested_array_flattened)
+
+
+def get_outer_array_shape(nested_array, spec):
+  """Batch dims of array's batch dimension `dim`."""
+  first_array = nest.flatten(nested_array)[0]
+  first_spec = nest.flatten(spec)[0]
+  num_outer_dims = len(first_array.shape) - len(first_spec.shape)
+  return first_array.shape[:num_outer_dims]
