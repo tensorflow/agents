@@ -49,10 +49,10 @@ def validate_py_environment(environment, episodes=5):
   random_policy = random_py_policy.RandomPyPolicy(
       time_step_spec=time_step_spec, action_spec=action_spec)
 
-  episodes = 0
+  episode_count = 0
   time_step = environment.reset()
 
-  while episodes < 5:
+  while episode_count < episodes:
     if not array_spec.check_arrays_nest(time_step, time_step_spec):
       raise ValueError(
           'Given `time_step`: %r does not match expected `time_step_spec`: %r' %
@@ -62,4 +62,4 @@ def validate_py_environment(environment, episodes=5):
     time_step = environment.step(action)
 
     if time_step.is_last():
-      episodes += 1
+      episode_count += 1
