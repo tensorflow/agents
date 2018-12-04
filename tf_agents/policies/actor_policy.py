@@ -34,8 +34,7 @@ nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 
-# TODO(sfishman): Rename this to ActorPolicy
-class ActorPolicyKeras(tf_policy.Base):
+class ActorPolicy(tf_policy.Base):
   """Class to build Actor Policies."""
 
   def __init__(self,
@@ -68,7 +67,7 @@ class ActorPolicyKeras(tf_policy.Base):
     self._observation_normalizer = observation_normalizer
     self._clip = clip
 
-    super(ActorPolicyKeras, self).__init__(
+    super(ActorPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         policy_state_spec=actor_network.state_spec,

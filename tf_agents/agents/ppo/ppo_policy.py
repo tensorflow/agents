@@ -32,7 +32,7 @@ nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 
-class PPOPolicy(actor_policy.ActorPolicyKeras):
+class PPOPolicy(actor_policy.ActorPolicy):
   """An ActorPolicy that also returns policy_info needed for PPO training."""
 
   def __init__(self,

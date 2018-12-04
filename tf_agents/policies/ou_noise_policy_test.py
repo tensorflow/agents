@@ -77,7 +77,7 @@ class OuNoisePolicyTest(tf.test.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, 2, 3)
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
-    self._wrapped_policy = actor_policy.ActorPolicyKeras(
+    self._wrapped_policy = actor_policy.ActorPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=self._action_spec,
         actor_network=actor_network,
@@ -128,7 +128,7 @@ class OuNoisePolicyTest(tf.test.TestCase):
   def testActionList(self):
     action_spec = [self._action_spec]
     actor_network = DummyActionNet(self._obs_spec, action_spec)
-    self._wrapped_policy = actor_policy.ActorPolicyKeras(
+    self._wrapped_policy = actor_policy.ActorPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
         actor_network=actor_network,

@@ -126,10 +126,10 @@ class Td3Agent(tf_agent.BaseV2):
     self._target_policy_noise_clip = target_policy_noise_clip
     self._gradient_clipping = gradient_clipping
 
-    policy = actor_policy.ActorPolicyKeras(
+    policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec, action_spec=action_spec,
         actor_network=self._actor_network, clip=True)
-    collect_policy = actor_policy.ActorPolicyKeras(
+    collect_policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec, action_spec=action_spec,
         actor_network=self._actor_network, clip=False)
     collect_policy = ou_noise_policy.OUNoisePolicy(

@@ -92,10 +92,10 @@ def test_cases():
   })
 
 
-class ActorPolicyKerasTest(parameterized.TestCase, tf.test.TestCase):
+class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
 
   def setUp(self):
-    super(ActorPolicyKerasTest, self).setUp()
+    super(ActorPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, 2, 3)
@@ -116,7 +116,7 @@ class ActorPolicyKerasTest(parameterized.TestCase, tf.test.TestCase):
   @test_cases()
   def testBuild(self, network_ctor):
     actor_network = network_ctor(self._obs_spec, self._action_spec)
-    policy = actor_policy.ActorPolicyKeras(
+    policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
@@ -126,7 +126,7 @@ class ActorPolicyKerasTest(parameterized.TestCase, tf.test.TestCase):
   @test_cases()
   def testActionBatch(self, network_ctor):
     actor_network = network_ctor(self._obs_spec, self._action_spec)
-    policy = actor_policy.ActorPolicyKeras(
+    policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     action_step = policy.action(self._time_step_batch)
@@ -140,10 +140,10 @@ class ActorPolicyKerasTest(parameterized.TestCase, tf.test.TestCase):
   def testUpdate(self):
     tf.set_random_seed(1)
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
-    policy = actor_policy.ActorPolicyKeras(
+    policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
     self.assertEqual(policy.variables(), [])
-    new_policy = actor_policy.ActorPolicyKeras(
+    new_policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     action_step = policy.action(self._time_step_batch)
@@ -162,7 +162,7 @@ class ActorPolicyKerasTest(parameterized.TestCase, tf.test.TestCase):
 
   def testDeterministicDistribution(self):
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
-    policy = actor_policy.ActorPolicyKeras(
+    policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     action_step = policy.action(self._time_step_batch)
@@ -178,7 +178,7 @@ class ActorPolicyKerasTest(parameterized.TestCase, tf.test.TestCase):
   def testGaussianDistribution(self):
     actor_network = DummyActionDistributionNet(self._obs_spec,
                                                self._action_spec)
-    policy = actor_policy.ActorPolicyKeras(
+    policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     distribution_step = policy.distribution(self._time_step_batch)

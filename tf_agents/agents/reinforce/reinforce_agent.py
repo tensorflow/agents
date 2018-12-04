@@ -65,7 +65,7 @@ class ReinforceAgent(tf_agent.BaseV2):
     """
 
     self._actor_network = actor_network
-    collect_policy = actor_policy.ActorPolicyKeras(
+    collect_policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         actor_network=self._actor_network,
