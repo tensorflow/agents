@@ -65,7 +65,7 @@ from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_py_policy
-from tf_agents.replay_buffers import py_uniform_replay_buffer
+from tf_agents.replay_buffers import py_hashed_replay_buffer
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common_utils
 from tf_agents.utils import timer
@@ -285,9 +285,8 @@ class TrainEval(object):
         data_spec = trajectory.from_transition(
             py_time_step_spec, py_action_spec, py_time_step_spec)
         self._replay_buffer = (
-            py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer(
-                data_spec=data_spec,
-                capacity=replay_buffer_capacity))
+            py_hashed_replay_buffer.PyHashedReplayBuffer(
+                data_spec=data_spec, capacity=replay_buffer_capacity))
         ds = self._replay_buffer.as_dataset(
             sample_batch_size=batch_size, num_steps=2).prefetch(4)
         self._ds_itr = ds.make_initializable_iterator()

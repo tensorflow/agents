@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Simple unit test of py_uniform_replay_buffer."""
+"""Unit tests for PyUniformReplayBuffer and PyHashedReplayBuffer."""
 
 from __future__ import division
 from __future__ import unicode_literals
@@ -27,6 +27,7 @@ import tensorflow as tf
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
+from tf_agents.replay_buffers import py_hashed_replay_buffer
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
@@ -35,7 +36,7 @@ from tf_agents.utils import nest_utils
 class FrameBufferTest(tf.test.TestCase):
 
   def testFrameBuffer(self):
-    fb = py_uniform_replay_buffer.FrameBuffer()
+    fb = py_hashed_replay_buffer.FrameBuffer()
     a = np.random.randint(low=0, high=256, size=[84, 84, 1], dtype=np.uint8)
     h = fb.add_frame(a)
     fb.on_delete([h])
@@ -89,8 +90,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing',
-        py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
+       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
   def testReplayBufferCircular(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -145,8 +145,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing',
-        py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
+       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
   def testSampleBatches(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -162,8 +161,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing',
-        py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
+       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
   def testSampleBatchesWithNumSteps(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -181,8 +179,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing',
-        py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
+       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
   def testNumStepsNoBatching(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -200,8 +197,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing',
-        py_uniform_replay_buffer.PyTrajectoryHashedUniformReplayBuffer)])
+       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
   def testCheckpointable(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
     self.assertEqual(32, self._replay_buffer.size)
