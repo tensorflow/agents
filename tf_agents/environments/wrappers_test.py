@@ -44,7 +44,7 @@ class TimeLimitWrapperTest(absltest.TestCase):
     env = wrappers.TimeLimit(env, 10)
 
     action_spec = env.action_spec()
-    self.assertEqual((1,), action_spec.shape)
+    self.assertEqual((), action_spec.shape)
     self.assertEqual(0, action_spec.minimum)
     self.assertEqual(1, action_spec.maximum)
 
@@ -64,8 +64,8 @@ class TimeLimitWrapperTest(absltest.TestCase):
     env = wrappers.TimeLimit(env, 2)
 
     env.reset()
-    env.step([0])
-    time_step = env.step([0])
+    env.step(0)
+    time_step = env.step(0)
 
     self.assertTrue(time_step.is_last())
     self.assertNotEqual(None, time_step.discount)
@@ -78,7 +78,7 @@ class TimeLimitWrapperTest(absltest.TestCase):
 
     self.assertEqual(None, env.get_info())
     env.reset()
-    env.step([0])
+    env.step(0)
     self.assertEqual({}, env.get_info())
 
   def test_automatic_reset(self):
@@ -87,19 +87,19 @@ class TimeLimitWrapperTest(absltest.TestCase):
     env = wrappers.TimeLimit(env, 2)
 
     # Episode 1
-    first_time_step = env.step([0])
+    first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
-    mid_time_step = env.step([0])
+    mid_time_step = env.step(0)
     self.assertTrue(mid_time_step.is_mid())
-    last_time_step = env.step([0])
+    last_time_step = env.step(0)
     self.assertTrue(last_time_step.is_last())
 
     # Episode 2
-    first_time_step = env.step([0])
+    first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
-    mid_time_step = env.step([0])
+    mid_time_step = env.step(0)
     self.assertTrue(mid_time_step.is_mid())
-    last_time_step = env.step([0])
+    last_time_step = env.step(0)
     self.assertTrue(last_time_step.is_last())
 
   def test_duration_applied_after_episode_terminates_early(self):
@@ -108,19 +108,19 @@ class TimeLimitWrapperTest(absltest.TestCase):
     env = wrappers.TimeLimit(env, 10000)
 
     # Episode 1 stepped until termination occurs.
-    time_step = env.step([1])
+    time_step = env.step(1)
     while not time_step.is_last():
-      time_step = env.step([1])
+      time_step = env.step(1)
 
     self.assertTrue(time_step.is_last())
     env._duration = 2
 
     # Episode 2 short duration hits step limit.
-    first_time_step = env.step([0])
+    first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
-    mid_time_step = env.step([0])
+    mid_time_step = env.step(0)
     self.assertTrue(mid_time_step.is_mid())
-    last_time_step = env.step([0])
+    last_time_step = env.step(0)
     self.assertTrue(last_time_step.is_last())
 
 
@@ -162,9 +162,9 @@ class ActionRepeatWrapperTest(absltest.TestCase):
   def test_accumulates_reward(self):
     mock_env = self._get_mock_env_episode()
     env = wrappers.ActionRepeat(mock_env, 3)
-    time_step = env.step([0])
+    time_step = env.step(0)
 
-    mock_env.step.assert_called_with([0])
+    mock_env.step.assert_called_with(0)
     self.assertEqual(10, time_step.reward)
     self.assertEqual([2], time_step.observation)
 
@@ -182,9 +182,9 @@ class RunStatsWrapperTest(absltest.TestCase):
 
     for episode_num in range(1, 4):
       while not time_step.is_last():
-        time_step = env.step([1])
+        time_step = env.step(1)
       self.assertEqual(episode_num, env.episodes)
-      time_step = env.step([1])
+      time_step = env.step(1)
 
   def test_episode_count_with_time_limit(self):
     cartpole_env = gym.make('CartPole-v1')
@@ -195,8 +195,8 @@ class RunStatsWrapperTest(absltest.TestCase):
     env.reset()
     self.assertEqual(0, env.episodes)
 
-    env.step([0])
-    time_step = env.step([0])
+    env.step(0)
+    time_step = env.step(0)
 
     self.assertTrue(time_step.is_last())
     self.assertEqual(1, env.episodes)
@@ -214,9 +214,9 @@ class RunStatsWrapperTest(absltest.TestCase):
     for _ in range(0, 4):
       while not time_step.is_last():
         self.assertEqual(steps, env.total_steps)
-        time_step = env.step([1])
+        time_step = env.step(1)
         steps += 1
-      time_step = env.step([1])
+      time_step = env.step(1)
 
   def test_resets_count(self):
     cartpole_env = gym.make('CartPole-v1')
@@ -231,8 +231,8 @@ class RunStatsWrapperTest(absltest.TestCase):
     for _ in range(0, 4):
       while not time_step.is_last():
         self.assertEqual(resets, env.resets)
-        time_step = env.step([1])
-      time_step = env.step([1])
+        time_step = env.step(1)
+      time_step = env.step(1)
       resets += 1
 
 
@@ -240,15 +240,15 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
   def test_discrete_spec_scalar_limit(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
-    action_spec = array_spec.BoundedArraySpec((1,), np.float32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.float32, -10, 10)
     limits = 3
 
     env = random_py_environment.RandomPyEnvironment(
         obs_spec, action_spec=action_spec)
     env = wrappers.ActionDiscretizeWrapper(env, limits)
 
-    expected_spec = array_spec.BoundedArraySpec((1,), np.int32, 0,
-                                                np.atleast_1d(limits) - 1)
+    expected_spec = array_spec.BoundedArraySpec((), np.int32, 0,
+                                                np.asarray(limits) - 1)
     self.assertEqual(expected_spec, env.action_spec())
 
   def test_discrete_spec_1d(self):
@@ -261,7 +261,7 @@ class ActionDiscretizeWrapper(absltest.TestCase):
     env = wrappers.ActionDiscretizeWrapper(env, limits)
 
     expected_spec = array_spec.BoundedArraySpec((2,), np.int32, 0,
-                                                np.atleast_1d(limits) - 1)
+                                                np.asarray(limits) - 1)
     self.assertEqual(expected_spec, env.action_spec())
 
   def test_discrete_spec_nd(self):
@@ -278,7 +278,7 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
   def test_action_mapping_1d(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
-    action_spec = array_spec.BoundedArraySpec((1,), np.float32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.float32, -10, 10)
     limits = np.array(5)
 
     def mock_step(_, action):
@@ -549,7 +549,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     for idx, key in enumerate(observation_keys):
       obs_spec[key] = array_spec.ArraySpec(observation_shapes[idx],
                                            observation_dtypes)
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
         obs_spec, action_spec=action_spec)
@@ -577,7 +577,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     })
 
     observations_to_keep = np.array([observations_to_keep]).flatten()
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
         obs_spec, action_spec=action_spec)
@@ -606,7 +606,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
         'obs3': array_spec.ArraySpec((3,), np.int32)
     })
 
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
         obs_spec, action_spec=action_spec)
@@ -625,7 +625,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
                             array_spec.ArraySpec((1,), np.int32))
   def test_observations_wrong_spec_for_whitelist(self, observation_spec):
     """Test the Wrapper has ValueError if the observation spec is invalid."""
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
         observation_spec, action_spec=action_spec)
@@ -637,7 +637,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
 
   def test_observations_unknown_whitelist(self):
     """Test the Wrapper has ValueError if given unknown keys."""
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     obs_spec = collections.OrderedDict({
         'obs1': array_spec.ArraySpec((1,), np.int32),
@@ -656,7 +656,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
 
   def test_observations_multiple_dtypes(self):
     """Test the Wrapper has ValueError if given unknown keys."""
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     obs_spec = collections.OrderedDict({
         'obs1': array_spec.ArraySpec((1,), np.int32),
@@ -676,7 +676,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
         'obs2': array_spec.ArraySpec((2,), np.int32),
     })
 
-    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     # Generate a randomy py environment with batch size.
     batch_size = 4

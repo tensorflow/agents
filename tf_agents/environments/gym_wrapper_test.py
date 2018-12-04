@@ -36,7 +36,7 @@ class GymWrapperSpecTest(absltest.TestCase):
     discrete_space = gym.spaces.Discrete(3)
     spec = gym_wrapper._spec_from_gym_space(discrete_space)
 
-    self.assertEqual((1,), spec.shape)
+    self.assertEqual((), spec.shape)
     self.assertEqual(np.int64, spec.dtype)
     self.assertEqual(0, spec.minimum)
     self.assertEqual(2, spec.maximum)
@@ -65,12 +65,12 @@ class GymWrapperSpecTest(absltest.TestCase):
     spec = gym_wrapper._spec_from_gym_space(tuple_space)
 
     self.assertEqual(2, len(spec))
-    self.assertEqual((1,), spec[0].shape)
+    self.assertEqual((), spec[0].shape)
     self.assertEqual(np.int64, spec[0].dtype)
     self.assertEqual(0, spec[0].minimum)
     self.assertEqual(1, spec[0].maximum)
 
-    self.assertEqual((1,), spec[1].shape)
+    self.assertEqual((), spec[1].shape)
     self.assertEqual(np.int64, spec[1].dtype)
     self.assertEqual(0, spec[1].minimum)
     self.assertEqual(2, spec[1].maximum)
@@ -92,7 +92,7 @@ class GymWrapperSpecTest(absltest.TestCase):
 
     self.assertEqual(4, len(spec))
     # Test Discrete
-    self.assertEqual((1,), spec[0].shape)
+    self.assertEqual((), spec[0].shape)
     self.assertEqual(np.int64, spec[0].dtype)
     self.assertEqual(0, spec[0].minimum)
     self.assertEqual(1, spec[0].maximum)
@@ -105,11 +105,11 @@ class GymWrapperSpecTest(absltest.TestCase):
 
     # Test Tuple
     self.assertEqual(2, len(spec[2]))
-    self.assertEqual((1,), spec[2][0].shape)
+    self.assertEqual((), spec[2][0].shape)
     self.assertEqual(np.int64, spec[2][0].dtype)
     self.assertEqual(0, spec[2][0].minimum)
     self.assertEqual(1, spec[2][0].maximum)
-    self.assertEqual((1,), spec[2][1].shape)
+    self.assertEqual((), spec[2][1].shape)
     self.assertEqual(np.int64, spec[2][1].dtype)
     self.assertEqual(0, spec[2][1].minimum)
     self.assertEqual(2, spec[2][1].maximum)
@@ -117,7 +117,7 @@ class GymWrapperSpecTest(absltest.TestCase):
     # Test Dict
     # Test Discrete in Dict
     discrete_in_dict = spec[3]['spec_1']
-    self.assertEqual((1,), discrete_in_dict.shape)
+    self.assertEqual((), discrete_in_dict.shape)
     self.assertEqual(np.int64, discrete_in_dict.dtype)
     self.assertEqual(0, discrete_in_dict.minimum)
     self.assertEqual(1, discrete_in_dict.maximum)
@@ -125,11 +125,11 @@ class GymWrapperSpecTest(absltest.TestCase):
     # Test Tuple in Dict
     tuple_in_dict = spec[3]['spec_2']
     self.assertEqual(2, len(tuple_in_dict))
-    self.assertEqual((1,), tuple_in_dict[0].shape)
+    self.assertEqual((), tuple_in_dict[0].shape)
     self.assertEqual(np.int64, tuple_in_dict[0].dtype)
     self.assertEqual(0, tuple_in_dict[0].minimum)
     self.assertEqual(1, tuple_in_dict[0].maximum)
-    self.assertEqual((1,), tuple_in_dict[1].shape)
+    self.assertEqual((), tuple_in_dict[1].shape)
     self.assertEqual(np.int64, tuple_in_dict[1].dtype)
     self.assertEqual(0, tuple_in_dict[1].minimum)
     self.assertEqual(2, tuple_in_dict[1].maximum)
@@ -142,7 +142,7 @@ class GymWrapperSpecTest(absltest.TestCase):
     spec = gym_wrapper._spec_from_gym_space(dict_space)
 
     self.assertEqual(2, len(spec))
-    self.assertEqual((1,), spec['spec_1'].shape)
+    self.assertEqual((), spec['spec_1'].shape)
     self.assertEqual(np.int64, spec['spec_1'].dtype)
     self.assertEqual(0, spec['spec_1'].minimum)
     self.assertEqual(1, spec['spec_1'].maximum)
@@ -194,7 +194,7 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     env = gym_wrapper.GymWrapper(cartpole_env)
 
     action_spec = env.action_spec()
-    self.assertEqual((1,), action_spec.shape)
+    self.assertEqual((), action_spec.shape)
     self.assertEqual(0, action_spec.minimum)
     self.assertEqual(1, action_spec.maximum)
 
@@ -224,7 +224,7 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
     env.reset()
-    transition_time_step = env.step([0])
+    transition_time_step = env.step(0)
 
     self.assertTrue(transition_time_step.is_mid())
     self.assertNotEqual(None, transition_time_step.reward)
@@ -237,7 +237,7 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     time_step = env.reset()
 
     while not time_step.is_last():
-      time_step = env.step([1])
+      time_step = env.step(1)
 
     self.assertTrue(time_step.is_last())
     self.assertNotEqual(None, time_step.reward)
@@ -250,14 +250,14 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     self.assertEqual(None, env.get_info())
     env.reset()
     self.assertEqual(None, env.get_info())
-    env.step([0])
+    env.step(0)
     self.assertEqual({}, env.get_info())
 
   def test_automatic_reset_after_create(self):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
 
-    first_time_step = env.step([0])
+    first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
 
   def test_automatic_reset_after_done(self):
@@ -266,22 +266,22 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     time_step = env.reset()
 
     while not time_step.is_last():
-      time_step = env.step([1])
+      time_step = env.step(1)
 
     self.assertTrue(time_step.is_last())
-    first_time_step = env.step([0])
+    first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
 
   def test_automatic_reset_after_done_not_using_reset_directly(self):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
-    time_step = env.step([1])
+    time_step = env.step(1)
 
     while not time_step.is_last():
-      time_step = env.step([1])
+      time_step = env.step(1)
 
     self.assertTrue(time_step.is_last())
-    first_time_step = env.step([0])
+    first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
 
   def test_render(self):

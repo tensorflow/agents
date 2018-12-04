@@ -231,7 +231,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     if not np.all(limits >= 2):
       raise ValueError('num_actions should all be at least size 2.')
 
-    limits = np.atleast_1d(limits)
+    limits = np.asarray(limits)
     discrete_spec = array_spec.BoundedArraySpec(
         shape=spec.shape,
         dtype=np.int32,
@@ -265,7 +265,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
       ValueError: If the given action's shpe does not match the action_spec
       shape.
     """
-    action = np.atleast_1d(action)
+    action = np.asarray(action)
     if action.shape != self._discrete_spec.shape:
       raise ValueError(
           'Received action with incorrect shape. Got {}, expected {}'.format(
