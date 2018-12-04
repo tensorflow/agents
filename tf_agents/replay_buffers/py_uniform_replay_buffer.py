@@ -116,31 +116,29 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
                 sample_batch_size=None,
                 num_steps=None,
                 time_stacked=True):
-    if num_steps is None:
-      num_steps = 1
-
+    num_steps_value = num_steps if num_steps is not None else 1
     def get_single():
       """Gets a single item from the replay buffer."""
       with self._lock:
         if self._np_state.size <= 0:
           raise ValueError('Read error: empty replay buffer')
 
-        idx = np.random.randint(self._np_state.size - num_steps + 1)
+        idx = np.random.randint(self._np_state.size - num_steps_value + 1)
         if self._np_state.size == self._capacity:
           # If the buffer is full, add cur_id (head of circular buffer) so that
-          # we sample from the range [cur_id, cur_id + size - num_steps]. We
-          # will modulo the size below.
+          # we sample from the range [cur_id, cur_id + size - num_steps_value].
+          # We will modulo the size below.
           idx += self._np_state.cur_id
 
-        if num_steps > 1:
+        if num_steps is not None:
           # TODO(b/120242830): Try getting data from numpy in one shot rather
-          # than num_steps.
+          # than num_steps_value.
           item = [self._decode(self._storage.get((idx + n) % self._capacity))
                   for n in range(num_steps)]
         else:
           item = self._decode(self._storage.get(idx % self._capacity))
 
-      if num_steps > 1 and time_stacked:
+      if num_steps is not None and time_stacked:
         item = nest_utils.stack_nested_arrays(item)
       return item
 
@@ -156,14 +154,11 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
       raise NotImplementedError('PyUniformReplayBuffer does not support '
                                 'num_parallel_calls (must be None).')
 
-    if num_steps is None:
-      num_steps = 1
-
     data_spec = self._data_spec
     if sample_batch_size is not None:
       data_spec = array_spec.add_outer_dims_nest(
           data_spec, (sample_batch_size,))
-    if num_steps > 1:
+    if num_steps is not None:
       data_spec = (data_spec,) * num_steps
     shapes = tuple(s.shape for s in nest.flatten(data_spec))
     dtypes = tuple(s.dtype for s in nest.flatten(data_spec))
@@ -185,7 +180,7 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
     ds = tf.data.Dataset.from_generator(generator_fn, dtypes, shapes).map(
         lambda *items: nest.pack_sequence_as(data_spec, items))
-    if num_steps > 1:
+    if num_steps is not None:
       return ds.map(time_stack)
     else:
       return ds
@@ -200,4 +195,3 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
   def _clear(self):
     self._np_state.size = np.int64(0)
     self._np_state.cur_id = np.int64(0)
-
