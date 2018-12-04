@@ -55,6 +55,7 @@ import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.dqn import q_network
+from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_atari
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
@@ -227,6 +228,7 @@ class TrainEval(object):
           env_name,
           max_episode_steps=max_episode_frames / ATARI_FRAME_SKIP,
           gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
+      self._env = batched_py_environment.BatchedPyEnvironment([self._env])
 
       observation_spec = tensor_spec.from_spec(self._env.observation_spec())
       time_step_spec = ts.time_step_spec(observation_spec)
@@ -269,7 +271,7 @@ class TrainEval(object):
             summarize_grads_and_vars=summarize_grads_and_vars)
 
         self._collect_policy = py_tf_policy.PyTFPolicy(
-            tf_agent.collect_policy())
+            tf_agent.collect_policy(), batch_size=self._env.batch_size)
 
         if self._do_eval:
           self._eval_policy = py_tf_policy.PyTFPolicy(
@@ -287,7 +289,7 @@ class TrainEval(object):
                 data_spec=data_spec,
                 capacity=replay_buffer_capacity))
         ds = self._replay_buffer.as_dataset(
-            batch_size=batch_size, num_steps=2).prefetch(4)
+            sample_batch_size=batch_size, num_steps=2).prefetch(4)
         self._ds_itr = ds.make_initializable_iterator()
         experience = self._ds_itr.get_next()
 
@@ -354,6 +356,9 @@ class TrainEval(object):
             replay_buffer=self._replay_buffer)
 
         self._init_agent_op = tf_agent.initialize()
+
+  def game_over(self):
+    return self._env.envs[0].game_over
 
   def run(self):
     """Execute the train/eval loop."""
@@ -441,12 +446,12 @@ class TrainEval(object):
         time_step_spec, self._env.action_spec())
     time_step = self._env.reset()
     while self._replay_buffer.size < self._initial_collect_steps:
-      if self._env.game_over:
+      if self.game_over():
         time_step = self._env.reset()
       action_step = random_policy.action(time_step)
       next_time_step = self._env.step(action_step.action)
-      self._replay_buffer.add(
-          trajectory.from_transition(time_step, action_step, next_time_step))
+      self._replay_buffer.add_batch(trajectory.from_transition(
+          time_step, action_step, next_time_step))
       time_step = next_time_step
     tf.logging.info('Done.')
 
@@ -463,7 +468,7 @@ class TrainEval(object):
             train=train)
         env_steps += 1
 
-      if self._env.game_over:
+      if self.game_over():
         break
       elif train and self._env_steps_metric.result() % self._update_period == 0:
         with self._train_timer:
@@ -483,7 +488,7 @@ class TrainEval(object):
     # Clip the reward to (-1, 1) to normalize rewards in training.
     traj = traj._replace(
         reward=np.asarray(np.clip(traj.reward, -1, 1)))
-    self._replay_buffer.add(traj)
+    self._replay_buffer.add_batch(traj)
 
   def _collect_step(self, time_step, policy, metric_observers, train=False):
     """Run a single step (or 2 steps on life loss) in the environment."""
@@ -493,8 +498,8 @@ class TrainEval(object):
       next_time_step = self._env.step(action_step.action)
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
 
-    if next_time_step.is_last() and not self._env.game_over:
-      traj = traj._replace(discount=np.array(1.0, dtype=np.float32))
+    if next_time_step.is_last() and not self.game_over():
+      traj = traj._replace(discount=np.array([1.0], dtype=np.float32))
 
     if train:
       self._store_to_rb(traj)
@@ -507,7 +512,7 @@ class TrainEval(object):
     # steps were MID steps, since life loss is not actually a terminal event
     # (it is mostly a trick to make it easier to propagate rewards backwards by
     # shortening episode durations from the agent's perspective).
-    if next_time_step.is_last() and not self._env.game_over:
+    if next_time_step.is_last() and not self.game_over():
       # Update metrics as if this is a mid-episode step.
       next_time_step = ts.transition(
           next_time_step.observation, next_time_step.reward)

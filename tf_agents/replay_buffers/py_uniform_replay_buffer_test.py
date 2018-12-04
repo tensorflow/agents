@@ -29,6 +29,7 @@ from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import array_spec
+from tf_agents.utils import nest_utils
 
 
 class FrameBufferTest(tf.test.TestCase):
@@ -82,8 +83,9 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._transition_count = len(time_steps) - 1
     dummy_action = policy_step.PolicyStep(np.int32(0))
     for k in range(self._transition_count):
-      self._replay_buffer.add(trajectory.from_transition(
-          time_steps[k], dummy_action, time_steps[k + 1]))
+      self._replay_buffer.add_batch(nest_utils.batch_nested_array(
+          trajectory.from_transition(
+              time_steps[k], dummy_action, time_steps[k + 1])))
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
@@ -118,11 +120,11 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     # Seed RB with 5 elements to move head to position 5.
     for _ in range(5):
-      replay_buffer.add(np.array(0))
+      replay_buffer.add_batch(np.array([0]))
 
     # Fill RB with elements 0-9.
     for i in range(10):
-      replay_buffer.add(np.array(i))
+      replay_buffer.add_batch(np.array([i]))
 
     # Sample with num_steps = 2. We should never sample (9, 0) since this is an
     # invalid transition. With 1000 samples, the probability of sampling (9, 0)
@@ -148,7 +150,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
   def testSampleBatches(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
-    ds = self._replay_buffer.as_dataset(batch_size=5)
+    ds = self._replay_buffer.as_dataset(sample_batch_size=5)
     replay_itr = ds.make_one_shot_iterator()
     tf_trajectory = replay_itr.get_next()
     self.assertEqual(tf_trajectory.observation.shape.as_list(), [5, 15, 15, 4])
@@ -165,7 +167,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
   def testSampleBatchesWithNumSteps(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
-    ds = self._replay_buffer.as_dataset(batch_size=5, num_steps=3)
+    ds = self._replay_buffer.as_dataset(sample_batch_size=5, num_steps=3)
     replay_itr = ds.make_one_shot_iterator()
     tf_trajectory = replay_itr.get_next()
     self.assertEqual(tf_trajectory.observation.shape.as_list(),

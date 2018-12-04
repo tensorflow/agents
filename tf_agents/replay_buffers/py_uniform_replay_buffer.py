@@ -34,6 +34,7 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.environments import trajectory
+from tf_agents.replay_buffers import replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
 
@@ -96,8 +97,8 @@ class NumpyStorage(tf.contrib.checkpoint.Checkpointable):
       self._array(nest_idx)[table_idx] = element
 
 
-class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
-  """A uniform replay buffer.
+class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
+  """A Python-based replay buffer that supports uniform sampling.
 
   Writing and reading to this replay buffer is thread safe.
   """
@@ -110,13 +111,9 @@ class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
         single item that can be stored in this buffer.
       capacity: The maximum number of items that can be stored in the buffer.
     """
-    self._capacity = capacity
-    if not hasattr(self, '_data_spec'):
-      # If subclass has already set data_spec, ignore this one (there may be
-      # spec differences between what the subclass encodes and what the
-      # subclass decodes).
-      self._data_spec = data_spec
-    self._storage = NumpyStorage(data_spec, capacity)
+    super(PyUniformReplayBuffer, self).__init__(data_spec, capacity)
+
+    self._storage = NumpyStorage(self._encoded_data_spec(), capacity)
     self._lock = threading.Lock()
     self._np_state = tf.contrib.checkpoint.NumpyState()
 
@@ -129,13 +126,17 @@ class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
     # Total number of items that went through the replay buffer.
     self._np_state.item_count = np.int64(0)
 
+  def _encoded_data_spec(self):
+    """Spec of data items after encoding using _encode."""
+    return self._data_spec
+
   def _encode(self, item):
     """Encodes an item (before adding it to the buffer)."""
     return item
 
-  def _decode(self, encoded_item):
+  def _decode(self, item):
     """Decodes an item."""
-    return encoded_item
+    return item
 
   def _on_delete(self, encoded_item):
     """Do any necessary cleanup."""
@@ -145,76 +146,75 @@ class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
   def size(self):
     return self._np_state.size
 
-  def add(self, item):
-    """Adds an item to the replay buffer.
+  def _add_batch(self, items):
+    outer_shape = nest_utils.get_outer_array_shape(items, self._data_spec)
+    if outer_shape[0] != 1:
+      raise NotImplementedError('PyUniformReplayBuffer only supports a batch '
+                                'size of 1, but received `items` with batch '
+                                'size {}.'.format(outer_shape[0]))
 
-    When the replay buffer is full, the item replaces the oldest item.
-
-    Args:
-      item: An array or list/tuple/nest of arrays representing a single item to
-        be added to the replay buffer. `item` must match the data_spec of this
-        class.
-    """
-    encoded_item = self._encode(item)
+    item = nest_utils.unbatch_nested_array(items)
     with self._lock:
       if self._np_state.size == self._capacity:
         # If we are at capacity, we are deleting element cur_id.
         self._on_delete(self._storage.get(self._np_state.cur_id))
-      self._storage.set(self._np_state.cur_id, encoded_item)
-      self._np_state.size = np.minimum(self._np_state.size + 1, self._capacity)
+      self._storage.set(self._np_state.cur_id, self._encode(item))
+      self._np_state.size = np.minimum(self._np_state.size + 1,
+                                       self._capacity)
       self._np_state.cur_id = (self._np_state.cur_id + 1) % self._capacity
       self._np_state.item_count += 1
 
-  def get_next(self, num_steps=1, time_stacked=True):
-    with self._lock:
-      if self._np_state.size <= 0:
-        raise ValueError('Read error: empty replay buffer')
+  def _get_next(self,
+                sample_batch_size=None,
+                num_steps=None,
+                time_stacked=True):
+    if num_steps is None:
+      num_steps = 1
 
-      idx = np.random.randint(self._np_state.size - num_steps + 1)
-      if self._np_state.size == self._capacity:
-        # If the buffer is full, add cur_id (head of circular buffer) so that
-        # we sample from the range [cur_id, cur_id + size - num_steps]. We will
-        # modulo the size below.
-        idx += self._np_state.cur_id
+    def get_single():
+      """Gets a single item from the replay buffer."""
+      with self._lock:
+        if self._np_state.size <= 0:
+          raise ValueError('Read error: empty replay buffer')
 
-      if num_steps > 1:
-        # TODO(sfishman): Try getting data from numpy in one shot rather than
-        # num_steps.
-        encoded_item = [self._storage.get((idx + n) % self._capacity)
-                        for n in range(num_steps)]
-      else:
-        encoded_item = self._storage.get(idx % self._capacity)
+        idx = np.random.randint(self._np_state.size - num_steps + 1)
+        if self._np_state.size == self._capacity:
+          # If the buffer is full, add cur_id (head of circular buffer) so that
+          # we sample from the range [cur_id, cur_id + size - num_steps]. We
+          # will modulo the size below.
+          idx += self._np_state.cur_id
 
-    if num_steps > 1:
-      item = [self._decode(item) for item in encoded_item]
-      if time_stacked:
+        if num_steps > 1:
+          # TODO(b/120242830): Try getting data from numpy in one shot rather
+          # than num_steps.
+          item = [self._decode(self._storage.get((idx + n) % self._capacity))
+                  for n in range(num_steps)]
+        else:
+          item = self._decode(self._storage.get(idx % self._capacity))
+
+      if num_steps > 1 and time_stacked:
         item = nest_utils.stack_nested_arrays(item)
+      return item
+
+    if sample_batch_size is None:
+      return get_single()
     else:
-      item = self._decode(encoded_item)
-    return item
+      samples = [get_single() for _ in range(sample_batch_size)]
+      return nest_utils.stack_nested_arrays(samples)
 
-  def as_dataset(self, batch_size=None, num_steps=1):
-    """Returns a dataset that samples a random trajectory or sequence.
+  def _as_dataset(self, sample_batch_size=None, num_steps=None,
+                  num_parallel_calls=None):
+    if num_parallel_calls is not None:
+      raise NotImplementedError('PyUniformReplayBuffer does not support '
+                                'num_parallel_calls (must be None).')
 
-    Args:
-      batch_size: If None, return a single item from the replay buffer.
-        Otherwise, batch `batch_size` items along the first dimension.
-      num_steps: The number of steps to fetch per sample. Steps will be
-        stacked along the second dimension.
+    if num_steps is None:
+      num_steps = 1
 
-    Returns:
-      If num_steps == 1: a Dataset returning single items from the replay
-        buffer, with a batch dimension added in front if batch_size is not
-        None.
-      If num_steps > 1: a Dataset returning items from
-        the replay buffer, where each element in the item nest is of shape
-        [B x T x F...], where B is the batch dimension, T is the time
-        dimension, and F is the feature shape. If batch_size is None, there is
-        no batch dimension.
-    """
     data_spec = self._data_spec
-    if batch_size is not None:
-      data_spec = array_spec.add_outer_dims_nest(data_spec, (batch_size,))
+    if sample_batch_size is not None:
+      data_spec = array_spec.add_outer_dims_nest(
+          data_spec, (sample_batch_size,))
     if num_steps > 1:
       data_spec = (data_spec,) * num_steps
     shapes = tuple(s.shape for s in nest.flatten(data_spec))
@@ -222,16 +222,16 @@ class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
 
     def generator_fn():
       while True:
-        if batch_size is not None:
-          batch = [self.get_next(num_steps=num_steps, time_stacked=False)
-                   for _ in range(batch_size)]
+        if sample_batch_size is not None:
+          batch = [self._get_next(num_steps=num_steps, time_stacked=False)
+                   for _ in range(sample_batch_size)]
           item = nest_utils.stack_nested_arrays(batch)
         else:
-          item = self.get_next(num_steps=num_steps, time_stacked=False)
+          item = self._get_next(num_steps=num_steps, time_stacked=False)
         yield tuple(nest.flatten(item))
 
     def time_stack(*structures):
-      time_axis = 0 if batch_size is None else 1
+      time_axis = 0 if sample_batch_size is None else 1
       return nest.map_structure(
           lambda *elements: tf.stack(elements, axis=time_axis), *structures)
 
@@ -241,6 +241,17 @@ class PyUniformReplayBuffer(tf.contrib.checkpoint.Checkpointable):
       return ds.map(time_stack)
     else:
       return ds
+
+  def _gather_all(self):
+    data = [self._decode(self._storage.get(idx))
+            for idx in range(self._capacity)]
+    stacked = nest_utils.stack_nested_arrays(data)
+    batched = nest.map_structure(lambda t: np.expand_dims(t, 0), stacked)
+    return batched
+
+  def _clear(self):
+    self._np_state.size = np.int64(0)
+    self._np_state.cur_id = np.int64(0)
 
 
 class FrameBuffer(tf.contrib.checkpoint.PythonStateWrapper):
@@ -299,23 +310,36 @@ class FrameBuffer(tf.contrib.checkpoint.PythonStateWrapper):
       else:
         del self._frames[h]
 
+  def clear(self):
+    self._frames = {}
+
 
 class PyTrajectoryHashedUniformReplayBuffer(PyUniformReplayBuffer):
-  """Uniform replay buffer of trajectories with optimized underlying storage.
+  """A Python-based replay buffer with optimized underlying storage.
+
+  This replay buffer deduplicates data in the stored trajectories along the
+  last axis of the observation, which is useful, e.g., if you are performing
+  something like frame stacking. For example, if each observation is 4 stacked
+  84x84 grayscale images forming a shape [84, 84, 4], then the replay buffer
+  will separate out each of the images and depuplicate across each trajectory
+  in case an image is repeated.
+
+  Note: This replay buffer assumes that the items being stored are
+  trajectory.Trajectory instances.
   """
 
   def __init__(self, data_spec, capacity, log_interval=None):
     if not isinstance(data_spec, trajectory.Trajectory):
       raise ValueError(
           'data_spec must be the spec of a trajectory: {}'.format(data_spec))
-    self._data_spec = data_spec
     super(PyTrajectoryHashedUniformReplayBuffer, self).__init__(
-        self._compressed_data_spec(), capacity)
+        data_spec, capacity)
+
     self._frame_buffer = FrameBuffer()
     self._lock_frame_buffer = threading.Lock()
     self._log_interval = log_interval
 
-  def _compressed_data_spec(self):
+  def _encoded_data_spec(self):
     observation = self._data_spec.observation
     observation = array_spec.ArraySpec(
         shape=(observation.shape[-1],), dtype=np.int64)
@@ -364,3 +388,6 @@ class PyTrajectoryHashedUniformReplayBuffer(PyUniformReplayBuffer):
     with self._lock_frame_buffer:
       self._frame_buffer.on_delete(encoded_trajectory.observation)
 
+  def _clear(self):
+    super(PyTrajectoryHashedUniformReplayBuffer, self)._clear()
+    self._frame_buffer.clear()

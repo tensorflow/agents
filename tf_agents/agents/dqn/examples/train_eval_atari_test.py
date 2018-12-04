@@ -75,7 +75,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
         self.get_temp_dir(), 'Pong-v0', terminal_on_life_loss=True)
 
     self.trainer._env = mock.MagicMock()
-    self.trainer._env.game_over = False
+    self.trainer._env.envs[0].game_over = False
     self.trainer._replay_buffer = mock.MagicMock()
     self.policy = mock.MagicMock()
     self.action_step = policy_step.PolicyStep(action=1)
@@ -96,7 +96,8 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       time_step = self.trainer._collect_step(
           time_step, self.policy, self.metric_observers, train=True)
       self.assertTrue(time_step.is_mid())
-      self.trainer._replay_buffer.add.assert_called_with(trajectory_first(0))
+      self.trainer._replay_buffer.add_batch.assert_called_with(
+          trajectory_first(0))
       self.observer.assert_called_with(trajectory_first(0))
 
   def testLifeLoss(self):
@@ -112,7 +113,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       time_step = self.trainer._collect_step(
           time_step, self.policy, self.metric_observers, train=True)
 
-      self.trainer._replay_buffer.add.reset_mock()
+      self.trainer._replay_buffer.add_batch.reset_mock()
       self.observer.reset_mock()
 
       # Lose a life, but not the end of a game.
@@ -127,7 +128,8 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
           mock.call(trajectory_last(1, discount=1.0)),
           mock.call(trajectory_first(2))]
       self.assertEqual(
-          expected_rb_calls, self.trainer._replay_buffer.add.call_args_list)
+          expected_rb_calls,
+          self.trainer._replay_buffer.add_batch.call_args_list)
       expected_observer_calls = [
           mock.call(trajectory_mid(1)),
           mock.call(trajectory_mid(2)),
@@ -156,7 +158,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       time_step = self.trainer._collect_step(
           time_step, self.policy, self.metric_observers, train=True)
 
-      self.trainer._replay_buffer.add.reset_mock()
+      self.trainer._replay_buffer.add_batch.reset_mock()
       self.observer.reset_mock()
 
       # Run a regular step.
@@ -165,7 +167,8 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       time_step = self.trainer._collect_step(
           time_step, self.policy, self.metric_observers, train=True)
       self.assertTrue(time_step.is_mid())
-      self.trainer._replay_buffer.add.assert_called_with(trajectory_mid(3))
+      self.trainer._replay_buffer.add_batch.assert_called_with(
+          trajectory_mid(3))
       self.observer.assert_called_with(trajectory_mid(3))
 
   def testGameOver(self):
@@ -196,16 +199,17 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       time_step = self.trainer._collect_step(
           time_step, self.policy, self.metric_observers, train=True)
 
-      self.trainer._replay_buffer.add.reset_mock()
+      self.trainer._replay_buffer.add_batch.reset_mock()
       self.observer.reset_mock()
 
       # Set game_over.
-      self.trainer._env.game_over = True
+      self.trainer._env.envs[0].game_over = True
       self.trainer._env.step.return_value = ts_termination(5)
       time_step = self.trainer._collect_step(
           time_step, self.policy, self.metric_observers, train=True)
       self.assertTrue(time_step.is_last())
-      self.trainer._replay_buffer.add.assert_called_with(trajectory_last(4))
+      self.trainer._replay_buffer.add_batch.assert_called_with(
+          trajectory_last(4))
       self.observer.assert_called_with(trajectory_last(4))
 
 

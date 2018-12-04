@@ -40,6 +40,7 @@ import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.dqn import q_network
+from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
@@ -66,7 +67,7 @@ def collect_step(env, time_step, py_policy, replay_buffer):
   next_time_step = env.step(action_step.action)
   if not time_step.is_last():
     traj = trajectory.from_transition(time_step, action_step, next_time_step)
-    replay_buffer.add([traj])
+    replay_buffer.add_batch(traj)
   return next_time_step
 
 
@@ -118,7 +119,7 @@ def train_eval(
   ]
 
   # Note this is a python environment.
-  env = suite_gym.load(env_name)
+  env = batched_py_environment.BatchedPyEnvironment([suite_gym.load(env_name)])
   eval_py_env = suite_gym.load(env_name)
 
   # Convert specs to BoundedTensorSpec.
@@ -148,7 +149,8 @@ def train_eval(
       summarize_grads_and_vars=summarize_grads_and_vars)
 
   tf_collect_policy = agent.collect_policy()
-  collect_policy = py_tf_policy.PyTFPolicy(tf_collect_policy)
+  collect_policy = py_tf_policy.PyTFPolicy(
+      tf_collect_policy, batch_size=env.batch_size)
   greedy_policy = py_tf_policy.PyTFPolicy(agent.policy())
   random_policy = random_py_policy.RandomPyPolicy(env.time_step_spec(),
                                                   env.action_spec())
@@ -177,7 +179,8 @@ def train_eval(
       policy=agent.policy(),
       global_step=global_step)
 
-  ds = replay_buffer.as_dataset(batch_size=batch_size, num_steps=2).prefetch(4)
+  ds = replay_buffer.as_dataset(sample_batch_size=batch_size, num_steps=2)
+  ds = ds.prefetch(4)
   itr = ds.make_initializable_iterator()
 
   experience = itr.get_next()
