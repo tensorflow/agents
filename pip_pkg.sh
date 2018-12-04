@@ -20,7 +20,7 @@ PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
 
 if [[ $# -lt 1 ]] ; then
   echo "Usage:"
-  echo "pip_pkg /path/to/destination/directory"
+  echo "pip_pkg /path/to/destination/directory [--release]"
   exit 1
 fi
 

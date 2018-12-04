@@ -14,6 +14,10 @@
 # limitations under the License.
 
 """Install tf_agents."""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import codecs
 import datetime
 import fnmatch
@@ -143,8 +147,9 @@ if '--release' in sys.argv:
   version = __rel_version__
 else:
   # Build a nightly package by default.
-  version = __dev_version__
   release = False
+  version = __dev_version__
+  version += datetime.datetime.now().strftime('%Y%m%d')
 
 if release:
   project_name = 'tf-agents'
@@ -154,8 +159,6 @@ else:
   # Nightly releases use date-based versioning of the form
   # '0.0.1.dev20180305'
   project_name = 'tf-agents-nightly'
-  datestring = datetime.datetime.now().strftime('%Y%m%d')
-  version += datestring
   tfp_package_name = 'tfp-nightly'
 
 REQUIRED_PACKAGES.append(tfp_package_name)
