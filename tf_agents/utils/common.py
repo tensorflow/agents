@@ -313,6 +313,7 @@ def scale_to_spec(tensor, spec):
 def ornstein_uhlenbeck_process(initial_value,
                                damping=0.15,
                                stddev=0.2,
+                               seed=None,
                                scope='ornstein_uhlenbeck_noise'):
   """An op for generating noise from a zero-mean Ornstein-Uhlenbeck process.
 
@@ -332,15 +333,16 @@ def ornstein_uhlenbeck_process(initial_value,
       random walk and a value of 1 gives uncorrelated Gaussian noise. Hence
       in most applications a small non-zero value is appropriate.
     stddev: Standard deviation of the Gaussian component.
+    seed: Seed for random number generation.
     scope: Scope of the variables.
 
   Returns:
     An op that generates noise.
   """
   if context.executing_eagerly():
-    return OUProcess(initial_value, damping, stddev, scope)
+    return OUProcess(initial_value, damping, stddev, seed, scope)
   else:
-    return OUProcess(initial_value, damping, stddev, scope)()
+    return OUProcess(initial_value, damping, stddev, seed, scope)()
 
 
 class OUProcess(object):
@@ -350,6 +352,7 @@ class OUProcess(object):
                initial_value,
                damping=0.15,
                stddev=0.2,
+               seed=None,
                scope='ornstein_uhlenbeck_noise'):
     """A Class for generating noise from a zero-mean Ornstein-Uhlenbeck process.
 
@@ -369,17 +372,22 @@ class OUProcess(object):
         undamped random walk and a value of 1 gives uncorrelated Gaussian noise.
         Hence in most applications a small non-zero value is appropriate.
       stddev: Standard deviation of the Gaussian component.
+      seed: Seed for random number generation.
       scope: Scope of the variables.
     """
     self._damping = damping
     self._stddev = stddev
+    self._seed = seed
     with tf.variable_scope(scope):
       self._x = tf.contrib.framework.local_variable(
           initial_value, use_resource=True)
 
   def __call__(self):
     noise = tf.random_normal(
-        shape=self._x.shape, stddev=self._stddev, dtype=self._x.dtype)
+        shape=self._x.shape,
+        stddev=self._stddev,
+        dtype=self._x.dtype,
+        seed=self._seed)
     return self._x.assign((1. - self._damping) * self._x + noise)
 
 

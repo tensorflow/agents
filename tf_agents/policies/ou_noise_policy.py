@@ -20,12 +20,14 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.utils import common
 
 nest = tf.contrib.framework.nest
+tfd = tfp.distributions
 
 
 class OUNoisePolicy(tf_policy.Base):
@@ -64,17 +66,18 @@ class OUNoisePolicy(tf_policy.Base):
     return self._wrapped_policy.variables()
 
   def _action(self, time_step, policy_state, seed):
-    # TODO(ebrevdo): Properly pass seed to OUProcess sampling.
+    seed_stream = tfd.SeedStream(seed=seed, salt='ou_noise')
     def _create_ou_process(action_spec):
       return common.OUProcess(
           lambda: tf.zeros(action_spec.shape, dtype=action_spec.dtype),
-          self._ou_damping, self._ou_stddev)
+          self._ou_damping, self._ou_stddev, seed=seed_stream())
 
     if self._ou_process is None:
       self._ou_process = nest.map_structure(_create_ou_process,
                                             self._action_spec)
 
-    action_step = self._wrapped_policy.action(time_step, policy_state, seed)
+    action_step = self._wrapped_policy.action(time_step, policy_state,
+                                              seed_stream())
 
     def _add_ou_noise(action, ou_process, action_spec):
       noisy_action = action + ou_process()
