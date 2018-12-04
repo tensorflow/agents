@@ -80,7 +80,7 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     ones = tf.ones(shape=[2], dtype=tf.float32)
     obs_spec = tensor_spec.TensorSpec(shape=[5], dtype=tf.float32)
     time_step_spec = ts.time_step_spec(obs_spec)
-    mock_policy = mock.create_autospec(actor_policy.ActorPolicy)
+    mock_policy = mock.create_autospec(actor_policy.ActorPolicyKeras)
     mock_policy.distribution.return_value = policy_step.PolicyStep(
         (tfp.distributions.Categorical(logits=ones),
          tfp.distributions.Normal(ones, ones)), None)
@@ -94,7 +94,7 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     ones = tf.ones(shape=[1, 2], dtype=tf.float32)
     obs_spec = tensor_spec.TensorSpec(shape=[5], dtype=tf.float32)
     time_step_spec = ts.time_step_spec(obs_spec)
-    mock_policy = mock.create_autospec(actor_policy.ActorPolicy)
+    mock_policy = mock.create_autospec(actor_policy.ActorPolicyKeras)
     mock_policy._distribution.return_value = policy_step.PolicyStep(
         (tfp.distributions.Categorical(logits=ones),
          tfp.distributions.Normal(ones, ones)))
