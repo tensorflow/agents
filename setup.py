@@ -65,10 +65,10 @@ class Test(TestCommandBase):
       # pybullet imports multiprocessing in their setup.py, which causes an
       # issue when we import multiprocessing.pool.dummy down the line because
       # the PYTHONPATH has changed.
-      if 'multiprocessing' in sys.modules:
-        del sys.modules['multiprocessing']
-      if 'multiprocessing.pool' in sys.modules:
-        del sys.modules['multiprocessing.pool']
+      for module in ['multiprocessing', 'multiprocessing.pool',
+                     'multiprocessing.dummy', 'multiprocessing.pool.dummy']:
+        if module in sys.modules:
+          del sys.modules[module]
 
       run_separately = [
           x.rstrip() for x in open('test_individually.txt', 'r').readlines()
