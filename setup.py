@@ -139,7 +139,7 @@ TEST_REQUIRED_PACKAGES = [
     'scipy == 1.1.0',
 ]
 
-REQUIRED_TENSORFLOW_VERSION = '1.10.0'
+REQUIRED_TFP_VERSION = '0.5.0'
 
 if '--release' in sys.argv:
   release = True
@@ -153,8 +153,7 @@ else:
 
 if release:
   project_name = 'tf-agents'
-  tfp_package_name = 'tensorflow-probability>={}'.format(
-      REQUIRED_TENSORFLOW_VERSION)
+  tfp_package_name = 'tensorflow-probability>={}'.format(REQUIRED_TFP_VERSION)
 else:
   # Nightly releases use date-based versioning of the form
   # '0.0.1.dev20180305'
