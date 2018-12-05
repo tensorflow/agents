@@ -105,7 +105,7 @@ class LSTMEncodingNetwork(network.Network):
     state_spec = nest.map_structure(
         functools.partial(
             tensor_spec.TensorSpec, dtype=tf.float32,
-            name='network_state_spec'), list(cell.state_size))
+            name='network_state_spec'), cell.state_size)
 
     super(LSTMEncodingNetwork, self).__init__(
         observation_spec=observation_spec,

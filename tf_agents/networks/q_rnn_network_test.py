@@ -50,7 +50,7 @@ class QRnnNetworkTest(tf.test.TestCase):
 
     time_step = tf_env.current_time_step()
     q_values, state = rnn_network(time_step.observation, time_step.step_type)
-    self.assertTrue(isinstance(state, tuple))
+    nest.assert_same_structure(rnn_network.state_spec, state)
     self.assertEqual(2, len(state))
 
     self.assertEqual((1, 2), q_values.shape)
