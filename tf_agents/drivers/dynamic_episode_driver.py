@@ -64,7 +64,7 @@ class DynamicEpisodeDriver(driver.Driver):
     super(DynamicEpisodeDriver, self).__init__(env, policy, observers)
     self._num_episodes = num_episodes
 
-  def _loop_condition_fn(self):
+  def _loop_condition_fn(self, num_episodes):
     """Returns a function with the condition needed for tf.while_loop."""
     def loop_cond(counter, *_):
       """Determines when to stop the loop, based on episode counter.
@@ -75,7 +75,7 @@ class DynamicEpisodeDriver(driver.Driver):
       Returns:
         tf.bool tensor, shape (), indicating whether while loop should continue.
       """
-      return tf.less(tf.reduce_sum(counter), self._num_episodes)
+      return tf.less(tf.reduce_sum(counter), num_episodes)
 
     return loop_cond
 
@@ -109,17 +109,23 @@ class DynamicEpisodeDriver(driver.Driver):
 
     return loop_body
 
-  # TODO(b/113529538): Add tests for policy_state.
   def run(self,
           time_step=None,
-          policy_state=(),
+          policy_state=None,
+          num_episodes=None,
           maximum_iterations=None):
     """Takes episodes in the environment using the policy and update observers.
+
+    If `time_step` and `policy_state` are not provided, `run` will reset the
+    environment and request an initial state from the policy.
 
     Args:
       time_step: optional initial time_step. If None, it will be obtained by
         resetting the environment. Elements should be shape [batch_size, ...].
-      policy_state: optional initial state for the policy.
+      policy_state: optional initial state for the policy. If None, it will be
+        obtained from the policy.get_initial_state().
+      num_episodes: Optional number of episodes to take in the environment. If
+        None it would use initial num_episodes.
       maximum_iterations: Optional maximum number of iterations of the while
         loop to run. If provided, the cond output is AND-ed with an additional
         condition ensuring the number of iterations executed is no greater than
@@ -132,14 +138,18 @@ class DynamicEpisodeDriver(driver.Driver):
     if time_step is None:
       time_step = self._env.reset()
 
+    if policy_state is None:
+      policy_state = self._policy.get_initial_state(self._env.batch_size)
+
     # Batch dim should be first index of tensors during data
     # collection.
     batch_dims = nest_utils.get_outer_shape(
         time_step, self._env.time_step_spec())
     counter = tf.zeros(batch_dims, tf.int32)
 
+    num_episodes = num_episodes or self._num_episodes
     [_, time_step, policy_state] = tf.while_loop(
-        cond=self._loop_condition_fn(),
+        cond=self._loop_condition_fn(num_episodes),
         body=self._loop_body_fn(),
         loop_vars=[
             counter,

@@ -196,23 +196,19 @@ def train_eval(
 
     global_step = tf.train.get_or_create_global_step()
 
-    # TODO(oars): Refactor drivers to better handle policy states. Remove the
-    # policy reset and passing down an empyt policy state to the driver.
     collect_policy = tf_agent.collect_policy()
-    policy_state = collect_policy.get_initial_state(tf_env.batch_size)
+
     initial_collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=initial_collect_steps).run(policy_state=policy_state)
+        num_episodes=initial_collect_steps).run()
 
-    policy_state = collect_policy.get_initial_state(tf_env.batch_size)
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_episodes=collect_episodes_per_iteration).run(
-            policy_state=policy_state)
+        num_episodes=collect_episodes_per_iteration).run()
 
     # Need extra step to generate transitions of train_sequence_length.
     # Dataset generates trajectories with shape [BxTx...]

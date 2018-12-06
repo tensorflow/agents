@@ -166,13 +166,11 @@ def train_eval(
         num_episodes=initial_collect_steps).run()
 
     collect_policy = tf_agent.collect_policy()
-    collect_policy_state = collect_policy.get_initial_state(tf_env.batch_size)
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_episodes=collect_episodes_per_iteration).run(
-            policy_state=collect_policy_state)
+        num_episodes=collect_episodes_per_iteration).run()
 
     # Need extra step to generate transitions of train_sequence_length.
     # Dataset generates trajectories with shape [BxTx...]

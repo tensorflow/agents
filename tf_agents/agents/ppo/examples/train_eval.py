@@ -205,15 +205,11 @@ def train_eval(
     global_step = tf.train.get_or_create_global_step()
     collect_policy = tf_agent.collect_policy()
 
-    policy_state = tf_agent.policy().get_initial_state(
-        batch_size=tf_env.batch_size)
-
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=replay_buffer_observer + train_metrics,
-        num_episodes=collect_episodes_per_iteration).run(
-            policy_state=policy_state)
+        num_episodes=collect_episodes_per_iteration).run()
 
     trajectories = replay_buffer.gather_all()
 
