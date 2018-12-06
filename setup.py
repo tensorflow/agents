@@ -73,6 +73,9 @@ class Test(TestCommandBase):
                      'multiprocessing.dummy', 'multiprocessing.pool.dummy']:
         if module in sys.modules:
           del sys.modules[module]
+      # Reimport multiprocessing to avoid spurious error printouts. See
+      # https://bugs.python.org/issue15881.
+      import multiprocessing as _  # pylint: disable=g-import-not-at-top
 
       run_separately = [
           x.rstrip() for x in open('test_individually.txt', 'r').readlines()
