@@ -183,8 +183,7 @@ def train_eval(
         batch_size=num_parallel_environments,
         max_length=replay_buffer_capacity)
 
-    eval_py_policy = py_tf_policy.PyTFPolicy(
-        tf_agent.policy(), batch_size=num_parallel_environments)
+    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy())
 
     # TODO(sguada): Reenable metrics when ready for batch data.
     environment_steps_metric = tf_metrics.EnvironmentSteps()

@@ -92,7 +92,6 @@ class Base(object):
     self._trajectory_spec = trajectory.from_transition(
         self._time_step_spec, self._policy_step_spec, self._time_step_spec)
 
-  # TODO(kbanoop): Consider renaming this to get_initial_state()
   def get_initial_state(self, batch_size=None):
     """Returns an initial state usable by the policy.
 
@@ -200,7 +199,7 @@ class Base(object):
     """Default implementation of `get_initial_state`.
 
     This implementation returns arrays of all zeros matching `batch_size` and
-    spec `self.state_spec()`.
+    spec `self.policy_state_spec()`.
 
     Args:
       batch_size: The batch shape.

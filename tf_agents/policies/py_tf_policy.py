@@ -38,12 +38,17 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
   # policy state could be the same for every element in the batch.
   # In that case, the initial policy state could be given with no batch
   # dimension.
+  # TODO(sfishman): Remove batch_size param entirely.
+  @tf.contrib.framework.deprecated_args(
+      '2019-05-01',
+      '`batch_size ` is deprecated, This parameter has no effect.',
+      'batch_size')
   def __init__(self, policy, batch_size=None, seed=None):
     """Initializes a new `PyTFPolicy`.
 
     Args:
       policy: A TF Policy implementing `tf_policy.Base`.
-      batch_size: The batch size of time_steps and actions.
+      batch_size: (deprecated)
       seed: Seed to use if policy performs random actions (optional).
     """
     if not isinstance(policy, tf_policy.Base):
@@ -59,12 +64,18 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     self._policy_state_spec = tensor_spec.to_nest_array_spec(
         self._tf_policy.policy_state_spec())
 
-    self._batch_size = batch_size
+    self._batch_size = None
+    self._batched = None
     self._seed = seed
-    self._batched = batch_size is not None
-    self._set_up_feeds_and_fetches()
+    self._built = False
 
-  def _set_up_feeds_and_fetches(self):
+  def _build(self, batch_size):
+    if self._built:
+      raise RuntimeError('_build() called twice.')
+
+    self._batch_size = batch_size
+    self._batched = batch_size is not None
+
     outer_dims = [self._batch_size] if self._batched else [1]
     self._time_step = tensor_spec.to_nest_placeholder(
         self._tf_policy.time_step_spec(), outer_dims=outer_dims)
@@ -78,15 +89,45 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     self._action_step = self._tf_policy.action(
         self._time_step, self._policy_state, seed=self._seed)
 
+    self.session.run(tf.initializers.variables(self._tf_policy.variables()))
+
+    self._built = True
+
+  def _build_from_time_step(self, time_step):
+    outer_shape = nest_utils.get_outer_array_shape(
+        time_step, self._time_step_spec)
+    if len(outer_shape) == 1:
+      self._build(outer_shape[0])
+    elif not outer_shape:
+      self._build(None)
+    else:
+      raise ValueError(
+          'Cannot handle more than one outer dimension. Saw {} outer '
+          'dimensions: {}'.format(len(outer_shape), outer_shape))
+
   def _get_initial_state(self, batch_size):
+    if not self._built:
+      self._build(batch_size)
     if batch_size != self._batch_size:
       raise ValueError(
-          '`batch_size` argument is different from the batch size provided to '
-          'the constructor. Expected {}, but saw {}.'.format(
+          '`batch_size` argument is different from the batch size provided '
+          'previously. Expected {}, but saw {}.'.format(
               self._batch_size, batch_size))
     return self.session.run(self._tf_initial_state)
 
   def _action(self, time_step, policy_state):
+    if not self._built:
+      self._build_from_time_step(time_step)
+
+    batch_size = None
+    if time_step.step_type.shape:
+      batch_size = time_step.step_type.shape[0]
+    if self._batch_size != batch_size:
+      raise ValueError(
+          'The batch size of time_step is different from the batch size '
+          'provided previously. Expected {}, but saw {}.'.format(
+              self._batch_size, batch_size))
+
     if not self._batched:
       # Since policy_state is given in a batched form from the policy and we
       # simply have to send it back we do not need to worry about it. Only

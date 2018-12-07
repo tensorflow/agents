@@ -271,7 +271,7 @@ class TrainEval(object):
             summarize_grads_and_vars=summarize_grads_and_vars)
 
         self._collect_policy = py_tf_policy.PyTFPolicy(
-            tf_agent.collect_policy(), batch_size=self._env.batch_size)
+            tf_agent.collect_policy())
 
         if self._do_eval:
           self._eval_policy = py_tf_policy.PyTFPolicy(

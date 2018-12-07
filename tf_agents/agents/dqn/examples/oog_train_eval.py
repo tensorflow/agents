@@ -149,8 +149,7 @@ def train_eval(
       summarize_grads_and_vars=summarize_grads_and_vars)
 
   tf_collect_policy = agent.collect_policy()
-  collect_policy = py_tf_policy.PyTFPolicy(
-      tf_collect_policy, batch_size=env.batch_size)
+  collect_policy = py_tf_policy.PyTFPolicy(tf_collect_policy)
   greedy_policy = py_tf_policy.PyTFPolicy(agent.policy())
   random_policy = random_py_policy.RandomPyPolicy(env.time_step_spec(),
                                                   env.action_spec())

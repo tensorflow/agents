@@ -34,8 +34,11 @@ nest = tf.contrib.framework.nest
 
 class DummyNet(network.Network):
 
-  def __init__(self, name=None, num_actions=2):
-    state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
+  def __init__(self, name=None, num_actions=2, stateful=True):
+    if stateful:
+      state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
+    else:
+      state_spec = ()
     super(DummyNet, self).__init__(name, None, state_spec, None)
     self._layers.append(
         tf.keras.layers.Dense(
@@ -90,7 +93,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAssignSession(self, batch_size):
-    policy = py_tf_policy.PyTFPolicy(self._tf_policy, batch_size=batch_size)
+    policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     policy.session = tf.Session()
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
     self.assertTrue(
@@ -99,7 +102,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testZeroState(self, batch_size):
-    policy = py_tf_policy.PyTFPolicy(self._tf_policy, batch_size=batch_size)
+    policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
     with self.test_session():
       self.assertTrue(
@@ -114,7 +117,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       time_steps = [time_steps] * batch_size
       time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
                                       *time_steps)
-    policy = py_tf_policy.PyTFPolicy(self._tf_policy, batch_size=batch_size)
+    policy = py_tf_policy.PyTFPolicy(self._tf_policy)
 
     with self.test_session():
       policy_state = policy.get_initial_state(batch_size)
@@ -129,6 +132,47 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
         self.assertEqual(action_steps.action.shape, (batch_size,))
         self.assertAllEqual(action_steps.action, [1] * batch_size)
         self.assertAllEqual(action_steps.state, np.zeros([5, 1]))
+
+  def testDeferredBatchingAction(self):
+    # Construct policy without providing batch_size.
+    tf_policy = q_policy.QPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=DummyNet(stateful=False))
+    policy = py_tf_policy.PyTFPolicy(tf_policy)
+
+    # But time_steps have batch_size of 5
+    batch_size = 5
+    single_observation = np.array([1, 2], dtype=np.float32)
+    time_steps = [ts.restart(single_observation)] * batch_size
+    time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
+                                    *time_steps)
+
+    with self.test_session():
+      tf.global_variables_initializer().run()
+      action_steps = policy.action(time_steps)
+      self.assertEqual(action_steps.action.shape, (batch_size,))
+      self.assertAllEqual(action_steps.action, [1] * batch_size)
+      self.assertAllEqual(action_steps.state, ())
+
+  def testDeferredBatchingStateful(self):
+    # Construct policy without providing batch_size.
+    policy = py_tf_policy.PyTFPolicy(self._tf_policy)
+
+    # But time_steps have batch_size of 5
+    batch_size = 5
+    single_observation = np.array([1, 2], dtype=np.float32)
+    time_steps = [ts.restart(single_observation)] * batch_size
+    time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
+                                    *time_steps)
+
+    with self.test_session():
+      initial_state = policy.get_initial_state(batch_size=batch_size)
+      self.assertAllEqual(initial_state, np.zeros([5, 1]))
+      action_steps = policy.action(time_steps, initial_state)
+      self.assertEqual(action_steps.action.shape, (batch_size,))
+      self.assertAllEqual(action_steps.action, [1] * batch_size)
+      self.assertAllEqual(action_steps.state, np.zeros([5, 1]))
 
 
 if __name__ == '__main__':
