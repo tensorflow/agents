@@ -27,6 +27,8 @@ import tensorflow as tf
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
+
+
 nest = tf.contrib.framework.nest
 
 TYPE_PARAMETERS = (
