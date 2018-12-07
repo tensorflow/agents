@@ -34,9 +34,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import mock
+from absl.testing.absltest import mock
 import numpy as np
 import tensorflow as tf
+
 from tf_agents.environments import time_step as ts
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
@@ -107,7 +108,7 @@ class TFPyPolicyTest(tf.test.TestCase):
         time_step, tf.ones(py_policy_state_spec.shape, tf.int32))
     py_action_step = self.evaluate(action_step)
 
-    mock_py_policy.action.assert_called_once()
+    self.assertEqual(1, mock_py_policy.action.call_count)
     np.testing.assert_equal(mock_py_policy.action.call_args[1]['time_step'],
                             expected_py_time_step)
     np.testing.assert_equal(mock_py_policy.action.call_args[1]['policy_state'],
@@ -140,7 +141,7 @@ class TFPyPolicyTest(tf.test.TestCase):
     initial_state = tf_mock_py_policy.get_initial_state(batch_size=batch_size)
     initial_state_ = self.evaluate(initial_state)
 
-    mock_py_policy.get_initial_state.assert_called_once()
+    self.assertEqual(1, mock_py_policy.get_initial_state.call_count)
     np.testing.assert_equal(initial_state_, expected_py_policy_state)
 
   def testDistributionRaisesNotImplementedError(self):

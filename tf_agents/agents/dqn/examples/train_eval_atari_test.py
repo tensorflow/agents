@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl import flags
-import mock
+from absl.testing.absltest import mock
 import numpy as np
 import tensorflow as tf
 
@@ -126,7 +126,8 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       self.assertTrue(time_step.is_mid())
       expected_rb_calls = [
           mock.call(trajectory_last(1, discount=1.0)),
-          mock.call(trajectory_first(2))]
+          mock.call(trajectory_first(2))
+      ]
       self.assertEqual(
           expected_rb_calls,
           self.trainer._replay_buffer.add_batch.call_args_list)

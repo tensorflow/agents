@@ -20,7 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import absltest
-import mock
+from absl.testing.absltest import mock
+
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_epsilon_greedy_policy
 

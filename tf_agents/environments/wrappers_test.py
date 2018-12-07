@@ -23,10 +23,10 @@ import math
 
 from absl.testing import absltest
 from absl.testing import parameterized
+from absl.testing.absltest import mock
 
 import gym
 import gym.spaces
-import mock
 import numpy as np
 
 from tf_agents.environments import gym_wrapper
@@ -149,7 +149,8 @@ class ActionRepeatWrapperTest(absltest.TestCase):
 
     env.step([2])
     time_step = env.step([3])
-    mock_env.step.assert_has_calls([mock.call([2])] * 3 + [mock.call([3])])
+    mock_env.step.assert_has_calls([mock.call([2])] * 3 +
+                                   [mock.call([3])])
 
     self.assertEqual(7, time_step.reward)
     self.assertEqual([3], time_step.observation)
@@ -531,7 +532,7 @@ class ActionOffsetWrapperTest(absltest.TestCase):
     env = wrappers.ActionOffsetWrapper(mock_env)
 
     env.step(np.array([0, 1, 2]))
-    mock_env.step.assert_called()
+    self.assertTrue(mock_env.step.called)
     np.testing.assert_array_equal(np.array([-1, 0, 1]),
                                   mock_env.step.call_args[0][0])
 

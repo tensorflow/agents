@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-import mock
+from absl.testing.absltest import mock
 import numpy as np
 import tensorflow as tf
 
@@ -33,7 +33,6 @@ from tf_agents.networks import utils as network_utils
 from tf_agents.networks import value_network
 from tf_agents.specs import tensor_spec
 
-slim = tf.contrib.slim
 nest = tf.contrib.framework.nest
 
 

@@ -165,6 +165,11 @@ else:
 
 REQUIRED_PACKAGES.append(tfp_package_name)
 
+if sys.version_info.major == 2:
+  # mock comes with unittest.mock for python3, need to install for
+  # python2
+  REQUIRED_PACKAGES.append('mock >= 2.0.0')
+
 
 class BinaryDistribution(Distribution):
   """This class is needed in order to create OS specific wheels."""

@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import absltest
-import mock
+from absl.testing.absltest import mock
 import numpy as np
 
 from tf_agents.environments import time_step as ts

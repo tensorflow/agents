@@ -22,9 +22,9 @@ from __future__ import print_function
 import math
 
 from absl.testing import absltest
+from absl.testing.absltest import mock
 import gym
 import gym.spaces
-import mock
 import numpy as np
 
 from tf_agents.environments import gym_wrapper
@@ -289,7 +289,7 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     cartpole_env.render = mock.MagicMock()
     env = gym_wrapper.GymWrapper(cartpole_env)
     env.render()
-    cartpole_env.render.assert_called_once()
+    self.assertEqual(1, cartpole_env.render.call_count)
 
   def test_obs_dtype(self):
     cartpole_env = gym.spec('CartPole-v1').make()
