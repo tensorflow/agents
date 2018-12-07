@@ -91,8 +91,10 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
         name='logits')
 
   def _output_distribution_spec(self, output_shape, sample_spec):
-    input_param_spec = tensor_spec.TensorSpec(
-        shape=output_shape.num_elements(), dtype=tf.float32)
+    input_param_spec = {
+        'logits': tensor_spec.TensorSpec(shape=output_shape, dtype=tf.float32)
+    }
+
     return distribution_spec.DistributionSpec(
         tfp.distributions.Categorical,
         input_param_spec,
