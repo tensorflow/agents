@@ -441,16 +441,13 @@ class PPOAgent(tf_agent.Base):
                       l2_regularization_loss, entropy_regularization_loss,
                       kl_penalty_loss]
 
-  def compute_return_and_advantage(self, time_steps, actions, next_time_steps,
-                                   value_preds):
+  def compute_return_and_advantage(self, next_time_steps, value_preds):
     """Compute the Monte Carlo return and advantage.
 
     Normalazation will be applied to the computed returns and advantages if
     it's enabled.
 
     Args:
-      time_steps: batched tensor of TimeStep tuples before action is taken.
-      actions: batched tensor of actions.
       next_time_steps: batched tensor of TimeStep tuples after action is taken.
       value_preds: Batched value predction tensor. Should have one more entry in
         time index than time_steps, with the final value corresponding to the
@@ -464,7 +461,6 @@ class PPOAgent(tf_agent.Base):
 
     rewards = next_time_steps.reward
     if self._debug_summaries:
-      tf.contrib.summary.histogram('actions', actions)
       # Summarize rewards before they get normalized below.
       tf.contrib.summary.histogram('rewards', rewards)
 
@@ -500,7 +496,8 @@ class PPOAgent(tf_agent.Base):
         tf.logging.warning('use_td_lambda_return was True, but use_gae was '
                            'False. Using Monte Carlo return.')
       else:
-        returns = tf.add(advantages, value_preds, name='td_lambda_returns')
+        returns = tf.add(
+            advantages, value_preds[:, :-1], name='td_lambda_returns')
 
     return returns, normalized_advantages
 
@@ -548,6 +545,9 @@ class PPOAgent(tf_agent.Base):
     (time_steps, policy_steps_, next_time_steps) = trajectory.to_transition(
         trajectory0, trajectory1)
     actions = policy_steps_.action
+    if self._debug_summaries:
+      tf.contrib.summary.histogram('actions', actions)
+
     action_distribution_parameters = policy_steps_.info
 
     # Reconstruct per-timestep policy distribution from stored distribution
@@ -574,7 +574,7 @@ class PPOAgent(tf_agent.Base):
     valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
 
     returns, normalized_advantages = self.compute_return_and_advantage(
-        time_steps, actions, next_time_steps, value_preds)
+        next_time_steps, value_preds)
 
     # Loss tensors across batches will be aggregated for summaries.
     policy_gradient_losses = []
@@ -789,7 +789,7 @@ class PPOAgent(tf_agent.Base):
     Args:
       time_steps: TimeSteps with observations for each timestep.
       actions: Tensor of actions for timesteps, aligned on index.
-      sample_action_log_probs: Tensor of ample probability of each action.
+      sample_action_log_probs: Tensor of sample probability of each action.
       advantages: Tensor of advantage estimate for each timestep, aligned on
         index. Works better when advantage estimates are normalized.
       current_policy_distribution: The policy distribution, evaluated on all

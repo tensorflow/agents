@@ -169,10 +169,10 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllClose(gae_vals, advantages)
 
   @parameterized.named_parameters([
-      ('OneEpoch', 1),
-      ('FiveEpochs', 5),
+      ('OneEpoch', 1, True),
+      ('FiveEpochs', 5, False),
   ])
-  def testTrain(self, num_epochs):
+  def testTrain(self, num_epochs, use_td_lambda_return):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -181,7 +181,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         value_net=DummyValueNet(outer_rank=2),
         normalize_observations=False,
         num_epochs=num_epochs,
-    )
+        use_gae=use_td_lambda_return,
+        use_td_lambda_return=use_td_lambda_return)
     observations = tf.constant([
         [[1, 2], [3, 4], [5, 6]],
         [[1, 2], [3, 4], [5, 6]],
