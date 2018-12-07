@@ -24,6 +24,8 @@ import tensorflow_probability as tfp
 from tf_agents.networks import bias_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils
+from tf_agents.specs import distribution_spec
+from tf_agents.specs import tensor_spec
 
 import gin.tf
 
@@ -38,14 +40,14 @@ def tanh_squash_to_spec(inputs, spec):
 
 
 @gin.configurable
-class NormalProjectionNetwork(network.Network):
+class NormalProjectionNetwork(network.DistributionNetwork):
   """Generates a tfp.distribution.Normal by predicting a mean and std.
 
   Note: the standard deviations are independent of the input.
   """
 
   def __init__(self,
-               output_spec,
+               sample_spec,
                activation_fn=None,
                init_means_output_factor=0.1,
                std_initializer_value=0.0,
@@ -55,8 +57,9 @@ class NormalProjectionNetwork(network.Network):
     """Creates an instance of NormalProjectionNetwork.
 
     Args:
-      output_spec: An output spec (either BoundedArraySpec or
-        BoundedTensorSpec).
+      sample_spec: An spec (either BoundedArraySpec or BoundedTensorSpec)
+        detailing the shape and dtypes of samples pulled from the output
+        distribution.
       activation_fn: Activation function to use in dense layer.
       init_means_output_factor: Output factor for initializing action means
         weights.
@@ -65,19 +68,21 @@ class NormalProjectionNetwork(network.Network):
       std_transform: Transform to apply to the stddevs.
       name: A string representing name of the network.
     """
+    output_spec = self._output_distribution_spec(sample_spec)
     super(NormalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
         observation_spec=None,
         action_spec=None,
         state_spec=(),
+        output_spec=output_spec,
         name=name)
 
-    self._output_spec = output_spec
+    self._sample_spec = sample_spec
     self._mean_transform = mean_transform
     self._std_transform = std_transform
 
     self._projection_layer = tf.keras.layers.Dense(
-        output_spec.shape.num_elements(),
+        sample_spec.shape.num_elements(),
         activation=activation_fn,
         kernel_initializer=tf.keras.initializers.VarianceScaling(
             scale=init_means_output_factor),
@@ -88,7 +93,22 @@ class NormalProjectionNetwork(network.Network):
         bias_initializer=tf.keras.initializers.Constant(
             value=std_initializer_value))
 
+  def _output_distribution_spec(self, sample_spec):
+    input_param_shapes = tfp.distributions.Normal.param_static_shapes(
+        sample_spec.shape)
+    input_param_spec = nest.map_structure(
+        lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
+            shape=tensor_shape,
+            dtype=sample_spec.dtype),
+        input_param_shapes)
+
+    return distribution_spec.DistributionSpec(
+        tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
+
   def call(self, inputs, outer_rank):
+    if inputs.dtype != self._sample_spec.dtype:
+      raise ValueError(
+          'Inputs to NormalProjectionNetwork must match the sample_spec.dtype.')
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to
     # compare to.
@@ -96,16 +116,16 @@ class NormalProjectionNetwork(network.Network):
     inputs = batch_squash.flatten(inputs)
 
     means = self._projection_layer(inputs)
-    means = tf.reshape(means, [-1] + self._output_spec.shape.as_list())
-    means = self._mean_transform(means, self._output_spec)
-    means = tf.cast(means, self._output_spec.dtype)
+    means = tf.reshape(means, [-1] + self._sample_spec.shape.as_list())
+    means = self._mean_transform(means, self._sample_spec)
+    means = tf.cast(means, self._sample_spec.dtype)
 
     stds = self._bias(tf.zeros_like(means))
-    stds = tf.reshape(stds, [-1] + self._output_spec.shape.as_list())
+    stds = tf.reshape(stds, [-1] + self._sample_spec.shape.as_list())
     stds = self._std_transform(stds)
-    stds = tf.cast(stds, self._output_spec.dtype)
+    stds = tf.cast(stds, self._sample_spec.dtype)
 
     means = batch_squash.unflatten(means)
     stds = batch_squash.unflatten(stds)
 
-    return tfp.distributions.Normal(means, stds)
+    return self.output_spec.build_distribution(loc=means, scale=stds)

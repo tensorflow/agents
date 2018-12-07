@@ -32,7 +32,7 @@ def _get_inputs(batch_size, num_input_dims):
 class CategoricalProjectionNetworkTest(tf.test.TestCase):
 
   def testBuild(self):
-    output_spec = tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1)
+    output_spec = tensor_spec.BoundedTensorSpec([4], tf.int32, 0, 1)
     network = categorical_projection_network.CategoricalProjectionNetwork(
         output_spec)
 
@@ -43,7 +43,9 @@ class CategoricalProjectionNetworkTest(tf.test.TestCase):
     sample = self.evaluate(distribution.sample())
 
     self.assertEqual(tfp.distributions.Categorical, type(distribution))
-    self.assertAllEqual((3, 2), sample.shape)
+    # Batch = 3; 4x action choices, 2x actions per choise.
+    self.assertEqual((3, 4, 2), distribution.logits.shape)
+    self.assertAllEqual((3, 4), sample.shape)
 
   def testTrainableVariables(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1)

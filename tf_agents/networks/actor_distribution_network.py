@@ -50,7 +50,7 @@ def _normal_projection_net(action_spec,
 
 
 @gin.configurable
-class ActorDistributionNetwork(network.Network):
+class ActorDistributionNetwork(network.DistributionNetwork):
   """Creates an actor producing either Normal or Categorical distribution."""
 
   def __init__(self,
@@ -59,8 +59,8 @@ class ActorDistributionNetwork(network.Network):
                fc_layer_params=(200, 100),
                conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
-               categorical_projection_net=_categorical_projection_net,
-               normal_projection_net=_normal_projection_net,
+               discrete_projection_net=_categorical_projection_net,
+               continuous_projection_net=_normal_projection_net,
                name='ActorDistributionNetwork'):
     """Creates an instance of `ActorDistributionNetwork`.
 
@@ -75,40 +75,51 @@ class ActorDistributionNetwork(network.Network):
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
-      categorical_projection_net: Callable that generates a categorical
-        projection network to be called with some hidden state and the
-        outer_rank of the state.
-      normal_projection_net: Callable that generates a normal projection network
-        to be called with some hidden state and the outer_rank of the state.
+      discrete_projection_net: Callable that generates a discrete projection
+        network to be called with some hidden state and the outer_rank of the
+        state.
+      continuous_projection_net: Callable that generates a continuous projection
+        network to be called with some hidden state and the outer_rank of the
+        state.
       name: A string representing name of the network.
 
     Raises:
       ValueError: If `observation_spec` contains more than one observation.
     """
-    super(ActorDistributionNetwork, self).__init__(
-        observation_spec=observation_spec,
-        action_spec=action_spec,
-        state_spec=(),
-        name=name)
 
     if len(nest.flatten(observation_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
-    self._mlp_layers = utils.mlp_layers(
+    mlp_layers = utils.mlp_layers(
         conv_layer_params,
         fc_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.keras.initializers.glorot_uniform(),
         name='input_mlp')
 
-    self._projection_networks = []
+    projection_networks = []
     for single_output_spec in nest.flatten(action_spec):
       if single_output_spec.is_discrete():
-        self._projection_networks.append(
-            categorical_projection_net(single_output_spec))
+        projection_networks.append(discrete_projection_net(single_output_spec))
       else:
-        self._projection_networks.append(
-            normal_projection_net(single_output_spec))
+        projection_networks.append(
+            continuous_projection_net(single_output_spec))
+
+    projection_distribution_specs = [
+        proj_net.output_spec for proj_net in projection_networks
+    ]
+    output_spec = nest.pack_sequence_as(
+        action_spec, projection_distribution_specs)
+
+    super(ActorDistributionNetwork, self).__init__(
+        observation_spec=observation_spec,
+        action_spec=action_spec,
+        state_spec=(),
+        output_spec=output_spec,
+        name=name)
+
+    self._mlp_layers = mlp_layers
+    self._projection_networks = projection_networks
 
   def call(self, observations, step_type, network_state):
     del step_type  # unused.

@@ -24,6 +24,8 @@ import tensorflow_probability as tfp
 
 from tf_agents.networks import network
 from tf_agents.networks import utils
+from tf_agents.specs import distribution_spec
+from tf_agents.specs import tensor_spec
 
 import gin.tf
 
@@ -31,39 +33,46 @@ nest = tf.contrib.framework.nest
 
 
 @gin.configurable
-class CategoricalProjectionNetwork(network.Network):
+class CategoricalProjectionNetwork(network.DistributionNetwork):
   """Generates a tfp.distribution.Categorical by predicting logits."""
 
   def __init__(self,
-               output_spec,
+               sample_spec,
                logits_init_output_factor=0.1,
                name='CategoricalProjectionNetwork'):
     """Creates an instance of CategoricalProjectionNetwork.
 
     Args:
-      output_spec: An output spec (either BoundedArraySpec or
-        BoundedTensorSpec).
+      sample_spec: An spec (either BoundedArraySpec or BoundedTensorSpec)
+        detailing the shape and dtypes of samples pulled from the output
+        distribution.
       logits_init_output_factor: Output factor for initializing kernel logits
         weights.
       name: A string representing name of the network.
     """
+    unique_num_actions = np.unique(sample_spec.maximum - sample_spec.minimum +
+                                   1)
+    if len(unique_num_actions) > 1 or np.any(unique_num_actions <= 0):
+      raise ValueError('Bounds on discrete actions must be the same for all '
+                       'dimensions and have at least 1 action.')
+
+    output_shape = sample_spec.shape.concatenate([unique_num_actions])
+    output_spec = self._output_distribution_spec(output_shape, sample_spec)
+
     super(CategoricalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
         observation_spec=None,
         action_spec=None,
         state_spec=(),
+        output_spec=output_spec,
         name=name)
 
-    if not output_spec.is_bounded():
+    if not sample_spec.is_bounded():
       raise ValueError(
-          'output_spec must be bounded. Got: %s.' % type(output_spec))
+          'sample_spec must be bounded. Got: %s.' % type(sample_spec))
 
-    if not output_spec.is_discrete():
-      raise ValueError(
-          'output_spec must be discrete. Got: %s.' % output_spec)
-
-    unique_num_actions = np.unique(output_spec.maximum - output_spec.minimum +
-                                   1)
+    if not sample_spec.is_discrete():
+      raise ValueError('sample_spec must be discrete. Got: %s.' % sample_spec)
 
     if len(unique_num_actions) > 1:
       raise ValueError(
@@ -71,8 +80,8 @@ class CategoricalProjectionNetwork(network.Network):
           'across action dimentions. Implement a more general categorical '
           'projection if you need more flexibility.')
 
-    self._output_spec = output_spec
-    self._output_shape = output_spec.shape.concatenate([unique_num_actions])
+    self._sample_spec = sample_spec
+    self._output_shape = output_shape
 
     self._projection_layer = tf.keras.layers.Dense(
         self._output_shape.num_elements(),
@@ -81,15 +90,25 @@ class CategoricalProjectionNetwork(network.Network):
         bias_initializer=tf.keras.initializers.Zeros(),
         name='logits')
 
+  def _output_distribution_spec(self, output_shape, sample_spec):
+    input_param_spec = tensor_spec.TensorSpec(
+        shape=output_shape.num_elements(), dtype=tf.float32)
+    return distribution_spec.DistributionSpec(
+        tfp.distributions.Categorical,
+        input_param_spec,
+        sample_spec=sample_spec,
+        dtype=sample_spec.dtype)
+
   def call(self, inputs, outer_rank):
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to
     # compare to.
     batch_squash = utils.BatchSquash(outer_rank)
     inputs = batch_squash.flatten(inputs)
+    inputs = tf.to_float(inputs)
 
     logits = self._projection_layer(inputs)
     logits = tf.reshape(logits, [-1] + self._output_shape.as_list())
     logits = batch_squash.unflatten(logits)
 
-    return tfp.distributions.Categorical(logits, dtype=self._output_spec.dtype)
+    return self.output_spec.build_distribution(logits=logits)

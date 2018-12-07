@@ -54,7 +54,7 @@ def _normal_projection_net(action_spec,
 
 
 @gin.configurable
-class ActorDistributionRnnNetwork(network.Network):
+class ActorDistributionRnnNetwork(network.DistributionNetwork):
   """Creates an actor producing either Normal or Categorical distribution."""
 
   def __init__(self,
@@ -119,8 +119,8 @@ class ActorDistributionRnnNetwork(network.Network):
             tensor_spec.TensorSpec, dtype=tf.float32,
             name='network_state_spec'), list(cell.state_size))
 
-    output_layers = utils.mlp_layers(fc_layer_params=output_fc_layer_params,
-                                     name='output')
+    output_layers = utils.mlp_layers(
+        fc_layer_params=output_fc_layer_params, name='output')
 
     projection_networks = []
     for single_output_spec in nest.flatten(action_spec):
@@ -130,10 +130,17 @@ class ActorDistributionRnnNetwork(network.Network):
       else:
         projection_networks.append(normal_projection_net(single_output_spec))
 
+    projection_distribution_specs = [
+        proj_net.output_spec for proj_net in projection_networks
+    ]
+    output_spec = nest.pack_sequence_as(
+        action_spec, projection_distribution_specs)
+
     super(ActorDistributionRnnNetwork, self).__init__(
         observation_spec=observation_spec,
         action_spec=action_spec,
         state_spec=state_spec,
+        output_spec=output_spec,
         name=name)
 
     self._conv_layer_params = conv_layer_params

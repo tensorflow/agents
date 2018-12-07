@@ -66,8 +66,8 @@ class _NetworkMeta(abc.ABCMeta):
     arg_spec = tf_inspect.getargspec(init)
     if arg_spec.varargs is not None:
       raise RuntimeError(
-          "%s.__init__ function accepts *args.  This is not allowed."
-          % classname)
+          "%s.__init__ function accepts *args.  This is not allowed." %
+          classname)
 
     def capture_init(self, *args, **kwargs):
       if len(args) > len(arg_spec.args) + 1:
@@ -115,9 +115,26 @@ class Network(keras_network.Network):
 
     Args:
       **kwargs: Args to override when recreating this network.  Commonly
-      overridden args include 'name'.
+        overridden args include 'name'.
 
     Returns:
       A copy of this network.
     """
     return type(self)(**dict(self._saved_kwargs, **kwargs))
+
+
+class DistributionNetwork(Network):
+  """Base class for networks which generate Distributions as their output."""
+
+  def __init__(self, observation_spec, action_spec, state_spec, output_spec,
+               name):
+    super(DistributionNetwork, self).__init__(
+        observation_spec=observation_spec,
+        action_spec=action_spec,
+        state_spec=state_spec,
+        name=name)
+    self._output_spec = output_spec
+
+  @property
+  def output_spec(self):
+    return self._output_spec
