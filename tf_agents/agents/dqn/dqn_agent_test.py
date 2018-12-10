@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
+from tf_agents.agents.dqn import q_network
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
@@ -68,8 +69,8 @@ class AgentTest(tf.test.TestCase):
 
   def setUp(self):
     super(AgentTest, self).setUp()
-    self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
-    self._time_step_spec = ts.time_step_spec(self._obs_spec)
+    obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
+    self._time_step_spec = ts.time_step_spec(obs_spec)
     self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
     self._observation_spec = self._time_step_spec.observation
 
@@ -81,6 +82,41 @@ class AgentTest(tf.test.TestCase):
         q_network=q_net,
         optimizer=None)
     self.assertTrue(agent.policy() is not None)
+
+  def testAgentFollowsActionSpec(self, agent_class):
+    agent = agent_class(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=q_network.QNetwork(self._observation_spec, self._action_spec),
+        optimizer=None)
+    self.assertTrue(agent.policy() is not None)
+    policy = agent.policy()
+    observation = tensor_spec.sample_spec_nest(
+        self._time_step_spec, seed=42, outer_dims=(1,))
+    action_op = policy.action(observation).action
+    self.evaluate(tf.initialize_all_variables())
+
+    action = self.evaluate(action_op)
+    self.assertEqual([1] + self._action_spec[0].shape.as_list(),
+                     list(action[0].shape))
+
+  def testAgentFollowsActionSpecWithScalarAction(self, agent_class):
+    action_spec = [tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)]
+    agent = agent_class(
+        self._time_step_spec,
+        action_spec,
+        q_network=q_network.QNetwork(self._observation_spec, action_spec),
+        optimizer=None)
+    self.assertTrue(agent.policy() is not None)
+    policy = agent.policy()
+    observation = tensor_spec.sample_spec_nest(
+        self._time_step_spec, seed=42, outer_dims=(1,))
+
+    action_op = policy.action(observation).action
+    self.evaluate(tf.initialize_all_variables())
+    action = self.evaluate(action_op)
+    self.assertEqual([1] + action_spec[0].shape.as_list(),
+                     list(action[0].shape))
 
   def testCreateAgentNestSizeChecks(self, agent_class):
     action_spec = [
