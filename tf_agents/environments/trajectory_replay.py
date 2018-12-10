@@ -128,7 +128,7 @@ class TrajectoryReplay(object):
     output_action_tas = nest.map_structure(
         create_output_ta, trajectory_spec.action)
     output_policy_info_tas = nest.map_structure(
-        create_output_ta, trajectory_spec.action)
+        create_output_ta, trajectory_spec.policy_info)
 
     read0 = lambda ta: ta.read(0)
     zeros_like0 = lambda t: tf.zeros_like(t[0])

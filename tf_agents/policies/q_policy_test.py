@@ -65,8 +65,8 @@ class QPolicyTest(tf.test.TestCase):
   def testMultipleActionsRaiseError(self):
     action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)] * 2
     with self.assertRaisesRegexp(
-        ValueError, 'action_spec can only contain a single '
-        'BoundedTensorSpec.'):
+        NotImplementedError,
+        'action_spec can only contain a single BoundedTensorSpec'):
       q_policy.QPolicy(
           self._time_step_spec, action_spec, q_network=DummyNet())
 

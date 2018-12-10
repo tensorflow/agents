@@ -25,10 +25,12 @@ import tensorflow as tf
 from tf_agents import specs
 from tf_agents.environments import py_environment
 from tf_agents.environments import time_step as ts
+from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
+from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
 
@@ -217,3 +219,46 @@ class NumEpisodesObserver(object):
           tf.identity, traj)
 
 
+def make_random_trajectory():
+  """Creates a random trajectory.
+
+  This trajectory contains Tensors shaped `[1, 6, ...]` where `1` is the batch
+  and `6` is the number of time steps.
+
+  Observations are unbounded but actions are bounded to take values within
+  `[1, 2]`.
+
+  Policy info is also provided, and is equal to the actions.  It can be removed
+  via:
+
+  ```python
+  traj = make_random_trajectory().clone(policy_info=())
+  ```
+
+  Returns:
+    A `Trajectory`.
+  """
+  time_step_spec = ts.time_step_spec(
+      tensor_spec.TensorSpec([], tf.int64, name='observation'))
+  action_spec = tensor_spec.BoundedTensorSpec([],
+                                              tf.int32,
+                                              minimum=1,
+                                              maximum=2,
+                                              name='action')
+  # info and policy state specs match that of TFPolicyMock.
+  outer_dims = [1, 6]  # (batch_size, time)
+  traj = trajectory.Trajectory(
+      observation=tensor_spec.sample_spec_nest(
+          time_step_spec.observation, outer_dims=outer_dims),
+      action=tensor_spec.sample_bounded_spec(
+          action_spec, outer_dims=outer_dims),
+      policy_info=tensor_spec.sample_bounded_spec(
+          action_spec, outer_dims=outer_dims),
+      reward=tf.fill(outer_dims, 0.0),
+      # step_type is F M L F M L.
+      step_type=tf.reshape(tf.range(0, 6) % 3, outer_dims),
+      # next_step_type is M L F M L F.
+      next_step_type=tf.reshape(tf.range(1, 7) % 3, outer_dims),
+      discount=tf.fill(outer_dims, 1.0),
+  )
+  return traj, time_step_spec, action_spec

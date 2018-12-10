@@ -89,6 +89,24 @@ class Trajectory(
       return tf.equal(self.step_type, ts.StepType.LAST)
     return self.step_type == ts.StepType.LAST
 
+  def replace(self, **kwargs):
+    """Exposes as namedtuple._replace.
+
+    Usage:
+    ```
+      new_trajectory = trajectory.replace(policy_info=())
+    ```
+
+    This returns a new trajectory with an empty policy_info.
+
+    Args:
+      **kwargs: key/value pairs of fields in the trajectory.
+
+    Returns:
+      A new `Trajectory`.
+    """
+    return self._replace(**kwargs)
+
 
 def _create_trajectory(
     observation,

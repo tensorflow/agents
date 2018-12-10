@@ -90,7 +90,14 @@ class Base(tf.contrib.eager.Checkpointable):
     return self._action_spec
 
 
-LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
+class LossInfo(collections.namedtuple("LossInfo", ("loss", "extra"))):
+  """Stores loss information; returned by `BaseV2.loss` and `BaseV2.train`.
+
+  - `loss` is a per-batch loss value.
+  - `extra` is an optional, optionally nested, tuple of side loss information.
+    A common entry in `extra` is `td_loss`, e.g. as returned by `DqnAgent`.
+  """
+  pass
 
 
 class BaseV2(six.with_metaclass(abc.ABCMeta, tf.contrib.eager.Checkpointable)):
