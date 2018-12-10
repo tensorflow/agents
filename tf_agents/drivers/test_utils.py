@@ -28,6 +28,15 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
+
+nest = tf.contrib.framework.nest
+
+
+def make_replay_buffer(policy):
+  """Default replay buffer factory."""
+  return tf_uniform_replay_buffer.TFUniformReplayBuffer(
+      policy.trajectory_spec(), batch_size=1)
 
 
 class PyEnvironmentMock(py_environment.Base):
@@ -163,3 +172,48 @@ class PyPolicyMock(py_policy.Base):
     action = (policy_state % 2) + 1
     policy_info = action * 2
     return policy_step.PolicyStep(action, policy_state + 1, policy_info)
+
+
+class NumStepsObserver(object):
+  """Class to count number of steps run by an observer."""
+
+  def __init__(self, variable_scope='num_steps_step_observer'):
+    with tf.variable_scope(variable_scope):
+      self._num_steps = tf.get_variable(
+          'num_steps',
+          shape=[],
+          dtype=tf.int32,
+          initializer=tf.zeros_initializer())
+
+  @property
+  def num_steps(self):
+    return self._num_steps
+
+  def __call__(self, traj):
+    num_steps = tf.reduce_sum(tf.to_int32(~traj.is_boundary()))
+    with tf.control_dependencies([self._num_steps.assign_add(num_steps)]):
+      return nest.map_structure(tf.identity, traj)
+
+
+class NumEpisodesObserver(object):
+  """Class to count number of episodes run by an observer."""
+
+  def __init__(self, variable_scope='num_episodes_step_observer'):
+    with tf.variable_scope(variable_scope):
+      self._num_episodes = tf.get_variable(
+          'num_episodes',
+          shape=[],
+          dtype=tf.int32,
+          initializer=tf.zeros_initializer())
+
+  @property
+  def num_episodes(self):
+    return self._num_episodes
+
+  def __call__(self, traj):
+    with tf.control_dependencies(
+        [self._num_episodes.assign_add(tf.to_int32(traj.is_last()[0]))]):
+      return nest.map_structure(
+          tf.identity, traj)
+
+

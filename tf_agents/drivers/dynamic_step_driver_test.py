@@ -24,45 +24,9 @@ import tensorflow as tf
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
-from tf_agents.environments import trajectory
-from tf_agents.policies import policy_step
-from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
-
-
-# TODO(kbanoop): Use the version from metrics instead.
-class NumEpisodesObserver(object):
-
-  def __init__(self, variable_scope='num_episodes_step_observer'):
-    with tf.variable_scope(variable_scope):
-      self._num_episodes = tf.get_variable(
-          'num_episodes',
-          shape=[],
-          dtype=tf.int32,
-          initializer=tf.zeros_initializer())
-
-  @property
-  def num_episodes(self):
-    return self._num_episodes
-
-  def __call__(self, traj):
-    with tf.control_dependencies(
-        [self._num_episodes.assign_add(tf.to_int32(traj.is_last())[0])]):
-      return nest.map_structure(tf.identity, traj)
-
-
-def make_replay_buffer(tf_env):
-  """Default replay buffer factory."""
-
-  time_step_spec = tf_env.time_step_spec()
-  action_step_spec = policy_step.PolicyStep(
-      tf_env.action_spec(), (), tensor_spec.TensorSpec((), tf.int32))
-  trajectory_spec = trajectory.from_transition(time_step_spec, action_step_spec,
-                                               time_step_spec)
-  return tf_uniform_replay_buffer.TFUniformReplayBuffer(
-      trajectory_spec, batch_size=1)
 
 
 class DynamicStepDriverTest(tf.test.TestCase):
@@ -77,7 +41,7 @@ class DynamicStepDriverTest(tf.test.TestCase):
         default=0,
         name_scope='policy_state_ph',
         outer_dims=(1,))
-    num_episodes_observer = NumEpisodesObserver()
+    num_episodes_observer = driver_test_utils.NumEpisodesObserver()
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env, policy, observers=[num_episodes_observer])
@@ -97,7 +61,7 @@ class DynamicStepDriverTest(tf.test.TestCase):
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     policy_state = policy.get_initial_state(1)
-    num_episodes_observer = NumEpisodesObserver()
+    num_episodes_observer = driver_test_utils.NumEpisodesObserver()
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env, policy, num_steps=5, observers=[num_episodes_observer])
@@ -114,8 +78,10 @@ class DynamicStepDriverTest(tf.test.TestCase):
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     policy_state = policy.get_initial_state(1)
-    num_episodes_observer0 = NumEpisodesObserver(variable_scope='observer0')
-    num_episodes_observer1 = NumEpisodesObserver(variable_scope='observer1')
+    num_episodes_observer0 = driver_test_utils.NumEpisodesObserver(
+        variable_scope='observer0')
+    num_episodes_observer1 = driver_test_utils.NumEpisodesObserver(
+        variable_scope='observer1')
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env,
@@ -139,7 +105,7 @@ class DynamicStepDriverTest(tf.test.TestCase):
         default=0,
         name_scope='policy_state_ph',
         outer_dims=(1,))
-    replay_buffer = make_replay_buffer(env)
+    replay_buffer = driver_test_utils.make_replay_buffer(policy)
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env, policy, num_steps=1, observers=[replay_buffer.add_batch])
@@ -170,7 +136,7 @@ class DynamicStepDriverTest(tf.test.TestCase):
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     policy_state = policy.get_initial_state(1)
-    replay_buffer = make_replay_buffer(env)
+    replay_buffer = driver_test_utils.make_replay_buffer(policy)
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env, policy, num_steps=6, observers=[replay_buffer.add_batch])
