@@ -74,6 +74,7 @@ import gin.tf
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_string('game_name', 'Pong', 'Name of Atari game to run.')
+flags.DEFINE_multi_string('gin_binding', None, 'Gin binding.')
 FLAGS = flags.FLAGS
 
 # AtariPreprocessing runs 4 frames at a time, max-pooling over the last 2
@@ -364,7 +365,6 @@ class TrainEval(object):
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
       # Initialize the graph.
       self._initialize_graph(sess)
-      tf.get_default_graph().finalize()
 
       # Initial collect
       self._initial_collect()
@@ -570,6 +570,7 @@ class TrainEval(object):
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
+  gin.parse_config_files_and_bindings(None, FLAGS.gin_binding)
   TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name)).run()
 
 
