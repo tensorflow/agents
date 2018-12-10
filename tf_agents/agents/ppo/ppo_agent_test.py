@@ -53,7 +53,7 @@ class DummyActorNet(network.Network):
         ))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.to_float(nest.flatten(inputs))[0]
+    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
     batch_squash = network_utils.BatchSquash(self._outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
 
@@ -81,7 +81,7 @@ class DummyValueNet(network.Network):
             bias_initializer=tf.constant_initializer([5])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.to_float(nest.flatten(inputs))[0]
+    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
     batch_squash = network_utils.BatchSquash(self._outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
     for layer in self.layers:

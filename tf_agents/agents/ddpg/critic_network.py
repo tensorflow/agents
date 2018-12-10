@@ -110,11 +110,11 @@ class CriticNetwork(network.Network):
 
   def call(self, observations, actions, step_type=(), network_state=()):
     del step_type  # unused.
-    observations = tf.to_float(nest.flatten(observations)[0])
+    observations = tf.cast(nest.flatten(observations)[0], tf.float32)
     for layer in self._observation_layers:
       observations = layer(observations)
 
-    actions = tf.to_float(nest.flatten(actions)[0])
+    actions = tf.cast(nest.flatten(actions)[0], tf.float32)
     for layer in self._action_layers:
       actions = layer(actions)
 

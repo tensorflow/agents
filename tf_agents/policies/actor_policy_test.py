@@ -54,7 +54,7 @@ class DummyActionNet(network.Network):
   def call(self, observations, step_type, network_state):
     del step_type
 
-    states = tf.to_float(nest.flatten(observations)[0])
+    states = tf.cast(nest.flatten(observations)[0], tf.float32)
     for layer in self.layers:
       states = layer(states)
 

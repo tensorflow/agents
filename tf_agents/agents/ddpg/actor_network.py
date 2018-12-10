@@ -93,7 +93,7 @@ class ActorNetwork(network.Network):
   def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
     observations = nest.flatten(observations)
-    output = tf.to_float(observations[0])
+    output = tf.cast(observations[0], tf.float32)
     for layer in self._mlp_layers:
       output = layer(output)
 

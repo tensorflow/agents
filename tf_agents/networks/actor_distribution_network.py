@@ -125,7 +125,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
     del step_type  # unused.
     outer_rank = nest_utils.get_outer_rank(observations, self._observation_spec)
     observations = nest.flatten(observations)
-    states = tf.to_float(observations[0])
+    states = tf.cast(observations[0], tf.float32)
 
     # Reshape to only a single batch dimension for neural network functions.
     batch_squash = utils.BatchSquash(outer_rank)

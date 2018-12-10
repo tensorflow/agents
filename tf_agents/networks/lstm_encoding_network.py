@@ -132,7 +132,7 @@ class LSTMEncodingNetwork(network.Network):
                                        observation)
       step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
 
-    state = tf.to_float(nest.flatten(observation)[0])
+    state = tf.cast(nest.flatten(observation)[0], tf.float32)
 
     num_feature_dims = 3 if self._conv_layer_params else 1
     state.shape.with_rank_at_least(num_feature_dims)

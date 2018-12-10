@@ -219,7 +219,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
         num_ids = max_val - min_val
         probability = tf.cond(
             tf.equal(num_ids, 0), lambda: 0.,
-            lambda: 1. / tf.to_float(num_ids * self._batch_size))
+            lambda: 1. / tf.cast(num_ids * self._batch_size, tf.float32))
         probabilities = tf.fill(rows_shape, probability)
 
         buffer_info = BufferInfo(ids=data_ids,

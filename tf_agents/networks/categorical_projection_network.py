@@ -107,7 +107,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
     # compare to.
     batch_squash = utils.BatchSquash(outer_rank)
     inputs = batch_squash.flatten(inputs)
-    inputs = tf.to_float(inputs)
+    inputs = tf.cast(inputs, tf.float32)
 
     logits = self._projection_layer(inputs)
     logits = tf.reshape(logits, [-1] + self._output_shape.as_list())

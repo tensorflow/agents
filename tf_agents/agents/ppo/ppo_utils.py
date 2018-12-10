@@ -46,12 +46,14 @@ def make_timestep_mask(batched_next_time_step):
   # 1.0 for timesteps of all complete episodes. 0.0 for incomplete episode at
   #   the end of the sequence.
   episode_is_complete = tf.cumsum(
-      tf.to_float(batched_next_time_step.is_last()), axis=1, reverse=True) > 0
+      tf.cast(batched_next_time_step.is_last(), tf.float32),
+      axis=1,
+      reverse=True) > 0
 
   # 1.0 for all valid timesteps. 0.0 where between episodes.
   not_between_episodes = ~batched_next_time_step.is_first()
 
-  return tf.to_float(episode_is_complete & not_between_episodes)
+  return tf.cast(episode_is_complete & not_between_episodes, tf.float32)
 
 
 def get_distribution_class_spec(policy, time_step_spec):

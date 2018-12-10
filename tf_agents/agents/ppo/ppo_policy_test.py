@@ -48,7 +48,7 @@ class DummyActorNet(network.Network):
         ))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.to_float(nest.flatten(inputs))[0]
+    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
     for layer in self.layers:
       hidden_state = layer(hidden_state)
 
@@ -92,7 +92,7 @@ class DummyValueNet(network.Network):
             bias_initializer=tf.constant_initializer([5])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.to_float(nest.flatten(inputs))[0]
+    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
     for layer in self.layers:
       hidden_state = layer(hidden_state)
     return hidden_state, network_state

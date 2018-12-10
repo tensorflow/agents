@@ -484,7 +484,7 @@ def discounted_future_sum(values, gamma, num_steps):
   (batch_size, total_steps) = values.get_shape().as_list()
 
   num_steps = tf.minimum(num_steps, total_steps)
-  discount_filter = tf.reshape(gamma ** tf.to_float(tf.range(num_steps)),
+  discount_filter = tf.reshape(gamma**tf.cast(tf.range(num_steps), tf.float32),
                                [-1, 1, 1])
   padded_values = tf.concat(
       [values, tf.zeros([batch_size, num_steps - 1])], 1)
@@ -522,7 +522,8 @@ def discounted_future_sum_masked(values, gamma, num_steps, episode_lengths):
     raise ValueError('total_steps dimension in input '
                      'values[batch_size, total_steps] must be fully defined.')
 
-  episode_mask = tf.to_float(tf.sequence_mask(episode_lengths, total_steps))
+  episode_mask = tf.cast(
+      tf.sequence_mask(episode_lengths, total_steps), tf.float32)
   values *= episode_mask
   return discounted_future_sum(values, gamma, num_steps)
 
@@ -555,10 +556,12 @@ def shift_values(values, gamma, num_steps, final_values=None):
   if final_values is None:
     final_values = tf.zeros([batch_size])
 
-  padding_exponent = tf.expand_dims(tf.to_float(tf.range(num_steps, 0, -1)), 0)
+  padding_exponent = tf.expand_dims(
+      tf.cast(tf.range(num_steps, 0, -1), tf.float32), 0)
   final_pad = tf.expand_dims(final_values, 1) * gamma ** padding_exponent
-  return tf.concat([gamma ** tf.to_float(num_steps) * values[:, num_steps:],
-                    final_pad], 1)
+  return tf.concat([
+      gamma**tf.cast(num_steps, tf.float32) * values[:, num_steps:], final_pad
+  ], 1)
 
 
 def get_episode_mask(time_steps):
@@ -570,8 +573,8 @@ def get_episode_mask(time_steps):
   Returns:
     A float32 Tensor with 0s where step_type == LAST and 1s otherwise.
   """
-  episode_mask = tf.to_float(
-      tf.not_equal(time_steps.step_type, ts.StepType.LAST))
+  episode_mask = tf.cast(
+      tf.not_equal(time_steps.step_type, ts.StepType.LAST), tf.float32)
   return episode_mask
 
 
@@ -591,7 +594,8 @@ def get_contiguous_sub_episodes(next_time_steps_discount):
   """
   episode_end = tf.equal(next_time_steps_discount,
                          tf.constant(0, dtype=next_time_steps_discount.dtype))
-  mask = tf.cumprod(1.0 - tf.to_float(episode_end), axis=1, exclusive=True)
+  mask = tf.cumprod(
+      1.0 - tf.cast(episode_end, tf.float32), axis=1, exclusive=True)
   return mask
 
 

@@ -153,7 +153,7 @@ class ValueRnnNetwork(network.Network):
                                        observation)
       step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
 
-    states = tf.to_float(nest.flatten(observation)[0])
+    states = tf.cast(nest.flatten(observation)[0], tf.float32)
     batch_squash = utils.BatchSquash(2)  # Squash B, and T dims.
     states = batch_squash.flatten(states)
 

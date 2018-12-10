@@ -99,7 +99,7 @@ class ValueNetwork(network.Network):
     outer_rank = nest_utils.get_outer_rank(observation, self.observation_spec)
     batch_squash = utils.BatchSquash(outer_rank)
 
-    states = tf.to_float(nest.flatten(observation)[0])
+    states = tf.cast(nest.flatten(observation)[0], tf.float32)
     states = batch_squash.flatten(states)
     for layer in self.layers:
       states = layer(states)

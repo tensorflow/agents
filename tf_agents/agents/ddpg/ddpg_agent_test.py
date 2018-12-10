@@ -57,7 +57,7 @@ class DummyActorNetwork(network.Network):
 
   def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
-    observations = tf.to_float(nest.flatten(observations)[0])
+    observations = tf.cast(nest.flatten(observations)[0], tf.float32)
     output = self._layer(observations)
     actions = tf.reshape(output,
                          [-1] + self._single_action_spec.shape.as_list())

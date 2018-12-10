@@ -710,8 +710,8 @@ class PPOAgent(tf_agent.Base):
     if self._entropy_regularization > 0:
       nest.assert_same_structure(time_steps, self.time_step_spec())
       with tf.name_scope('entropy_regularization'):
-        entropy = tf.to_float(common_utils.entropy(
-            current_policy_distribution, self.action_spec()))
+        entropy = tf.cast(common_utils.entropy(
+            current_policy_distribution, self.action_spec()), tf.float32)
         entropy_reg_loss = (tf.reduce_mean(-entropy * valid_mask) *
                             self._entropy_regularization)
         if self._check_numerics:
@@ -807,7 +807,7 @@ class PPOAgent(tf_agent.Base):
     nest.assert_same_structure(time_steps, self.time_step_spec())
     action_log_prob = common_utils.log_probability(
         current_policy_distribution, actions, self._action_spec)
-    action_log_prob = tf.to_float(action_log_prob)
+    action_log_prob = tf.cast(action_log_prob, tf.float32)
     if self._log_prob_clipping > 0.0:
       action_log_prob = tf.clip_by_value(action_log_prob,
                                          -self._log_prob_clipping,
@@ -843,9 +843,9 @@ class PPOAgent(tf_agent.Base):
 
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
-        clip_fraction = tf.reduce_mean(tf.to_float(
+        clip_fraction = tf.reduce_mean(tf.cast(
             tf.greater(tf.abs(importance_ratio - 1.0),
-                       self._importance_ratio_clipping)))
+                       self._importance_ratio_clipping), tf.float32))
         tf.contrib.summary.scalar('clip_fraction', clip_fraction)
       tf.contrib.summary.histogram('action_log_prob', action_log_prob)
       tf.contrib.summary.histogram('action_log_prob_sample',

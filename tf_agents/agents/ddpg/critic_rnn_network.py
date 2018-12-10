@@ -160,8 +160,8 @@ class CriticRnnNetwork(network.Network):
       action = nest.map_structure(lambda t: tf.expand_dims(t, 1), action)
       step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
 
-    observation = tf.to_float(nest.flatten(observation)[0])
-    action = tf.to_float(nest.flatten(action)[0])
+    observation = tf.cast(nest.flatten(observation)[0], tf.float32)
+    action = tf.cast(nest.flatten(action)[0], tf.float32)
 
     batch_squash = utils.BatchSquash(2)  # Squash B, and T dims.
     observation = batch_squash.flatten(observation)  # [B, T, ...] -> [BxT, ...]

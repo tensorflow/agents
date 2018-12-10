@@ -287,7 +287,7 @@ class DqnAgent(tf_agent.BaseV2):
           rewards=reward_scale_factor * next_time_steps.reward,
           discounts=gamma * next_time_steps.discount)
 
-      weights = tf.to_float(~time_steps.is_last())
+      weights = tf.cast(~time_steps.is_last(), tf.float32)
       td_loss = weights * td_errors_loss_fn(td_targets, q_values)
 
       if nest_utils.is_batched_nested_tensors(

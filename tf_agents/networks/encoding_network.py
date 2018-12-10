@@ -129,7 +129,7 @@ class EncodingNetwork(network.Network):
       batch_squash = utils.BatchSquash(outer_rank)
 
     # Get single observation out regardless of nesting.
-    states = tf.to_float(nest.flatten(observation)[0])
+    states = tf.cast(nest.flatten(observation)[0], tf.float32)
 
     if self._batch_squash:
       states = batch_squash.flatten(states)

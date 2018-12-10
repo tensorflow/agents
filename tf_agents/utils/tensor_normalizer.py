@@ -98,7 +98,7 @@ class TensorNormalizer(tf.contrib.eager.Checkpointable):
 
   def update(self, tensor, outer_dims=(0,)):
     """Updates tensor normalizer variables."""
-    tensor = tf.to_float(tensor)
+    tensor = tf.cast(tensor, tf.float32)
     return tf.group(self._update_ops(tensor, outer_dims))
 
   def normalize(self,
@@ -119,7 +119,7 @@ class TensorNormalizer(tf.contrib.eager.Checkpointable):
       normalized_tensor: Tensor after applying normalization.
     """
     nest.assert_same_structure(tensor, self._tensor_spec)
-    tensor = nest.map_structure(tf.to_float, tensor)
+    tensor = nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
 
     with tf.name_scope(self._scope + '/normalize'):
       mean_estimate, var_estimate = self._get_mean_var_estimates()
@@ -258,8 +258,8 @@ class StreamingTensorNormalizer(TensorNormalizer):
     """
     mean_estimate, _ = self._get_mean_var_estimates()
     # Num samples in batch is the product of batch dimensions.
-    num_samples = tf.to_float(
-        tf.reduce_prod(tf.gather(tf.shape(tensor), outer_dims)))
+    num_samples = tf.cast(
+        tf.reduce_prod(tf.gather(tf.shape(tensor), outer_dims)), tf.float32)
     mean_sum = tf.reduce_sum(tensor, axis=outer_dims)
     var_sum = tf.reduce_sum(
         tf.square(tensor - mean_estimate), axis=outer_dims)
