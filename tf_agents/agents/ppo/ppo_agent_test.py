@@ -25,6 +25,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
@@ -206,18 +207,20 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     observations = tf.constant([
         [[1, 2], [3, 4], [5, 6]],
         [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    ], dtype=tf.float32)
+
     time_steps = ts.TimeStep(
         step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         observation=observations)
     actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
+
     action_distribution_parameters = {
-        'loc': tf.constant([[0.0, 0.0], [0.0, 0.0]], dtype=tf.float32),
-        'scale': tf.constant([[1.0, 1.0], [1.0, 1.0]], dtype=tf.float32),
+        'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
+        'scale': tf.constant([[[1.0]]* 3] * 2, dtype=tf.float32),
     }
+
     policy_info = action_distribution_parameters
 
     experience = trajectory.Trajectory(
@@ -228,7 +231,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     counter = tf.train.get_or_create_global_step()
     zero = tf.constant(0, dtype=tf.float32)
     agent.build_train_op = (
-        lambda *_, **__: (counter.assign_add(1), [zero] * 5))
+        lambda *_, **__: tf_agent.LossInfo(counter.assign_add(1),  # pylint: disable=g-long-lambda
+                                           ppo_agent.PPOLossInfo(*[zero] * 5)))
 
     train_op = agent.train(experience)
 
@@ -410,7 +414,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1].
     expected_loss = l2_reg * ((2**2 + 1) + (2**2 + 1 + 1 + 1))
     # Make sure the network is built before we try to get variables.
-    agent.policy().action(tensor_spec.sample_spec_nest(self._time_step_spec))
+    agent.policy().action(
+        tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
     loss = agent.l2_regularization_loss()
 
     self.evaluate(tf.global_variables_initializer())
@@ -677,11 +682,11 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         tf.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         value_net=value_net)
-    observations = tf.constant([1, 2], dtype=tf.float32)
-    time_steps = ts.restart(observations)
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=1)
     action_step = agent.policy().action(time_steps)
     actions = action_step.action
-    self.assertEqual(actions.shape.as_list(), [1])
+    self.assertEqual(actions.shape.as_list(), [1, 1])
     self.evaluate(tf.global_variables_initializer())
     _ = self.evaluate(actions)
 

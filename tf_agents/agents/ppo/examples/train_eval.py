@@ -212,7 +212,7 @@ def train_eval(
 
     trajectories = replay_buffer.gather_all()
 
-    train_op = tf_agent.train(
+    train_op, _ = tf_agent.train(
         experience=trajectories, train_step_counter=global_step)
 
     with tf.control_dependencies([train_op]):

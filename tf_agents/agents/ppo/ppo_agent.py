@@ -56,6 +56,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
@@ -64,17 +65,24 @@ from tf_agents.agents.ppo import ppo_utils
 from tf_agents.environments import trajectory
 from tf_agents.networks import network
 from tf_agents.policies import greedy_policy
-from tf_agents.policies import policy_step
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common as common_utils
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
 from tf_agents.utils import value_ops
-import tf_agents.utils.common as common_utils
+
 import gin.tf
 
 nest = tf.contrib.framework.nest
+PPOLossInfo = collections.namedtuple('PPOLossInfo', (
+    'policy_gradient_loss',
+    'value_estimation_loss',
+    'l2_regularization_loss',
+    'entropy_regularization_loss',
+    'kl_penalty_loss',
+))
 
 
 def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
@@ -85,7 +93,7 @@ def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
 
 
 @gin.configurable
-class PPOAgent(tf_agent.Base):
+class PPOAgent(tf_agent.BaseV2):
   """A PPO Agent."""
 
   def __init__(self,
@@ -172,7 +180,6 @@ class PPOAgent(tf_agent.Base):
     Raises:
       ValueError: If the actor_net is not a DistributionNetwork.
     """
-    super(PPOAgent, self).__init__(time_step_spec, action_spec)
     self._importance_ratio_clipping = importance_ratio_clipping
     self._lambda = lambda_value
     self._discount_factor = discount_factor
@@ -224,86 +231,51 @@ class PPOAgent(tf_agent.Base):
     # only returns 1 state, and that actor and value networks have the same
     # state.
     self._policy_state_spec = self._actor_net.state_spec
-    self._policy = self.collect_policy()
-    self._action_distribution_spec = (self._actor_net.output_spec)
 
-  def _make_policy(self, collect):
-    return ppo_policy.PPOPolicy(
-        time_step_spec=self.time_step_spec(),
-        action_spec=self.action_spec(),
-        actor_network=self._actor_net,
-        value_network=self._value_net,
+    policy = greedy_policy.GreedyPolicy(
+        ppo_policy.PPOPolicy(
+            time_step_spec=time_step_spec,
+            action_spec=action_spec,
+            actor_network=actor_net,
+            value_network=value_net,
+            observation_normalizer=self._observation_normalizer,
+            clip=False,
+            collect=False))
+
+    collect_policy = ppo_policy.PPOPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        actor_network=actor_net,
+        value_network=value_net,
         observation_normalizer=self._observation_normalizer,
         clip=False,
-        collect=collect)
+        collect=True)
 
-  def _make_ppo_trajectory_spec(self, action_distribution_params_spec):
-    # Make policy_step_spec with action_spec, empty tuple for policy_state, and
-    # (act_log_prob_spec, value_pred_spec, action_distribution_params_spec) for
-    # info.
-    policy_step_spec = policy_step.PolicyStep(
-        action=self.action_spec(), state=self._policy.policy_state_spec(),
-        info=action_distribution_params_spec)
-    trajectory_spec = trajectory.from_transition(self.time_step_spec(),
-                                                 policy_step_spec,
-                                                 self.time_step_spec())
-    return trajectory_spec
+    self._action_distribution_spec = (self._actor_net.output_spec)
 
-  def collect_data_spec(self):
-    """Returns a `Trajectory` spec, as expected by the `collect_policy`.
-
-    Returns:
-      A `Trajectory` spec.
-    """
-    output_spec = self._actor_net.output_spec
-    action_distribution_params_spec = nest.map_structure_up_to(
-        output_spec, lambda spec: spec.input_params_spec, output_spec)
-    return self._make_ppo_trajectory_spec(action_distribution_params_spec)
-
-  def policy_state_spec(self):
-    """TensorSpec describing the policy_state.
-
-    Returns:
-      An single TensorSpec, or a nested dict, list or tuple of
-      `TensorSpec` objects, which describe the shape and
-      dtype of each Tensor in policy_state.
-    """
-    return self._policy_state_spec
+    super(PPOAgent, self).__init__(
+        time_step_spec,
+        action_spec,
+        policy,
+        collect_policy,
+        train_sequence_length=None,
+        debug_summaries=debug_summaries,
+        summarize_grads_and_vars=summarize_grads_and_vars)
 
   @property
   def actor_net(self):
     """Returns actor_net TensorFlow template function."""
     return self._actor_net
 
-  def initialize(self):
-    """Returns an op to initialize the agent. tf.no_op() for this agent.
+  def _initialize(self):
+    """Returns an op to initialize the agent.
 
     Returns:
-      tf.no_op() for this agent.
+      tf.no_op(). No initialization required for this agent.
     """
     return tf.no_op()
 
-  def policy(self):
-    """Return the current policy held by the agent.
-
-    Returns:
-      A subclass of tf_policy.Base.
-    """
-    return greedy_policy.GreedyPolicy(self._make_policy(collect=False))
-
-  def collect_policy(self):
-    """Returns a policy for collecting data from the environment.
-
-    Returns:
-      A tf_policy.Base object.
-    """
-    return self._make_policy(collect=True)
-
-  def compute_advantages(self,
-                         rewards,
-                         returns,
-                         discounts,
-                         value_preds):
+  def compute_advantages(self, rewards, returns, discounts, value_preds):
     """Compute advantages, optionally using GAE.
 
     Based on baselines ppo1 implementation. Removes final timestep, as it needs
@@ -373,17 +345,18 @@ class PPOAgent(tf_agent.Base):
       summarize_gradients: If true, gradient summaries will be written.
       gradient_clipping: Norm length to clip gradients.
       debug_summaries: True if debug summaries should be created.
+
     Returns:
-      train_op: An op that runs training with this batch of data.
-      losses: A list of policy_gradient_loss, value_estimation_loss,
-        l2_regularization_loss, and entropy_regularization_loss.
+      A tf_agent.LossInfo named tuple with the total_loss and all intermediate
+        losses in the extra field contained in a PPOLossInfo named tuple.
     """
     # Evaluate the current policy on timesteps.
 
     # batch_size from time_steps
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
-    policy_state = self._policy.get_initial_state(batch_size)
-    distribution_step = self._policy.distribution(time_steps, policy_state)
+    policy_state = self._collect_policy.get_initial_state(batch_size)
+    distribution_step = self._collect_policy.distribution(time_steps,
+                                                          policy_state)
     # TODO(eholly): Rename policy distributions to something clear and uniform.
     current_policy_distribution = distribution_step.action
 
@@ -431,16 +404,18 @@ class PPOAgent(tf_agent.Base):
     # If summarize_gradients, create functions for summarizing both gradients
     # and variables.
     if summarize_gradients and debug_summaries:
+
       def _create_summaries(grads_and_vars):
         grads_and_vars = eager_utils.add_gradients_summaries(grads_and_vars)
         grads_and_vars = eager_utils.add_variables_summaries(grads_and_vars)
         grads_and_vars = clip_gradients(grads_and_vars)
         return grads_and_vars
+
       transform_grads_fn = _create_summaries
     else:
       transform_grads_fn = clip_gradients
 
-    train_op = tf.contrib.training.create_train_op(
+    total_loss = tf.contrib.training.create_train_op(
         total_loss,
         self._optimizer,
         global_step=train_step,
@@ -448,9 +423,15 @@ class PPOAgent(tf_agent.Base):
         variables_to_train=(self._actor_net.trainable_weights +
                             self._value_net.trainable_weights))
 
-    return train_op, [policy_gradient_loss, value_estimation_loss,
-                      l2_regularization_loss, entropy_regularization_loss,
-                      kl_penalty_loss]
+    return tf_agent.LossInfo(
+        total_loss,
+        PPOLossInfo(
+            policy_gradient_loss=policy_gradient_loss,
+            value_estimation_loss=value_estimation_loss,
+            l2_regularization_loss=l2_regularization_loss,
+            entropy_regularization_loss=entropy_regularization_loss,
+            kl_penalty_loss=kl_penalty_loss,
+        ))
 
   def compute_return_and_advantage(self, next_time_steps, value_preds):
     """Compute the Monte Carlo return and advantage.
@@ -467,8 +448,8 @@ class PPOAgent(tf_agent.Base):
     Returns:
       tuple of (return, normalized_advantage), both are batched tensors.
     """
-    discounts = next_time_steps.discount * tf.constant(self._discount_factor,
-                                                       dtype=tf.float32)
+    discounts = next_time_steps.discount * tf.constant(
+        self._discount_factor, dtype=tf.float32)
 
     rewards = next_time_steps.reward
     if self._debug_summaries:
@@ -493,8 +474,8 @@ class PPOAgent(tf_agent.Base):
       tf.contrib.summary.histogram('returns', returns)
 
     # Compute advantages.
-    advantages = self.compute_advantages(rewards, returns,
-                                         discounts, value_preds)
+    advantages = self.compute_advantages(rewards, returns, discounts,
+                                         value_preds)
     normalized_advantages = _normalize_advantages(advantages, axes=(0, 1))
     if self._debug_summaries:
       tf.contrib.summary.histogram('advantages', advantages)
@@ -512,42 +493,7 @@ class PPOAgent(tf_agent.Base):
 
     return returns, normalized_advantages
 
-  @gin.configurable(module='tf_agents.agents.ppo.ppo_agent.PPOAgent')
-  def train(self, experience, train_step_counter=None):
-    """Update the agent estimates given a batch of experience.
-
-    Args:
-      experience: Trajectory of experience to train on.
-      train_step_counter: An optional variable to increment for each train step.
-        Typically the global_step.
-    Returns:
-      A train_op to train the actor and critic networks.
-    Raises:
-      ValueError: If replay_buffer is None, and the agent does not have an
-        internal replay buffer.
-    """
-    train_op = self.train_from_experience(
-        experience=experience,
-        train_step_counter=train_step_counter)
-
-    return train_op
-
-  def train_from_experience(self,
-                            experience,
-                            train_step_counter=None):
-    """Update the agent estimates given a batch of experience.
-
-    Args:
-      experience: A `trajectory.Trajectory` representing training data.
-      train_step_counter: An optional variable to increment for each train step.
-        Typically the global_step.
-
-    Returns:
-      A train_op to train the actor and critic networks.
-    Raises:
-      ValueError: If replay_buffer is None, and the agent does not have an
-        internal replay buffer.
-    """
+  def _train(self, experience, train_step_counter):
     # Change trajectory to transitions.
     trajectory0 = nest.map_structure(lambda t: t[:, :-1], experience)
     trajectory1 = nest.map_structure(lambda t: t[:, 1:], experience)
@@ -569,15 +515,15 @@ class PPOAgent(tf_agent.Base):
 
     # Compute log probability of actions taken during data collection, using the
     #   collect policy distribution.
-    act_log_probs = common_utils.log_probability(
-        old_actions_distribution, actions, self._action_spec)
+    act_log_probs = common_utils.log_probability(old_actions_distribution,
+                                                 actions, self._action_spec)
 
     # Compute the value predictions for states using the current value function.
     # To be used for return & advantage computation.
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
-    policy_state = self._policy.get_initial_state(batch_size=batch_size)
+    policy_state = self._collect_policy.get_initial_state(batch_size=batch_size)
 
-    value_preds, unused_policy_state = self._policy.apply_value_network(
+    value_preds, unused_policy_state = self._collect_policy.apply_value_network(
         experience.observation, experience.step_type, policy_state=policy_state)
     value_preds = tf.stop_gradient(value_preds)
 
@@ -594,37 +540,40 @@ class PPOAgent(tf_agent.Base):
     kl_penalty_losses = []
 
     # For each epoch, create its own train op that depends on the previous one.
-    last_train_op = tf.no_op()
+    loss_info = tf.no_op()
     for i_epoch in range(self._num_epochs):
       with tf.name_scope('epoch_%d' % i_epoch):
-        with tf.control_dependencies([last_train_op]):
+        with tf.control_dependencies(nest.flatten(loss_info)):
           # Only save debug summaries for first and last epochs.
-          debug_summaries = (self._debug_summaries and
-                             (i_epoch == 0 or i_epoch == self._num_epochs-1))
+          debug_summaries = (
+              self._debug_summaries and
+              (i_epoch == 0 or i_epoch == self._num_epochs - 1))
 
           # Build one epoch train op.
-          last_train_op, losses = self.build_train_op(
+          loss_info = self.build_train_op(
               time_steps, actions, act_log_probs, returns,
               normalized_advantages, action_distribution_parameters, valid_mask,
-              train_step_counter,
-              self._summarize_grads_and_vars, self._gradient_clipping,
-              debug_summaries)
-          policy_gradient_losses.append(losses[0])
-          value_estimation_losses.append(losses[1])
-          l2_regularization_losses.append(losses[2])
-          entropy_regularization_losses.append(losses[3])
-          kl_penalty_losses.append(losses[4])
+              train_step_counter, self._summarize_grads_and_vars,
+              self._gradient_clipping, debug_summaries)
+
+          policy_gradient_losses.append(loss_info.extra.policy_gradient_loss)
+          value_estimation_losses.append(loss_info.extra.value_estimation_loss)
+          l2_regularization_losses.append(
+              loss_info.extra.l2_regularization_loss)
+          entropy_regularization_losses.append(
+              loss_info.extra.entropy_regularization_loss)
+          kl_penalty_losses.append(loss_info.extra.kl_penalty_loss)
 
     # After update epochs, update adaptive kl beta, then update observation
     #   normalizer and reward normalizer.
-    with tf.control_dependencies([last_train_op]):
+    with tf.control_dependencies(nest.flatten(loss_info)):
       # Compute the mean kl from old.
-      batch_size = nest_utils.get_outer_shape(
-          time_steps, self._time_step_spec)[0]
-      policy_state = self._policy.get_initial_state(batch_size)
+      batch_size = nest_utils.get_outer_shape(time_steps,
+                                              self._time_step_spec)[0]
+      policy_state = self._collect_policy.get_initial_state(batch_size)
       kl_divergence = self._kl_divergence(
           time_steps, action_distribution_parameters,
-          self._policy.distribution(time_steps, policy_state).action)
+          self._collect_policy.distribution(time_steps, policy_state).action)
       update_adaptive_kl_beta_op = self.update_adaptive_kl_beta(kl_divergence)
 
     with tf.control_dependencies([update_adaptive_kl_beta_op]):
@@ -641,10 +590,10 @@ class PPOAgent(tf_agent.Base):
         update_reward_norm = tf.no_op()
 
     with tf.control_dependencies([update_obs_norm, update_reward_norm]):
-      last_train_op = tf.identity(last_train_op)
+      loss_info = nest.map_structure(tf.identity, loss_info)
 
     # Make summaries for total loss across all epochs.
-    # The self._*_losses lists will have been populated by
+    # The *_losses lists will have been populated by
     #   calls to self.build_train_op.
     with tf.name_scope('Losses/'):
       total_policy_gradient_loss = tf.add_n(policy_gradient_losses)
@@ -662,8 +611,7 @@ class PPOAgent(tf_agent.Base):
       if self._entropy_regularization:
         tf.contrib.summary.scalar('entropy_regularization_loss',
                                   total_entropy_regularization_loss)
-      tf.contrib.summary.scalar('kl_penalty_loss',
-                                total_kl_penalty_loss)
+      tf.contrib.summary.scalar('kl_penalty_loss', total_kl_penalty_loss)
 
       total_loss = (
           tf.abs(total_policy_gradient_loss) +
@@ -681,25 +629,28 @@ class PPOAgent(tf_agent.Base):
         for var in all_vars:
           tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
 
-    return last_train_op
+    return loss_info
 
   def l2_regularization_loss(self, debug_summaries=False):
     if self._policy_l2_reg > 0 or self._value_function_l2_reg > 0:
       with tf.name_scope('l2_regularization'):
         # Regularize policy weights.
-        policy_vars_to_l2_regularize = [v for v in
-                                        self._actor_net.trainable_weights
-                                        if 'kernel' in v.name]
-        policy_l2_losses = [tf.reduce_sum(tf.square(v)) * self._policy_l2_reg
-                            for v in policy_vars_to_l2_regularize]
+        policy_vars_to_l2_regularize = [
+            v for v in self._actor_net.trainable_weights if 'kernel' in v.name
+        ]
+        policy_l2_losses = [
+            tf.reduce_sum(tf.square(v)) * self._policy_l2_reg
+            for v in policy_vars_to_l2_regularize
+        ]
 
         # Regularize value function weights.
-        vf_vars_to_l2_regularize = [v for v in
-                                    self._value_net.trainable_weights
-                                    if 'kernel' in v.name]
-        vf_l2_losses = [tf.reduce_sum(tf.square(v)) *
-                        self._value_function_l2_reg
-                        for v in vf_vars_to_l2_regularize]
+        vf_vars_to_l2_regularize = [
+            v for v in self._value_net.trainable_weights if 'kernel' in v.name
+        ]
+        vf_l2_losses = [
+            tf.reduce_sum(tf.square(v)) * self._value_function_l2_reg
+            for v in vf_vars_to_l2_regularize
+        ]
 
         l2_losses = policy_l2_losses + vf_l2_losses
         total_l2_loss = tf.add_n(l2_losses, name='l2_loss')
@@ -714,8 +665,11 @@ class PPOAgent(tf_agent.Base):
 
     return total_l2_loss
 
-  def entropy_regularization_loss(self, time_steps, current_policy_distribution,
-                                  valid_mask, debug_summaries=False):
+  def entropy_regularization_loss(self,
+                                  time_steps,
+                                  current_policy_distribution,
+                                  valid_mask,
+                                  debug_summaries=False):
     """Create regularization loss tensor based on agent parameters."""
     if self._entropy_regularization > 0:
       nest.assert_same_structure(time_steps, self.time_step_spec())
@@ -731,8 +685,8 @@ class PPOAgent(tf_agent.Base):
         if debug_summaries:
           tf.contrib.summary.histogram('entropy_reg_loss', entropy_reg_loss)
     else:
-      entropy_reg_loss = tf.constant(0.0, dtype=tf.float32,
-                                     name='zero_entropy_reg_loss')
+      entropy_reg_loss = tf.constant(
+          0.0, dtype=tf.float32, name='zero_entropy_reg_loss')
 
     return entropy_reg_loss
 
@@ -754,6 +708,7 @@ class PPOAgent(tf_agent.Base):
         betweeen two episodes, or part of an unfinished episode at the end of
         one batch dimension.)
       debug_summaries: True if debug summaries should be created.
+
     Returns:
       value_estimation_loss: A scalar value_estimation_loss loss.
     """
@@ -762,18 +717,16 @@ class PPOAgent(tf_agent.Base):
       tf.contrib.summary.histogram('observations', observation)
 
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
-    policy_state = self._policy.get_initial_state(batch_size=batch_size)
+    policy_state = self._collect_policy.get_initial_state(batch_size=batch_size)
 
-    value_preds, unused_policy_state = self._policy.apply_value_network(
-        time_steps.observation, time_steps.step_type,
-        policy_state=policy_state)
-    value_estimation_error = tf.squared_difference(
-        returns, value_preds) * valid_mask
-    value_estimation_loss = (tf.reduce_mean(value_estimation_error) *
-                             self._value_pred_loss_coef)
+    value_preds, unused_policy_state = self._collect_policy.apply_value_network(
+        time_steps.observation, time_steps.step_type, policy_state=policy_state)
+    value_estimation_error = tf.squared_difference(returns,
+                                                   value_preds) * valid_mask
+    value_estimation_loss = (
+        tf.reduce_mean(value_estimation_error) * self._value_pred_loss_coef)
     if debug_summaries:
-      tf.contrib.summary.scalar(
-          'value_pred_avg', tf.reduce_mean(value_preds))
+      tf.contrib.summary.scalar('value_pred_avg', tf.reduce_mean(value_preds))
       tf.contrib.summary.histogram('value_preds', value_preds)
       tf.contrib.summary.histogram('value_estimation_error',
                                    value_estimation_error)
@@ -815,13 +768,12 @@ class PPOAgent(tf_agent.Base):
         the on-policy experience.
     """
     nest.assert_same_structure(time_steps, self.time_step_spec())
-    action_log_prob = common_utils.log_probability(
-        current_policy_distribution, actions, self._action_spec)
+    action_log_prob = common_utils.log_probability(current_policy_distribution,
+                                                   actions, self._action_spec)
     action_log_prob = tf.cast(action_log_prob, tf.float32)
     if self._log_prob_clipping > 0.0:
-      action_log_prob = tf.clip_by_value(action_log_prob,
-                                         -self._log_prob_clipping,
-                                         self._log_prob_clipping)
+      action_log_prob = tf.clip_by_value(
+          action_log_prob, -self._log_prob_clipping, self._log_prob_clipping)
     if self._check_numerics:
       action_log_prob = tf.check_numerics(action_log_prob, 'action_log_prob')
 
@@ -835,8 +787,8 @@ class PPOAgent(tf_agent.Base):
     if self._check_numerics:
       importance_ratio = tf.check_numerics(importance_ratio, 'importance_ratio')
       if self._importance_ratio_clipping > 0.0:
-        importance_ratio_clipped = tf.check_numerics(importance_ratio_clipped,
-                                                     'importance_ratio_clipped')
+        importance_ratio_clipped = tf.check_numerics(
+            importance_ratio_clipped, 'importance_ratio_clipped')
 
     # Pessimistically choose the minimum objective value for clipped and
     #   unclipped importance ratios.
@@ -920,9 +872,7 @@ class PPOAgent(tf_agent.Base):
 
     return adaptive_kl_loss
 
-  def _kl_divergence(self,
-                     time_steps,
-                     action_distribution_parameters,
+  def _kl_divergence(self, time_steps, action_distribution_parameters,
                      current_policy_distribution):
     outer_dims = list(
         range(nest_utils.get_outer_rank(time_steps, self.time_step_spec())))
@@ -932,7 +882,8 @@ class PPOAgent(tf_agent.Base):
             self._action_distribution_spec, action_distribution_parameters))
 
     kl_divergence = ppo_utils.nested_kl_divergence(
-        old_actions_distribution, current_policy_distribution,
+        old_actions_distribution,
+        current_policy_distribution,
         outer_dims=outer_dims)
     return kl_divergence
 
@@ -961,6 +912,7 @@ class PPOAgent(tf_agent.Base):
         betweeen two episodes, or part of an unfinished episode at the end of
         one batch dimension.)
       debug_summaries: True if debug summaries should be created.
+
     Returns:
       kl_penalty_loss: The sum of a squared penalty for KL over a constant
         threshold, plus an adaptive penalty that encourages updates toward a
@@ -983,6 +935,7 @@ class PPOAgent(tf_agent.Base):
     Args:
       kl_divergence: KL divergence of old policy to new policy for all
         timesteps.
+
     Returns:
       update_op: An op which runs the update for the adaptive kl penalty term.
     """
