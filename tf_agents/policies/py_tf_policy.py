@@ -69,9 +69,9 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     self._seed = seed
     self._built = False
 
-  def _build(self, batch_size):
+  def initialize(self, batch_size):
     if self._built:
-      raise RuntimeError('_build() called twice.')
+      raise RuntimeError('initialize() called twice.')
 
     self._batch_size = batch_size
     self._batched = batch_size is not None
@@ -97,9 +97,9 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     outer_shape = nest_utils.get_outer_array_shape(
         time_step, self._time_step_spec)
     if len(outer_shape) == 1:
-      self._build(outer_shape[0])
+      self.initialize(outer_shape[0])
     elif not outer_shape:
-      self._build(None)
+      self.initialize(None)
     else:
       raise ValueError(
           'Cannot handle more than one outer dimension. Saw {} outer '
@@ -107,7 +107,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
 
   def _get_initial_state(self, batch_size):
     if not self._built:
-      self._build(batch_size)
+      self.initialize(batch_size)
     if batch_size != self._batch_size:
       raise ValueError(
           '`batch_size` argument is different from the batch size provided '
