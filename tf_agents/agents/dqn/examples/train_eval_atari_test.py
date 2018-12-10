@@ -77,9 +77,9 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
     self.trainer._env = mock.MagicMock()
     self.trainer._env.envs[0].game_over = False
     self.trainer._replay_buffer = mock.MagicMock()
-    self.policy = mock.MagicMock()
-    self.action_step = policy_step.PolicyStep(action=1)
-    self.policy.action.return_value = self.action_step
+    self.trainer._collect_policy = mock.MagicMock()
+    action_step = policy_step.PolicyStep(action=1)
+    self.trainer._collect_policy.action.return_value = action_step
     self.observer = mock.MagicMock()
     self.metric_observers = [self.observer]
 
@@ -94,7 +94,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       # Run a regular step.
       self.trainer._env.step.return_value = ts_transition(1)
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
       self.assertTrue(time_step.is_mid())
       self.trainer._replay_buffer.add_batch.assert_called_with(
           trajectory_first(0))
@@ -111,7 +111,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       # Run a regular step.
       self.trainer._env.step.return_value = ts_transition(1)
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
 
       self.trainer._replay_buffer.add_batch.reset_mock()
       self.observer.reset_mock()
@@ -122,7 +122,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
           ts_transition(3),
       ]
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
       self.assertTrue(time_step.is_mid())
       expected_rb_calls = [
           mock.call(trajectory_last(1, discount=1.0)),
@@ -148,7 +148,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       # Run a regular step.
       self.trainer._env.step.return_value = ts_transition(1)
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
 
       # Lose a life, but not the end of a game.
       self.trainer._env.step.return_value = None
@@ -157,7 +157,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
           ts_transition(3),
       ]
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
 
       self.trainer._replay_buffer.add_batch.reset_mock()
       self.observer.reset_mock()
@@ -166,7 +166,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       self.trainer._env.step.return_value = ts_transition(4)
       self.trainer._env.step.side_effect = None
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
       self.assertTrue(time_step.is_mid())
       self.trainer._replay_buffer.add_batch.assert_called_with(
           trajectory_mid(3))
@@ -183,7 +183,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       # Run a regular step.
       self.trainer._env.step.return_value = ts_transition(1)
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
 
       # Lose a life, but not the end of a game.
       self.trainer._env.step.return_value = None
@@ -192,13 +192,13 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
           ts_transition(3),
       ]
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
 
       # Run a regular step.
       self.trainer._env.step.return_value = ts_transition(4)
       self.trainer._env.step.side_effect = None
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
 
       self.trainer._replay_buffer.add_batch.reset_mock()
       self.observer.reset_mock()
@@ -207,7 +207,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
       self.trainer._env.envs[0].game_over = True
       self.trainer._env.step.return_value = ts_termination(5)
       time_step = self.trainer._collect_step(
-          time_step, self.policy, self.metric_observers, train=True)
+          time_step, self.metric_observers, train=True)
       self.assertTrue(time_step.is_last())
       self.trainer._replay_buffer.add_batch.assert_called_with(
           trajectory_last(4))

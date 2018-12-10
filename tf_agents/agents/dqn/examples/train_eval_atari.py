@@ -462,7 +462,6 @@ class TrainEval(object):
       with self._collect_timer:
         time_step = self._collect_step(
             time_step,
-            self._collect_policy,
             metric_observers,
             train=train)
         env_steps += 1
@@ -489,8 +488,13 @@ class TrainEval(object):
         reward=np.asarray(np.clip(traj.reward, -1, 1)))
     self._replay_buffer.add_batch(traj)
 
-  def _collect_step(self, time_step, policy, metric_observers, train=False):
+  def _collect_step(self, time_step, metric_observers, train=False):
     """Run a single step (or 2 steps on life loss) in the environment."""
+    if train:
+      policy = self._collect_policy
+    else:
+      policy = self._eval_policy
+
     with self._action_timer:
       action_step = policy.action(time_step)
     with self._step_timer:
