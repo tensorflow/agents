@@ -23,6 +23,7 @@ from absl.testing import parameterized
 from absl.testing.absltest import mock
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.environments import time_step as ts
@@ -31,15 +32,21 @@ from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.networks import value_network
+from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
 
 
-class DummyActorNet(network.Network):
+class DummyActorNet(network.DistributionNetwork):
 
   def __init__(self, action_spec, name=None):
-    super(DummyActorNet, self).__init__(name, None, (), 'DummyActorNet')
+    output_spec = self._get_normal_distribution_spec(action_spec)
+    super(DummyActorNet, self).__init__(
+        name,
+        None, (),
+        output_spec=output_spec,
+        name='DummyActorNet')
     self._action_spec = action_spec
     self._flat_action_spec = nest.flatten(self._action_spec)[0]
     self._outer_rank = 1  # TOOD(oars): Do we need this?
@@ -51,6 +58,18 @@ class DummyActorNet(network.Network):
             bias_initializer=tf.constant_initializer([5, 5]),
             activation=None,
         ))
+
+  def _get_normal_distribution_spec(self, sample_spec):
+    input_param_shapes = tfp.distributions.Normal.param_static_shapes(
+        sample_spec.shape)
+    input_param_spec = nest.map_structure(
+        lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
+            shape=tensor_shape,
+            dtype=sample_spec.dtype),
+        input_param_shapes)
+
+    return distribution_spec.DistributionSpec(
+        tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
@@ -65,8 +84,9 @@ class DummyActorNet(network.Network):
     stdevs = batch_squash.unflatten(stdevs)
     actions = nest.pack_sequence_as(self._action_spec, [actions])
     stdevs = nest.pack_sequence_as(self._action_spec, [stdevs])
-    return nest.map_structure_up_to(self._action_spec, tf.distributions.Normal,
-                                    actions, stdevs), network_state
+
+    return self.output_spec.build_distribution(
+        loc=actions, scale=stdevs), network_state
 
 
 class DummyValueNet(network.Network):
@@ -389,6 +409,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     # Now request L2 regularization loss.
     # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1].
     expected_loss = l2_reg * ((2**2 + 1) + (2**2 + 1 + 1 + 1))
+    # Make sure the network is built before we try to get variables.
+    agent.policy().action(tensor_spec.sample_spec_nest(self._time_step_spec))
     loss = agent.l2_regularization_loss()
 
     self.evaluate(tf.global_variables_initializer())

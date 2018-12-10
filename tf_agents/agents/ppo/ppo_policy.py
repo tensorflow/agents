@@ -24,8 +24,10 @@ import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.environments import time_step as ts
+from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_step
+from tf_agents.specs import distribution_spec
 from tf_agents.utils import common as common_utils
 
 nest = tf.contrib.framework.nest
@@ -51,8 +53,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
       actor_network: An instance of a tf_agents.networks.network.Network, with
         call(observation, step_type, network_state).  Network should
         return one of the following: 1. a nested tuple of tfp.distributions
-        objects matching action_spec, or 2. a nested tuple of tf.Tensors
-        representing actions.
+          objects matching action_spec, or 2. a nested tuple of tf.Tensors
+          representing actions.
       value_network:  An instance of a tf_agents.networks.network.Network, with
         call(observation, step_type, network_state).  Network should return
         value predictions for the input state.
@@ -81,8 +83,14 @@ class PPOPolicy(actor_policy.ActorPolicy):
     # Instead, the info_spec should be determined from __init__ arguments and
     # passed to super().
     if self._collect:
-      self._info_spec = ppo_utils.get_distribution_params_spec(
-          policy=self, time_step_spec=time_step_spec)
+      # TODO(oars): Cleanup how we handle non distribution networks.
+      if isinstance(self._actor_network, network.DistributionNetwork):
+        spec = self._actor_network.output_spec
+      else:
+        spec = nest.map_structure(
+            distribution_spec.deterministic_distribution_from_spec, action_spec)
+      self._info_spec = nest.map_structure(lambda spec: spec.input_params_spec,
+                                           spec)
       self._setup_specs()
 
   def apply_value_network(self, observations, step_types, policy_state):

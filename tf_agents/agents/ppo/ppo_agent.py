@@ -62,8 +62,10 @@ from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_policy
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.environments import trajectory
+from tf_agents.networks import network
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import policy_step
+from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
@@ -166,6 +168,9 @@ class PPOAgent(tf_agent.Base):
         values. For debugging only.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
+
+    Raises:
+      ValueError: If the actor_net is not a DistributionNetwork.
     """
     super(PPOAgent, self).__init__(time_step_spec, action_spec)
     self._importance_ratio_clipping = importance_ratio_clipping
@@ -208,6 +213,10 @@ class PPOAgent(tf_agent.Base):
 
     self._optimizer = optimizer
 
+    if not isinstance(actor_net, network.DistributionNetwork):
+      raise ValueError(
+          'actor_net must be an instance of a DistributionNetwork.')
+
     self._actor_net = actor_net
     self._value_net = value_net
 
@@ -216,9 +225,7 @@ class PPOAgent(tf_agent.Base):
     # state.
     self._policy_state_spec = self._actor_net.state_spec
     self._policy = self.collect_policy()
-    self._action_distribution_class_spec = (
-        ppo_utils.get_distribution_class_spec(self._policy,
-                                              self.time_step_spec()))
+    self._action_distribution_spec = (self._actor_net.output_spec)
 
   def _make_policy(self, collect):
     return ppo_policy.PPOPolicy(
@@ -237,8 +244,9 @@ class PPOAgent(tf_agent.Base):
     policy_step_spec = policy_step.PolicyStep(
         action=self.action_spec(), state=self._policy.policy_state_spec(),
         info=action_distribution_params_spec)
-    trajectory_spec = trajectory.from_transition(
-        self.time_step_spec(), policy_step_spec, self.time_step_spec())
+    trajectory_spec = trajectory.from_transition(self.time_step_spec(),
+                                                 policy_step_spec,
+                                                 self.time_step_spec())
     return trajectory_spec
 
   def collect_data_spec(self):
@@ -247,9 +255,9 @@ class PPOAgent(tf_agent.Base):
     Returns:
       A `Trajectory` spec.
     """
-    action_distribution_params_spec = ppo_utils.get_distribution_params_spec(
-        self._policy,
-        self.time_step_spec())
+    output_spec = self._actor_net.output_spec
+    action_distribution_params_spec = nest.map_structure_up_to(
+        output_spec, lambda spec: spec.input_params_spec, output_spec)
     return self._make_ppo_trajectory_spec(action_distribution_params_spec)
 
   def policy_state_spec(self):
@@ -414,8 +422,11 @@ class PPOAgent(tf_agent.Base):
                   entropy_regularization_loss +
                   kl_penalty_loss)
 
-    clip_gradients = (tf.contrib.training.clip_gradient_norms_fn(
-        gradient_clipping) if gradient_clipping > 0 else lambda x: x)
+    if gradient_clipping > 0:
+      clip_gradients = tf.contrib.training.clip_gradient_norms_fn(
+          gradient_clipping)
+    else:
+      clip_gradients = lambda x: x
 
     # If summarize_gradients, create functions for summarizing both gradients
     # and variables.
@@ -553,9 +564,8 @@ class PPOAgent(tf_agent.Base):
     # Reconstruct per-timestep policy distribution from stored distribution
     #   parameters.
     old_actions_distribution = (
-        ppo_utils.get_distribution_from_params_and_classes(
-            action_distribution_parameters,
-            self._action_distribution_class_spec))
+        distribution_spec.nested_distributions_from_specs(
+            self._action_distribution_spec, action_distribution_parameters))
 
     # Compute log probability of actions taken during data collection, using the
     #   collect policy distribution.
@@ -914,12 +924,13 @@ class PPOAgent(tf_agent.Base):
                      time_steps,
                      action_distribution_parameters,
                      current_policy_distribution):
-    outer_dims = list(range(nest_utils.get_outer_rank(
-        time_steps, self.time_step_spec())))
+    outer_dims = list(
+        range(nest_utils.get_outer_rank(time_steps, self.time_step_spec())))
+
     old_actions_distribution = (
-        ppo_utils.get_distribution_from_params_and_classes(
-            action_distribution_parameters,
-            self._action_distribution_class_spec))
+        distribution_spec.nested_distributions_from_specs(
+            self._action_distribution_spec, action_distribution_parameters))
+
     kl_divergence = ppo_utils.nested_kl_divergence(
         old_actions_distribution, current_policy_distribution,
         outer_dims=outer_dims)

@@ -94,6 +94,11 @@ class DistributionSpec(object):
                                       repr(self.sample_spec))
 
 
+def deterministic_distribution_from_spec(spec):
+  """Creates a Deterministic distribution_spec from a tensor_spec."""
+  return DistributionSpec(tfd.Deterministic, {"loc": spec}, sample_spec=spec)
+
+
 def nested_distributions_from_specs(specs, parameters):
   """Builds a nest of distributions from a nest of specs.
 

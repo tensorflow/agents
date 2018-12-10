@@ -26,6 +26,7 @@ import tensorflow_probability as tfp
 from tf_agents.agents.ppo import ppo_policy
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
+from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
@@ -64,12 +65,29 @@ class DummyActorNet(network.Network):
                                  [action_means]), network_state
 
 
-class DummyActorDistributionNet(network.Network):
+class DummyActorDistributionNet(network.DistributionNetwork):
 
   def __init__(self, action_spec, name=None):
+    output_spec = nest.map_structure(self._get_normal_distribution_spec,
+                                     action_spec)
     super(DummyActorDistributionNet, self).__init__(
-        name, None, (), 'DummyActorDistributionNet')
+        name,
+        None, (),
+        output_spec=output_spec,
+        name='DummyActorDistributionNet')
     self._action_net = DummyActorNet(action_spec)
+
+  def _get_normal_distribution_spec(self, sample_spec):
+    input_param_shapes = tfp.distributions.Normal.param_static_shapes(
+        sample_spec.shape)
+    input_param_spec = nest.map_structure(
+        lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
+            shape=tensor_shape,
+            dtype=sample_spec.dtype),
+        input_param_shapes)
+
+    return distribution_spec.DistributionSpec(
+        tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     action_means, network_state = self._action_net(inputs, network_state)
