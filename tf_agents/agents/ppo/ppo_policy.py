@@ -69,29 +69,27 @@ class PPOPolicy(actor_policy.ActorPolicy):
       ValueError: if actor_network or value_network is not of type callable or
         tensorflow.python.ops.template.Template.
     """
+    info_spec = ()
+    if collect:
+      # TODO(oars): Cleanup how we handle non distribution networks.
+      if isinstance(actor_network, network.DistributionNetwork):
+        network_output_spec = actor_network.output_spec
+      else:
+        network_output_spec = nest.map_structure(
+            distribution_spec.deterministic_distribution_from_spec, action_spec)
+      info_spec = nest.map_structure(lambda spec: spec.input_params_spec,
+                                     network_output_spec)
+
     super(PPOPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
+        info_spec=info_spec,
         actor_network=actor_network,
         observation_normalizer=observation_normalizer,
         clip=clip)
+
     self._collect = collect
-
     self._value_network = value_network
-
-    # TODO(ebrevdo,eholly): Fix the way to set up info_spec.
-    # Instead, the info_spec should be determined from __init__ arguments and
-    # passed to super().
-    if self._collect:
-      # TODO(oars): Cleanup how we handle non distribution networks.
-      if isinstance(self._actor_network, network.DistributionNetwork):
-        spec = self._actor_network.output_spec
-      else:
-        spec = nest.map_structure(
-            distribution_spec.deterministic_distribution_from_spec, action_spec)
-      self._info_spec = nest.map_structure(lambda spec: spec.input_params_spec,
-                                           spec)
-      self._setup_specs()
 
   def apply_value_network(self, observations, step_types, policy_state):
     """Apply value network to time_step, potentially a sequence.

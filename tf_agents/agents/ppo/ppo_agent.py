@@ -180,33 +180,39 @@ class PPOAgent(tf_agent.TFAgent):
     Raises:
       ValueError: If the actor_net is not a DistributionNetwork.
     """
+    if not isinstance(actor_net, network.DistributionNetwork):
+      raise ValueError(
+          'actor_net must be an instance of a DistributionNetwork.')
+
+    self._optimizer = optimizer
+    self._actor_net = actor_net
+    self._value_net = value_net
     self._importance_ratio_clipping = importance_ratio_clipping
     self._lambda = lambda_value
     self._discount_factor = discount_factor
+    self._entropy_regularization = entropy_regularization
     self._policy_l2_reg = policy_l2_reg
     self._value_function_l2_reg = value_function_l2_reg
-    self._entropy_regularization = entropy_regularization
     self._value_pred_loss_coef = value_pred_loss_coef
+    self._num_epochs = num_epochs
     self._use_gae = use_gae
     self._use_td_lambda_return = use_td_lambda_return
-    self._num_epochs = num_epochs
+    self._reward_norm_clipping = reward_norm_clipping
     self._log_prob_clipping = log_prob_clipping
-    self._gradient_clipping = gradient_clipping or 0.0
     self._kl_cutoff_factor = kl_cutoff_factor
     self._kl_cutoff_coef = kl_cutoff_coef
+    self._adaptive_kl_target = adaptive_kl_target
+    self._adaptive_kl_tolerance = adaptive_kl_tolerance
+    self._gradient_clipping = gradient_clipping or 0.0
+    self._check_numerics = check_numerics
+
     if initial_adaptive_kl_beta > 0.0:
       # TODO(kbanoop): Rename create_variable.
       self._adaptive_kl_beta = common_utils.create_counter(
           'adaptive_kl_beta', initial_adaptive_kl_beta, dtype=tf.float32)
     else:
       self._adaptive_kl_beta = None
-    self._adaptive_kl_target = adaptive_kl_target
-    self._adaptive_kl_tolerance = adaptive_kl_tolerance
-    self._check_numerics = check_numerics
-    self._debug_summaries = debug_summaries
-    self._summarize_grads_and_vars = summarize_grads_and_vars
 
-    self._reward_norm_clipping = reward_norm_clipping
     self._reward_normalizer = None
     if normalize_rewards:
       self._reward_normalizer = tensor_normalizer.StreamingTensorNormalizer(
@@ -217,20 +223,6 @@ class PPOAgent(tf_agent.TFAgent):
       self._observation_normalizer = (
           tensor_normalizer.StreamingTensorNormalizer(
               time_step_spec.observation, scope='normalize_observations'))
-
-    self._optimizer = optimizer
-
-    if not isinstance(actor_net, network.DistributionNetwork):
-      raise ValueError(
-          'actor_net must be an instance of a DistributionNetwork.')
-
-    self._actor_net = actor_net
-    self._value_net = value_net
-
-    # TODO(oars): Fix uses of policy_state, right now code assumes ppo_policy
-    # only returns 1 state, and that actor and value networks have the same
-    # state.
-    self._policy_state_spec = self._actor_net.state_spec
 
     policy = greedy_policy.GreedyPolicy(
         ppo_policy.PPOPolicy(
