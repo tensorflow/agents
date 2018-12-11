@@ -36,7 +36,7 @@ nest = tf.contrib.framework.nest
 
 
 @gin.configurable
-class ReinforceAgent(tf_agent.BaseV2):
+class ReinforceAgent(tf_agent.TFAgent):
   """A REINFORCE Agent."""
 
   def __init__(self,

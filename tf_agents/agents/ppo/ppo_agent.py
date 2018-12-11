@@ -93,7 +93,7 @@ def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
 
 
 @gin.configurable
-class PPOAgent(tf_agent.BaseV2):
+class PPOAgent(tf_agent.TFAgent):
   """A PPO Agent."""
 
   def __init__(self,

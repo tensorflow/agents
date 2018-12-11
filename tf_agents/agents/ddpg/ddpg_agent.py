@@ -38,7 +38,7 @@ nest = tf.contrib.framework.nest
 
 
 @gin.configurable
-class DdpgAgent(tf_agent.BaseV2):
+class DdpgAgent(tf_agent.TFAgent):
   """A DDPG Agent."""
 
   def __init__(self,

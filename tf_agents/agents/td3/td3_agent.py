@@ -43,7 +43,7 @@ nest = tf.contrib.framework.nest
 
 
 @gin.configurable
-class Td3Agent(tf_agent.BaseV2):
+class Td3Agent(tf_agent.TFAgent):
   """A TD3 Agent."""
 
   def __init__(self,

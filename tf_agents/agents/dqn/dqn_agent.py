@@ -68,7 +68,7 @@ def compute_td_targets(next_q_values, rewards, discounts):
 
 
 @gin.configurable
-class DqnAgent(tf_agent.BaseV2):
+class DqnAgent(tf_agent.TFAgent):
   """A DQN Agent.
 
   Implements the DQN algorithm from

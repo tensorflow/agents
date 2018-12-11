@@ -32,75 +32,11 @@ from tf_agents.utils import nest_utils
 nest = tf.contrib.framework.nest
 
 
+LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
+
+
 @six.add_metaclass(abc.ABCMeta)
-class Base(tf.contrib.eager.Checkpointable):
-  """Abstract base class for TF RL agents."""
-
-  def __init__(self, time_step_spec, action_spec):
-    self._time_step_spec = time_step_spec
-    self._action_spec = action_spec
-
-  @abc.abstractmethod
-  def initialize(self):
-    """Returns an op to initialize the agent."""
-
-  @abc.abstractmethod
-  def policy(self):
-    """Return the current policy held by the agent.
-
-    Returns:
-      A tf_policy.Base object.
-    """
-
-  def collect_policy(self):
-    """Returns a policy for collecting data from the environment.
-
-    We use self.policy() by default, override to use a different collect_policy.
-
-    Returns:
-      A tf_policy.Base object.
-    """
-    return self.policy()
-
-  @abc.abstractmethod
-  def train(self):
-    """Trains the agent.
-
-    Returns:
-      An op to train the agent, e.g. update neural network weights.
-    """
-
-  def time_step_spec(self):
-    """Describes the `TimeStep` tensors expected by the agent.
-
-    Returns:
-      A `TimeStep` namedtuple with `TensorSpec` objects instead of Tensors,
-      which describe the shape, dtype and name of each tensor.
-    """
-    return self._time_step_spec
-
-  def action_spec(self):
-    """TensorSpec describing the action produced by the agent.
-
-    Returns:
-      An single BoundedTensorSpec, or a nested dict, list or tuple of
-      `BoundedTensorSpec` objects, which describe the shape and
-      dtype of each action Tensor.
-    """
-    return self._action_spec
-
-
-class LossInfo(collections.namedtuple("LossInfo", ("loss", "extra"))):
-  """Stores loss information; returned by `BaseV2.loss` and `BaseV2.train`.
-
-  - `loss` is a per-batch loss value.
-  - `extra` is an optional, optionally nested, tuple of side loss information.
-    A common entry in `extra` is `td_loss`, e.g. as returned by `DqnAgent`.
-  """
-  pass
-
-
-class BaseV2(six.with_metaclass(abc.ABCMeta, tf.contrib.eager.Checkpointable)):
+class TFAgent(tf.contrib.eager.Checkpointable):
   """Abstract base class for TF RL agents."""
 
   def __init__(self,
@@ -136,7 +72,7 @@ class BaseV2(six.with_metaclass(abc.ABCMeta, tf.contrib.eager.Checkpointable)):
         collect gradient and variable summaries.
     """
     common.assert_members_are_not_overridden(
-        base_cls=BaseV2,
+        base_cls=TFAgent,
         instance=self,
         allowed_overrides=set(["_initialize", "_train"]))
 

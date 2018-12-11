@@ -47,7 +47,7 @@ class BehavioralCloningLossInfo(collections.namedtuple(
 
 
 @gin.configurable
-class BehavioralCloningAgent(tf_agent.BaseV2):
+class BehavioralCloningAgent(tf_agent.TFAgent):
   """An behavioral cloning Agent.
 
   Implements behavioral cloning, wherein the network learns to clone
