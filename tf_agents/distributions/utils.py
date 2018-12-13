@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from tf_agents.distributions import layers
+from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
 
@@ -51,9 +52,9 @@ def project_to_output_distribution(inputs,
     ValueError: If the distribution type of output_spec is unclear.
   """
   with tf.variable_scope(scope):
-    if output_spec.is_discrete():
+    if tensor_spec.is_discrete(output_spec):
       return project_to_discrete(inputs, output_spec, outer_rank=outer_rank)
-    elif output_spec.is_continuous():
+    elif tensor_spec.is_continuous(output_spec):
       return project_to_continuous(inputs, output_spec, outer_rank=outer_rank)
     else:
       raise ValueError('Output spec corresponds to unknown distribution.')

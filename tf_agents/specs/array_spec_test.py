@@ -74,6 +74,7 @@ class ArraySpecNestSampleTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
     self.rng = np.random.RandomState()
+    return super(ArraySpecNestSampleTest, self).setUp()
 
   def testArraySpecSample(self, dtype):
     spec = array_spec.ArraySpec((2, 3), dtype)
@@ -495,17 +496,18 @@ class ArraySpecTypeTest(parameterized.TestCase):
 
   def testIsDiscrete(self, dtype):
     spec = array_spec.ArraySpec((2, 3), dtype=dtype)
-    self.assertIs(spec.is_discrete(),
+    self.assertIs(tensor_spec.is_discrete(spec),
                   issubclass(np.dtype(dtype).type, np.integer))
 
   def testIsContinuous(self, dtype):
     spec = array_spec.ArraySpec((2, 3), dtype=dtype)
-    self.assertIs(spec.is_continuous(),
+    self.assertIs(tensor_spec.is_continuous(spec),
                   issubclass(np.dtype(dtype).type, np.floating))
 
   def testExclusive(self, dtype):
     spec = array_spec.ArraySpec((2, 3), dtype=dtype)
-    self.assertIs(spec.is_discrete() ^ spec.is_continuous(), True)
+    self.assertIs(
+        tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True)
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.networks import utils
+from tf_agents.specs import tensor_spec
 
 
 def default_fully_connected(inputs, num_elements, scope=None):
@@ -76,10 +77,10 @@ def factored_categorical(inputs, output_spec, outer_rank=1,
     ValueError: If output_spec contains multiple distinct ranges or is otherwise
       invalid.
   """
-  if not output_spec.is_bounded():
+  if not tensor_spec.is_bounded(output_spec):
     raise ValueError('Input output_spec is of invalid type '
                      '%s.' % type(output_spec))
-  if not output_spec.is_discrete():
+  if not tensor_spec.is_discrete(output_spec):
     raise ValueError('Output is not discrete.')
   num_outputs = np.unique(output_spec.maximum - output_spec.minimum + 1)
   num_ranges = len(num_outputs)
@@ -135,10 +136,10 @@ def normal(inputs,
   Raises:
     ValueError: If output_spec is invalid.
   """
-  if not output_spec.is_bounded():
+  if not tensor_spec.is_bounded(output_spec):
     raise ValueError('Input output_spec is of invalid type '
                      '%s.' % type(output_spec))
-  if not output_spec.is_continuous():
+  if not tensor_spec.is_continuous(output_spec):
     raise ValueError('Output is not continuous.')
 
   batch_squash = utils.BatchSquash(outer_rank)

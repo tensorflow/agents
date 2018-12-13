@@ -67,11 +67,11 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
         output_spec=output_spec,
         name=name)
 
-    if not sample_spec.is_bounded():
+    if not tensor_spec.is_bounded(sample_spec):
       raise ValueError(
           'sample_spec must be bounded. Got: %s.' % type(sample_spec))
 
-    if not sample_spec.is_discrete():
+    if not tensor_spec.is_discrete(sample_spec):
       raise ValueError('sample_spec must be discrete. Got: %s.' % sample_spec)
 
     if len(unique_num_actions) > 1:

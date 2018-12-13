@@ -32,6 +32,7 @@ def sample_bounded_spec(spec, rng):
   Args:
     spec: A BoundedSpec to sample.
     rng: A numpy RandomState to use for the sampling.
+
   Returns:
     An np.array sample of the requested space.
   """
@@ -77,11 +78,11 @@ def sample_spec_nest(structure, rng, outer_dims=()):
   """Samples the given nest of specs.
 
   Args:
-    structure: An `ArraySpec`, or a nested dict, list or tuple of
-        `ArraySpec`s.
+    structure: An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
     rng: A numpy RandomState to use for the sampling.
-    outer_dims: An optional list/tuple specifying outer dimensions to add to
-      the spec shape before sampling.
+    outer_dims: An optional list/tuple specifying outer dimensions to add to the
+      spec shape before sampling.
+
   Returns:
     A nest of sampled values following the ArraySpec definition.
   """
@@ -102,6 +103,7 @@ def check_arrays_nest(arrays, spec):
   Args:
     arrays: A NumPy array, or a nested dict, list or tuple of arrays.
     spec: An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+
   Returns:
     True if the arrays conforms to the spec, False otherwise.
   """
@@ -194,6 +196,7 @@ class ArraySpec(object):
       array: A NumPy array or a scalar. Tuples and lists will not be converted
         to a NumPy array automatically; they will cause this function to return
         false, even if a conversion to a conforming array is trivial.
+
     Returns:
       True if the array conforms to the spec, False otherwise.
     """
@@ -218,19 +221,6 @@ class ArraySpec(object):
   def from_spec(spec):
     """Construct a spec from the given spec."""
     return ArraySpec(spec.shape, spec.dtype, spec.name)
-
-  @classmethod
-  def is_bounded(cls):
-    del cls
-    return False
-
-  def is_discrete(self):
-    """Whether spec is discrete."""
-    return np.issubdtype(self.dtype, np.integer)
-
-  def is_continuous(self):
-    """Whether spec is continuous."""
-    return np.issubdtype(self.dtype, np.float)
 
 
 class BoundedArraySpec(ArraySpec):
@@ -341,11 +331,6 @@ class BoundedArraySpec(ArraySpec):
 
     return BoundedArraySpec(spec.shape, spec.dtype, name=name)
 
-  @classmethod
-  def is_bounded(cls):
-    del cls
-    return True
-
   @property
   def minimum(self):
     """Returns a NumPy array specifying the minimum bounds (inclusive)."""
@@ -373,3 +358,15 @@ class BoundedArraySpec(ArraySpec):
     """Return true if the given array conforms to the spec."""
     return (super(BoundedArraySpec, self).check_array(array) and
             np.all(array >= self.minimum) and np.all(array <= self.maximum))
+
+
+def is_bounded(spec):
+  return isinstance(spec, BoundedArraySpec)
+
+
+def is_discrete(spec):
+  return np.issubdtype(spec.dtype, np.integer)
+
+
+def is_continuous(spec):
+  return np.issubdtype(spec.dtype, np.float)

@@ -821,7 +821,7 @@ class PPOAgent(tf_agent.TFAgent):
       tf.contrib.summary.scalar('policy_entropy_mean', tf.reduce_mean(entropy))
       # Categorical distribution (used for discrete actions)
       # doesn't have a mean.
-      if not self.action_spec().is_discrete():
+      if not tensor_spec.is_discrete(self.action_spec()):
         tf.contrib.summary.histogram('actions_distribution_mean',
                                      current_policy_distribution.mean())
         tf.contrib.summary.histogram('actions_distribution_stddev',

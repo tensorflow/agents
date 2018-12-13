@@ -24,6 +24,7 @@ import tensorflow_probability as tfp
 
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
 nest = tf.contrib.framework.nest
@@ -47,7 +48,7 @@ class OUNoisePolicy(tf_policy.Base):
       clip: Whether to clip actions to spec. Default True.
     """
     def _validate_action_spec(action_spec):
-      if not action_spec.is_continuous():
+      if not tensor_spec.is_continuous(action_spec):
         raise ValueError('OU Noise is applicable only to continuous actions.')
     nest.map_structure(_validate_action_spec, wrapped_policy.action_spec())
 

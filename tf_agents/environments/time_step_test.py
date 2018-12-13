@@ -251,31 +251,6 @@ class TFTimeStepSpecTest(tf.test.TestCase):
                                                    minimum=0.0, maximum=1.0,
                                                    name='discount'))
 
-  def testDictObsHashable(self):
-    observation_spec = [
-        {
-            'obs1': tensor_spec.TensorSpec((1, 2, 3), tf.int32, 'obs1')
-        },
-        tensor_spec.TensorSpec((1, 2, 3), tf.float32, 'obs2'),
-    ]
-
-    time_step_spec = ts.time_step_spec(observation_spec)
-
-    self.assertEqual(time_step_spec.observation, observation_spec)
-    self.assertEqual(time_step_spec.step_type,
-                     tensor_spec.TensorSpec([], tf.int32, name='step_type'))
-    self.assertEqual(time_step_spec.reward,
-                     tensor_spec.TensorSpec([], tf.float32, name='reward'))
-    self.assertEqual(time_step_spec.discount,
-                     tensor_spec.BoundedTensorSpec(
-                         [],
-                         tf.float32,
-                         minimum=0.0,
-                         maximum=1.0,
-                         name='discount'))
-    feed_dict = {time_step_spec: 'test'}
-    self.assertEqual('test', feed_dict[time_step_spec])
-
 
 if __name__ == '__main__':
   tf.test.main()

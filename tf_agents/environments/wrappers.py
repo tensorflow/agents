@@ -29,6 +29,8 @@ import tensorflow as tf
 from tf_agents.environments import py_environment
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
+from tf_agents.specs import tensor_spec
+
 import gin.tf
 
 nest = tf.contrib.framework.nest
@@ -331,10 +333,10 @@ class ActionOffsetWrapper(PyEnvironmentBaseWrapper):
     if nest.is_sequence(self._env.action_spec()):
       raise ValueError('ActionOffsetWrapper only works with single-array '
                        'action specs (not nested specs).')
-    if not self._env.action_spec().is_bounded():
+    if not tensor_spec.is_bounded(self._env.action_spec()):
       raise ValueError('ActionOffsetWrapper only works with bounded '
                        'action specs.')
-    if not self._env.action_spec().is_discrete():
+    if not tensor_spec.is_discrete(self._env.action_spec()):
       raise ValueError('ActionOffsetWrapper only works with discrete '
                        'action specs.')
 

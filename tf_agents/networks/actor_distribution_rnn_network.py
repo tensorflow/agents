@@ -124,7 +124,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
 
     projection_networks = []
     for single_output_spec in nest.flatten(action_spec):
-      if single_output_spec.is_discrete():
+      if tensor_spec.is_discrete(single_output_spec):
         projection_networks.append(
             categorical_projection_net(single_output_spec))
       else:

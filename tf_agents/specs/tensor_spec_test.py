@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for environments.specs.tensor_spec."""
+"""Tests for specs.tensor_spec."""
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import pickle
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -92,222 +91,6 @@ def example_nested_tensor_spec(dtype):
            tensor_spec.BoundedTensorSpec((2, 3), dtype, minval, maxval)),
       ],
   }
-
-
-class TensorSpecTest(tf.test.TestCase):
-
-  def testAcceptsNumpyDType(self):
-    desc = tensor_spec.TensorSpec([1], np.float32)
-    self.assertEqual(desc.dtype, tf.float32)
-
-  def testWorksWithStrType(self):
-    # tf.as_dtype does not handle numpy string_/unicode_ type objects and
-    # requires dtype objects with type string_/unicode_.
-    desc = tensor_spec.TensorSpec([1], np.dtype(np.string_))
-    self.assertEqual(desc.dtype, tf.string)
-
-    desc = tensor_spec.TensorSpec([1], tf.string)
-    self.assertEqual(desc.dtype, tf.string)
-
-  def testAcceptsTensorShape(self):
-    desc = tensor_spec.TensorSpec(tf.TensorShape([1]), tf.float32)
-    self.assertEqual(desc.shape, tf.TensorShape([1]))
-
-  def testUnknownShape(self):
-    desc = tensor_spec.TensorSpec(shape=None, dtype=tf.float32)
-    self.assertEqual(desc.shape, tf.TensorShape(None))
-
-  def testShapeCompatibility(self):
-    unknown = tf.placeholder(tf.int64)
-    partial = tf.placeholder(tf.int64, shape=[None, 1])
-    full = tf.placeholder(tf.int64, shape=[2, 3])
-    rank3 = tf.placeholder(tf.int64, shape=[4, 5, 6])
-
-    desc_unknown = tensor_spec.TensorSpec(None, tf.int64)
-    self.assertTrue(desc_unknown.is_compatible_with(unknown))
-    self.assertTrue(desc_unknown.is_compatible_with(partial))
-    self.assertTrue(desc_unknown.is_compatible_with(full))
-    self.assertTrue(desc_unknown.is_compatible_with(rank3))
-
-    desc_partial = tensor_spec.TensorSpec([2, None], tf.int64)
-    self.assertTrue(desc_partial.is_compatible_with(unknown))
-    self.assertTrue(desc_partial.is_compatible_with(partial))
-    self.assertTrue(desc_partial.is_compatible_with(full))
-    self.assertFalse(desc_partial.is_compatible_with(rank3))
-
-    desc_full = tensor_spec.TensorSpec([2, 3], tf.int64)
-    self.assertTrue(desc_full.is_compatible_with(unknown))
-    self.assertFalse(desc_full.is_compatible_with(partial))
-    self.assertTrue(desc_full.is_compatible_with(full))
-    self.assertFalse(desc_full.is_compatible_with(rank3))
-
-    desc_rank3 = tensor_spec.TensorSpec([4, 5, 6], tf.int64)
-    self.assertTrue(desc_rank3.is_compatible_with(unknown))
-    self.assertFalse(desc_rank3.is_compatible_with(partial))
-    self.assertFalse(desc_rank3.is_compatible_with(full))
-    self.assertTrue(desc_rank3.is_compatible_with(rank3))
-
-  def testTypeCompatibility(self):
-    floats = tf.placeholder(tf.float32, shape=[10, 10])
-    ints = tf.placeholder(tf.int32, shape=[10, 10])
-    desc = tensor_spec.TensorSpec(shape=(10, 10), dtype=tf.float32)
-    self.assertTrue(desc.is_compatible_with(floats))
-    self.assertFalse(desc.is_compatible_with(ints))
-
-  def testName(self):
-    desc = tensor_spec.TensorSpec([1], tf.float32, name="beep")
-    self.assertEqual(desc.name, "beep")
-
-  def testRepr(self):
-    desc1 = tensor_spec.TensorSpec([1], tf.float32, name="beep")
-    self.assertEqual(
-        repr(desc1),
-        "TensorSpec(shape=(1,), dtype=tf.float32, name='beep')")
-    desc2 = tensor_spec.TensorSpec([1, None], tf.int32)
-    self.assertEqual(
-        repr(desc2),
-        "TensorSpec(shape=(1, ?), dtype=tf.int32, name=None)")
-
-  def testFromTensorSpec(self):
-    spec_1 = tensor_spec.TensorSpec((1, 2), tf.int32)
-    spec_2 = tensor_spec.TensorSpec.from_spec(spec_1)
-    self.assertEqual(spec_1, spec_2)
-
-  def testFromTensor(self):
-    zero = tf.constant(0)
-    spec = tensor_spec.TensorSpec.from_tensor(zero)
-    self.assertEqual(spec.dtype, tf.int32)
-    self.assertEqual(spec.shape, [])
-    self.assertEqual(spec.name, "Const")
-
-  def testFromPlaceholder(self):
-    unknown = tf.placeholder(tf.int64, name="unknown")
-    partial = tf.placeholder(tf.float32, shape=[None, 1], name="partial")
-    spec_1 = tensor_spec.TensorSpec.from_tensor(unknown)
-    self.assertEqual(spec_1.dtype, tf.int64)
-    self.assertEqual(spec_1.shape, None)
-    self.assertEqual(spec_1.name, "unknown")
-    spec_2 = tensor_spec.TensorSpec.from_tensor(partial)
-    self.assertEqual(spec_2.dtype, tf.float32)
-    self.assertEqual(spec_2.shape.as_list(), [None, 1])
-    self.assertEqual(spec_2.name, "partial")
-
-  def testFromBoundedTensorSpec(self):
-    bounded_spec = tensor_spec.BoundedTensorSpec((1, 2), tf.int32, 0, 1)
-    spec = tensor_spec.TensorSpec.from_spec(bounded_spec)
-    self.assertEqual(bounded_spec.shape, spec.shape)
-    self.assertEqual(bounded_spec.dtype, spec.dtype)
-    self.assertEqual(bounded_spec.name, spec.name)
-    self.assertTrue(isinstance(spec, tensor_spec.TensorSpec))
-
-  def testIsDiscrete(self):
-    discrete_spec = tensor_spec.TensorSpec((1, 2), tf.int32)
-    continuous_spec = tensor_spec.TensorSpec((1, 2), tf.float32)
-    self.assertTrue(discrete_spec.is_discrete())
-    self.assertFalse(continuous_spec.is_discrete())
-
-
-class BoundedTensorSpecTest(tf.test.TestCase):
-
-  def testInvalidMinimum(self):
-    with self.assertRaisesRegexp(ValueError, "not compatible"):
-      tensor_spec.BoundedTensorSpec((3, 5), tf.uint8, (0, 0, 0), (1, 1))
-
-  def testInvalidMaximum(self):
-    with self.assertRaisesRegexp(ValueError, "not compatible"):
-      tensor_spec.BoundedTensorSpec((3, 5), tf.uint8, 0, (1, 1, 1))
-
-  def testMinimumMaximumAttributes(self):
-    spec = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, 0, (5, 5, 5))
-    self.assertEqual(type(spec.minimum), np.ndarray)
-    self.assertEqual(type(spec.maximum), np.ndarray)
-    self.assertAllEqual(spec.minimum, np.array(0, dtype=np.float32))
-    self.assertAllEqual(spec.maximum, np.array([5, 5, 5], dtype=np.float32))
-
-  def testNotWriteableNP(self):
-    spec = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, 0, (5, 5, 5))
-    with self.assertRaisesRegexp(ValueError, "read-only"):
-      spec.minimum[0] = -1
-    with self.assertRaisesRegexp(ValueError, "read-only"):
-      spec.maximum[0] = 100
-
-  def testReuseSpec(self):
-    spec_1 = tensor_spec.BoundedTensorSpec((1, 2), tf.int32,
-                                           minimum=0, maximum=1)
-    spec_2 = tensor_spec.BoundedTensorSpec(
-        spec_1.shape, spec_1.dtype, spec_1.minimum, spec_1.maximum)
-    self.assertEqual(spec_1, spec_2)
-
-  def testScalarBounds(self):
-    spec = tensor_spec.BoundedTensorSpec(
-        (), tf.float32, minimum=0.0, maximum=1.0)
-
-    self.assertIsInstance(spec.minimum, np.ndarray)
-    self.assertIsInstance(spec.maximum, np.ndarray)
-
-    # Sanity check that numpy compares correctly to a scalar for an empty shape.
-    self.assertEqual(0.0, spec.minimum)
-    self.assertEqual(1.0, spec.maximum)
-
-    # Check that the spec doesn't fail its own input validation.
-    _ = tensor_spec.BoundedTensorSpec(
-        spec.shape, spec.dtype, spec.minimum, spec.maximum)
-
-  def testFromBoundedTensorSpec(self):
-    spec_1 = tensor_spec.BoundedTensorSpec((1, 2), tf.int32,
-                                           minimum=0, maximum=1)
-    spec_2 = tensor_spec.BoundedTensorSpec.from_spec(spec_1)
-    self.assertEqual(spec_1, spec_2)
-
-  def testEquality(self):
-    spec_1_1 = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, 0,
-                                             (5, 5, 5))
-    spec_1_2 = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, 0.00000001,
-                                             (5, 5, 5.00000000000000001))
-    spec_2_1 = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, 1,
-                                             (5, 5, 5))
-    spec_2_2 = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, (1, 1, 1),
-                                             (5, 5, 5))
-    spec_2_3 = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, (1, 1, 1),
-                                             5)
-    spec_3_1 = tensor_spec.BoundedTensorSpec((1, 2, 3), tf.float32, (2, 1, 1),
-                                             (5, 5, 5))
-
-    self.assertEqual(spec_1_1, spec_1_2)
-    self.assertEqual(spec_1_2, spec_1_1)
-
-    self.assertNotEqual(spec_1_1, spec_2_2)
-    self.assertNotEqual(spec_1_1, spec_2_1)
-    self.assertNotEqual(spec_2_2, spec_1_1)
-    self.assertNotEqual(spec_2_1, spec_1_1)
-
-    self.assertEqual(spec_2_1, spec_2_2)
-    self.assertEqual(spec_2_2, spec_2_1)
-    self.assertEqual(spec_2_2, spec_2_3)
-
-    self.assertNotEqual(spec_1_1, spec_3_1)
-    self.assertNotEqual(spec_2_1, spec_3_1)
-    self.assertNotEqual(spec_2_2, spec_3_1)
-
-  def testFromTensorSpec(self):
-    spec = tensor_spec.TensorSpec((1, 2), tf.int32)
-    bounded_spec = tensor_spec.BoundedTensorSpec.from_spec(spec)
-    self.assertEqual(spec.shape, bounded_spec.shape)
-    self.assertEqual(spec.dtype, bounded_spec.dtype)
-    self.assertEqual(spec.dtype.min, bounded_spec.minimum)
-    self.assertEqual(spec.dtype.max, bounded_spec.maximum)
-    self.assertEqual(spec.name, bounded_spec.name)
-    self.assertEquals(type(bounded_spec), tensor_spec.BoundedTensorSpec)
-
-  def testSerialization(self):
-    desc = tensor_spec.BoundedTensorSpec([1, 5], tf.float32, -1, 1, "test")
-    self.assertEqual(pickle.loads(pickle.dumps(desc)), desc)
-
-  def testUint8IncludeMaxOfDtype(self):
-    spec = tensor_spec.BoundedTensorSpec((2, 3), tf.uint8, 255, 255)
-    sample = tensor_spec.sample_spec_nest(spec)
-    sample_ = self.evaluate(sample)
-    self.assertTrue(np.all(sample_ == 255))
 
 
 @parameterized.named_parameters(*TYPE_PARAMETERS)
@@ -479,15 +262,16 @@ class TensorSpecTypeTest(tf.test.TestCase, parameterized.TestCase):
 
   def testIsDiscrete(self, dtype):
     spec = tensor_spec.TensorSpec((2, 3), dtype=dtype)
-    self.assertIs(spec.is_discrete(), dtype.is_integer)
+    self.assertIs(tensor_spec.is_discrete(spec), dtype.is_integer)
 
   def testIsContinuous(self, dtype):
     spec = tensor_spec.TensorSpec((2, 3), dtype=dtype)
-    self.assertIs(spec.is_continuous(), dtype.is_floating)
+    self.assertIs(tensor_spec.is_continuous(spec), dtype.is_floating)
 
   def testExclusive(self, dtype):
     spec = tensor_spec.TensorSpec((2, 3), dtype=dtype)
-    self.assertIs(spec.is_discrete() ^ spec.is_continuous(), True)
+    self.assertIs(
+        tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True)
 
 
 class FromSpecTest(tf.test.TestCase):
