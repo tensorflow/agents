@@ -24,31 +24,12 @@ import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.dqn import q_network
+from tf_agents.agents.dqn import test_utils
 from tf_agents.environments import time_step as ts
-from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 
+
 nest = tf.contrib.framework.nest
-
-
-class DummyNet(network.Network):
-
-  def __init__(self, unused_observation_spec, action_spec, name=None):
-    super(DummyNet, self).__init__(
-        unused_observation_spec, action_spec, state_spec=(), name=name)
-    action_spec = nest.flatten(action_spec)[0]
-    num_actions = action_spec.maximum - action_spec.minimum + 1
-    self._layers.append(
-        tf.keras.layers.Dense(
-            num_actions,
-            kernel_initializer=tf.constant_initializer([[2, 1], [1, 1]]),
-            bias_initializer=tf.constant_initializer([[1], [1]])))
-
-  def call(self, inputs, unused_step_type=None, network_state=()):
-    inputs = tf.cast(inputs[0], tf.float32)
-    for layer in self.layers:
-      inputs = layer(inputs)
-    return inputs, network_state
 
 
 class ComputeTDTargetsTest(tf.test.TestCase):
@@ -75,7 +56,7 @@ class AgentTest(tf.test.TestCase):
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateAgent(self, agent_class):
-    q_net = DummyNet(self._observation_spec, self._action_spec)
+    q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
@@ -124,21 +105,21 @@ class AgentTest(tf.test.TestCase):
         tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
     ]
 
-    q_net = DummyNet(self._observation_spec, action_spec)
+    q_net = test_utils.DummyNet(self._observation_spec, action_spec)
     with self.assertRaisesRegexp(ValueError, '.*one dimensional.*'):
       agent_class(
           self._time_step_spec, action_spec, q_network=q_net, optimizer=None)
 
   def testCreateAgentDimChecks(self, agent_class):
     action_spec = [tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)]
-    q_net = DummyNet(self._observation_spec, action_spec)
+    q_net = test_utils.DummyNet(self._observation_spec, action_spec)
     with self.assertRaisesRegexp(ValueError, '.*one dimensional.*'):
       agent_class(
           self._time_step_spec, action_spec, q_network=q_net, optimizer=None)
 
   # TODO(kbanoop): Add a test where the target network has different values.
   def testLoss(self, agent_class):
-    q_net = DummyNet(self._observation_spec, self._action_spec)
+    q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
@@ -163,7 +144,7 @@ class AgentTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(total_loss), expected_loss)
 
   def testPolicy(self, agent_class):
-    q_net = DummyNet(self._observation_spec, self._action_spec)
+    q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
@@ -184,7 +165,7 @@ class AgentTest(tf.test.TestCase):
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
 
   def testInitializeRestoreAgent(self, agent_class):
-    q_net = DummyNet(self._observation_spec, self._action_spec)
+    q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
