@@ -116,7 +116,7 @@ class TFPolicyMock(tf_policy.Base):
                                        policy_state_spec, info_spec)
 
   def _get_initial_state(self, batch_size):
-    return tf.fill([batch_size], self._maximum)
+    return tf.fill([batch_size], 0)
 
   def _action(self, time_step, policy_state, seed):
     del seed
