@@ -45,7 +45,7 @@ class SessionUser(object):
 
   The session can then be accessed using the `session` property.
 
-  The ususual way to use a `SessionUser` is the following.
+  The usual way to use a `SessionUser` is the following.
   ```python
   class MySessionUserClass(SessionUser):
 
