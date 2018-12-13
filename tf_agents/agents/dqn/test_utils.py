@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helper classes for tf_agents.agents.dqn.DQNAgent testing."""
+"""Helper classes for tf_agents.agents.dqn.DqnAgent testing."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -27,7 +27,7 @@ nest = tf.contrib.framework.nest
 
 
 class DummyNet(network.Network):
-  """Dummy network for testing DQNAgent."""
+  """Dummy network for testing DqnAgent."""
 
   def __init__(self, unused_observation_spec, action_spec, name=None):
     super(DummyNet, self).__init__(
