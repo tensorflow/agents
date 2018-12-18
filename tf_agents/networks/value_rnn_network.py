@@ -31,7 +31,6 @@ from __future__ import print_function
 
 import functools
 import tensorflow as tf
-from tensorflow.keras import layers as keras_layers
 
 from tf_agents.environments import time_step
 from tf_agents.networks import network
@@ -115,7 +114,7 @@ class ValueRnnNetwork(network.Network):
               name='output/dense') for num_units in output_fc_layer_params
       ]
 
-    value_projection_layer = keras_layers.Dense(
+    value_projection_layer = tf.keras.layers.Dense(
         1,
         activation=None,
         kernel_initializer=tf.random_uniform_initializer(

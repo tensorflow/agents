@@ -28,7 +28,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.keras import layers as keras_layers
 
 from tf_agents.networks import network
 from tf_agents.networks import utils
@@ -86,7 +85,7 @@ class ValueNetwork(network.Network):
         name='input_mlp')
 
     self._layers.append(
-        keras_layers.Dense(
+        tf.keras.layers.Dense(
             1,
             activation=None,
             kernel_initializer=tf.random_uniform_initializer(
