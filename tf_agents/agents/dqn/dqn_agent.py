@@ -50,7 +50,27 @@ import gin.tf
 nest = tf.contrib.framework.nest
 
 
-DqnLossInfo = collections.namedtuple('DqnLossInfo', ('td_loss',))
+class DqnLossInfo(collections.namedtuple(
+    'DqnLossInfo', ('td_loss', 'td_error'))):
+  """DqnLossInfo is stored in the `extras` field of the LossInfo instance.
+
+  Both `td_loss` and `td_error` have a validity mask applied to ensure that
+  no loss or error is calculated for episode boundaries.
+
+  td_loss: The **weighted** TD loss (depends on choice of loss metric and
+    any weights passed to the DQN loss function.
+  td_error: The **unweighted** TD errors, which are just calculated as:
+
+    ```
+    td_error = td_targets - q_values
+    ```
+
+    These can be used to update Prioritized Replay Buffer priorities.
+
+    Note that, unlike `td_loss`, `td_error` may contain a time dimension when
+    training with RNN mode.  For `td_loss`, this axis is averaged out.
+  """
+  pass
 
 
 # TODO(damienv): Definition of those element wise losses should not belong to
@@ -201,7 +221,7 @@ class DqnAgent(tf_agent.TFAgent):
     actions = policy_steps.action
     return time_steps, actions, next_time_steps
 
-  def _train(self, experience, train_step_counter=None):
+  def _train(self, experience, train_step_counter=None, weights=None):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
@@ -211,7 +231,8 @@ class DqnAgent(tf_agent.TFAgent):
         next_time_steps,
         td_errors_loss_fn=self._td_errors_loss_fn,
         gamma=self._gamma,
-        reward_scale_factor=self._reward_scale_factor)
+        reward_scale_factor=self._reward_scale_factor,
+        weights=weights)
 
     transform_grads_fn = None
     if self._gradient_clipping is not None:
@@ -252,7 +273,8 @@ class DqnAgent(tf_agent.TFAgent):
             next_time_steps,
             td_errors_loss_fn=element_wise_huber_loss,
             gamma=1.0,
-            reward_scale_factor=1.0):
+            reward_scale_factor=1.0,
+            weights=None):
     """Computes loss for DQN training.
 
     Args:
@@ -263,9 +285,13 @@ class DqnAgent(tf_agent.TFAgent):
         element wise loss.
       gamma: Discount for future rewards.
       reward_scale_factor: Multiplicative factor to scale rewards.
+      weights: Optional scalar or elementwise (per-batch-entry) importance
+        weights.  The output td_loss will be scaled by these weights, and
+        the final scalar loss is the mean of these values.
 
     Returns:
-      loss: A scalar loss.
+      loss: An instance of `DqnLossInfo`.
+
     Raises:
       ValueError:
         if the number of actions is greater than 1.
@@ -287,13 +313,17 @@ class DqnAgent(tf_agent.TFAgent):
           rewards=reward_scale_factor * next_time_steps.reward,
           discounts=gamma * next_time_steps.discount)
 
-      weights = tf.cast(~time_steps.is_last(), tf.float32)
-      td_loss = weights * td_errors_loss_fn(td_targets, q_values)
+      valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
+      td_error = valid_mask * (td_targets - q_values)
+      td_loss = valid_mask * td_errors_loss_fn(td_targets, q_values)
 
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec(), num_outer_dims=2):
         # Do a sum over the time dimension.
         td_loss = tf.reduce_sum(td_loss, axis=1)
+
+      if weights is not None:
+        td_loss *= weights
 
       # Average across the elements of the batch.
       # Note: We use an element wise loss above to ensure each element is always
@@ -313,15 +343,15 @@ class DqnAgent(tf_agent.TFAgent):
             tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
 
       if self._debug_summaries:
-        td_errors = td_targets - q_values
         diff_q_values = q_values - next_q_values
-        common_utils.generate_tensor_summaries('td_errors', td_errors)
+        common_utils.generate_tensor_summaries('td_error', td_error)
         common_utils.generate_tensor_summaries('td_loss', td_loss)
         common_utils.generate_tensor_summaries('q_values', q_values)
         common_utils.generate_tensor_summaries('next_q_values', next_q_values)
         common_utils.generate_tensor_summaries('diff_q_values', diff_q_values)
 
-      return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss))
+      return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss,
+                                                 td_error=td_error))
 
   def _compute_next_q_values(self, next_time_steps):
     """Compute the q value of the next state for TD error computation.

@@ -310,7 +310,7 @@ class PPOAgent(tf_agent.TFAgent):
                      returns,
                      normalized_advantages,
                      action_distribution_parameters,
-                     valid_mask,
+                     weights,
                      train_step,
                      summarize_gradients,
                      gradient_clipping,
@@ -328,10 +328,8 @@ class PPOAgent(tf_agent.TFAgent):
       normalized_advantages: A minibatch of normalized per-timestep advantages.
       action_distribution_parameters: Parameters of data-collecting action
         distribution. Needed for KL computation.
-      valid_mask: Mask for invalid timesteps. Float value 1.0 for valid
-        timesteps and 0.0 for invalid timesteps. (Timesteps which either are
-        betweeen two episodes, or part of an unfinished episode at the end of
-        one batch dimension.)
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.  Includes a mask for invalid timesteps.
       train_step: A train_step variable to increment for each train step.
         Typically the global_step.
       summarize_gradients: If true, gradient summaries will be written.
@@ -354,14 +352,14 @@ class PPOAgent(tf_agent.TFAgent):
 
     # Call all loss functions and add all loss values.
     value_estimation_loss = self.value_estimation_loss(
-        time_steps, returns, valid_mask, debug_summaries)
+        time_steps, returns, weights, debug_summaries)
     policy_gradient_loss = self.policy_gradient_loss(
         time_steps,
         actions,
         tf.stop_gradient(act_log_probs),
         tf.stop_gradient(normalized_advantages),
         current_policy_distribution,
-        valid_mask,
+        weights,
         debug_summaries=debug_summaries)
 
     if self._policy_l2_reg > 0.0 or self._value_function_l2_reg > 0.0:
@@ -371,14 +369,14 @@ class PPOAgent(tf_agent.TFAgent):
 
     if self._entropy_regularization > 0.0:
       entropy_regularization_loss = self.entropy_regularization_loss(
-          time_steps, current_policy_distribution, valid_mask, debug_summaries)
+          time_steps, current_policy_distribution, weights, debug_summaries)
     else:
       entropy_regularization_loss = tf.zeros_like(policy_gradient_loss)
 
     kl_penalty_loss = self.kl_penalty_loss(time_steps,
                                            action_distribution_parameters,
                                            current_policy_distribution,
-                                           valid_mask,
+                                           weights,
                                            debug_summaries)
 
     total_loss = (policy_gradient_loss +
@@ -485,7 +483,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     return returns, normalized_advantages
 
-  def _train(self, experience, train_step_counter):
+  def _train(self, experience, weights, train_step_counter):
     # Change trajectory to transitions.
     trajectory0 = nest.map_structure(lambda t: t[:, :-1], experience)
     trajectory1 = nest.map_structure(lambda t: t[:, 1:], experience)
@@ -521,6 +519,11 @@ class PPOAgent(tf_agent.TFAgent):
 
     valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
 
+    if weights is None:
+      weights = valid_mask
+    else:
+      weights *= valid_mask
+
     returns, normalized_advantages = self.compute_return_and_advantage(
         next_time_steps, value_preds)
 
@@ -544,7 +547,7 @@ class PPOAgent(tf_agent.TFAgent):
           # Build one epoch train op.
           loss_info = self.build_train_op(
               time_steps, actions, act_log_probs, returns,
-              normalized_advantages, action_distribution_parameters, valid_mask,
+              normalized_advantages, action_distribution_parameters, weights,
               train_step_counter, self._summarize_grads_and_vars,
               self._gradient_clipping, debug_summaries)
 
@@ -660,7 +663,7 @@ class PPOAgent(tf_agent.TFAgent):
   def entropy_regularization_loss(self,
                                   time_steps,
                                   current_policy_distribution,
-                                  valid_mask,
+                                  weights,
                                   debug_summaries=False):
     """Create regularization loss tensor based on agent parameters."""
     if self._entropy_regularization > 0:
@@ -668,7 +671,7 @@ class PPOAgent(tf_agent.TFAgent):
       with tf.name_scope('entropy_regularization'):
         entropy = tf.cast(common_utils.entropy(
             current_policy_distribution, self.action_spec()), tf.float32)
-        entropy_reg_loss = (tf.reduce_mean(-entropy * valid_mask) *
+        entropy_reg_loss = (tf.reduce_mean(-entropy * weights) *
                             self._entropy_regularization)
         if self._check_numerics:
           entropy_reg_loss = tf.check_numerics(entropy_reg_loss,
@@ -685,7 +688,7 @@ class PPOAgent(tf_agent.TFAgent):
   def value_estimation_loss(self,
                             time_steps,
                             returns,
-                            valid_mask,
+                            weights,
                             debug_summaries=False):
     """Computes the value estimation loss for actor-critic training.
 
@@ -695,10 +698,8 @@ class PPOAgent(tf_agent.TFAgent):
       time_steps: A batch of timesteps.
       returns: Per-timestep returns for value function to predict. (Should come
         from TD-lambda computation.)
-      valid_mask: Mask for invalid timesteps. Float value 1.0 for valid
-        timesteps and 0.0 for invalid timesteps. (Timesteps which either are
-        betweeen two episodes, or part of an unfinished episode at the end of
-        one batch dimension.)
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.  Includes a mask for invalid timesteps.
       debug_summaries: True if debug summaries should be created.
 
     Returns:
@@ -713,8 +714,9 @@ class PPOAgent(tf_agent.TFAgent):
 
     value_preds, unused_policy_state = self._collect_policy.apply_value_network(
         time_steps.observation, time_steps.step_type, policy_state=policy_state)
-    value_estimation_error = tf.squared_difference(returns,
-                                                   value_preds) * valid_mask
+    value_estimation_error = tf.squared_difference(returns, value_preds)
+    value_estimation_error *= weights
+
     value_estimation_loss = (
         tf.reduce_mean(value_estimation_error) * self._value_pred_loss_coef)
     if debug_summaries:
@@ -735,7 +737,7 @@ class PPOAgent(tf_agent.TFAgent):
                            sample_action_log_probs,
                            advantages,
                            current_policy_distribution,
-                           valid_mask,
+                           weights,
                            debug_summaries=False):
     """Create tensor for policy gradient loss.
 
@@ -749,10 +751,8 @@ class PPOAgent(tf_agent.TFAgent):
         index. Works better when advantage estimates are normalized.
       current_policy_distribution: The policy distribution, evaluated on all
         time_steps.
-      valid_mask: Mask for invalid timesteps. Float value 1.0 for valid
-        timesteps and 0.0 for invalid timesteps. (Timesteps which either are
-        betweeen two episodes, or part of an unfinished episode at the end of
-        one batch dimension.)
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.  Includes a mask for invalid timesteps.
       debug_summaries: True if debug summaries should be created.
 
     Returns:
@@ -793,7 +793,8 @@ class PPOAgent(tf_agent.TFAgent):
       policy_gradient_loss = -per_timestep_objective_min
     else:
       policy_gradient_loss = -per_timestep_objective
-    policy_gradient_loss = tf.reduce_mean(policy_gradient_loss * valid_mask)
+
+    policy_gradient_loss = tf.reduce_mean(policy_gradient_loss * weights)
 
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
@@ -883,7 +884,7 @@ class PPOAgent(tf_agent.TFAgent):
                       time_steps,
                       action_distribution_parameters,
                       current_policy_distribution,
-                      valid_mask,
+                      weights,
                       debug_summaries=False):
     """Compute a loss that penalizes policy steps with high KL.
 
@@ -899,10 +900,8 @@ class PPOAgent(tf_agent.TFAgent):
         collection policy, used for reconstruction old action distributions.
       current_policy_distribution: The policy distribution, evaluated on all
         time_steps.
-      valid_mask: Mask for invalid timesteps. Float value 1.0 for valid
-        timesteps and 0.0 for invalid timesteps. (Timesteps which either are
-        betweeen two episodes, or part of an unfinished episode at the end of
-        one batch dimension.)
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.  Inlcudes a mask for invalid timesteps.
       debug_summaries: True if debug summaries should be created.
 
     Returns:
@@ -912,7 +911,7 @@ class PPOAgent(tf_agent.TFAgent):
     """
     kl_divergence = self._kl_divergence(
         time_steps, action_distribution_parameters,
-        current_policy_distribution) * valid_mask
+        current_policy_distribution) * weights
 
     if debug_summaries:
       tf.contrib.summary.histogram('kl_divergence', kl_divergence)

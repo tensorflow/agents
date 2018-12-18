@@ -199,7 +199,7 @@ class Td3Agent(tf_agent.TFAgent):
     actions = policy_steps.action
     return time_steps, actions, next_time_steps
 
-  def _train(self, experience, train_step_counter=None):
+  def _train(self, experience, weights=None, train_step_counter=None):
     # TODO(b/120034503): Move the conversion to transitions to the base class.
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
@@ -208,9 +208,10 @@ class Td3Agent(tf_agent.TFAgent):
     critic_loss = self.critic_loss(
         time_steps,
         actions,
-        next_time_steps)
+        next_time_steps,
+        weights=weights)
 
-    actor_loss = self.actor_loss(time_steps)
+    actor_loss = self.actor_loss(time_steps, weights=weights)
 
     def clip_and_summarize_gradients(grads_and_vars):
       """Clips gradients, and summarizes gradients and variables."""
@@ -258,13 +259,16 @@ class Td3Agent(tf_agent.TFAgent):
     # TODO(kbanoop): Compute per element TD loss and return in loss_info.
     return tf_agent.LossInfo(total_loss, ())
 
-  def critic_loss(self, time_steps, actions, next_time_steps):
+  def critic_loss(self, time_steps, actions, next_time_steps, weights=None):
     """Computes the critic loss for TD3 training.
 
     Args:
       time_steps: A batch of timesteps.
       actions: A batch of actions.
       next_time_steps: A batch of next timesteps.
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.
+
     Returns:
       critic_loss: A scalar critic loss.
     """
@@ -335,13 +339,18 @@ class Td3Agent(tf_agent.TFAgent):
         # Sum over the time dimension.
         critic_loss = tf.reduce_sum(critic_loss, axis=1)
 
+      if weights is not None:
+        critic_loss *= weights
+
       return tf.reduce_mean(critic_loss)
 
-  def actor_loss(self, time_steps):
+  def actor_loss(self, time_steps, weights=None):
     """Computes the actor_loss for TD3 training.
 
     Args:
       time_steps: A batch of timesteps.
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.
 
     Returns:
       actor_loss: A scalar actor loss.
@@ -366,6 +375,10 @@ class Td3Agent(tf_agent.TFAgent):
             time_steps, self.time_step_spec(), num_outer_dims=2):
           # Sum over the time dimension.
           loss = tf.reduce_sum(loss, axis=1)
+
+        if weights is not None:
+          loss *= weights
+
         loss = tf.reduce_mean(loss)
         actor_losses.append(loss)
 

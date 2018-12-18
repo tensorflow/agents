@@ -88,7 +88,7 @@ class ReinforceAgent(tf_agent.TFAgent):
   def _initialize(self):
     return tf.no_op()
 
-  def _train(self, experience, train_step_counter=None):
+  def _train(self, experience, weights=None, train_step_counter=None):
     # TODO(sfishman): Support batch dimensions >1.
     if experience.step_type.shape[0] != 1:
       raise NotImplementedError('ReinforceAgent does not yet support batch '
@@ -118,7 +118,8 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     loss_info = self._loss(time_step,
                            experience.action,
-                           tf.stop_gradient(returns))
+                           tf.stop_gradient(returns),
+                           weights=weights)
 
     clip_gradients = (tf.contrib.training.clip_gradient_norms_fn(
         self._gradient_clipping) if self._gradient_clipping else None)
@@ -145,10 +146,10 @@ class ReinforceAgent(tf_agent.TFAgent):
     return loss_info
 
   @eager_utils.future_in_eager_mode
-  def _loss(self, time_steps, actions, returns):
-    return self.policy_gradient_loss(time_steps, actions, returns)
+  def _loss(self, time_steps, actions, returns, weights):
+    return self.policy_gradient_loss(time_steps, actions, returns, weights)
 
-  def policy_gradient_loss(self, time_steps, actions, returns):
+  def policy_gradient_loss(self, time_steps, actions, returns, weights=None):
     """Computes the policy gradient loss.
 
     Args:
@@ -156,6 +157,8 @@ class ReinforceAgent(tf_agent.TFAgent):
       actions: Tensor with a batch of actions.
       returns: Tensor with a return from each timestep, aligned on index. Works
         better when returns are normalized.
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.  May include a mask for invalid timesteps.
 
     Returns:
       policy_gradient_loss: A tensor that will contain policy gradient loss for
@@ -169,6 +172,9 @@ class ReinforceAgent(tf_agent.TFAgent):
     action_log_prob = common.log_probability(actions_distribution, actions,
                                              self.action_spec())
     action_log_prob_times_return = action_log_prob * returns
+
+    if weights is not None:
+      action_log_prob_times_return *= weights
 
     if self._debug_summaries:
       tf.contrib.summary.histogram('action_log_prob', action_log_prob)

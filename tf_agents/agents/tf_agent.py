@@ -88,7 +88,7 @@ class TFAgent(tf.contrib.eager.Checkpointable):
     """Returns an op to initialize the agent."""
     return self._initialize()
 
-  def train(self, experience, train_step_counter=None):
+  def train(self, experience, weights=None, train_step_counter=None):
     """Trains the agent.
 
     Args:
@@ -97,6 +97,10 @@ class TFAgent(tf.contrib.eager.Checkpointable):
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.required_experience_time_steps` if that
         property is not `None`.
+      weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
+        containing weights to be used when calculating the total train loss.
+        Weights are typically multiplied elementwise against the per-batch loss,
+        but the implementation is up to the Agent.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
 
@@ -146,7 +150,9 @@ class TFAgent(tf.contrib.eager.Checkpointable):
       nest.map_structure(check_shape, experience)
 
     loss_info = self._train(
-        experience=experience, train_step_counter=train_step_counter)
+        experience=experience,
+        weights=weights,
+        train_step_counter=train_step_counter)
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))
@@ -226,7 +232,7 @@ class TFAgent(tf.contrib.eager.Checkpointable):
     """Returns an op to initialize the agent."""
 
   @abc.abstractmethod
-  def _train(self, experience, train_step_counter):
+  def _train(self, experience, weights, train_step_counter):
     """Returns an op to train the agent.
 
     Args:
@@ -235,9 +241,16 @@ class TFAgent(tf.contrib.eager.Checkpointable):
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.required_experience_time_steps` if that
         property is not `None`.
+      weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
+        containing weights to be used when calculating the total train loss.
+        Weights are typically multiplied elementwise against the per-batch loss,
+        but the implementation is up to the Agent.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
 
     Returns:
-        - An op to train the agent, e.g. update neural network weights.
+        A `LossInfo` containing the loss *before* the training step is taken.
+        In most cases, if `weights` is provided, the entries of this tuple will
+        have been calculated with the weights.  Note that each Agent chooses
+        its own method of applying weights.
     """

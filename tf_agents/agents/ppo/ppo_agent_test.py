@@ -272,7 +272,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     sample_action_log_probs = tf.constant([0.9, 0.3, 0.9, 0.3],
                                           dtype=tf.float32)
     advantages = tf.constant([1.9, 1.0, 1.9, 1.0], dtype=tf.float32)
-    valid_mask = tf.constant([1.0, 1.0, 0.0, 0.0], dtype=tf.float32)
+    weights = tf.constant([1.0, 1.0, 0.0, 0.0], dtype=tf.float32)
     sample_action_distribution_parameters = {
         'loc': tf.constant([[9.0], [15.0], [9.0], [15.0]], dtype=tf.float32),
         'scale': tf.constant([[8.0], [12.0], [8.0], [12.0]], dtype=tf.float32),
@@ -287,7 +287,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
             returns,
             advantages,
             sample_action_distribution_parameters,
-            valid_mask,
+            weights,
             train_step,
             summarize_gradients=False,
             gradient_clipping=0.0,
@@ -348,7 +348,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       returns = tf.constant([1.9, 1.0], dtype=tf.float32)
       sample_action_log_probs = tf.constant([0.9, 0.3], dtype=tf.float32)
       advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
-      valid_mask = tf.ones_like(advantages)
+      weights = tf.ones_like(advantages)
       sample_action_distribution_parameters = {
           'loc': tf.constant([[9.0], [15.0]], dtype=tf.float32),
           'scale': tf.constant([[8.0], [12.0]], dtype=tf.float32),
@@ -361,7 +361,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         (_, _) = (
             agent.build_train_op(
                 time_steps, actions, sample_action_log_probs, returns,
-                advantages, sample_action_distribution_parameters, valid_mask,
+                advantages, sample_action_distribution_parameters, weights,
                 train_step, summarize_gradients=False,
                 gradient_clipping=0.0, debug_summaries=False))
         summaries_without_debug = tf.contrib.summary.all_summary_ops()
@@ -369,7 +369,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         (_, _) = (
             agent.build_train_op(
                 time_steps, actions, sample_action_log_probs, returns,
-                advantages, sample_action_distribution_parameters, valid_mask,
+                advantages, sample_action_distribution_parameters, weights,
                 train_step, summarize_gradients=False,
                 gradient_clipping=0.0, debug_summaries=True))
         summaries_with_debug = tf.contrib.summary.all_summary_ops()
@@ -404,11 +404,11 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
     current_policy_distribution, unused_network_state = DummyActorNet(
         self._action_spec)(time_steps.observation, time_steps.step_type, ())
-    valid_mask = tf.ones_like(advantages)
+    weights = tf.ones_like(advantages)
     agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
                                advantages, current_policy_distribution,
-                               valid_mask)
-    agent.value_estimation_loss(time_steps, returns, valid_mask)
+                               weights)
+    agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request L2 regularization loss.
     # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1].
@@ -446,19 +446,19 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     returns = tf.constant([1.9, 1.0], dtype=tf.float32)
     sample_action_log_probs = tf.constant([[0.9], [0.3]], dtype=tf.float32)
     advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
-    valid_mask = tf.ones_like(advantages)
+    weights = tf.ones_like(advantages)
     current_policy_distribution, unused_network_state = DummyActorNet(
         self._action_spec)(time_steps.observation, time_steps.step_type, ())
     agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
                                advantages, current_policy_distribution,
-                               valid_mask)
-    agent.value_estimation_loss(time_steps, returns, valid_mask)
+                               weights)
+    agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request entropy regularization loss.
     # Action stdevs should be ~1.0, and mean entropy ~3.70111.
     expected_loss = -3.70111 * ent_reg
     loss = agent.entropy_regularization_loss(
-        time_steps, current_policy_distribution, valid_mask)
+        time_steps, current_policy_distribution, weights)
 
     self.evaluate(tf.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -478,10 +478,10 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     returns = tf.constant([1.9, 1.0], dtype=tf.float32)
-    valid_mask = tf.ones_like(returns)
+    weights = tf.ones_like(returns)
 
     expected_loss = 123.205
-    loss = agent.value_estimation_loss(time_steps, returns, valid_mask)
+    loss = agent.value_estimation_loss(time_steps, returns, weights)
 
     self.evaluate(tf.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -504,7 +504,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     actions = tf.constant([[0], [1]], dtype=tf.float32)
     sample_action_log_probs = tf.constant([0.9, 0.3], dtype=tf.float32)
     advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
-    valid_mask = tf.ones_like(advantages)
+    weights = tf.ones_like(advantages)
 
     current_policy_distribution, unused_network_state = actor_net(
         time_steps.observation, time_steps.step_type, ())
@@ -512,7 +512,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     expected_loss = -0.0164646133
     loss = agent.policy_gradient_loss(time_steps, actions,
                                       sample_action_log_probs, advantages,
-                                      current_policy_distribution, valid_mask)
+                                      current_policy_distribution, weights)
 
     self.evaluate(tf.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -549,13 +549,13 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     }
     current_policy_distribution, unused_network_state = DummyActorNet(
         self._action_spec)(time_steps.observation, time_steps.step_type, ())
-    valid_mask = tf.ones_like(time_steps.discount)
+    weights = tf.ones_like(time_steps.discount)
 
     expected_kl_penalty_loss = 7.0
 
     kl_penalty_loss = agent.kl_penalty_loss(
         time_steps, action_distribution_parameters, current_policy_distribution,
-        valid_mask)
+        weights)
     self.evaluate(tf.global_variables_initializer())
     kl_penalty_loss_ = self.evaluate(kl_penalty_loss)
     self.assertEqual(expected_kl_penalty_loss, kl_penalty_loss_)

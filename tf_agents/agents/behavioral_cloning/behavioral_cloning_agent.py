@@ -172,8 +172,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   def _initialize(self):
     return tf.no_op()
 
-  def _train(self, experience, train_step_counter=None):
-    loss_info = self._loss(experience)
+  def _train(self, experience, weights=None, train_step_counter=None):
+    loss_info = self._loss(experience, weights=weights)
 
     transform_grads_fn = None
     if self._gradient_clipping is not None:
@@ -198,11 +198,13 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   @eager_utils.future_in_eager_mode
   # TODO(b/79688437): Figure out how to enable defun for Eager mode.
   # @tfe.defun
-  def _loss(self, experience):
+  def _loss(self, experience, weights=None):
     """Computes loss for behavioral cloning.
 
     Args:
       experience: A `Trajectory` containing experience.
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.
 
     Returns:
       loss: A `LossInfo` struct.
@@ -217,8 +219,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
           experience.observation,
           experience.step_type)
 
-      weights = tf.cast(~experience.is_boundary(), logits.dtype)
-      error = weights * self._loss_fn(logits, actions)
+      boundary_weights = tf.cast(~experience.is_boundary(), logits.dtype)
+      error = boundary_weights * self._loss_fn(logits, actions)
 
       if nest_utils.is_batched_nested_tensors(
           experience.action, self.action_spec(), num_outer_dims=2):
@@ -232,6 +234,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       #   is the actual number of non-zero weight would artificially increase
       #   their contribution in the loss. Think about what would happen as
       #   the number of boundary samples increases.
+      if weights is not None:
+        error *= weights
       loss = tf.reduce_mean(error)
 
       with tf.name_scope('Losses/'):
