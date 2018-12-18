@@ -118,7 +118,7 @@ class DynamicStepDriver(driver.Driver):
   # TODO(b/113529538): Add tests for policy_state.
   def run(self,
           time_step=None,
-          policy_state=(),
+          policy_state=None,
           maximum_iterations=None):
     """Takes steps in the environment using the policy while updating observers.
 
@@ -138,6 +138,8 @@ class DynamicStepDriver(driver.Driver):
     """
     if time_step is None:
       time_step = self._env.current_time_step()
+    if policy_state is None:
+      policy_state = self._policy.get_initial_state(self._env.batch_size)
 
     # Batch dim should be first index of tensors during data collection.
     batch_dims = nest_utils.get_outer_shape(

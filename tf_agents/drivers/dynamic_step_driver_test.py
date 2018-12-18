@@ -60,13 +60,12 @@ class DynamicStepDriverTest(tf.test.TestCase):
         driver_test_utils.PyEnvironmentMock())
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
                                             env.action_spec())
-    policy_state = policy.get_initial_state(1)
     num_episodes_observer = driver_test_utils.NumEpisodesObserver()
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env, policy, num_steps=5, observers=[num_episodes_observer])
 
-    run_driver = driver.run(policy_state=policy_state)
+    run_driver = driver.run()
 
     self.evaluate(tf.global_variables_initializer())
     self.evaluate(run_driver)
