@@ -608,14 +608,14 @@ class PPOAgent(tf_agent.TFAgent):
                                   total_entropy_regularization_loss)
       tf.contrib.summary.scalar('kl_penalty_loss', total_kl_penalty_loss)
 
-      total_loss = (
+      total_abs_loss = (
           tf.abs(total_policy_gradient_loss) +
           tf.abs(total_value_estimation_loss) +
           tf.abs(total_entropy_regularization_loss) +
           tf.abs(total_l2_regularization_loss) +
           tf.abs(total_kl_penalty_loss))
 
-      tf.contrib.summary.scalar('total_loss', total_loss)
+      tf.contrib.summary.scalar('total_abs_loss', total_abs_loss)
 
     if self._summarize_grads_and_vars:
       with tf.name_scope('Variables/'):
