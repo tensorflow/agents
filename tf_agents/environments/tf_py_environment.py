@@ -31,6 +31,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
 
 import tensorflow.contrib.eager as tfe  # TF internal
+from tensorflow.python.framework import tensor_shape  # TF internal
 
 nest = tf.contrib.framework.nest
 
@@ -190,9 +191,9 @@ class TFPyEnvironment(tf_environment.Base):
     with tf.name_scope('step', values=[actions]):
       flat_actions = [tf.identity(x) for x in nest.flatten(actions)]
       for action in flat_actions:
+        dim_value = tensor_shape.dimension_value(action.shape[0])
         if (action.shape.ndims == 0 or
-            (action.shape[0].value is not None and
-             action.shape[0].value != self.batch_size)):
+            (dim_value is not None and dim_value != self.batch_size)):
           raise ValueError(
               'Expected actions whose major dimension is batch_size (%d), '
               'but saw action with shape %s:\n   %s' % (self.batch_size,

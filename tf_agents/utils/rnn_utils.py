@@ -282,13 +282,13 @@ def dynamic_unroll(cell,
     inputs_flat = nest.flatten(inputs)
     inputs_static_shapes = tuple(x.shape for x in inputs_flat)
     batch_size = tf.contrib.rnn.best_effort_input_batch_size(inputs_flat)
-    const_batch_size = inputs_static_shapes[0][1].value
+    const_batch_size = tensor_shape.dimension_value(inputs_static_shapes[0][1])
 
     # reset_mask is batch major.  Convert to time major.
     reset_mask = tf.transpose(reset_mask)
 
     for shape in inputs_static_shapes:
-      got_batch_size = shape[1].value
+      got_batch_size = tensor_shape.dimension_value(shape[1])
       if const_batch_size is None:
         const_batch_size = got_batch_size
       if got_batch_size is not None and const_batch_size != got_batch_size:
@@ -305,7 +305,8 @@ def dynamic_unroll(cell,
 
     # Try to get the iteration count statically; if that's not possible,
     # access it dynamically at runtime.
-    iterations = inputs_flat[0].shape[0].value or tf.shape(inputs_flat[0])[0]
+    iterations = tensor_shape.dimension_value(inputs_flat[0].shape[0])
+    iterations = iterations or tf.shape(inputs_flat[0])[0]
 
     if not tf.contrib.framework.is_tensor(iterations) and iterations == 1:
       # Take exactly one time step
