@@ -128,7 +128,7 @@ class Table(tf.contrib.checkpoint.Checkpointable):
     flattened_slots = nest.flatten(slots)
     flattened_values = nest.flatten(values)
     write_ops = [
-        tf.scatter_update(self._slot2storage_map[slot], rows, value)
+        tf.scatter_update(self._slot2storage_map[slot], rows, value).op
         for (slot, value) in zip(flattened_slots, flattened_values)
     ]
     return tf.group(*write_ops)
