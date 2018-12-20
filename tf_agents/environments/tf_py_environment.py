@@ -122,11 +122,10 @@ class TFPyEnvironment(tf_environment.Base):
         return nest.flatten(self._time_step)
 
     with tf.name_scope('current_time_step'):
-      outputs = tf.py_func(
+      outputs = tfe.py_func(
           _current_time_step,
           [],  # No inputs.
           self._time_step_dtypes,
-          stateful=True,
           name='current_time_step_py_func')
       step_type, reward, discount = outputs[0:3]
       flat_observations = outputs[3:]
@@ -151,11 +150,10 @@ class TFPyEnvironment(tf_environment.Base):
         self._time_step = self._env.reset()
 
     with tf.name_scope('reset'):
-      reset_op = tf.py_func(
+      reset_op = tfe.py_func(
           _reset,
           [],  # No inputs.
           [],
-          stateful=True,
           name='reset_py_func')
       with tf.control_dependencies([reset_op]):
         return self.current_time_step()
@@ -183,6 +181,7 @@ class TFPyEnvironment(tf_environment.Base):
 
     def _step(*flattened_actions):
       with _check_not_called_concurrently(self._lock):
+        flattened_actions = [x.numpy() for x in flattened_actions]
         packed = nest.pack_sequence_as(
             structure=self.action_spec(), flat_sequence=flattened_actions)
         self._time_step = self._env.step(packed)
@@ -198,11 +197,10 @@ class TFPyEnvironment(tf_environment.Base):
               'Expected actions whose major dimension is batch_size (%d), '
               'but saw action with shape %s:\n   %s' % (self.batch_size,
                                                         action.shape, action))
-      outputs = tf.py_func(
+      outputs = tfe.py_func(
           _step,
           flat_actions,
           self._time_step_dtypes,
-          stateful=True,
           name='step_py_func')
       step_type, reward, discount = outputs[0:3]
       flat_observations = outputs[3:]
