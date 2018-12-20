@@ -143,7 +143,8 @@ class DqnAgent(tf_agent.TFAgent):
         will be written during training.
 
     Raises:
-      ValueError: If the action spec contains more than one action.
+      ValueError: If the action spec contains more than one action or action
+        spec minimum is not equal to 0.
     """
     flat_action_spec = nest.flatten(action_spec)
     self._num_actions = [
@@ -153,6 +154,11 @@ class DqnAgent(tf_agent.TFAgent):
     # TODO(oars): Get DQN working with more than one dim in the actions.
     if len(flat_action_spec) > 1 or flat_action_spec[0].shape.ndims > 1:
       raise ValueError('Only one dimensional actions are supported now.')
+
+    if not all(spec.minimum == 0 for spec in flat_action_spec):
+      raise ValueError(
+          'Action specs should have minimum of 0, but saw: {0}'.format(
+              [spec.minimum for spec in flat_action_spec]))
 
     self._q_network = q_network
     self._target_q_network = self._q_network.copy(name='TargetQNetwork')
