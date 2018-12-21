@@ -92,9 +92,9 @@ class DynamicEpisodeDriver(driver.Driver):
       Returns:
         loop_vars for next iteration of tf.while_loop.
       """
-      action_step = self._policy.action(time_step, policy_state)
+      action_step = self.policy.action(time_step, policy_state)
       policy_state = action_step.state
-      next_time_step = self._env.step(action_step.action)
+      next_time_step = self.env.step(action_step.action)
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]
@@ -136,15 +136,15 @@ class DynamicEpisodeDriver(driver.Driver):
       policy_state: Tensor with final step policy state.
     """
     if time_step is None:
-      time_step = self._env.reset()
+      time_step = self.env.reset()
 
     if policy_state is None:
-      policy_state = self._policy.get_initial_state(self._env.batch_size)
+      policy_state = self.policy.get_initial_state(self.env.batch_size)
 
     # Batch dim should be first index of tensors during data
     # collection.
     batch_dims = nest_utils.get_outer_shape(
-        time_step, self._env.time_step_spec())
+        time_step, self.env.time_step_spec())
     counter = tf.zeros(batch_dims, tf.int32)
 
     num_episodes = num_episodes or self._num_episodes

@@ -23,41 +23,34 @@ import abc
 import six
 
 
-from tf_agents.environments import tf_environment
-from tf_agents.policies import tf_policy
-
-
 @six.add_metaclass(abc.ABCMeta)
 class Driver(object):
-  """A driver that takes steps in an environment using a TF policy."""
+  """A driver that takes steps in an environment using a policy."""
 
   def __init__(self, env, policy, observers=None):
     """Creates a Driver.
 
     Args:
-      env: A tf_environment.Base environment.
-      policy: A tf_policy.Base policy.
+      env: An environment.Base environment.
+      policy: A policy.Base policy.
       observers: A list of observers that are updated after the driver is run.
         Each observer is a callable(TimeStepAction) that returns the input.
         TimeStepAction.time_step is a stacked batch [N+1, batch_size, ...] of
         timesteps and TimeStepAction.action is a stacked batch
         [N, batch_size, ...] of actions in time major form.
-
-    Raises:
-      ValueError:
-        If env is not a tf_environment.Base or policy is not an instance of
-        tf_policy.Base.
     """
-
-    if not isinstance(env, tf_environment.Base):
-      raise ValueError('`env` must be an instance of tf_environment.Base.')
-
-    if not isinstance(policy, tf_policy.Base):
-      raise ValueError('`policy` must be an instance of tf_policy.Base.')
 
     self._env = env
     self._policy = policy
     self._observers = observers or []
+
+  @property
+  def env(self):
+    return self._env
+
+  @property
+  def policy(self):
+    return self._policy
 
   @property
   def observers(self):
