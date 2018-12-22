@@ -50,7 +50,9 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+import functools
 import inspect
+import numpy as np
 
 import six
 import tensorflow as tf
@@ -317,3 +319,105 @@ def create_train_step(loss,
       _loss=loss,
       _total_loss_fn=total_loss_fn,
       _variables_to_train=variables_to_train)
+
+
+def np_function(func=None, get_output_dtypes=None):
+  """Decorator that allow a numpy function used in TF both Eager and Graph.
+
+  Similar to `tf.py_func` and `tf.py_function` but it doesn't require defining
+  the inputs or the dtypes of the outputs a priori.
+
+  In Eager mode it would convert the tf.Tensors to np.arrays before passing to
+  `func` and then convert back the outputs from np.arrays to tf.Tensors.
+
+  In Graph mode it would create different tf.py_function for each combination
+  of dtype of the inputs and cache them for reuse.
+
+  NOTE: In Graph mode: if `get_output_dtypes` is not provided then `func` would
+  be called with `np.ones()` to infer the output dtypes, and therefore `func`
+  should be stateless.
+
+  ```python
+  Instead of doing:
+
+  def sum(x):
+    return np.sum(x)
+  inputs = tf.constant([3, 4])
+  outputs = tf.py_function(sum, inputs, Tout=[tf.int64])
+
+  inputs = tf.constant([3., 4.])
+  outputs = tf.py_function(sum, inputs, Tout=[tf.float32])
+
+  Do:
+  @eager_utils.np_function
+  def sum(x):
+    return np.sum(x)
+
+  @eager_utils.np_function(get_output_dtypes: lambda _: np.float32)
+  def mean(x):
+    return np.mean(x)
+
+  inputs = tf.constant([3, 4])
+  outputs = sum(inputs)  # Infers that Tout is tf.int64
+
+  inputs = tf.constant([3., 4.])
+  outputs = sum(inputs)  # Infers that Tout is tf.float32
+
+  with context.graph_mode():
+    outputs = sum(tf.constant([3, 4]))
+    outputs2 = sum(tf.constant([3., 4.]))
+    sess.run(outputs) # np.array(7)
+    sess.run(outputs2) # np.array(7.)
+
+  with context.eager_mode():
+    inputs = tf.constant([3, 4])
+    outputs = center_fn(tf.constant([3, 4])) # tf.Tensor([7])
+    outputs = center_fn(tf.constant([3., 4.])) # tf.Tensor([7.])
+
+  ```
+  Args:
+    func: A numpy function, that takes numpy arrays as inputs and return numpy
+      arrays as outputs.
+    get_output_dtypes: Optional function that maps input dtypes to output
+      dtypes. Example: lambda x: x (outputs have the same dtype as inputs).
+      If it is not provided in Graph mode the `func` would be called to infe
+      the output dtypes.
+  Returns:
+    A wrapped function that can be used with TF code.
+  """
+  def decorated(func):
+    """Decorated func."""
+    func.memo = {}
+    def wrapper(*args, **kwargs):
+      """Wrapper."""
+      func_part = func
+      if kwargs:
+        func_part = functools.partial(func, **kwargs)
+      if tf.executing_eagerly():
+        result = func_part(*nest.map_structure(lambda x: x.numpy(), args))
+        convert = lambda x: x if x is None else tf.convert_to_tensor(x)
+        return nest.map_structure(convert, result)
+      else:
+        input_dtypes = tuple([x.dtype for x in nest.flatten(args)])
+        if input_dtypes not in func.memo:
+          if get_output_dtypes is None:
+            zero_args = nest.map_structure(
+                lambda x: np.ones(x.shape, x.dtype.as_numpy_dtype), args)
+            def compute_output_dtypes(*args):
+              """Pass np.ones() as inputs to infer the output dtypes."""
+              result = func_part(*args)
+              return nest.flatten(nest.map_structure(lambda x: x.dtype, result))
+            func.memo[input_dtypes] = compute_output_dtypes(*zero_args)
+          else:
+            func.memo[input_dtypes] = get_output_dtypes(*input_dtypes)
+        output_dtypes = func.memo[input_dtypes]
+        return tf.py_function(func_part, inp=args, Tout=output_dtypes)
+    return tf_decorator.make_decorator(func, wrapper)
+  # This code path is for the `foo = np_function(foo, ...)` use case
+  if func is not None:
+    return decorated(func)
+
+  # This code path is for the decorator
+  # @np_function(...)
+  # def foo(...):
+  return decorated

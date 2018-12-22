@@ -20,8 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+import itertools
 
 from absl.testing import parameterized
+import numpy as np
 import tensorflow as tf
 
 from tf_agents.utils import eager_utils
@@ -454,6 +456,114 @@ class HasSelfClsArgTest(tf.test.TestCase):
     self.assertTrue(eager_utils.has_self_cls_arg(A.method))
     self.assertTrue(eager_utils.has_self_cls_arg(A.class_method))
     self.assertFalse(eager_utils.has_self_cls_arg(A.static_method))
+
+
+@eager_utils.np_function
+def meshgrid(low, high, nx=2, ny=3):
+  x = np.linspace(low, high, nx)
+  y = np.linspace(low, high, ny)
+  return np.meshgrid(x, y)
+
+
+@eager_utils.np_function(get_output_dtypes=lambda _: np.float32)
+def mean(x):
+  return np.mean(x)
+
+
+class NpFunctionTest(tf.test.TestCase):
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testMeshGrid(self):
+    xv, yv = meshgrid(tf.constant(0), tf.constant(1))
+    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.], [0., 1.]])
+    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [.5, .5], [1., 1.]])
+    xv, yv = meshgrid(tf.constant(0.), tf.constant(1.))
+    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.], [0., 1.]])
+    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [.5, .5], [1., 1.]])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testMeshGridKwargs(self):
+    xv, yv = meshgrid(tf.constant(0), tf.constant(1), nx=2, ny=2)
+    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.]])
+    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [1., 1.]])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testVariables(self):
+    a, b = tf.Variable(0), tf.Variable(1)
+    xv, yv = meshgrid(a, b, nx=2, ny=2)
+    self.evaluate(tf.initializers.global_variables())
+    self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.]])
+    self.assertAllEqual(self.evaluate(yv), [[0., 0.], [1., 1.]])
+
+  def testPlaceHolder(self):
+    a = tf.placeholder(tf.float32, shape=())
+    b = tf.placeholder(tf.float32, shape=())
+    xv, yv = meshgrid(a, b, nx=2, ny=2)
+    self.evaluate(tf.initializers.global_variables())
+    with self.session() as sess:
+      xv, yv = sess.run([xv, yv], {a: 0, b: 1})
+    self.assertAllEqual(xv, [[0., 1.], [0., 1.]])
+    self.assertAllEqual(yv, [[0., 0.], [1., 1.]])
+
+  def testPlaceHolderWithDefault(self):
+    a = tf.placeholder_with_default(0, ())
+    b = tf.placeholder_with_default(1, ())
+    xv, yv = meshgrid(a, b, nx=2, ny=2)
+    self.evaluate(tf.initializers.global_variables())
+    with self.session() as sess:
+      xv_np, yv_np = sess.run([xv, yv])
+    self.assertAllEqual(xv_np, [[0., 1.], [0., 1.]])
+    self.assertAllEqual(yv_np, [[0., 0.], [1., 1.]])
+    with self.session() as sess:
+      xv_np, yv_np = sess.run([xv, yv], {a: 0., b: 2.})
+    self.assertAllEqual(xv_np, [[0., 2.], [0., 2.]])
+    self.assertAllEqual(yv_np, [[0., 0.], [2., 2.]])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testGetOutputDtypesInts2Floats(self):
+    x = tf.constant([1, 2, 3])
+    mean_x = mean(x)
+    self.assertEqual(self.evaluate(mean_x), 2.)
+
+  def testGetOutputDtypesFloats2Floats(self):
+    x = tf.constant([1., 2., 3.])
+    mean_x = mean(x)
+    self.assertEqual(self.evaluate(mean_x), 2.)
+
+
+@eager_utils.np_function(get_output_dtypes=lambda *args: np.float32)
+def np_descent(x, d, mu, n_epochs):
+  n = len(x)
+  f = 2 / n
+
+  y = np.zeros(n)
+  err = np.zeros(n)
+  w = np.zeros(2)
+  grad = np.zeros(2)
+
+  for _ in itertools.repeat(None, n_epochs):
+    np.subtract(d, y, out=err)
+    grad[:] = [f * np.sum(err), f * np.dot(err, x)]
+    w = w + mu * grad
+    y = w[0] + w[1] * x
+  return w
+
+
+class NpDescentTest(tf.test.TestCase):
+
+  def setUp(self):
+    np.random.seed(444)
+    n = 10000
+    sigma = 0.1
+    noise = sigma * np.random.randn(n)
+    self._x = np.linspace(0, 2, n)
+    self._d = 3 + 2 * self._x + noise
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testSolve(self):
+    x, d = tf.constant(self._x), tf.constant(self._d)
+    w = np_descent(x, d, mu=0.001, n_epochs=10000)
+    self.assertAllClose([2.96, 2.03], self.evaluate(w), atol=0.01, rtol=0.01)
 
 
 if __name__ == '__main__':
