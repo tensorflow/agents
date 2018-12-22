@@ -641,10 +641,11 @@ def compute_returns(rewards, discounts):
     Tensor of per-timestep cumulative returns.
   """
   rewards.shape.assert_is_compatible_with(discounts.shape)
-  check_shape = (tf.assert_equal(tf.shape(rewards), tf.shape(discounts))
-                 if (not rewards.shape.is_fully_defined() or
-                     not discounts.shape.is_fully_defined())
-                 else tf.no_op())
+  if (not rewards.shape.is_fully_defined() or
+      not discounts.shape.is_fully_defined()):
+    check_shape = tf.assert_equal(tf.shape(rewards), tf.shape(discounts))
+  else:
+    check_shape = tf.no_op()
   with tf.control_dependencies([check_shape]):
     # Reverse the rewards and discounting for accumulation.
     rewards, discounts = tf.reverse(rewards, [0]), tf.reverse(discounts, [0])
