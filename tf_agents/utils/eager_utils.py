@@ -353,7 +353,7 @@ def np_function(func=None, get_output_dtypes=None):
   def sum(x):
     return np.sum(x)
 
-  @eager_utils.np_function(get_output_dtypes: lambda _: np.float32)
+  @eager_utils.np_function(get_output_dtypes=lambda _: np.float32)
   def mean(x):
     return np.mean(x)
 
@@ -371,8 +371,8 @@ def np_function(func=None, get_output_dtypes=None):
 
   with context.eager_mode():
     inputs = tf.constant([3, 4])
-    outputs = center_fn(tf.constant([3, 4])) # tf.Tensor([7])
-    outputs = center_fn(tf.constant([3., 4.])) # tf.Tensor([7.])
+    outputs = sum(tf.constant([3, 4])) # tf.Tensor([7])
+    outputs = sum(tf.constant([3., 4.])) # tf.Tensor([7.])
 
   ```
   Args:
