@@ -13,15 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test for tf_agents.policies.q_policy."""
+"""Test for tf_agents.policies.boltzmann_policy."""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import absltest
 import tensorflow as tf
 
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
+from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 from tensorflow.python.framework import test_util  # TF internal
@@ -44,37 +47,30 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
-class QPolicyTest(tf.test.TestCase):
+class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
 
   def setUp(self):
-    super(QPolicyTest, self).setUp()
+    super(BoltzmannPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
 
   @test_util.run_in_graph_and_eager_modes()
   def testBuild(self):
-    policy = q_policy.QPolicy(
+    wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
+    policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
     self.assertEqual(policy.action_spec(), self._action_spec)
-    self.assertEqual(policy.variables(), [])
-
-  @test_util.run_in_graph_and_eager_modes()
-  def testMultipleActionsRaiseError(self):
-    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)] * 2
-    with self.assertRaisesRegexp(
-        NotImplementedError,
-        'action_spec can only contain a single BoundedTensorSpec'):
-      q_policy.QPolicy(
-          self._time_step_spec, action_spec, q_network=DummyNet())
+    self.assertEmpty(policy.variables())
 
   @test_util.run_in_graph_and_eager_modes()
   def testAction(self):
     tf.set_random_seed(1)
-    policy = q_policy.QPolicy(
+    wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
+    policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
@@ -86,39 +82,11 @@ class QPolicyTest(tf.test.TestCase):
     self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
 
   @test_util.run_in_graph_and_eager_modes()
-  def testActionScalarSpec(self):
-    tf.set_random_seed(1)
-
-    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
-    policy = q_policy.QPolicy(
-        self._time_step_spec, action_spec, q_network=DummyNet())
-
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observations, batch_size=2)
-    aaction_step = policy.action(time_step, seed=1)
-    self.assertEqual(aaction_step.action.shape.as_list(), [2])
-    self.assertEqual(aaction_step.action.dtype, tf.int32)
-    # Initialize all variables
-    self.evaluate(tf.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(aaction_step.action), [1, 1])
-
-  @test_util.run_in_graph_and_eager_modes()
-  def testActionList(self):
-    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
-    policy = q_policy.QPolicy(
-        self._time_step_spec, action_spec, q_network=DummyNet())
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observations, batch_size=2)
-    action_step = policy.action(time_step, seed=1)
-    self.assertTrue(isinstance(action_step.action, list))
-    self.evaluate(tf.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action), [[[1], [1]]])
-
-  @test_util.run_in_graph_and_eager_modes()
   def testDistribution(self):
     tf.set_random_seed(1)
-    policy = q_policy.QPolicy(
+    wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
+    policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=1)
@@ -130,32 +98,23 @@ class QPolicyTest(tf.test.TestCase):
     self.assertAllEqual([[1]], self.evaluate(mode))
 
   @test_util.run_in_graph_and_eager_modes()
-  def testUpdate(self):
+  def testLogits(self):
     tf.set_random_seed(1)
-    policy = q_policy.QPolicy(
+    wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
-    new_policy = q_policy.QPolicy(
-        self._time_step_spec, self._action_spec, q_network=DummyNet())
+    policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.5)
 
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observations, batch_size=2)
-
-    self.assertEqual(policy.variables(), [])
-    self.assertEqual(new_policy.variables(), [])
-
-    action_step = policy.action(time_step, seed=1)
-    new_action_step = new_policy.action(time_step, seed=1)
-
-    self.assertEqual(len(policy.variables()), 2)
-    self.assertEqual(len(new_policy.variables()), 2)
-    self.assertEqual(action_step.action.shape, new_action_step.action.shape)
-    self.assertEqual(action_step.action.dtype, new_action_step.action.dtype)
-
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=1)
+    distribution_step = policy.distribution(time_step)
+    logits = distribution_step.action.logits
+    original_logits = wrapped.distribution(time_step).action.logits
     self.evaluate(tf.global_variables_initializer())
-    self.assertEqual(self.evaluate(new_policy.update(policy)), None)
-
-    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
-    self.assertAllEqual(self.evaluate(new_action_step.action), [[1], [1]])
+    # The un-temperature'd logits would be 4 and 5.5, because it is (1 2) . (1
+    # 1) + 1 and (1 2) . (1.5 1.5) + 1. The temperature'd logits will be double
+    # that.
+    self.assertAllEqual([[[4., 5.5]]], self.evaluate(original_logits))
+    self.assertAllEqual([[[8., 11.]]], self.evaluate(logits))
 
 
 if __name__ == '__main__':

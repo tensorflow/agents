@@ -34,6 +34,9 @@ from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
 
+# Number of times to train in test loops.
+TRAIN_ITERATIONS = 30
+
 
 class DummyNet(network.Network):
 
@@ -145,7 +148,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     replay = trajectory_replay.TrajectoryReplay(agent.policy())
     self.evaluate(tf.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
-    for _ in range(20):
+    for _ in range(TRAIN_ITERATIONS):
       self.evaluate(train_and_loss)
     post_training_actions = self.evaluate(replay.run(traj)[0])
     # We don't necessarily converge to the same actions as in trajectory after
@@ -169,7 +172,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     replay = trajectory_replay.TrajectoryReplay(agent.policy())
     self.evaluate(tf.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
-    for _ in range(20):
+    for _ in range(TRAIN_ITERATIONS):
       self.evaluate(train_and_loss)
     post_training_actions = self.evaluate(replay.run(traj)[0])
     # We don't necessarily converge to the same actions as in trajectory after

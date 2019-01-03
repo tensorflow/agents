@@ -126,12 +126,13 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       self.assertEqual(action_steps.action.dtype, np.int32)
       if batch_size is None:
         self.assertEqual(action_steps.action.shape, ())
-        self.assertEqual(action_steps.action, 1)
+        self.assertIn(action_steps.action, (0, 1))
         self.assertEqual(action_steps.state, np.zeros([1, 1]))
       else:
         self.assertEqual(action_steps.action.shape, (batch_size,))
-        self.assertAllEqual(action_steps.action, [1] * batch_size)
-        self.assertAllEqual(action_steps.state, np.zeros([5, 1]))
+        for a in action_steps.action:
+          self.assertIn(a, (0, 1))
+        self.assertAllEqual(action_steps.state, np.zeros([batch_size, 1]))
 
   def testDeferredBatchingAction(self):
     # Construct policy without providing batch_size.
@@ -152,7 +153,8 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       tf.global_variables_initializer().run()
       action_steps = policy.action(time_steps)
       self.assertEqual(action_steps.action.shape, (batch_size,))
-      self.assertAllEqual(action_steps.action, [1] * batch_size)
+      for a in action_steps.action:
+        self.assertIn(a, (0, 1))
       self.assertAllEqual(action_steps.state, ())
 
   def testDeferredBatchingStateful(self):
@@ -171,7 +173,8 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       self.assertAllEqual(initial_state, np.zeros([5, 1]))
       action_steps = policy.action(time_steps, initial_state)
       self.assertEqual(action_steps.action.shape, (batch_size,))
-      self.assertAllEqual(action_steps.action, [1] * batch_size)
+      for a in action_steps.action:
+        self.assertIn(a, (0, 1))
       self.assertAllEqual(action_steps.state, np.zeros([5, 1]))
 
 

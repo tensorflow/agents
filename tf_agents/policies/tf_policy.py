@@ -291,9 +291,7 @@ class Base(tf.contrib.eager.Checkpointable):
     """
     return self._trajectory_spec
 
-  ## Subclasses must implement these
-
-  @abc.abstractmethod
+  # Subclasses MAY optionally override _action.
   def _action(self, time_step, policy_state, seed):
     """Implementation of `action`.
 
@@ -309,7 +307,13 @@ class Base(tf.contrib.eager.Checkpointable):
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """
-    pass
+    distribution_step = self._distribution(time_step, policy_state)
+    actions = nest.map_structure(
+        lambda d: d.sample(seed=seed),
+        distribution_step.action)
+    return distribution_step._replace(action=actions)
+
+  ## Subclasses MUST implement these.
 
   @abc.abstractmethod
   def _distribution(self, time_step, policy_state):
@@ -322,7 +326,8 @@ class Base(tf.contrib.eager.Checkpointable):
 
     Returns:
       A `PolicyState` named tuple containing:
-        `action`: A tfp.distribution capturing the distribution of next actions.
+        `action`: A (optionally nested) of tfp.distribution.Distribution
+          capturing the distribution of next actions.
         `state`: A policy state tensor for the next call to distribution.
         `info`: Optional side information such as action log probabilities.
     """
@@ -333,7 +338,7 @@ class Base(tf.contrib.eager.Checkpointable):
     """Returns an iterable of `tf.Variable` objects used by this policy."""
     pass
 
-  # Subclass may optionally overwrite this.
+  # Subclasses MAY optionally overwrite _get_initial_state.
   def _get_initial_state(self, batch_size):
     """Default implementation of `get_initial_state`.
 
