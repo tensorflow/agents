@@ -33,11 +33,11 @@ import functools
 import tensorflow as tf
 
 from tf_agents.environments import time_step
+from tf_agents.networks import dynamic_unroll_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
-from tf_agents.utils import rnn_utils
 
 import gin.tf
 
@@ -134,7 +134,7 @@ class ValueRnnNetwork(network.Network):
 
     self._conv_layer_params = conv_layer_params
     self._input_layers = input_layers
-    self._cell = cell
+    self._dynamic_unroll = dynamic_unroll_layer.DynamicUnroll(cell)
     self._output_layers = output_layers
     self._value_projection_layer = value_projection_layer
 
@@ -164,12 +164,10 @@ class ValueRnnNetwork(network.Network):
     with tf.name_scope('reset_mask'):
       reset_mask = tf.equal(step_type, time_step.StepType.FIRST)
     # Unroll over the time sequence.
-    states, network_state, _ = rnn_utils.dynamic_unroll(
-        self._cell,
+    states, network_state = self._dynamic_unroll(
         states,
         reset_mask,
-        initial_state=network_state,
-        dtype=tf.float32)
+        initial_state=network_state)
 
     states = batch_squash.flatten(states)
 
