@@ -51,7 +51,10 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   """An behavioral cloning Agent.
 
   Implements behavioral cloning, wherein the network learns to clone
-  given experience.  Users must provide their own loss functions.
+  given experience.  Users must provide their own loss functions. Note this
+  implementation will use a QPolicy. To use with other policies subclass this
+  agent and override the `_get_policies` method. Note the cloning_network must
+  match the requirements of the generated policies.
 
   Behavioral cloning was proposed in the following articles:
 
@@ -131,22 +134,9 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
           'Multi-arity actions are not currently supported.')
-    if flat_action_spec[0].dtype.is_floating:
-      if loss_fn is None:
-        loss_fn = tf.math.squared_difference
-    else:
-      if flat_action_spec[0].shape.ndims > 1:
-        raise NotImplementedError(
-            'Only scalar and one dimensional integer actions are supported.')
-      if loss_fn is None:
-        # TODO(ebrevdo): Maybe move the subtraction of the minimum into a
-        # self._label_fn and rewrite this.
-        def xent_loss_fn(logits, actions):
-          # Subtract the minimum so that we get a proper cross entropy loss on
-          # [0, maximum - minimum).
-          return tf.nn.sparse_softmax_cross_entropy_with_logits(
-              logits=logits, labels=actions - flat_action_spec[0].minimum)
-        loss_fn = xent_loss_fn
+
+    if loss_fn is None:
+      loss_fn = self._get_default_loss_fn(flat_action_spec[0])
 
     self._cloning_network = cloning_network
     self._loss_fn = loss_fn
@@ -154,11 +144,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     self._optimizer = optimizer
     self._gradient_clipping = gradient_clipping
 
-    policy = q_policy.QPolicy(
-        time_step_spec, action_spec, q_network=self._cloning_network)
-    collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        policy, epsilon=self._epsilon_greedy)
-    policy = greedy_policy.GreedyPolicy(policy)
+    policy, collect_policy = self._get_policies(time_step_spec, action_spec,
+                                                cloning_network)
 
     super(BehavioralCloningAgent, self).__init__(
         time_step_spec,
@@ -168,6 +155,30 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         train_sequence_length=1 if not cloning_network.state_spec else None,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars)
+
+  def _get_default_loss_fn(self, spec):
+    if spec.dtype.is_floating:
+      return tf.math.squared_difference
+    if spec.shape.ndims > 1:
+      raise NotImplementedError(
+          'Only scalar and one dimensional integer actions are supported.')
+    # TODO(ebrevdo): Maybe move the subtraction of the minimum into a
+    # self._label_fn and rewrite this.
+    def xent_loss_fn(logits, actions):
+      # Subtract the minimum so that we get a proper cross entropy loss on
+      # [0, maximum - minimum).
+      return tf.nn.sparse_softmax_cross_entropy_with_logits(
+          logits=logits, labels=actions - spec.minimum)
+
+    return xent_loss_fn
+
+  def _get_policies(self, time_step_spec, action_spec, cloning_network):
+    policy = q_policy.QPolicy(
+        time_step_spec, action_spec, q_network=self._cloning_network)
+    collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+        policy, epsilon=self._epsilon_greedy)
+    policy = greedy_policy.GreedyPolicy(policy)
+    return policy, collect_policy
 
   def _initialize(self):
     return tf.no_op()
