@@ -74,20 +74,14 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
     self.assertEqual(policy.action_spec(), action_spec)
 
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observations, batch_size=2)
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=1)
     action_step = policy.action(time_step)
     nest.assert_same_structure(action_spec, action_step.action)
 
     action_ = self.evaluate(action_step.action)
     self.assertEqual(action_[0][0], np.argmax(action_probs))
     self.assertEqual(action_[1], np.argmax(action_probs))
-    self.assertAllEqual(action_[0].shape, [
-        1,
-    ] + action_spec[0].shape.as_list())
-    self.assertAllEqual(action_[1].shape, [
-        1,
-    ] + action_spec[1].shape.as_list())
 
   @parameterized.parameters(
       {'loc': 1.0, 'scale': 0.2},

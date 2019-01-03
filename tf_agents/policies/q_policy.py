@@ -76,12 +76,16 @@ class QPolicy(tf_policy.Base):
         time_step.observation, time_step.step_type, policy_state)
     q_values.shape.assert_has_rank(2)
 
+    # TODO(b/122314058): Validate and enforce that sampling distributions
+    # created with the q_network logits generate the right action shapes. This
+    # is curretly patching the problem.
+
     # If the action spec says each action should be shaped (1,), add another
     # dimension so the final shape is (B, 1, A), where A is the number of
     # actions. This will make Categorical emit events shaped (B, 1) rather than
-    # (B,).
+    # (B,). Using axis -2 to allow for (B, T, 1, A) shaped q_values.
     if self._action_shape.ndims == 1:
-      q_values = tf.expand_dims(q_values, 1)
+      q_values = tf.expand_dims(q_values, -2)
 
     # TODO(kbanoop): Handle distributions over nests.
     distribution = tfp.distributions.Categorical(
