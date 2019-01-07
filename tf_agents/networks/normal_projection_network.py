@@ -53,6 +53,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
                std_initializer_value=0.0,
                mean_transform=tanh_squash_to_spec,
                std_transform=tf.nn.softplus,
+               state_dependent_std=False,
                name='NormalProjectionNetwork'):
     """Creates an instance of NormalProjectionNetwork.
 
@@ -66,6 +67,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       std_initializer_value: Initial value for std variables.
       mean_transform: Transform to apply to the calculated means
       std_transform: Transform to apply to the stddevs.
+      state_dependent_std: If true, stddevs will be produced by MLP from state.
+        else, stddevs will be an independent variable.
       name: A string representing name of the network.
     """
     output_spec = self._output_distribution_spec(sample_spec)
@@ -80,14 +83,25 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     self._sample_spec = sample_spec
     self._mean_transform = mean_transform
     self._std_transform = std_transform
+    self._state_dependent_std = state_dependent_std
 
-    self._projection_layer = tf.keras.layers.Dense(
+    self._means_projection_layer = tf.keras.layers.Dense(
         sample_spec.shape.num_elements(),
         activation=activation_fn,
         kernel_initializer=tf.keras.initializers.VarianceScaling(
             scale=init_means_output_factor),
         bias_initializer=tf.keras.initializers.Zeros(),
-        name='normal_projection_layer')
+        name='means_projection_layer')
+
+    self._stddev_projection_layer = None
+    if self._state_dependent_std:
+      self._stddev_projection_layer = tf.keras.layers.Dense(
+          sample_spec.shape.num_elements(),
+          activation=activation_fn,
+          kernel_initializer=tf.keras.initializers.VarianceScaling(
+              scale=init_means_output_factor),
+          bias_initializer=tf.keras.initializers.Zeros(),
+          name='stddev_projection_layer')
 
     self._bias = bias_layer.BiasLayer(
         bias_initializer=tf.keras.initializers.Constant(
@@ -115,14 +129,20 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     batch_squash = utils.BatchSquash(outer_rank)
     inputs = batch_squash.flatten(inputs)
 
-    means = self._projection_layer(inputs)
+    means = self._means_projection_layer(inputs)
     means = tf.reshape(means, [-1] + self._sample_spec.shape.as_list())
-    means = self._mean_transform(means, self._sample_spec)
+    if self._mean_transform is not None:
+      means = self._mean_transform(means, self._sample_spec)
     means = tf.cast(means, self._sample_spec.dtype)
 
-    stds = self._bias(tf.zeros_like(means))
-    stds = tf.reshape(stds, [-1] + self._sample_spec.shape.as_list())
-    stds = self._std_transform(stds)
+    if self._state_dependent_std:
+      stds = self._stddev_projection_layer(inputs)
+    else:
+      stds = self._bias(tf.zeros_like(means))
+
+      stds = tf.reshape(stds, [-1] + self._sample_spec.shape.as_list())
+    if self._std_transform is not None:
+      stds = self._std_transform(stds)
     stds = tf.cast(stds, self._sample_spec.dtype)
 
     means = batch_squash.unflatten(means)

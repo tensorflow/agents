@@ -47,6 +47,23 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
                         [3] + output_spec.shape.as_list())
     self.assertAllEqual(stds.shape.as_list(), [3] + output_spec.shape.as_list())
 
+  def testBuildStateDepStddev(self):
+    output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
+    network = normal_projection_network.NormalProjectionNetwork(
+        output_spec, state_dependent_std=True)
+
+    inputs = _get_inputs(batch_size=3, num_input_dims=5)
+
+    distribution = network(inputs, outer_rank=1)
+    self.evaluate(tf.global_variables_initializer())
+    self.assertEqual(tfp.distributions.Normal, type(distribution))
+
+    means, stds = distribution.loc, distribution.scale
+
+    self.assertAllEqual(means.shape.as_list(),
+                        [3] + output_spec.shape.as_list())
+    self.assertAllEqual(stds.shape.as_list(), [3] + output_spec.shape.as_list())
+
   def testTrainableVariables(self):
     output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
     network = normal_projection_network.NormalProjectionNetwork(output_spec)
@@ -61,6 +78,23 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
     self.assertEqual((5, 2), network.trainable_variables[0].shape)
     self.assertEqual((2,), network.trainable_variables[1].shape)
     self.assertEqual((2,), network.trainable_variables[2].shape)
+
+  def testTrainableVariablesStateDepStddev(self):
+    output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
+    network = normal_projection_network.NormalProjectionNetwork(
+        output_spec, state_dependent_std=True)
+
+    inputs = _get_inputs(batch_size=3, num_input_dims=5)
+
+    network(inputs, outer_rank=1)
+    self.evaluate(tf.global_variables_initializer())
+
+    # Dense kernel, dense bias, std bias.
+    self.assertEqual(4, len(network.trainable_variables))
+    self.assertEqual((5, 2), network.trainable_variables[0].shape)
+    self.assertEqual((2,), network.trainable_variables[1].shape)
+    self.assertEqual((5, 2), network.trainable_variables[2].shape)
+    self.assertEqual((2,), network.trainable_variables[3].shape)
 
 
 if __name__ == '__main__':
