@@ -94,7 +94,9 @@ class PyEnvironmentMock(py_environment.Base):
 class TFPolicyMock(tf_policy.Base):
   """Mock policy takes actions 1 and 2, alternating."""
 
-  def __init__(self, time_step_spec, action_spec, batch_size=1):
+  def __init__(self, time_step_spec, action_spec, batch_size=1,
+               policy_state_spec_name='policy_state_spec',
+               policy_state_name='policy_state'):
     batch_shape = (batch_size,)
     self._batch_shape = batch_shape
     minimum = np.asarray(1, dtype=np.int32)
@@ -102,10 +104,10 @@ class TFPolicyMock(tf_policy.Base):
     self._maximum = maximum
     policy_state_spec = specs.BoundedTensorSpec(
         (), tf.int32, minimum=minimum, maximum=maximum,
-        name='policy_state_spec')
+        name=policy_state_spec_name)
     info_spec = action_spec
     self._policy_state = tf.get_variable(
-        name='policy_state',
+        name=policy_state_name,
         shape=batch_shape,
         dtype=tf.int32,
         initializer=tf.constant_initializer(maximum))
