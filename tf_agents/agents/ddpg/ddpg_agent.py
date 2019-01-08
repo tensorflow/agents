@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import tensorflow as tf
 
 
@@ -35,6 +36,11 @@ import tf_agents.utils.common as common_utils
 import gin.tf
 
 nest = tf.contrib.framework.nest
+
+
+class DdpgInfo(collections.namedtuple(
+    'DdpgInfo', ('actor_loss', 'critic_loss'))):
+  pass
 
 
 @gin.configurable
@@ -224,7 +230,8 @@ class DdpgAgent(tf_agent.TFAgent):
       total_loss = actor_loss + critic_loss
 
     # TODO(kbanoop): Compute per element TD loss and return in loss_info.
-    return tf_agent.LossInfo(total_loss, ())
+    return tf_agent.LossInfo(total_loss,
+                             DdpgInfo(actor_loss, critic_loss))
 
   def critic_loss(self,
                   time_steps,
