@@ -155,12 +155,13 @@ class AverageReturnMetric(StreamingMetric):
     """
     episode_return = self._np_state.episode_return
 
-    non_boundary = np.where(~trajectory.is_boundary())
-    episode_return[non_boundary] += trajectory.reward[non_boundary]
+    is_first = np.where(trajectory.is_first())
+    episode_return[is_first] = 0
+
+    episode_return += trajectory.reward
 
     is_last = np.where(trajectory.is_last())
     self.add_to_buffer(episode_return[is_last])
-    episode_return[is_last] = 0
 
 
 class AverageEpisodeLengthMetric(StreamingMetric):
@@ -262,4 +263,3 @@ class CounterMetric(py_metric.PyMetric, tf.contrib.checkpoint.Checkpointable):
 
   def result(self):
     return self._np_state.count
-

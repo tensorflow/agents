@@ -83,6 +83,26 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
     metric(trajectory.last((), (), (), 3., 0.))
     self.assertEqual(expected_result, metric.result())
 
+  @parameterized.named_parameters(('AverageReturnMetric',
+                                   py_metrics.AverageReturnMetric, 7.0))
+  def testAverageOneEpisodeWithReset(self, metric_class, expected_result):
+    metric = metric_class()
+
+    metric(trajectory.first((), (), (), 0., 1.))
+    metric(trajectory.mid((), (), (), 1., 1.))
+    metric(trajectory.mid((), (), (), 2., 1.))
+    # The episode is reset.
+    #
+    # This could happen when using the dynamic_episode_driver with
+    # parallel_py_environment. When the parallel episodes are of different
+    # lengths and num_episodes is reached, some episodes would be left in "MID".
+    # When the driver runs again, all environments are reset at the beginning
+    # of the tf.while_loop and the unfinished episodes would get "FIRST" without
+    # seeing "LAST".
+    metric(trajectory.first((), (), (), 3., 1.))
+    metric(trajectory.last((), (), (), 4., 1.))
+    self.assertEqual(expected_result, metric.result())
+
   @parameterized.named_parameters(
       ('AverageReturnMetric', py_metrics.AverageReturnMetric, 0.0),
       ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
