@@ -396,8 +396,8 @@ class PPOAgent(tf_agent.TFAgent):
     if summarize_gradients and debug_summaries:
 
       def _create_summaries(grads_and_vars):
-        grads_and_vars = eager_utils.add_gradients_summaries(grads_and_vars)
-        grads_and_vars = eager_utils.add_variables_summaries(grads_and_vars)
+        eager_utils.add_gradients_summaries(grads_and_vars)
+        eager_utils.add_variables_summaries(grads_and_vars)
         grads_and_vars = clip_gradients(grads_and_vars)
         return grads_and_vars
 

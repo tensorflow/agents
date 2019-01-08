@@ -170,24 +170,43 @@ def future_in_eager_mode(func_or_method):
   return tf_decorator.make_decorator(func_or_method, decorator)
 
 
+def add_variables_summaries(grads_and_vars):
+  """Add summaries for variables.
+
+  Args:
+    grads_and_vars: A list of (gradient, variable) pairs.
+  """
+  with tf.name_scope('summarize_vars'):
+    for grad, var in grads_and_vars:
+      if grad is not None:
+        if isinstance(var, tf.IndexedSlices):
+          var_values = var.values
+        else:
+          var_values = var
+        tf.contrib.summary.histogram(var.op.name + '_value', var_values)
+        tf.contrib.summary.scalar(var.op.name + '_value_norm',
+                                  tf.global_norm([var_values]))
+
+
 def add_gradients_summaries(grads_and_vars):
   """Add summaries to gradients.
 
   Args:
     grads_and_vars: A list of gradient to variable pairs (tuples).
   """
-  for grad, var in grads_and_vars:
-    if grad is not None:
-      if isinstance(grad, tf.IndexedSlices):
-        grad_values = grad.values
+  with tf.name_scope('summarize_grads'):
+    for grad, var in grads_and_vars:
+      if grad is not None:
+        if isinstance(grad, tf.IndexedSlices):
+          grad_values = grad.values
+        else:
+          grad_values = grad
+        var_name = var.name.replace(':', '_')
+        tf.contrib.summary.histogram(var_name + '_gradient', grad_values)
+        tf.contrib.summary.scalar(var_name + '_gradient_norm',
+                                  tf.global_norm([grad_values]))
       else:
-        grad_values = grad
-      var_name = var.name.replace(':', '_')
-      tf.contrib.summary.histogram(var_name + '_gradient', grad_values)
-      tf.contrib.summary.scalar(var_name + '_gradient_norm',
-                                tf.global_norm([grad_values]))
-    else:
-      tf.logging.info('Var %s has no gradient', var.name)
+        tf.logging.info('Var %s has no gradient', var.name)
 
 
 def create_train_step(loss,
