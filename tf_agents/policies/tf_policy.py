@@ -186,7 +186,7 @@ class Base(tf.contrib.eager.Checkpointable):
         Tensors representing the previous policy_state.
 
     Returns:
-      A `PolicyState` named tuple containing:
+      A `PolicyStep` named tuple containing:
 
         `action`: A tf.distribution capturing the distribution of next actions.
         `state`: A policy state tensor for the next call to distribution.
@@ -325,7 +325,7 @@ class Base(tf.contrib.eager.Checkpointable):
         Tensors representing the previous policy_state.
 
     Returns:
-      A `PolicyState` named tuple containing:
+      A `PolicyStep` named tuple containing:
         `action`: A (optionally nested) of tfp.distribution.Distribution
           capturing the distribution of next actions.
         `state`: A policy state tensor for the next call to distribution.
