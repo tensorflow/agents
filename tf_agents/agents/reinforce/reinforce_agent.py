@@ -124,7 +124,6 @@ class ReinforceAgent(tf_agent.TFAgent):
     clip_gradients = (tf.contrib.training.clip_gradient_norms_fn(
         self._gradient_clipping) if self._gradient_clipping else None)
 
-    # TODO(sguada): create_train_step should not return a Future.
     loss_info = eager_utils.create_train_step(
         loss_info,
         self._optimizer,
@@ -134,9 +133,6 @@ class ReinforceAgent(tf_agent.TFAgent):
         summarize_gradients=self._summarize_grads_and_vars,
         variables_to_train=lambda: self._actor_network.trainable_weights,
     )
-
-    if isinstance(loss_info, eager_utils.Future):
-      loss_info = loss_info()
 
     if self._summarize_grads_and_vars:
       with tf.name_scope('Variables/'):

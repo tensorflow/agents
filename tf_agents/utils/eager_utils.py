@@ -297,47 +297,31 @@ def create_train_step(loss,
   if not isinstance(loss, Future):
     tf.logging.warning('loss should be an instance of eager_utils.Future')
 
-  def train_step(*args, **kwargs):
-    """Creates a Future train_step."""
-    # pylint: disable=invalid-name
-    _loss = kwargs.pop('_loss')
-    _total_loss_fn = kwargs.pop('_total_loss_fn')
-    _variables_to_train = kwargs.pop('_variables_to_train')
-    with tf.GradientTape() as tape:
-      loss_value = _loss(*args)
-      total_loss_value = _total_loss_fn(loss_value)
-    if _variables_to_train is None:
-      _variables_to_train = tape.watched_variables()
-    elif callable(_variables_to_train):
-      _variables_to_train = _variables_to_train()
-    _variables_to_train = nest.flatten(_variables_to_train)
-    grads = tape.gradient(total_loss_value, _variables_to_train)
-    grads_and_vars = zip(grads, _variables_to_train)
-    # pylint: enable=invalid-name
+  with tf.GradientTape() as tape:
+    loss_value = loss()
+    total_loss_value = total_loss_fn(loss_value)
+  if variables_to_train is None:
+    variables_to_train = tape.watched_variables()
+  elif callable(variables_to_train):
+    variables_to_train = variables_to_train()
+  variables_to_train = nest.flatten(variables_to_train)
+  grads = tape.gradient(total_loss_value, variables_to_train)
+  grads_and_vars = zip(grads, variables_to_train)
 
-    if transform_grads_fn:
-      grads_and_vars = transform_grads_fn(grads_and_vars)
+  if transform_grads_fn:
+    grads_and_vars = transform_grads_fn(grads_and_vars)
 
-    if summarize_gradients:
-      with tf.name_scope('summarize_grads'):
-        add_gradients_summaries(grads_and_vars)
+  if summarize_gradients:
+    with tf.name_scope('summarize_grads'):
+      add_gradients_summaries(grads_and_vars)
 
-    if check_numerics:
-      with tf.name_scope('train_op'):
-        flat_loss_value = nest.flatten(loss_value)
-        flat_loss_value[0] = tf.check_numerics(
-            flat_loss_value[0], 'Loss is inf or nan')
-        loss_value = nest.pack_sequence_as(loss_value, flat_loss_value)
+  if check_numerics:
+    with tf.name_scope('train_op'):
+      tf.check_numerics(total_loss_value, 'Loss is inf or nan')
 
-    optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+  optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
-    return loss_value
-
-  return Future(
-      train_step,
-      _loss=loss,
-      _total_loss_fn=total_loss_fn,
-      _variables_to_train=variables_to_train)
+  return loss_value
 
 
 def np_function(func=None, get_output_dtypes=None):

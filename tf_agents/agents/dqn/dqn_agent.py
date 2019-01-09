@@ -255,9 +255,6 @@ class DqnAgent(tf_agent.TFAgent):
         variables_to_train=lambda: self._q_network.trainable_weights,
     )
 
-    if isinstance(loss_info, eager_utils.Future):
-      loss_info = loss_info()
-
     # Make sure the update_targets periodically object is only created once.
     if self._target_update_train_op is None:
       with tf.control_dependencies([loss_info.loss]):

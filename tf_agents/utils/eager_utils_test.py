@@ -316,7 +316,7 @@ class CreateTrainOpTest(tf.test.TestCase):
     final_loss = 1.064379
     self.evaluate(tf.global_variables_initializer())
     self.assertAllClose(self.evaluate(train_step), initial_loss)
-    self.assertAllClose(self.evaluate(train_step), final_loss)
+    self.assertAllClose(self.evaluate(loss), final_loss)
 
   @test_util.run_in_graph_and_eager_modes()
   def testCreateTrainOpWithTotalLossFn(self):
@@ -338,17 +338,11 @@ class CreateTrainOpTest(tf.test.TestCase):
     optimizer = tf.train.GradientDescentOptimizer(0.1)
     loss = eager_utils.create_train_step(
         tuple_loss_value, optimizer, total_loss_fn=first_element)
-    initial_loss = 1.098612
-    final_loss = 1.064379
+    expected_loss = 1.098612
     self.evaluate(tf.global_variables_initializer())
     train_step_model_0, train_step_model_1 = self.evaluate(loss)
-    self.assertAllClose(train_step_model_0, initial_loss)
-    self.assertAllClose(train_step_model_1, initial_loss)
-    train_step_model_0, train_step_model_1 = self.evaluate(loss)
-    self.assertAllClose(train_step_model_0, final_loss)
-    # model_1 was not updated since its loss is not being optimized: only
-    # the first element output was optimized.
-    self.assertAllClose(train_step_model_1, initial_loss)
+    self.assertAllClose(train_step_model_0, expected_loss)
+    self.assertAllClose(train_step_model_1, expected_loss)
 
   @test_util.run_in_graph_and_eager_modes()
   def testMultipleCallsTrainStep(self):
@@ -363,8 +357,9 @@ class CreateTrainOpTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(train_step), initial_loss)
     if context.executing_eagerly():
       for _ in range(5):
-        self.evaluate(train_step(inputs, labels))
-      self.assertAllClose(self.evaluate(train_step(inputs, labels)), final_loss)
+        train_step = eager_utils.create_train_step(loss, optimizer)
+      train_step = eager_utils.create_train_step(loss, optimizer)
+      self.assertAllClose(self.evaluate(train_step), final_loss)
     else:
       for _ in range(5):
         self.evaluate(train_step)
@@ -384,11 +379,9 @@ class CreateTrainOpTest(tf.test.TestCase):
     optimizer = tf.train.GradientDescentOptimizer(0.1)
     train_step = eager_utils.create_train_step(
         loss, optimizer, variables_to_train=variables_to_train)
-    initial_loss = 1.098612
-    final_loss = 1.064379
+    expected_loss = 1.098612
     self.evaluate(tf.global_variables_initializer())
-    self.assertAllClose(self.evaluate(train_step), initial_loss)
-    self.assertAllClose(self.evaluate(train_step), final_loss)
+    self.assertAllClose(self.evaluate(train_step), expected_loss)
     self.assertEqual(len(model.trainable_variables), 2)
 
 

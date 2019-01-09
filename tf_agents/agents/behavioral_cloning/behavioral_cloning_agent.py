@@ -201,9 +201,6 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         variables_to_train=lambda: self._cloning_network.trainable_weights,
     )
 
-    if isinstance(loss_info, eager_utils.Future):
-      loss_info = loss_info()
-
     return loss_info
 
   @eager_utils.future_in_eager_mode
