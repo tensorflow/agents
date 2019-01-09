@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A TensorSpec class."""
+"""Utilities related to TensorSpec class."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -30,7 +30,7 @@ from tensorflow.python.framework import tensor_spec as ts  # TF internal
 nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
-TensorSpec = tf.TensorSpec
+TensorSpec = ts.TensorSpec
 BoundedTensorSpec = ts.BoundedTensorSpec
 
 
