@@ -35,7 +35,7 @@ class DynamicStepDriver(driver.Driver):
   The while loop will run num_steps in the environment, only counting steps that
   result in an environment transition, i.e. (time_step, action, next_time_step).
   If a step results in environment resetting, i.e. time_step.is_last() and
-  next_time_step.fist() (traj.is_boundary()), this is not counted toward the
+  next_time_step.is_first() (traj.is_boundary()), this is not counted toward the
   num_steps.
 
   As environments run batched time_steps, the counters for all batch elements
