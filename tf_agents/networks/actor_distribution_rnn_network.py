@@ -117,7 +117,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     state_spec = nest.map_structure(
         functools.partial(
             tensor_spec.TensorSpec, dtype=tf.float32,
-            name='network_state_spec'), list(cell.state_size))
+            name='network_state_spec'), cell.state_size)
 
     output_layers = utils.mlp_layers(
         fc_layer_params=output_fc_layer_params, name='output')
