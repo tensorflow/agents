@@ -18,3 +18,4 @@ from tf_agents.agents.ddpg.ddpg_agent import DdpgAgent
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
 from tf_agents.agents.ppo.ppo_agent import PPOAgent
 from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
+from tf_agents.agents.td3.td3_agent import Td3Agent
