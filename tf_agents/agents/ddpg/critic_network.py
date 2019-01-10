@@ -26,7 +26,7 @@ nest = tf.contrib.framework.nest
 
 @gin.configurable
 class CriticNetwork(network.Network):
-  """Creates an actor network."""
+  """Creates a critic network."""
 
   def __init__(self,
                observation_spec,
