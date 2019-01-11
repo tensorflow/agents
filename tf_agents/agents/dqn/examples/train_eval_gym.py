@@ -54,6 +54,8 @@ flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_integer('num_iterations', 100000,
                      'Total number train/eval iterations to perform.')
+flags.DEFINE_bool('use_ddqn', False,
+                  'If True uses the DdqnAgent instead of the DqnAgent.')
 FLAGS = flags.FLAGS
 
 
@@ -88,6 +90,7 @@ def train_eval(
     log_interval=1000,
     summary_interval=1000,
     summaries_flush_secs=10,
+    agent_class=dqn_agent.DqnAgent,
     debug_summaries=False,
     summarize_grads_and_vars=False,
     eval_metrics_callback=None):
@@ -119,7 +122,7 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=fc_layer_params)
 
-    tf_agent = dqn_agent.DqnAgent(
+    tf_agent = agent_class(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         q_network=q_net,
@@ -283,7 +286,11 @@ def train_eval(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
-  train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
+  agent_class = dqn_agent.DdqnAgent if FLAGS.use_ddqn else dqn_agent.DdqnAgent
+  train_eval(
+      FLAGS.root_dir,
+      agent_class=agent_class,
+      num_iterations=FLAGS.num_iterations)
 
 
 if __name__ == '__main__':
