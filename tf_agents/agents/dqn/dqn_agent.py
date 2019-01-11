@@ -308,7 +308,8 @@ class DqnAgent(tf_agent.TFAgent):
       # multi_dim_actions param.
       multi_dim_actions = nest.flatten(self._action_spec)[0].shape.ndims > 0
       q_values = common_utils.index_with_actions(
-          q_values, tf.to_int32(actions), multi_dim_actions=multi_dim_actions)
+          q_values, tf.cast(actions, dtype=tf.int32),
+          multi_dim_actions=multi_dim_actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
       td_targets = compute_td_targets(

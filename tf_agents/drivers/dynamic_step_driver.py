@@ -109,7 +109,7 @@ class DynamicStepDriver(driver.Driver):
             tf.identity, (time_step, next_time_step, policy_state))
 
       # While loop counter should not be incremented for episode reset steps.
-      counter += tf.to_int32(~traj.is_boundary())
+      counter += tf.cast(~traj.is_boundary(), dtype=tf.int32)
 
       return [counter, next_time_step, policy_state]
 

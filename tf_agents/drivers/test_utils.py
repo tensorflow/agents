@@ -194,7 +194,7 @@ class NumStepsObserver(object):
     return self._num_steps
 
   def __call__(self, traj):
-    num_steps = tf.reduce_sum(tf.to_int32(~traj.is_boundary()))
+    num_steps = tf.reduce_sum(tf.cast(~traj.is_boundary(), dtype=tf.int32))
     with tf.control_dependencies([self._num_steps.assign_add(num_steps)]):
       return nest.map_structure(tf.identity, traj)
 
@@ -216,7 +216,8 @@ class NumEpisodesObserver(object):
 
   def __call__(self, traj):
     with tf.control_dependencies(
-        [self._num_episodes.assign_add(tf.to_int32(traj.is_last()[0]))]):
+        [self._num_episodes.assign_add(
+            tf.cast(traj.is_last()[0], dtype=tf.int32))]):
       return nest.map_structure(
           tf.identity, traj)
 
