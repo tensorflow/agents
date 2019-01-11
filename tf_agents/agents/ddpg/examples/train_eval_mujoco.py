@@ -39,6 +39,7 @@ from tf_agents.agents.ddpg import actor_network
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.ddpg import ddpg_agent
 from tf_agents.drivers import dynamic_step_driver
+from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
 from tf_agents.metrics import metric_utils
@@ -72,6 +73,7 @@ def train_eval(
     # Params for collect
     initial_collect_steps=1000,
     collect_steps_per_iteration=1,
+    num_parallel_environments=1,
     replay_buffer_capacity=100000,
     ou_stddev=0.2,
     ou_damping=0.15,
@@ -121,8 +123,12 @@ def train_eval(
   # TODO(kbanoop): Figure out if it is possible to avoid the with block.
   with tf.contrib.summary.record_summaries_every_n_global_steps(
       summary_interval):
-
-    tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
+    if num_parallel_environments > 1:
+      tf_env = tf_py_environment.TFPyEnvironment(
+          parallel_py_environment.ParallelPyEnvironment(
+              [lambda: env_load_fn(env_name)] * num_parallel_environments))
+    else:
+      tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
     eval_py_env = env_load_fn(env_name)
 
     actor_net = actor_network.ActorNetwork(
