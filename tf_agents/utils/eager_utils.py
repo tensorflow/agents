@@ -183,8 +183,9 @@ def add_variables_summaries(grads_and_vars):
           var_values = var.values
         else:
           var_values = var
-        tf.contrib.summary.histogram(var.op.name + '_value', var_values)
-        tf.contrib.summary.scalar(var.op.name + '_value_norm',
+        var_name = var.name.replace(':', '_')
+        tf.contrib.summary.histogram(var_name + '_value', var_values)
+        tf.contrib.summary.scalar(var_name + '_value_norm',
                                   tf.global_norm([var_values]))
 
 
