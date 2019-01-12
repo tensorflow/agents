@@ -51,40 +51,16 @@ e.g.:
 <a id='Installation'></a>
 ## Installation
 
-### Stable Builds
-
-To install the latest version, run the following:
-
-```shell
-# Installing with the `--upgrade` flag ensures you'll get the latest version.
-pip install --user --upgrade tf-agents  # depends on TensorFlow
-```
-
-TF-Agents depends on a recent stable release of
-[TensorFlow](https://www.tensorflow.org/install) (pip package `tensorflow`).
-
-Note: Since TensorFlow is *not* included as a dependency of the TF-Agents
-package (in `setup.py`), you must explicitly install the TensorFlow
-package (`tensorflow` or `tensorflow-gpu`). This allows us to maintain one
-package instead of separate packages for CPU and GPU-enabled TensorFlow.
-
-To force a Python 3-specific install, replace `pip` with `pip3` in the above
-commands. For additional installation help, guidance installing prerequisites,
-and (optionally) setting up virtual environments, see the [TensorFlow
-installation guide](https://www.tensorflow.org/install).
-
-### Nightly Builds
-
-There are also nightly builds of TF-Agents under the pip package
+To install the latest version, use nightly builds of TF-Agents under the pip package
 `tf-agents-nightly`, which requires you install on one of `tf-nightly` and
-`tf-nightly-gpu`. Nightly builds include newer features, but may be less stable
-than the versioned releases.
+`tf-nightly-gpu` and also `tensorflow-probability-nightly`.
+Nightly builds include newer features, but may be less stable than the versioned releases.
 
 To install the nightly build version, run the following:
 
 ```shell
 # Installing with the `--upgrade` flag ensures you'll get the latest version.
-pip install --user --upgrade tf-agents-nightly  # depends on TensorFlow
+pip install --user --upgrade tf-agents-nightly  # depends on tf-nightly
 ```
 
 <a id='Contributing'></a>
