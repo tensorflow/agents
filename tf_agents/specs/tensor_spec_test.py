@@ -44,8 +44,12 @@ def example_nested_array_spec(dtype):
           array_spec.ArraySpec((2, 3), dtype),
       "bounded_spec_1":
           array_spec.BoundedArraySpec((2, 3), dtype, -10, 10),
+      "bounded_spec_2":
+          array_spec.BoundedArraySpec((2, 3), dtype, -10, -10),
       "bounded_array_spec_3":
           array_spec.BoundedArraySpec((2,), dtype, [-10, -10], [10, 10]),
+      "bounded_array_spec_4":
+          array_spec.BoundedArraySpec((2,), dtype, [-10, -9], [10, 9]),
       "dict_spec": {
           "spec_2":
               array_spec.ArraySpec((2, 3), dtype),
@@ -72,9 +76,14 @@ def example_nested_tensor_spec(dtype):
           tensor_spec.TensorSpec((2, 3), dtype),
       "bounded_spec_1":
           tensor_spec.BoundedTensorSpec((2, 3), dtype, minval, maxval),
+      "bounded_spec_2":
+          tensor_spec.BoundedTensorSpec((2, 3), dtype, minval, minval),
       "bounded_array_spec_3":
           tensor_spec.BoundedTensorSpec((2), dtype, [minval, minval],
                                         [maxval, maxval]),
+      "bounded_array_spec_4":
+          tensor_spec.BoundedTensorSpec((2), dtype, [minval, minval + 1],
+                                        [maxval, maxval - 1]),
       "dict_spec": {
           "spec_2":
               tensor_spec.TensorSpec((2, 3), dtype),

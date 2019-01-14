@@ -233,7 +233,14 @@ def sample_bounded_spec(spec, seed=None, outer_dims=None):
   else:
     outer_dims = ops.convert_to_tensor(outer_dims, dtype=tf.int32)
 
-  if minval.ndim != 0 or maxval.ndim != 0:
+  def _unique_vals(vals):
+    if vals.size > 0:
+      if vals.ndim > 0:
+        return np.all(vals == vals[0])
+    return True
+
+  if (minval.ndim != 0 or maxval.ndim != 0) and not (
+      _unique_vals(minval) and _unique_vals(maxval)):
     # tf.random_uniform can only handle minval/maxval 0-d tensors.
     res = _random_uniform_int(
         shape=spec.shape,
@@ -241,6 +248,8 @@ def sample_bounded_spec(spec, seed=None, outer_dims=None):
         minval=minval, maxval=maxval, dtype=sampling_dtype,
         seed=seed)
   else:
+    minval = minval.item(0) if minval.ndim != 0 else minval
+    maxval = maxval.item(0) if maxval.ndim != 0 else maxval
     # BoundedTensorSpec are bounds inclusive.
     # tf.random_uniform is upper bound exclusive, +1 to fix the sampling
     # behavior.
