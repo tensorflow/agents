@@ -714,6 +714,7 @@ class Checkpointer(object):
   def initialize_or_restore(self, session):
     """Initialize or restore graph (based on checkpoint if exists)."""
     self._load_status.initialize_or_restore(session)
+    return self._load_status
 
   def save(self, global_step):
     """Save state to checkpoint."""

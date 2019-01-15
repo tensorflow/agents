@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -34,23 +36,35 @@ nest = tf.contrib.framework.nest
 
 class DummyNet(network.Network):
 
-  def __init__(self, name=None, num_actions=2, stateful=True):
+  def __init__(self,
+               name=None,
+               num_actions=2,
+               stateful=True,
+               use_constant_initializer=True):
     if stateful:
       state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
     else:
       state_spec = ()
     super(DummyNet, self).__init__(name, None, state_spec, None)
-    self._layers.append(
+
+    kernel_initializer = None
+    bias_initializer = None
+    if use_constant_initializer:
+      kernel_initializer = tf.constant_initializer([[1, 200], [3, 4]],
+                                                   verify_shape=True)
+      bias_initializer = tf.constant_initializer([1, 1], verify_shape=True)
+
+    # Store custom layers that can be serialized through the Checkpointable API.
+    self._dummy_layers = []
+    self._dummy_layers.append(
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[1, 2], [3, 4]],
-                                                       verify_shape=True),
-            bias_initializer=tf.constant_initializer([1, 1],
-                                                     verify_shape=True)))
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     inputs = tf.cast(inputs, tf.float32)
-    for layer in self.layers:
+    for layer in self._dummy_layers:
       inputs = layer(inputs)
     return inputs, network_state
 
@@ -133,6 +147,56 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
         for a in action_steps.action:
           self.assertIn(a, (0, 1))
         self.assertAllEqual(action_steps.state, np.zeros([batch_size, 1]))
+
+  @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
+  def testSaveRestore(self, batch_size):
+    policy_save_path = os.path.join(tf.flags.FLAGS.test_tmpdir, 'policy',
+                                    str(batch_size))
+
+    # Construct a policy to be saved under a tf.Graph instance.
+    policy_saved_graph = tf.Graph()
+    with policy_saved_graph.as_default():
+      tf_policy = q_policy.QPolicy(self._time_step_spec, self._action_spec,
+                                   DummyNet(use_constant_initializer=False))
+
+      # Parameterized tests reuse temp directories, check it doesn't exist.
+      with self.assertRaises(tf.errors.NotFoundError):
+        tf.gfile.ListDirectory(policy_save_path)
+      policy_saved = py_tf_policy.PyTFPolicy(tf_policy)
+      policy_saved.session = tf.Session(graph=policy_saved_graph)
+      policy_saved.initialize(batch_size)
+      policy_saved.save(policy_dir=policy_save_path, graph=policy_saved_graph)
+      self.assertEqual(
+          set(tf.gfile.ListDirectory(policy_save_path)),
+          set(['checkpoint', 'ckpt-0.data-00000-of-00001', 'ckpt-0.index']))
+
+    # Construct a policy to be restored under another tf.Graph instance.
+    policy_restore_graph = tf.Graph()
+    with policy_restore_graph.as_default():
+      tf_policy = q_policy.QPolicy(self._time_step_spec, self._action_spec,
+                                   DummyNet(use_constant_initializer=False))
+      policy_restored = py_tf_policy.PyTFPolicy(tf_policy)
+      policy_restored.session = tf.Session(graph=policy_restore_graph)
+      policy_restored.initialize(batch_size)
+      random_init_vals = policy_restored.session.run(tf_policy.variables())
+      policy_restored.restore(
+          policy_dir=policy_save_path, graph=policy_restore_graph)
+      restored_vals = policy_restored.session.run(tf_policy.variables())
+      for random_init_var, restored_var in zip(random_init_vals, restored_vals):
+        self.assertFalse(np.array_equal(random_init_var, restored_var))
+
+    # Check that variables in the two policies have identical values.
+    with policy_restore_graph.as_default():
+      restored_values = policy_restored.session.run(tf.global_variables())
+    with policy_saved_graph.as_default():
+      initial_values = policy_saved.session.run(tf.global_variables())
+
+    # Networks have two fully connected layers.
+    self.assertLen(initial_values, 4)
+    self.assertLen(restored_values, 4)
+
+    for initial_var, restored_var in zip(initial_values, restored_values):
+      np.testing.assert_array_equal(initial_var, restored_var)
 
   def testDeferredBatchingAction(self):
     # Construct policy without providing batch_size.
