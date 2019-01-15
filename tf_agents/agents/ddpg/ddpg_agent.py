@@ -300,9 +300,9 @@ class DdpgAgent(tf_agent.TFAgent):
       q_values, _ = self._critic_network(time_steps.observation, actions,
                                          time_steps.step_type)
       actions = nest.flatten(actions)
-      dqda = tf.gradients([q_values], actions)
+      dqdas = tf.gradients([q_values], actions)
       actor_losses = []
-      for dqda, action in zip(dqda, actions):
+      for dqda, action in zip(dqdas, actions):
         if self._dqda_clipping is not None:
           dqda = tf.clip_by_value(dqda, -1 * self._dqda_clipping,
                                   self._dqda_clipping)
