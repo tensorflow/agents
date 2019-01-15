@@ -55,13 +55,14 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     if not isinstance(policy, tf_policy.Base):
       tf.logging.warning('Policy should implement tf_policy.Base')
 
+    time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec())
+    action_spec = tensor_spec.to_nest_array_spec(policy.action_spec())
+    super(PyTFPolicy, self).__init__(
+        time_step_spec, action_spec, policy_state_spec=(), info_spec=())
+
     self._tf_policy = policy
     self.session = None
 
-    self._time_step_spec = tensor_spec.to_nest_array_spec(
-        self._tf_policy.time_step_spec())
-    self._action_spec = tensor_spec.to_nest_array_spec(
-        self._tf_policy.action_spec())
     self._policy_state_spec = tensor_spec.to_nest_array_spec(
         self._tf_policy.policy_state_spec())
 
