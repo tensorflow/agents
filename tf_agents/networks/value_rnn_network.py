@@ -49,7 +49,7 @@ class ValueRnnNetwork(network.Network):
   """Feed Forward value network. Reduces to 1 value output per batch item."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                conv_layer_params=None,
                input_fc_layer_params=(75, 40),
                lstm_size=(40,),
@@ -58,12 +58,12 @@ class ValueRnnNetwork(network.Network):
                name='ValueRnnNetwork'):
     """Creates an instance of `ValueRnnNetwork`.
 
-    Network supports calls with shape outer_rank + observation_spec.shape. Note
-    outer_rank must be at least 1.
+    Network supports calls with shape outer_rank + input_tensor_shape.shape.
+    Note outer_rank must be at least 1.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -80,7 +80,7 @@ class ValueRnnNetwork(network.Network):
     Raises:
       ValueError: If `observation_spec` contains more than one observation.
     """
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(nest.flatten(input_tensor_spec)) > 1:
       raise ValueError(
           'Network only supports observation_specs with a single observation.')
 
@@ -127,7 +127,7 @@ class ValueRnnNetwork(network.Network):
             name='network_state_spec'), list(cell.state_size))
 
     super(ValueRnnNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=None,
         state_spec=state_spec,
         name=name)
@@ -140,7 +140,7 @@ class ValueRnnNetwork(network.Network):
 
   def call(self, observation, step_type=None, network_state=None):
     num_outer_dims = nest_utils.get_outer_rank(observation,
-                                               self.observation_spec)
+                                               self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
       raise ValueError(
           'Input observation must have a batch or batch x time outer shape.')

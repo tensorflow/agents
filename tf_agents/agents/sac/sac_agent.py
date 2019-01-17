@@ -76,7 +76,7 @@ class SacAgent(tf_agent.TFAgent):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      critic_network: A function critic_network(observations, actions) that
+      critic_network: A function critic_network((observations, actions)) that
         returns the q_values for each observation and action.
       actor_network: A function actor_network(observation, action_spec) that
        returns action distribution.
@@ -356,10 +356,12 @@ class SacAgent(tf_agent.TFAgent):
       nest.assert_same_structure(next_time_steps, self.time_step_spec())
 
       next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps)
+      target_input_1 = (next_time_steps.observation, next_actions)
       target_q_values1, unused_network_state1 = self._target_critic_network1(
-          next_time_steps.observation, next_actions, next_time_steps.step_type)
+          target_input_1, next_time_steps.step_type)
+      target_input_2 = (next_time_steps.observation, next_actions)
       target_q_values2, unused_network_state2 = self._target_critic_network2(
-          next_time_steps.observation, next_actions, next_time_steps.step_type)
+          target_input_2, next_time_steps.step_type)
       target_q_values = (tf.minimum(target_q_values1, target_q_values2) -
                          tf.exp(self._log_alpha) * next_log_pis)
 
@@ -367,10 +369,12 @@ class SacAgent(tf_agent.TFAgent):
           reward_scale_factor * next_time_steps.reward +
           gamma * next_time_steps.discount * target_q_values)
 
+      pred_input_1 = (time_steps.observation, actions)
       pred_td_targets1, unused_network_state1 = self._critic_network1(
-          time_steps.observation, actions, time_steps.step_type)
+          pred_input_1, time_steps.step_type)
+      pred_input_2 = (time_steps.observation, actions)
       pred_td_targets2, unused_network_state2 = self._critic_network2(
-          time_steps.observation, actions, time_steps.step_type)
+          pred_input_2, time_steps.step_type)
       critic_loss1 = td_errors_loss_fn(td_targets, pred_td_targets1)
       critic_loss2 = td_errors_loss_fn(td_targets, pred_td_targets2)
       critic_loss = critic_loss1 + critic_loss2
@@ -409,10 +413,12 @@ class SacAgent(tf_agent.TFAgent):
       nest.assert_same_structure(time_steps, self.time_step_spec())
 
       actions, log_pi = self._actions_and_log_probs(time_steps)
+      target_input_1 = (time_steps.observation, actions)
       target_q_values1, unused_network_state1 = self._critic_network1(
-          time_steps.observation, actions, time_steps.step_type)
+          target_input_1, time_steps.step_type)
+      target_input_2 = (time_steps.observation, actions)
       target_q_values2, unused_network_state2 = self._critic_network2(
-          time_steps.observation, actions, time_steps.step_type)
+          target_input_2, time_steps.step_type)
       target_q_values = tf.minimum(target_q_values1, target_q_values2)
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
       if weights is not None:

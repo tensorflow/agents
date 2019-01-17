@@ -32,12 +32,12 @@ nest = tf.contrib.framework.nest
 
 class DummyActorNet(network.Network):
 
-  def __init__(self, observation_spec, action_spec, unbounded_actions=False):
+  def __init__(self, input_tensor_spec, action_spec, unbounded_actions=False):
     # When unbounded_actions=True, we skip the final tanh activation and the
     # action shift and scale. This allows us to compute the actor and critic
     # losses by hand more easily.
     super(DummyActorNet, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=(),
         name='DummyActorNet')

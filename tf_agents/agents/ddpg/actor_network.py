@@ -31,7 +31,7 @@ class ActorNetwork(network.Network):
   """Creates an actor network."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                action_spec,
                fc_layer_params=None,
                conv_layer_params=None,
@@ -40,8 +40,8 @@ class ActorNetwork(network.Network):
     """Creates an instance of `ActorNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        inputs.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
       fc_layer_params: Optional list of fully_connected parameters, where each
@@ -53,16 +53,16 @@ class ActorNetwork(network.Network):
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `observation_spec` or `action_spec` contains more than one
+      ValueError: If `input_tensor_spec` or `action_spec` contains more than one
         item, or if the action data type is not `float`.
     """
     super(ActorNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=(),
         name=name)
 
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
     flat_action_spec = nest.flatten(action_spec)

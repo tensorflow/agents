@@ -37,7 +37,7 @@ class ActorRnnNetwork(network.Network):
   """Creates a recurrent actor network."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                action_spec,
                conv_layer_params=None,
                input_fc_layer_params=(200, 100),
@@ -48,8 +48,8 @@ class ActorRnnNetwork(network.Network):
     """Creates an instance of `ActorRnnNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
       conv_layer_params: Optional list of convolution layers parameters, where
@@ -69,9 +69,9 @@ class ActorRnnNetwork(network.Network):
       A nest of action tensors matching the action_spec.
 
     Raises:
-      ValueError: If `observation_spec` contains more than one observation.
+      ValueError: If `input_tensor_spec` contains more than one observation.
     """
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
     input_layers = utils.mlp_layers(
@@ -107,7 +107,7 @@ class ActorRnnNetwork(network.Network):
     ]
 
     super(ActorRnnNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=state_spec,
         name=name)
@@ -122,7 +122,7 @@ class ActorRnnNetwork(network.Network):
   # TODO(kbanoop): Standardize argument names across different networks.
   def call(self, observation, step_type, network_state=None):
     num_outer_dims = nest_utils.get_outer_rank(observation,
-                                               self.observation_spec)
+                                               self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
       raise ValueError(
           'Input observation must have a batch or batch x time outer shape.')

@@ -49,7 +49,7 @@ class QNetwork(network.Network):
   """Feed Forward network."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                action_spec,
                conv_layer_params=None,
                fc_layer_params=(75, 40),
@@ -60,8 +60,8 @@ class QNetwork(network.Network):
     """Creates an instance of `QNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
       conv_layer_params: Optional list of convolution layers parameters, where
@@ -78,15 +78,15 @@ class QNetwork(network.Network):
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `observation_spec` contains more than one observation. Or
+      ValueError: If `input_tensor_spec` contains more than one observation. Or
         if `action_spec` contains more than one action.
     """
-    validate_specs(action_spec, observation_spec)
+    validate_specs(action_spec, input_tensor_spec)
     action_spec = nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
     encoder = encoding_network.EncodingNetwork(
-        observation_spec,
+        input_tensor_spec,
         conv_layer_params=conv_layer_params,
         fc_layer_params=fc_layer_params,
         activation_fn=activation_fn,
@@ -103,7 +103,7 @@ class QNetwork(network.Network):
         bias_initializer=tf.constant_initializer(-0.2))
 
     super(QNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=(),
         name=name)

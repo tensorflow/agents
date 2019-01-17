@@ -147,9 +147,11 @@ def train_eval(
         lstm_size=actor_lstm_size,
         output_fc_layer_params=actor_output_fc_layers)
 
+    critic_net_input_specs = (tf_env.time_step_spec().observation,
+                              tf_env.action_spec())
+
     critic_net = critic_rnn_network.CriticRnnNetwork(
-        tf_env.time_step_spec().observation,
-        tf_env.action_spec(),
+        critic_net_input_specs,
         observation_fc_layer_params=critic_obs_fc_layers,
         action_fc_layer_params=critic_action_fc_layers,
         joint_fc_layer_params=critic_joint_fc_layers,

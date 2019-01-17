@@ -142,7 +142,7 @@ def train_eval(
         fc_layer_params=actor_fc_layers,
         continuous_projection_net=_normal_projection_net)
     critic_net = critic_network.CriticNetwork(
-        observation_spec, action_spec,
+        (observation_spec, action_spec),
         observation_fc_layer_params=critic_obs_fc_layers,
         action_fc_layer_params=critic_action_fc_layers,
         joint_fc_layer_params=critic_joint_fc_layers)

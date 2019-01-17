@@ -296,11 +296,13 @@ class Td3Agent(tf_agent.TFAgent):
                                                 target_actions)
 
       # Target q-values are the min of the two networks
+      target_q_input_1 = (next_time_steps.observation, noisy_target_actions)
       target_q_values_1, _ = self._target_critic_network_1(
-          next_time_steps.observation, noisy_target_actions,
+          target_q_input_1,
           next_time_steps.step_type)
+      target_q_input_2 = (next_time_steps.observation, noisy_target_actions)
       target_q_values_2, _ = self._target_critic_network_2(
-          next_time_steps.observation, noisy_target_actions,
+          target_q_input_2,
           next_time_steps.step_type)
       target_q_values = tf.minimum(target_q_values_1, target_q_values_2)
 
@@ -308,10 +310,12 @@ class Td3Agent(tf_agent.TFAgent):
           self._reward_scale_factor * next_time_steps.reward +
           self._gamma * next_time_steps.discount * target_q_values)
 
+      pred_input_1 = (time_steps.observation, actions)
       pred_td_targets_1, _ = self._critic_network_1(
-          time_steps.observation, actions, time_steps.step_type)
+          pred_input_1, time_steps.step_type)
+      pred_input_2 = (time_steps.observation, actions)
       pred_td_targets_2, _ = self._critic_network_2(
-          time_steps.observation, actions, time_steps.step_type)
+          pred_input_2, time_steps.step_type)
       pred_td_targets_all = [pred_td_targets_1, pred_td_targets_2]
 
       if self._debug_summaries:
@@ -364,7 +368,9 @@ class Td3Agent(tf_agent.TFAgent):
     with tf.name_scope('actor_loss'):
       actions, _ = self._actor_network(time_steps.observation,
                                        time_steps.step_type)
-      q_values, _ = self._critic_network_1(time_steps.observation, actions,
+
+      critic_network_input = (time_steps.observation, actions)
+      q_values, _ = self._critic_network_1(critic_network_input,
                                            time_steps.step_type)
 
       actions = nest.flatten(actions)

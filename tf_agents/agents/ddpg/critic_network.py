@@ -29,8 +29,7 @@ class CriticNetwork(network.Network):
   """Creates a critic network."""
 
   def __init__(self,
-               observation_spec,
-               action_spec,
+               input_tensor_spec,
                observation_conv_layer_params=None,
                observation_fc_layer_params=None,
                action_fc_layer_params=None,
@@ -40,10 +39,8 @@ class CriticNetwork(network.Network):
     """Creates an instance of `CriticNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
-      action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
-        actions.
+      input_tensor_spec: A tuple of (observation, action) each a nest of
+        `tensor_spec.TensorSpec` representing the inputs.
       observation_conv_layer_params: Optional list of convolution layer
         parameters for observations, where each item is a length-three tuple
         indicating (num_units, kernel_size, stride).
@@ -62,10 +59,12 @@ class CriticNetwork(network.Network):
         observation.
     """
     super(CriticNetwork, self).__init__(
-        observation_spec=observation_spec,
-        action_spec=action_spec,
+        input_tensor_spec=input_tensor_spec,
+        action_spec=None,
         state_spec=(),
         name=name)
+
+    observation_spec, action_spec = input_tensor_spec
 
     if len(nest.flatten(observation_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
@@ -108,7 +107,8 @@ class CriticNetwork(network.Network):
                 minval=-0.003, maxval=0.003),
             name='value'))
 
-  def call(self, observations, actions, step_type=(), network_state=()):
+  def call(self, inputs, step_type=(), network_state=()):
+    observations, actions = inputs
     del step_type  # unused.
     observations = tf.cast(nest.flatten(observations)[0], tf.float32)
     for layer in self._observation_layers:

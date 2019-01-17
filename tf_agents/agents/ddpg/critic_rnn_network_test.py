@@ -38,10 +38,10 @@ class CriticRnnNetworkTest(tf.test.TestCase):
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
     action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
+    network_input_spec = (observation_spec, action_spec)
     action = tensor_spec.sample_spec_nest(action_spec, outer_dims=(1,))
     net = critic_rnn_network.CriticRnnNetwork(
-        observation_spec,
-        action_spec,
+        network_input_spec,
         observation_conv_layer_params=[(4, 2, 2)],
         observation_fc_layer_params=(4,),
         action_fc_layer_params=(5,),
@@ -50,7 +50,8 @@ class CriticRnnNetworkTest(tf.test.TestCase):
         output_fc_layer_params=(5,),
     )
 
-    q_values, network_state = net(time_step.observation, action,
+    network_input = (time_step.observation, action)
+    q_values, network_state = net(network_input,
                                   time_step.step_type)
 
     self.evaluate(tf.global_variables_initializer())

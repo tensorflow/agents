@@ -252,15 +252,16 @@ class DdpgAgent(tf_agent.TFAgent):
     with tf.name_scope('critic_loss'):
       target_actions, _ = self._target_actor_network(
           next_time_steps.observation, next_time_steps.step_type)
+      target_critic_net_input = (next_time_steps.observation, target_actions)
       target_q_values, _ = self._target_critic_network(
-          next_time_steps.observation, target_actions,
-          next_time_steps.step_type)
+          target_critic_net_input, next_time_steps.step_type)
 
       td_targets = tf.stop_gradient(
           self._reward_scale_factor * next_time_steps.reward +
           self._gamma * next_time_steps.discount * target_q_values)
 
-      q_values, _ = self._critic_network(time_steps.observation, actions,
+      critic_net_input = (time_steps.observation, actions)
+      q_values, _ = self._critic_network(critic_net_input,
                                          time_steps.step_type)
 
       critic_loss = self._td_errors_loss_fn(td_targets, q_values)
@@ -297,7 +298,8 @@ class DdpgAgent(tf_agent.TFAgent):
     with tf.name_scope('actor_loss'):
       actions, _ = self._actor_network(time_steps.observation,
                                        time_steps.step_type)
-      q_values, _ = self._critic_network(time_steps.observation, actions,
+      critic_net_input = (time_steps.observation, actions)
+      q_values, _ = self._critic_network(critic_net_input,
                                          time_steps.step_type)
       actions = nest.flatten(actions)
       dqdas = tf.gradients([q_values], actions)

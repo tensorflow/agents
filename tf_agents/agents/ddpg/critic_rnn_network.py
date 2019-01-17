@@ -35,8 +35,7 @@ class CriticRnnNetwork(network.Network):
   """Creates a recurrent Critic network."""
 
   def __init__(self,
-               observation_spec,
-               action_spec,
+               input_tensor_spec,
                observation_conv_layer_params=None,
                observation_fc_layer_params=(200,),
                action_fc_layer_params=(200,),
@@ -48,10 +47,8 @@ class CriticRnnNetwork(network.Network):
     """Creates an instance of `CriticRnnNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
-      action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
-        actions.
+      input_tensor_spec: A tuple of (observation, action) each of type
+        `tensor_spec.TensorSpec` representing the inputs.
       observation_conv_layer_params: Optional list of convolution layers
         parameters to apply to the observations, where each item is a
         length-three tuple indicating (filters, kernel_size, stride).
@@ -78,6 +75,8 @@ class CriticRnnNetwork(network.Network):
       ValueError: If `observation_spec` or `action_spec` contains more than one
         item.
     """
+    observation_spec, action_spec = input_tensor_spec
+
     if len(nest.flatten(observation_spec)) > 1:
       raise ValueError(
           'Only a single observation is supported by this network.')
@@ -133,7 +132,7 @@ class CriticRnnNetwork(network.Network):
             name='value'))
 
     super(CriticRnnNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=state_spec,
         name=name)
@@ -145,9 +144,11 @@ class CriticRnnNetwork(network.Network):
     self._output_layers = output_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, observation, action, step_type, network_state=None):
+  def call(self, inputs, step_type, network_state=None):
+    observation, action = inputs
+    observation_spec, _ = self.input_tensor_spec
     num_outer_dims = nest_utils.get_outer_rank(observation,
-                                               self.observation_spec)
+                                               observation_spec)
     if num_outer_dims not in (1, 2):
       raise ValueError(
           'Input observation must have a batch or batch x time outer shape.')

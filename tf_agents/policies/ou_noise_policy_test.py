@@ -35,9 +35,9 @@ slim = tf.contrib.slim
 
 class DummyActionNet(network.Network):
 
-  def __init__(self, observation_spec, action_spec):
+  def __init__(self, input_tensor_spec, action_spec):
     super(DummyActionNet, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=(),
         name='DummyActionNet')

@@ -58,7 +58,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
   """Creates an actor producing either Normal or Categorical distribution."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                action_spec,
                input_fc_layer_params=(200, 100),
                output_fc_layer_params=(200, 100),
@@ -71,8 +71,8 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     """Creates an instance of `ActorDistributionRnnNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
       input_fc_layer_params: Optional list of fully_connected parameters, where
@@ -94,10 +94,9 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `observation_spec` contains more than one observation.
+      ValueError: If `input_tensor_spec` contains more than one observation.
     """
-
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
     input_layers = utils.mlp_layers(
@@ -137,7 +136,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         action_spec, projection_distribution_specs)
 
     super(ActorDistributionRnnNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=state_spec,
         output_spec=output_spec,
@@ -151,7 +150,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
 
   def call(self, observation, step_type, network_state=None):
     num_outer_dims = nest_utils.get_outer_rank(observation,
-                                               self.observation_spec)
+                                               self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
       raise ValueError(
           'Input observation must have a batch or batch x time outer shape.')

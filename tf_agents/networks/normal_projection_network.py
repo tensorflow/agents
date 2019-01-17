@@ -74,7 +74,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     output_spec = self._output_distribution_spec(sample_spec)
     super(NormalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
-        observation_spec=None,
+        input_tensor_spec=None,
         action_spec=None,
         state_spec=(),
         output_spec=output_spec,

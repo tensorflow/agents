@@ -61,7 +61,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
 
     super(CategoricalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
-        observation_spec=None,
+        input_tensor_spec=None,
         action_spec=None,
         state_spec=(),
         output_spec=output_spec,

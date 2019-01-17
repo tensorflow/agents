@@ -43,7 +43,7 @@ class ValueNetwork(network.Network):
   """Feed Forward value network. Reduces to 1 value output per batch item."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                fc_layer_params=(75, 40),
                conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
@@ -54,8 +54,8 @@ class ValueNetwork(network.Network):
     outer_rank must be at least 1.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A `tensor_spec.TensorSpec` or a tuple of specs
+        representing the input observations.
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
       conv_layer_params: Optional list of convolution layers parameters, where
@@ -65,17 +65,19 @@ class ValueNetwork(network.Network):
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `observation_spec` contains more than one observation.
+      ValueError: If input_tensor_spec is not an instance of network.InputSpec.
+      ValueError: If `input_tensor_spec.observations` contains more than one
+      observation.
     """
     super(ValueNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=None,
         state_spec=(),
         name=name)
 
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(nest.flatten(input_tensor_spec)) > 1:
       raise ValueError(
-          'Network only supports observation_specs with a single observation.')
+          'Network only supports observation specs with a single observation.')
 
     self._layers = utils.mlp_layers(
         conv_layer_params,
@@ -93,9 +95,8 @@ class ValueNetwork(network.Network):
         ))
 
   def call(self, observation, step_type=None, network_state=()):
-    del step_type  # unused.
-
-    outer_rank = nest_utils.get_outer_rank(observation, self.observation_spec)
+    outer_rank = nest_utils.get_outer_rank(observation,
+                                           self.input_tensor_spec)
     batch_squash = utils.BatchSquash(outer_rank)
 
     states = tf.cast(nest.flatten(observation)[0], tf.float32)

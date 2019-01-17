@@ -50,7 +50,7 @@ class LSTMEncodingNetwork(network.Network):
 
   def __init__(
       self,
-      observation_spec,
+      input_tensor_spec,
       conv_layer_params=None,
       input_fc_layer_params=(75, 40),
       lstm_size=(40,),
@@ -61,8 +61,8 @@ class LSTMEncodingNetwork(network.Network):
     """Creates an instance of `LSTMEncodingNetwork`.
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -80,7 +80,7 @@ class LSTMEncodingNetwork(network.Network):
         scale=2.0, mode='fan_in', distribution='truncated_normal')
 
     input_encoder = encoding_network.EncodingNetwork(
-        observation_spec,
+        input_tensor_spec,
         conv_layer_params=conv_layer_params,
         fc_layer_params=input_fc_layer_params,
         activation_fn=activation_fn,
@@ -108,7 +108,7 @@ class LSTMEncodingNetwork(network.Network):
             name='network_state_spec'), cell.state_size)
 
     super(LSTMEncodingNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=None,
         state_spec=state_spec,
         name=name)
@@ -120,7 +120,7 @@ class LSTMEncodingNetwork(network.Network):
 
   def call(self, observation, step_type, network_state=None):
     num_outer_dims = nest_utils.get_outer_rank(observation,
-                                               self._observation_spec)
+                                               self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
       raise ValueError(
           'Input observation must have a batch or batch x time outer shape.')

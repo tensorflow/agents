@@ -69,7 +69,8 @@ class DummyCriticNet(object):
     del name
     return copy.copy(self)
 
-  def __call__(self, observation, actions, step_type):
+  def __call__(self, inputs, step_type):
+    observation, actions = inputs
     del step_type
     actions = tf.cast(nest.flatten(actions)[0], tf.float32)
 

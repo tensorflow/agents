@@ -88,16 +88,12 @@ class _NetworkMeta(abc.ABCMeta):
 class Network(keras_network.Network):
   """Base extension to Keras network to simplify copy operations."""
 
-  def __init__(self, observation_spec, action_spec, state_spec, name):
+  def __init__(self, input_tensor_spec, action_spec, state_spec, name):
     super(Network, self).__init__(name=name)
-    self._observation_spec = observation_spec
+    self._input_tensor_spec = input_tensor_spec
     self._action_spec = action_spec
     self._state_spec = state_spec
     self._name = name
-
-  @property
-  def observation_spec(self):
-    return self._observation_spec
 
   @property
   def action_spec(self):
@@ -106,6 +102,11 @@ class Network(keras_network.Network):
   @property
   def state_spec(self):
     return self._state_spec
+
+  @property
+  def input_tensor_spec(self):
+    """Returns the spec of the input to the network of type InputSpec."""
+    return self._input_tensor_spec
 
   def copy(self, **kwargs):
     """Create a copy of this network.
@@ -126,10 +127,10 @@ class Network(keras_network.Network):
 class DistributionNetwork(Network):
   """Base class for networks which generate Distributions as their output."""
 
-  def __init__(self, observation_spec, action_spec, state_spec, output_spec,
+  def __init__(self, input_tensor_spec, action_spec, state_spec, output_spec,
                name):
     super(DistributionNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=state_spec,
         name=name)

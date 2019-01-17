@@ -42,7 +42,7 @@ class EncodingNetwork(network.Network):
   """Feed Forward network with CNN and FNN layers.."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                conv_layer_params=None,
                fc_layer_params=None,
                activation_fn=tf.keras.activations.relu,
@@ -51,15 +51,15 @@ class EncodingNetwork(network.Network):
                name='EncodingNetwork'):
     """Creates an instance of `EncodingNetwork`.
 
-    Network supports calls with shape outer_rank + observation_spec.shape. Note
+    Network supports calls with shape outer_rank + input_tensor_spec.shape. Note
     outer_rank must be at least 1.
 
     For example an observation spec with shape (2, 3) will require observations
     with at least a batch size making it shape (1, 2, 3).
 
     Args:
-      observation_spec: A nest of `tensor_spec.TensorSpec` representing the
-        observations.
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -74,10 +74,10 @@ class EncodingNetwork(network.Network):
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `observation_spec` contains more than one observation.
+      ValueError: If `input_tensor_spec` contains more than one observation.
     """
-    if len(nest.flatten(observation_spec)) > 1:
-      raise ValueError('EncodingNetwork only supports observation_specs with '
+    if len(nest.flatten(input_tensor_spec)) > 1:
+      raise ValueError('EncodingNetwork only supports input_tensor_spec with '
                        'a single observation.')
 
     if not (conv_layer_params or fc_layer_params):
@@ -113,7 +113,7 @@ class EncodingNetwork(network.Network):
       ])
 
     super(EncodingNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=None,
         state_spec=(),
         name=name)
@@ -125,7 +125,8 @@ class EncodingNetwork(network.Network):
     del step_type  # unused.
 
     if self._batch_squash:
-      outer_rank = nest_utils.get_outer_rank(observation, self.observation_spec)
+      outer_rank = nest_utils.get_outer_rank(observation,
+                                             self.input_tensor_spec)
       batch_squash = utils.BatchSquash(outer_rank)
 
     # Get single observation out regardless of nesting.

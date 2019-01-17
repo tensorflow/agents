@@ -34,12 +34,12 @@ class DummyActorNetwork(network.Network):
   """Creates an actor network."""
 
   def __init__(self,
-               observation_spec,
+               input_tensor_spec,
                action_spec,
                unbounded_actions=False,
                name=None):
     super(DummyActorNetwork, self).__init__(
-        observation_spec=observation_spec,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         state_spec=(),
         name=name)
@@ -70,9 +70,9 @@ class DummyActorNetwork(network.Network):
 
 class DummyCriticNetwork(network.Network):
 
-  def __init__(self, observation_spec, action_spec, name=None):
+  def __init__(self, input_tensor_spec, name=None):
     super(DummyCriticNetwork, self).__init__(
-        observation_spec, action_spec, state_spec=(), name=name)
+        input_tensor_spec, None, state_spec=(), name=name)
 
     self._obs_layer = tf.keras.layers.Flatten()
     self._action_layer = tf.keras.layers.Flatten()
@@ -82,7 +82,8 @@ class DummyCriticNetwork(network.Network):
         kernel_initializer=tf.constant_initializer([1, 3, 2]),
         bias_initializer=tf.constant_initializer([4]))
 
-  def call(self, observations, actions, step_type=None, network_state=None):
+  def call(self, inputs, step_type=None, network_state=None):
+    observations, actions = inputs
     del step_type
     observations = self._obs_layer(nest.flatten(observations)[0])
     actions = self._action_layer(nest.flatten(actions)[0])
@@ -100,7 +101,8 @@ class TD3AgentTest(tf.test.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]
 
-    self._critic_net = DummyCriticNetwork(self._obs_spec, self._action_spec)
+    input_spec = (self._obs_spec, self._action_spec)
+    self._critic_net = DummyCriticNetwork(input_spec)
     self._bounded_actor_net = DummyActorNetwork(
         self._obs_spec, self._action_spec, unbounded_actions=False)
     self._unbounded_actor_net = DummyActorNetwork(
