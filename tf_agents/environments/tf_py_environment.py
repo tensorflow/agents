@@ -30,7 +30,6 @@ from tf_agents.environments import tf_environment
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
 
-import tensorflow.contrib.eager as tfe  # TF internal
 from tensorflow.python.framework import tensor_shape  # TF internal
 
 nest = tf.contrib.framework.nest
@@ -122,7 +121,7 @@ class TFPyEnvironment(tf_environment.Base):
         return nest.flatten(self._time_step)
 
     with tf.name_scope('current_time_step'):
-      outputs = tfe.py_func(
+      outputs = tf.py_function(
           _current_time_step,
           [],  # No inputs.
           self._time_step_dtypes,
@@ -150,7 +149,7 @@ class TFPyEnvironment(tf_environment.Base):
         self._time_step = self._env.reset()
 
     with tf.name_scope('reset'):
-      reset_op = tfe.py_func(
+      reset_op = tf.py_function(
           _reset,
           [],  # No inputs.
           [],
@@ -197,7 +196,7 @@ class TFPyEnvironment(tf_environment.Base):
               'Expected actions whose major dimension is batch_size (%d), '
               'but saw action with shape %s:\n   %s' % (self.batch_size,
                                                         action.shape, action))
-      outputs = tfe.py_func(
+      outputs = tf.py_function(
           _step,
           flat_actions,
           self._time_step_dtypes,
@@ -216,7 +215,7 @@ class TFPyEnvironment(tf_environment.Base):
     discount = tf.identity(discount, name='discount')
     batch_shape = () if not self.batched else (self.batch_size,)
     batch_shape = tf.TensorShape(batch_shape)
-    if not tfe.executing_eagerly():
+    if not tf.executing_eagerly():
       # Shapes are not required in eager mode.
       reward.set_shape(batch_shape)
       step_type.set_shape(batch_shape)
@@ -226,7 +225,7 @@ class TFPyEnvironment(tf_environment.Base):
     for obs, spec in zip(flat_observations,
                          nest.flatten(self.observation_spec())):
       named_observation = tf.identity(obs, name=spec.name)
-      if not tfe.executing_eagerly():
+      if not tf.executing_eagerly():
         named_observation.set_shape(batch_shape.concatenate(spec.shape))
       named_observations.append(named_observation)
 
