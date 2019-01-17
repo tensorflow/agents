@@ -39,7 +39,7 @@ import gin.tf
 nest = tf.contrib.framework.nest
 
 
-@gin.configurable(module='sac_agent')
+@gin.configurable
 def std_clip_transform(stddevs):
   stddevs = nest.map_structure(
       lambda t: tf.clip_by_value(t, -20, 2),
@@ -47,6 +47,7 @@ def std_clip_transform(stddevs):
   return tf.exp(stddevs)
 
 
+@gin.configurable
 class SacAgent(tf_agent.TFAgent):
   """A SAC Agent."""
 
