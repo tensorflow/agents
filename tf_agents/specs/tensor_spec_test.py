@@ -303,7 +303,13 @@ class FromSpecTest(tf.test.TestCase):
 
 class ToPlaceholderTest(tf.test.TestCase):
 
+  def skipIfExecutingEagerly(self):
+    # With TF 2.0 (or when executing eagerly), these tests do not make sense.
+    if tf.executing_eagerly():
+      self.skipTest("Placeholders do not make sense when executing eagerly")
+
   def testCreatePlaceholderFromTuple(self):
+    self.skipIfExecutingEagerly()
     specs = (
         tensor_spec.TensorSpec(
             shape=(), dtype=tf.float32, name="act_prob"),
@@ -320,6 +326,7 @@ class ToPlaceholderTest(tf.test.TestCase):
     self.assertEqual(ph[1].shape, tf.TensorShape([]))
 
   def testCreatePlaceholderFromTimeStepSpec(self):
+    self.skipIfExecutingEagerly()
     obs_spec = tensor_spec.TensorSpec([2], tf.float32, "obs")
     time_step_spec = ts.time_step_spec(obs_spec)
     ph = tensor_spec.to_nest_placeholder(time_step_spec)
@@ -329,6 +336,7 @@ class ToPlaceholderTest(tf.test.TestCase):
     self.assertEqual(ph.observation.shape, tf.TensorShape([2]))
 
   def testCreatePlaceholderWithNameScope(self):
+    self.skipIfExecutingEagerly()
     obs_spec = tensor_spec.TensorSpec([2], tf.float32, "obs")
     time_step_spec = ts.time_step_spec(obs_spec)
     ph = tensor_spec.to_nest_placeholder(

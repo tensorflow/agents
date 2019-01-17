@@ -33,6 +33,48 @@ from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
 
 
+def next_dataset_element(test_case, dataset):
+  """Utility function to iterate over tf.data.Datasets in both TF 1.x and 2.x.
+
+  TensorFlow 1.x and 2.x have different mechanisms for iterating over elements
+  of a tf.data.Dataset. TensorFlow 1.x would require something like:
+
+  itr = tf.data.Dataset.range(10).make_one_shot_iterator()
+  get_next = itr.get_next()
+  with tf.Session() as sess:
+    for _ in range(10):
+      item = sess.run(get_next)
+      process(item)
+
+  While TensorFlow 2.x enables something simpler like:
+
+  for item in tf.data.Dataset.range(10):
+    process(item)
+
+  That simpler latter form is also available in TensorFlow 1.x when running
+  with eager execution enabled.
+
+  This function accomodates for the differing styles using:
+
+  next_element = next_dataset_element(self, tf.data.Dataset.range(10))
+  for _ in range 10:
+    process(next_element())
+
+  Args:
+    test_case: The tf.test.TestCase object of the test calling this function.
+    dataset: A tf.data.Dataset object.
+
+  Returns:
+    A Python function that returns successive elements from dataset on each call
+    (using test_case.evaluate() in TensorFlow 1.x).
+  """
+  if tf.executing_eagerly():
+    itr = iter(dataset)
+    return lambda: next(itr)
+  get_next = dataset.make_one_shot_iterator().get_next()
+  return lambda: test_case.evaluate(get_next)
+
+
 class FrameBufferTest(tf.test.TestCase):
 
   def testFrameBuffer(self):
@@ -97,19 +139,17 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     # Since data is added in a circular way, we know that frames sampled from
     # the replay buffer should not have values below a given threshold.
     ds = self._replay_buffer.as_dataset()
-    replay_itr = ds.make_one_shot_iterator()
-    tf_trajectory = replay_itr.get_next()
+    next_trajectory = next_dataset_element(self, ds)
     min_value = self._transition_count - self._capacity
-    with self.test_session() as sess:
-      for _ in range(200):
-        traj = sess.run(tf_trajectory)
-        self.assertLessEqual(min_value, traj.observation[0, 0, 0])
-        self.assertAllEqual(traj.observation[:, :, 0] + 1,
-                            traj.observation[:, :, 1])
-        self.assertAllEqual(traj.observation[:, :, 0] + 2,
-                            traj.observation[:, :, 2])
-        self.assertAllEqual(traj.observation[:, :, 0] + 3,
-                            traj.observation[:, :, 3])
+    for _ in range(200):
+      traj = next_trajectory()
+      self.assertLessEqual(min_value, traj.observation[0, 0, 0])
+      self.assertAllEqual(traj.observation[:, :, 0] + 1,
+                          traj.observation[:, :, 1])
+      self.assertAllEqual(traj.observation[:, :, 0] + 2,
+                          traj.observation[:, :, 2])
+      self.assertAllEqual(traj.observation[:, :, 0] + 3,
+                          traj.observation[:, :, 3])
 
   def testSampleDoesNotCrossHead(self):
     np.random.seed(12345)
@@ -150,14 +190,12 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
     ds = self._replay_buffer.as_dataset(sample_batch_size=5)
-    replay_itr = ds.make_one_shot_iterator()
-    tf_trajectory = replay_itr.get_next()
-    self.assertEqual(tf_trajectory.observation.shape.as_list(), [5, 15, 15, 4])
-    self.assertEqual(tf_trajectory.action.shape.as_list(), [5])
-    with self.test_session() as sess:
-      traj = sess.run(tf_trajectory)
-      self.assertEqual(traj.observation.shape, (5, 15, 15, 4))
-      self.assertEqual(traj.step_type.shape, (5,))
+    next_trajectory = next_dataset_element(self, ds)
+    self.assertEqual(list(ds.output_shapes.observation), [5, 15, 15, 4])
+    self.assertEqual(list(ds.output_shapes.action), [5])
+    traj = next_trajectory()
+    self.assertEqual(traj.observation.shape, (5, 15, 15, 4))
+    self.assertEqual(traj.step_type.shape, (5,))
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
@@ -166,16 +204,13 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
     ds = self._replay_buffer.as_dataset(sample_batch_size=5, num_steps=3)
-    replay_itr = ds.make_one_shot_iterator()
-    tf_trajectory = replay_itr.get_next()
-    self.assertEqual(tf_trajectory.observation.shape.as_list(),
-                     [5, 3, 15, 15, 4])
-    self.assertEqual(tf_trajectory.action.shape.as_list(), [5, 3])
+    self.assertEqual(list(ds.output_shapes.observation), [5, 3, 15, 15, 4])
+    self.assertEqual(list(ds.output_shapes.action), [5, 3])
+    next_trajectory = next_dataset_element(self, ds)
 
-    with self.test_session() as sess:
-      traj = sess.run(tf_trajectory)
-      self.assertEqual(traj.observation.shape, (5, 3, 15, 15, 4))
-      self.assertEqual(traj.action.shape, (5, 3))
+    traj = next_trajectory()
+    self.assertEqual(traj.observation.shape, (5, 3, 15, 15, 4))
+    self.assertEqual(traj.action.shape, (5, 3))
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
@@ -184,16 +219,13 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
     ds = self._replay_buffer.as_dataset(num_steps=3)
-    replay_itr = ds.make_one_shot_iterator()
-    tf_trajectory = replay_itr.get_next()
-    self.assertEqual(tf_trajectory.observation.shape.as_list(),
-                     [3, 15, 15, 4])
-    self.assertEqual(tf_trajectory.action.shape.as_list(), [3])
+    self.assertEqual(list(ds.output_shapes.observation), [3, 15, 15, 4])
+    self.assertEqual(list(ds.output_shapes.action), [3])
+    next_trajectory = next_dataset_element(self, ds)
 
-    with self.test_session() as sess:
-      traj = sess.run(tf_trajectory)
-      self.assertEqual(traj.observation.shape, (3, 15, 15, 4))
-      self.assertEqual(traj.action.shape, (3,))
+    traj = next_trajectory()
+    self.assertEqual(traj.observation.shape, (3, 15, 15, 4))
+    self.assertEqual(traj.action.shape, (3,))
 
   @parameterized.named_parameters(
       [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
@@ -202,7 +234,7 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._generate_replay_buffer(rb_cls=rb_cls)
     self.assertEqual(32, self._replay_buffer.size)
 
-    with self.test_session() as sess:
+    with self.cached_session():
       directory = self.get_temp_dir()
       prefix = os.path.join(directory, 'ckpt')
       saver = tf.train.Checkpoint(rb=self._replay_buffer)
@@ -216,11 +248,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
       # Check that replay buffer contains the same items as before
       ds = loaded_rb.as_dataset()
-      replay_itr = ds.make_one_shot_iterator()
-      tf_trajectory = replay_itr.get_next()
+      next_trajectory = next_dataset_element(self, ds)
       min_value = self._transition_count - self._capacity
       for _ in range(200):
-        traj = sess.run(tf_trajectory)
+        traj = next_trajectory()
         self.assertLessEqual(min_value, traj.observation[0, 0, 0])
         self.assertAllEqual(traj.observation[:, :, 0] + 1,
                             traj.observation[:, :, 1])
