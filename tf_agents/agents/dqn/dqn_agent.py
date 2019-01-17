@@ -373,6 +373,7 @@ class DqnAgent(tf_agent.TFAgent):
     return tf.reduce_max(next_target_q_values, -1)
 
 
+@gin.configurable
 class DdqnAgent(DqnAgent):
   """A Double DQN Agent.
 
