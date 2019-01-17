@@ -34,6 +34,7 @@ Currently the following algorithms are available under TF-Agents:
 * TD3: __Addressing Function Approximation Error in Actor-Critic Methods__ Fujimoto et al. https://arxiv.org/abs/1802.09477.
 * REINFORCE: __Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning__ Williams http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 * PPO: __Proximal Policy Optimization Algorithms__ Schulman et al.  http://arxiv.org/abs/1707.06347
+* SAC: __Soft Actor Critic__ Haarnoja et al.  https://arxiv.org/abs/1812.05905
 
 <a id='Tutorials'></a>
 ## Tutorials
