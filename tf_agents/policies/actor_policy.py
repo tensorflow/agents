@@ -30,10 +30,13 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.utils import common
 
+import gin.tf
+
 nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 
+@gin.configurable
 class ActorPolicy(tf_policy.Base):
   """Class to build Actor Policies."""
 
