@@ -22,10 +22,14 @@ from __future__ import print_function
 import abc
 import six
 
+import tensorflow as tf
+
 from tensorflow.keras import layers  # pylint: disable=unused-import
 from tensorflow.python.keras.engine import network as keras_network  # TF internal
 from tensorflow.python.util import tf_decorator  # TF internal
 from tensorflow.python.util import tf_inspect  # TF internal
+
+nest = tf.contrib.framework.nest
 
 
 class _NetworkMeta(abc.ABCMeta):
@@ -122,6 +126,10 @@ class Network(keras_network.Network):
       A copy of this network.
     """
     return type(self)(**dict(self._saved_kwargs, **kwargs))
+
+  def __call__(self, inputs, *args, **kwargs):
+    nest.assert_same_structure(inputs, self.input_tensor_spec)
+    return super(Network, self).__call__(inputs, *args, **kwargs)
 
 
 class DistributionNetwork(Network):

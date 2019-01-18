@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+from tf_agents import specs
 from tf_agents.networks import network
 
 
@@ -43,6 +44,9 @@ class MockNetwork(BaseNetwork):
     self.param2 = param2
     self.kwarg1 = kwarg1
     self.kwarg2 = kwarg2
+
+  def call(self, param1, param2, kwarg1=2, kwarg2=3):
+    pass
 
 
 class NoInitNetwork(MockNetwork):
@@ -76,6 +80,11 @@ class NetworkTest(tf.test.TestCase):
       # pylint: disable=too-many-function-args
       MockNetwork(0, 1, 2, 3, 4, 5, 6)
 
+  def test_assert_input_spec(self):
+    spec = specs.TensorSpec([], tf.int32, 'action')
+    net = MockNetwork(spec, 1)
+    with self.assertRaises(ValueError):
+      net((1, 2), 2)
 
 if __name__ == '__main__':
   tf.test.main()
