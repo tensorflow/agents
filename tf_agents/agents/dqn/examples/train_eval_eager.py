@@ -46,10 +46,6 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 
-from tensorflow.contrib import eager as tfe  # TF internal
-
-nest = tf.contrib.framework.nest
-
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_integer('num_iterations', 100000,
@@ -194,7 +190,7 @@ def train_eval(
         num_parallel_calls=3,
         sample_batch_size=batch_size,
         num_steps=2).prefetch(3)
-    iterator = tfe.Iterator(dataset)
+    iterator = iter(dataset)
 
     for _ in range(num_iterations):
       start_time = time.time()
@@ -203,7 +199,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _ = iterator.get_next()
+        experience, _ = next(iterator)
         train_loss = tf_agent.train(experience, train_step_counter=global_step)
       time_acc += time.time() - start_time
 
@@ -234,9 +230,7 @@ def train_eval(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
-  tfe.enable_eager_execution(
-      config=tf.ConfigProto(allow_soft_placement=True),
-      device_policy=tfe.DEVICE_PLACEMENT_SILENT)
+  tf.enable_eager_execution(config=tf.ConfigProto(allow_soft_placement=True))
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
