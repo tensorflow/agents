@@ -325,8 +325,8 @@ def create_train_step(loss,
   return loss_value
 
 
-def np_function(func=None, get_output_dtypes=None):
-  """Decorator that allow a numpy function used in TF both Eager and Graph.
+def np_function(func=None, output_dtypes=None):
+  """Decorator that allow a numpy function to be used in Eager and Graph modes.
 
   Similar to `tf.py_func` and `tf.py_function` but it doesn't require defining
   the inputs or the dtypes of the outputs a priori.
@@ -337,7 +337,7 @@ def np_function(func=None, get_output_dtypes=None):
   In Graph mode it would create different tf.py_function for each combination
   of dtype of the inputs and cache them for reuse.
 
-  NOTE: In Graph mode: if `get_output_dtypes` is not provided then `func` would
+  NOTE: In Graph mode: if `output_dtypes` is not provided then `func` would
   be called with `np.ones()` to infer the output dtypes, and therefore `func`
   should be stateless.
 
@@ -357,15 +357,21 @@ def np_function(func=None, get_output_dtypes=None):
   def sum(x):
     return np.sum(x)
 
-  @eager_utils.np_function(get_output_dtypes=lambda _: np.float32)
-  def mean(x):
-    return np.mean(x)
-
   inputs = tf.constant([3, 4])
   outputs = sum(inputs)  # Infers that Tout is tf.int64
 
   inputs = tf.constant([3., 4.])
   outputs = sum(inputs)  # Infers that Tout is tf.float32
+
+  # Output dtype is always float32 for valid input dtypes.
+  @eager_utils.np_function(output_dtypes=np.float32)
+  def mean(x):
+    return np.mean(x)
+
+  # Output dtype depends on the input dtype.
+  @eager_utils.np_function(output_dtypes=lambda x: (x, x))
+  def repeat(x):
+    return x, x
 
   with context.graph_mode():
     outputs = sum(tf.constant([3, 4]))
@@ -382,40 +388,60 @@ def np_function(func=None, get_output_dtypes=None):
   Args:
     func: A numpy function, that takes numpy arrays as inputs and return numpy
       arrays as outputs.
-    get_output_dtypes: Optional function that maps input dtypes to output
-      dtypes. Example: lambda x: x (outputs have the same dtype as inputs).
-      If it is not provided in Graph mode the `func` would be called to infe
+    output_dtypes: Optional list of dtypes or a function that maps input dtypes
+      to output dtypes. Examples: output_dtypes=[tf.float32],
+      output_dtypes=lambda x: x (outputs have the same dtype as inputs).
+      If it is not provided in Graph mode the `func` would be called to infer
       the output dtypes.
   Returns:
     A wrapped function that can be used with TF code.
   """
   def decorated(func):
     """Decorated func."""
-    func.memo = {}
+    dtype_map = {}
     def wrapper(*args, **kwargs):
-      """Wrapper."""
-      func_part = func
-      if kwargs:
-        func_part = functools.partial(func, **kwargs)
+      """Wrapper to add nested input and outputs support."""
+      func_with_kwargs = functools.partial(func, **kwargs)
+      def func_flat_outputs(*args):
+        return nest.flatten(func_with_kwargs(*args))
+      def compute_output_dtypes(*args):
+        """Calls the func to compute output dtypes."""
+        result = func(*args, **kwargs)
+        return nest.map_structure(lambda x: x.dtype, result)
       if tf.executing_eagerly():
-        result = func_part(*nest.map_structure(lambda x: x.numpy(), args))
+        result = func_with_kwargs(
+            *nest.map_structure(lambda x: x.numpy(), args))
         convert = lambda x: x if x is None else tf.convert_to_tensor(x)
         return nest.map_structure(convert, result)
       else:
         input_dtypes = tuple([x.dtype for x in nest.flatten(args)])
-        if input_dtypes not in func.memo:
-          if get_output_dtypes is None:
-            zero_args = nest.map_structure(
+        if input_dtypes not in dtype_map:
+          if output_dtypes is None:
+            dummy_args = nest.map_structure(
                 lambda x: np.ones(x.shape, x.dtype.as_numpy_dtype), args)
-            def compute_output_dtypes(*args):
-              """Pass np.ones() as inputs to infer the output dtypes."""
-              result = func_part(*args)
-              return nest.flatten(nest.map_structure(lambda x: x.dtype, result))
-            func.memo[input_dtypes] = compute_output_dtypes(*zero_args)
+            dtype_map[input_dtypes] = compute_output_dtypes(*dummy_args)
+          elif isinstance(output_dtypes, (list, tuple)):
+            # output_dtypes define the output dtypes.
+            dtype_map[input_dtypes] = output_dtypes
           else:
-            func.memo[input_dtypes] = get_output_dtypes(*input_dtypes)
-        output_dtypes = func.memo[input_dtypes]
-        return tf.py_function(func_part, inp=args, Tout=output_dtypes)
+            try:
+              # See if output_dtypes define the output dtype directly.
+              tf.as_dtype(output_dtypes)
+              dtype_map[input_dtypes] = output_dtypes
+            except TypeError:
+              if callable(output_dtypes):
+                # output_dtypes is mapping from input_dtypes to output_dtypes.
+                dtype_map[input_dtypes] = output_dtypes(*input_dtypes)
+              else:
+                raise ValueError(
+                    'output_dtypes not a list of dtypes or a callable.')
+
+      flat_output_dtypes = nest.flatten(dtype_map[input_dtypes])
+      flat_outputs = tf.py_function(func_flat_outputs,
+                                    inp=args,
+                                    Tout=flat_output_dtypes)
+      return nest.pack_sequence_as(dtype_map[input_dtypes], flat_outputs)
+
     return tf_decorator.make_decorator(func, wrapper)
   # This code path is for the `foo = np_function(foo, ...)` use case
   if func is not None:

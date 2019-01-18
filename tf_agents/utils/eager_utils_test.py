@@ -458,9 +458,19 @@ def meshgrid(low, high, nx=2, ny=3):
   return np.meshgrid(x, y)
 
 
-@eager_utils.np_function(get_output_dtypes=lambda _: np.float32)
+@eager_utils.np_function(output_dtypes=np.float32)
 def mean(x):
   return np.mean(x)
+
+
+@eager_utils.np_function(output_dtypes=lambda x: (x, x))
+def repeat(x):
+  return x, x
+
+
+@eager_utils.np_function(output_dtypes=lambda x, y: {'x': x, 'y': y})
+def dictionary(x, y):
+  return {'x': x, 'y': y}
 
 
 class NpFunctionTest(tf.test.TestCase):
@@ -518,13 +528,38 @@ class NpFunctionTest(tf.test.TestCase):
     mean_x = mean(x)
     self.assertEqual(self.evaluate(mean_x), 2.)
 
+  @test_util.run_in_graph_and_eager_modes()
   def testGetOutputDtypesFloats2Floats(self):
     x = tf.constant([1., 2., 3.])
     mean_x = mean(x)
     self.assertEqual(self.evaluate(mean_x), 2.)
 
+  @test_util.run_in_graph_and_eager_modes()
+  def testIdentityDtypes(self):
+    x = tf.constant([1])
+    self.assertAllEqual(self.evaluate(repeat(x)), ([1], [1]))
+    y = tf.constant([1.])
+    self.assertAllEqual(self.evaluate(repeat(y)), ([1.], [1.]))
 
-@eager_utils.np_function(get_output_dtypes=lambda *args: np.float32)
+  @test_util.run_in_graph_and_eager_modes()
+  def testInline(self):
+    square = eager_utils.np_function(np.square)
+    x = tf.constant([1, 2, 3])
+    self.assertAllEqual([1, 4, 9], self.evaluate(square(x)))
+    y = tf.constant([1., 2., 3.])
+    self.assertAllEqual([1., 4., 9.], self.evaluate(square(y)))
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testOutputDictionary(self):
+    x = tf.constant([1])
+    y = tf.constant([1.])
+    outputs = dictionary(x, y)
+    print(outputs)
+    self.assertAllEqual([1], self.evaluate(outputs['x']))
+    self.assertAllEqual([1.], self.evaluate(outputs['y']))
+
+
+@eager_utils.np_function(output_dtypes=np.float32)
 def np_descent(x, d, mu, n_epochs):
   n = len(x)
   f = 2 / n
