@@ -17,6 +17,8 @@
 
 Implements a network that will generate the following layers:
 
+  [optional]: preprocessing_layers  # preprocessing_layers
+  [optional]: (Add | Concat(axis=-1) | ...)  # preprocessing_combiner
   [optional]: Conv2D # input_conv_layer_params
   Flatten
   [optional]: Dense  # input_fc_layer_params
@@ -35,7 +37,6 @@ from tf_agents.environments import time_step
 from tf_agents.networks import dynamic_unroll_layer
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
-from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
@@ -51,18 +52,60 @@ class LSTMEncodingNetwork(network.Network):
   def __init__(
       self,
       input_tensor_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
       conv_layer_params=None,
       input_fc_layer_params=(75, 40),
       lstm_size=(40,),
       output_fc_layer_params=(75, 40),
       activation_fn=tf.keras.activations.relu,
+      dtype=tf.float32,
       name='LSTMEncodingNetwork',
   ):
     """Creates an instance of `LSTMEncodingNetwork`.
 
+    Input preprocessing is possible via `preprocessing_layers` and
+    `preprocessing_combiner` Layers.  If the `preprocessing_layers` nest is
+    shallower than `input_tensor_spec`, then the layers will get the subnests.
+    For example, if:
+
+    ```python
+    input_tensor_spec = ([TensorSpec(3)] * 2, [TensorSpec(3)] * 5)
+    preprocessing_layers = (Layer1(), Layer2())
+    ```
+
+    then preprocessing will call:
+
+    ```python
+    preprocessed = [preprocessing_layers[0](observations[0]),
+                    preprocessing_layers[1](obsrevations[1])]
+    ```
+
+    However if
+
+    ```python
+    preprocessing_layers = ([Layer1() for _ in range(2)],
+                            [Layer2() for _ in range(5)])
+    ```
+
+    then preprocessing will call:
+    ```python
+    preprocessed = [
+      layer(obs) for layer, obs in zip(flatten(preprocessing_layers),
+                                       flatten(observations))
+    ]
+    ```
+
     Args:
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
-        input observations.
+        observations.
+      preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
+        representing preprocessing for the different observations.
+        All of these layers must not be already built.
+      preprocessing_combiner: (Optional.) A keras layer that takes a flat list
+        of tensors and combines them.  Good options include
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
+        This layer must not be already built.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -74,37 +117,47 @@ class LSTMEncodingNetwork(network.Network):
         each item is the number of units in the layer. These are applied on top
         of the recurrent layer.
       activation_fn: Activation function, e.g. tf.keras.activations.relu,.
+      dtype: The dtype to use by the convolution, LSTM, and fully connected
+        layers.
       name: A string representing name of the network.
+
+    Raises:
+      ValueError: If any of `preprocessing_layers` is already built.
+      ValueError: If `preprocessing_combiner` is already built.
     """
     kernel_initializer = tf.variance_scaling_initializer(
         scale=2.0, mode='fan_in', distribution='truncated_normal')
 
     input_encoder = encoding_network.EncodingNetwork(
         input_tensor_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=preprocessing_combiner,
         conv_layer_params=conv_layer_params,
         fc_layer_params=input_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=kernel_initializer)
+        kernel_initializer=kernel_initializer,
+        dtype=dtype)
 
     # Create RNN cell
     if len(lstm_size) == 1:
-      cell = tf.keras.layers.LSTMCell(lstm_size[0])
+      cell = tf.keras.layers.LSTMCell(lstm_size[0], dtype=dtype)
     else:
       cell = tf.keras.layers.StackedRNNCells(
-          [tf.keras.layers.LSTMCell(size) for size in lstm_size])
+          [tf.keras.layers.LSTMCell(size, dtype=dtype) for size in lstm_size])
 
     output_encoder = ([
         tf.keras.layers.Dense(
             num_units,
             activation=activation_fn,
             kernel_initializer=kernel_initializer,
+            dtype=dtype,
             name='/'.join([name, 'dense']))
         for num_units in output_fc_layer_params
     ])
 
     state_spec = nest.map_structure(
         functools.partial(
-            tensor_spec.TensorSpec, dtype=tf.float32,
+            tensor_spec.TensorSpec, dtype=dtype,
             name='network_state_spec'), cell.state_size)
 
     super(LSTMEncodingNetwork, self).__init__(
@@ -119,6 +172,20 @@ class LSTMEncodingNetwork(network.Network):
     self._output_encoder = output_encoder
 
   def call(self, observation, step_type, network_state=None):
+    """Apply the network.
+
+    Args:
+      observation: A tuple of tensors matching `input_tensor_spec`.
+      step_type: A tensor of `StepType.
+      network_state: (optional.) The network state.
+
+    Returns:
+      `(outputs, network_state)` - the network output and next network state.
+
+    Raises:
+      ValueError: If observation tensors lack outer `(batch,)` or
+        `(batch, time)` axes.
+    """
     num_outer_dims = nest_utils.get_outer_rank(observation,
                                                self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
@@ -128,32 +195,24 @@ class LSTMEncodingNetwork(network.Network):
     has_time_dim = num_outer_dims == 2
     if not has_time_dim:
       # Add a time dimension to the inputs.
-      observation = nest.map_structure(lambda t: tf.expand_dims(t, 1),
-                                       observation)
+      observation = nest.map_structure(
+          lambda t: tf.expand_dims(t, 1), observation)
       step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
 
-    state = tf.cast(nest.flatten(observation)[0], tf.float32)
-
-    num_feature_dims = 3 if self._conv_layer_params else 1
-    state.shape.with_rank_at_least(num_feature_dims)
-    batch_squash = utils.BatchSquash(state.shape.ndims - num_feature_dims)
-
-    state = batch_squash.flatten(state)
-    state, network_state = self._input_encoder(state, step_type, network_state)
-    state = batch_squash.unflatten(state)
+    state, network_state = self._input_encoder(
+        observation, step_type, network_state)
 
     with tf.name_scope('reset_mask'):
       reset_mask = tf.equal(step_type, time_step.StepType.FIRST)
+
     # Unroll over the time sequence.
     state, network_state = self._dynamic_unroll(
         state,
         reset_mask,
         initial_state=network_state)
 
-    state = batch_squash.flatten(state)
     for layer in self._output_encoder:
       state = layer(state)
-    state = batch_squash.unflatten(state)
 
     if not has_time_dim:
       # Remove time dimension from the state.

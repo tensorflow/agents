@@ -30,10 +30,8 @@ nest = tf.contrib.framework.nest
 
 
 def validate_specs(action_spec, observation_spec):
-  """Validates the spec contains a single observation and action."""
-  if len(nest.flatten(observation_spec)) > 1:
-    raise ValueError(
-        'Network only supports observation_specs with a single observation.')
+  """Validates the spec contains a single action."""
+  del observation_spec  # not currently validated
 
   flat_action_spec = nest.flatten(action_spec)
   if len(flat_action_spec) > 1:
@@ -51,11 +49,14 @@ class QNetwork(network.Network):
   def __init__(self,
                input_tensor_spec,
                action_spec,
+               preprocessing_layers=None,
+               preprocessing_combiner=None,
                conv_layer_params=None,
                fc_layer_params=(75, 40),
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
                batch_squash=True,
+               dtype=tf.float32,
                name='QNetwork'):
     """Creates an instance of `QNetwork`.
 
@@ -64,6 +65,15 @@ class QNetwork(network.Network):
         input observations.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
+      preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
+        representing preprocessing for the different observations.
+        All of these layers must not be already built.  For more details see
+        the documentation of `networks.EncodingNetwork`.
+      preprocessing_combiner: (Optional.) A keras layer that takes a flat list
+        of tensors and combines them.  Good options include
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
+        This layer must be already built.  For more details see
+        the documentation of `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -75,6 +85,7 @@ class QNetwork(network.Network):
       batch_squash: If True the outer_ranks of the observation are squashed into
         the batch dimension. This allow encoding networks to be used with
         observations with shape [BxTx...].
+      dtype: The dtype to use by the convolution and fully connected layers.
       name: A string representing name of the network.
 
     Raises:
@@ -87,11 +98,14 @@ class QNetwork(network.Network):
 
     encoder = encoding_network.EncodingNetwork(
         input_tensor_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=preprocessing_combiner,
         conv_layer_params=conv_layer_params,
         fc_layer_params=fc_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
-        batch_squash=batch_squash)
+        batch_squash=batch_squash,
+        dtype=dtype)
 
     # TODO(kewa): consider create custom layer flattens/restores nested actions.
     q_value_layer = tf.keras.layers.Dense(
@@ -100,7 +114,8 @@ class QNetwork(network.Network):
         kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
         # TODO(kewa): double check if initialization is needed.
-        bias_initializer=tf.constant_initializer(-0.2))
+        bias_initializer=tf.constant_initializer(-0.2),
+        dtype=dtype)
 
     super(QNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,

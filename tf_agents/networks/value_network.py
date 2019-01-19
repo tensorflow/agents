@@ -79,14 +79,14 @@ class ValueNetwork(network.Network):
       raise ValueError(
           'Network only supports observation specs with a single observation.')
 
-    self._layers = utils.mlp_layers(
+    self._postprocessing_layers = utils.mlp_layers(
         conv_layer_params,
         fc_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.keras.initializers.glorot_uniform(),
         name='input_mlp')
 
-    self._layers.append(
+    self._postprocessing_layers.append(
         tf.keras.layers.Dense(
             1,
             activation=None,
@@ -101,7 +101,7 @@ class ValueNetwork(network.Network):
 
     states = tf.cast(nest.flatten(observation)[0], tf.float32)
     states = batch_squash.flatten(states)
-    for layer in self.layers:
+    for layer in self._postprocessing_layers:
       states = layer(states)
 
     value = tf.reshape(states, [-1])

@@ -113,17 +113,18 @@ class Network(keras_network.Network):
     return self._input_tensor_spec
 
   def copy(self, **kwargs):
-    """Create a copy of this network.
+    """Create a shallow copy of this network.
 
-    **NOTE** Network layer weights are *not* copied; just the parameters
-    passed to the constructor of the original network.
+    **NOTE** Network layer weights are *never* copied.  This method recreates
+    the `Network` instance with the same arguments it was initialized with
+    (excepting any new kwargs).
 
     Args:
       **kwargs: Args to override when recreating this network.  Commonly
         overridden args include 'name'.
 
     Returns:
-      A copy of this network.
+      A shallow copy of this network.
     """
     return type(self)(**dict(self._saved_kwargs, **kwargs))
 

@@ -50,7 +50,7 @@ class AgentTest(tf.test.TestCase):
 
   def setUp(self):
     super(AgentTest, self).setUp()
-    obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
+    obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(obs_spec)
     self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
     self._observation_spec = self._time_step_spec.observation
@@ -126,14 +126,14 @@ class AgentTest(tf.test.TestCase):
         q_network=q_net,
         optimizer=None)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = [tf.constant([[0], [1]], dtype=tf.int32)]
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     expected_loss = 26.0
@@ -150,7 +150,7 @@ class AgentTest(tf.test.TestCase):
         self._action_spec,
         q_network=q_net,
         optimizer=None)
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy()
     action_step = policy.action(time_steps)
@@ -171,7 +171,7 @@ class AgentTest(tf.test.TestCase):
         self._action_spec,
         q_network=q_net,
         optimizer=None)
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy()
     action_step = policy.action(time_steps)

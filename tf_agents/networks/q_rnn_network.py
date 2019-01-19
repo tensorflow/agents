@@ -38,11 +38,14 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
       self,
       input_tensor_spec,
       action_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
       conv_layer_params=None,
       input_fc_layer_params=(75, 40),
       lstm_size=(40,),
       output_fc_layer_params=(75, 40),
       activation_fn=tf.keras.activations.relu,
+      dtype=tf.float32,
       name='QRnnNetwork',
   ):
     """Creates an instance of `QRnnNetwork`.
@@ -52,6 +55,15 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         input observations.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
+      preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
+        representing preprocessing for the different observations.
+        All of these layers must not be already built.  For more details see
+        the documentation of `networks.EncodingNetwork`.
+      preprocessing_combiner: (Optional.) A keras layer that takes a flat list
+        of tensors and combines them.  Good options include
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
+        This layer must be already built.  For more details see
+        the documentation of `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -63,11 +75,14 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         each item is the number of units in the layer. These are applied on top
         of the recurrent layer.
       activation_fn: Activation function, e.g. tf.keras.activations.relu,.
+      dtype: The dtype to use by the convolution, LSTM, and fully connected
+        layers.
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `input_tensor_spec` contains more than one observation. Or
-        If `action_spec` contains more than one action.
+      ValueError: If any of `preprocessing_layers` is already built.
+      ValueError: If `preprocessing_combiner` is already built.
+      ValueError: If `action_spec` contains more than one action.
     """
     q_network.validate_specs(action_spec, input_tensor_spec)
     action_spec = nest.flatten(action_spec)[0]
@@ -79,15 +94,19 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
         bias_initializer=tf.constant_initializer(-0.2),
+        dtype=dtype,
         name='num_action_project/dense')
 
     super(QRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=preprocessing_combiner,
         conv_layer_params=conv_layer_params,
         input_fc_layer_params=input_fc_layer_params,
         lstm_size=lstm_size,
         output_fc_layer_params=output_fc_layer_params,
         activation_fn=activation_fn,
+        dtype=dtype,
         name=name)
 
     self._output_encoder.append(q_projection)
