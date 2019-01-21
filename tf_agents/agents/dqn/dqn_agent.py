@@ -38,6 +38,7 @@ import tensorflow as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
+from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
@@ -107,6 +108,7 @@ class DqnAgent(tf_agent.TFAgent):
       q_network,
       optimizer,
       epsilon_greedy=0.1,
+      boltzmann_temperature=None,
       # Params for target network updates
       target_update_tau=1.0,
       target_update_period=1,
@@ -129,6 +131,9 @@ class DqnAgent(tf_agent.TFAgent):
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method).
+      boltzmann_temperature: Temperature value to use for Boltzmann sampling of
+        the actions during data collection. The closer to 0.0, the higher the
+        probability of choosing the best action.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -160,9 +165,16 @@ class DqnAgent(tf_agent.TFAgent):
           'Action specs should have minimum of 0, but saw: {0}'.format(
               [spec.minimum for spec in flat_action_spec]))
 
+    if epsilon_greedy is not None and boltzmann_temperature is not None:
+      raise ValueError(
+          'Configured both epsilon_greedy value {} and temperature {}, '
+          'however only one of them can be used for exploration.'.format(
+              epsilon_greedy, boltzmann_temperature))
+
     self._q_network = q_network
     self._target_q_network = self._q_network.copy(name='TargetQNetwork')
     self._epsilon_greedy = epsilon_greedy
+    self._boltzmann_temperature = boltzmann_temperature
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._optimizer = optimizer
@@ -176,8 +188,13 @@ class DqnAgent(tf_agent.TFAgent):
     policy = q_policy.QPolicy(
         time_step_spec, action_spec, q_network=self._q_network)
 
-    collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        policy, epsilon=self._epsilon_greedy)
+    if boltzmann_temperature is not None:
+      collect_policy = boltzmann_policy.BoltzmannPolicy(
+          policy, temperature=self._boltzmann_temperature)
+    else:
+      collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+          policy, epsilon=self._epsilon_greedy)
+
     policy = greedy_policy.GreedyPolicy(policy)
 
     super(DqnAgent, self).__init__(
