@@ -74,17 +74,17 @@ class TFPyMetric(tf_metric.TFStepMetric):
     """
     def _call(*flattened_trajectories):
       with _check_not_called_concurrently(self._lock):
+        flat_sequence = [x.numpy() for x in flattened_trajectories]
         packed_trajectories = nest.pack_sequence_as(
             structure=(trajectory),
-            flat_sequence=flattened_trajectories)
+            flat_sequence=flat_sequence)
         return self._py_metric(packed_trajectories)
 
     flattened_trajectories = nest.flatten(trajectory)
-    metric_op = tf.py_func(
+    metric_op = tf.py_function(
         _call,
         flattened_trajectories,
         [],
-        stateful=True,
         name='metric_call_py_func')
 
     with tf.control_dependencies([metric_op]):
@@ -95,11 +95,10 @@ class TFPyMetric(tf_metric.TFStepMetric):
       with _check_not_called_concurrently(self._lock):
         return  self._py_metric.result()
 
-    return tf.py_func(
+    return tf.py_function(
         _result,
         [],
         self._dtype,
-        stateful=True,
         name='metric_result_py_func')
 
   def reset(self):
@@ -107,7 +106,6 @@ class TFPyMetric(tf_metric.TFStepMetric):
       with _check_not_called_concurrently(self._lock):
         return  self._py_metric.reset()
 
-    return tf.py_func(
+    return tf.py_function(
         _reset, [], [],
-        stateful=True,
         name='metric_reset_py_func')
