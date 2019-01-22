@@ -288,11 +288,16 @@ class TrainEval(object):
         self._replay_buffer = (
             py_hashed_replay_buffer.PyHashedReplayBuffer(
                 data_spec=data_spec, capacity=replay_buffer_capacity))
+
+      with tf.device('/cpu:0'):
         ds = self._replay_buffer.as_dataset(
             sample_batch_size=batch_size, num_steps=2).prefetch(4)
+        # TODO(b/123242430): Add prefetch_to_device back here in order to
+        # improve performance once errors are resolved.
         self._ds_itr = ds.make_initializable_iterator()
         experience = self._ds_itr.get_next()
 
+      with tf.device('/gpu:0'):
         self._train_op = tf_agent.train(
             experience,
             train_step_counter=self._global_step)
