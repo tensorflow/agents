@@ -35,13 +35,13 @@ slim = tf.contrib.slim
 
 class DummyActionNet(network.Network):
 
-  def __init__(self, input_tensor_spec, action_spec):
+  def __init__(self, input_tensor_spec, output_tensor_spec):
     super(DummyActionNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=(),
         name='DummyActionNet')
-    single_action_spec = nest.flatten(action_spec)[0]
+    self._output_tensor_spec = output_tensor_spec
+    single_action_spec = nest.flatten(output_tensor_spec)[0]
     self._layers = [
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
@@ -58,14 +58,14 @@ class DummyActionNet(network.Network):
     for layer in self.layers:
       states = layer(states)
 
-    single_action_spec = nest.flatten(self._action_spec)[0]
+    single_action_spec = nest.flatten(self._output_tensor_spec)[0]
     means = tf.reshape(states, [-1] + single_action_spec.shape.as_list())
     spec_means = (single_action_spec.maximum + single_action_spec.minimum) / 2.0
     spec_ranges = (
         single_action_spec.maximum - single_action_spec.minimum) / 2.0
     action_means = spec_means + spec_ranges * means
 
-    return (nest.pack_sequence_as(self._action_spec, [action_means]),
+    return (nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
             network_state)
 
 

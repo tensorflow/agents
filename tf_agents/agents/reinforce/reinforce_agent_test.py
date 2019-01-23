@@ -32,17 +32,20 @@ nest = tf.contrib.framework.nest
 
 class DummyActorNet(network.Network):
 
-  def __init__(self, input_tensor_spec, action_spec, unbounded_actions=False):
+  def __init__(self,
+               input_tensor_spec,
+               output_tensor_spec,
+               unbounded_actions=False):
     # When unbounded_actions=True, we skip the final tanh activation and the
     # action shift and scale. This allows us to compute the actor and critic
     # losses by hand more easily.
     super(DummyActorNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=(),
         name='DummyActorNet')
-    single_action_spec = nest.flatten(action_spec)[0]
+    single_action_spec = nest.flatten(output_tensor_spec)[0]
     activation_fn = None if unbounded_actions else tf.nn.tanh
+    self._output_tensor_spec = output_tensor_spec
     self._layers = [
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements() * 2,
@@ -59,15 +62,15 @@ class DummyActorNet(network.Network):
     for layer in self.layers:
       states = layer(states)
 
-    single_action_spec = nest.flatten(self._action_spec)[0]
+    single_action_spec = nest.flatten(self._output_tensor_spec)[0]
     actions, stdevs = tf.split(states, 2, axis=1)
     actions = tf.reshape(actions, [-1] + single_action_spec.shape.as_list())
     stdevs = tf.reshape(stdevs, [-1] + single_action_spec.shape.as_list())
-    actions = nest.pack_sequence_as(self._action_spec, [actions])
-    stdevs = nest.pack_sequence_as(self._action_spec, [stdevs])
+    actions = nest.pack_sequence_as(self._output_tensor_spec, [actions])
+    stdevs = nest.pack_sequence_as(self._output_tensor_spec, [stdevs])
 
     distribution = nest.map_structure_up_to(
-        self._action_spec, tfp.distributions.Normal, actions, stdevs)
+        self._output_tensor_spec, tfp.distributions.Normal, actions, stdevs)
     return distribution, network_state
 
 

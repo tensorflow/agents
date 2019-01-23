@@ -28,8 +28,8 @@ from tf_agents.networks import network
 class BaseNetwork(network.Network):
 
   # pylint: disable=useless-super-delegation
-  def __init__(self, v1, v2, **kwargs):
-    super(BaseNetwork, self).__init__(v1, v2, **kwargs)
+  def __init__(self, v1, **kwargs):
+    super(BaseNetwork, self).__init__(v1, **kwargs)
   # pylint: enable=useless-super-delegation
 
 
@@ -37,7 +37,6 @@ class MockNetwork(BaseNetwork):
 
   def __init__(self, param1, param2, kwarg1=2, kwarg2=3):
     super(MockNetwork, self).__init__(param1,
-                                      param2,
                                       state_spec=(),
                                       name='mock')
     self.param1 = param1

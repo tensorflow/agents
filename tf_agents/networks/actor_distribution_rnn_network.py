@@ -59,7 +59,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
 
   def __init__(self,
                input_tensor_spec,
-               action_spec,
+               output_tensor_spec,
                input_fc_layer_params=(200, 100),
                output_fc_layer_params=(200, 100),
                conv_layer_params=None,
@@ -72,9 +72,9 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
 
     Args:
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
-        input observations.
-      action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
-        actions.
+        input.
+      output_tensor_spec: A nest of `tensor_spec.BoundedTensorSpec` representing
+        the output.
       input_fc_layer_params: Optional list of fully_connected parameters, where
         each item is the number of units in the layer. This is applied before
         the LSTM cell.
@@ -122,7 +122,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         fc_layer_params=output_fc_layer_params, name='output')
 
     projection_networks = []
-    for single_output_spec in nest.flatten(action_spec):
+    for single_output_spec in nest.flatten(output_tensor_spec):
       if tensor_spec.is_discrete(single_output_spec):
         projection_networks.append(
             categorical_projection_net(single_output_spec))
@@ -133,11 +133,10 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         proj_net.output_spec for proj_net in projection_networks
     ]
     output_spec = nest.pack_sequence_as(
-        action_spec, projection_distribution_specs)
+        output_tensor_spec, projection_distribution_specs)
 
     super(ActorDistributionRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=state_spec,
         output_spec=output_spec,
         name=name)
@@ -147,6 +146,11 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     self._dynamic_unroll = dynamic_unroll_layer.DynamicUnroll(cell)
     self._output_layers = output_layers
     self._projection_networks = projection_networks
+    self._output_tensor_spec = output_tensor_spec
+
+  @property
+  def action_spec(self):
+    return self._action_spec
 
   def call(self, observation, step_type, network_state=None):
     num_outer_dims = nest_utils.get_outer_rank(observation,
@@ -190,4 +194,5 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         for projection in self._projection_networks
     ]
 
-    return nest.pack_sequence_as(self._action_spec, outputs), network_state
+    output_actions = nest.pack_sequence_as(self._output_tensor_spec, outputs)
+    return output_actions, network_state

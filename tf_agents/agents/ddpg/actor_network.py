@@ -32,7 +32,7 @@ class ActorNetwork(network.Network):
 
   def __init__(self,
                input_tensor_spec,
-               action_spec,
+               output_tensor_spec,
                fc_layer_params=None,
                conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
@@ -42,8 +42,8 @@ class ActorNetwork(network.Network):
     Args:
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
         inputs.
-      action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
-        actions.
+      output_tensor_spec: A nest of `tensor_spec.BoundedTensorSpec` representing
+        the outputs.
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
       conv_layer_params: Optional list of convolution layers parameters, where
@@ -56,16 +56,16 @@ class ActorNetwork(network.Network):
       ValueError: If `input_tensor_spec` or `action_spec` contains more than one
         item, or if the action data type is not `float`.
     """
+
     super(ActorNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=(),
         name=name)
 
     if len(nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
-    flat_action_spec = nest.flatten(action_spec)
+    flat_action_spec = nest.flatten(output_tensor_spec)
     if len(flat_action_spec) > 1:
       raise ValueError('Only a single action is supported by this network')
     self._single_action_spec = flat_action_spec[0]
@@ -90,6 +90,8 @@ class ActorNetwork(network.Network):
                 minval=-0.003, maxval=0.003),
             name='action'))
 
+    self._output_tensor_spec = output_tensor_spec
+
   def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
     observations = nest.flatten(observations)
@@ -98,4 +100,6 @@ class ActorNetwork(network.Network):
       output = layer(output)
 
     actions = common_utils.scale_to_spec(output, self._single_action_spec)
-    return nest.pack_sequence_as(self._action_spec, [actions]), network_state
+    output_actions = nest.pack_sequence_as(self._output_tensor_spec, [actions])
+
+    return output_actions, network_state

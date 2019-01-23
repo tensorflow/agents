@@ -36,7 +36,7 @@ slim = tf.contrib.slim
 class DummyActorNet(network.Network):
 
   def __init__(self, action_spec, name=None):
-    super(DummyActorNet, self).__init__(name, None, (), 'DummyActorNet')
+    super(DummyActorNet, self).__init__(name, (), 'DummyActorNet')
     self._action_spec = action_spec
     self._flat_action_spec = nest.flatten(self._action_spec)[0]
 
@@ -72,7 +72,7 @@ class DummyActorDistributionNet(network.DistributionNetwork):
                                      action_spec)
     super(DummyActorDistributionNet, self).__init__(
         name,
-        None, (),
+        (),
         output_spec=output_spec,
         name='DummyActorDistributionNet')
     self._action_net = DummyActorNet(action_spec)
@@ -102,7 +102,7 @@ class DummyActorDistributionNet(network.DistributionNetwork):
 class DummyValueNet(network.Network):
 
   def __init__(self, name=None):
-    super(DummyValueNet, self).__init__(name, None, (), 'DummyValueNet')
+    super(DummyValueNet, self).__init__(name, (), 'DummyValueNet')
     self._layers.append(
         tf.keras.layers.Dense(
             1,

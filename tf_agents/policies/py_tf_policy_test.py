@@ -45,7 +45,7 @@ class DummyNet(network.Network):
       state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
     else:
       state_spec = ()
-    super(DummyNet, self).__init__(name, None, state_spec, None)
+    super(DummyNet, self).__init__(name, state_spec, None)
 
     kernel_initializer = None
     bias_initializer = None

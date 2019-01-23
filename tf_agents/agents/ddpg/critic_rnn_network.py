@@ -133,7 +133,6 @@ class CriticRnnNetwork(network.Network):
 
     super(CriticRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=state_spec,
         name=name)
 

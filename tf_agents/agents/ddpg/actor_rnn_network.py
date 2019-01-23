@@ -38,7 +38,7 @@ class ActorRnnNetwork(network.Network):
 
   def __init__(self,
                input_tensor_spec,
-               action_spec,
+               output_tensor_spec,
                conv_layer_params=None,
                input_fc_layer_params=(200, 100),
                lstm_size=(40,),
@@ -50,8 +50,8 @@ class ActorRnnNetwork(network.Network):
     Args:
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
         input observations.
-      action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
-        actions.
+      output_tensor_spec: A nest of `tensor_spec.BoundedTensorSpec` representing
+        the actions.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -96,7 +96,7 @@ class ActorRnnNetwork(network.Network):
     output_layers = utils.mlp_layers(fc_layer_params=output_fc_layer_params,
                                      name='output')
 
-    flat_action_spec = nest.flatten(action_spec)
+    flat_action_spec = nest.flatten(output_tensor_spec)
     action_layers = [
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
@@ -108,10 +108,10 @@ class ActorRnnNetwork(network.Network):
 
     super(ActorRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=state_spec,
         name=name)
 
+    self._output_tensor_spec = output_tensor_spec
     self._flat_action_spec = flat_action_spec
     self._conv_layer_params = conv_layer_params
     self._input_layers = input_layers
@@ -165,4 +165,5 @@ class ActorRnnNetwork(network.Network):
         action = tf.squeeze(action, axis=1)
       actions.append(action)
 
-    return nest.pack_sequence_as(self._action_spec, actions), network_state
+    output_actions = nest.pack_sequence_as(self._output_tensor_spec, actions)
+    return output_actions, network_state

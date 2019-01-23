@@ -35,19 +35,19 @@ class DummyActorNetwork(network.Network):
 
   def __init__(self,
                input_tensor_spec,
-               action_spec,
+               output_tensor_spec,
                unbounded_actions=False,
                name=None):
     super(DummyActorNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
         state_spec=(),
         name=name)
 
+    self._output_tensor_spec = output_tensor_spec
     self._unbounded_actions = unbounded_actions
     activation = None if unbounded_actions else tf.keras.activations.tanh
 
-    self._single_action_spec = nest.flatten(action_spec)[0]
+    self._single_action_spec = nest.flatten(output_tensor_spec)[0]
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
@@ -65,14 +65,15 @@ class DummyActorNetwork(network.Network):
     if not self._unbounded_actions:
       actions = common_utils.scale_to_spec(actions, self._single_action_spec)
 
-    return nest.pack_sequence_as(self._action_spec, [actions]), network_state
+    output_actions = nest.pack_sequence_as(self._output_tensor_spec, [actions])
+    return output_actions, network_state
 
 
 class DummyCriticNetwork(network.Network):
 
   def __init__(self, input_tensor_spec, name=None):
     super(DummyCriticNetwork, self).__init__(
-        input_tensor_spec, None, state_spec=(), name=name)
+        input_tensor_spec, state_spec=(), name=name)
 
     self._obs_layer = tf.keras.layers.Flatten()
     self._action_layer = tf.keras.layers.Flatten()

@@ -30,7 +30,7 @@ from tensorflow.python.framework import test_util  # TF internal
 class DummyNet(network.Network):
 
   def __init__(self, name=None, num_actions=2):
-    super(DummyNet, self).__init__(name, None, (), 'DummyNet')
+    super(DummyNet, self).__init__(name, (), 'DummyNet')
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,

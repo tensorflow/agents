@@ -128,7 +128,6 @@ class ValueRnnNetwork(network.Network):
 
     super(ValueRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        action_spec=None,
         state_spec=state_spec,
         name=name)
 

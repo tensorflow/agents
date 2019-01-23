@@ -45,7 +45,7 @@ class DummyActorNet(network.DistributionNetwork):
     output_spec = self._get_normal_distribution_spec(action_spec)
     super(DummyActorNet, self).__init__(
         name,
-        None, (),
+        (),
         output_spec=output_spec,
         name='DummyActorNet')
     self._action_spec = action_spec
@@ -93,7 +93,7 @@ class DummyActorNet(network.DistributionNetwork):
 class DummyValueNet(network.Network):
 
   def __init__(self, name=None, outer_rank=1):
-    super(DummyValueNet, self).__init__(name, None, (), 'DummyValueNet')
+    super(DummyValueNet, self).__init__(name, (), 'DummyValueNet')
     self._outer_rank = outer_rank
     self._layers.append(
         tf.keras.layers.Dense(
