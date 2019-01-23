@@ -708,5 +708,85 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     return (expected_shape,)
 
 
+class MockGoalReplayEnvWrapper(wrappers.GoalReplayEnvWrapper):
+  """Mock environment specific implementation of GoalReplayEnvWrapper."""
+
+  def get_trajectory_with_goal(self, trajectory, goal):
+    # In this mock environment, 'obs1' is the goal
+    trajectory.observation.update({'obs1': goal})
+    return trajectory
+
+  def get_goal_from_trajectory(self, trajectory):
+    return trajectory.observation['obs1']
+
+
+class GoalReplayEnvWrapperTest(parameterized.TestCase):
+
+  @parameterized.parameters((['obs1', 'obs2'], [(4,), (5,)], np.int32),
+                            (['obs1', 'obs2', 'obs3'], [(1,), (1,),
+                                                        (4,)], np.float32),
+                            ((['obs1', 'obs2'], [(5, 2), (3, 3)], np.float32)))
+  def test_with_varying_observation_specs(
+      self, observation_keys, observation_shapes, observation_dtypes):
+    """Vary the observation spec and step the environment."""
+    obs_spec = collections.OrderedDict()
+    for idx, key in enumerate(observation_keys):
+      obs_spec[key] = array_spec.ArraySpec(observation_shapes[idx],
+                                           observation_dtypes)
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
+
+    env = random_py_environment.RandomPyEnvironment(
+        obs_spec, action_spec=action_spec)
+    env = MockGoalReplayEnvWrapper(env)
+    random_action = array_spec.sample_bounded_spec(action_spec,
+                                                   np.random.RandomState())
+    time_step = env.step(random_action)
+    self.assertIsInstance(time_step.observation, dict)
+    self.assertEqual(time_step.observation.keys(),
+                     env.observation_spec().keys())
+    time_step = env.reset()
+    self.assertIsInstance(time_step.observation, dict)
+    self.assertEqual(time_step.observation.keys(),
+                     env.observation_spec().keys())
+
+  def test_not_implemented_functions(self):
+    """Wrapper contains functions which need to be implemented in child."""
+    obs_spec = collections.OrderedDict({
+        'obs1': array_spec.ArraySpec((1,), np.int32),
+        'obs2': array_spec.ArraySpec((2,), np.int32),
+    })
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
+
+    env = random_py_environment.RandomPyEnvironment(
+        obs_spec, action_spec=action_spec)
+    with self.assertRaises(TypeError):
+      env = wrappers.GoalReplayEnvWrapper(env)
+
+  def test_batch_env(self):
+    """Test batched version of the environment."""
+    obs_spec = collections.OrderedDict({
+        'obs1': array_spec.ArraySpec((1,), np.int32),
+        'obs2': array_spec.ArraySpec((2,), np.int32),
+    })
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
+
+    # Generate a randomy py environment with batch size.
+    batch_size = 4
+    env = random_py_environment.RandomPyEnvironment(
+        obs_spec, action_spec=action_spec, batch_size=batch_size)
+    env = MockGoalReplayEnvWrapper(env)
+    random_action = array_spec.sample_bounded_spec(action_spec,
+                                                   np.random.RandomState())
+
+    time_step = env.step(random_action)
+    self.assertIsInstance(time_step.observation, dict)
+    self.assertEqual(time_step.observation.keys(),
+                     env.observation_spec().keys())
+    time_step = env.reset()
+    self.assertIsInstance(time_step.observation, dict)
+    self.assertEqual(time_step.observation.keys(),
+                     env.observation_spec().keys())
+
+
 if __name__ == '__main__':
   absltest.main()

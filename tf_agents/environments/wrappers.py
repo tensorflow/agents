@@ -23,7 +23,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import abc
 import numpy as np
+import six
 import tensorflow as tf
 
 from tf_agents.environments import py_environment
@@ -554,3 +556,74 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
       An `ArraySpec` with a shape of the total length of observations kept.
     """
     return self._flattened_observation_spec
+
+
+@six.add_metaclass(abc.ABCMeta)
+class GoalReplayEnvWrapper(PyEnvironmentBaseWrapper):
+  """Adds a goal to the observation, used for HER (Hindsight Experience Replay).
+
+  Sources:
+    [1] Hindsight Experience Replay. https://arxiv.org/abs/1707.01495.
+
+  To use this wrapper, create an environment-specific version by inheriting this
+  class.
+  """
+
+  def __init__(self, env):
+    """Initializes a wrapper to add a goal to the observation.
+
+    Args:
+      env: A `py_environment.Base` environment to wrap.
+
+    Raises:
+      ValueError: If environment observation is not a dict
+    """
+    super(GoalReplayEnvWrapper, self).__init__(env)
+    self._env = env
+    self._goal = None
+
+  @abc.abstractmethod
+  def get_trajectory_with_goal(self, trajectory, goal):
+    """Generates a new trajectory assuming the given goal was the actual target.
+
+    One example is updating a "distance-to-goal" field in the observation. Note
+    that relevant state information must be recovered or re-calculated from the
+    given trajectory.
+
+    Args:
+      trajectory: An instance of `Trajectory`.
+      goal: Environment specific goal
+
+    Returns:
+      Updated instance of `Trajectory`
+
+    Raises:
+      NotImplementedError: function should be implemented in child class.
+    """
+    pass
+
+  @abc.abstractmethod
+  def get_goal_from_trajectory(self, trajectory):
+    """Extracts the goal from a given trajectory.
+
+    Args:
+      trajectory: An instance of `Trajectory`.
+
+    Returns:
+      Environment specific goal
+
+    Raises:
+      NotImplementedError: function should be implemented in child class.
+    """
+    pass
+
+  def reset(self, *args, **kwargs):
+    """Resets the environment, updating the trajectory with goal."""
+    trajectory = self._env.reset(*args, **kwargs)
+    self._goal = self.get_goal_from_trajectory(trajectory)
+    return self.get_trajectory_with_goal(trajectory, self._goal)
+
+  def step(self, *args, **kwargs):
+    """Execute a step in the environment, updating the trajectory with goal."""
+    trajectory = self._env.step(*args, **kwargs)
+    return self.get_trajectory_with_goal(trajectory, self._goal)
