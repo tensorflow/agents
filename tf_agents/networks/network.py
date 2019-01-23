@@ -21,10 +21,11 @@ from __future__ import print_function
 
 import abc
 import six
-
 import tensorflow as tf
 
 from tensorflow.keras import layers  # pylint: disable=unused-import
+from tf_agents.environments import time_step
+from tf_agents.specs import tensor_spec
 from tensorflow.python.keras.engine import network as keras_network  # TF internal
 from tensorflow.python.util import tf_decorator  # TF internal
 from tensorflow.python.util import tf_inspect  # TF internal
@@ -107,10 +108,34 @@ class Network(keras_network.Network):
   def state_spec(self):
     return self._state_spec
 
+  def _build(self):
+    if not self.built and self.input_tensor_spec is not None:
+      random_input = tensor_spec.sample_spec_nest(self.input_tensor_spec,
+                                                  outer_dims=(1,))
+      step_type = tf.expand_dims(time_step.StepType.FIRST, 0)
+      self.__call__(random_input, step_type, None)
+
   @property
   def input_tensor_spec(self):
     """Returns the spec of the input to the network of type InputSpec."""
     return self._input_tensor_spec
+
+  @property
+  def variables(self):
+    """Return the variables for all the network layers.
+
+    Requires that the network has been already built by either calling the
+    network on some input or explicitly calling build().
+
+    Raises:
+      ValueError:  If the network fails to build.
+    """
+    try:
+      self._build()
+    except ValueError as e:
+      raise ValueError("""Failed to call build on the network when accessing
+                          variables. Message: {!r}.""".format(e))
+    return self.weights
 
   def copy(self, **kwargs):
     """Create a shallow copy of this network.

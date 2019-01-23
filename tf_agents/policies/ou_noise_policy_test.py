@@ -100,7 +100,7 @@ class OuNoisePolicyTest(tf.test.TestCase):
     policy = ou_noise_policy.OUNoisePolicy(self._wrapped_policy)
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
     self.assertEqual(policy.action_spec(), self._action_spec)
-    self.assertEqual(policy.variables(), [])
+    self.assertEqual(len(policy.variables()), 2)
 
   def testActionIsInRange(self):
     policy = ou_noise_policy.OUNoisePolicy(self._wrapped_policy)

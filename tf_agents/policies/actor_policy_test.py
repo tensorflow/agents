@@ -121,7 +121,7 @@ class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
 
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
     self.assertEqual(policy.action_spec(), self._action_spec)
-    self.assertEqual(policy.variables(), [])
+    self.assertLen(policy.variables(), 2)
 
   @test_cases()
   def testActionBatch(self, network_ctor):
@@ -142,7 +142,7 @@ class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
     policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
-    self.assertEqual(policy.variables(), [])
+    self.assertLen(policy.variables(), 2)
     new_policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 

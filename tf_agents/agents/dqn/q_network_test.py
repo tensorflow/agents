@@ -127,5 +127,16 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.evaluate(tf.global_variables_initializer())
     self.assertAllClose(q_values, next_q_values)
 
+  def testVariablesBuild(self):
+    num_state_dims = 5
+    network = q_network.QNetwork(
+        input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
+        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1))
+    self.assertFalse(network.built)
+    variables = network.variables
+    self.assertTrue(network.built)
+    self.assertGreater(len(variables), 0)
+
+
 if __name__ == '__main__':
   tf.test.main()

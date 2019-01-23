@@ -46,7 +46,11 @@ class MockNetwork(BaseNetwork):
     self.kwarg2 = kwarg2
 
   def call(self, param1, param2, kwarg1=2, kwarg2=3):
-    pass
+    return []
+
+  @property
+  def weights(self):
+    return [1]
 
 
 class NoInitNetwork(MockNetwork):
@@ -85,6 +89,15 @@ class NetworkTest(tf.test.TestCase):
     net = MockNetwork(spec, 1)
     with self.assertRaises(ValueError):
       net((1, 2), 2)
+
+  def test_variables_calls_build(self):
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    action_spec = specs.TensorSpec([2], tf.float32, 'action')
+    net = MockNetwork(observation_spec, action_spec)
+    self.assertFalse(net.built)
+    variables = net.variables
+    self.assertTrue(net.built)
+    self.assertAllEqual(variables, [1])
 
 if __name__ == '__main__':
   tf.test.main()
