@@ -484,14 +484,11 @@ class PPOAgent(tf_agent.TFAgent):
     return returns, normalized_advantages
 
   def _train(self, experience, weights, train_step_counter):
-    # Change trajectory to transitions.
-    trajectory0 = nest.map_structure(lambda t: t[:, :-1], experience)
-    trajectory1 = nest.map_structure(lambda t: t[:, 1:], experience)
-
     # Get individual tensors from transitions.
     (time_steps, policy_steps_, next_time_steps) = trajectory.to_transition(
-        trajectory0, trajectory1)
+        experience)
     actions = policy_steps_.action
+
     if self._debug_summaries:
       tf.contrib.summary.histogram('actions', actions)
 
