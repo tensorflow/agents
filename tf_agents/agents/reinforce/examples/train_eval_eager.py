@@ -18,7 +18,7 @@ r"""Train and Eval REINFORCE.
 To run:
 
 ```bash
-tf_agents/agents/reinforce/examples/train_eval_gym \
+tf_agents/agents/reinforce/examples/train_eval_eager \
  --root_dir=$HOME/tmp/reinforce/gym/ \
  --alsologtostderr
 """
@@ -41,9 +41,6 @@ from tf_agents.metrics import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
-
-from tensorflow.contrib import eager as tfe  # TF internal
-
 
 nest = tf.contrib.framework.nest
 
@@ -155,7 +152,6 @@ def train_eval(
       eval_metrics_callback(metrics, global_step.numpy())
 
     time_step = None
-    step_state = ()
     policy_state = collect_policy.get_initial_state(tf_env.batch_size)
 
     timed_at_step = global_step.numpy()
@@ -163,9 +159,8 @@ def train_eval(
 
     for _ in range(num_iterations):
       start_time = time.time()
-      time_step, step_state, policy_state = collect_driver.run(
+      time_step, policy_state = collect_driver.run(
           time_step=time_step,
-          step_state=step_state,
           policy_state=policy_state,
       )
       experience = replay_buffer.gather_all()
@@ -200,9 +195,8 @@ def train_eval(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
-  tfe.enable_eager_execution(
-      config=tf.ConfigProto(allow_soft_placement=True),
-      device_policy=tfe.DEVICE_PLACEMENT_SILENT)
+  tf.enable_eager_execution(
+      config=tf.ConfigProto(allow_soft_placement=True))
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
