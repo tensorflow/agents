@@ -51,13 +51,13 @@ class BiasLayer(tf.keras.layers.Layer):
 
   def build(self, input_shape):
     input_shape = tf.TensorShape(input_shape)
+    last_dim = tf.compat.dimension_value(input_shape[-1])
 
-    if input_shape[-1].value is None:
+    if last_dim is None:
       raise ValueError('The last dimension of the inputs to `BiasLayer` '
                        'should be defined. Found `None`.')
 
-    self.input_spec = tf.keras.layers.InputSpec(
-        min_ndim=2, axes={-1: input_shape[-1].value})
+    self.input_spec = tf.keras.layers.InputSpec(min_ndim=2, axes={-1: last_dim})
     self.bias = self.add_weight(
         'bias',
         shape=[input_shape[-1]],
