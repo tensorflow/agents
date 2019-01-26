@@ -21,6 +21,8 @@ from __future__ import print_function
 
 from absl.testing import absltest
 
+import numpy as np
+
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_dm_control
 from tf_agents.environments import utils
@@ -38,6 +40,18 @@ class SuiteDMControlTest(absltest.TestCase):
     self.assertIsInstance(env, py_environment.Base)
 
     utils.validate_py_environment(env)
+
+  def testObservationSpec(self):
+    env = suite_dm_control.load('ball_in_cup', 'catch')
+    obs_spec = env.observation_spec()
+    self.assertEqual(np.float64, obs_spec['position'].dtype)
+    self.assertEqual((4,), obs_spec['position'].shape)
+
+  def testActionSpec(self):
+    env = suite_dm_control.load('ball_in_cup', 'catch')
+    obs_spec = env.observation_spec()
+    self.assertEqual(np.float64, obs_spec['position'].dtype)
+    self.assertEqual((4,), obs_spec['position'].shape)
 
 
 if __name__ == '__main__':

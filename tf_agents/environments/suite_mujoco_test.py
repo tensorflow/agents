@@ -21,6 +21,8 @@ from __future__ import print_function
 
 from absl.testing import absltest
 
+import numpy as np
+
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import wrappers
@@ -42,6 +44,16 @@ class SuiteMujocoTest(absltest.TestCase):
     env = suite_mujoco.load('HalfCheetah-v1')
     self.assertIsInstance(env, py_environment.Base)
     self.assertIsInstance(env, wrappers.TimeLimit)
+
+  def testObservationSpec(self):
+    env = suite_mujoco.load('HalfCheetah-v1')
+    self.assertEqual(np.float32, env.observation_spec().dtype)
+    self.assertEqual((17,), env.observation_spec().shape)
+
+  def testActionSpec(self):
+    env = suite_mujoco.load('HalfCheetah-v1')
+    self.assertEqual(np.float32, env.observation_spec().dtype)
+    self.assertEqual((17,), env.observation_spec().shape)
 
   def testGinConfig(self):
     gin.parse_config_file(

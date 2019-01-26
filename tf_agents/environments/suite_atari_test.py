@@ -60,10 +60,17 @@ class SuiteAtariTest(absltest.TestCase):
     self.assertIsInstance(env, py_environment.Base)
     self.assertIsInstance(env, atari_wrappers.AtariTimeLimit)
 
-  def testAtariObsSpecUnit8(self):
+  def testAtariObsSpec(self):
     env = suite_atari.load('Pong-v0')
     self.assertIsInstance(env, py_environment.Base)
     self.assertEqual(np.uint8, env.observation_spec().dtype)
+    self.assertEqual((84, 84, 1), env.observation_spec().shape)
+
+  def testAtariActionSpec(self):
+    env = suite_atari.load('Pong-v0')
+    self.assertIsInstance(env, py_environment.Base)
+    self.assertEqual(np.int64, env.action_spec().dtype)
+    self.assertEqual((), env.action_spec().shape)
 
 
 if __name__ == '__main__':
