@@ -71,10 +71,7 @@ class TFAgent(tf.contrib.eager.Checkpointable):
       summarize_grads_and_vars: A bool; if true, subclasses should additionally
         collect gradient and variable summaries.
     """
-    common.assert_members_are_not_overridden(
-        base_cls=TFAgent,
-        instance=self,
-        allowed_overrides=set(["_initialize", "_train"]))
+    common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
 
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec

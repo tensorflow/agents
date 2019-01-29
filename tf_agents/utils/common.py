@@ -761,14 +761,43 @@ def replicate(tensor, outer_shape):
   return tf.reshape(tiled_tensor, target_shape)
 
 
-def assert_members_are_not_overridden(base_cls, instance, allowed_overrides=()):
-  """Asserts members of `base_cls` are not overridden in `instance`."""
-  public_members = set([
-      m for m in base_cls.__dict__.keys() if not m.startswith('_')])
-  allowed_overrides = set(allowed_overrides)
+def assert_members_are_not_overridden(base_cls,
+                                      instance,
+                                      white_list=(),
+                                      black_list=()):
+  """Asserts public members of `base_cls` are not overridden in `instance`.
+
+  If both `white_list` and `black_list` are empty, no public member of
+  `base_cls` can be overridden. If a `white_list` is provided, only public
+  members in `white_list` can be overridden. If a `black_list` is provided,
+  all public members except those in `black_list` can be overridden. Both
+  `white_list` and `black_list` cannot be provided at the same, if so a
+  ValueError will be raised.
+
+  Args:
+    base_cls: A Base class.
+    instance: An instance of a subclass of `base_cls`.
+    white_list: Optional list of `base_cls` members that can be overridden.
+    black_list: Optional list of `base_cls` members that cannot be overridden.
+
+  Raises:
+    ValueError if both white_list and black_list are provided.
+  """
+
+  if black_list and white_list:
+    raise ValueError('Both `black_list` and `white_list` cannot be provided.')
+
   instance_type = type(instance)
   subclass_members = set(instance_type.__dict__.keys())
-  common_members = public_members & subclass_members - allowed_overrides
+  public_members = set([
+      m for m in base_cls.__dict__.keys() if not m.startswith('_')])
+  common_members = public_members & subclass_members
+
+  if white_list:
+    common_members = common_members - set(white_list)
+  elif black_list:
+    common_members = common_members & set(black_list)
+
   overridden_members = [
       m for m in common_members
       if base_cls.__dict__[m] != instance_type.__dict__[m]]
