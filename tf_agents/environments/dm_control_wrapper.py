@@ -72,10 +72,10 @@ class DmControlWrapper(wrappers.PyEnvironmentBaseWrapper):
   def physics(self):
     return self._env.physics
 
-  def reset(self):
+  def _reset(self):
     return convert_time_step(self._env.reset())
 
-  def step(self, action):
+  def _step(self, action):
     return convert_time_step(self._env.step(action))
 
   def observation_spec(self):

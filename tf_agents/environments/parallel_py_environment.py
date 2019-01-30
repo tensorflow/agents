@@ -93,7 +93,7 @@ class ParallelPyEnvironment(py_environment.Base):
   def time_step_spec(self):
     return self._time_step_spec
 
-  def reset(self):
+  def _reset(self):
     """Reset all environments and combine the resulting observation.
 
     Returns:
@@ -104,7 +104,7 @@ class ParallelPyEnvironment(py_environment.Base):
       time_steps = [promise() for promise in time_steps]
     return self._stack_time_steps(time_steps)
 
-  def step(self, actions):
+  def _step(self, actions):
     """Forward a batch of actions to the wrapped environments.
 
     Args:

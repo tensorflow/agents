@@ -17,8 +17,6 @@
 
 Adapted from the Deepmind's Environment API as seen in:
   https://github.com/deepmind/dm_control
-
-# TODO(b/120300176) to consider adding current_time_step()
 """
 
 from __future__ import absolute_import
@@ -29,6 +27,7 @@ import abc
 import six
 
 from tf_agents.environments import time_step as ts
+from tf_agents.utils import common
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -42,6 +41,10 @@ class Base(object):
   set of actions and return a batched set of observations, it should overwrite
   the property batched to True.
   """
+
+  def __init__(self):
+    common.assert_members_are_not_overridden(
+        base_cls=Base, instance=self, black_list=('reset', 'step'))
 
   @property
   def batched(self):
@@ -79,9 +82,29 @@ class Base(object):
           'batch_size property' % type(self))
     return None
 
-  @abc.abstractmethod
   def reset(self):
     """Starts a new sequence and returns the first `TimeStep` of this sequence.
+
+    Note: Subclasses cannot override this directly. Subclasses implement
+    _reset() which will be called by this method. The output of _reset() will
+    be cached and made available through current_time_step().
+
+    Returns:
+      A `TimeStep` namedtuple containing:
+        step_type: A `StepType` of `FIRST`.
+        reward: 0.0, indicating the reward.
+        discount: 1.0, indicating the discount.
+        observation: A NumPy array, or a nested dict, list or tuple of arrays
+          corresponding to `observation_spec()`.
+    """
+    self._current_time_step = self._reset()
+    return self._current_time_step
+
+  @abc.abstractmethod
+  def _reset(self):
+    """Starts a new sequence and returns the first `TimeStep` of this sequence.
+
+    Subclasses implement this method, which will be called by reset.
 
     Returns:
       A `TimeStep` namedtuple containing:
@@ -92,7 +115,6 @@ class Base(object):
           corresponding to `observation_spec()`.
     """
 
-  @abc.abstractmethod
   def step(self, action):
     """Updates the environment according to the action and returns a `TimeStep`.
 
@@ -103,6 +125,10 @@ class Base(object):
     This method will also start a new sequence if called after the environment
     has been constructed and `restart` has not been called. Again, in this case
     `action` will be ignored.
+
+    Note: Subclasses cannot override this directly. Subclasses implement
+    _step() which will be called by this method. The output of _step() will be
+    cached and made available through current_time_step().
 
     Args:
       action: A NumPy array, or a nested dict, list or tuple of arrays
@@ -116,6 +142,30 @@ class Base(object):
         observation: A NumPy array, or a nested dict, list or tuple of arrays
           corresponding to `observation_spec()`.
     """
+    self._current_time_step = self._step(action)
+    return self._current_time_step
+
+  @abc.abstractmethod
+  def _step(self, action):
+    """Updates the environment according to the action and returns a `TimeStep`.
+
+    Subclasses implement this method, which will be called by step.
+
+    Args:
+      action: A NumPy array, or a nested dict, list or tuple of arrays
+        corresponding to `action_spec()`.
+
+    Returns:
+      A `TimeStep` namedtuple containing:
+        step_type: A `StepType` value.
+        reward: A NumPy array, reward value for this timestep.
+        discount: A NumPy array, discount in the range [0, 1].
+        observation: A NumPy array, or a nested dict, list or tuple of arrays
+          corresponding to `observation_spec()`.
+    """
+
+  def current_time_step(self):
+    return self._current_time_step
 
   @abc.abstractmethod
   def observation_spec(self):

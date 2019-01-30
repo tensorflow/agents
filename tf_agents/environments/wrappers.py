@@ -49,10 +49,10 @@ class PyEnvironmentBaseWrapper(py_environment.Base):
     """Forward all other calls to the base environment."""
     return getattr(self._env, name)
 
-  def reset(self):
+  def _reset(self):
     return self._env.reset()
 
-  def step(self, action):
+  def _step(self, action):
     return self._env.step(action)
 
   def observation_spec(self):
@@ -75,24 +75,24 @@ class TimeLimit(PyEnvironmentBaseWrapper):
   def __init__(self, env, duration):
     super(TimeLimit, self).__init__(env)
     self._duration = duration
-    self._step = None
+    self._num_steps = None
 
-  def reset(self):
-    self._step = 0
+  def _reset(self):
+    self._num_steps = 0
     return self._env.reset()
 
-  def step(self, action):
-    if self._step is None:
+  def _step(self, action):
+    if self._num_steps is None:
       return self.reset()
 
     time_step = self._env.step(action)
 
-    self._step += 1
-    if self._step >= self._duration:
+    self._num_steps += 1
+    if self._num_steps >= self._duration:
       time_step = time_step._replace(step_type=ts.StepType.LAST)
 
     if time_step.is_last():
-      self._step = None
+      self._num_steps = None
 
     return time_step
 
@@ -117,7 +117,7 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
           'Times parameter ({}) should be greater than 1'.format(times))
     self._times = times
 
-  def step(self, action):
+  def _step(self, action):
     total_reward = 0
 
     for _ in range(self._times):
@@ -165,12 +165,12 @@ class RunStats(PyEnvironmentBaseWrapper):
   def resets(self):
     return self._resets
 
-  def reset(self):
+  def _reset(self):
     self._resets += 1
     self._episode_steps = 0
     return self._env.reset()
 
-  def step(self, action):
+  def _step(self, action):
     time_step = self._env.step(action)
 
     if time_step.is_first():
@@ -278,7 +278,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     mapped_action = [action_map[i][a] for i, a in enumerate(action.flatten())]
     return np.reshape(mapped_action, newshape=action.shape)
 
-  def step(self, action):
+  def _step(self, action):
     """Steps the environment while remapping the actions.
 
     Args:
@@ -299,7 +299,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
 class ActionClipWrapper(PyEnvironmentBaseWrapper):
   """Wraps an environment and clips actions to spec before applying."""
 
-  def step(self, action):
+  def _step(self, action):
     """Steps the environment after clipping the actions.
 
     Args:
@@ -349,7 +349,7 @@ class ActionOffsetWrapper(PyEnvironmentBaseWrapper):
     return array_spec.BoundedArraySpec(spec.shape, spec.dtype, minimum=minimum,
                                        maximum=maximum)
 
-  def step(self, action):
+  def _step(self, action):
     return self._env.step(action + self._env.action_spec().minimum)
 
 
@@ -519,7 +519,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     axis = 1 if is_batched else 0
     return np.concatenate(nest.flatten(observations), axis=axis)
 
-  def step(self, action):
+  def _step(self, action):
     """Steps the environment while packing the observations returned.
 
     Args:
@@ -536,7 +536,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     """
     return self._pack_and_filter_timestep_observation(self._env.step(action))
 
-  def reset(self):
+  def _reset(self):
     """Starts a new sequence and returns the first `TimeStep` of this sequence.
 
     Returns:
@@ -617,13 +617,13 @@ class GoalReplayEnvWrapper(PyEnvironmentBaseWrapper):
     """
     pass
 
-  def reset(self, *args, **kwargs):
+  def _reset(self, *args, **kwargs):
     """Resets the environment, updating the trajectory with goal."""
     trajectory = self._env.reset(*args, **kwargs)
     self._goal = self.get_goal_from_trajectory(trajectory)
     return self.get_trajectory_with_goal(trajectory, self._goal)
 
-  def step(self, *args, **kwargs):
+  def _step(self, *args, **kwargs):
     """Execute a step in the environment, updating the trajectory with goal."""
     trajectory = self._env.step(*args, **kwargs)
     return self.get_trajectory_with_goal(trajectory, self._goal)

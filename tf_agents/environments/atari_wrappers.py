@@ -48,13 +48,13 @@ class FrameStack4(gym.Wrapper):
   def _generate_observation(self):
     return np.concatenate(self._frames, axis=2)
 
-  def reset(self):
+  def _reset(self):
     observation = self._env.reset()
     for _ in range(FrameStack4.STACK_SIZE):
       self._frames.append(observation)
     return self._generate_observation()
 
-  def step(self, action):
+  def _step(self, action):
     observation, reward, done, info = self._env.step(action)
     self._frames.append(observation)
     return self._generate_observation(), reward, done, info
@@ -74,30 +74,30 @@ class AtariTimeLimit(wrappers.PyEnvironmentBaseWrapper):
   def __init__(self, env, duration):
     super(AtariTimeLimit, self).__init__(env)
     self._duration = duration
-    self._step = None
+    self._num_steps = None
 
-  def reset(self):
-    self._step = 0
+  def _reset(self):
+    self._num_steps = 0
     return self._env.reset()
 
-  def step(self, action):
-    if self._step is None:
+  def _step(self, action):
+    if self._num_steps is None:
       return self.reset()
 
     time_step = self._env.step(action)
 
-    self._step += 1
-    if self._step >= self._duration:
+    self._num_steps += 1
+    if self._num_steps >= self._duration:
       time_step = time_step._replace(step_type=ts.StepType.LAST)
 
     if time_step.is_last() and self.game_over:
-      self._step = None
+      self._num_steps = None
 
     return time_step
 
   @property
   def game_over(self):
-    if self._step >= self._duration:
+    if self._num_steps >= self._duration:
       return True
     else:
       return self.gym.game_over

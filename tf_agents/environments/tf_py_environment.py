@@ -101,6 +101,7 @@ class TFPyEnvironment(tf_environment.Base):
     """Returns the underlying Python environment."""
     return self._env
 
+  # TODO(b/123585179): Simplify this using py_environment.current_time_step().
   def current_time_step(self):
     """Returns the current ts.TimeStep.
 

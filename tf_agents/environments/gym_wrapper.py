@@ -121,7 +121,7 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
     """Returns the gym environment info returned on the last step."""
     return self._info
 
-  def reset(self):
+  def _reset(self):
     # TODO(oars): Upcoming update on gym adds **kwargs on reset. Update this to
     # support that.
     observation = self._gym_env.reset()
@@ -136,7 +136,7 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
   def done(self):
     return self._done
 
-  def step(self, action):
+  def _step(self, action):
     # Automatically reset the environments on step if they need to be reset.
     if self._auto_reset and self._done:
       return self.reset()

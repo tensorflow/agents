@@ -100,7 +100,7 @@ class RandomPyEnvironment(py_environment.Base):
       self._reward_fn = reward_fn
 
     self._done = True
-    self._step = 0
+    self._num_steps = 0
     self._min_duration = min_duration
     self._max_duration = max_duration
     self._rng = np.random.RandomState(seed)
@@ -119,7 +119,7 @@ class RandomPyEnvironment(py_environment.Base):
     return array_spec.sample_spec_nest(self._observation_spec, self._rng,
                                        batch_size)
 
-  def reset(self):
+  def _reset(self):
     self._done = False
     return ts.restart(self._get_observation(), self._batch_size)
 
@@ -129,19 +129,19 @@ class RandomPyEnvironment(py_environment.Base):
       raise ValueError('%r != %r. Size of reward must equal the batch size.' %
                        (np.asarray(reward).shape, self._batch_size))
 
-  def step(self, action):
+  def _step(self, action):
     if self._done:
       return self.reset()
 
     if self._action_spec:
       nest.assert_same_structure(self._action_spec, action)
 
-    self._step += 1
+    self._num_steps += 1
 
     observation = self._get_observation()
-    if self._step < self._min_duration:
+    if self._num_steps < self._min_duration:
       self._done = False
-    elif self._max_duration and self._step >= self._max_duration:
+    elif self._max_duration and self._num_steps >= self._max_duration:
       self._done = True
     else:
       self._done = self._rng.uniform() < self._episode_end_probability
@@ -150,7 +150,7 @@ class RandomPyEnvironment(py_environment.Base):
       reward = self._reward_fn(ts.StepType.LAST, action, observation)
       self._check_reward_shape(reward)
       time_step = ts.termination(observation, reward)
-      self._step = 0
+      self._num_steps = 0
     else:
       reward = self._reward_fn(ts.StepType.MID, action, observation)
       self._check_reward_shape(reward)

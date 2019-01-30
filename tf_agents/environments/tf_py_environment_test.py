@@ -53,12 +53,12 @@ class PYEnvironmentMock(py_environment.Base):
     self.resets = 0
     self._state = 0
 
-  def reset(self):
+  def _reset(self):
     self._state = 0
     self.resets += 1
     return ts.restart([self._state])
 
-  def step(self, action):
+  def _step(self, action):
     self._state = (self._state + 1) % 3
     self.steps += 1
     self.actions_taken.append(action)

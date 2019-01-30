@@ -63,11 +63,11 @@ class PyEnvironmentMock(py_environment.Base):
   def batched(self):
     return False
 
-  def reset(self):
+  def _reset(self):
     self._state = 0
     return ts.restart(self._state)
 
-  def step(self, action):
+  def _step(self, action):
     if action < self._action_spec.minimum or action > self._action_spec.maximum:
       raise ValueError('Action should be in [{0}, {1}], but saw: {2}'.format(
           self._action_spec.minimum, self._action_spec.maximum,
