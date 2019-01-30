@@ -30,6 +30,8 @@ from tf_agents.environments import tf_environment
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
 
+# TODO(b/123022201): Use tf.autograph instead.
+from tensorflow.python.autograph.impl import api as autograph  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import tensor_shape  # TF internal
 
 nest = tf.contrib.framework.nest
@@ -102,6 +104,12 @@ class TFPyEnvironment(tf_environment.Base):
     return self._env
 
   # TODO(b/123585179): Simplify this using py_environment.current_time_step().
+  # There currently is a bug causing py_function to resolve variables
+  # incorrectly when used inside autograph code. This decorator tells autograph
+  # to call it directly instead of converting it when called from other
+  # autograph-converted functions.
+  # TODO(b/123600776): Remove override.
+  @autograph.do_not_convert()
   def current_time_step(self):
     """Returns the current ts.TimeStep.
 
@@ -132,6 +140,9 @@ class TFPyEnvironment(tf_environment.Base):
       return self._set_names_and_shapes(step_type, reward, discount,
                                         *flat_observations)
 
+  # Make sure this is called without conversion from tf.function.
+  # TODO(b/123600776): Remove override.
+  @autograph.do_not_convert()
   def reset(self):
     """Returns the current `TimeStep` after resetting the environment.
 
@@ -158,6 +169,9 @@ class TFPyEnvironment(tf_environment.Base):
       with tf.control_dependencies([reset_op]):
         return self.current_time_step()
 
+  # Make sure this is called without conversion from tf.function.
+  # TODO(b/123600776): Remove override.
+  @autograph.do_not_convert()
   def step(self, actions):
     """Returns a TensorFlow op to step the environment.
 
