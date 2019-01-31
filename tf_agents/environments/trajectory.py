@@ -356,7 +356,9 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     else:
       time_source = nest.flatten(reward)[0]
     if tf.contrib.framework.is_tensor(time_source):
-      num_frames = time_source.shape[0].value or tf.shape(time_source)[0]
+      num_frames = (
+          tf.compat.dimension_value(time_source.shape[0]) or
+          tf.shape(time_source)[0])
     else:
       num_frames = np.shape(time_source)[0]
     if discount is None:

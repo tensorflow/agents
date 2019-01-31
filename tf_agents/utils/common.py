@@ -517,7 +517,7 @@ def discounted_future_sum_masked(values, gamma, num_steps, episode_lengths):
     raise ValueError(
         'Input must be a rank 2 tensor.  Got %d.' % values.shape)
 
-  total_steps = values.shape[1].value
+  total_steps = tf.compat.dimension_value(values.shape[1])
   if total_steps is None:
     raise ValueError('total_steps dimension in input '
                      'values[batch_size, total_steps] must be fully defined.')

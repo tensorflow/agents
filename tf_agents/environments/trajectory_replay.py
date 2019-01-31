@@ -92,19 +92,22 @@ class TrajectoryReplay(object):
     trajectory_spec = self._policy.trajectory_spec()
     outer_dims = nest_utils.get_outer_shape(trajectory, trajectory_spec)
 
-    if outer_dims.shape[0].value != 2:
+    if tf.compat.dimension_value(outer_dims.shape[0]) != 2:
       raise ValueError(
           "Expected two outer dimensions, but saw '{}' dimensions.\n"
           "Trajectory:\n{}.\nTrajectory spec from policy:\n{}.".format(
-              outer_dims.shape[0].value, trajectory, trajectory_spec))
+              tf.compat.dimension_value(outer_dims.shape[0]), trajectory,
+              trajectory_spec))
     if self._time_major:
       sequence_length = outer_dims[0]
       batch_size = outer_dims[1]
-      static_batch_size = trajectory.discount.shape[1].value
+      static_batch_size = tf.compat.dimension_value(
+          trajectory.discount.shape[1])
     else:
       batch_size = outer_dims[0]
       sequence_length = outer_dims[1]
-      static_batch_size = trajectory.discount.shape[0].value
+      static_batch_size = tf.compat.dimension_value(
+          trajectory.discount.shape[0])
 
     if policy_state is None:
       policy_state = self._policy.get_initial_state(batch_size)

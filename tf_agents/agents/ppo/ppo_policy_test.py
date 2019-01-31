@@ -249,7 +249,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
         actor_network=actor_network,
         value_network=value_network)
 
-    batch_size = self._time_step.step_type.shape[0].value
+    batch_size = tf.compat.dimension_value(self._time_step.step_type.shape[0])
     policy_state = policy.get_initial_state(batch_size=batch_size)
     value_pred, unused_policy_state = policy.apply_value_network(
         self._time_step.observation, self._time_step.step_type, policy_state)
