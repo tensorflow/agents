@@ -82,7 +82,7 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
       source_vars = tf.contrib.framework.get_model_variables('source')
       target_vars = tf.contrib.framework.get_model_variables('target')
       update_op = common.soft_variables_update(source_vars, target_vars, tau)
-      with self.test_session(graph=g) as sess:
+      with self.cached_session(graph=g) as sess:
         tf.global_variables_initializer().run()
         v_s, v_t = sess.run([source_vars, target_vars])
         sess.run(update_op)
@@ -112,7 +112,7 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
                                                shuffled_target_vars,
                                                tau,
                                                sort_variables_by_name=True)
-      with self.test_session(graph=g) as sess:
+      with self.cached_session(graph=g) as sess:
         tf.global_variables_initializer().run()
         v_s, v_t = sess.run([source_vars, target_vars])
         sess.run(update_op)
@@ -201,7 +201,7 @@ class IndexWithActionsTest(tf.test.TestCase):
     q_values = tf.placeholder(tf.float32, shape=[None, None, None])
     actions = tf.placeholder(tf.int32, shape=[None, None])
     values = common.index_with_actions(q_values, actions)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.assertAllClose(
           [[51, 52]],
           sess.run(values,
@@ -321,7 +321,7 @@ class ClipToSpecTest(tf.test.TestCase):
                                          [3, 3, 3, 3])
     expected_clipped_value = np.array([1, 2, 3, 0])
     clipped_value = common.clip_to_spec(value, spec)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       clipped_value_ = sess.run(clipped_value)
       self.assertAllClose(expected_clipped_value, clipped_value_)
 
@@ -338,7 +338,7 @@ class ScaleToSpecTest(tf.test.TestCase):
     )
     expected_scaled_value = np.array([[[5, -5], [2.0, -2.0], [2.0, 0.0]]])
     scaled_value = common.scale_to_spec(value, spec)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       scaled_value_ = sess.run(scaled_value)
       self.assertAllClose(expected_scaled_value, scaled_value_)
 
@@ -769,7 +769,7 @@ class ReplicateTensorTest(tf.test.TestCase, parameterized.TestCase):
       self.assertEqual(tf.TensorShape(outer_shape + list(value.shape)),
                        tf_replicated_value.shape)
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       feed_dict = {}
       if outer_shape_type == 'placeholder':
         feed_dict = {outer_shape: np.array([2, 1])}

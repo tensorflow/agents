@@ -182,7 +182,7 @@ class AgentTest(tf.test.TestCase):
     latest_checkpoint = tf.train.latest_checkpoint(self.get_temp_dir())
     checkpoint_load_status = checkpoint.restore(latest_checkpoint)
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       checkpoint_load_status.initialize_or_restore(sess)
       self.assertAllEqual(sess.run(action_step.action), [[[0], [0]]])
 

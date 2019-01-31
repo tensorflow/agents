@@ -30,7 +30,7 @@ class MaskedCategoricalTest(tf.test.TestCase):
     probs_tensor = distribution.probs
     logits_tensor = distribution.logits
 
-    with self.test_session() as s:
+    with self.cached_session() as s:
       probs_np = s.run(probs_tensor)
       logits_np = s.run(logits_tensor)
 

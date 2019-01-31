@@ -100,7 +100,7 @@ class NestedTensorsTest(tf.test.TestCase):
     tensor = tf.placeholder(tf.float32, shape=(None, 1))
     spec = tensor_spec.TensorSpec([1], dtype=tf.float32)
     batch_size = nest_utils.get_outer_shape(tensor, spec)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.assertEqual(sess.run(batch_size,
                                 feed_dict={tensor: [[0.0]] * 8}),
                        [8])
@@ -109,7 +109,7 @@ class NestedTensorsTest(tf.test.TestCase):
     tensor = tf.placeholder(tf.float32, shape=(None, 1))
     spec = tensor_spec.TensorSpec([None, 1], dtype=tf.float32)
     batch_size = nest_utils.get_outer_shape(tensor, spec)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.assertEqual(sess.run(batch_size,
                                 feed_dict={tensor: [[0.0]] * 8}), [])
 

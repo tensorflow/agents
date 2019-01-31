@@ -86,7 +86,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
   def testRegularStep(self):
     self._setup_mocks()
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.trainer._initialize_graph(sess)
 
       time_step = ts_restart(0)
@@ -103,7 +103,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
   def testLifeLoss(self):
     self._setup_mocks()
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.trainer._initialize_graph(sess)
 
       time_step = ts_restart(0)
@@ -140,7 +140,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
   def testRegularStepAfterLifeLoss(self):
     self._setup_mocks()
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.trainer._initialize_graph(sess)
 
       time_step = ts_restart(0)
@@ -175,7 +175,7 @@ class AtariTerminalOnLifeLossTest(tf.test.TestCase):
   def testGameOver(self):
     self._setup_mocks()
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       self.trainer._initialize_graph(sess)
 
       time_step = ts_restart(0)

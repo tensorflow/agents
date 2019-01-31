@@ -236,7 +236,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
 
     train_op = agent.train(experience)
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
 
       # Assert that counter starts out at zero.
@@ -355,7 +355,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       }
       train_step = tf.train.get_or_create_global_step()
 
-      with self.test_session() as sess:
+      with self.cached_session() as sess:
         tf.contrib.summary.initialize(session=sess)
 
         (_, _) = (
@@ -612,7 +612,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     loss = agent.adaptive_kl_loss(kl_divergence)
     update = agent.update_adaptive_kl_beta(kl_divergence)
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
 
       # Loss should not change if data kl is target kl.
@@ -652,7 +652,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     kl_divergence = tf.placeholder(shape=[1], dtype=tf.float32)
     updated_adaptive_kl_beta = agent.update_adaptive_kl_beta(kl_divergence)
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
 
       # When KL is target kl, beta should not change.

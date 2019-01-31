@@ -118,7 +118,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
   def testZeroState(self, batch_size):
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
-    with self.test_session():
+    with self.cached_session():
       self.assertTrue(
           np.array_equal(
               policy.get_initial_state(batch_size), expected_initial_state))
@@ -133,7 +133,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
                                       *time_steps)
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
 
-    with self.test_session():
+    with self.cached_session():
       policy_state = policy.get_initial_state(batch_size)
       tf.global_variables_initializer().run()
       action_steps = policy.action(time_steps, policy_state)
@@ -213,7 +213,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
     time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
                                     *time_steps)
 
-    with self.test_session():
+    with self.cached_session():
       tf.global_variables_initializer().run()
       action_steps = policy.action(time_steps)
       self.assertEqual(action_steps.action.shape, (batch_size,))
@@ -232,7 +232,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
     time_steps = fast_map_structure(lambda *arrays: np.stack(arrays),
                                     *time_steps)
 
-    with self.test_session():
+    with self.cached_session():
       initial_state = policy.get_initial_state(batch_size=batch_size)
       self.assertAllEqual(initial_state, np.zeros([5, 1]))
       action_steps = policy.action(time_steps, initial_state)

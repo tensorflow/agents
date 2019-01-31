@@ -99,7 +99,7 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     nest.assert_same_structure(self._action_spec, action_step.action)
 
     self.evaluate(tf.global_variables_initializer())
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       for epsilon in [0.0, 0.2, 0.7, 1.0]:
         # Collect 100 steps with the current value of epsilon.
         actions = []

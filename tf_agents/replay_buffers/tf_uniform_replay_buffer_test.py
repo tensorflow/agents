@@ -79,7 +79,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     values, add_op = _get_add_op(spec, replay_buffer, batch_size)
     sample, _ = replay_buffer.get_next()
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       sess.run(add_op)
       sample_ = sess.run(sample)
@@ -106,7 +106,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     values, add_op = _get_add_op(spec, replay_buffer, batch_size)
     sample, _ = replay_buffer.get_next(sample_batch_size=3)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       sess.run(add_op)
       values_ = sess.run(values)
@@ -126,7 +126,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     items_op = replay_buffer.gather_all()
     last_id_op = replay_buffer._get_last_id()
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       last_id = sess.run(last_id_op)
       empty_items = sess.run(items_op)
@@ -171,7 +171,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         var for var in replay_buffer.variables() if 'Table' in var.name
     ]
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       sess.run(clear_op)
       empty_table_vars = sess.run(table_vars)
@@ -214,7 +214,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     add_op = replay_buffer.add_batch(action)
     (step, next_step), _ = replay_buffer.get_next(num_steps=2,
                                                   time_stacked=False)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(10):
         sess.run(add_op)
@@ -235,7 +235,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     add_op = replay_buffer.add_batch(actions)
     steps, _ = replay_buffer.get_next(num_steps=2)
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(10):
         sess.run(add_op)
@@ -257,7 +257,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     add_op = replay_buffer.add_batch(actions)
     steps, _ = replay_buffer._get_next(3, num_steps=2, time_stacked=True)
     self.assertEqual(steps.shape, [3, 2])
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(10):
         sess.run(add_op)
@@ -282,7 +282,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     add_op = replay_buffer.add_batch(actions)
     items = replay_buffer.gather_all()
     expected = [list(range(i, i + 10)) for i in range(0, batch_size)]
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(10):
         sess.run(add_op)
@@ -309,7 +309,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     expected = [
         list(range(5 + x * 100, 15 + x * 100)) for x in range(batch_size)
     ]
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       for _ in range(15):
         sess.run(add_op)
@@ -327,7 +327,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     items = replay_buffer.gather_all()
     expected = [[]] * batch_size
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       sess.run(tf.global_variables_initializer())
       items_ = sess.run(items)
       self.assertAllClose(expected, items_)
@@ -348,7 +348,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     _, buffer_info = replay_buffer.get_next(
         sample_batch_size=sample_batch_size)
     probabilities = buffer_info.probabilities
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       tf.global_variables_initializer().run()
       num_adds = 3
       for i in range(num_adds):
@@ -374,7 +374,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     _, buffer_info = replay_buffer.get_next()
     probabilities = buffer_info.probabilities
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       tf.global_variables_initializer().run()
       num_adds = 5
       for i in range(1, num_adds):
@@ -402,7 +402,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     _, buffer_info = itr.get_next()
     probabilities = buffer_info.probabilities
 
-    with self.test_session() as sess:
+    with self.cached_session() as sess:
       tf.global_variables_initializer().run()
       itr.initializer.run()
       num_adds = 5

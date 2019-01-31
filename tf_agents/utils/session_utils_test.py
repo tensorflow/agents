@@ -49,7 +49,7 @@ class TfRunnableTest(tf.test.TestCase):
 
   def testTestSessionWithinContextManager(self):
     session_user = MySessionUser()
-    with self.test_session() as session:
+    with self.cached_session() as session:
       self.assertIs(session_user.session, session)
       self.assertEqual(0, session_user.run())
 
@@ -80,7 +80,7 @@ class TfRunnableTest(tf.test.TestCase):
 
   def testSettingSessionTakesPrecedenceOverDefaultSession(self):
     session_user = MySessionUser()
-    with self.test_session() as test_session:
+    with self.cached_session() as test_session:
       session = tf.Session()
       self.assertIsNot(test_session, session)
       self.assertIs(session_user.session, test_session)
