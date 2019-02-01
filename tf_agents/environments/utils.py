@@ -63,3 +63,4 @@ def validate_py_environment(environment, episodes=5):
 
     if time_step.is_last():
       episode_count += 1
+      time_step = environment.reset()
