@@ -139,7 +139,6 @@ def train_eval(
   ]
   eval_summary_writer_flush_op = eval_summary_writer.flush()
 
-  # TODO(kbanoop): Figure out if it is possible to avoid the with block.
   with tf.contrib.summary.record_summaries_every_n_global_steps(
       summary_interval):
     tf.set_random_seed(random_seed)

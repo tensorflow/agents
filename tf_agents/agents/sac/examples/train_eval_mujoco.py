@@ -124,7 +124,6 @@ def train_eval(
       py_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
 
-  # TODO(kbanoop): Figure out if it is possible to avoid the with block.
   with tf.contrib.summary.record_summaries_every_n_global_steps(
       summary_interval):
 
