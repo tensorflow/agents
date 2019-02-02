@@ -320,6 +320,10 @@ def train_eval(
 
 
 def main(_):
+  if tf.executing_eagerly():
+    # self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
+    return
+
   tf.logging.set_verbosity(tf.logging.INFO)
   train_eval(
       FLAGS.root_dir,

@@ -194,6 +194,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       ('FiveEpochs', 5, False),
   ])
   def testTrain(self, num_epochs, use_td_lambda_return):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777119')  # Secondary bug: ('b/123770140')
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -250,6 +252,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       self.assertEqual(num_epochs, counter_)
 
   def testBuildTrainOp(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -327,6 +331,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(1, self.evaluate(train_step))
 
   def testDebugSummaries(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     logdir = self.get_temp_dir()
     with tf.contrib.summary.create_file_writer(
         logdir,
@@ -592,6 +598,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllClose([loss_], [expected_kl_cutoff_loss])
 
   def testAdaptiveKlLoss(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777119')  # Secondary bug: ('b/123770194')
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         self._time_step_spec.observation,
         self._action_spec,
@@ -633,6 +641,8 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       self.assertLess(loss_1, loss_2)
 
   def testUpdateAdaptiveKlBeta(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777119')  # Secondary bug: ('b/123770194')
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         self._time_step_spec.observation,
         self._action_spec,
