@@ -242,6 +242,9 @@ def train_eval(
 
 
 def main(_):
+  if tf.executing_eagerly():
+    # train_eval_eager is already the tf2 version of this file: b/123777589
+    return
   tf.logging.set_verbosity(tf.logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 

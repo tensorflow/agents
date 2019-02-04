@@ -92,6 +92,9 @@ class ReinforceAgentTest(tf.test.TestCase):
     )
 
   def testPolicyGradientLoss(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777433')
+
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,
@@ -113,6 +116,9 @@ class ReinforceAgentTest(tf.test.TestCase):
     self.assertAllClose(loss_.loss, expected_loss)
 
   def testPolicy(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123777433')
+
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,

@@ -318,6 +318,11 @@ def train_eval(
 
 
 def main(_):
+  if tf.executing_eagerly():
+    # Need a tf2 / eager version of this.
+    # Uses lots of sessions & Runs into datasets issue: b/78320626
+    return
+
   root_dir = FLAGS.root_dir
   tf.logging.set_verbosity(tf.logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.config_file, FLAGS.binding)

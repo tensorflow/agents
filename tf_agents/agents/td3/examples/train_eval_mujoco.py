@@ -295,6 +295,11 @@ def train_eval(
 
 
 def main(_):
+  if tf.executing_eagerly():
+    # Need a tf2 / eager version of this.
+    # Uses lots of sessions & Runs into datasets issue: b/78320626
+    return
+
   tf.logging.set_verbosity(tf.logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
