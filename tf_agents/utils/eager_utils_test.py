@@ -498,30 +498,6 @@ class NpFunctionTest(tf.test.TestCase):
     self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.]])
     self.assertAllEqual(self.evaluate(yv), [[0., 0.], [1., 1.]])
 
-  def testPlaceHolder(self):
-    a = tf.placeholder(tf.float32, shape=())
-    b = tf.placeholder(tf.float32, shape=())
-    xv, yv = meshgrid(a, b, nx=2, ny=2)
-    self.evaluate(tf.initializers.global_variables())
-    with self.session() as sess:
-      xv, yv = sess.run([xv, yv], {a: 0, b: 1})
-    self.assertAllEqual(xv, [[0., 1.], [0., 1.]])
-    self.assertAllEqual(yv, [[0., 0.], [1., 1.]])
-
-  def testPlaceHolderWithDefault(self):
-    a = tf.placeholder_with_default(0, ())
-    b = tf.placeholder_with_default(1, ())
-    xv, yv = meshgrid(a, b, nx=2, ny=2)
-    self.evaluate(tf.initializers.global_variables())
-    with self.session() as sess:
-      xv_np, yv_np = sess.run([xv, yv])
-    self.assertAllEqual(xv_np, [[0., 1.], [0., 1.]])
-    self.assertAllEqual(yv_np, [[0., 0.], [1., 1.]])
-    with self.session() as sess:
-      xv_np, yv_np = sess.run([xv, yv], {a: 0., b: 2.})
-    self.assertAllEqual(xv_np, [[0., 2.], [0., 2.]])
-    self.assertAllEqual(yv_np, [[0., 0.], [2., 2.]])
-
   @test_util.run_in_graph_and_eager_modes()
   def testGetOutputDtypesInts2Floats(self):
     x = tf.constant([1, 2, 3])
@@ -554,7 +530,6 @@ class NpFunctionTest(tf.test.TestCase):
     x = tf.constant([1])
     y = tf.constant([1.])
     outputs = dictionary(x, y)
-    print(outputs)
     self.assertAllEqual([1], self.evaluate(outputs['x']))
     self.assertAllEqual([1.], self.evaluate(outputs['y']))
 
