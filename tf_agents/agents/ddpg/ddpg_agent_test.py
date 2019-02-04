@@ -148,6 +148,8 @@ class DdpgAgentTest(tf.test.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   def testActorLoss(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123537776')
     agent = ddpg_agent.DdpgAgent(
         self._time_step_spec,
         self._action_spec,
