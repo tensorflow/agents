@@ -117,7 +117,7 @@ class AgentTest(tf.test.TestCase):
       agent_class(
           self._time_step_spec, action_spec, q_network=q_net, optimizer=None)
 
-  # TODO(kbanoop): Add a test where the target network has different values.
+  # TODO(b/123890005): Add a test where the target network has different values.
   def testLoss(self, agent_class):
     q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
@@ -138,10 +138,10 @@ class AgentTest(tf.test.TestCase):
 
     expected_loss = 26.0
     loss_info = agent._loss(time_steps, actions, next_time_steps)
-    total_loss = loss_info.loss
-
     self.evaluate(tf.initialize_all_variables())
-    self.assertAllClose(self.evaluate(total_loss), expected_loss)
+    total_loss, _ = self.evaluate(loss_info)
+
+    self.assertAllClose(total_loss, expected_loss)
 
   def testPolicy(self, agent_class):
     q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
