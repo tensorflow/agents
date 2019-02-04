@@ -88,6 +88,9 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     self.checkActionDistribution(actions, epsilon, num_steps)
 
   def testTensorEpsilon(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770194')
+
     epsilon_ph = tf.placeholder(tf.float32, shape=())
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(self._policy,
                                                        epsilon=epsilon_ph)
