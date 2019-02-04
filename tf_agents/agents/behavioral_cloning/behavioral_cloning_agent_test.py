@@ -121,13 +121,14 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         reward=rewards,
         discount=discounts)
     loss_info = agent._loss(experience)
-    total_loss = loss_info.loss
+
+    self.evaluate(tf.initialize_all_variables())
+    total_loss, _ = self.evaluate(loss_info)
 
     expected_loss = tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=cloning_net(observations)[0], labels=actions[0]))
 
-    self.evaluate(tf.initialize_all_variables())
     self.assertAllClose(total_loss, expected_loss)
 
   def testTrain(self):
@@ -145,7 +146,11 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         optimizer=tf.train.AdamOptimizer(learning_rate=0.01))
     # Remove policy_info, as BehavioralCloningAgent expects none.
     traj = traj.replace(policy_info=())
-    train_and_loss = agent.train(traj)
+    # TODO(b/123883319) convert to tf.function.
+    if tf.executing_eagerly():
+      train_and_loss = lambda: agent.train(traj)
+    else:
+      train_and_loss = agent.train(traj)
     replay = trajectory_replay.TrajectoryReplay(agent.policy())
     self.evaluate(tf.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
@@ -169,7 +174,11 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         optimizer=tf.train.AdamOptimizer(learning_rate=0.01))
     # Remove policy_info, as BehavioralCloningAgent expects none.
     traj = traj.replace(policy_info=())
-    train_and_loss = agent.train(traj)
+    # TODO(b/123883319) convert to tf.function.
+    if tf.executing_eagerly():
+      train_and_loss = lambda: agent.train(traj)
+    else:
+      train_and_loss = agent.train(traj)
     replay = trajectory_replay.TrajectoryReplay(agent.policy())
     self.evaluate(tf.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
