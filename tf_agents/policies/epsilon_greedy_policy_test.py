@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for learning.reinforcement_learning.policies.epsilon_greedy_policy."""
+"""Tests for tf_agents.policies.epsilon_greedy_policy."""
 
 from __future__ import absolute_import
 from __future__ import division

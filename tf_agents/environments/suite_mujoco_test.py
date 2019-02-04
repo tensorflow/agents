@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for learning.reinforcement_learning.environments.suite_mujoco."""
+"""Tests for tf_agents.environments.suite_mujoco."""
 
 from __future__ import absolute_import
 from __future__ import division
