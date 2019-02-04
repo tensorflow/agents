@@ -135,7 +135,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     with self.cached_session():
       policy_state = policy.get_initial_state(batch_size)
-      tf.global_variables_initializer().run()
+      self.evaluate(tf.global_variables_initializer())
       action_steps = policy.action(time_steps, policy_state)
       self.assertEqual(action_steps.action.dtype, np.int32)
       if batch_size is None:
@@ -214,7 +214,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
                                     *time_steps)
 
     with self.cached_session():
-      tf.global_variables_initializer().run()
+      self.evaluate(tf.global_variables_initializer())
       action_steps = policy.action(time_steps)
       self.assertEqual(action_steps.action.shape, (batch_size,))
       for a in action_steps.action:
