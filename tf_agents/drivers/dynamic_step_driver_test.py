@@ -32,6 +32,9 @@ nest = tf.contrib.framework.nest
 class DynamicStepDriverTest(tf.test.TestCase):
 
   def testOneStepUpdatesObservers(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123880556')
+
     env = tf_py_environment.TFPyEnvironment(
         driver_test_utils.PyEnvironmentMock())
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
@@ -95,6 +98,9 @@ class DynamicStepDriverTest(tf.test.TestCase):
     self.assertEqual(self.evaluate(num_episodes_observer1.num_episodes), 2)
 
   def testOneStepReplayBufferObservers(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123880556')
+
     env = tf_py_environment.TFPyEnvironment(
         driver_test_utils.PyEnvironmentMock())
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),

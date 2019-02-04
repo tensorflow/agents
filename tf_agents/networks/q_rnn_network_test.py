@@ -47,6 +47,9 @@ class QRnnNetworkTest(tf.test.TestCase):
     self.assertEqual((1, 40), state[1].shape)
 
   def test_network_can_preprocess_and_combine(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123776211')
+
     batch_size = 3
     frames = 5
     num_actions = 2
@@ -76,6 +79,9 @@ class QRnnNetworkTest(tf.test.TestCase):
     self.assertGreater(len(network.trainable_variables), 4)
 
   def test_network_can_preprocess_and_combine_no_time_dim(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123776211')
+
     batch_size = 3
     num_actions = 2
     lstm_size = 5

@@ -120,6 +120,9 @@ class TD3AgentTest(tf.test.TestCase):
         )
 
   def testCriticLoss(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123772477')
+
     agent = td3_agent.Td3Agent(
         self._time_step_spec,
         self._action_spec,

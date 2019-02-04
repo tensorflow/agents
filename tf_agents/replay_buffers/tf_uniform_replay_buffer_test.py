@@ -91,11 +91,11 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=1, max_length=10)
 
-    sample, _ = replay_buffer.get_next()
-    self.evaluate(tf.global_variables_initializer())
     with self.assertRaisesRegexp(
         tf.errors.InvalidArgumentError, 'TFUniformReplayBuffer is empty. Make '
         'sure to add items before sampling the buffer.'):
+      self.evaluate(tf.global_variables_initializer())
+      sample, _ = replay_buffer.get_next()
       self.evaluate(sample)
 
   def testAddSingleSampleBatch(self):
@@ -115,6 +115,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
                        values_, sample_)
 
   def testClear(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123886086')
     batch_size = 1
     spec = self._data_spec()
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
@@ -147,6 +149,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
                        self.evaluate(items_op))
 
   def testClearAllVariables(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123886086')
     batch_size = 1
     spec = self._data_spec()
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
@@ -203,6 +207,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testMultiStepSampling(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123885577')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
@@ -225,6 +231,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testMultiStepStackedSampling(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123885577')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
@@ -246,6 +254,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testMultiStepStackedBatchedSampling(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123885577')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
@@ -268,6 +278,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testGatherAll(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123883577')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
@@ -292,6 +304,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testGatherAllOverCapacity(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123883577')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size, max_length=10)
@@ -335,6 +349,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testSampleBatchCorrectProbabilities(self, buffer_batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=buffer_batch_size, max_length=4)
@@ -362,6 +378,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testSampleSingleCorrectProbability(self, buffer_batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
     max_length = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
@@ -387,6 +405,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testSampleSingleCorrectProbabilityAsDataset(self, buffer_batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123771990')
     max_length = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(

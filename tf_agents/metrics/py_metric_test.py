@@ -47,6 +47,8 @@ class DummyMetric(py_metric.PyStepMetric):
 class PyMetricTest(tf.test.TestCase):
 
   def testBuildsSummary(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881100')
     metric = DummyMetric()
     self.assertIsNone(metric.summary_op)
     metric.tf_summaries()
@@ -85,6 +87,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     return list(tf.train.summary_iterator(file_path))
 
   def testSummarySimple(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881100')
     with tf.contrib.summary.always_record_summaries():
       self.metric1.tf_summaries()
       self.metric2.tf_summaries()
@@ -105,6 +109,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     self.assert_summary_equals(records, 'Metric2', 0, 0)
 
   def testSummaryUpdates(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881100')
     with tf.contrib.summary.always_record_summaries():
       self.metric1.tf_summaries()
       self.metric2.tf_summaries()
@@ -132,6 +138,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     self.assert_summary_equals(records, 'Metric2', 1, 2)
 
   def testSummaryStepMetrics(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881100')
     with tf.contrib.summary.always_record_summaries():
       self.metric1.tf_summaries(step_metrics=(self.metric2,))
       self.metric2.tf_summaries(step_metrics=(self.metric2,))
@@ -155,6 +163,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     self.assert_summary_equals(records, 'Metric2', 0, 2)
 
   def testSummaryStepMetricsUpdate(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881100')
     with tf.contrib.summary.always_record_summaries():
       self.metric1.tf_summaries(step_metrics=(self.metric2,))
       self.metric2.tf_summaries(step_metrics=(self.metric2,))
@@ -179,6 +189,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     self.assert_summary_equals(records, 'vs_Metric2/Metric1', 3, 4)
 
   def testSummaryMultipleStepMetrics(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881100')
     with tf.contrib.summary.always_record_summaries():
       self.metric1.tf_summaries(step_metrics=(self.metric2, self.metric3))
       self.metric2.tf_summaries(step_metrics=(self.metric2, self.metric3))

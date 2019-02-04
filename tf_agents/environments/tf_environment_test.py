@@ -58,6 +58,7 @@ class TFEnvironmentMock(tf_environment.Base):
       self.resets = tf.Variable(0, name='resets')
 
   def current_time_step(self):
+
     def first():
       return (tf.constant(FIRST, dtype=tf.int32),
               tf.constant(0.0, dtype=tf.float32),
@@ -115,6 +116,8 @@ class TFEnvironmentTest(tf.test.TestCase):
     self.assertEqual(0, self.evaluate(tf_env.episodes))
 
   def testMultipleReset(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881612')
     tf_env = TFEnvironmentMock()
     reset_op = tf_env.reset()
     self.evaluate(tf.global_variables_initializer())
@@ -172,6 +175,8 @@ class TFEnvironmentTest(tf.test.TestCase):
     self.assertEqual(0, self.evaluate(tf_env.episodes))
 
   def testCurrentStep(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881612')
     tf_env = TFEnvironmentMock()
     time_step = tf_env.current_time_step()
     with tf.control_dependencies([time_step.step_type]):
@@ -278,6 +283,8 @@ class TFEnvironmentTest(tf.test.TestCase):
     self.assertEqual(0, self.evaluate(tf_env.episodes))
 
   def testRunEpisode(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123881612')
     tf_env = TFEnvironmentMock()
     time_step = tf_env.reset()
     c = lambda t: tf.logical_not(t.is_last())
