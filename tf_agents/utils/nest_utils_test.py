@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import numpy as np
 import tensorflow as tf
 from tf_agents.specs import array_spec
@@ -97,21 +96,16 @@ class NestedTensorsTest(tf.test.TestCase):
     self.assertAllEqual(self.evaluate(batch_dim), [7, 5])
 
   def testGetOuterShapeDynamicShapeBatched(self):
-    tensor = tf.placeholder(tf.float32, shape=(None, 1))
     spec = tensor_spec.TensorSpec([1], dtype=tf.float32)
-    batch_size = nest_utils.get_outer_shape(tensor, spec)
-    with self.cached_session() as sess:
-      self.assertEqual(sess.run(batch_size,
-                                feed_dict={tensor: [[0.0]] * 8}),
-                       [8])
+    tensor = tf.convert_to_tensor([[0.0]] * 8)
+    batch_size = self.evaluate(nest_utils.get_outer_shape(tensor, spec))
+    self.assertAllEqual(batch_size, [8])
 
   def testGetOuterShapeDynamicShapeNotBatched(self):
-    tensor = tf.placeholder(tf.float32, shape=(None, 1))
     spec = tensor_spec.TensorSpec([None, 1], dtype=tf.float32)
-    batch_size = nest_utils.get_outer_shape(tensor, spec)
-    with self.cached_session() as sess:
-      self.assertEqual(sess.run(batch_size,
-                                feed_dict={tensor: [[0.0]] * 8}), [])
+    tensor = tf.convert_to_tensor([[0.0]] * 8)
+    batch_size = self.evaluate(nest_utils.get_outer_shape(tensor, spec))
+    self.assertEqual(batch_size, [])
 
   def testGetOuterDimsSingleTensorUnbatched(self):
     tensor = tf.zeros([2, 3], dtype=tf.float32)
@@ -539,8 +533,10 @@ class NestedArraysTest(tf.test.TestCase):
       A nested tuple of arrays matching the spec.
     """
     outer_dims = outer_dims or []
+
     def _zeros(spec):
       return np.zeros(type(spec.shape)(outer_dims) + spec.shape, spec.dtype)
+
     return nest.map_structure(_zeros, specs)
 
   def testUnstackNestedArrays(self):
