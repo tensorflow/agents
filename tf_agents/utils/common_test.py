@@ -74,54 +74,52 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters(0.0, 0.5, 1.0)
   def testUpdateOnlyTargetVariables(self, tau):
-    with tf.Graph().as_default() as g:
-      inputs = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-      tf.contrib.layers.fully_connected(inputs, 2, scope='source')
-      tf.contrib.layers.fully_connected(inputs, 2, scope='target')
+    inputs = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    tf.contrib.layers.fully_connected(inputs, 2, scope='source')
+    tf.contrib.layers.fully_connected(inputs, 2, scope='target')
 
-      source_vars = tf.contrib.framework.get_model_variables('source')
-      target_vars = tf.contrib.framework.get_model_variables('target')
-      update_op = common.soft_variables_update(source_vars, target_vars, tau)
-      with self.cached_session(graph=g) as sess:
-        tf.global_variables_initializer().run()
-        v_s, v_t = sess.run([source_vars, target_vars])
-        sess.run(update_op)
-        new_v_s, new_v_t = sess.run([source_vars, target_vars])
-        for i_v_s, i_v_t, n_v_s, n_v_t in zip(v_s, v_t, new_v_s, new_v_t):
-          # Source variables don't change
-          self.assertAllClose(n_v_s, i_v_s)
-          # Target variables are updated
-          self.assertAllClose(n_v_t, tau*i_v_s + (1-tau)*i_v_t)
+    source_vars = tf.contrib.framework.get_model_variables('source')
+    target_vars = tf.contrib.framework.get_model_variables('target')
+    update_op = common.soft_variables_update(source_vars, target_vars, tau)
+
+    self.evaluate(tf.global_variables_initializer())
+    v_s, v_t = self.evaluate([source_vars, target_vars])
+    self.evaluate(update_op)
+    new_v_s, new_v_t = self.evaluate([source_vars, target_vars])
+    for i_v_s, i_v_t, n_v_s, n_v_t in zip(v_s, v_t, new_v_s, new_v_t):
+      # Source variables don't change
+      self.assertAllClose(n_v_s, i_v_s)
+      # Target variables are updated
+      self.assertAllClose(n_v_t, tau*i_v_s + (1-tau)*i_v_t)
 
   @parameterized.parameters(0.0, 0.5, 1.0)
   def testShuffleOrderVariables(self, tau):
-    with tf.Graph().as_default() as g:
-      inputs = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-      tf.contrib.layers.fully_connected(inputs, 2, scope='source')
-      tf.contrib.layers.fully_connected(inputs, 2, scope='target')
+    inputs = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    tf.contrib.layers.fully_connected(inputs, 2, scope='source')
+    tf.contrib.layers.fully_connected(inputs, 2, scope='target')
 
-      source_vars = tf.contrib.framework.get_model_variables('source')
-      target_vars = tf.contrib.framework.get_model_variables('target')
+    source_vars = tf.contrib.framework.get_model_variables('source')
+    target_vars = tf.contrib.framework.get_model_variables('target')
 
-      shuffled_source_vars = sorted(source_vars,
-                                    key=lambda x: random.random())
-      shuffled_target_vars = sorted(target_vars,
-                                    key=lambda x: random.random())
+    shuffled_source_vars = sorted(source_vars,
+                                  key=lambda x: random.random())
+    shuffled_target_vars = sorted(target_vars,
+                                  key=lambda x: random.random())
 
-      update_op = common.soft_variables_update(shuffled_source_vars,
-                                               shuffled_target_vars,
-                                               tau,
-                                               sort_variables_by_name=True)
-      with self.cached_session(graph=g) as sess:
-        tf.global_variables_initializer().run()
-        v_s, v_t = sess.run([source_vars, target_vars])
-        sess.run(update_op)
-        new_v_s, new_v_t = sess.run([source_vars, target_vars])
-        for i_v_s, i_v_t, n_v_s, n_v_t in zip(v_s, v_t, new_v_s, new_v_t):
-          # Source variables don't change
-          self.assertAllClose(n_v_s, i_v_s)
-          # Target variables are updated
-          self.assertAllClose(n_v_t, tau*i_v_s + (1-tau)*i_v_t)
+    update_op = common.soft_variables_update(shuffled_source_vars,
+                                             shuffled_target_vars,
+                                             tau,
+                                             sort_variables_by_name=True)
+
+    self.evaluate(tf.global_variables_initializer())
+    v_s, v_t = self.evaluate([source_vars, target_vars])
+    self.evaluate(update_op)
+    new_v_s, new_v_t = self.evaluate([source_vars, target_vars])
+    for i_v_s, i_v_t, n_v_s, n_v_t in zip(v_s, v_t, new_v_s, new_v_t):
+      # Source variables don't change
+      self.assertAllClose(n_v_s, i_v_s)
+      # Target variables are updated
+      self.assertAllClose(n_v_t, tau*i_v_s + (1-tau)*i_v_t)
 
 
 class JoinScopeTest(tf.test.TestCase):
@@ -321,9 +319,9 @@ class ClipToSpecTest(tf.test.TestCase):
                                          [3, 3, 3, 3])
     expected_clipped_value = np.array([1, 2, 3, 0])
     clipped_value = common.clip_to_spec(value, spec)
-    with self.cached_session() as sess:
-      clipped_value_ = sess.run(clipped_value)
-      self.assertAllClose(expected_clipped_value, clipped_value_)
+
+    clipped_value_ = self.evaluate(clipped_value)
+    self.assertAllClose(expected_clipped_value, clipped_value_)
 
 
 class ScaleToSpecTest(tf.test.TestCase):
@@ -338,9 +336,9 @@ class ScaleToSpecTest(tf.test.TestCase):
     )
     expected_scaled_value = np.array([[[5, -5], [2.0, -2.0], [2.0, 0.0]]])
     scaled_value = common.scale_to_spec(value, spec)
-    with self.cached_session() as sess:
-      scaled_value_ = sess.run(scaled_value)
-      self.assertAllClose(expected_scaled_value, scaled_value_)
+
+    scaled_value_ = self.evaluate(scaled_value)
+    self.assertAllClose(expected_scaled_value, scaled_value_)
 
 
 class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):

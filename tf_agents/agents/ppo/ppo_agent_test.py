@@ -238,18 +238,15 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
 
     train_op = agent.train(experience)
 
-    with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+    self.evaluate(tf.global_variables_initializer())
 
-      # Assert that counter starts out at zero.
-      counter_ = sess.run(counter)
-      self.assertEqual(0, counter_)
+    # Assert that counter starts out at zero.
+    self.assertEqual(0, self.evaluate(counter))
 
-      sess.run(train_op)
+    self.evaluate(train_op)
 
-      # Assert that train_op ran increment_counter num_epochs times.
-      counter_ = sess.run(counter)
-      self.assertEqual(num_epochs, counter_)
+    # Assert that train_op ran increment_counter num_epochs times.
+    self.assertEqual(num_epochs, self.evaluate(counter))
 
   def testBuildTrainOp(self):
     if tf.executing_eagerly():
@@ -364,24 +361,24 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       with self.cached_session() as sess:
         tf.contrib.summary.initialize(session=sess)
 
-        (_, _) = (
-            agent.build_train_op(
-                time_steps, actions, sample_action_log_probs, returns,
-                advantages, sample_action_distribution_parameters, weights,
-                train_step, summarize_gradients=False,
-                gradient_clipping=0.0, debug_summaries=False))
-        summaries_without_debug = tf.contrib.summary.all_summary_ops()
+      (_, _) = (
+          agent.build_train_op(
+              time_steps, actions, sample_action_log_probs, returns,
+              advantages, sample_action_distribution_parameters, weights,
+              train_step, summarize_gradients=False,
+              gradient_clipping=0.0, debug_summaries=False))
+      summaries_without_debug = tf.contrib.summary.all_summary_ops()
 
-        (_, _) = (
-            agent.build_train_op(
-                time_steps, actions, sample_action_log_probs, returns,
-                advantages, sample_action_distribution_parameters, weights,
-                train_step, summarize_gradients=False,
-                gradient_clipping=0.0, debug_summaries=True))
-        summaries_with_debug = tf.contrib.summary.all_summary_ops()
+      (_, _) = (
+          agent.build_train_op(
+              time_steps, actions, sample_action_log_probs, returns,
+              advantages, sample_action_distribution_parameters, weights,
+              train_step, summarize_gradients=False,
+              gradient_clipping=0.0, debug_summaries=True))
+      summaries_with_debug = tf.contrib.summary.all_summary_ops()
 
-        self.assertGreater(
-            len(summaries_with_debug), len(summaries_without_debug))
+      self.assertGreater(
+          len(summaries_with_debug), len(summaries_without_debug))
 
   @parameterized.named_parameters([
       ('IsZero', 0),
@@ -616,29 +613,25 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         adaptive_kl_target=10.0,
         adaptive_kl_tolerance=0.5,
     )
-    kl_divergence = tf.placeholder(shape=[1], dtype=tf.float32)
-    loss = agent.adaptive_kl_loss(kl_divergence)
-    update = agent.update_adaptive_kl_beta(kl_divergence)
 
-    with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+    self.evaluate(tf.global_variables_initializer())
 
-      # Loss should not change if data kl is target kl.
-      loss_1 = sess.run(loss, feed_dict={kl_divergence: [10.0]})
-      loss_2 = sess.run(loss, feed_dict={kl_divergence: [10.0]})
-      self.assertEqual(loss_1, loss_2)
+    # Loss should not change if data kl is target kl.
+    loss_1 = self.evaluate(agent.adaptive_kl_loss(10.0))
+    loss_2 = self.evaluate(agent.adaptive_kl_loss(10.0))
+    self.assertEqual(loss_1, loss_2)
 
-      # If data kl is low, kl penalty should decrease between calls.
-      loss_1 = sess.run(loss, feed_dict={kl_divergence: [1.0]})
-      sess.run(update, feed_dict={kl_divergence: [1.0]})
-      loss_2 = sess.run(loss, feed_dict={kl_divergence: [1.0]})
-      self.assertGreater(loss_1, loss_2)
+    # If data kl is low, kl penalty should decrease between calls.
+    loss_1 = self.evaluate(agent.adaptive_kl_loss(1.0))
+    self.evaluate(agent.update_adaptive_kl_beta(1.0))
+    loss_2 = self.evaluate(agent.adaptive_kl_loss(1.0))
+    self.assertGreater(loss_1, loss_2)
 
-      # If data kl is low, kl penalty should increase between calls.
-      loss_1 = sess.run(loss, feed_dict={kl_divergence: [100.0]})
-      sess.run(update, feed_dict={kl_divergence: [100.0]})
-      loss_2 = sess.run(loss, feed_dict={kl_divergence: [100.0]})
-      self.assertLess(loss_1, loss_2)
+    # If data kl is low, kl penalty should increase between calls.
+    loss_1 = self.evaluate(agent.adaptive_kl_loss(100.0))
+    self.evaluate(agent.update_adaptive_kl_beta(100.0))
+    loss_2 = self.evaluate(agent.adaptive_kl_loss(100.0))
+    self.assertLess(loss_1, loss_2)
 
   def testUpdateAdaptiveKlBeta(self):
     if tf.executing_eagerly():
@@ -659,29 +652,20 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         adaptive_kl_target=10.0,
         adaptive_kl_tolerance=0.5,
     )
-    kl_divergence = tf.placeholder(shape=[1], dtype=tf.float32)
-    updated_adaptive_kl_beta = agent.update_adaptive_kl_beta(kl_divergence)
 
-    with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+    self.evaluate(tf.global_variables_initializer())
 
-      # When KL is target kl, beta should not change.
-      beta_0 = sess.run(
-          updated_adaptive_kl_beta, feed_dict={kl_divergence: [10.0]})
-      expected_beta_0 = 1.0
-      self.assertEqual(expected_beta_0, beta_0)
+    # When KL is target kl, beta should not change.
+    beta_0 = agent.update_adaptive_kl_beta(10.0)
+    self.assertEqual(self.evaluate(beta_0), 1.0)
 
-      # When KL is large, beta should increase.
-      beta_1 = sess.run(
-          updated_adaptive_kl_beta, feed_dict={kl_divergence: [100.0]})
-      expected_beta_1 = 1.5
-      self.assertEqual(expected_beta_1, beta_1)
+    # When KL is large, beta should increase.
+    beta_1 = agent.update_adaptive_kl_beta(100.0)
+    self.assertEqual(self.evaluate(beta_1), 1.5)
 
-      # When KL is small, beta should decrease.
-      beta_2 = sess.run(
-          updated_adaptive_kl_beta, feed_dict={kl_divergence: [1.0]})
-      expected_beta_2 = 1.0
-      self.assertEqual(expected_beta_2, beta_2)
+    # When KL is small, beta should decrease.
+    beta_2 = agent.update_adaptive_kl_beta(1.0)
+    self.assertEqual(self.evaluate(beta_2), 1.0)
 
   def testPolicy(self):
     value_net = value_network.ValueNetwork(
