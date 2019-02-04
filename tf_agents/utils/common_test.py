@@ -749,30 +749,23 @@ class ComputeReturnsTest(tf.test.TestCase):
 
 class ReplicateTensorTest(tf.test.TestCase, parameterized.TestCase):
 
-  @parameterized.parameters('list', 'tf_constant', 'placeholder')
+  @parameterized.parameters('list', 'tf_constant')
   def testReplicateTensor(self, outer_shape_type):
     value = np.array([[1., 2., 3.], [4., 5., 6.]])
-    if outer_shape_type == 'placeholder':
-      outer_shape = tf.placeholder(tf.int32, shape=[2])
-    elif outer_shape_type == 'tf_constant':
+    if outer_shape_type == 'tf_constant':
       outer_shape = tf.constant([2, 1])
     else:
       outer_shape = [2, 1]
     expected_replicated_value = np.array([[value], [value]])
 
     tf_value = tf.constant(value)
-    tf_replicated_value = common.replicate(tf_value, outer_shape)
+    replicated_value = self.evaluate(common.replicate(tf_value, outer_shape))
+    self.assertAllEqual(expected_replicated_value, replicated_value)
+
     if isinstance(outer_shape, np.ndarray):
       # The shape should be fully defined in this case.
       self.assertEqual(tf.TensorShape(outer_shape + list(value.shape)),
-                       tf_replicated_value.shape)
-
-    with self.cached_session() as sess:
-      feed_dict = {}
-      if outer_shape_type == 'placeholder':
-        feed_dict = {outer_shape: np.array([2, 1])}
-      replicated_value = sess.run(tf_replicated_value, feed_dict)
-      self.assertAllEqual(expected_replicated_value, replicated_value)
+                       replicated_value.shape)
 
 
 if __name__ == '__main__':
