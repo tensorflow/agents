@@ -229,7 +229,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
     const_batch_size = tensor_shape.dimension_value(inputs_static_shapes[0][1])
 
     # reset_mask is batch major.  Convert to time major.
-    reset_mask = tf.transpose(reset_mask)
+    reset_mask = tf.transpose(a=reset_mask)
 
     for shape in inputs_static_shapes:
       got_batch_size = tensor_shape.dimension_value(shape[1])
@@ -252,9 +252,9 @@ class DynamicUnroll(tf.keras.layers.Layer):
     # Try to get the iteration count statically; if that's not possible,
     # access it dynamically at runtime.
     iterations = tensor_shape.dimension_value(inputs_flat[0].shape[0])
-    iterations = iterations or tf.shape(inputs_flat[0])[0]
+    iterations = iterations or tf.shape(input=inputs_flat[0])[0]
 
-    if not tf.contrib.framework.is_tensor(iterations) and iterations == 1:
+    if not tf.is_tensor(iterations) and iterations == 1:
       # Take exactly one time step
       return _static_unroll_single_step(
           self.cell,
@@ -376,18 +376,17 @@ def _dynamic_unroll_multi_step(cell,
   # Create a new scope in which the caching device is either
   # determined by the parent scope, or is set to place the cached
   # Variable using the same placement as for the rest of the RNN.
-  with tf.variable_scope(tf.get_variable_scope()) as varscope:
+  with tf.compat.v1.variable_scope(
+      tf.compat.v1.get_variable_scope()) as varscope:
     if (not tf.contrib.eager.executing_eagerly()
         and varscope.caching_device is None):
       varscope.set_caching_device(lambda op: op.device)
 
     _, final_state, output_tas = (
         tf.while_loop(
-            pred,
-            body,
-            (tf.constant(0, name="time"),
-             initial_state,
-             output_tas),
+            cond=pred,
+            body=body,
+            loop_vars=(tf.constant(0, name="time"), initial_state, output_tas),
             parallel_iterations=parallel_iterations,
             swap_memory=swap_memory,
             maximum_iterations=iterations))

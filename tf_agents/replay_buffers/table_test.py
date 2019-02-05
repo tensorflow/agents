@@ -54,11 +54,12 @@ class TableTest(tf.test.TestCase):
          3 * np.ones(spec[1][1].shape.as_list())]
     ]
     tensors = nest.map_structure(
-        lambda x: tf.convert_to_tensor(x, dtype=tf.float32), expected_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
+        expected_values)
 
     write_op = replay_table.write(0, tensors)
     read_op = replay_table.read(0)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     nest.map_structure(self.assertAllClose, read_value_, expected_values)
@@ -80,11 +81,12 @@ class TableTest(tf.test.TestCase):
          3 * np.ones([batch_size] + spec[1][1].shape.as_list())]
     ]
     tensors = nest.map_structure(
-        lambda x: tf.convert_to_tensor(x, dtype=tf.float32), expected_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
+        expected_values)
 
     write_op = replay_table.write(list(range(batch_size)), tensors)
     read_op = replay_table.read(list(range(batch_size)))
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     nest.map_structure(self.assertAllClose, read_value_, expected_values)
@@ -106,12 +108,12 @@ class TableTest(tf.test.TestCase):
 
     values = [action, [camera, lidar]]
     tensors = nest.map_structure(
-        lambda x: tf.convert_to_tensor(x, dtype=tf.float32), values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), values)
 
     write_op = replay_table.write(list(range(batch_size)), tensors)
     read_op = replay_table.read(
         list(range(batch_size)), slots=['lidar', ['action']])
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     expected_values = [lidar, [action]]
@@ -140,7 +142,7 @@ class TableTest(tf.test.TestCase):
     write_op2 = replay_table.write(
         list(range(batch_size)), [lidar2, [action2]], ['lidar', ['action']])
     read_op = replay_table.read(list(range(batch_size)))
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op1)
     self.evaluate(write_op2)
     read_value_ = self.evaluate(read_op)
@@ -167,11 +169,12 @@ class TableTest(tf.test.TestCase):
         'lidar': 3 * np.ones(spec['lidar'].shape.as_list())
     }
     tensors = nest.map_structure(
-        lambda x: tf.convert_to_tensor(x, dtype=tf.float32), expected_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
+        expected_values)
 
     write_op = replay_table.write(0, tensors)
     read_op = replay_table.read(0)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     nest.map_structure(self.assertAllClose, read_value_, expected_values)
@@ -199,11 +202,12 @@ class TableTest(tf.test.TestCase):
         lidar=3 * np.ones(spec.lidar.shape.as_list())
     )
     tensors = nest.map_structure(
-        lambda x: tf.convert_to_tensor(x, dtype=tf.float32), expected_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
+        expected_values)
 
     write_op = replay_table.write(0, tensors)
     read_op = replay_table.read(0)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     nest.map_structure(self.assertAllClose, read_value_, expected_values)
@@ -268,13 +272,12 @@ class TableTest(tf.test.TestCase):
          3 * np.ones(spec[1][1].shape.as_list())]
     ]
     tensors = nest.map_structure(
-        lambda x, dtype: tf.convert_to_tensor(x, dtype=dtype),
-        expected_values,
-        [tf.float32, [tf.string, tf.float32]])
+        lambda x, dtype: tf.convert_to_tensor(value=x, dtype=dtype),
+        expected_values, [tf.float32, [tf.string, tf.float32]])
 
     write_op = replay_table.write(0, tensors)
     read_op = replay_table.read(0)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     self.assertAllClose(read_value_[0], expected_values[0])

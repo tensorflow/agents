@@ -44,7 +44,7 @@ def run_summaries(metrics, session=None):
       provided by a context manager.
   """
   if session is None:
-    default_session = tf.get_default_session()
+    default_session = tf.compat.v1.get_default_session()
     if default_session is None:
       raise AttributeError(
           'No TensorFlow session-like object was provided, and none '
@@ -93,7 +93,7 @@ class PyMetric(object):
 
   def log(self):
     tag = common_utils.join_scope(self.prefix, self.name)
-    tf.logging.info('{0} = {1}'.format(tag, self.result()))
+    tf.compat.v1.logging.info('{0} = {1}'.format(tag, self.result()))
 
   def tf_summaries(self, step_metrics=()):
     """Build TF summary op and placeholder for this metric.
@@ -150,7 +150,7 @@ class PyMetric(object):
         result = np.array(result)
       dtype = tf.as_dtype(result.dtype)
       shape = result.shape
-      self._summary_placeholder = tf.placeholder(
+      self._summary_placeholder = tf.compat.v1.placeholder(
           dtype, shape=shape, name='{}_ph'.format(self.name))
     return self._summary_placeholder
 
@@ -197,4 +197,3 @@ class PyStepMetric(PyMetric):
     Args:
       trajectory: A trajectory.Trajectory.
     """
-

@@ -43,7 +43,7 @@ class TfRunnableTest(tf.test.TestCase):
 
   def testSessionWithinContextManager(self):
     session_user = MySessionUser()
-    with tf.Session() as session:
+    with tf.compat.v1.Session() as session:
       self.assertIs(session_user.session, session)
       self.assertEqual(0, session_user.run())
 
@@ -55,25 +55,25 @@ class TfRunnableTest(tf.test.TestCase):
 
   def testSessionWithinMonitoredSessionContextManagerRaisesError(self):
     session_user = MySessionUser()
-    with tf.train.MonitoredSession() as _:
+    with tf.compat.v1.train.MonitoredSession() as _:
       with self.assertRaisesRegexp(AttributeError, "No TensorFlow session"):
         session_user.run()
 
   def testSessionWithSingularMonitoredSession(self):
     session_user = MySessionUser()
-    with tf.train.SingularMonitoredSession() as session:
+    with tf.compat.v1.train.SingularMonitoredSession() as session:
       session_user.session = session
       self.assertEqual(0, session_user.run())
 
   def testSessionWithMonitoredSession(self):
     session_user = MySessionUser()
-    with tf.train.MonitoredSession() as session:
+    with tf.compat.v1.train.MonitoredSession() as session:
       session_user.session = session
       self.assertEqual(0, session_user.run())
 
   def testSessionProvidedUsingSetSession(self):
     session_user = MySessionUser()
-    session = tf.Session()
+    session = tf.compat.v1.Session()
     session_user.session = session
     self.assertIs(session_user.session, session)
     self.assertEqual(0, session_user.run())
@@ -81,7 +81,7 @@ class TfRunnableTest(tf.test.TestCase):
   def testSettingSessionTakesPrecedenceOverDefaultSession(self):
     session_user = MySessionUser()
     with self.cached_session() as test_session:
-      session = tf.Session()
+      session = tf.compat.v1.Session()
       self.assertIsNot(test_session, session)
       self.assertIs(session_user.session, test_session)
       session_user.session = session
@@ -89,8 +89,8 @@ class TfRunnableTest(tf.test.TestCase):
 
   def testSessionUsesCurrent(self):
     session_user = MySessionUser()
-    session1 = tf.Session()
-    session2 = tf.Session()
+    session1 = tf.compat.v1.Session()
+    session2 = tf.compat.v1.Session()
     self.assertIsNot(session1, session2)
     with session1.as_default():
       self.assertIs(session_user.session, session1)

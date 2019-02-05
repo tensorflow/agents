@@ -88,15 +88,15 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
     self._table_fn = table_fn
     # TODO(sguada) move to create_variables function so we can use make_template
     # to handle this.
-    with tf.device(self._device), tf.variable_scope(self._scope):
+    with tf.device(self._device), tf.compat.v1.variable_scope(self._scope):
       self._capacity = tf.constant(capacity, dtype=tf.int64)
       self._data_table = table_fn(self._data_spec, self._capacity_value)
       self._id_table = table_fn(self._id_spec, self._capacity_value)
-      self._last_id = tf.get_variable(
+      self._last_id = tf.compat.v1.get_variable(
           name='last_id',
           shape=[],
           dtype=tf.int64,
-          initializer=tf.constant_initializer(-1, dtype=tf.int64),
+          initializer=tf.compat.v1.initializers.constant(-1, dtype=tf.int64),
           use_resource=True,
           trainable=False)
       self._last_id_cs = tf.contrib.framework.CriticalSection(name='last_id')
@@ -174,17 +174,17 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
         min_val, max_val = self._valid_range_ids(
             self._get_last_id(), self._max_length, num_steps)
         rows_shape = () if sample_batch_size is None else (sample_batch_size,)
-        assert_nonempty = tf.assert_greater(
+        assert_nonempty = tf.compat.v1.assert_greater(
             max_val,
             min_val,
             message='TFUniformReplayBuffer is empty. Make sure to add items '
             'before sampling the buffer.')
         with tf.control_dependencies([assert_nonempty]):
-          ids = tf.random_uniform(
+          ids = tf.random.uniform(
               rows_shape, minval=min_val, maxval=max_val, dtype=tf.int64)
 
         # Move each id sample to a random batch.
-        batch_offsets = tf.random_uniform(
+        batch_offsets = tf.random.uniform(
             rows_shape, minval=0, maxval=self._batch_size, dtype=tf.int64)
         batch_offsets *= self._max_length
         ids += batch_offsets
@@ -218,8 +218,10 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
             data_ids = tuple(data_ids)
         num_ids = max_val - min_val
         probability = tf.cond(
-            tf.equal(num_ids, 0), lambda: 0.,
-            lambda: 1. / tf.cast(num_ids * self._batch_size, tf.float32))
+            pred=tf.equal(num_ids, 0),
+            true_fn=lambda: 0.,
+            false_fn=lambda: 1. / tf.cast(num_ids * self._batch_size, tf.float32
+                                         ))
         probabilities = tf.fill(rows_shape, probability)
 
         buffer_info = BufferInfo(ids=data_ids,
@@ -343,7 +345,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
       max_id = last_id + 1 - num_steps + 1
       return min_id, max_id
 
-    return tf.cond(last_id < max_length, non_full, full)
+    return tf.cond(pred=last_id < max_length, true_fn=non_full, false_fn=full)
 
   def _increment_last_id(self, increment=1):
     """Increments the last_id in a thread safe manner.

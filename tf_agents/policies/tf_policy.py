@@ -356,7 +356,7 @@ class Base(tf.contrib.eager.Checkpointable):
       if batch_size is None:
         shape = spec.shape
       else:
-        spec_shape = tf.convert_to_tensor(spec.shape, dtype=tf.int32)
+        spec_shape = tf.convert_to_tensor(value=spec.shape, dtype=tf.int32)
         shape = tf.concat(([batch_size], spec_shape), axis=0)
       dtype = spec.dtype
       return tf.zeros(shape, dtype)

@@ -123,12 +123,12 @@ class DiscountedReturnTest(tf.test.TestCase, parameterized.TestCase):
         rewards=rewards, discounts=discounts, final_value=final_value)
 
     batch_major_discounted_return = value_ops.discounted_return(
-        rewards=tf.transpose(rewards),
-        discounts=tf.transpose(discounts),
+        rewards=tf.transpose(a=rewards),
+        discounts=tf.transpose(a=discounts),
         final_value=final_value,
         time_major=False)
     self.assertAllClose(time_major_discounted_return,
-                        tf.transpose(batch_major_discounted_return))
+                        tf.transpose(a=batch_major_discounted_return))
 
   def testDiscountedReturnWithFinalValueMatchPrecomputedResult(self):
 
@@ -141,7 +141,7 @@ class DiscountedReturnTest(tf.test.TestCase, parameterized.TestCase):
         5, 4, 3, 2, 1, 8 * 0.9**4 + 3.439, 8 * 0.9**3 + 2.71, 8 * 0.9**2 + 1.9,
         8 * 0.9 + 1
     ]
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(discounted_return, expected)
 
 

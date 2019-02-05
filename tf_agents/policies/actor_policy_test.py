@@ -46,8 +46,8 @@ class DummyActionNet(network.Network):
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
             activation=tf.nn.tanh,
-            kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5]),
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5]),
         ),
     ]
 
@@ -132,13 +132,13 @@ class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
     action_step = policy.action(self._time_step_batch)
     self.assertEqual(action_step.action.shape.as_list(), [2, 1])
     self.assertEqual(action_step.action.dtype, tf.float32)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_ >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_ <= self._action_spec.maximum))
 
   def testUpdate(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     actor_network = DummyActionNet(self._obs_spec, self._action_spec)
     policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
@@ -154,7 +154,7 @@ class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(action_step.action.shape, new_action_step.action.shape)
     self.assertEqual(action_step.action.dtype, new_action_step.action.dtype)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(new_policy.update(policy))
     actions_, new_actions_ = self.evaluate(
         [action_step.action, new_action_step.action])
@@ -170,7 +170,7 @@ class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
     self.assertIsInstance(distribution_step.action,
                           tfp.distributions.Deterministic)
     distribution_mean = distribution_step.action.mean()
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     distribution_mean_ = self.evaluate(distribution_mean)
     self.assertNear(actions_[0], distribution_mean_[0], 1e-6)

@@ -85,16 +85,16 @@ class DynamicUnrollTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testDynamicUnrollMatchesDynamicRNNWhenNoReset(self):
-    cell = tf.nn.rnn_cell.LSTMCell(3)
+    cell = tf.compat.v1.nn.rnn_cell.LSTMCell(3)
     batch_size = 4
     max_time = 7
-    inputs = tf.random_uniform((batch_size, max_time, 2), dtype=tf.float32)
+    inputs = tf.random.uniform((batch_size, max_time, 2), dtype=tf.float32)
     reset_mask = tf.zeros((batch_size, max_time), dtype=tf.bool)
     layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
     outputs_dun, final_state_dun = layer(inputs, reset_mask)
-    outputs_drnn, final_state_drnn = tf.nn.dynamic_rnn(
+    outputs_drnn, final_state_drnn = tf.compat.v1.nn.dynamic_rnn(
         cell, inputs, dtype=tf.float32)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     outputs_dun, final_state_dun, outputs_drnn, final_state_drnn = (
         self.evaluate(
             (outputs_dun, final_state_dun, outputs_drnn, final_state_drnn)))
@@ -103,16 +103,16 @@ class DynamicUnrollTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testDynamicUnrollMatchesDynamicRNNWhenNoResetSingleTimeStep(self):
-    cell = tf.nn.rnn_cell.LSTMCell(3)
+    cell = tf.compat.v1.nn.rnn_cell.LSTMCell(3)
     batch_size = 4
     max_time = 1
-    inputs = tf.random_uniform((batch_size, max_time, 2), dtype=tf.float32)
+    inputs = tf.random.uniform((batch_size, max_time, 2), dtype=tf.float32)
     reset_mask = tf.zeros((batch_size, max_time), dtype=tf.bool)
     layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
     outputs_dun, final_state_dun = layer(inputs, reset_mask)
-    outputs_drnn, final_state_drnn = tf.nn.dynamic_rnn(
+    outputs_drnn, final_state_drnn = tf.compat.v1.nn.dynamic_rnn(
         cell, inputs, dtype=tf.float32)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     outputs_dun, final_state_dun, outputs_drnn, final_state_drnn = (
         self.evaluate(
             (outputs_dun, final_state_dun, outputs_drnn, final_state_drnn)))
@@ -130,8 +130,8 @@ class DynamicUnrollTest(tf.test.TestCase):
     cell = cell_type()
     batch_size = 4
     max_time = 7
-    inputs = tf.random_uniform((batch_size, max_time, 1))
-    reset_mask = (tf.random_normal((batch_size, max_time)) > 0)
+    inputs = tf.random.uniform((batch_size, max_time, 1))
+    reset_mask = (tf.random.normal((batch_size, max_time)) > 0)
 
     layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
     outputs, final_state = layer(inputs, reset_mask)

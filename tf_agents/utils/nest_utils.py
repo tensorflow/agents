@@ -26,8 +26,7 @@ nest = tf.contrib.framework.nest
 
 
 def has_tensors(*x):
-  return np.any([
-      tf.contrib.framework.is_tensor(t) for t in nest.flatten(x)])
+  return np.any([tf.is_tensor(t) for t in nest.flatten(x)])
 
 
 def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
@@ -290,9 +289,9 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   batch_dims = []
   for i, (tensor, shape) in enumerate(zip(flat_tensors, flat_shapes)):
     if i == 0:  # Set batch_dims based on first tensor.
-      tensor_shape = tf.shape(tensor)
+      tensor_shape = tf.shape(input=tensor)
       batch_dims = tensor_shape[:tensor.shape.ndims - shape.ndims]
-    reshaped_dims = [tf.reduce_prod(batch_dims)] + shape.as_list()
+    reshaped_dims = [tf.reduce_prod(input_tensor=batch_dims)] + shape.as_list()
     out_tensors.append(tf.reshape(tensor, reshaped_dims))
   return nest.pack_sequence_as(tensors, out_tensors), batch_dims
 
@@ -309,7 +308,7 @@ def get_outer_shape(nested_tensor, spec):
       nested_tensor, spec, num_outer_dims=num_outer_dims):
     return []
 
-  return tf.shape(first_tensor)[:num_outer_dims]
+  return tf.shape(input=first_tensor)[:num_outer_dims]
 
 
 def get_outer_rank(tensors, specs):

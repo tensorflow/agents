@@ -51,7 +51,7 @@ def project_to_output_distribution(inputs,
   Raises:
     ValueError: If the distribution type of output_spec is unclear.
   """
-  with tf.variable_scope(scope):
+  with tf.compat.v1.variable_scope(scope):
     if tensor_spec.is_discrete(output_spec):
       return project_to_discrete(inputs, output_spec, outer_rank=outer_rank)
     elif tensor_spec.is_continuous(output_spec):

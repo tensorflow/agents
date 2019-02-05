@@ -29,7 +29,8 @@ from tf_agents.utils import common as common_utils
 
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.result()) for m in metrics]
-  tf.logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
+  tf.compat.v1.logging.info('{0} \n\t\t {1}'.format(prefix,
+                                                    '\n\t\t '.join(log)))
 
 
 def compute(metrics,

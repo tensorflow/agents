@@ -71,7 +71,7 @@ def next_dataset_element(test_case, dataset):
   if tf.executing_eagerly():
     itr = iter(dataset)
     return lambda: next(itr)
-  get_next = dataset.make_one_shot_iterator().get_next()
+  get_next = tf.compat.v1.data.make_one_shot_iterator(dataset).get_next()
   return lambda: test_case.evaluate(get_next)
 
 

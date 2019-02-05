@@ -44,7 +44,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
         env, policy, observers=[num_episodes_observer, num_steps_observer])
     run_driver = driver.run()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     time_step, policy_state = self.evaluate(run_driver)
 
@@ -65,7 +65,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
     time_step, policy_state = driver.run()
     time_step, policy_state = driver.run(time_step, policy_state)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     time_step, policy_state = self.evaluate([time_step, policy_state])
 
@@ -86,7 +86,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
         env, policy, observers=[num_episodes_observer, num_steps_observer])
     run_driver = driver.run()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     for _ in range(5):
       self.evaluate(run_driver)
 
@@ -107,7 +107,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
 
     run_driver = driver.run(num_episodes=5)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(run_driver)
     self.assertEqual(self.evaluate(num_episodes_observer.num_episodes), 5)
     # Two steps per episode.
@@ -128,7 +128,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
                                                 num_episodes_observer1])
     run_driver = driver.run()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(run_driver)
     self.assertEqual(self.evaluate(num_episodes_observer0.num_episodes), 5)
     self.assertEqual(self.evaluate(num_episodes_observer1.num_episodes), 5)
@@ -149,7 +149,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
     run_driver = driver.run()
     rb_gather_all = replay_buffer.gather_all()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     for _ in range(3):
       self.evaluate(run_driver)
@@ -180,7 +180,7 @@ class DynamicEpisodeDriverTest(tf.test.TestCase):
     run_driver = driver.run()
     rb_gather_all = replay_buffer.gather_all()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(run_driver)
     trajectories = self.evaluate(rb_gather_all)
 

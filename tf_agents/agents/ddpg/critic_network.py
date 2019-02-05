@@ -78,7 +78,7 @@ class CriticNetwork(network.Network):
         observation_conv_layer_params,
         observation_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
+        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),
         name='observation_encoding')
 
@@ -86,7 +86,7 @@ class CriticNetwork(network.Network):
         None,
         action_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
+        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),
         name='action_encoding')
 
@@ -94,7 +94,7 @@ class CriticNetwork(network.Network):
         None,
         joint_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
+        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),
         name='joint_mlp')
 

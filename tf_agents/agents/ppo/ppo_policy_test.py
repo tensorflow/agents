@@ -43,8 +43,8 @@ class DummyActorNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements(),
-            kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5]),
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5]),
             activation=tf.keras.activations.tanh,
         ))
 
@@ -106,8 +106,8 @@ class DummyValueNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             1,
-            kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5])))
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
@@ -195,7 +195,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
     action_step = policy.action(self._time_step)
     self.assertEqual(action_step.action.shape.as_list(), [1, 1])
     self.assertEqual(action_step.action.dtype, tf.float32)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_ >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_ <= self._action_spec.maximum))
@@ -214,7 +214,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
 
     action_step = policy.action(self._time_step)
     self.assertIsInstance(action_step.action, list)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_ >= action_spec[0].minimum))
     self.assertTrue(np.all(actions_ <= action_spec[0].maximum))
@@ -233,7 +233,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
     action_step = policy.action(self._time_step_batch)
     self.assertEqual(action_step.action.shape.as_list(), [2, 1])
     self.assertEqual(action_step.action.dtype, tf.float32)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_ >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_ <= self._action_spec.maximum))
@@ -255,11 +255,11 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
         self._time_step.observation, self._time_step.step_type, policy_state)
     self.assertEqual(value_pred.shape.as_list(), [1, 1])
     self.assertEqual(value_pred.dtype, tf.float32)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(value_pred)
 
   def testUpdate(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     actor_network = DummyActorNet(self._action_spec)
     value_network = DummyValueNet()
 
@@ -280,7 +280,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(action_step.action.shape, new_action_step.action.shape)
     self.assertEqual(action_step.action.dtype, new_action_step.action.dtype)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(new_policy.update(policy))
     actions_, new_actions_ = self.evaluate(
         [action_step.action, new_action_step.action])
@@ -301,7 +301,7 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
     self.assertIsInstance(distribution_step.action,
                           tfp.distributions.Deterministic)
     distribution_mean = distribution_step.action.mean()
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     distribution_mean_ = self.evaluate(distribution_mean)
     self.assertNear(actions_, distribution_mean_, 1e-6)

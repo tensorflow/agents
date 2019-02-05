@@ -321,9 +321,12 @@ class Td3Agent(tf_agent.TFAgent):
       if self._debug_summaries:
         tf.contrib.summary.histogram('td_targets', td_targets)
         with tf.name_scope('td_targets'):
-          tf.contrib.summary.scalar('mean', tf.reduce_mean(td_targets))
-          tf.contrib.summary.scalar('max', tf.reduce_max(td_targets))
-          tf.contrib.summary.scalar('min', tf.reduce_min(td_targets))
+          tf.contrib.summary.scalar('mean',
+                                    tf.reduce_mean(input_tensor=td_targets))
+          tf.contrib.summary.scalar('max',
+                                    tf.reduce_max(input_tensor=td_targets))
+          tf.contrib.summary.scalar('min',
+                                    tf.reduce_min(input_tensor=td_targets))
 
         for td_target_idx in range(2):
           pred_td_targets = pred_td_targets_all[td_target_idx]
@@ -332,27 +335,33 @@ class Td3Agent(tf_agent.TFAgent):
             tf.contrib.summary.histogram('td_errors', td_errors)
             tf.contrib.summary.histogram('pred_td_targets', pred_td_targets)
             with tf.name_scope('td_errors'):
-              tf.contrib.summary.scalar('mean', tf.reduce_mean(td_errors))
-              tf.contrib.summary.scalar('mean_abs',
-                                        tf.reduce_mean(tf.abs(td_errors)))
-              tf.contrib.summary.scalar('max', tf.reduce_max(td_errors))
-              tf.contrib.summary.scalar('min', tf.reduce_min(td_errors))
+              tf.contrib.summary.scalar('mean',
+                                        tf.reduce_mean(input_tensor=td_errors))
+              tf.contrib.summary.scalar(
+                  'mean_abs', tf.reduce_mean(input_tensor=tf.abs(td_errors)))
+              tf.contrib.summary.scalar('max',
+                                        tf.reduce_max(input_tensor=td_errors))
+              tf.contrib.summary.scalar('min',
+                                        tf.reduce_min(input_tensor=td_errors))
             with tf.name_scope('pred_td_targets'):
-              tf.contrib.summary.scalar('mean', tf.reduce_mean(pred_td_targets))
-              tf.contrib.summary.scalar('max', tf.reduce_max(pred_td_targets))
-              tf.contrib.summary.scalar('min', tf.reduce_min(pred_td_targets))
+              tf.contrib.summary.scalar(
+                  'mean', tf.reduce_mean(input_tensor=pred_td_targets))
+              tf.contrib.summary.scalar(
+                  'max', tf.reduce_max(input_tensor=pred_td_targets))
+              tf.contrib.summary.scalar(
+                  'min', tf.reduce_min(input_tensor=pred_td_targets))
 
       critic_loss = (self._td_errors_loss_fn(td_targets, pred_td_targets_1)
                      + self._td_errors_loss_fn(td_targets, pred_td_targets_2))
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec(), num_outer_dims=2):
         # Sum over the time dimension.
-        critic_loss = tf.reduce_sum(critic_loss, axis=1)
+        critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
 
       if weights is not None:
         critic_loss *= weights
 
-      return tf.reduce_mean(critic_loss)
+      return tf.reduce_mean(input_tensor=critic_loss)
 
   def actor_loss(self, time_steps, weights=None):
     """Computes the actor_loss for TD3 training.
@@ -374,7 +383,7 @@ class Td3Agent(tf_agent.TFAgent):
                                            time_steps.step_type)
 
       actions = nest.flatten(actions)
-      dqda = tf.gradients([q_values], actions)
+      dqda = tf.gradients(ys=[q_values], xs=actions)
       actor_losses = []
       for dqda, action in zip(dqda, actions):
         if self._dqda_clipping is not None:
@@ -386,12 +395,12 @@ class Td3Agent(tf_agent.TFAgent):
         if nest_utils.is_batched_nested_tensors(
             time_steps, self.time_step_spec(), num_outer_dims=2):
           # Sum over the time dimension.
-          loss = tf.reduce_sum(loss, axis=1)
+          loss = tf.reduce_sum(input_tensor=loss, axis=1)
 
         if weights is not None:
           loss *= weights
 
-        loss = tf.reduce_mean(loss)
+        loss = tf.reduce_mean(input_tensor=loss)
         actor_losses.append(loss)
 
       # TODO(kbanoop): Add an action norm regularizer.

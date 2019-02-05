@@ -153,7 +153,7 @@ class EncodingNetwork(network.Network):
           'conv_layer_params, or fc_layer_params should be provided.')
 
     if not kernel_initializer:
-      kernel_initializer = tf.variance_scaling_initializer(
+      kernel_initializer = tf.compat.v1.variance_scaling_initializer(
           scale=2.0, mode='fan_in', distribution='truncated_normal')
 
     layers = []

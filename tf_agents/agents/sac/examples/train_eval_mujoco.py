@@ -90,7 +90,7 @@ def train_eval(
     actor_learning_rate=3e-4,
     critic_learning_rate=3e-4,
     alpha_learning_rate=3e-4,
-    td_errors_loss_fn=tf.losses.mean_squared_error,
+    td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
     gamma=0.99,
     reward_scale_factor=1.0,
     gradient_clipping=None,
@@ -151,11 +151,11 @@ def train_eval(
         action_spec,
         actor_network=actor_net,
         critic_network=critic_net,
-        actor_optimizer=tf.train.AdamOptimizer(
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(
             learning_rate=actor_learning_rate),
-        critic_optimizer=tf.train.AdamOptimizer(
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(
             learning_rate=critic_learning_rate),
-        alpha_optimizer=tf.train.AdamOptimizer(
+        alpha_optimizer=tf.compat.v1.train.AdamOptimizer(
             learning_rate=alpha_learning_rate),
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
@@ -182,7 +182,7 @@ def train_eval(
         tf_py_metric.TFPyMetric(py_metrics.AverageEpisodeLengthMetric()),
     ]
 
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     collect_policy = tf_agent.collect_policy()
     initial_collect_op = dynamic_step_driver.DynamicStepDriver(
@@ -201,10 +201,11 @@ def train_eval(
     def _filter_invalid_transition(trajectories, unused_arg1):
       return ~trajectories.is_boundary()[0]
     dataset = replay_buffer.as_dataset(
-        sample_batch_size=5*batch_size, num_steps=2).apply(
-            tf.contrib.data.unbatch()).filter(_filter_invalid_transition).batch(
-                batch_size).prefetch(batch_size*5)
-    dataset_iterator = dataset.make_initializable_iterator()
+        sample_batch_size=5 * batch_size,
+        num_steps=2).apply(tf.data.experimental.unbatch()).filter(
+            _filter_invalid_transition).batch(batch_size).prefetch(
+                batch_size * 5)
+    dataset_iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     trajectories, unused_info = dataset_iterator.get_next()
     train_op = tf_agent.train(trajectories, train_step_counter=global_step)
 
@@ -231,7 +232,7 @@ def train_eval(
         max_to_keep=1,
         replay_buffer=replay_buffer)
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       # Initialize graph.
       train_checkpointer.initialize_or_restore(sess)
       policy_checkpointer.initialize_or_restore(sess)
@@ -256,24 +257,24 @@ def train_eval(
         )
 
         # Run initial collect.
-        tf.logging.info('Global step %d: Running initial collect op.',
-                        global_step_val)
+        tf.compat.v1.logging.info('Global step %d: Running initial collect op.',
+                                  global_step_val)
         sess.run(initial_collect_op)
 
         # Checkpoint the initial replay buffer contents.
         rb_checkpointer.save(global_step=global_step_val)
 
-        tf.logging.info('Finished initial collect.')
+        tf.compat.v1.logging.info('Finished initial collect.')
       else:
-        tf.logging.info('Global step %d: Skipping initial collect op.',
-                        global_step_val)
+        tf.compat.v1.logging.info(
+            'Global step %d: Skipping initial collect op.', global_step_val)
 
       collect_call = sess.make_callable(collect_op)
       train_step_call = sess.make_callable([train_op, summary_op, global_step])
 
       timed_at_step = sess.run(global_step)
       time_acc = 0
-      steps_per_second_ph = tf.placeholder(
+      steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
       steps_per_second_summary = tf.contrib.summary.scalar(
           name='global_steps/sec', tensor=steps_per_second_ph)
@@ -286,10 +287,10 @@ def train_eval(
         time_acc += time.time() - start_time
 
         if global_step_val % log_interval == 0:
-          tf.logging.info('step = %d, loss = %f',
-                          global_step_val, total_loss.loss)
+          tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
+                                    total_loss.loss)
           steps_per_sec = (global_step_val - timed_at_step) / time_acc
-          tf.logging.info('%.3f steps/sec' % steps_per_sec)
+          tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
@@ -324,7 +325,7 @@ def main(_):
     return
 
   root_dir = FLAGS.root_dir
-  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.config_file, FLAGS.binding)
   train_eval(root_dir,
              num_iterations=FLAGS.num_iterations,
@@ -333,4 +334,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.app.run()
+  tf.compat.v1.app.run()

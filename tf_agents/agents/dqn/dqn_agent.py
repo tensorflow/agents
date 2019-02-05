@@ -77,11 +77,13 @@ class DqnLossInfo(collections.namedtuple(
 # TODO(damienv): Definition of those element wise losses should not belong to
 # this file. Move them to utils/common or utils/losses.
 def element_wise_squared_loss(x, y):
-  return tf.losses.mean_squared_error(x, y, reduction=tf.losses.Reduction.NONE)
+  return tf.compat.v1.losses.mean_squared_error(
+      x, y, reduction=tf.losses.Reduction.NONE)
 
 
 def element_wise_huber_loss(x, y):
-  return tf.losses.huber_loss(x, y, reduction=tf.losses.Reduction.NONE)
+  return tf.compat.v1.losses.huber_loss(
+      x, y, reduction=tf.losses.Reduction.NONE)
 
 
 def compute_td_targets(next_q_values, rewards, discounts):
@@ -341,7 +343,7 @@ class DqnAgent(tf_agent.TFAgent):
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec(), num_outer_dims=2):
         # Do a sum over the time dimension.
-        td_loss = tf.reduce_sum(td_loss, axis=1)
+        td_loss = tf.reduce_sum(input_tensor=td_loss, axis=1)
 
       if weights is not None:
         td_loss *= weights
@@ -353,7 +355,7 @@ class DqnAgent(tf_agent.TFAgent):
       #   is the actual number of non-zero weight would artificially increase
       #   their contribution in the loss. Think about what would happen as
       #   the number of boundary samples increases.
-      loss = tf.reduce_mean(td_loss)
+      loss = tf.reduce_mean(input_tensor=td_loss)
 
       with tf.name_scope('Losses/'):
         tf.contrib.summary.scalar('loss', loss)
@@ -387,7 +389,7 @@ class DqnAgent(tf_agent.TFAgent):
         next_time_steps.observation, next_time_steps.step_type)
     # Reduce_max below assumes q_values are [BxF] or [BxTxF]
     assert next_target_q_values.shape.ndims in [2, 3]
-    return tf.reduce_max(next_target_q_values, -1)
+    return tf.reduce_max(input_tensor=next_target_q_values, axis=-1)
 
 
 @gin.configurable
@@ -414,7 +416,8 @@ class DdqnAgent(DqnAgent):
     # TODO(b/117175589): Add binary tests for DDQN.
     next_q_values, _ = self._q_network(next_time_steps.observation,
                                        next_time_steps.step_type)
-    best_next_actions = tf.to_int32(tf.argmax(next_q_values, axis=-1))
+    best_next_actions = tf.cast(
+        tf.argmax(input=next_q_values, axis=-1), dtype=tf.int32)
     next_target_q_values, _ = self._target_q_network(
         next_time_steps.observation, next_time_steps.step_type)
     multi_dim_actions = best_next_actions.shape.ndims > 1

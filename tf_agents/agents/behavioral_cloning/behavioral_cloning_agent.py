@@ -233,7 +233,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       if nest_utils.is_batched_nested_tensors(
           experience.action, self.action_spec(), num_outer_dims=2):
         # Do a sum over the time dimension.
-        error = tf.reduce_sum(error, axis=1)
+        error = tf.reduce_sum(input_tensor=error, axis=1)
 
       # Average across the elements of the batch.
       # Note: We use an element wise loss above to ensure each element is always
@@ -244,7 +244,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       #   the number of boundary samples increases.
       if weights is not None:
         error *= weights
-      loss = tf.reduce_mean(error)
+      loss = tf.reduce_mean(input_tensor=error)
 
       with tf.name_scope('Losses/'):
         tf.contrib.summary.scalar('loss', loss)

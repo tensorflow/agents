@@ -76,11 +76,11 @@ class DummyCriticNet(object):
 
     states = tf.cast(nest.flatten(observation)[0], tf.float32)
     # Biggest state is best state.
-    value = tf.reduce_max(states, axis=-1)
+    value = tf.reduce_max(input_tensor=states, axis=-1)
     value = tf.reshape(value, [-1])
 
     # Biggest action is best action.
-    q_value = tf.reduce_max(actions, axis=-1)
+    q_value = tf.reduce_max(input_tensor=actions, axis=-1)
     q_value = tf.reshape(q_value, [-1])
     # Biggest state is best state.
     return value + q_value, ()
@@ -129,19 +129,19 @@ class SacAgentTest(tf.test.TestCase):
     td_targets = [7.3, 19.1]
     pred_td_targets = [7., 10.]
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Expected critic loss has factor of 2, for the two TD3 critics.
-    expected_loss = self.evaluate(2 * tf.losses.mean_squared_error(
+    expected_loss = self.evaluate(2 * tf.compat.v1.losses.mean_squared_error(
         tf.constant(td_targets), tf.constant(pred_td_targets)))
 
     loss = agent.critic_loss(
         time_steps,
         actions,
         next_time_steps,
-        td_errors_loss_fn=tf.losses.mean_squared_error)
+        td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -163,7 +163,7 @@ class SacAgentTest(tf.test.TestCase):
     expected_loss = (2 * 10 - (2 + 1) - (4 + 1)) / 2
     loss = agent.actor_loss(time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -186,7 +186,7 @@ class SacAgentTest(tf.test.TestCase):
     expected_loss = 4.0 * (-10 - 3)
     loss = agent.alpha_loss(time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -205,7 +205,7 @@ class SacAgentTest(tf.test.TestCase):
     time_steps = ts.restart(observations)
     action_step = agent.policy().action(time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     action_ = self.evaluate(action_step.action)
     self.assertLessEqual(action_, self._action_spec.maximum)
     self.assertGreaterEqual(action_, self._action_spec.minimum)

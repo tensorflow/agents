@@ -82,14 +82,14 @@ class ValueNetwork(network.Network):
         conv_layer_params,
         fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.glorot_uniform(),
+        kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
         name='input_mlp')
 
     self._postprocessing_layers.append(
         tf.keras.layers.Dense(
             1,
             activation=None,
-            kernel_initializer=tf.random_uniform_initializer(
+            kernel_initializer=tf.compat.v1.initializers.random_uniform(
                 minval=-0.03, maxval=0.03),
         ))
 

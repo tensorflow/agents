@@ -75,7 +75,7 @@ class DynamicEpisodeDriver(driver.Driver):
       Returns:
         tf.bool tensor, shape (), indicating whether while loop should continue.
       """
-      return tf.less(tf.reduce_sum(counter), num_episodes)
+      return tf.less(tf.reduce_sum(input_tensor=counter), num_episodes)
 
     return loop_cond
 

@@ -39,34 +39,34 @@ class CreateCounterTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testDefaults(self):
     counter = common.create_counter('counter')
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 0)
 
   @test_util.run_in_graph_and_eager_modes()
   def testInitialValue(self):
     counter = common.create_counter('counter', 1)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 1)
 
   @test_util.run_in_graph_and_eager_modes()
   def testIncrement(self):
     counter = common.create_counter('counter', 0)
     inc_counter = counter.assign_add(1)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(inc_counter), 1)
 
   @test_util.run_in_graph_and_eager_modes()
   def testMultipleCounters(self):
     counter1 = common.create_counter('counter', 1)
     counter2 = common.create_counter('counter', 2)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter1), 1)
     self.assertEqual(self.evaluate(counter2), 2)
 
   @test_util.run_in_graph_and_eager_modes()
   def testInitialValueWithShape(self):
     counter = common.create_counter('counter', 1, shape=(2,))
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(counter), [1, 1])
 
 
@@ -82,7 +82,7 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
     target_vars = tf.contrib.framework.get_model_variables('target')
     update_op = common.soft_variables_update(source_vars, target_vars, tau)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     v_s, v_t = self.evaluate([source_vars, target_vars])
     self.evaluate(update_op)
     new_v_s, new_v_t = self.evaluate([source_vars, target_vars])
@@ -111,7 +111,7 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
                                              tau,
                                              sort_variables_by_name=True)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     v_s, v_t = self.evaluate([source_vars, target_vars])
     self.evaluate(update_op)
     new_v_s, new_v_t = self.evaluate([source_vars, target_vars])
@@ -216,7 +216,7 @@ class PeriodicallyTest(tf.test.TestCase):
     periodic_update = common.periodically(
         body=lambda: tf.group(target.assign_add(1)), period=period)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     desired_values = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3]
     for desired_value in desired_values:
       result = self.evaluate(target)
@@ -231,7 +231,7 @@ class PeriodicallyTest(tf.test.TestCase):
     periodic_update = common.periodically(
         lambda: tf.group(target.assign_add(1)), period=1)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     for desired_value in range(0, 10):
       result = self.evaluate(target)
       self.assertEqual(desired_value, result)
@@ -245,7 +245,7 @@ class PeriodicallyTest(tf.test.TestCase):
     periodic_update = common.periodically(
         body=lambda: target.assign_add(1), period=None)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     desired_value = 0
     for _ in range(1, 11):
       _, result = self.evaluate([periodic_update, target])
@@ -266,7 +266,7 @@ class PeriodicallyTest(tf.test.TestCase):
     periodic_update = common.periodically(
         body=lambda: tf.group(target.assign_add(1)), period=period)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     # With period = 1
     desired_values = [0, 1, 2]
     for desired_value in desired_values:
@@ -294,7 +294,7 @@ class PeriodicallyTest(tf.test.TestCase):
     periodic_update2 = common.periodically(
         body=lambda: tf.group(target2.assign_add(2)), period=2)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     # With period = 1, increment = 1
     desired_values1 = [0, 1, 2, 3]
     # With period = 2, increment = 2
@@ -354,7 +354,7 @@ class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
     ou = common.ornstein_uhlenbeck_process(
         tf.zeros([10]), damping=theta, stddev=sigma)
     samples = np.ndarray([num_samples, 10])
-    self.evaluate(tf.local_variables_initializer())
+    self.evaluate(tf.compat.v1.local_variables_initializer())
     for i in range(num_samples):
       samples[i] = self.evaluate(ou)
 
@@ -381,7 +381,7 @@ class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
         tf.zeros([10]), damping=theta, stddev=sigma)
 
     samples = np.ndarray([100, 10, 2])
-    self.evaluate(tf.local_variables_initializer())
+    self.evaluate(tf.compat.v1.local_variables_initializer())
     for i in range(100):
       samples[i, :, 0], samples[i, :, 1] = self.evaluate([ou1, ou2])
 
@@ -399,7 +399,7 @@ class LogProbabilityTest(tf.test.TestCase):
     actions = tf.constant([0.0, 0.0])
     log_probs = common.log_probability(distribution, actions, action_spec)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     log_probs_ = self.evaluate(log_probs)
     self.assertEqual(len(log_probs_.shape), 0)
     self.assertNear(log_probs_, 2 * -0.5 * np.log(2 * 3.14159), 0.001)
@@ -420,7 +420,7 @@ class LogProbabilityTest(tf.test.TestCase):
                [tf.constant([0.5]), tf.constant([-0.5])]]
     log_probs = common.log_probability(distribution, actions, action_spec)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     log_probs_ = self.evaluate(log_probs)
     self.assertEqual(len(log_probs_.shape), 0)
     self.assertNear(log_probs_, 4 * -0.5 * np.log(2 * 3.14159), 0.001)
@@ -442,7 +442,7 @@ class LogProbabilityTest(tf.test.TestCase):
                [tf.constant([[0.5], [0.5]]), tf.constant([[-0.5], [-0.5]])]]
     log_probs = common.log_probability(distribution, actions, action_spec)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     log_probs_ = self.evaluate(log_probs)
     self.assertEqual(log_probs_.shape, (2,))
     self.assertAllClose(log_probs_,
@@ -457,7 +457,7 @@ class EntropyTest(tf.test.TestCase):
     distribution = tfp.distributions.Normal([0.0, 0.0], [1.0, 2.0])
     entropies = common.entropy(distribution, action_spec)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     entropies_ = self.evaluate(entropies)
     self.assertEqual(len(entropies_.shape), 0)
     self.assertNear(entropies_,
@@ -478,7 +478,7 @@ class EntropyTest(tf.test.TestCase):
     ]
     entropies = common.entropy(distribution, action_spec)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     entropies_ = self.evaluate(entropies)
     self.assertEqual(len(entropies_.shape), 0)
     self.assertNear(entropies_,
@@ -500,7 +500,7 @@ class EntropyTest(tf.test.TestCase):
     ]
     entropies = common.entropy(distribution, action_spec)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     entropies_ = self.evaluate(entropies)
     self.assertEqual(entropies_.shape, (2,))
     self.assertAllClose(entropies_,
@@ -670,7 +670,7 @@ class GetEpisodeMaskTest(tf.test.TestCase):
     episode_mask = get_episode_mask(time_steps)
 
     expected_mask = [1, 1, 1, 0, 1, 1, 1, 0]
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(expected_mask, self.evaluate(episode_mask))
 
 
@@ -719,7 +719,7 @@ class ComputeReturnsTest(tf.test.TestCase):
     returns = common.compute_returns(rewards, discounts)
     expected_returns = [5, 4, 3, 2, 1, 3.439, 2.71, 1.9, 1]
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     returns = self.evaluate(returns)
     self.assertAllClose(returns, expected_returns)
 
@@ -736,11 +736,12 @@ class ComputeReturnsTest(tf.test.TestCase):
         returns[t] = rewards[t] + discounts[t] * next_state_return
         next_state_return = returns[t]
       return returns.astype(np.float32)
-    expected_returns = tf.py_func(_compute_returns_fn,
-                                  [rewards, discounts],
-                                  tf.float32)
 
-    self.evaluate(tf.global_variables_initializer())
+    expected_returns = tf.compat.v1.py_func(_compute_returns_fn,
+                                            [rewards, discounts],
+                                            tf.float32)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     returns = self.evaluate(returns)
     expected_returns = self.evaluate(expected_returns)
     self.assertAllClose(returns, expected_returns)

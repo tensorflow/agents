@@ -51,8 +51,8 @@ class DummyActorNetwork(network.Network):
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
-        kernel_initializer=tf.constant_initializer([2, 1]),
-        bias_initializer=tf.constant_initializer([5]),
+        kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+        bias_initializer=tf.compat.v1.initializers.constant([5]),
         name='action')
 
   def call(self, observations, step_type=(), network_state=()):
@@ -79,8 +79,8 @@ class DummyCriticNetwork(network.Network):
     self._action_layer = tf.keras.layers.Flatten()
     self._joint_layer = tf.keras.layers.Dense(
         1,
-        kernel_initializer=tf.constant_initializer([1, 3, 2]),
-        bias_initializer=tf.constant_initializer([4]))
+        kernel_initializer=tf.compat.v1.initializers.constant([1, 3, 2]),
+        bias_initializer=tf.compat.v1.initializers.constant([4]))
 
   def call(self, inputs, step_type=None, network_state=None):
     observations, actions = inputs
@@ -143,7 +143,7 @@ class DdpgAgentTest(tf.test.TestCase):
     expected_loss = 59.6
     loss = agent.critic_loss(time_steps, actions, next_time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -165,7 +165,7 @@ class DdpgAgentTest(tf.test.TestCase):
     expected_loss = 4.0
     loss = agent.actor_loss(time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -184,7 +184,7 @@ class DdpgAgentTest(tf.test.TestCase):
     action_step = agent.policy().action(time_steps)
     self.assertEqual(action_step.action[0].shape.as_list(), [1, 1])
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))

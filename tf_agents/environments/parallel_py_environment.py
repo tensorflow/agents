@@ -71,10 +71,10 @@ class ParallelPyEnvironment(py_environment.Base):
     self._flatten = flatten
 
   def start(self):
-    tf.logging.info('Starting all processes.')
+    tf.compat.v1.logging.info('Starting all processes.')
     for env in self._envs:
       env.start()
-    tf.logging.info('All processes started.')
+    tf.compat.v1.logging.info('All processes started.')
 
   @property
   def batched(self):
@@ -126,10 +126,10 @@ class ParallelPyEnvironment(py_environment.Base):
 
   def close(self):
     """Close all external process."""
-    tf.logging.info('Closing all processes.')
+    tf.compat.v1.logging.info('Closing all processes.')
     for env in self._envs:
       env.close()
-    tf.logging.info('All processes closed.')
+    tf.compat.v1.logging.info('All processes closed.')
 
   def _stack_time_steps(self, time_steps):
     """Given a list of TimeStep, combine to one with a batch dimension."""
@@ -368,7 +368,7 @@ class ProcessPyEnvironment(object):
       etype, evalue, tb = sys.exc_info()
       stacktrace = ''.join(traceback.format_exception(etype, evalue, tb))
       message = 'Error in environment process: {}'.format(stacktrace)
-      tf.logging.error(message)
+      tf.compat.v1.logging.error(message)
       conn.send((self._EXCEPTION, stacktrace))
     finally:
       conn.close()

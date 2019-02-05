@@ -70,7 +70,7 @@ class FixedPolicyTest(tf.test.TestCase):
     distribution_step = self._policy.distribution(time_step)
     mode = distribution_step.action.mode()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action),
                         [self._fixed_action])
     self.assertAllEqual(self.evaluate(mode), [self._fixed_action])
@@ -83,7 +83,7 @@ class FixedPolicyTest(tf.test.TestCase):
     distribution_step = self._policy.distribution(time_step)
     mode = distribution_step.action.mode()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action),
                         [[self._fixed_action]] * batch_size)
     self.assertAllEqual(self.evaluate(mode),

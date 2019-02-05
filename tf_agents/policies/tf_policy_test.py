@@ -35,11 +35,11 @@ class TfPolicyHoldsVariables(tf_policy.Base):
       init_var_value: A scalar specifies the initial value of all variables.
       var_scope: A String defines variable scope.
     """
-    const_init = tf.constant_initializer(init_var_value)
-    with tf.variable_scope(var_scope):
+    const_init = tf.compat.v1.initializers.constant(init_var_value)
+    with tf.compat.v1.variable_scope(var_scope):
       self._variables_list = [
-          tf.get_variable("var_1", [3, 3], initializer=const_init),
-          tf.get_variable("var_2", [5, 5], initializer=const_init)
+          tf.compat.v1.get_variable("var_1", [3, 3], initializer=const_init),
+          tf.compat.v1.get_variable("var_2", [5, 5], initializer=const_init)
       ]
 
   def _variables(self):
@@ -62,7 +62,7 @@ class TfPolicyTest(tf.test.TestCase, parameterized.TestCase):
     source_policy = TfPolicyHoldsVariables(init_var_value=1, var_scope="source")
     target_policy = TfPolicyHoldsVariables(init_var_value=0, var_scope="target")
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     for var in self.evaluate(target_policy.variables()):
       self.assertAllEqual(var, np.zeros(var.shape))
 

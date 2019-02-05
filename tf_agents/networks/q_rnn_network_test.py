@@ -54,9 +54,8 @@ class QRnnNetworkTest(tf.test.TestCase):
     frames = 5
     num_actions = 2
     lstm_size = 6
-    states = (
-        tf.random_uniform([batch_size, frames, 1]),
-        tf.random_uniform([batch_size, frames]))
+    states = (tf.random.uniform([batch_size, frames, 1]),
+              tf.random.uniform([batch_size, frames]))
     preprocessing_layers = (
         tf.keras.layers.Dense(4),
         tf.keras.Sequential([
@@ -85,9 +84,8 @@ class QRnnNetworkTest(tf.test.TestCase):
     batch_size = 3
     num_actions = 2
     lstm_size = 5
-    states = (
-        tf.random_uniform([batch_size, 1]),
-        tf.random_uniform([batch_size]))
+    states = (tf.random.uniform([batch_size, 1]),
+              tf.random.uniform([batch_size]))
     preprocessing_layers = (
         tf.keras.layers.Dense(4),
         tf.keras.Sequential([

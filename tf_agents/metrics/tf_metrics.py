@@ -46,7 +46,7 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
         name='environment_steps',
         shape=(),
         dtype=self.dtype,
-        initializer=tf.zeros_initializer())
+        initializer=tf.compat.v1.initializers.zeros())
 
   def call(self, trajectory):
     """Increase the number of environment_steps according to trajectory.
@@ -62,7 +62,7 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
     """
     # The __call__ will execute this.
     num_steps = tf.cast(~trajectory.is_boundary(), self.dtype)
-    num_steps = tf.reduce_sum(num_steps)
+    num_steps = tf.reduce_sum(input_tensor=num_steps)
     self.environment_steps.assign_add(num_steps)
     return trajectory
 
@@ -87,7 +87,7 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
         name='number_episodes',
         shape=(),
         dtype=self.dtype,
-        initializer=tf.zeros_initializer())
+        initializer=tf.compat.v1.initializers.zeros())
 
   def call(self, trajectory):
     """Increase the number of number_episodes according to trajectory.
@@ -102,7 +102,7 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
     """
     # The __call__ will execute this.
     num_episodes = tf.cast(trajectory.is_last(), self.dtype)
-    num_episodes = tf.reduce_sum(num_episodes)
+    num_episodes = tf.reduce_sum(input_tensor=num_episodes)
     self.number_episodes.assign_add(num_episodes)
     return trajectory
 
@@ -138,4 +138,5 @@ class AverageEpisodeLengthMetric(tf_py_metric.TFPyMetric):
 
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.log().numpy()) for m in metrics]
-  tf.logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
+  tf.compat.v1.logging.info('{0} \n\t\t {1}'.format(prefix,
+                                                    '\n\t\t '.join(log)))

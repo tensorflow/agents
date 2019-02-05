@@ -81,7 +81,7 @@ class DynamicStepDriver(driver.Driver):
       Returns:
         tf.bool tensor, shape (), indicating whether while loop should continue.
       """
-      return tf.less(tf.reduce_sum(counter), self._num_steps)
+      return tf.less(tf.reduce_sum(input_tensor=counter), self._num_steps)
 
     return loop_cond
 

@@ -115,5 +115,5 @@ class ScriptedPyPolicy(py_policy.Base):
           "Got: {}. Expected {}.".format(action_index, current_action,
                                          self._action_spec))
 
-    tf.logging.info("Policy_state: %r", policy_state)
+    tf.compat.v1.logging.info("Policy_state: %r", policy_state)
     return policy_step.PolicyStep(current_action, [action_index, num_repeats])

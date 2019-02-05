@@ -37,14 +37,15 @@ def create_counter(name,
                    use_resource=True,
                    trainable=False):
   """Create a variable."""
-  collections = [tf.GraphKeys.GLOBAL_VARIABLES]
+  collections = [tf.compat.v1.GraphKeys.GLOBAL_VARIABLES]
   if use_local_variable:
-    collections = [tf.GraphKeys.LOCAL_VARIABLES]
-  return tf.get_variable(
-      name=tf.get_default_graph().unique_name(name),
+    collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
+  return tf.compat.v1.get_variable(
+      name=tf.compat.v1.get_default_graph().unique_name(name),
       shape=shape,
       dtype=dtype,
-      initializer=tf.constant_initializer(initial_value, dtype=dtype),
+      initializer=tf.compat.v1.initializers.constant(
+          initial_value, dtype=dtype),
       collections=collections,
       use_resource=use_resource,
       trainable=trainable)
@@ -142,7 +143,7 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
     # vector of actions for each batch, so exclude it from the batch dimensions.
     batch_dims -= 1
 
-  outer_shape = tf.shape(actions)
+  outer_shape = tf.shape(input=actions)
   batch_indices = tf.meshgrid(
       *[tf.range(outer_shape[i]) for i in range(batch_dims)],
       indexing='ij')
@@ -227,7 +228,7 @@ class Periodically(tf.contrib.eager.Checkpointable):
       raise TypeError('body must be callable.')
     self._body = body
     self._period = period
-    with tf.variable_scope(scope):
+    with tf.compat.v1.variable_scope(scope):
       self._counter = create_counter('counter', 0)
 
   def __call__(self):
@@ -237,7 +238,8 @@ class Periodically(tf.contrib.eager.Checkpointable):
       return self._body()
     period = tf.cast(self._period, self._counter.dtype)
     remainder = tf.mod(self._counter.assign_add(1), period)
-    return tf.cond(tf.equal(remainder, 0), self._body, tf.no_op)
+    return tf.cond(
+        pred=tf.equal(remainder, 0), true_fn=self._body, false_fn=tf.no_op)
 
 
 class EagerPeriodically(object):
@@ -378,12 +380,12 @@ class OUProcess(object):
     self._damping = damping
     self._stddev = stddev
     self._seed = seed
-    with tf.variable_scope(scope):
+    with tf.compat.v1.variable_scope(scope):
       self._x = tf.contrib.framework.local_variable(
           initial_value, use_resource=True)
 
   def __call__(self):
-    noise = tf.random_normal(
+    noise = tf.random.normal(
         shape=self._x.shape,
         stddev=self._stddev,
         dtype=self._x.dtype,
@@ -409,8 +411,8 @@ def log_probability(distributions, actions, action_spec):
     rank = single_action.shape.ndims
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(
-        single_distribution.log_prob(single_action),
-        reduce_dims)
+        input_tensor=single_distribution.log_prob(single_action),
+        axis=reduce_dims)
 
   nest.assert_same_structure(distributions, actions)
   log_probs = [_compute_log_prob(dist, action) for (dist, action)
@@ -444,7 +446,7 @@ def entropy(distributions, action_spec):
     # Sum entropies over everything but the batch.
     rank = entropies.shape.ndims
     reduce_dims = list(range(outer_rank, rank))
-    return tf.reduce_sum(entropies, reduce_dims)
+    return tf.reduce_sum(input_tensor=entropies, axis=reduce_dims)
 
   entropies = [_compute_entropy(dist) for dist in nest.flatten(distributions)]
 
@@ -489,9 +491,12 @@ def discounted_future_sum(values, gamma, num_steps):
   padded_values = tf.concat(
       [values, tf.zeros([batch_size, num_steps - 1])], 1)
 
-  convolved_values = tf.squeeze(tf.nn.conv1d(
-      tf.expand_dims(padded_values, -1), discount_filter,
-      stride=1, padding='VALID'), -1)
+  convolved_values = tf.squeeze(
+      tf.nn.conv1d(
+          tf.expand_dims(padded_values, -1),
+          filters=discount_filter,
+          stride=1,
+          padding='VALID'), -1)
 
   return convolved_values
 
@@ -594,7 +599,7 @@ def get_contiguous_sub_episodes(next_time_steps_discount):
   """
   episode_end = tf.equal(next_time_steps_discount,
                          tf.constant(0, dtype=next_time_steps_discount.dtype))
-  mask = tf.cumprod(
+  mask = tf.math.cumprod(
       1.0 - tf.cast(episode_end, tf.float32), axis=1, exclusive=True)
   return mask
 
@@ -610,7 +615,7 @@ def convert_q_logits_to_values(logits, support):
     A Tensor containing the expected Q-values.
   """
   probabilities = tf.nn.softmax(logits)
-  return tf.reduce_sum(support * probabilities, axis=-1)
+  return tf.reduce_sum(input_tensor=support * probabilities, axis=-1)
 
 
 def generate_tensor_summaries(tag, tensor):
@@ -622,10 +627,11 @@ def generate_tensor_summaries(tag, tensor):
   """
   with tf.name_scope(tag):
     tf.contrib.summary.histogram('histogram', tensor)
-    tf.contrib.summary.scalar('mean', tf.reduce_mean(tensor))
-    tf.contrib.summary.scalar('mean_abs', tf.reduce_mean(tf.abs(tensor)))
-    tf.contrib.summary.scalar('max', tf.reduce_max(tensor))
-    tf.contrib.summary.scalar('min', tf.reduce_min(tensor))
+    tf.contrib.summary.scalar('mean', tf.reduce_mean(input_tensor=tensor))
+    tf.contrib.summary.scalar('mean_abs',
+                              tf.reduce_mean(input_tensor=tf.abs(tensor)))
+    tf.contrib.summary.scalar('max', tf.reduce_max(input_tensor=tensor))
+    tf.contrib.summary.scalar('min', tf.reduce_min(input_tensor=tensor))
 
 
 # TODO(kbanoop): Support batch mode
@@ -643,7 +649,8 @@ def compute_returns(rewards, discounts):
   rewards.shape.assert_is_compatible_with(discounts.shape)
   if (not rewards.shape.is_fully_defined() or
       not discounts.shape.is_fully_defined()):
-    check_shape = tf.assert_equal(tf.shape(rewards), tf.shape(discounts))
+    check_shape = tf.compat.v1.assert_equal(
+        tf.shape(input=rewards), tf.shape(input=discounts))
   else:
     check_shape = tf.no_op()
   with tf.control_dependencies([check_shape]):
@@ -667,18 +674,18 @@ def compute_returns(rewards, discounts):
 
 def initialize_uninitialized_variables(session):
   """Initialize any pending variables that are uninitialized."""
-  var_list = tf.global_variables() + tf.local_variables()
+  var_list = tf.compat.v1.global_variables() + tf.compat.v1.local_variables()
   is_initialized = session.run(
-      [tf.is_variable_initialized(v) for v in var_list])
+      [tf.compat.v1.is_variable_initialized(v) for v in var_list])
   uninitialized_vars = []
   for flag, v in zip(is_initialized, var_list):
     if not flag:
       uninitialized_vars.append(v)
   if uninitialized_vars:
-    tf.logging.info('uninitialized_vars:')
+    tf.compat.v1.logging.info('uninitialized_vars:')
     for v in uninitialized_vars:
-      tf.logging.info(v)
-    session.run(tf.variables_initializer(uninitialized_vars))
+      tf.compat.v1.logging.info(v)
+    session.run(tf.compat.v1.variables_initializer(uninitialized_vars))
 
 
 class Checkpointer(object):
@@ -697,17 +704,18 @@ class Checkpointer(object):
     """
     self._checkpoint = tf.train.Checkpoint(**kwargs)
 
-    if not tf.gfile.Exists(ckpt_dir):
-      tf.gfile.MakeDirs(ckpt_dir)
+    if not tf.io.gfile.exists(ckpt_dir):
+      tf.io.gfile.makedirs(ckpt_dir)
 
     self._manager = tf.contrib.checkpoint.CheckpointManager(
         self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
 
     if self._manager.latest_checkpoint is not None:
-      tf.logging.info('Checkpoint available: {}'.format(
+      tf.compat.v1.logging.info('Checkpoint available: {}'.format(
           self._manager.latest_checkpoint))
     else:
-      tf.logging.info('No checkpoint available at {}'.format(ckpt_dir))
+      tf.compat.v1.logging.info(
+          'No checkpoint available at {}'.format(ckpt_dir))
     self._load_status = self._checkpoint.restore(
         self._manager.latest_checkpoint)
 
@@ -719,7 +727,7 @@ class Checkpointer(object):
   def save(self, global_step):
     """Save state to checkpoint."""
     saved_checkpoint = self._manager.save(checkpoint_number=global_step)
-    tf.logging.info('Saved checkpoint: {}'.format(saved_checkpoint))
+    tf.compat.v1.logging.info('Saved checkpoint: {}'.format(saved_checkpoint))
 
 
 def replicate(tensor, outer_shape):
@@ -742,7 +750,7 @@ def replicate(tensor, outer_shape):
   Raises:
     ValueError: when the outer shape is incorrect.
   """
-  outer_shape = tf.convert_to_tensor(outer_shape)
+  outer_shape = tf.convert_to_tensor(value=outer_shape)
   if len(outer_shape.shape) != 1:
     raise ValueError('The outer shape must be a 1D tensor')
   outer_ndims = int(outer_shape.shape[0])
@@ -754,10 +762,11 @@ def replicate(tensor, outer_shape):
 
   # Replicate tensor "t" along the 1st dimension.
   tiled_tensor = tf.tile(
-      tensor, [tf.reduce_prod(outer_shape)] + [1] * (tensor_ndims - 1))
+      tensor,
+      [tf.reduce_prod(input_tensor=outer_shape)] + [1] * (tensor_ndims - 1))
 
   # Reshape to match outer_shape.
-  target_shape = tf.concat([outer_shape, tf.shape(tensor)], axis=0)
+  target_shape = tf.concat([outer_shape, tf.shape(input=tensor)], axis=0)
   return tf.reshape(tiled_tensor, target_shape)
 
 
@@ -808,8 +817,10 @@ def assert_members_are_not_overridden(base_cls,
 
 
 def element_wise_squared_loss(x, y):
-  return tf.losses.mean_squared_error(x, y, reduction=tf.losses.Reduction.NONE)
+  return tf.compat.v1.losses.mean_squared_error(
+      x, y, reduction=tf.losses.Reduction.NONE)
 
 
 def element_wise_huber_loss(x, y):
-  return tf.losses.huber_loss(x, y, reduction=tf.losses.Reduction.NONE)
+  return tf.compat.v1.losses.huber_loss(
+      x, y, reduction=tf.losses.Reduction.NONE)

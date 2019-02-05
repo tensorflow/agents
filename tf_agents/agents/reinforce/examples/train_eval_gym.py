@@ -113,7 +113,7 @@ def train_eval(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         actor_network=actor_net,
-        optimizer=tf.train.AdamOptimizer(learning_rate=learning_rate),
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
         normalize_returns=normalize_returns,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
@@ -133,7 +133,7 @@ def train_eval(
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
 
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     collect_policy = tf_agent.collect_policy()
 
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
@@ -171,7 +171,7 @@ def train_eval(
 
     init_agent_op = tf_agent.initialize()
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       # Initialize the graph.
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
@@ -198,7 +198,7 @@ def train_eval(
 
       timed_at_step = sess.run(global_step)
       time_acc = 0
-      steps_per_second_ph = tf.placeholder(
+      steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
       steps_per_second_summary = tf.contrib.summary.scalar(
           name='global_steps/sec', tensor=steps_per_second_ph)
@@ -211,10 +211,10 @@ def train_eval(
         time_acc += time.time() - start_time
 
         if global_step_val % log_interval == 0:
-          tf.logging.info('step = %d, loss = %f', global_step_val,
-                          total_loss.loss)
+          tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
+                                    total_loss.loss)
           steps_per_sec = (global_step_val - timed_at_step) / time_acc
-          tf.logging.info('%.3f steps/sec' % steps_per_sec)
+          tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
@@ -245,10 +245,10 @@ def main(_):
   if tf.executing_eagerly():
     # train_eval_eager is already the tf2 version of this file: b/123777589
     return
-  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.app.run()
+  tf.compat.v1.app.run()

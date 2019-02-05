@@ -28,7 +28,7 @@ from tf_agents.specs import tensor_spec
 
 
 def _get_inputs(batch_size, num_input_dims):
-  return tf.random_uniform([batch_size, num_input_dims])
+  return tf.random.uniform([batch_size, num_input_dims])
 
 
 class FactoredCategoricalTest(tf.test.TestCase):
@@ -70,10 +70,11 @@ class NormalTest(tf.test.TestCase):
     def gen_projection(value=1):
       def projection(inputs, num_elements, scope=None):
         del scope
-        return value * tf.ones([tf.shape(inputs)[0], num_elements])
+        return value * tf.ones([tf.shape(input=inputs)[0], num_elements])
+
       return projection
 
-    with tf.variable_scope('test', reuse=tf.AUTO_REUSE):
+    with tf.compat.v1.variable_scope('test', reuse=tf.compat.v1.AUTO_REUSE):
       # No squashing.
       distribution = layers.normal(
           inputs, output_spec,
@@ -106,7 +107,7 @@ class NormalTest(tf.test.TestCase):
       self.assertEqual(type(distribution), tfp.distributions.Normal)
       squashed_means2 = distribution.loc
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     (unsquashed_means1_, unsquashed_means2_,
      squashed_means1_, squashed_means2_) = self.evaluate(
          (unsquashed_means1, unsquashed_means2,

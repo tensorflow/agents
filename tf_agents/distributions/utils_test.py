@@ -28,7 +28,7 @@ from tf_agents.specs import tensor_spec
 
 
 def _get_inputs(batch_dims, num_input_dims):
-  return tf.random_uniform(batch_dims + [num_input_dims])
+  return tf.random.uniform(batch_dims + [num_input_dims])
 
 
 class ProjectToOutputDistributionTest(tf.test.TestCase):

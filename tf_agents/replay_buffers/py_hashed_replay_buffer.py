@@ -143,8 +143,9 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
 
     if (self._log_interval and
         self._np_state.item_count % self._log_interval == 0):
-      tf.logging.info('Effective Replay buffer frame count: {}'.format(
-          len(self._frame_buffer)))
+      tf.compat.v1.logging.info(
+          'Effective Replay buffer frame count: {}'.format(
+              len(self._frame_buffer)))
 
     return traj._replace(observation=observation)
 
@@ -171,4 +172,3 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
   def _clear(self):
     super(PyHashedReplayBuffer, self)._clear()
     self._frame_buffer.clear()
-

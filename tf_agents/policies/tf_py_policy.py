@@ -90,9 +90,8 @@ class TFPyPolicy(tf_policy.Base):
           self._py_policy.get_initial_state(batch_size=batch_size))
 
     with tf.name_scope('get_initial_state'):
-      flat_policy_state = tf.py_func(
-          _get_initial_state_fn,
-          [batch_size],
+      flat_policy_state = tf.compat.v1.py_func(
+          _get_initial_state_fn, [batch_size],
           self._policy_state_dtypes,
           stateful=False,
           name='get_initial_state_py_func')
@@ -116,7 +115,7 @@ class TFPyPolicy(tf_policy.Base):
     with tf.name_scope('action'):
       flattened_input_tensors = nest.flatten((time_step, policy_state))
       with tf.control_dependencies(flattened_input_tensors):
-        flat_action_step = tf.py_func(
+        flat_action_step = tf.compat.v1.py_func(
             _action_fn,
             flattened_input_tensors,
             self._policy_step_dtypes,

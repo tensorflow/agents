@@ -53,7 +53,7 @@ class TrajectoryReplayTest(tf.test.TestCase):
         action=output_actions,
         policy_info=output_policy_info)
     repeat_output_actions, repeat_output_policy_info, _ = replay.run(new_traj)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     (output_actions, output_policy_info, traj,
      repeat_output_actions, repeat_output_policy_info) = self.evaluate(
          (output_actions, output_policy_info, traj,
@@ -82,7 +82,7 @@ class TrajectoryReplayTest(tf.test.TestCase):
         policy_info=output_policy_info)
     repeat_output_actions, repeat_output_policy_info, _ = replay.run(
         new_traj, policy_state=policy_state)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     (output_actions, output_policy_info, traj,
      repeat_output_actions, repeat_output_policy_info) = self.evaluate(
          (output_actions, output_policy_info, traj,

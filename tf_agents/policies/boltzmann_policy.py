@@ -51,7 +51,7 @@ class BoltzmannPolicy(tf_policy.Base):
     if temperature == 1.0:
       self._temperature = None
     else:
-      self._temperature = tf.convert_to_tensor(temperature)
+      self._temperature = tf.convert_to_tensor(value=temperature)
     self._wrapped_policy = policy
 
   def _variables(self):
@@ -70,4 +70,3 @@ class BoltzmannPolicy(tf_policy.Base):
     action_dist = nest.map_structure(
         _apply_temperature, distribution_step.action)
     return distribution_step._replace(action=action_dist)
-

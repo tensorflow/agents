@@ -78,7 +78,7 @@ class ActorNetwork(network.Network):
         conv_layer_params,
         fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
+        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),
         name='input_mlp')
 

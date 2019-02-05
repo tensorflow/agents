@@ -66,7 +66,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     random_action = self._random_policy.action(time_step, (), seed_stream())
 
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
-    rng = tf.random_uniform(
+    rng = tf.random.uniform(
         outer_shape, maxval=1.0, seed=seed_stream(), name='epsilon_rng')
     cond = tf.greater(rng, self._epsilon)
 

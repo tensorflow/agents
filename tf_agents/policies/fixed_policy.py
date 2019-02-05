@@ -48,7 +48,8 @@ class FixedPolicy(tf_policy.Base):
     super(FixedPolicy, self).__init__(time_step_spec, action_spec)
     nest.assert_same_structure(self._action_spec, actions)
     def convert(action, spec):
-      return tf.convert_to_tensor(action, dtype=spec.dtype)
+      return tf.convert_to_tensor(value=action, dtype=spec.dtype)
+
     self._action_value = nest.map_structure(convert, actions, self._action_spec)
 
   def _variables(self):

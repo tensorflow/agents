@@ -67,12 +67,12 @@ class Trajectory(
   __slots__ = ()
 
   def is_first(self):
-    if tf.contrib.framework.is_tensor(self.step_type):
+    if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, ts.StepType.FIRST)
     return self.step_type == ts.StepType.FIRST
 
   def is_mid(self):
-    if tf.contrib.framework.is_tensor(self.step_type):
+    if tf.is_tensor(self.step_type):
       return tf.logical_and(
           tf.equal(self.step_type, ts.StepType.MID),
           tf.equal(self.next_step_type, ts.StepType.MID))
@@ -80,12 +80,12 @@ class Trajectory(
         self.next_step_type == ts.StepType.MID)
 
   def is_last(self):
-    if tf.contrib.framework.is_tensor(self.next_step_type):
+    if tf.is_tensor(self.next_step_type):
       return tf.equal(self.next_step_type, ts.StepType.LAST)
     return self.next_step_type == ts.StepType.LAST
 
   def is_boundary(self):
-    if tf.contrib.framework.is_tensor(self.step_type):
+    if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, ts.StepType.LAST)
     return self.step_type == ts.StepType.LAST
 
@@ -144,7 +144,7 @@ def _create_trajectory(
       observation, action, policy_info, reward, discount):
     with tf.name_scope(name_scope):
       discount = tf.identity(discount)
-      shape = tf.shape(discount)
+      shape = tf.shape(input=discount)
       make_tensors = lambda struct: nest.map_structure(tf.identity, struct)
       return Trajectory(
           step_type=tf.fill(shape, step_type),
@@ -355,16 +355,17 @@ def from_episode(observation, action, policy_info, reward, discount=None):
       time_source = discount
     else:
       time_source = nest.flatten(reward)[0]
-    if tf.contrib.framework.is_tensor(time_source):
+    if tf.is_tensor(time_source):
       num_frames = (
           tf.compat.dimension_value(time_source.shape[0]) or
-          tf.shape(time_source)[0])
+          tf.shape(input=time_source)[0])
     else:
       num_frames = np.shape(time_source)[0]
     if discount is None:
       discount = ones_fn([num_frames], dtype=float_dtype)
 
-    if not tf.contrib.framework.is_tensor(num_frames):
+    if not tf.is_tensor(num_frames):
+
       def check_num_frames(t):
         if t.shape[0] is not None and t.shape[0] != num_frames:
           raise ValueError('Expected first dimension to be {}, '

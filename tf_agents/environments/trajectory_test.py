@@ -34,7 +34,7 @@ class TrajectoryTest(tf.test.TestCase):
     reward = tf.constant([1.0, 1.0, 2.0])
     discount = tf.constant([1.0, 1.0, 1.0])
     traj = trajectory.first(observation, action, policy_info, reward, discount)
-    self.assertTrue(tf.contrib.framework.is_tensor(traj.step_type))
+    self.assertTrue(tf.is_tensor(traj.step_type))
     traj_val = self.evaluate(traj)
     self.assertAllEqual(traj_val.step_type, [ts.StepType.FIRST] * 3)
     self.assertAllEqual(traj_val.next_step_type, [ts.StepType.MID] * 3)
@@ -46,18 +46,18 @@ class TrajectoryTest(tf.test.TestCase):
     reward = np.array([1.0, 1.0, 2.0])
     discount = np.array([1.0, 1.0, 1.0])
     traj = trajectory.first(observation, action, policy_info, reward, discount)
-    self.assertFalse(tf.contrib.framework.is_tensor(traj.step_type))
+    self.assertFalse(tf.is_tensor(traj.step_type))
     self.assertAllEqual(traj.step_type, [ts.StepType.FIRST] * 3)
     self.assertAllEqual(traj.next_step_type, [ts.StepType.MID] * 3)
 
   def testFromEpisodeTensor(self):
-    observation = tf.random_uniform((4, 5))
+    observation = tf.random.uniform((4, 5))
     action = ()
     policy_info = ()
-    reward = tf.random_uniform((4,))
+    reward = tf.random.uniform((4,))
     traj = trajectory.from_episode(
         observation, action, policy_info, reward, discount=None)
-    self.assertTrue(tf.contrib.framework.is_tensor(traj.step_type))
+    self.assertTrue(tf.is_tensor(traj.step_type))
     traj_val, obs_val, reward_val = self.evaluate((traj, observation, reward))
     first = ts.StepType.FIRST
     mid = ts.StepType.MID
@@ -77,7 +77,7 @@ class TrajectoryTest(tf.test.TestCase):
     reward = np.random.rand(4)
     traj = trajectory.from_episode(
         observation, action, policy_info, reward, discount=None)
-    self.assertFalse(tf.contrib.framework.is_tensor(traj.step_type))
+    self.assertFalse(tf.is_tensor(traj.step_type))
     first = ts.StepType.FIRST
     mid = ts.StepType.MID
     last = ts.StepType.LAST

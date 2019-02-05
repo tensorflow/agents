@@ -29,9 +29,10 @@ from tf_agents.specs import tensor_spec
 
 def default_fully_connected(inputs, num_elements, scope=None):
   return tf.contrib.layers.fully_connected(
-      inputs, num_elements,
-      biases_initializer=tf.zeros_initializer(),
-      weights_initializer=tf.random_uniform_initializer(
+      inputs,
+      num_elements,
+      biases_initializer=tf.compat.v1.initializers.zeros(),
+      weights_initializer=tf.compat.v1.initializers.random_uniform(
           minval=-0.003, maxval=0.003),
       activation_fn=None,
       normalizer_fn=None,
@@ -102,7 +103,7 @@ def normal(inputs,
            outer_rank=1,
            projection_layer=default_fully_connected,
            mean_transform=tanh_squash_to_spec,
-           std_initializer=tf.zeros_initializer(),
+           std_initializer=tf.compat.v1.initializers.zeros(),
            std_transform=tf.exp,
            distribution_cls=tfp.distributions.Normal):
   """Project a batch of inputs to a batch of means and standard deviations.

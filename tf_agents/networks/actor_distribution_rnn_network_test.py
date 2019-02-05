@@ -54,7 +54,7 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
 
     action_distributions, network_state = net(time_step.observation,
                                               time_step.step_type)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], action_distributions[0].mode().shape.as_list())
     self.assertEqual([1, 3], action_distributions[1].mode().shape.as_list())
 
@@ -118,7 +118,7 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
     net_call = net(time_step.observation, time_step.step_type,
                    initial_state)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(nest.map_structure(lambda d: d.sample(), net_call[0]))
 
 

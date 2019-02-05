@@ -75,7 +75,7 @@ class AgentTest(tf.test.TestCase):
     observation = tensor_spec.sample_spec_nest(
         self._time_step_spec, seed=42, outer_dims=(1,))
     action_op = policy.action(observation).action
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
 
     action = self.evaluate(action_op)
     self.assertEqual([1] + self._action_spec[0].shape.as_list(),
@@ -94,7 +94,7 @@ class AgentTest(tf.test.TestCase):
         self._time_step_spec, seed=42, outer_dims=(1,))
 
     action_op = policy.action(observation).action
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     action = self.evaluate(action_op)
     self.assertEqual([1] + action_spec[0].shape.as_list(),
                      list(action[0].shape))
@@ -138,7 +138,7 @@ class AgentTest(tf.test.TestCase):
 
     expected_loss = 26.0
     loss_info = agent._loss(time_steps, actions, next_time_steps)
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     total_loss, _ = self.evaluate(loss_info)
 
     self.assertAllClose(total_loss, expected_loss)
@@ -159,7 +159,7 @@ class AgentTest(tf.test.TestCase):
         [2] + self._action_spec[0].shape.as_list(),
         action_step.action[0].shape,
     )
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
@@ -175,7 +175,7 @@ class AgentTest(tf.test.TestCase):
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy()
     action_step = policy.action(time_steps)
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
 
     checkpoint = tf.train.Checkpoint(agent=agent)
 

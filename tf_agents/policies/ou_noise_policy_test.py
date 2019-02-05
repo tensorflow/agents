@@ -46,8 +46,8 @@ class DummyActionNet(network.Network):
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
             activation=tf.nn.tanh,
-            kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5]),
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5]),
         ),
     ]
 
@@ -107,8 +107,8 @@ class OuNoisePolicyTest(tf.test.TestCase):
     action_step = policy.action(self._time_step_batch)
     self.assertEqual(action_step.action.shape.as_list(), [2, 1])
     self.assertEqual(action_step.action.dtype, tf.float32)
-    self.evaluate(tf.global_variables_initializer())
-    self.evaluate(tf.local_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.local_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_ >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_ <= self._action_spec.maximum))
@@ -118,8 +118,8 @@ class OuNoisePolicyTest(tf.test.TestCase):
     action_step = policy.action(self._time_step_batch)
     wrapped_action_step = self._wrapped_policy.action(self._time_step_batch)
 
-    self.evaluate(tf.global_variables_initializer())
-    self.evaluate(tf.local_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.local_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     wrapped_policy_actions_ = self.evaluate(wrapped_action_step.action)
 
@@ -138,8 +138,8 @@ class OuNoisePolicyTest(tf.test.TestCase):
     action_step = policy.action(self._time_step_batch)
     self.assertEqual(action_step.action[0].shape.as_list(), [2, 1])
     self.assertEqual(action_step.action[0].dtype, tf.float32)
-    self.evaluate(tf.global_variables_initializer())
-    self.evaluate(tf.local_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.local_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_[0] >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_[0] <= self._action_spec.maximum))

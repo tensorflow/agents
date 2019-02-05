@@ -50,9 +50,10 @@ class DummyNet(network.Network):
     kernel_initializer = None
     bias_initializer = None
     if use_constant_initializer:
-      kernel_initializer = tf.constant_initializer([[1, 200], [3, 4]],
-                                                   verify_shape=True)
-      bias_initializer = tf.constant_initializer([1, 1], verify_shape=True)
+      kernel_initializer = tf.compat.v1.initializers.constant(
+          [[1, 200], [3, 4]], verify_shape=True)
+      bias_initializer = tf.compat.v1.initializers.constant([1, 1],
+                                                            verify_shape=True)
 
     # Store custom layers that can be serialized through the Checkpointable API.
     self._dummy_layers = []
@@ -111,7 +112,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       self.skipTest('b/123770140')
 
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
-    policy.session = tf.Session()
+    policy.session = tf.compat.v1.Session()
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
     self.assertTrue(
         np.array_equal(
@@ -144,7 +145,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     with self.cached_session():
       policy_state = policy.get_initial_state(batch_size)
-      self.evaluate(tf.global_variables_initializer())
+      self.evaluate(tf.compat.v1.global_variables_initializer())
       action_steps = policy.action(time_steps, policy_state)
       self.assertEqual(action_steps.action.dtype, np.int32)
       if batch_size is None:
@@ -170,13 +171,13 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
       # Parameterized tests reuse temp directories, check it doesn't exist.
       with self.assertRaises(tf.errors.NotFoundError):
-        tf.gfile.ListDirectory(policy_save_path)
+        tf.io.gfile.listdir(policy_save_path)
       policy_saved = py_tf_policy.PyTFPolicy(tf_policy)
-      policy_saved.session = tf.Session(graph=policy_saved_graph)
+      policy_saved.session = tf.compat.v1.Session(graph=policy_saved_graph)
       policy_saved.initialize(batch_size)
       policy_saved.save(policy_dir=policy_save_path, graph=policy_saved_graph)
       self.assertEqual(
-          set(tf.gfile.ListDirectory(policy_save_path)),
+          set(tf.io.gfile.listdir(policy_save_path)),
           set(['checkpoint', 'ckpt-0.data-00000-of-00001', 'ckpt-0.index']))
 
     # Construct a policy to be restored under another tf.Graph instance.
@@ -185,7 +186,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       tf_policy = q_policy.QPolicy(self._time_step_spec, self._action_spec,
                                    DummyNet(use_constant_initializer=False))
       policy_restored = py_tf_policy.PyTFPolicy(tf_policy)
-      policy_restored.session = tf.Session(graph=policy_restore_graph)
+      policy_restored.session = tf.compat.v1.Session(graph=policy_restore_graph)
       policy_restored.initialize(batch_size)
       random_init_vals = policy_restored.session.run(tf_policy.variables())
       policy_restored.restore(
@@ -196,9 +197,10 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     # Check that variables in the two policies have identical values.
     with policy_restore_graph.as_default():
-      restored_values = policy_restored.session.run(tf.global_variables())
+      restored_values = policy_restored.session.run(
+          tf.compat.v1.global_variables())
     with policy_saved_graph.as_default():
-      initial_values = policy_saved.session.run(tf.global_variables())
+      initial_values = policy_saved.session.run(tf.compat.v1.global_variables())
 
     # Networks have two fully connected layers.
     self.assertLen(initial_values, 4)
@@ -226,7 +228,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
                                     *time_steps)
 
     with self.cached_session():
-      self.evaluate(tf.global_variables_initializer())
+      self.evaluate(tf.compat.v1.global_variables_initializer())
       action_steps = policy.action(time_steps)
       self.assertEqual(action_steps.action.shape, (batch_size,))
       for a in action_steps.action:

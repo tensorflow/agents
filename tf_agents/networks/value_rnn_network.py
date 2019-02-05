@@ -88,7 +88,7 @@ class ValueRnnNetwork(network.Network):
         conv_layer_params,
         input_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.glorot_uniform(),
+        kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
         name='input_mlp')
 
     # Create RNN cell
@@ -109,7 +109,7 @@ class ValueRnnNetwork(network.Network):
           tf.keras.layers.Dense(
               num_units,
               activation=activation_fn,
-              kernel_initializer=tf.variance_scaling_initializer(
+              kernel_initializer=tf.compat.v1.variance_scaling_initializer(
                   scale=2.0, mode='fan_in', distribution='truncated_normal'),
               name='output/dense') for num_units in output_fc_layer_params
       ]
@@ -117,7 +117,7 @@ class ValueRnnNetwork(network.Network):
     value_projection_layer = tf.keras.layers.Dense(
         1,
         activation=None,
-        kernel_initializer=tf.random_uniform_initializer(
+        kernel_initializer=tf.compat.v1.initializers.random_uniform(
             minval=-0.03, maxval=0.03),
     )
 

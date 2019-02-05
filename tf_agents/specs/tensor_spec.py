@@ -99,7 +99,7 @@ def to_placeholder(spec, outer_dims=()):
     An instance of tf.placeholder.
   """
   ph_shape = list(outer_dims) + spec.shape.as_list()
-  return tf.placeholder(spec.dtype, ph_shape, spec.name)
+  return tf.compat.v1.placeholder(spec.dtype, ph_shape, spec.name)
 
 
 def to_placeholder_with_default(default, spec, outer_dims=()):
@@ -114,7 +114,7 @@ def to_placeholder_with_default(default, spec, outer_dims=()):
     An instance of tf.placeholder.
   """
   ph_shape = list(outer_dims) + spec.shape.as_list()
-  return tf.placeholder_with_default(default, ph_shape, spec.name)
+  return tf.compat.v1.placeholder_with_default(default, ph_shape, spec.name)
 
 
 def to_nest_placeholder(nested_tensor_specs,
@@ -188,12 +188,13 @@ def _random_uniform_int(shape, outer_dims, minval, maxval, dtype, seed=None):
   sample_shape = tf.concat((outer_dims, shape[:-len(minval.shape)]), axis=0)
   full_shape = tf.concat((outer_dims, shape), axis=0)
   for (single_min, single_max) in zip(minval.flat, sampling_maxval.flat):
-    samples.append(tf.random_uniform(
-        shape=sample_shape,
-        minval=single_min,
-        maxval=single_max,
-        dtype=dtype,
-        seed=seed))
+    samples.append(
+        tf.random.uniform(
+            shape=sample_shape,
+            minval=single_min,
+            maxval=single_max,
+            dtype=dtype,
+            seed=seed))
   samples = tf.stack(samples, axis=-1)
   samples = tf.reshape(samples, full_shape)
   return samples
@@ -259,8 +260,11 @@ def sample_bounded_spec(spec, seed=None, outer_dims=None):
 
     shape = ops.convert_to_tensor(spec.shape, dtype=tf.int32)
     full_shape = tf.concat((outer_dims, shape), axis=0)
-    res = tf.random_uniform(
-        full_shape, minval=minval, maxval=maxval, dtype=sampling_dtype,
+    res = tf.random.uniform(
+        full_shape,
+        minval=minval,
+        maxval=maxval,
+        dtype=sampling_dtype,
         seed=seed)
 
   if is_uint8:

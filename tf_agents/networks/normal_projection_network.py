@@ -87,7 +87,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     self._means_projection_layer = tf.keras.layers.Dense(
         sample_spec.shape.num_elements(),
         activation=activation_fn,
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
+        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=init_means_output_factor),
         bias_initializer=tf.keras.initializers.Zeros(),
         name='means_projection_layer')
@@ -97,7 +97,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       self._stddev_projection_layer = tf.keras.layers.Dense(
           sample_spec.shape.num_elements(),
           activation=activation_fn,
-          kernel_initializer=tf.keras.initializers.VarianceScaling(
+          kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
               scale=init_means_output_factor),
           bias_initializer=tf.keras.initializers.Zeros(),
           name='stddev_projection_layer')

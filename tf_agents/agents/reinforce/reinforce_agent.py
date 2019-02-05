@@ -103,7 +103,7 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     # TODO(kbnaoop): replace with tensor normalizer.
     if self._normalize_returns:
-      ret_mean, ret_var = tf.nn.moments(returns, axes=[0])
+      ret_mean, ret_var = tf.nn.moments(x=returns, axes=[0])
       returns = (returns - ret_mean) / (tf.sqrt(ret_var) + 1e-6)
       if self._debug_summaries:
         tf.contrib.summary.histogram('normalized_returns', returns)
@@ -182,7 +182,8 @@ class ReinforceAgent(tf_agent.TFAgent):
     # Policy gradient loss is defined as the sum, over timesteps, of action
     #   log-probability times the cumulative return from that timestep onward.
     #   For more information, see (Williams, 1992)
-    policy_gradient_loss = -tf.reduce_sum(action_log_prob_times_return)
+    policy_gradient_loss = -tf.reduce_sum(
+        input_tensor=action_log_prob_times_return)
 
     with tf.name_scope('Losses/'):
       tf.contrib.summary.scalar('policy_gradient_loss',

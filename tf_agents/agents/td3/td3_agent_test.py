@@ -51,8 +51,8 @@ class DummyActorNetwork(network.Network):
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
-        kernel_initializer=tf.constant_initializer([2, 1]),
-        bias_initializer=tf.constant_initializer([5]),
+        kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+        bias_initializer=tf.compat.v1.initializers.constant([5]),
         name='action')
 
   def call(self, observations, step_type=(), network_state=()):
@@ -80,8 +80,8 @@ class DummyCriticNetwork(network.Network):
     self._joint_layer = tf.keras.layers.Dense(
         1,
         activation=None,
-        kernel_initializer=tf.constant_initializer([1, 3, 2]),
-        bias_initializer=tf.constant_initializer([4]))
+        kernel_initializer=tf.compat.v1.initializers.constant([1, 3, 2]),
+        bias_initializer=tf.compat.v1.initializers.constant([4]))
 
   def call(self, inputs, step_type=None, network_state=None):
     observations, actions = inputs
@@ -145,7 +145,7 @@ class TD3AgentTest(tf.test.TestCase):
     expected_loss = 118.9109
     loss = agent.critic_loss(time_steps, actions, next_time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -166,7 +166,7 @@ class TD3AgentTest(tf.test.TestCase):
     expected_loss = 4.0
     loss = agent.actor_loss(time_steps)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -184,9 +184,10 @@ class TD3AgentTest(tf.test.TestCase):
     action = agent.policy().action(time_steps).action[0]
     self.assertEqual(action.shape.as_list(), [1, 1])
 
-    self.evaluate(
-        [tf.global_variables_initializer(),
-         tf.local_variables_initializer()])
+    self.evaluate([
+        tf.compat.v1.global_variables_initializer(),
+        tf.compat.v1.local_variables_initializer()
+    ])
     py_action = self.evaluate(action)
     self.assertTrue(all(py_action <= self._action_spec[0].maximum))
     self.assertTrue(all(py_action >= self._action_spec[0].minimum))
@@ -206,9 +207,10 @@ class TD3AgentTest(tf.test.TestCase):
     collect_policy_action = agent.collect_policy().action(time_steps).action[0]
     self.assertEqual(action.shape, collect_policy_action.shape)
 
-    self.evaluate(
-        [tf.global_variables_initializer(),
-         tf.local_variables_initializer()])
+    self.evaluate([
+        tf.compat.v1.global_variables_initializer(),
+        tf.compat.v1.local_variables_initializer()
+    ])
     py_action, py_collect_policy_action = self.evaluate(
         [action, collect_policy_action])
     self.assertNotEqual(py_action, py_collect_policy_action)

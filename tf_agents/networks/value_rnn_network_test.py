@@ -44,7 +44,7 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         output_fc_layer_params=(3,))
 
     value, state = net(time_step.observation, time_step.step_type)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual((1, 3), value.shape)
 
@@ -89,7 +89,7 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         output_fc_layer_params=(3,))
 
     _, state = net(time_step.observation, time_step.step_type)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Assert LSTM cell is created.
     self.assertEqual((1, 7), state[0][0].shape)

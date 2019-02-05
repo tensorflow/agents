@@ -26,7 +26,7 @@ from tf_agents.specs import tensor_spec
 
 
 def _get_inputs(batch_size, num_input_dims):
-  return tf.random_uniform([batch_size, num_input_dims])
+  return tf.random.uniform([batch_size, num_input_dims])
 
 
 class CategoricalProjectionNetworkTest(tf.test.TestCase):
@@ -39,7 +39,7 @@ class CategoricalProjectionNetworkTest(tf.test.TestCase):
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
     distribution = network(inputs, outer_rank=1)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     sample = self.evaluate(distribution.sample())
 
     self.assertEqual(tfp.distributions.Categorical, type(distribution))
@@ -55,7 +55,7 @@ class CategoricalProjectionNetworkTest(tf.test.TestCase):
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
     network(inputs, outer_rank=1)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Dense kernel, dense bias.
     self.assertEqual(2, len(network.trainable_variables))

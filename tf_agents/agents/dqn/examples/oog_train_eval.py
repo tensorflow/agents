@@ -140,7 +140,7 @@ def train_eval(
       epsilon_greedy=epsilon_greedy,
       target_update_tau=target_update_tau,
       target_update_period=target_update_period,
-      optimizer=tf.train.AdamOptimizer(learning_rate=learning_rate),
+      optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
       td_errors_loss_fn=dqn_agent.element_wise_squared_loss,
       gamma=gamma,
       reward_scale_factor=reward_scale_factor,
@@ -167,7 +167,7 @@ def train_eval(
   for _ in range(initial_collect_steps):
     time_step = collect_step(env, time_step, random_policy, replay_buffer)
 
-  global_step = tf.train.get_or_create_global_step()
+  global_step = tf.compat.v1.train.get_or_create_global_step()
 
   # TODO(b/112041045) Use global_step as counter.
   train_checkpointer = common_utils.Checkpointer(
@@ -180,7 +180,7 @@ def train_eval(
 
   ds = replay_buffer.as_dataset(sample_batch_size=batch_size, num_steps=2)
   ds = ds.prefetch(4)
-  itr = ds.make_initializable_iterator()
+  itr = tf.compat.v1.data.make_initializable_iterator(ds)
 
   experience = itr.get_next()
 
@@ -192,7 +192,7 @@ def train_eval(
     for eval_metric in eval_metrics:
       eval_metric.tf_summaries()
 
-  with tf.Session() as session:
+  with tf.compat.v1.Session() as session:
     train_checkpointer.initialize_or_restore(session)
     # TODO(sguada) Remove once Periodically can be saved.
     common_utils.initialize_uninitialized_variables(session)
@@ -217,7 +217,7 @@ def train_eval(
     timed_at_step = global_step_val
     collect_time = 0
     train_time = 0
-    steps_per_second_ph = tf.placeholder(
+    steps_per_second_ph = tf.compat.v1.placeholder(
         tf.float32, shape=(), name='steps_per_sec_ph')
     steps_per_second_summary = tf.contrib.summary.scalar(
         name='global_steps/sec', tensor=steps_per_second_ph)
@@ -232,15 +232,15 @@ def train_eval(
       train_time += time.time() - start_time
 
       if global_step_val % log_interval == 0:
-        tf.logging.info(
-            'step = %d, loss = %f', global_step_val, loss.loss)
+        tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
+                                  loss.loss)
         steps_per_sec = (
             (global_step_val - timed_at_step) / (collect_time + train_time))
         session.run(
             steps_per_second_summary,
             feed_dict={steps_per_second_ph: steps_per_sec})
-        tf.logging.info('%.3f steps/sec' % steps_per_sec)
-        tf.logging.info('collect_time = {}, train_time = {}'.format(
+        tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
+        tf.compat.v1.logging.info('collect_time = {}, train_time = {}'.format(
             collect_time, train_time))
         timed_at_step = global_step_val
         collect_time = 0
@@ -268,10 +268,10 @@ def train_eval(
 
 
 def main(_):
-  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.app.run(main)
+  tf.compat.v1.app.run(main)

@@ -58,12 +58,12 @@ class MaskedCategorical(tfp.distributions.Categorical):
         of the statistic's batch members are undefined.
       name: Python `str` name prefixed to Ops created by this class.
     """
-    logits = tf.convert_to_tensor(logits)
-    mask = tf.convert_to_tensor(mask)
+    logits = tf.convert_to_tensor(value=logits)
+    mask = tf.convert_to_tensor(value=mask)
     self._mask = tf.cast(mask, tf.bool)  # Nonzero values are True
 
-    neg_inf = tf.cast(tf.fill(dims=tf.shape(logits), value=float('-inf')),
-                      logits.dtype)
+    neg_inf = tf.cast(
+        tf.fill(dims=tf.shape(input=logits), value=float('-inf')), logits.dtype)
 
     logits = tf.where(self._mask, logits, neg_inf)
     super(MaskedCategorical, self).__init__(

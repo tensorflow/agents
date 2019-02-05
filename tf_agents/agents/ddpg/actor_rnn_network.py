@@ -78,7 +78,7 @@ class ActorRnnNetwork(network.Network):
         conv_layer_params,
         input_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.glorot_uniform(),
+        kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
         name='input_mlp')
 
     # Create RNN cell

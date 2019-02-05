@@ -49,8 +49,8 @@ def discounted_return(rewards, discounts, final_value=None, time_major=True):
   """
   if not time_major:
     with tf.name_scope("to_time_major_tensors"):
-      discounts = tf.transpose(discounts)
-      rewards = tf.transpose(rewards)
+      discounts = tf.transpose(a=discounts)
+      rewards = tf.transpose(a=rewards)
 
   if final_value is None:
     final_value = tf.zeros_like(rewards[-1])
@@ -68,7 +68,7 @@ def discounted_return(rewards, discounts, final_value=None, time_major=True):
 
   if not time_major:
     with tf.name_scope("to_batch_major_tensors"):
-      returns = tf.transpose(returns)
+      returns = tf.transpose(a=returns)
 
   return tf.stop_gradient(returns)
 
@@ -109,9 +109,9 @@ def generalized_advantage_estimation(values,
 
   if not time_major:
     with tf.name_scope("to_time_major_tensors"):
-      discounts = tf.transpose(discounts)
-      rewards = tf.transpose(rewards)
-      values = tf.transpose(values)
+      discounts = tf.transpose(a=discounts)
+      rewards = tf.transpose(a=rewards)
+      values = tf.transpose(a=values)
 
   with tf.name_scope("gae", values=[discounts, rewards, values, final_value]):
 
@@ -133,6 +133,6 @@ def generalized_advantage_estimation(values,
 
   if not time_major:
     with tf.name_scope("to_batch_major_tensors"):
-      advantages = tf.transpose(advantages)
+      advantages = tf.transpose(a=advantages)
 
   return tf.stop_gradient(advantages)

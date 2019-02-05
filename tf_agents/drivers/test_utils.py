@@ -106,11 +106,11 @@ class TFPolicyMock(tf_policy.Base):
         (), tf.int32, minimum=minimum, maximum=maximum,
         name=policy_state_spec_name)
     info_spec = action_spec
-    self._policy_state = tf.get_variable(
+    self._policy_state = tf.compat.v1.get_variable(
         name=policy_state_name,
         shape=batch_shape,
         dtype=tf.int32,
-        initializer=tf.constant_initializer(maximum))
+        initializer=tf.compat.v1.initializers.constant(maximum))
     self._initial_policy_state = tf.constant(
         0, shape=batch_shape, dtype=tf.int32)
 
@@ -182,19 +182,20 @@ class NumStepsObserver(object):
   """Class to count number of steps run by an observer."""
 
   def __init__(self, variable_scope='num_steps_step_observer'):
-    with tf.variable_scope(variable_scope):
-      self._num_steps = tf.get_variable(
+    with tf.compat.v1.variable_scope(variable_scope):
+      self._num_steps = tf.compat.v1.get_variable(
           'num_steps',
           shape=[],
           dtype=tf.int32,
-          initializer=tf.zeros_initializer())
+          initializer=tf.compat.v1.initializers.zeros())
 
   @property
   def num_steps(self):
     return self._num_steps
 
   def __call__(self, traj):
-    num_steps = tf.reduce_sum(tf.cast(~traj.is_boundary(), dtype=tf.int32))
+    num_steps = tf.reduce_sum(
+        input_tensor=tf.cast(~traj.is_boundary(), dtype=tf.int32))
     with tf.control_dependencies([self._num_steps.assign_add(num_steps)]):
       return nest.map_structure(tf.identity, traj)
 
@@ -203,12 +204,12 @@ class NumEpisodesObserver(object):
   """Class to count number of episodes run by an observer."""
 
   def __init__(self, variable_scope='num_episodes_step_observer'):
-    with tf.variable_scope(variable_scope):
-      self._num_episodes = tf.get_variable(
+    with tf.compat.v1.variable_scope(variable_scope):
+      self._num_episodes = tf.compat.v1.get_variable(
           'num_episodes',
           shape=[],
           dtype=tf.int32,
-          initializer=tf.zeros_initializer())
+          initializer=tf.compat.v1.initializers.zeros())
 
   @property
   def num_episodes(self):

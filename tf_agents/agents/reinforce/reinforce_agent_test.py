@@ -50,8 +50,8 @@ class DummyActorNet(network.Network):
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements() * 2,
             activation=activation_fn,
-            kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5]),
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5]),
         ),
     ]
 
@@ -111,7 +111,7 @@ class ReinforceAgentTest(tf.test.TestCase):
     expected_loss = 10.983667373657227
     loss = agent.policy_gradient_loss(time_steps, actions, returns)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_.loss, expected_loss)
 
@@ -131,7 +131,7 @@ class ReinforceAgentTest(tf.test.TestCase):
     actions = agent.policy().action(time_steps).action
     self.assertEqual(actions.shape.as_list(), [1, 1])
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     _ = self.evaluate(actions)
 
 

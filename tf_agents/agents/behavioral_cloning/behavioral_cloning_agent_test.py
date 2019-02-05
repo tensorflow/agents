@@ -48,8 +48,9 @@ class DummyNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[2, 1], [1, 1]]),
-            bias_initializer=tf.constant_initializer([[1], [1]]),
+            kernel_initializer=tf.compat.v1.initializers.constant([[2, 1],
+                                                                   [1, 1]]),
+            bias_initializer=tf.compat.v1.initializers.constant([[1], [1]]),
             dtype=tf.float32))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
@@ -122,11 +123,11 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         discount=discounts)
     loss_info = agent._loss(experience)
 
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     total_loss, _ = self.evaluate(loss_info)
 
     expected_loss = tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
+        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=cloning_net(observations)[0], labels=actions[0]))
 
     self.assertAllClose(total_loss, expected_loss)
@@ -143,7 +144,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         time_step_spec,
         action_spec,
         cloning_network=cloning_net,
-        optimizer=tf.train.AdamOptimizer(learning_rate=0.01))
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
     # Remove policy_info, as BehavioralCloningAgent expects none.
     traj = traj.replace(policy_info=())
     # TODO(b/123883319) convert to tf.function.
@@ -152,7 +153,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     else:
       train_and_loss = agent.train(traj)
     replay = trajectory_replay.TrajectoryReplay(agent.policy())
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
     for _ in range(TRAIN_ITERATIONS):
       self.evaluate(train_and_loss)
@@ -171,7 +172,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         time_step_spec,
         action_spec,
         cloning_network=cloning_net,
-        optimizer=tf.train.AdamOptimizer(learning_rate=0.01))
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
     # Remove policy_info, as BehavioralCloningAgent expects none.
     traj = traj.replace(policy_info=())
     # TODO(b/123883319) convert to tf.function.
@@ -180,7 +181,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     else:
       train_and_loss = agent.train(traj)
     replay = trajectory_replay.TrajectoryReplay(agent.policy())
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
     for _ in range(TRAIN_ITERATIONS):
       self.evaluate(train_and_loss)
@@ -205,7 +206,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         [2] + self._action_spec[0].shape.as_list(),
         action_step.action[0].shape,
     )
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
@@ -221,7 +222,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy()
     action_step = policy.action(time_steps)
-    self.evaluate(tf.initialize_all_variables())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
 
     checkpoint = tf.train.Checkpoint(agent=agent)
 

@@ -268,10 +268,10 @@ class DdpgAgent(tf_agent.TFAgent):
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec(), num_outer_dims=2):
         # Do a sum over the time dimension.
-        critic_loss = tf.reduce_sum(critic_loss, axis=1)
+        critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
       if weights is not None:
         critic_loss *= weights
-      critic_loss = tf.reduce_mean(critic_loss)
+      critic_loss = tf.reduce_mean(input_tensor=critic_loss)
 
       with tf.name_scope('Losses/'):
         tf.contrib.summary.scalar('critic_loss', critic_loss)
@@ -302,7 +302,7 @@ class DdpgAgent(tf_agent.TFAgent):
       q_values, _ = self._critic_network(critic_net_input,
                                          time_steps.step_type)
       actions = nest.flatten(actions)
-      dqdas = tf.gradients([q_values], actions)
+      dqdas = tf.gradients(ys=[q_values], xs=actions)
       actor_losses = []
       for dqda, action in zip(dqdas, actions):
         if self._dqda_clipping is not None:
@@ -313,10 +313,10 @@ class DdpgAgent(tf_agent.TFAgent):
         if nest_utils.is_batched_nested_tensors(
             time_steps, self.time_step_spec(), num_outer_dims=2):
           # Sum over the time dimension.
-          loss = tf.reduce_sum(loss, axis=1)
+          loss = tf.reduce_sum(input_tensor=loss, axis=1)
         if weights is not None:
           loss *= weights
-        loss = tf.reduce_mean(loss)
+        loss = tf.reduce_mean(input_tensor=loss)
         actor_losses.append(loss)
 
       actor_loss = tf.add_n(actor_losses)

@@ -86,7 +86,7 @@ PPOLossInfo = collections.namedtuple('PPOLossInfo', (
 
 
 def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
-  adv_mean, adv_var = tf.nn.moments(advantages, axes=axes, keep_dims=True)
+  adv_mean, adv_var = tf.nn.moments(x=advantages, axes=axes, keepdims=True)
   normalized_advantages = (
       (advantages - adv_mean) / (tf.sqrt(adv_var) + variance_epsilon))
   return normalized_advantages
@@ -475,8 +475,9 @@ class PPOAgent(tf_agent.TFAgent):
     # Return TD-Lambda returns if both use_td_lambda_return and use_gae.
     if self._use_td_lambda_return:
       if not self._use_gae:
-        tf.logging.warning('use_td_lambda_return was True, but use_gae was '
-                           'False. Using Monte Carlo return.')
+        tf.compat.v1.logging.warning(
+            'use_td_lambda_return was True, but use_gae was '
+            'False. Using Monte Carlo return.')
       else:
         returns = tf.add(
             advantages, value_preds[:, :-1], name='td_lambda_returns')
@@ -631,7 +632,7 @@ class PPOAgent(tf_agent.TFAgent):
             v for v in self._actor_net.trainable_weights if 'kernel' in v.name
         ]
         policy_l2_losses = [
-            tf.reduce_sum(tf.square(v)) * self._policy_l2_reg
+            tf.reduce_sum(input_tensor=tf.square(v)) * self._policy_l2_reg
             for v in policy_vars_to_l2_regularize
         ]
 
@@ -640,15 +641,16 @@ class PPOAgent(tf_agent.TFAgent):
             v for v in self._value_net.trainable_weights if 'kernel' in v.name
         ]
         vf_l2_losses = [
-            tf.reduce_sum(tf.square(v)) * self._value_function_l2_reg
-            for v in vf_vars_to_l2_regularize
+            tf.reduce_sum(input_tensor=tf.square(v)) *
+            self._value_function_l2_reg for v in vf_vars_to_l2_regularize
         ]
 
         l2_losses = policy_l2_losses + vf_l2_losses
         total_l2_loss = tf.add_n(l2_losses, name='l2_loss')
 
         if self._check_numerics:
-          total_l2_loss = tf.check_numerics(total_l2_loss, 'total_l2_loss')
+          total_l2_loss = tf.debugging.check_numerics(total_l2_loss,
+                                                      'total_l2_loss')
 
         if debug_summaries:
           tf.contrib.summary.histogram('l2_loss', total_l2_loss)
@@ -668,11 +670,12 @@ class PPOAgent(tf_agent.TFAgent):
       with tf.name_scope('entropy_regularization'):
         entropy = tf.cast(common_utils.entropy(
             current_policy_distribution, self.action_spec()), tf.float32)
-        entropy_reg_loss = (tf.reduce_mean(-entropy * weights) *
-                            self._entropy_regularization)
+        entropy_reg_loss = (
+            tf.reduce_mean(input_tensor=-entropy * weights) *
+            self._entropy_regularization)
         if self._check_numerics:
-          entropy_reg_loss = tf.check_numerics(entropy_reg_loss,
-                                               'entropy_reg_loss')
+          entropy_reg_loss = tf.debugging.check_numerics(
+              entropy_reg_loss, 'entropy_reg_loss')
 
         if debug_summaries:
           tf.contrib.summary.histogram('entropy_reg_loss', entropy_reg_loss)
@@ -711,20 +714,22 @@ class PPOAgent(tf_agent.TFAgent):
 
     value_preds, unused_policy_state = self._collect_policy.apply_value_network(
         time_steps.observation, time_steps.step_type, policy_state=policy_state)
-    value_estimation_error = tf.squared_difference(returns, value_preds)
+    value_estimation_error = tf.math.squared_difference(returns, value_preds)
     value_estimation_error *= weights
 
     value_estimation_loss = (
-        tf.reduce_mean(value_estimation_error) * self._value_pred_loss_coef)
+        tf.reduce_mean(input_tensor=value_estimation_error) *
+        self._value_pred_loss_coef)
     if debug_summaries:
-      tf.contrib.summary.scalar('value_pred_avg', tf.reduce_mean(value_preds))
+      tf.contrib.summary.scalar('value_pred_avg',
+                                tf.reduce_mean(input_tensor=value_preds))
       tf.contrib.summary.histogram('value_preds', value_preds)
       tf.contrib.summary.histogram('value_estimation_error',
                                    value_estimation_error)
 
     if self._check_numerics:
-      value_estimation_loss = tf.check_numerics(value_estimation_loss,
-                                                'value_estimation_loss')
+      value_estimation_loss = tf.debugging.check_numerics(
+          value_estimation_loss, 'value_estimation_loss')
 
     return value_estimation_loss
 
@@ -764,7 +769,8 @@ class PPOAgent(tf_agent.TFAgent):
       action_log_prob = tf.clip_by_value(
           action_log_prob, -self._log_prob_clipping, self._log_prob_clipping)
     if self._check_numerics:
-      action_log_prob = tf.check_numerics(action_log_prob, 'action_log_prob')
+      action_log_prob = tf.debugging.check_numerics(action_log_prob,
+                                                    'action_log_prob')
 
     # Prepare both clipped and unclipped importance ratios.
     importance_ratio = tf.exp(action_log_prob - sample_action_log_probs)
@@ -774,9 +780,10 @@ class PPOAgent(tf_agent.TFAgent):
         1 + self._importance_ratio_clipping)
 
     if self._check_numerics:
-      importance_ratio = tf.check_numerics(importance_ratio, 'importance_ratio')
+      importance_ratio = tf.debugging.check_numerics(importance_ratio,
+                                                     'importance_ratio')
       if self._importance_ratio_clipping > 0.0:
-        importance_ratio_clipped = tf.check_numerics(
+        importance_ratio_clipped = tf.debugging.check_numerics(
             importance_ratio_clipped, 'importance_ratio_clipped')
 
     # Pessimistically choose the minimum objective value for clipped and
@@ -791,20 +798,23 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       policy_gradient_loss = -per_timestep_objective
 
-    policy_gradient_loss = tf.reduce_mean(policy_gradient_loss * weights)
+    policy_gradient_loss = tf.reduce_mean(
+        input_tensor=policy_gradient_loss * weights)
 
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
-        clip_fraction = tf.reduce_mean(tf.cast(
-            tf.greater(tf.abs(importance_ratio - 1.0),
-                       self._importance_ratio_clipping), tf.float32))
+        clip_fraction = tf.reduce_mean(
+            input_tensor=tf.cast(
+                tf.greater(
+                    tf.abs(importance_ratio -
+                           1.0), self._importance_ratio_clipping), tf.float32))
         tf.contrib.summary.scalar('clip_fraction', clip_fraction)
       tf.contrib.summary.histogram('action_log_prob', action_log_prob)
       tf.contrib.summary.histogram('action_log_prob_sample',
                                    sample_action_log_probs)
       tf.contrib.summary.histogram('importance_ratio', importance_ratio)
       tf.contrib.summary.scalar('importance_ratio_mean',
-                                tf.reduce_mean(importance_ratio))
+                                tf.reduce_mean(input_tensor=importance_ratio))
       tf.contrib.summary.histogram('importance_ratio_clipped',
                                    importance_ratio_clipped)
       tf.contrib.summary.histogram('per_timestep_objective',
@@ -816,7 +826,8 @@ class PPOAgent(tf_agent.TFAgent):
       entropy = common_utils.entropy(current_policy_distribution,
                                      self.action_spec())
       tf.contrib.summary.histogram('policy_entropy', entropy)
-      tf.contrib.summary.scalar('policy_entropy_mean', tf.reduce_mean(entropy))
+      tf.contrib.summary.scalar('policy_entropy_mean',
+                                tf.reduce_mean(input_tensor=entropy))
       # Categorical distribution (used for discrete actions)
       # doesn't have a mean.
       if not tensor_spec.is_discrete(self.action_spec()):
@@ -827,8 +838,8 @@ class PPOAgent(tf_agent.TFAgent):
       tf.contrib.summary.histogram('policy_gradient_loss', policy_gradient_loss)
 
     if self._check_numerics:
-      policy_gradient_loss = tf.check_numerics(policy_gradient_loss,
-                                               'policy_gradient_loss')
+      policy_gradient_loss = tf.debugging.check_numerics(
+          policy_gradient_loss, 'policy_gradient_loss')
 
     return policy_gradient_loss
 
@@ -837,14 +848,15 @@ class PPOAgent(tf_agent.TFAgent):
     if self._kl_cutoff_factor <= 0.0:
       return tf.constant(0.0, dtype=tf.float32, name='zero_kl_cutoff_loss')
     kl_cutoff = self._kl_cutoff_factor * self._adaptive_kl_target
-    mean_kl = tf.reduce_mean(kl_divergence)
+    mean_kl = tf.reduce_mean(input_tensor=kl_divergence)
     kl_over_cutoff = tf.maximum(mean_kl - kl_cutoff, 0.0)
     kl_cutoff_loss = self._kl_cutoff_coef * tf.square(kl_over_cutoff)
 
     if debug_summaries:
       tf.contrib.summary.scalar(
           'kl_cutoff_count',
-          tf.reduce_sum(tf.to_int64(kl_divergence > kl_cutoff)))
+          tf.reduce_sum(
+              input_tensor=tf.cast(kl_divergence > kl_cutoff, dtype=tf.int64)))
       tf.contrib.summary.scalar('kl_cutoff_loss', kl_cutoff_loss)
 
     return tf.identity(kl_cutoff_loss, name='kl_cutoff_loss')
@@ -854,7 +866,7 @@ class PPOAgent(tf_agent.TFAgent):
       return tf.constant(0.0, dtype=tf.float32, name='zero_adaptive_kl_loss')
 
     # Define the loss computation, which depends on the update computation.
-    mean_kl = tf.reduce_mean(kl_divergence)
+    mean_kl = tf.reduce_mean(input_tensor=kl_divergence)
     adaptive_kl_loss = self._adaptive_kl_beta * mean_kl
 
     if debug_summaries:
@@ -930,7 +942,7 @@ class PPOAgent(tf_agent.TFAgent):
     if self._adaptive_kl_beta is None:
       return tf.no_op()
 
-    mean_kl = tf.reduce_mean(kl_divergence)
+    mean_kl = tf.reduce_mean(input_tensor=kl_divergence)
 
     # Update the adaptive kl beta after each time it is computed.
     mean_kl_below_bound = (
@@ -943,8 +955,8 @@ class PPOAgent(tf_agent.TFAgent):
         default=lambda: tf.constant(1.0, dtype=tf.float32), exclusive=True)
     new_adaptive_kl_beta = tf.maximum(
         self._adaptive_kl_beta * adaptive_kl_update_factor, 10e-16)
-    update_adaptive_kl_beta = tf.assign(
-        self._adaptive_kl_beta, new_adaptive_kl_beta)
+    update_adaptive_kl_beta = tf.compat.v1.assign(self._adaptive_kl_beta,
+                                                  new_adaptive_kl_beta)
 
     if self._debug_summaries:
       tf.contrib.summary.scalar('adaptive_kl_update_factor',

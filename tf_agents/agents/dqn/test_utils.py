@@ -37,8 +37,9 @@ class DummyNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[2, 1], [1, 1]]),
-            bias_initializer=tf.constant_initializer([[1], [1]]),
+            kernel_initializer=tf.compat.v1.initializers.constant([[2, 1],
+                                                                   [1, 1]]),
+            bias_initializer=tf.compat.v1.initializers.constant([[1], [1]]),
             dtype=tf.float32))
 
   def call(self, inputs, unused_step_type=None, network_state=()):

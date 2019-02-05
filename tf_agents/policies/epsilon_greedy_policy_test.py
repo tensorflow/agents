@@ -79,7 +79,7 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     action_step = policy.action(self._time_step, policy_state, seed=54)
     nest.assert_same_structure(self._action_spec, action_step.action)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     # Collect 100 steps with the current value of epsilon.
     actions = []
     num_steps = 100
@@ -94,7 +94,7 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123770194')
 
-    epsilon_ph = tf.placeholder(tf.float32, shape=())
+    epsilon_ph = tf.compat.v1.placeholder(tf.float32, shape=())
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(self._policy,
                                                        epsilon=epsilon_ph)
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
@@ -104,7 +104,7 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     action_step = policy.action(self._time_step, policy_state, seed=54)
     nest.assert_same_structure(self._action_spec, action_step.action)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     with self.cached_session() as sess:
       for epsilon in [0.0, 0.2, 0.7, 1.0]:
         # Collect 100 steps with the current value of epsilon.

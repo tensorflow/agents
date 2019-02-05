@@ -39,7 +39,7 @@ class ValueNetworkTest(tf.test.TestCase):
         observation_spec, conv_layer_params=[(4, 2, 2)], fc_layer_params=(5,))
 
     value, _ = net(observation)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual([1], value.shape.as_list())
 

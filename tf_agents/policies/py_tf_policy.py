@@ -53,7 +53,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       seed: Seed to use if policy performs random actions (optional).
     """
     if not isinstance(policy, tf_policy.Base):
-      tf.logging.warning('Policy should implement tf_policy.Base')
+      tf.compat.v1.logging.warning('Policy should implement tf_policy.Base')
 
     time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec())
     action_spec = tensor_spec.to_nest_array_spec(policy.action_spec())
@@ -85,8 +85,10 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
           batch_size=self._batch_size or 1)
 
       self._policy_state = nest.map_structure(
-          lambda ps: tf.placeholder(  # pylint: disable=g-long-lambda
-              ps.dtype, ps.shape, name='policy_state'),
+          lambda ps: tf.compat.v1.placeholder(  # pylint: disable=g-long-lambda
+              ps.dtype,
+              ps.shape,
+              name='policy_state'),
           self._tf_initial_state)
       self._action_step = self._tf_policy.action(
           self._time_step, self._policy_state, seed=self._seed)
@@ -96,10 +98,11 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       raise RuntimeError('PyTFPolicy can only be initialized once.')
 
     if not graph:
-      graph = tf.get_default_graph()
+      graph = tf.compat.v1.get_default_graph()
 
     self._construct(batch_size, graph)
-    self.session.run(tf.initializers.variables(self._tf_policy.variables()))
+    self.session.run(
+        tf.compat.v1.initializers.variables(self._tf_policy.variables()))
 
     self._built = True
 
@@ -108,10 +111,10 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       raise RuntimeError('PyTFPolicy has not been initialized yet.')
 
     if not graph:
-      graph = tf.get_default_graph()
+      graph = tf.compat.v1.get_default_graph()
 
     with graph.as_default():
-      global_step = tf.train.get_or_create_global_step()
+      global_step = tf.compat.v1.train.get_or_create_global_step()
       policy_checkpointer = common_utils.Checkpointer(
           ckpt_dir=policy_dir,
           policy=self._tf_policy,
@@ -125,10 +128,10 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       raise RuntimeError(
           'PyTFPolicy must be initialized before being restored.')
     if not graph:
-      graph = tf.get_default_graph()
+      graph = tf.compat.v1.get_default_graph()
 
     with graph.as_default():
-      global_step = tf.train.get_or_create_global_step()
+      global_step = tf.compat.v1.train.get_or_create_global_step()
       policy_checkpointer = common_utils.Checkpointer(
           ckpt_dir=policy_dir,
           policy=self._tf_policy,

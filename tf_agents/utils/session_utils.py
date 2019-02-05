@@ -115,7 +115,7 @@ class SessionUser(object):
     if self._session_user_internal_session is not None:
       return self._session_user_internal_session
 
-    default_session = tf.get_default_session()
+    default_session = tf.compat.v1.get_default_session()
     if default_session is None:
       raise AttributeError(
           "No TensorFlow session-like object was set on this {!r}, and none "

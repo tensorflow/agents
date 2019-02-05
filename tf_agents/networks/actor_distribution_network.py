@@ -95,7 +95,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         conv_layer_params,
         fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.keras.initializers.glorot_uniform(),
+        kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
         name='input_mlp')
 
     projection_networks = []

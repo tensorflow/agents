@@ -294,7 +294,9 @@ class SacAgent(tf_agent.TFAgent):
         lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
     action_magnitudes = nest.map_structure(
         lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec)
-    return tf.to_float(action_means), tf.to_float(action_magnitudes)
+    return tf.cast(
+        action_means, dtype=tf.float32), tf.cast(
+            action_magnitudes, dtype=tf.float32)
 
   def _actions_and_log_probs(self, time_steps):
     """Get actions and corresponding log probabilities from policy."""
@@ -383,7 +385,7 @@ class SacAgent(tf_agent.TFAgent):
         critic_loss *= weights
 
       # Take the mean across the batch.
-      critic_loss = tf.reduce_mean(critic_loss)
+      critic_loss = tf.reduce_mean(input_tensor=critic_loss)
 
       if self._debug_summaries:
         td_errors1 = td_targets - pred_td_targets1
@@ -423,13 +425,14 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
       if weights is not None:
         actor_loss *= weights
-      actor_loss = tf.reduce_mean(actor_loss)
+      actor_loss = tf.reduce_mean(input_tensor=actor_loss)
 
       if self._debug_summaries:
         common_utils.generate_tensor_summaries('actor_loss', actor_loss)
         common_utils.generate_tensor_summaries('actions', actions)
         common_utils.generate_tensor_summaries('log_pi', log_pi)
-        tf.contrib.summary.scalar('entropy_avg', -tf.reduce_mean(log_pi))
+        tf.contrib.summary.scalar('entropy_avg',
+                                  -tf.reduce_mean(input_tensor=log_pi))
         common_utils.generate_tensor_summaries('target_q_values',
                                                target_q_values)
         action_distribution = self.policy().distribution(time_steps).action
@@ -464,7 +467,7 @@ class SacAgent(tf_agent.TFAgent):
       if weights is not None:
         alpha_loss *= weights
 
-      alpha_loss = tf.reduce_mean(alpha_loss)
+      alpha_loss = tf.reduce_mean(input_tensor=alpha_loss)
 
       if self._debug_summaries:
         common_utils.generate_tensor_summaries('alpha_loss', alpha_loss)

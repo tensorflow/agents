@@ -55,8 +55,9 @@ class DummyActorNet(network.DistributionNetwork):
     self._layers.append(
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements() * 2,
-            kernel_initializer=tf.constant_initializer([[2, 1], [1, 1]]),
-            bias_initializer=tf.constant_initializer([5, 5]),
+            kernel_initializer=tf.compat.v1.initializers.constant([[2, 1],
+                                                                   [1, 1]]),
+            bias_initializer=tf.compat.v1.initializers.constant([5, 5]),
             activation=None,
         ))
 
@@ -98,8 +99,8 @@ class DummyValueNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             1,
-            kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5])))
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
@@ -132,7 +133,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         check_numerics=True)
     agent.initialize()
@@ -141,7 +142,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         value_net=DummyValueNet(),
         normalize_observations=False,
@@ -166,7 +167,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec,),
         value_net=DummyValueNet(),
         normalize_observations=False,
@@ -199,7 +200,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec,),
         value_net=DummyValueNet(outer_rank=2),
         normalize_observations=False,
@@ -230,7 +231,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         time_steps.step_type, time_steps.reward, time_steps.discount)
 
     # Mock the build_train_op to return an op for incrementing this counter.
-    counter = tf.train.get_or_create_global_step()
+    counter = tf.compat.v1.train.get_or_create_global_step()
     zero = tf.constant(0, dtype=tf.float32)
     agent.build_train_op = (
         lambda *_, **__: tf_agent.LossInfo(counter.assign_add(1),  # pylint: disable=g-long-lambda
@@ -238,7 +239,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
 
     train_op = agent.train(experience)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Assert that counter starts out at zero.
     self.assertEqual(0, self.evaluate(counter))
@@ -254,7 +255,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec,),
         value_net=DummyValueNet(),
         normalize_observations=False,
@@ -278,7 +279,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         'loc': tf.constant([[9.0], [15.0], [9.0], [15.0]], dtype=tf.float32),
         'scale': tf.constant([[8.0], [12.0], [8.0], [12.0]], dtype=tf.float32),
     }
-    train_step = tf.train.get_or_create_global_step()
+    train_step = tf.compat.v1.train.get_or_create_global_step()
 
     (train_op, losses) = (
         agent.build_train_op(
@@ -297,7 +298,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
      entropy_reg_loss, kl_penalty_loss) = losses
 
     # Run train_op once.
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     total_loss_, pg_loss_, ve_loss_, l2_loss_, ent_loss_, kl_penalty_loss_ = (
         self.evaluate([
             train_op, policy_gradient_loss, value_estimation_loss,
@@ -340,7 +341,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       agent = ppo_agent.PPOAgent(
           self._time_step_spec,
           self._action_spec,
-          tf.train.AdamOptimizer(),
+          tf.compat.v1.train.AdamOptimizer(),
           actor_net=DummyActorNet(self._action_spec,),
           value_net=DummyValueNet(),
           debug_summaries=True,
@@ -356,7 +357,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
           'loc': tf.constant([[9.0], [15.0]], dtype=tf.float32),
           'scale': tf.constant([[8.0], [12.0]], dtype=tf.float32),
       }
-      train_step = tf.train.get_or_create_global_step()
+      train_step = tf.compat.v1.train.get_or_create_global_step()
 
       with self.cached_session() as sess:
         tf.contrib.summary.initialize(session=sess)
@@ -389,7 +390,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         value_net=DummyValueNet(),
         normalize_observations=False,
@@ -421,7 +422,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
     loss = agent.l2_regularization_loss()
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -434,7 +435,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         value_net=DummyValueNet(),
         normalize_observations=False,
@@ -463,7 +464,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     loss = agent.entropy_regularization_loss(
         time_steps, current_policy_distribution, weights)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -471,7 +472,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         value_net=DummyValueNet(),
         value_pred_loss_coef=1.0,
@@ -486,7 +487,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     expected_loss = 123.205
     loss = agent.value_estimation_loss(time_steps, returns, weights)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -495,7 +496,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         normalize_observations=False,
         normalize_rewards=False,
         actor_net=actor_net,
@@ -517,7 +518,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
                                       sample_action_log_probs, advantages,
                                       current_policy_distribution, weights)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -531,7 +532,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=actor_net,
         value_net=value_net,
         kl_cutoff_factor=5.0,
@@ -559,7 +560,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     kl_penalty_loss = agent.kl_penalty_loss(
         time_steps, action_distribution_parameters, current_policy_distribution,
         weights)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     kl_penalty_loss_ = self.evaluate(kl_penalty_loss)
     self.assertEqual(expected_kl_penalty_loss, kl_penalty_loss_)
 
@@ -578,7 +579,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=actor_net,
         value_net=value_net,
         kl_cutoff_factor=5.0,
@@ -590,7 +591,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     expected_kl_cutoff_loss = kl_cutoff_coef * (.24**2)  # (0.74 - 0.5) ^ 2
 
     loss = agent.kl_cutoff_loss(kl_divergence)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose([loss_], [expected_kl_cutoff_loss])
 
@@ -606,7 +607,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=actor_net,
         value_net=value_net,
         initial_adaptive_kl_beta=1.0,
@@ -614,7 +615,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         adaptive_kl_tolerance=0.5,
     )
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Loss should not change if data kl is target kl.
     loss_1 = self.evaluate(agent.adaptive_kl_loss(10.0))
@@ -645,7 +646,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=actor_net,
         value_net=value_net,
         initial_adaptive_kl_beta=1.0,
@@ -653,7 +654,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         adaptive_kl_tolerance=0.5,
     )
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # When KL is target kl, beta should not change.
     beta_0 = agent.update_adaptive_kl_beta(10.0)
@@ -673,7 +674,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
-        tf.train.AdamOptimizer(),
+        tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._action_spec),
         value_net=value_net)
     observations = tf.constant([[1, 2]], dtype=tf.float32)
@@ -681,7 +682,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     action_step = agent.policy().action(time_steps)
     actions = action_step.action
     self.assertEqual(actions.shape.as_list(), [1, 1])
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     _ = self.evaluate(actions)
 
   def testNormalizeAdvantages(self):

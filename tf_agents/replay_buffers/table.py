@@ -50,24 +50,25 @@ class Table(tf.contrib.checkpoint.Checkpointable):
     self._tracker = tf.contrib.checkpoint.UniqueNameTracker()
 
     def _create_unique_slot_name(spec):
-      return tf.get_default_graph().unique_name(spec.name or 'slot')
+      return tf.compat.v1.get_default_graph().unique_name(spec.name or 'slot')
+
     self._slots = nest.map_structure(_create_unique_slot_name,
                                      self._tensor_spec)
 
     def _create_storage(spec, slot_name):
       """Create storage for a slot, track it."""
-      new_storage = tf.get_variable(
+      new_storage = tf.compat.v1.get_variable(
           name=slot_name,
           shape=[self._capacity] + spec.shape.as_list(),
           dtype=spec.dtype,
-          initializer=tf.zeros_initializer,
+          initializer=tf.compat.v1.initializers.zeros,
           trainable=False,
           use_resource=True,
       )
       self._tracker.track(new_storage, slot_name)
       return new_storage
 
-    with tf.variable_scope(scope):
+    with tf.compat.v1.variable_scope(scope):
       self._storage = nest.map_structure(_create_storage, self._tensor_spec,
                                          self._slots)
 
@@ -128,7 +129,8 @@ class Table(tf.contrib.checkpoint.Checkpointable):
     flattened_slots = nest.flatten(slots)
     flattened_values = nest.flatten(values)
     write_ops = [
-        tf.scatter_update(self._slot2storage_map[slot], rows, value).op
+        tf.compat.v1.scatter_update(self._slot2storage_map[slot], rows,
+                                    value).op
         for (slot, value) in zip(flattened_slots, flattened_values)
     ]
     return tf.group(*write_ops)

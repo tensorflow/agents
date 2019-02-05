@@ -33,8 +33,8 @@ class CriticNetworkTest(tf.test.TestCase):
     obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
     action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
 
-    obs = tf.random_uniform([batch_size, num_obs_dims])
-    actions = tf.random_uniform([batch_size, num_actions_dims])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    actions = tf.random.uniform([batch_size, num_actions_dims])
     critic_net = critic_network.CriticNetwork((obs_spec, action_spec))
 
     q_values, _ = critic_net((obs, actions))
@@ -52,8 +52,8 @@ class CriticNetworkTest(tf.test.TestCase):
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec), observation_conv_layer_params=[(16, 3, 2)])
 
-    obs = tf.random_uniform([batch_size, 3, 3, num_obs_dims])
-    actions = tf.random_uniform([batch_size, num_actions_dims])
+    obs = tf.random.uniform([batch_size, 3, 3, num_obs_dims])
+    actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
     self.assertEqual(len(critic_net.trainable_variables), 4)
@@ -69,8 +69,8 @@ class CriticNetworkTest(tf.test.TestCase):
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec), observation_fc_layer_params=[20, 10])
 
-    obs = tf.random_uniform([batch_size, num_obs_dims])
-    actions = tf.random_uniform([batch_size, num_actions_dims])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
 
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
@@ -87,8 +87,8 @@ class CriticNetworkTest(tf.test.TestCase):
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec), action_fc_layer_params=[20])
 
-    obs = tf.random_uniform([batch_size, num_obs_dims])
-    actions = tf.random_uniform([batch_size, num_actions_dims])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
     self.assertEqual(len(critic_net.trainable_variables), 4)
@@ -104,8 +104,8 @@ class CriticNetworkTest(tf.test.TestCase):
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec), joint_fc_layer_params=[20])
 
-    obs = tf.random_uniform([batch_size, num_obs_dims])
-    actions = tf.random_uniform([batch_size, num_actions_dims])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
     self.assertEqual(len(critic_net.trainable_variables), 4)

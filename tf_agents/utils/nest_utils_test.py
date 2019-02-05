@@ -97,13 +97,13 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def testGetOuterShapeDynamicShapeBatched(self):
     spec = tensor_spec.TensorSpec([1], dtype=tf.float32)
-    tensor = tf.convert_to_tensor([[0.0]] * 8)
+    tensor = tf.convert_to_tensor(value=[[0.0]] * 8)
     batch_size = self.evaluate(nest_utils.get_outer_shape(tensor, spec))
     self.assertAllEqual(batch_size, [8])
 
   def testGetOuterShapeDynamicShapeNotBatched(self):
     spec = tensor_spec.TensorSpec([None, 1], dtype=tf.float32)
-    tensor = tf.convert_to_tensor([[0.0]] * 8)
+    tensor = tf.convert_to_tensor(value=[[0.0]] * 8)
     batch_size = self.evaluate(nest_utils.get_outer_shape(tensor, spec))
     self.assertEqual(batch_size, [])
 
@@ -474,7 +474,7 @@ class NestedTensorsTest(tf.test.TestCase):
 
     self.assertEqual(batch_flattened_tensor.shape.as_list(), [35, 2, 3])
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     batch_dims_ = self.evaluate(batch_dims)
     self.assertAllEqual(batch_dims_, [7, 5])
 
@@ -491,7 +491,7 @@ class NestedTensorsTest(tf.test.TestCase):
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [35, 2, 3])
     nest.map_structure(assert_shapes, batch_flattened_tensors)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     batch_dims_ = self.evaluate(batch_dims)
     self.assertAllEqual(batch_dims_, [7, 5])
 

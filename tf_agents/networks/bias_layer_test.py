@@ -31,7 +31,7 @@ class BiasLayerTest(tf.test.TestCase):
     bias = bias_layer.BiasLayer()
     states = tf.ones((2, 3))
     out = bias(states)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     np.testing.assert_almost_equal([[1.0] * 3] * 2, self.evaluate(out))
 
   def testTrainableVariables(self):
@@ -39,7 +39,7 @@ class BiasLayerTest(tf.test.TestCase):
         bias_initializer=tf.keras.initializers.Constant(value=1.0))
     states = tf.zeros((2, 3))
     _ = bias(states)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     variables = bias.trainable_variables
     np.testing.assert_almost_equal([[1.0] * 3], self.evaluate(variables))
 

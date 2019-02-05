@@ -68,4 +68,5 @@ class Tanh(bijector.Bijector):
     #    = 2 * (log(2) - x - log(e^-2x + 1))
     #    = 2 * (log(2) - x - softplus(-2x))
     return 2.0 * (
-        tf.log(tf.constant(2.0, dtype=x.dtype)) - x - tf.nn.softplus(-2.0 * x))
+        tf.math.log(tf.constant(2.0, dtype=x.dtype)) - x - tf.nn.softplus(
+            -2.0 * x))

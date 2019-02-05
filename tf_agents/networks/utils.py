@@ -53,7 +53,7 @@ class BatchSquash(object):
       if self._batch_dims == 1:
         return tensor
 
-      self._original_tensor_shape = tf.shape(tensor)
+      self._original_tensor_shape = tf.shape(input=tensor)
 
       if tensor.shape[self._batch_dims:].is_fully_defined():
         return tf.reshape(tensor,
@@ -61,7 +61,7 @@ class BatchSquash(object):
 
       return tf.reshape(
           tensor,
-          tf.concat([[-1], tf.shape(tensor)[self._batch_dims:]], axis=0),
+          tf.concat([[-1], tf.shape(input=tensor)[self._batch_dims:]], axis=0),
       )
 
   def unflatten(self, tensor):
@@ -78,7 +78,7 @@ class BatchSquash(object):
           tensor,
           tf.concat([
               self._original_tensor_shape[:self._batch_dims],
-              tf.shape(tensor)[1:]], axis=0)
+              tf.shape(input=tensor)[1:]], axis=0)
       )
       # pyformat: enable
 
@@ -128,7 +128,7 @@ def mlp_layers(conv_layer_params=None,
      List of mlp layers.
   """
   if not kernel_initializer:
-    kernel_initializer = tf.variance_scaling_initializer(
+    kernel_initializer = tf.compat.v1.variance_scaling_initializer(
         scale=2.0, mode='fan_in', distribution='truncated_normal')
 
   layers = []

@@ -49,7 +49,7 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
 
     action_distributions, _ = net(time_step.observation, time_step.step_type,
                                   ())
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], action_distributions[0].mode().shape.as_list())
     self.assertEqual([1, 3], action_distributions[1].mode().shape.as_list())
 
@@ -74,7 +74,7 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
 
     action_distributions, _ = net(time_step.observation, time_step.step_type,
                                   ())
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([3, 2, 2, 2],
                      action_distributions[0].mode().shape.as_list())
     self.assertEqual([3, 2, 2, 3],

@@ -84,7 +84,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
 
     self._projection_layer = tf.keras.layers.Dense(
         self._output_shape.num_elements(),
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
+        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=logits_init_output_factor),
         bias_initializer=tf.keras.initializers.Zeros(),
         name='logits')

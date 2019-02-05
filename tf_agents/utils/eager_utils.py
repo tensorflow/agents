@@ -186,7 +186,7 @@ def add_variables_summaries(grads_and_vars):
         var_name = var.name.replace(':', '_')
         tf.contrib.summary.histogram(var_name + '_value', var_values)
         tf.contrib.summary.scalar(var_name + '_value_norm',
-                                  tf.global_norm([var_values]))
+                                  tf.linalg.global_norm([var_values]))
 
 
 def add_gradients_summaries(grads_and_vars):
@@ -205,9 +205,9 @@ def add_gradients_summaries(grads_and_vars):
         var_name = var.name.replace(':', '_')
         tf.contrib.summary.histogram(var_name + '_gradient', grad_values)
         tf.contrib.summary.scalar(var_name + '_gradient_norm',
-                                  tf.global_norm([grad_values]))
+                                  tf.linalg.global_norm([grad_values]))
       else:
-        tf.logging.info('Var %s has no gradient', var.name)
+        tf.compat.v1.logging.info('Var %s has no gradient', var.name)
 
 
 def create_train_step(loss,
@@ -218,7 +218,7 @@ def create_train_step(loss,
                       variables_to_train=None,
                       transform_grads_fn=None,
                       summarize_gradients=False,
-                      gate_gradients=tf.train.Optimizer.GATE_OP,
+                      gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
                       aggregation_method=None,
                       colocate_gradients_with_ops=False,
                       check_numerics=True):
@@ -290,13 +290,14 @@ def create_train_step(loss,
       return nest.map_structure(lambda t: tf.identity(t, 'loss'), loss)
 
   if global_step is _USE_GLOBAL_STEP:
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
 
   if not callable(loss):
     raise ValueError('`loss` should be a function in eager mode.')
 
   if not isinstance(loss, Future):
-    tf.logging.warning('loss should be an instance of eager_utils.Future')
+    tf.compat.v1.logging.warning(
+        'loss should be an instance of eager_utils.Future')
 
   with tf.GradientTape() as tape:
     loss_value = loss()
@@ -318,7 +319,7 @@ def create_train_step(loss,
 
   if check_numerics:
     with tf.name_scope('train_op'):
-      tf.check_numerics(total_loss_value, 'Loss is inf or nan')
+      tf.debugging.check_numerics(total_loss_value, 'Loss is inf or nan')
 
   optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -521,7 +522,7 @@ def np_function(func=None, output_dtypes=None):
       if tf.executing_eagerly():
         result = func_with_kwargs(
             *nest.map_structure(lambda x: x.numpy(), args))
-        convert = lambda x: x if x is None else tf.convert_to_tensor(x)
+        convert = lambda x: x if x is None else tf.convert_to_tensor(value=x)
         return nest.map_structure(convert, result)
       else:
         input_dtypes = tuple([x.dtype for x in nest.flatten(args)])

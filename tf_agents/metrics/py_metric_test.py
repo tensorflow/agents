@@ -66,8 +66,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     self.metric2 = DummyMetric('Metric2')
     self.metric3 = DummyMetric('Metric3')
     self.flush_op = tf.contrib.summary.flush()
-    self.global_step = tf.train.get_or_create_global_step()
-    self.incr_global_step = tf.assign_add(self.global_step, 1)
+    self.global_step = tf.compat.v1.train.get_or_create_global_step()
+    self.incr_global_step = tf.compat.v1.assign_add(self.global_step, 1)
 
   def assert_summary_equals(self, records, tag, step, value):
     for record in records[1:]:
@@ -84,7 +84,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
     files = os.listdir(self.summary_dir)
     self.assertEqual(1, len(files))
     file_path = os.path.join(self.summary_dir, files[0])
-    return list(tf.train.summary_iterator(file_path))
+    return list(tf.compat.v1.train.summary_iterator(file_path))
 
   def testSummarySimple(self):
     if tf.executing_eagerly():
@@ -94,7 +94,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric2.tf_summaries()
 
     with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf.contrib.summary.initialize(session=sess)
       self.metric1.value = 3
       py_metric.run_summaries([self.metric1, self.metric2])
@@ -116,7 +116,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric2.tf_summaries()
 
     with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf.contrib.summary.initialize(session=sess)
       self.metric1.value = 3
       self.metric2.value = 0
@@ -145,7 +145,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric2.tf_summaries(step_metrics=(self.metric2,))
 
     with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf.contrib.summary.initialize(session=sess)
       self.metric1.value = 3
       self.metric2.value = 2
@@ -170,7 +170,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric2.tf_summaries(step_metrics=(self.metric2,))
 
     with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf.contrib.summary.initialize(session=sess)
       self.metric1.value = 3
       self.metric2.value = 2
@@ -197,7 +197,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric3.tf_summaries(step_metrics=(self.metric2, self.metric3))
 
     with self.cached_session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf.contrib.summary.initialize(session=sess)
       self.metric1.value = 1
       self.metric2.value = 2

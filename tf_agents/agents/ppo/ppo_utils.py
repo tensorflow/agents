@@ -91,7 +91,7 @@ def nested_kl_divergence(nested_from_distribution, nested_to_distribution,
   reduce_dims = list(range(len(summed_kl_divergences.shape)))
   for dim in outer_dims:
     reduce_dims.remove(dim)
-  total_kl = tf.reduce_sum(summed_kl_divergences, axis=reduce_dims)
+  total_kl = tf.reduce_sum(input_tensor=summed_kl_divergences, axis=reduce_dims)
 
   return total_kl
 

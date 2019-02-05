@@ -39,7 +39,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     batch_size = 3
     num_state_dims = 5
     num_actions = 2
-    states = tf.random_uniform([batch_size, num_state_dims])
+    states = tf.random.uniform([batch_size, num_state_dims])
     network = q_network.QNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1))
@@ -52,7 +52,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     batch_size = 3
     num_state_dims = 5
     num_actions = 2
-    states = tf.random_uniform([batch_size, num_state_dims])
+    states = tf.random.uniform([batch_size, num_state_dims])
     network = q_network.QNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
@@ -66,7 +66,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     batch_size = 3
     num_state_dims = 5
     num_actions = 2
-    states = tf.random_uniform([batch_size, 5, 5, num_state_dims])
+    states = tf.random.uniform([batch_size, 5, 5, num_state_dims])
     network = q_network.QNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([5, 5, num_state_dims],
                                                  tf.float32),
@@ -80,9 +80,8 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
   def testAddPreprocessingLayers(self):
     batch_size = 3
     num_actions = 2
-    states = (
-        tf.random_uniform([batch_size, 1]),
-        tf.random_uniform([batch_size]))
+    states = (tf.random.uniform([batch_size, 1]),
+              tf.random.uniform([batch_size]))
     preprocessing_layers = (
         tf.keras.layers.Dense(4),
         tf.keras.Sequential([
@@ -106,7 +105,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     batch_size = 3
     num_state_dims = 5
     num_actions = 2
-    states = tf.random_uniform([batch_size, num_state_dims])
+    states = tf.random.uniform([batch_size, num_state_dims])
     network = q_network.QNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1))
@@ -124,7 +123,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1))
     q_values, _ = network(states)
     next_q_values, _ = network(next_states)
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(q_values, next_q_values)
 
   def testVariablesBuild(self):

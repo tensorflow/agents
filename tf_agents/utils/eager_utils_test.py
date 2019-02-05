@@ -33,7 +33,7 @@ from tensorflow.python.keras.engine import network as keras_network  # TF intern
 
 
 def input_fn():
-  tf.set_random_seed(1)
+  tf.compat.v1.set_random_seed(1)
   inputs = tf.constant([[1, 2], [2, 3], [3, 4]], dtype=tf.float32)
   labels = tf.constant([[0], [1], [2]])
   return inputs, labels
@@ -44,9 +44,7 @@ class Network(keras_network.Network):
   def __init__(self, name=None):
     super(Network, self).__init__(name=name)
     self._layer = tf.keras.layers.Dense(
-        3,
-        kernel_initializer=tf.ones_initializer(),
-        name='logits')
+        3, kernel_initializer=tf.compat.v1.initializers.ones(), name='logits')
 
   def call(self, inputs):
     return self._layer(inputs)
@@ -72,7 +70,7 @@ class Model(object):
   @eager_utils.future_in_eager_mode
   def loss_fn(self, inputs, labels):
     logits = self._network(inputs)
-    return tf.losses.sparse_softmax_cross_entropy(labels, logits)
+    return tf.compat.v1.losses.sparse_softmax_cross_entropy(labels, logits)
 
 
 @eager_utils.future_in_eager_mode
@@ -87,11 +85,11 @@ class Aux(object):
 
   def method(self, inputs, labels, param=0):
     assert isinstance(self, Aux), self
-    return inputs, labels, tf.convert_to_tensor(param)
+    return inputs, labels, tf.convert_to_tensor(value=param)
 
 
 def aux_function(inputs, labels, param=0):
-  return inputs, labels, tf.convert_to_tensor(param)
+  return inputs, labels, tf.convert_to_tensor(value=param)
 
 
 @parameterized.named_parameters(
@@ -285,7 +283,7 @@ class EagerUtilsTest(tf.test.TestCase):
     model = Model('model', Network())
     loss = model.loss_fn(inputs, labels)
     expected_loss = 1.098612
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   @test_util.run_in_graph_and_eager_modes()
@@ -293,11 +291,11 @@ class EagerUtilsTest(tf.test.TestCase):
     inputs, labels = input_fn()
     model = Model('model', Network())
     loss = model.loss_fn(inputs, labels)
-    optimizer = tf.train.GradientDescentOptimizer(0.1)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     train_step = minimize_loss(loss, optimizer)
     initial_loss = 1.098612
     final_loss = 1.064379
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), initial_loss)
     self.evaluate(train_step)
     self.assertAllClose(self.evaluate(loss), final_loss)
@@ -310,11 +308,11 @@ class CreateTrainOpTest(tf.test.TestCase):
     inputs, labels = input_fn()
     model = Model('model', Network())
     loss = model.loss_fn(inputs, labels)
-    optimizer = tf.train.GradientDescentOptimizer(0.1)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     train_step = eager_utils.create_train_step(loss, optimizer)
     initial_loss = 1.098612
     final_loss = 1.064379
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(train_step), initial_loss)
     self.assertAllClose(self.evaluate(loss), final_loss)
 
@@ -335,11 +333,11 @@ class CreateTrainOpTest(tf.test.TestCase):
     def first_element(tuple_value):
       return tuple_value[0]
 
-    optimizer = tf.train.GradientDescentOptimizer(0.1)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     loss = eager_utils.create_train_step(
         tuple_loss_value, optimizer, total_loss_fn=first_element)
     expected_loss = 1.098612
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     train_step_model_0, train_step_model_1 = self.evaluate(loss)
     self.assertAllClose(train_step_model_0, expected_loss)
     self.assertAllClose(train_step_model_1, expected_loss)
@@ -349,11 +347,11 @@ class CreateTrainOpTest(tf.test.TestCase):
     inputs, labels = input_fn()
     model = Model('model', Network())
     loss = model.loss_fn(inputs, labels)
-    optimizer = tf.train.GradientDescentOptimizer(0.1)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     train_step = eager_utils.create_train_step(loss, optimizer)
     initial_loss = 1.098612
     final_loss = 1.033917
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(train_step), initial_loss)
     if context.executing_eagerly():
       for _ in range(5):
@@ -376,11 +374,11 @@ class CreateTrainOpTest(tf.test.TestCase):
       variables_to_train = model.trainable_variables
       self.assertEqual(len(variables_to_train), 2)
     loss = model.loss_fn(inputs, labels)
-    optimizer = tf.train.GradientDescentOptimizer(0.1)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.1)
     train_step = eager_utils.create_train_step(
         loss, optimizer, variables_to_train=variables_to_train)
     expected_loss = 1.098612
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(train_step), expected_loss)
     self.assertEqual(len(model.trainable_variables), 2)
 
@@ -494,7 +492,7 @@ class NpFunctionTest(tf.test.TestCase):
   def testVariables(self):
     a, b = tf.Variable(0), tf.Variable(1)
     xv, yv = meshgrid(a, b, nx=2, ny=2)
-    self.evaluate(tf.initializers.global_variables())
+    self.evaluate(tf.compat.v1.initializers.global_variables())
     self.assertAllEqual(self.evaluate(xv), [[0., 1.], [0., 1.]])
     self.assertAllEqual(self.evaluate(yv), [[0., 0.], [1., 1.]])
 

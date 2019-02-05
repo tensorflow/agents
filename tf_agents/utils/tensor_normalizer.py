@@ -61,7 +61,7 @@ class TensorNormalizer(tf.contrib.eager.Checkpointable):
                scope='normalize_tensor'):
     self._scope = scope
     self._tensor_spec = tensor_spec
-    with tf.variable_scope(self._scope):
+    with tf.compat.v1.variable_scope(self._scope):
       self._create_variables()
 
   @property
@@ -195,20 +195,21 @@ class EMATensorNormalizer(TensorNormalizer):
     """
     # Take the moments across batch dimension. Calculate variance with
     #   moving avg mean, so that this works even with batch size 1.
-    mean = tf.reduce_mean(tensor, axis=outer_dims)
+    mean = tf.reduce_mean(input_tensor=tensor, axis=outer_dims)
     var = tf.reduce_mean(
-        tf.square(tensor - self._mean_moving_avg), axis=outer_dims)
+        input_tensor=tf.square(tensor - self._mean_moving_avg), axis=outer_dims)
 
     # Ops to update moving average. Make sure that all stats are computed
     #   before updates are performed.
     with tf.control_dependencies([mean, var]):
       update_ops = [
-          tf.assign_add(
+          tf.compat.v1.assign_add(
               self._mean_moving_avg,
               self._norm_update_rate * (mean - self._mean_moving_avg)),
-          tf.assign_add(
+          tf.compat.v1.assign_add(
               self._var_moving_avg,
-              self._norm_update_rate * (var - self._var_moving_avg))]
+              self._norm_update_rate * (var - self._var_moving_avg))
+      ]
     return update_ops
 
   def _get_mean_var_estimates(self):
@@ -259,19 +260,26 @@ class StreamingTensorNormalizer(TensorNormalizer):
     mean_estimate, _ = self._get_mean_var_estimates()
     # Num samples in batch is the product of batch dimensions.
     num_samples = tf.cast(
-        tf.reduce_prod(tf.gather(tf.shape(tensor), outer_dims)), tf.float32)
-    mean_sum = tf.reduce_sum(tensor, axis=outer_dims)
+        tf.reduce_prod(
+            input_tensor=tf.gather(tf.shape(input=tensor), outer_dims)),
+        tf.float32)
+    mean_sum = tf.reduce_sum(input_tensor=tensor, axis=outer_dims)
     var_sum = tf.reduce_sum(
-        tf.square(tensor - mean_estimate), axis=outer_dims)
+        input_tensor=tf.square(tensor - mean_estimate), axis=outer_dims)
 
     # Ops to update streaming norm. Make sure that all stats are computed
     #   before updates are performed.
     with tf.control_dependencies([num_samples, mean_sum, var_sum]):
       update_ops = [
-          tf.assign_add(self._count, tf.ones_like(self._count) *
-                        num_samples, name='update_count'),
-          tf.assign_add(self._mean_sum, mean_sum, name='update_mean_sum'),
-          tf.assign_add(self._var_sum, var_sum, name='update_var_sum'),]
+          tf.compat.v1.assign_add(
+              self._count,
+              tf.ones_like(self._count) * num_samples,
+              name='update_count'),
+          tf.compat.v1.assign_add(
+              self._mean_sum, mean_sum, name='update_mean_sum'),
+          tf.compat.v1.assign_add(
+              self._var_sum, var_sum, name='update_var_sum'),
+      ]
     return update_ops
 
   def _get_mean_var_estimates(self):

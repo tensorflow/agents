@@ -37,8 +37,9 @@ class DummyNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[1, 1.5], [1, 1.5]]),
-            bias_initializer=tf.constant_initializer([[1], [1]])))
+            kernel_initializer=tf.compat.v1.initializers.constant([[1, 1.5],
+                                                                   [1, 1.5]]),
+            bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     inputs = tf.cast(inputs, tf.float32)
@@ -67,7 +68,7 @@ class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testAction(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
@@ -78,12 +79,12 @@ class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
     self.assertEqual(action_step.action.shape.as_list(), [2, 1])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
 
   @test_util.run_in_graph_and_eager_modes()
   def testDistribution(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
@@ -92,14 +93,14 @@ class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
     time_step = ts.restart(observations, batch_size=1)
     distribution_step = policy.distribution(time_step)
     mode = distribution_step.action.mode()
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     # The weights of index 0 are all 1 and the weights of index 1 are all 1.5,
     # so the Q values of index 1 will be higher.
     self.assertAllEqual([[1]], self.evaluate(mode))
 
   @test_util.run_in_graph_and_eager_modes()
   def testLogits(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.5)
@@ -109,7 +110,7 @@ class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
     distribution_step = policy.distribution(time_step)
     logits = distribution_step.action.logits
     original_logits = wrapped.distribution(time_step).action.logits
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     # The un-temperature'd logits would be 4 and 5.5, because it is (1 2) . (1
     # 1) + 1 and (1 2) . (1.5 1.5) + 1. The temperature'd logits will be double
     # that.

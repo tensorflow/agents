@@ -141,13 +141,13 @@ def train_eval(
 
   with tf.contrib.summary.record_summaries_every_n_global_steps(
       summary_interval):
-    tf.set_random_seed(random_seed)
+    tf.compat.v1.set_random_seed(random_seed)
     eval_py_env = parallel_py_environment.ParallelPyEnvironment(
         [lambda: env_load_fn(env_name)] * num_parallel_environments)
     tf_env = tf_py_environment.TFPyEnvironment(
         parallel_py_environment.ParallelPyEnvironment(
             [lambda: env_load_fn(env_name)] * num_parallel_environments))
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
 
     if use_rnns:
       actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
@@ -200,7 +200,7 @@ def train_eval(
     # Add to replay buffer and other agent specific observers.
     replay_buffer_observer = [replay_buffer.add_batch]
 
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     collect_policy = tf_agent.collect_policy()
 
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
@@ -245,7 +245,7 @@ def train_eval(
 
     init_agent_op = tf_agent.initialize()
 
-    with tf.Session(tf_master) as sess:
+    with tf.compat.v1.Session(tf_master) as sess:
       # Initialize graph.
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
@@ -258,7 +258,7 @@ def train_eval(
       collect_time = 0
       train_time = 0
       timed_at_step = sess.run(global_step)
-      steps_per_second_ph = tf.placeholder(
+      steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
       steps_per_second_summary = tf.contrib.summary.scalar(
           name='global_steps/sec', tensor=steps_per_second_ph)
@@ -285,14 +285,15 @@ def train_eval(
 
         global_step_val = sess.run(global_step)
         if global_step_val % log_interval == 0:
-          tf.logging.info('step = %d, loss = %f', global_step_val, total_loss)
+          tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
+                                    total_loss)
           steps_per_sec = (
               (global_step_val - timed_at_step) / (collect_time + train_time))
-          tf.logging.info('%.3f steps/sec' % steps_per_sec)
+          tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
-          tf.logging.info('collect_time = {}, train_time = {}'.format(
+          tf.compat.v1.logging.info('collect_time = {}, train_time = {}'.format(
               collect_time, train_time))
           timed_at_step = global_step_val
           collect_time = 0
@@ -324,7 +325,7 @@ def main(_):
     # self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     return
 
-  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
   train_eval(
       FLAGS.root_dir,
       tf_master=FLAGS.master,
@@ -340,4 +341,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.app.run()
+  tf.compat.v1.app.run()

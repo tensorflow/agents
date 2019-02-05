@@ -106,7 +106,7 @@ def train_eval(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         actor_network=actor_net,
-        optimizer=tf.train.AdamOptimizer(learning_rate=learning_rate),
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
         normalize_returns=normalize_returns,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
@@ -126,7 +126,7 @@ def train_eval(
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
 
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     eval_policy = tf_agent.policy()
     collect_policy = tf_agent.collect_policy()
@@ -169,10 +169,10 @@ def train_eval(
 
       global_step_val = global_step.numpy()
       if global_step_val % log_interval == 0:
-        tf.logging.info('step = %d, loss = %f', global_step_val,
-                        total_loss.loss)
+        tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
+                                  total_loss.loss)
         steps_per_sec = (global_step_val - timed_at_step) / time_acc
-        tf.logging.info('%.3f steps/sec' % steps_per_sec)
+        tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
         tf.contrib.summary.scalar(
             name='global_steps/sec', tensor=steps_per_sec)
         timed_at_step = global_step_val
@@ -193,12 +193,12 @@ def train_eval(
 
 
 def main(_):
-  tf.logging.set_verbosity(tf.logging.INFO)
-  tf.enable_eager_execution(
-      config=tf.ConfigProto(allow_soft_placement=True))
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  tf.compat.v1.enable_eager_execution(
+      config=tf.compat.v1.ConfigProto(allow_soft_placement=True))
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.app.run()
+  tf.compat.v1.app.run()

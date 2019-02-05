@@ -57,17 +57,17 @@ class TimeStep(
   __slots__ = ()
 
   def is_first(self):
-    if tf.contrib.framework.is_tensor(self.step_type):
+    if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.FIRST)
     return self.step_type == StepType.FIRST
 
   def is_mid(self):
-    if tf.contrib.framework.is_tensor(self.step_type):
+    if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.MID)
     return self.step_type == StepType.MID
 
   def is_last(self):
-    if tf.contrib.framework.is_tensor(self.step_type):
+    if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.LAST)
     return self.step_type == StepType.LAST
 
@@ -110,7 +110,7 @@ def restart(observation, batch_size=None):
     A `TimeStep`.
   """
   first_observation = nest.flatten(observation)[0]
-  if not tf.contrib.framework.is_tensor(first_observation):
+  if not tf.is_tensor(first_observation):
     if batch_size is not None:
       reward = np.zeros(batch_size, dtype=np.float32)
       discount = np.ones(batch_size, dtype=np.float32)
@@ -155,7 +155,7 @@ def transition(observation, reward, discount=1.0):
       is not `0` or `1`.
   """
   first_observation = nest.flatten(observation)[0]
-  if not tf.contrib.framework.is_tensor(first_observation):
+  if not tf.is_tensor(first_observation):
     reward = _as_float32_array(reward)
     discount = _as_float32_array(discount)
     if reward.shape:
@@ -167,7 +167,7 @@ def transition(observation, reward, discount=1.0):
   # TODO(sguada, kbanoop): If reward.shape.ndims == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
-  reward = tf.convert_to_tensor(reward, dtype=tf.float32, name='reward')
+  reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
   if reward.shape.ndims is None or reward.shape.ndims > 1:
     raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
                      reward.shape)
@@ -175,9 +175,10 @@ def transition(observation, reward, discount=1.0):
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [reward.shape[0] or tf.shape(reward)[0]]
+    shape = [reward.shape[0] or tf.shape(input=reward)[0]]
   step_type = tf.fill(shape, StepType.MID, name='step_type')
-  discount = tf.convert_to_tensor(discount, dtype=tf.float32, name='discount')
+  discount = tf.convert_to_tensor(
+      value=discount, dtype=tf.float32, name='discount')
 
   if discount.shape.ndims == 0:
     discount = tf.fill(shape, discount, name='discount_fill')
@@ -202,7 +203,7 @@ def termination(observation, reward):
       is not `0` or `1`.
   """
   first_observation = nest.flatten(observation)[0]
-  if not tf.contrib.framework.is_tensor(first_observation):
+  if not tf.is_tensor(first_observation):
     reward = _as_float32_array(reward)
     if reward.shape:
       step_type = np.tile(StepType.LAST, reward.shape)
@@ -215,7 +216,7 @@ def termination(observation, reward):
   # TODO(sguada, kbanoop): If reward.shape.ndims == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
-  reward = tf.convert_to_tensor(reward, dtype=tf.float32, name='reward')
+  reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
   if reward.shape.ndims is None or reward.shape.ndims > 1:
     raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
                      reward.shape)
@@ -223,7 +224,7 @@ def termination(observation, reward):
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [reward.shape[0] or tf.shape(reward)[0]]
+    shape = [reward.shape[0] or tf.shape(input=reward)[0]]
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
   discount = tf.fill(shape, _as_float32_array(0.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
@@ -249,7 +250,7 @@ def truncation(observation, reward, discount=1.0):
       is not `0` or `1`.
   """
   first_observation = nest.flatten(observation)[0]
-  if not tf.contrib.framework.is_tensor(first_observation):
+  if not tf.is_tensor(first_observation):
     reward = _as_float32_array(reward)
     discount = _as_float32_array(discount)
     if reward.shape:
@@ -258,7 +259,7 @@ def truncation(observation, reward, discount=1.0):
       step_type = StepType.LAST
     return TimeStep(step_type, reward, discount, observation)
 
-  reward = tf.convert_to_tensor(reward, dtype=tf.float32, name='reward')
+  reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
   if reward.shape.ndims is None or reward.shape.ndims > 1:
     raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
                      reward.shape)
@@ -266,9 +267,10 @@ def truncation(observation, reward, discount=1.0):
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [reward.shape[0] or tf.shape(reward)[0]]
+    shape = [reward.shape[0] or tf.shape(input=reward)[0]]
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
-  discount = tf.convert_to_tensor(discount, dtype=tf.float32, name='discount')
+  discount = tf.convert_to_tensor(
+      value=discount, dtype=tf.float32, name='discount')
   if discount.shape.ndims == 0:
     discount = tf.fill(shape, discount, name='discount_fill')
   else:

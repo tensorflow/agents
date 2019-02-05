@@ -125,7 +125,7 @@ class LSTMEncodingNetwork(network.Network):
       ValueError: If any of `preprocessing_layers` is already built.
       ValueError: If `preprocessing_combiner` is already built.
     """
-    kernel_initializer = tf.variance_scaling_initializer(
+    kernel_initializer = tf.compat.v1.variance_scaling_initializer(
         scale=2.0, mode='fan_in', distribution='truncated_normal')
 
     input_encoder = encoding_network.EncodingNetwork(

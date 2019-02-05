@@ -34,8 +34,9 @@ class DummyNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[1, 1.5], [1, 1.5]]),
-            bias_initializer=tf.constant_initializer([[1], [1]])))
+            kernel_initializer=tf.compat.v1.initializers.constant([[1, 1.5],
+                                                                   [1, 1.5]]),
+            bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     inputs = tf.cast(inputs, tf.float32)
@@ -72,7 +73,7 @@ class QPolicyTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testAction(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
@@ -82,12 +83,12 @@ class QPolicyTest(tf.test.TestCase):
     self.assertEqual(action_step.action.shape.as_list(), [2, 1])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
 
   @test_util.run_in_graph_and_eager_modes()
   def testActionScalarSpec(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
 
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
     policy = q_policy.QPolicy(
@@ -99,7 +100,7 @@ class QPolicyTest(tf.test.TestCase):
     self.assertEqual(aaction_step.action.shape.as_list(), [2])
     self.assertEqual(aaction_step.action.dtype, tf.int32)
     # Initialize all variables
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(aaction_step.action), [1, 1])
 
   @test_util.run_in_graph_and_eager_modes()
@@ -111,12 +112,12 @@ class QPolicyTest(tf.test.TestCase):
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
     self.assertTrue(isinstance(action_step.action, list))
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [[[1], [1]]])
 
   @test_util.run_in_graph_and_eager_modes()
   def testDistribution(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
@@ -124,14 +125,14 @@ class QPolicyTest(tf.test.TestCase):
     time_step = ts.restart(observations, batch_size=1)
     distribution_step = policy.distribution(time_step)
     mode = distribution_step.action.mode()
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     # The weights of index 0 are all 1 and the weights of index 1 are all 1.5,
     # so the Q values of index 1 will be higher.
     self.assertAllEqual([[1]], self.evaluate(mode))
 
   @test_util.run_in_graph_and_eager_modes()
   def testUpdate(self):
-    tf.set_random_seed(1)
+    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     new_policy = q_policy.QPolicy(
@@ -151,7 +152,7 @@ class QPolicyTest(tf.test.TestCase):
     self.assertEqual(action_step.action.shape, new_action_step.action.shape)
     self.assertEqual(action_step.action.dtype, new_action_step.action.dtype)
 
-    self.evaluate(tf.global_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(new_policy.update(policy)), None)
 
     self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
