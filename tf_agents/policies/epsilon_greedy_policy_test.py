@@ -67,6 +67,9 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
                             {'epsilon': 0.7},
                             {'epsilon': 1.0})
   def testFixedEpsilon(self, epsilon):
+    if tf.executing_eagerly():
+      self.skipTest('b/123935683')
+
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(self._policy,
                                                        epsilon=epsilon)
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)

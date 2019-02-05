@@ -107,6 +107,9 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAssignSession(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
+
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     policy.session = tf.Session()
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
@@ -116,6 +119,9 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testZeroState(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
+
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
     with self.cached_session():
@@ -125,6 +131,9 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAction(self, batch_size):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
+
     single_observation = np.array([1, 2], dtype=np.float32)
     time_steps = ts.restart(single_observation)
     if batch_size is not None:
@@ -199,6 +208,9 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       np.testing.assert_array_equal(initial_var, restored_var)
 
   def testDeferredBatchingAction(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
+
     # Construct policy without providing batch_size.
     tf_policy = q_policy.QPolicy(
         self._time_step_spec,

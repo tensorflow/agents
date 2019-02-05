@@ -52,6 +52,8 @@ nest = tf.contrib.framework.nest
 class TFPyPolicyTest(tf.test.TestCase):
 
   def testRandomPyPolicyGeneratesActionTensors(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123935604')
 
     py_action_spec = array_spec.BoundedArraySpec((7,), np.int32, -10, 10)
 
@@ -118,6 +120,9 @@ class TFPyPolicyTest(tf.test.TestCase):
     np.testing.assert_equal(py_action_step.info, expected_py_info)
 
   def testZeroState(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123935604')
+
     policy_state_length = 5
     batch_size = 3
     mock_py_policy = mock.create_autospec(py_policy.Base)

@@ -196,6 +196,9 @@ class IndexWithActionsTest(tf.test.TestCase):
         q_values, actions, expected_q_values, multi_dim_actions=True)
 
   def testTwoOuterDimsUnknownShape(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770194')
+
     q_values = tf.placeholder(tf.float32, shape=[None, None, None])
     actions = tf.placeholder(tf.int32, shape=[None, None])
     values = common.index_with_actions(q_values, actions)
