@@ -150,6 +150,8 @@ class TD3AgentTest(tf.test.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   def testActorLoss(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123899715')
     agent = td3_agent.Td3Agent(
         self._time_step_spec,
         self._action_spec,
