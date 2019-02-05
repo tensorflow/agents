@@ -196,18 +196,12 @@ class IndexWithActionsTest(tf.test.TestCase):
         q_values, actions, expected_q_values, multi_dim_actions=True)
 
   def testTwoOuterDimsUnknownShape(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123770194')
-
-    q_values = tf.placeholder(tf.float32, shape=[None, None, None])
-    actions = tf.placeholder(tf.int32, shape=[None, None])
+    q_values = tf.convert_to_tensor(np.array([[[50, 51], [52, 53]]],
+                                             dtype=np.float32))
+    actions = tf.convert_to_tensor(np.array([[1, 0]], dtype=np.int32))
     values = common.index_with_actions(q_values, actions)
-    with self.cached_session() as sess:
-      self.assertAllClose(
-          [[51, 52]],
-          sess.run(values,
-                   feed_dict={q_values: [[[50, 51], [52, 53]]],
-                              actions: [[1, 0]]}))
+
+    self.assertAllClose([[51, 52]], self.evaluate(values))
 
 
 class PeriodicallyTest(tf.test.TestCase):
@@ -671,7 +665,9 @@ class GetEpisodeMaskTest(tf.test.TestCase):
     time_steps = ts.TimeStep(
         step_type=step_types, discount=discounts, reward=discounts,
         observation=discounts)
-    episode_mask = common.get_episode_mask(time_steps)
+    # TODO(b/123941561): Remove tf.function conversion.
+    get_episode_mask = tf.function(common.get_episode_mask)
+    episode_mask = get_episode_mask(time_steps)
 
     expected_mask = [1, 1, 1, 0, 1, 1, 1, 0]
     self.evaluate(tf.global_variables_initializer())
