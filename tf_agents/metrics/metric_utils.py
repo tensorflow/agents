@@ -20,6 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+
+from absl import logging
+
 import tensorflow as tf
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import py_driver
@@ -29,8 +32,7 @@ from tf_agents.utils import common as common_utils
 
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.result()) for m in metrics]
-  tf.compat.v1.logging.info('{0} \n\t\t {1}'.format(prefix,
-                                                    '\n\t\t '.join(log)))
+  logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
 
 
 def compute(metrics,

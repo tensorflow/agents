@@ -31,7 +31,10 @@ from __future__ import print_function
 
 import os
 import time
+
+from absl import app
 from absl import flags
+from absl import logging
 
 import tensorflow as tf
 
@@ -285,15 +288,14 @@ def train_eval(
 
         global_step_val = sess.run(global_step)
         if global_step_val % log_interval == 0:
-          tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
-                                    total_loss)
+          logging.info('step = %d, loss = %f', global_step_val, total_loss)
           steps_per_sec = (
               (global_step_val - timed_at_step) / (collect_time + train_time))
-          tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
+          logging.info('%.3f steps/sec', steps_per_sec)
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
-          tf.compat.v1.logging.info('collect_time = {}, train_time = {}'.format(
+          logging.info('collect_time = {}, train_time = {}'.format(
               collect_time, train_time))
           timed_at_step = global_step_val
           collect_time = 0
@@ -325,7 +327,7 @@ def main(_):
     # self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     return
 
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   train_eval(
       FLAGS.root_dir,
       tf_master=FLAGS.master,
@@ -341,4 +343,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.compat.v1.app.run()
+  app.run(main)

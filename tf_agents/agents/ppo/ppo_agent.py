@@ -57,6 +57,9 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+
+from absl import logging
+
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
@@ -475,9 +478,8 @@ class PPOAgent(tf_agent.TFAgent):
     # Return TD-Lambda returns if both use_td_lambda_return and use_gae.
     if self._use_td_lambda_return:
       if not self._use_gae:
-        tf.compat.v1.logging.warning(
-            'use_td_lambda_return was True, but use_gae was '
-            'False. Using Monte Carlo return.')
+        logging.warning('use_td_lambda_return was True, but use_gae was '
+                        'False. Using Monte Carlo return.')
       else:
         returns = tf.add(
             advantages, value_preds[:, :-1], name='td_lambda_returns')

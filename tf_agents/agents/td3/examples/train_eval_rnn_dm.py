@@ -32,7 +32,9 @@ import functools
 import os
 import time
 
+from absl import app
 from absl import flags
+from absl import logging
 
 import tensorflow as tf
 
@@ -287,10 +289,10 @@ def train_eval(
         time_acc += time.time() - start_time
 
         if global_step_val % log_interval == 0:
-          tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
-                                    loss_info_value.loss)
+          logging.info('step = %d, loss = %f', global_step_val,
+                       loss_info_value.loss)
           steps_per_sec = (global_step_val - timed_at_step) / time_acc
-          tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
+          logging.info('%.3f steps/sec', steps_per_sec)
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
@@ -318,10 +320,10 @@ def train_eval(
 
 
 def main(_):
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.compat.v1.app.run()
+  app.run(main)

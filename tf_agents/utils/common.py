@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl import logging
+
 import tensorflow as tf
 
 from tf_agents.environments import time_step as ts
@@ -682,9 +684,9 @@ def initialize_uninitialized_variables(session):
     if not flag:
       uninitialized_vars.append(v)
   if uninitialized_vars:
-    tf.compat.v1.logging.info('uninitialized_vars:')
+    logging.info('uninitialized_vars:')
     for v in uninitialized_vars:
-      tf.compat.v1.logging.info(v)
+      logging.info(v)
     session.run(tf.compat.v1.variables_initializer(uninitialized_vars))
 
 
@@ -711,11 +713,10 @@ class Checkpointer(object):
         self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
 
     if self._manager.latest_checkpoint is not None:
-      tf.compat.v1.logging.info('Checkpoint available: {}'.format(
+      logging.info('Checkpoint available: {}'.format(
           self._manager.latest_checkpoint))
     else:
-      tf.compat.v1.logging.info(
-          'No checkpoint available at {}'.format(ckpt_dir))
+      logging.info('No checkpoint available at {}'.format(ckpt_dir))
     self._load_status = self._checkpoint.restore(
         self._manager.latest_checkpoint)
 
@@ -727,7 +728,7 @@ class Checkpointer(object):
   def save(self, global_step):
     """Save state to checkpoint."""
     saved_checkpoint = self._manager.save(checkpoint_number=global_step)
-    tf.compat.v1.logging.info('Saved checkpoint: {}'.format(saved_checkpoint))
+    logging.info('Saved checkpoint: {}'.format(saved_checkpoint))
 
 
 def replicate(tensor, outer_shape):

@@ -30,7 +30,10 @@ from __future__ import print_function
 
 import os
 import time
+
+from absl import app
 from absl import flags
+from absl import logging
 
 import tensorflow as tf
 
@@ -158,9 +161,9 @@ def train_eval(
         tf_env.time_step_spec(), tf_env.action_spec())
 
     # Collect initial replay data.
-    tf.compat.v1.logging.info(
+    logging.info(
         'Initializing replay buffer by collecting experience for %d steps with '
-        'a random policy.' % initial_collect_steps)
+        'a random policy.', initial_collect_steps)
     dynamic_step_driver.DynamicStepDriver(
         tf_env,
         initial_collect_policy,
@@ -203,10 +206,9 @@ def train_eval(
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
-        tf.compat.v1.logging.info('step = %d, loss = %f', global_step.numpy(),
-                                  train_loss)
+        logging.info('step = %d, loss = %f', global_step.numpy(), train_loss)
         steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
-        tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
+        logging.info('%.3f steps/sec', steps_per_sec)
         tf.contrib.summary.scalar(name='global_steps/sec', tensor=steps_per_sec)
         timed_at_step = global_step.numpy()
         time_acc = 0
@@ -229,7 +231,7 @@ def train_eval(
 
 
 def main(_):
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   tf.compat.v1.enable_eager_execution(
       config=tf.compat.v1.ConfigProto(allow_soft_placement=True))
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
@@ -237,4 +239,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.compat.v1.app.run()
+  app.run(main)

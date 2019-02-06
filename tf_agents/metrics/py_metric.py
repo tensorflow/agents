@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+from absl import logging
 
 import numpy as np
 import six
@@ -93,7 +94,7 @@ class PyMetric(object):
 
   def log(self):
     tag = common_utils.join_scope(self.prefix, self.name)
-    tf.compat.v1.logging.info('{0} = {1}'.format(tag, self.result()))
+    logging.info('{0} = {1}'.format(tag, self.result()))
 
   def tf_summaries(self, step_metrics=()):
     """Build TF summary op and placeholder for this metric.

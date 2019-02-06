@@ -22,7 +22,9 @@ from __future__ import print_function
 import os
 import time
 
+from absl import app
 from absl import flags
+from absl import logging
 
 import tensorflow as tf
 
@@ -257,17 +259,17 @@ def train_eval(
         )
 
         # Run initial collect.
-        tf.compat.v1.logging.info('Global step %d: Running initial collect op.',
-                                  global_step_val)
+        logging.info('Global step %d: Running initial collect op.',
+                     global_step_val)
         sess.run(initial_collect_op)
 
         # Checkpoint the initial replay buffer contents.
         rb_checkpointer.save(global_step=global_step_val)
 
-        tf.compat.v1.logging.info('Finished initial collect.')
+        logging.info('Finished initial collect.')
       else:
-        tf.compat.v1.logging.info(
-            'Global step %d: Skipping initial collect op.', global_step_val)
+        logging.info('Global step %d: Skipping initial collect op.',
+                     global_step_val)
 
       collect_call = sess.make_callable(collect_op)
       train_step_call = sess.make_callable([train_op, summary_op, global_step])
@@ -287,10 +289,9 @@ def train_eval(
         time_acc += time.time() - start_time
 
         if global_step_val % log_interval == 0:
-          tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
-                                    total_loss.loss)
+          logging.info('step = %d, loss = %f', global_step_val, total_loss.loss)
           steps_per_sec = (global_step_val - timed_at_step) / time_acc
-          tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
+          logging.info('%.3f steps/sec', steps_per_sec)
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
@@ -325,7 +326,7 @@ def main(_):
     return
 
   root_dir = FLAGS.root_dir
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.config_file, FLAGS.binding)
   train_eval(root_dir,
              num_iterations=FLAGS.num_iterations,
@@ -334,4 +335,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.compat.v1.app.run()
+  app.run(main)

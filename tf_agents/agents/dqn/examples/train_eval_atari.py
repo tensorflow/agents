@@ -48,7 +48,10 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
+from absl import app
 from absl import flags
+from absl import logging
 
 import numpy as np
 import tensorflow as tf
@@ -97,7 +100,7 @@ class AtariQNetwork(q_network.QNetwork):
 
 def log_metric(metric, prefix):
   tag = common_utils.join_scope(prefix, metric.name)
-  tf.compat.v1.logging.info('{0} = {1}'.format(tag, metric.result()))
+  logging.info('{0} = {1}'.format(tag, metric.result()))
 
 
 @gin.configurable
@@ -447,7 +450,7 @@ class TrainEval(object):
 
   def _initial_collect(self):
     """Collect initial experience before training begins."""
-    tf.compat.v1.logging.info('Collecting initial experience...')
+    logging.info('Collecting initial experience...')
     time_step_spec = ts.time_step_spec(self._env.observation_spec())
     random_policy = random_py_policy.RandomPyPolicy(
         time_step_spec, self._env.action_spec())
@@ -460,7 +463,7 @@ class TrainEval(object):
       self._replay_buffer.add_batch(trajectory.from_transition(
           time_step, action_step, next_time_step))
       time_step = next_time_step
-    tf.compat.v1.logging.info('Done.')
+    logging.info('Done.')
 
   def _run_episode(self, sess, metric_observers, train=False):
     """Run a single episode."""
@@ -558,21 +561,17 @@ class TrainEval(object):
   def _maybe_log(self, sess, global_step_val, total_loss):
     """Log some stats if global_step_val is a multiple of log_interval."""
     if global_step_val % self._log_interval == 0:
-      tf.compat.v1.logging.info('step = %d, loss = %f', global_step_val,
-                                total_loss.loss)
-      tf.compat.v1.logging.info('action_time = {}'.format(
-          self._action_timer.value()))
-      tf.compat.v1.logging.info('step_time = {}'.format(
-          self._step_timer.value()))
-      tf.compat.v1.logging.info('oberver_time = {}'.format(
-          self._observer_timer.value()))
+      logging.info('step = %d, loss = %f', global_step_val, total_loss.loss)
+      logging.info('action_time = {}'.format(self._action_timer.value()))
+      logging.info('step_time = {}'.format(self._step_timer.value()))
+      logging.info('oberver_time = {}'.format(self._observer_timer.value()))
       steps_per_sec = ((global_step_val - self._timed_at_step) /
                        (self._collect_timer.value()
                         + self._train_timer.value()))
       sess.run(self._steps_per_second_summary,
                feed_dict={self._steps_per_second_ph: steps_per_sec})
-      tf.compat.v1.logging.info('%.3f steps/sec' % steps_per_sec)
-      tf.compat.v1.logging.info('collect_time = {}, train_time = {}'.format(
+      logging.info('%.3f steps/sec', steps_per_sec)
+      logging.info('collect_time = {}, train_time = {}'.format(
           self._collect_timer.value(), self._train_timer.value()))
       for metric in self._train_metrics:
         log_metric(metric, prefix='Train/Metrics')
@@ -585,11 +584,11 @@ class TrainEval(object):
 
 
 def main(_):
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   gin.parse_config_files_and_bindings(None, FLAGS.gin_binding)
   TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name)).run()
 
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.compat.v1.app.run()
+  app.run(main)

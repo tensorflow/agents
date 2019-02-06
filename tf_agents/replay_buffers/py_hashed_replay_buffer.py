@@ -26,6 +26,8 @@ from __future__ import print_function
 import pickle
 import threading
 
+from absl import logging
+
 import numpy as np
 import tensorflow as tf
 
@@ -143,9 +145,8 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
 
     if (self._log_interval and
         self._np_state.item_count % self._log_interval == 0):
-      tf.compat.v1.logging.info(
-          'Effective Replay buffer frame count: {}'.format(
-              len(self._frame_buffer)))
+      logging.info('Effective Replay buffer frame count: {}'.format(
+          len(self._frame_buffer)))
 
     return traj._replace(observation=observation)
 

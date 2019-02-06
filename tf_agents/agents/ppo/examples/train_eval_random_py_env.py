@@ -24,7 +24,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl import app
 from absl import flags
+from absl import logging
+
 import numpy as np
 import tensorflow as tf
 
@@ -47,7 +50,7 @@ def main(_):
   if tf.executing_eagerly():
     # self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     return
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   train_eval.train_eval(
       FLAGS.root_dir, tf_master=FLAGS.master,
       env_name=FLAGS.env_name,
@@ -63,4 +66,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  tf.compat.v1.app.run()
+  app.run(main)

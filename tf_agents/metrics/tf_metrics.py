@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl import logging
+
 import tensorflow as tf
 
 from tf_agents.metrics import py_metrics
@@ -138,5 +140,4 @@ class AverageEpisodeLengthMetric(tf_py_metric.TFPyMetric):
 
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.log().numpy()) for m in metrics]
-  tf.compat.v1.logging.info('{0} \n\t\t {1}'.format(prefix,
-                                                    '\n\t\t '.join(log)))
+  logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))

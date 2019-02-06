@@ -52,8 +52,9 @@ from __future__ import print_function
 import copy
 import functools
 import inspect
-import numpy as np
+from absl import logging
 
+import numpy as np
 import six
 import tensorflow as tf
 
@@ -207,7 +208,7 @@ def add_gradients_summaries(grads_and_vars):
         tf.contrib.summary.scalar(var_name + '_gradient_norm',
                                   tf.linalg.global_norm([grad_values]))
       else:
-        tf.compat.v1.logging.info('Var %s has no gradient', var.name)
+        logging.info('Var %s has no gradient', var.name)
 
 
 def create_train_step(loss,
@@ -296,8 +297,7 @@ def create_train_step(loss,
     raise ValueError('`loss` should be a function in eager mode.')
 
   if not isinstance(loss, Future):
-    tf.compat.v1.logging.warning(
-        'loss should be an instance of eager_utils.Future')
+    logging.warning('loss should be an instance of eager_utils.Future')
 
   with tf.GradientTape() as tape:
     loss_value = loss()
