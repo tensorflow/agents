@@ -36,6 +36,10 @@ class MySessionUser(session_utils.SessionUser):
 
 class TfRunnableTest(tf.test.TestCase):
 
+  def setUp(self):
+    if tf.executing_eagerly():
+      self.skipTest("session_utils are not applicable when executing eagerly")
+
   def testWithoutSession(self):
     session_user = MySessionUser()
     with self.assertRaisesRegexp(AttributeError, "No TensorFlow session"):
