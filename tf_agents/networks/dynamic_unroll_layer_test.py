@@ -28,21 +28,6 @@ from tensorflow.python.framework import test_util  # TF internal
 nest = tf.contrib.framework.nest
 
 
-class AddInputAndStateRNNCell(tf.contrib.rnn.LayerRNNCell):
-
-  @property
-  def state_size(self):
-    return tf.TensorShape([1])
-
-  @property
-  def output_size(self):
-    return tf.TensorShape([1])
-
-  def call(self, input_, state):
-    s = input_ + state
-    return s, s
-
-
 class AddInputAndStateKerasRNNCell(tf.keras.layers.Layer):
 
   def __init__(self):
@@ -58,21 +43,6 @@ class AddInputAndStateKerasRNNCell(tf.keras.layers.Layer):
     if inputs is not None:
       return tf.zeros_like(inputs)
     return tf.zeros([batch_size, 1], dtype)
-
-
-class FixedOneRNNCell(tf.contrib.rnn.LayerRNNCell):
-
-  @property
-  def state_size(self):
-    return tf.TensorShape([1])
-
-  @property
-  def output_size(self):
-    return tf.TensorShape([1])
-
-  def call(self, input_, state):
-    s = tf.ones_like(state)
-    return input_, s
 
 
 class DynamicUnrollTest(tf.test.TestCase):
@@ -121,8 +91,24 @@ class DynamicUnrollTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testDynamicUnrollResetsStateOnReset(self):
-    self._testDynamicUnrollResetsStateOnReset(
-        AddInputAndStateRNNCell)
+    if hasattr(tf, 'contrib'):
+      class AddInputAndStateRNNCell(tf.contrib.rnn.LayerRNNCell):
+
+        @property
+        def state_size(self):
+          return tf.TensorShape([1])
+
+        @property
+        def output_size(self):
+          return tf.TensorShape([1])
+
+        def call(self, input_, state):
+          s = input_ + state
+          return s, s
+
+      self._testDynamicUnrollResetsStateOnReset(
+          AddInputAndStateRNNCell)
+
     self._testDynamicUnrollResetsStateOnReset(
         AddInputAndStateKerasRNNCell)
 

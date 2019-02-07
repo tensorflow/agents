@@ -38,6 +38,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+from tf_agents.utils import common as common_utils
+
 from tensorflow.python.framework import tensor_shape  # TF internal
 from tensorflow.python.keras import layers  # TF internal
 
@@ -82,6 +84,34 @@ def _infer_state_dtype(explicit_dtype, state):
     return inferred_dtypes[0]
   else:
     return state.dtype
+
+
+def _best_effort_input_batch_size(flat_input):
+  """Get static input batch size if available, with fallback to the dynamic one.
+
+  Args:
+    flat_input: An iterable of time major input Tensors of shape
+      `[max_time, batch_size, ...]`.
+    All inputs should have compatible batch sizes.
+
+  Returns:
+    The batch size in Python integer if available, or a scalar Tensor otherwise.
+
+  Raises:
+    ValueError: if there is any input with an invalid shape.
+  """
+  for input_ in flat_input:
+    shape = input_.shape
+    if shape.rank is None:
+      continue
+    if shape.rank < 2:
+      raise ValueError(
+          "Expected input tensor %s to have rank at least 2" % input_)
+    batch_size = shape.dims[1].value
+    if batch_size is not None:
+      return batch_size
+  # Fallback to the dynamic batch size of the first input.
+  return tf.shape(flat_input[0])[1]
 
 
 class DynamicUnroll(tf.keras.layers.Layer):
@@ -222,10 +252,10 @@ class DynamicUnroll(tf.keras.layers.Layer):
       raise ValueError("Must provide either dtype or initial_state")
 
     # Assume all inputs are batch major.  Convert to time major.
-    inputs = nest.map_structure(tf.contrib.rnn.transpose_batch_time, inputs)
+    inputs = nest.map_structure(common_utils.transpose_batch_time, inputs)
     inputs_flat = nest.flatten(inputs)
     inputs_static_shapes = tuple(x.shape for x in inputs_flat)
-    batch_size = tf.contrib.rnn.best_effort_input_batch_size(inputs_flat)
+    batch_size = _best_effort_input_batch_size(inputs_flat)
     const_batch_size = tensor_shape.dimension_value(inputs_static_shapes[0][1])
 
     # reset_mask is batch major.  Convert to time major.
@@ -402,7 +432,7 @@ def _dynamic_unroll_multi_step(cell,
         outputs)
 
   # Convert everything back to batch major
-  outputs = nest.map_structure(tf.contrib.rnn.transpose_batch_time,
+  outputs = nest.map_structure(common_utils.transpose_batch_time,
                                outputs)
 
   return (outputs, final_state)
