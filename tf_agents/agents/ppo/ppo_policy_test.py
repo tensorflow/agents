@@ -30,7 +30,6 @@ from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
-slim = tf.contrib.slim
 
 
 class DummyActorNet(network.Network):

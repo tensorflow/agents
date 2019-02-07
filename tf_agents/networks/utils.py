@@ -21,7 +21,6 @@ from __future__ import print_function
 import tensorflow as tf
 
 nest = tf.contrib.framework.nest
-slim = tf.contrib.slim
 
 
 class BatchSquash(object):
@@ -83,28 +82,6 @@ class BatchSquash(object):
       # pyformat: enable
 
 
-def encode_state(state, conv_layers=None, fc_layers=None):
-  """Evaluates a state through conv and fc layers into a hidden state."""
-  num_feature_dims = 3 if conv_layers else 1
-
-  state.shape.with_rank_at_least(num_feature_dims)
-  batch_squash = BatchSquash(state.shape.ndims - num_feature_dims)
-  state = batch_squash.flatten(state)
-
-  if conv_layers:
-    state.shape.assert_has_rank(4)
-    state = slim.stack(state, slim.conv2d, conv_layers, scope='conv_state')
-    state = slim.flatten(state)
-
-  state.shape.assert_has_rank(2)
-  if fc_layers:
-    state = slim.stack(state, slim.fully_connected, fc_layers, scope='fc_state')
-
-  return batch_squash.unflatten(state)
-
-
-# TODO(oars): remove encode_state above and standardize on this new keras
-# version.
 def mlp_layers(conv_layer_params=None,
                fc_layer_params=None,
                activation_fn=tf.keras.activations.relu,

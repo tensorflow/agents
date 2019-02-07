@@ -27,7 +27,6 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies.policy_step import PolicyStep
 from tf_agents.specs import tensor_spec
 
-slim = tf.contrib.slim
 nest = tf.contrib.framework.nest
 
 

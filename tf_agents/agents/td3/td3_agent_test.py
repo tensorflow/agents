@@ -26,7 +26,6 @@ from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common_utils
 
-slim = tf.contrib.slim
 nest = tf.contrib.framework.nest
 
 

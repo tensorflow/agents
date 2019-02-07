@@ -30,7 +30,6 @@ from tf_agents.policies import ou_noise_policy
 from tf_agents.specs import tensor_spec
 
 nest = tf.contrib.framework.nest
-slim = tf.contrib.slim
 
 
 class DummyActionNet(network.Network):
