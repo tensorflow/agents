@@ -119,8 +119,8 @@ class Network(keras_network.Network):
   def variables(self):
     """Return the variables for all the network layers.
 
-    Requires that the network has been already built by either calling the
-    network on some input or explicitly calling build().
+    If the network hasn't been built, builds it on random input (generated
+    using self._input_tensor_spec) to build all the layers and their variables.
 
     Raises:
       ValueError:  If the network fails to build.
