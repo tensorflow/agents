@@ -99,7 +99,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
           initializer=tf.compat.v1.initializers.constant(-1, dtype=tf.int64),
           use_resource=True,
           trainable=False)
-      self._last_id_cs = tf.contrib.framework.CriticalSection(name='last_id')
+      self._last_id_cs = tf.CriticalSection(name='last_id')
 
   def variables(self):
     # TODO(sguada) - make this Eager-compatible. Don't rely on scopes.
