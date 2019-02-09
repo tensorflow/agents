@@ -31,6 +31,11 @@ from tensorflow.python.eager import context  # TF internal
 nest = tf.contrib.framework.nest
 
 
+def function(*args, **kwargs):
+  autograph = kwargs.pop('autograph', False)
+  return tf.function(*args, autograph=autograph, **kwargs)  # allow-tf-function
+
+
 def create_counter(name,
                    initial_value=0,
                    shape=(),

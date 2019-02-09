@@ -666,7 +666,7 @@ class GetEpisodeMaskTest(tf.test.TestCase):
         step_type=step_types, discount=discounts, reward=discounts,
         observation=discounts)
     # TODO(b/123941561): Remove tf.function conversion.
-    get_episode_mask = tf.function(common.get_episode_mask)
+    get_episode_mask = common.function(common.get_episode_mask)
     episode_mask = get_episode_mask(time_steps)
 
     expected_mask = [1, 1, 1, 0, 1, 1, 1, 0]
