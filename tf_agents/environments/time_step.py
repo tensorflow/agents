@@ -175,7 +175,7 @@ def transition(observation, reward, discount=1.0):
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [reward.shape[0] or tf.shape(input=reward)[0]]
+    shape = [tf.dimension_value(reward.shape[0]) or tf.shape(input=reward)[0]]
   step_type = tf.fill(shape, StepType.MID, name='step_type')
   discount = tf.convert_to_tensor(
       value=discount, dtype=tf.float32, name='discount')
@@ -224,7 +224,7 @@ def termination(observation, reward):
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [reward.shape[0] or tf.shape(input=reward)[0]]
+    shape = [tf.dimension_value(reward.shape[0]) or tf.shape(input=reward)[0]]
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
   discount = tf.fill(shape, _as_float32_array(0.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
@@ -267,7 +267,7 @@ def truncation(observation, reward, discount=1.0):
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [reward.shape[0] or tf.shape(input=reward)[0]]
+    shape = [tf.dimension_value(reward.shape[0]) or tf.shape(input=reward)[0]]
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
   discount = tf.convert_to_tensor(
       value=discount, dtype=tf.float32, name='discount')
