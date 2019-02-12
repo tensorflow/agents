@@ -31,8 +31,6 @@ from tf_agents.environments import time_step as ts
 class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
 
   def testMakeTimestepMaskWithPartialEpisode(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123777119')  # Secondary bug: ('b/123776211')
     first, mid, last = ts.StepType.FIRST, ts.StepType.MID, ts.StepType.LAST
 
     next_step_types = tf.constant([[mid, mid, last, first,
