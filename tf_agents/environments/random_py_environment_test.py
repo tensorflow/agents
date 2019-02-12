@@ -145,6 +145,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, absltest.TestCase):
         reward_fn=lambda *_: np.ones(batch_size),
         batch_size=batch_size)
     env._done = False
+    env.reset()
     time_step = env.step([0])
     self.assertSequenceAlmostEqual([1.0] * 3, time_step.reward)
 
@@ -156,6 +157,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, absltest.TestCase):
         reward_fn=lambda *_: np.array([1.0]),
         batch_size=1)
     env._done = False
+    env.reset()
     time_step = env.step([0])
     self.assertEqual(time_step.reward, 1.0)
 
@@ -167,6 +169,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, absltest.TestCase):
         obs_spec,
         reward_fn=lambda *_: 1.0,
         batch_size=5)
+    env.reset()
     env._done = False
     with self.assertRaises(ValueError):
       env.step([0])

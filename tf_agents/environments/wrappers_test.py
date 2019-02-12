@@ -139,6 +139,7 @@ class ActionRepeatWrapperTest(absltest.TestCase):
   def test_action_repeated(self):
     mock_env = self._get_mock_env_episode()
     env = wrappers.ActionRepeat(mock_env, 3)
+    env.reset()
 
     env.step([2])
     mock_env.step.assert_has_calls([mock.call([2])] * 3)
@@ -146,6 +147,7 @@ class ActionRepeatWrapperTest(absltest.TestCase):
   def test_action_stops_on_last(self):
     mock_env = self._get_mock_env_episode()
     env = wrappers.ActionRepeat(mock_env, 3)
+    env.reset()
 
     env.step([2])
     time_step = env.step([3])
@@ -163,6 +165,7 @@ class ActionRepeatWrapperTest(absltest.TestCase):
   def test_accumulates_reward(self):
     mock_env = self._get_mock_env_episode()
     env = wrappers.ActionRepeat(mock_env, 3)
+    env.reset()
     time_step = env.step(0)
 
     mock_env.step.assert_called_with(0)
@@ -287,13 +290,14 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
+      env.reset()
 
       action = env.step(2)
       np.testing.assert_array_almost_equal(0.0, action)
@@ -310,13 +314,14 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
+      env.reset()
 
       action = env.step([[0, 2], [1, 1]])
       np.testing.assert_array_almost_equal([[-10.0, 0.0], [0.0, 10.0]], action)
@@ -331,13 +336,14 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
+      env.reset()
 
       action = env.step([[0, 2], [1, 4]])
       np.testing.assert_array_almost_equal([[-10.0, 0.0], [10.0, 10.0]], action)
@@ -361,6 +367,7 @@ class ActionDiscretizeWrapper(absltest.TestCase):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
+      env.reset()
       env.step([0, 0])
 
   def test_check_array_bounds(self):
@@ -373,13 +380,14 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
+      env.reset()
 
       action = env.step([0, 0])
       np.testing.assert_array_almost_equal([-10.0, 0.0], action)
@@ -402,13 +410,14 @@ class ActionDiscretizeWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
+      env.reset()
 
       action = env.step(np.array([[0, 2], [1, 4]]))
       np.testing.assert_array_almost_equal([[-10.0, 0.0], [10.0, 10.0]],
@@ -426,13 +435,14 @@ class ActionClipWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionClipWrapper(env)
+      env.reset()
 
       # actions within bounds, use NumPy action
       action = env.step(np.array([0, 0]))
@@ -465,13 +475,14 @@ class ActionClipWrapper(absltest.TestCase):
 
     with mock.patch.object(
         random_py_environment.RandomPyEnvironment,
-        'step',
+        '_step',
         side_effect=mock_step,
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
           obs_spec, action_spec=action_spec)
       env = wrappers.ActionClipWrapper(env)
+      env.reset()
 
       # use NumPy action
       action = [np.array([10, -10]), [np.array([10, -10]), np.array([10, -10])]]
@@ -530,6 +541,7 @@ class ActionOffsetWrapperTest(absltest.TestCase):
     mock_env = mock.Mock(
         wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
     env = wrappers.ActionOffsetWrapper(mock_env)
+    env.reset()
 
     env.step(np.array([0, 1, 2]))
     self.assertTrue(mock_env.step.called)

@@ -43,6 +43,7 @@ class Base(object):
   """
 
   def __init__(self):
+    self._current_time_step = None
     common.assert_members_are_not_overridden(
         base_cls=Base, instance=self, black_list=('reset', 'step'))
 
@@ -142,6 +143,9 @@ class Base(object):
         observation: A NumPy array, or a nested dict, list or tuple of arrays
           corresponding to `observation_spec()`.
     """
+    if self._current_time_step is None:
+      return self.reset()
+
     self._current_time_step = self._step(action)
     return self._current_time_step
 

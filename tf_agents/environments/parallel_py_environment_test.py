@@ -190,7 +190,7 @@ class MockEnvironmentCrashInReset(object):
   def action_spec(self):
     return []
 
-  def reset(self):
+  def _reset(self):
     raise RuntimeError()
 
 
@@ -207,8 +207,8 @@ class MockEnvironmentCrashInStep(random_py_environment.RandomPyEnvironment):
     self._crash_at_step = crash_at_step
     self._steps = 0
 
-  def step(self, *args, **kwargs):
-    transition = super(MockEnvironmentCrashInStep, self).step(*args, **kwargs)
+  def _step(self, *args, **kwargs):
+    transition = super(MockEnvironmentCrashInStep, self)._step(*args, **kwargs)
     self._steps += 1
     if self._steps == self._crash_at_step:
       raise RuntimeError()

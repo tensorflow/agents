@@ -72,7 +72,6 @@ class RandomPyEnvironment(py_environment.Base):
       ValueError: If batch_size argument is not None and does not match the
       shapes of discount or reward.
     """
-
     self._batch_size = batch_size
     self._observation_spec = observation_spec
     self._time_step_spec = ts.time_step_spec(self._observation_spec)
@@ -103,6 +102,7 @@ class RandomPyEnvironment(py_environment.Base):
     self._max_duration = max_duration
     self._rng = np.random.RandomState(seed)
     self._render_size = render_size
+    super(RandomPyEnvironment, self).__init__()
 
   @property
   def batch_size(self):
