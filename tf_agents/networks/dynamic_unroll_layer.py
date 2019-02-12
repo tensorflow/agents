@@ -404,7 +404,7 @@ def _dynamic_unroll_multi_step(cell,
   # Variable using the same placement as for the rest of the RNN.
   with tf.compat.v1.variable_scope(
       tf.compat.v1.get_variable_scope()) as varscope:
-    if (not tf.contrib.eager.executing_eagerly()
+    if (not tf.executing_eagerly()
         and varscope.caching_device is None):
       varscope.set_caching_device(lambda op: op.device)
 
