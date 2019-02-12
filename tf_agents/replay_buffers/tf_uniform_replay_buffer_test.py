@@ -24,6 +24,7 @@ import tensorflow as tf
 
 from tf_agents import specs
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
+from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
 
@@ -347,53 +348,59 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testSampleBatchCorrectProbabilities(self, buffer_batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123770140')
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=buffer_batch_size, max_length=4)
 
     actions = tf.stack([tf.Variable(0).count_up_to(9)] * buffer_batch_size)
-    add_op = replay_buffer.add_batch(actions)
-
     sample_batch_size = 2
-    _, buffer_info = replay_buffer.get_next(
-        sample_batch_size=sample_batch_size)
-    probabilities = buffer_info.probabilities
+
+    @common.function
+    def add(actions):
+      replay_buffer.add_batch(actions)
+
+    @common.function
+    def probabilities():
+      _, buffer_info = replay_buffer.get_next(
+          sample_batch_size=sample_batch_size)
+      return buffer_info.probabilities
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     num_adds = 3
-    for i in range(num_adds):
-      expected_probabilities = [
-          0 if i == 0 else 1. / (i * buffer_batch_size)
-      ] * sample_batch_size
-      probabilities_ = self.evaluate(probabilities)
+    for i in range(1, num_adds):
+      self.evaluate(add(actions))
+      expected_probabilities = [1. /
+                                (i * buffer_batch_size)] * sample_batch_size
+      probabilities_ = self.evaluate(probabilities())
       self.assertAllClose(expected_probabilities, probabilities_)
-      self.evaluate(add_op)
 
   @parameterized.named_parameters(
       ('BatchSizeOne', 1),
       ('BatchSizeFive', 5),
   )
   def testSampleSingleCorrectProbability(self, buffer_batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123770140')
     max_length = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=buffer_batch_size, max_length=max_length)
 
     actions = tf.stack([tf.Variable(0).count_up_to(9)] * buffer_batch_size)
-    add_op = replay_buffer.add_batch(actions)
 
-    _, buffer_info = replay_buffer.get_next()
-    probabilities = buffer_info.probabilities
+    @common.function
+    def add(actions):
+      replay_buffer.add_batch(actions)
+
+    @common.function
+    def probabilities():
+      _, buffer_info = replay_buffer.get_next()
+      return buffer_info.probabilities
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
+
     num_adds = 5
     for i in range(1, num_adds):
-      self.evaluate(add_op)
-      probabilities_ = self.evaluate(probabilities)
+      self.evaluate(add(actions))
+      probabilities_ = self.evaluate(probabilities())
       expected_probability = (
           1. / min(i * buffer_batch_size, max_length * buffer_batch_size))
       self.assertAllClose(expected_probability, probabilities_)

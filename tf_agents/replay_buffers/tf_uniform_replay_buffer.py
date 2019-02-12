@@ -177,6 +177,12 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
             message='TFUniformReplayBuffer is empty. Make sure to add items '
             'before sampling the buffer.')
         with tf.control_dependencies([assert_nonempty]):
+          num_ids = max_val - min_val
+          probability = tf.cond(
+              pred=tf.equal(num_ids, 0),
+              true_fn=lambda: 0.,
+              false_fn=lambda: 1. / tf.cast(num_ids * self._batch_size,  # pylint: disable=g-long-lambda
+                                            tf.float32))
           ids = tf.random.uniform(
               rows_shape, minval=min_val, maxval=max_val, dtype=tf.int64)
 
@@ -213,12 +219,6 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
               data_ids.append(self._id_table.read(steps_to_get))
             data = tuple(data)
             data_ids = tuple(data_ids)
-        num_ids = max_val - min_val
-        probability = tf.cond(
-            pred=tf.equal(num_ids, 0),
-            true_fn=lambda: 0.,
-            false_fn=lambda: 1. / tf.cast(num_ids * self._batch_size, tf.float32
-                                         ))
         probabilities = tf.fill(rows_shape, probability)
 
         buffer_info = BufferInfo(ids=data_ids,
