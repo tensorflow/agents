@@ -49,6 +49,12 @@ flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_integer('num_iterations', 100000,
                      'Total number train/eval iterations to perform.')
+flags.DEFINE_integer('log_interval', 10000,
+                     'Interval for logging to stdout.')
+flags.DEFINE_integer('eval_interval', 500000,
+                     'Interval for performing evaluations.')
+flags.DEFINE_integer('num_eval_episodes', 100,
+                     'Number of episodes to perform during evaluation.')
 flags.DEFINE_string('env_name', 'HalfCheetah-v1', 'Agent test environment.')
 flags.DEFINE_multi_string('config_file', None,
                           'Path to the trainer config files.')
@@ -328,6 +334,9 @@ def main(_):
   gin.parse_config_files_and_bindings(FLAGS.config_file, FLAGS.binding)
   train_eval(root_dir,
              num_iterations=FLAGS.num_iterations,
+             log_interval=FLAGS.log_interval,
+             eval_interval=FLAGS.eval_interval,
+             num_eval_episodes=FLAGS.num_eval_episodes,
              env_name=FLAGS.env_name)
 
 
