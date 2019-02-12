@@ -27,8 +27,6 @@ from tf_agents import specs
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import wrappers
 
-nest = tf.contrib.framework.nest
-
 _as_float32_array = functools.partial(np.asarray, dtype=np.float32)
 
 
@@ -63,10 +61,10 @@ class DmControlWrapper(wrappers.PyEnvironmentBaseWrapper):
     render_kwargs = render_kwargs or {}
     self._render_kwargs = render_kwargs
 
-    self._observation_spec = nest.map_structure(convert_spec,
-                                                self._env.observation_spec())
-    self._action_spec = nest.map_structure(convert_spec,
-                                           self._env.action_spec())
+    self._observation_spec = tf.nest.map_structure(convert_spec,
+                                                   self._env.observation_spec())
+    self._action_spec = tf.nest.map_structure(convert_spec,
+                                              self._env.action_spec())
 
   @property
   def physics(self):

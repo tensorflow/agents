@@ -25,8 +25,6 @@ import tensorflow as tf
 from tf_agents.networks import dynamic_unroll_layer
 from tensorflow.python.framework import test_util  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 class AddInputAndStateKerasRNNCell(tf.keras.layers.Layer):
 
@@ -122,8 +120,8 @@ class DynamicUnrollTest(tf.test.TestCase):
     layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
     outputs, final_state = layer(inputs, reset_mask)
 
-    nest.assert_same_structure(outputs, cell.output_size)
-    nest.assert_same_structure(final_state, cell.state_size)
+    tf.nest.assert_same_structure(outputs, cell.output_size)
+    tf.nest.assert_same_structure(final_state, cell.state_size)
 
     reset_mask, inputs, outputs, final_state = self.evaluate(
         (reset_mask, inputs, outputs, final_state))

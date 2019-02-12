@@ -28,8 +28,6 @@ from tf_agents.utils import nest_utils
 
 from tensorflow.python.eager import context  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 def function(*args, **kwargs):
   autograph = kwargs.pop('autograph', False)
@@ -421,9 +419,12 @@ def log_probability(distributions, actions, action_spec):
         input_tensor=single_distribution.log_prob(single_action),
         axis=reduce_dims)
 
-  nest.assert_same_structure(distributions, actions)
-  log_probs = [_compute_log_prob(dist, action) for (dist, action)
-               in zip(nest.flatten(distributions), nest.flatten(actions))]
+  tf.nest.assert_same_structure(distributions, actions)
+  log_probs = [
+      _compute_log_prob(dist, action)
+      for (dist, action
+          ) in zip(tf.nest.flatten(distributions), tf.nest.flatten(actions))
+  ]
 
   # sum log-probs over action tuple
   total_log_probs = tf.add_n(log_probs)
@@ -444,8 +445,7 @@ def entropy(distributions, action_spec):
     Assumes actions are independent, so that marginal entropies of each action
     may be summed.
   """
-  nested_modes = nest.map_structure(
-      lambda d: d.mode(), distributions)
+  nested_modes = tf.nest.map_structure(lambda d: d.mode(), distributions)
   outer_rank = nest_utils.get_outer_rank(nested_modes, action_spec)
 
   def _compute_entropy(single_distribution):
@@ -455,7 +455,9 @@ def entropy(distributions, action_spec):
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(input_tensor=entropies, axis=reduce_dims)
 
-  entropies = [_compute_entropy(dist) for dist in nest.flatten(distributions)]
+  entropies = [
+      _compute_entropy(dist) for dist in tf.nest.flatten(distributions)
+  ]
 
   # Sum entropies over action tuple.
   total_entropies = tf.add_n(entropies)

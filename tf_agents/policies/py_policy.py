@@ -29,8 +29,6 @@ from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
 from tf_agents.utils import common
 
-nest = tf.contrib.framework.nest
-
 
 @six.add_metaclass(abc.ABCMeta)
 class Base(object):
@@ -214,4 +212,5 @@ class Base(object):
       else:
         shape = (batch_size,) + spec.shape
       return np.zeros(shape, spec.dtype)
-    return nest.map_structure(_zero_array, self._policy_state_spec)
+
+    return tf.nest.map_structure(_zero_array, self._policy_state_spec)

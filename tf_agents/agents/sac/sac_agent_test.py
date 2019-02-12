@@ -27,8 +27,6 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies.policy_step import PolicyStep
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class _MockDistribution(object):
 
@@ -47,7 +45,7 @@ class DummyActorPolicy(object):
   def __init__(self, time_step_spec, action_spec, actor_network):
     del time_step_spec
     del actor_network
-    single_action_spec = nest.flatten(action_spec)[0]
+    single_action_spec = tf.nest.flatten(action_spec)[0]
     # Action is maximum of action range.
     self._action = single_action_spec.maximum
     self._action_spec = action_spec
@@ -71,9 +69,9 @@ class DummyCriticNet(object):
   def __call__(self, inputs, step_type):
     observation, actions = inputs
     del step_type
-    actions = tf.cast(nest.flatten(actions)[0], tf.float32)
+    actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
 
-    states = tf.cast(nest.flatten(observation)[0], tf.float32)
+    states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
     # Biggest state is best state.
     value = tf.reduce_max(input_tensor=states, axis=-1)
     value = tf.reshape(value, [-1])

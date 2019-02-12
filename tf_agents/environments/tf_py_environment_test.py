@@ -30,8 +30,6 @@ from tf_agents.environments import py_environment
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments import time_step as ts
 
-nest = tf.contrib.framework.nest
-
 
 class PYEnvironmentMock(py_environment.Base):
   """MockPyEnvironment.

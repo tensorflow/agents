@@ -20,8 +20,6 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-nest = tf.contrib.framework.nest
-
 
 class BatchSquash(object):
   """Facilitates flattening and unflattening batch dims of a tensor.

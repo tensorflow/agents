@@ -60,8 +60,6 @@ import tensorflow as tf
 
 from tensorflow.python.util import tf_decorator  # TF internal
 
-nest = tf.contrib.framework.nest
-
 _USE_GLOBAL_STEP = 0
 
 
@@ -274,7 +272,7 @@ def create_train_step(loss,
       variables_to_train = variables_to_train()
     # Calculate loss first, then calculate train op, then return the original
     # loss conditioned on executing the train op.
-    with tf.control_dependencies(nest.flatten(loss)):
+    with tf.control_dependencies(tf.nest.flatten(loss)):
       train_op = create_train_op(
           total_loss_fn(loss),
           optimizer,
@@ -288,7 +286,7 @@ def create_train_step(loss,
           colocate_gradients_with_ops=colocate_gradients_with_ops,
           check_numerics=check_numerics)
     with tf.control_dependencies([train_op]):
-      return nest.map_structure(lambda t: tf.identity(t, 'loss'), loss)
+      return tf.nest.map_structure(lambda t: tf.identity(t, 'loss'), loss)
 
   if global_step is _USE_GLOBAL_STEP:
     global_step = tf.compat.v1.train.get_or_create_global_step()
@@ -306,7 +304,7 @@ def create_train_step(loss,
     variables_to_train = tape.watched_variables()
   elif callable(variables_to_train):
     variables_to_train = variables_to_train()
-  variables_to_train = nest.flatten(variables_to_train)
+  variables_to_train = tf.nest.flatten(variables_to_train)
   grads = tape.gradient(total_loss_value, variables_to_train)
   grads_and_vars = zip(grads, variables_to_train)
 
@@ -514,21 +512,23 @@ def np_function(func=None, output_dtypes=None):
       """Wrapper to add nested input and outputs support."""
       func_with_kwargs = functools.partial(func, **kwargs)
       def func_flat_outputs(*args):
-        return nest.flatten(func_with_kwargs(*args))
+        return tf.nest.flatten(func_with_kwargs(*args))
+
       def compute_output_dtypes(*args):
         """Calls the func to compute output dtypes."""
         result = func(*args, **kwargs)
-        return nest.map_structure(lambda x: x.dtype, result)
+        return tf.nest.map_structure(lambda x: x.dtype, result)
+
       if tf.executing_eagerly():
         result = func_with_kwargs(
-            *nest.map_structure(lambda x: x.numpy(), args))
+            *tf.nest.map_structure(lambda x: x.numpy(), args))
         convert = lambda x: x if x is None else tf.convert_to_tensor(value=x)
-        return nest.map_structure(convert, result)
+        return tf.nest.map_structure(convert, result)
       else:
-        input_dtypes = tuple([x.dtype for x in nest.flatten(args)])
+        input_dtypes = tuple([x.dtype for x in tf.nest.flatten(args)])
         if input_dtypes not in dtype_map:
           if output_dtypes is None:
-            dummy_args = nest.map_structure(
+            dummy_args = tf.nest.map_structure(
                 lambda x: np.ones(x.shape, x.dtype.as_numpy_dtype), args)
             dtype_map[input_dtypes] = compute_output_dtypes(*dummy_args)
           elif isinstance(output_dtypes, (list, tuple)):
@@ -547,11 +547,11 @@ def np_function(func=None, output_dtypes=None):
                 raise ValueError(
                     'output_dtypes not a list of dtypes or a callable.')
 
-      flat_output_dtypes = nest.flatten(dtype_map[input_dtypes])
+      flat_output_dtypes = tf.nest.flatten(dtype_map[input_dtypes])
       flat_outputs = tf.py_function(func_flat_outputs,
                                     inp=args,
                                     Tout=flat_output_dtypes)
-      return nest.pack_sequence_as(dtype_map[input_dtypes], flat_outputs)
+      return tf.nest.pack_sequence_as(dtype_map[input_dtypes], flat_outputs)
 
     return tf_decorator.make_decorator(func, wrapper)
   # This code path is for the `foo = np_function(foo, ...)` use case

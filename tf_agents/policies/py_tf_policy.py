@@ -30,8 +30,6 @@ from tf_agents.utils import common as common_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import session_utils
 
-nest = tf.contrib.framework.nest
-
 
 class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
   """Exposes a Python policy as wrapper over a TF Policy."""
@@ -86,7 +84,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       self._tf_initial_state = self._tf_policy.get_initial_state(
           batch_size=self._batch_size or 1)
 
-      self._policy_state = nest.map_structure(
+      self._policy_state = tf.nest.map_structure(
           lambda ps: tf.compat.v1.placeholder(  # pylint: disable=g-long-lambda
               ps.dtype,
               ps.shape,
@@ -184,12 +182,12 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       # update time_step.
       time_step = nest_utils.batch_nested_array(time_step)
 
-    nest.assert_same_structure(self._time_step, time_step)
+    tf.nest.assert_same_structure(self._time_step, time_step)
     feed_dict = {self._time_step: time_step}
     if policy_state is not None:
       # Flatten policy_state to handle specs that are not hashable due to lists.
       for state_ph, state in zip(
-          nest.flatten(self._policy_state), nest.flatten(policy_state)):
+          tf.nest.flatten(self._policy_state), tf.nest.flatten(policy_state)):
         feed_dict[state_ph] = state
 
     action_step = self.session.run(self._action_step, feed_dict)

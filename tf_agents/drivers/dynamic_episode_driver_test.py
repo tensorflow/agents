@@ -26,9 +26,6 @@ from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
 
 
-nest = tf.contrib.framework.nest
-
-
 class DynamicEpisodeDriverTest(tf.test.TestCase):
 
   def testPolicyState(self):

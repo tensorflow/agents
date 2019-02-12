@@ -23,8 +23,6 @@ import tensorflow as tf
 
 from tf_agents.specs import array_spec
 
-nest = tf.contrib.framework.nest
-
 
 class NumpyStorage(tf.contrib.checkpoint.Checkpointable):
   """A class to store nested objects in a collection of numpy arrays.
@@ -50,12 +48,12 @@ class NumpyStorage(tf.contrib.checkpoint.Checkpointable):
     self._capacity = capacity
     if not all([
         isinstance(spec, array_spec.ArraySpec)
-        for spec in nest.flatten(data_spec)
+        for spec in tf.nest.flatten(data_spec)
     ]):
       raise ValueError('The data_spec parameter must be an instance or nest of '
                        'array_spec.ArraySpec. Got: {}'.format(data_spec))
     self._data_spec = data_spec
-    self._flat_specs = nest.flatten(data_spec)
+    self._flat_specs = tf.nest.flatten(data_spec)
     self._np_state = tf.contrib.checkpoint.NumpyState()
 
     self._buf_names = tf.contrib.checkpoint.NoDependency([])
@@ -83,10 +81,9 @@ class NumpyStorage(tf.contrib.checkpoint.Checkpointable):
     encoded_item = []
     for buf_idx in range(len(self._flat_specs)):
       encoded_item.append(self._array(buf_idx)[idx])
-    return nest.pack_sequence_as(self._data_spec, encoded_item)
+    return tf.nest.pack_sequence_as(self._data_spec, encoded_item)
 
   def set(self, table_idx, value):
     """Set table_idx to value."""
-    for nest_idx, element in enumerate(nest.flatten(value)):
+    for nest_idx, element in enumerate(tf.nest.flatten(value)):
       self._array(nest_idx)[table_idx] = element
-

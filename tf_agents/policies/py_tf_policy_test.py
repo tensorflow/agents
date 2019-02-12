@@ -31,8 +31,6 @@ from tf_agents.policies import py_tf_policy
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DummyNet(network.Network):
 
@@ -72,10 +70,10 @@ class DummyNet(network.Network):
 
 # TODO(damienv): This function should belong to nest_utils
 def fast_map_structure(func, *structure):
-  flat_structure = [nest.flatten(s) for s in structure]
+  flat_structure = [tf.nest.flatten(s) for s in structure]
   entries = zip(*flat_structure)
 
-  return nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
+  return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
 
 
 class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):

@@ -31,7 +31,6 @@ from tf_agents.policies import random_tf_policy
 from tf_agents.policies import tf_policy
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 

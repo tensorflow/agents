@@ -37,8 +37,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 class BehavioralCloningLossInfo(collections.namedtuple(
     'BehavioralCloningLossInfo', ('loss',))):
@@ -124,7 +122,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     Raises:
       NotImplementedError: If the action spec contains more than one action.
     """
-    flat_action_spec = nest.flatten(action_spec)
+    flat_action_spec = tf.nest.flatten(action_spec)
     self._num_actions = [
         spec.maximum - spec.minimum + 1 for spec in flat_action_spec
     ]
@@ -222,7 +220,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         If the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      actions = nest.flatten(experience.action)[0]
+      actions = tf.nest.flatten(experience.action)[0]
       logits, _ = self._cloning_network(
           experience.observation,
           experience.step_type)

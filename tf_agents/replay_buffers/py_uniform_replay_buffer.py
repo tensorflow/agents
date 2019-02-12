@@ -37,8 +37,6 @@ from tf_agents.replay_buffers import replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
   """A Python-based replay buffer that supports uniform sampling.
@@ -160,8 +158,8 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
           data_spec, (sample_batch_size,))
     if num_steps is not None:
       data_spec = (data_spec,) * num_steps
-    shapes = tuple(s.shape for s in nest.flatten(data_spec))
-    dtypes = tuple(s.dtype for s in nest.flatten(data_spec))
+    shapes = tuple(s.shape for s in tf.nest.flatten(data_spec))
+    dtypes = tuple(s.dtype for s in tf.nest.flatten(data_spec))
 
     def generator_fn():
       while True:
@@ -171,15 +169,16 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
           item = nest_utils.stack_nested_arrays(batch)
         else:
           item = self._get_next(num_steps=num_steps, time_stacked=False)
-        yield tuple(nest.flatten(item))
+        yield tuple(tf.nest.flatten(item))
 
     def time_stack(*structures):
       time_axis = 0 if sample_batch_size is None else 1
-      return nest.map_structure(
+      return tf.nest.map_structure(
           lambda *elements: tf.stack(elements, axis=time_axis), *structures)
 
-    ds = tf.data.Dataset.from_generator(generator_fn, dtypes, shapes).map(
-        lambda *items: nest.pack_sequence_as(data_spec, items))
+    ds = tf.data.Dataset.from_generator(
+        generator_fn, dtypes,
+        shapes).map(lambda *items: tf.nest.pack_sequence_as(data_spec, items))
     if num_steps is not None:
       return ds.map(time_stack)
     else:
@@ -189,7 +188,7 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
     data = [self._decode(self._storage.get(idx))
             for idx in range(self._capacity)]
     stacked = nest_utils.stack_nested_arrays(data)
-    batched = nest.map_structure(lambda t: np.expand_dims(t, 0), stacked)
+    batched = tf.nest.map_structure(lambda t: np.expand_dims(t, 0), stacked)
     return batched
 
   def _clear(self):

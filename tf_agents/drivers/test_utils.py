@@ -32,8 +32,6 @@ from tf_agents.policies import tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 def make_replay_buffer(policy):
   """Default replay buffer factory."""
@@ -197,7 +195,7 @@ class NumStepsObserver(object):
     num_steps = tf.reduce_sum(
         input_tensor=tf.cast(~traj.is_boundary(), dtype=tf.int32))
     with tf.control_dependencies([self._num_steps.assign_add(num_steps)]):
-      return nest.map_structure(tf.identity, traj)
+      return tf.nest.map_structure(tf.identity, traj)
 
 
 class NumEpisodesObserver(object):
@@ -219,8 +217,7 @@ class NumEpisodesObserver(object):
     with tf.control_dependencies(
         [self._num_episodes.assign_add(
             tf.cast(traj.is_last()[0], dtype=tf.int32))]):
-      return nest.map_structure(
-          tf.identity, traj)
+      return tf.nest.map_structure(tf.identity, traj)
 
 
 def make_random_trajectory():

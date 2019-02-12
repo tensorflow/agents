@@ -28,8 +28,6 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
 
-nest = tf.contrib.framework.nest
-
 
 class ScriptedPyPolicy(py_policy.Base):
   """Returns actions from the given configuration."""
@@ -108,7 +106,7 @@ class ScriptedPyPolicy(py_policy.Base):
     def actions_as_array(action_spec, action):
       return np.asarray(action, dtype=action_spec.dtype)
 
-    current_action = nest.map_structure_up_to(
+    current_action = tf.contrib.framework.nest.map_structure_up_to(
         self._action_spec, actions_as_array, self._action_spec, current_action)
 
     if not array_spec.check_arrays_nest(current_action, self._action_spec):

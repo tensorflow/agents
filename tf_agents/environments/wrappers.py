@@ -35,8 +35,6 @@ from tf_agents.specs import tensor_spec
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 class PyEnvironmentBaseWrapper(py_environment.Base):
   """Base environment wrapper forwards calls to the given environment."""
@@ -205,7 +203,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     """
     super(ActionDiscretizeWrapper, self).__init__(env)
 
-    action_spec = nest.flatten(env.action_spec())
+    action_spec = tf.nest.flatten(env.action_spec())
     if len(action_spec) != 1:
       raise ValueError(
           'ActionDiscretizeWrapper only supports environments with a single '
@@ -289,9 +287,9 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     continuous_actions = self._map_actions(action, self._action_map)
     env_action_spec = self._env.action_spec()
 
-    if nest.is_sequence(env_action_spec):
-      continuous_actions = nest.pack_sequence_as(env_action_spec,
-                                                 [continuous_actions])
+    if tf.contrib.framework.nest.is_sequence(env_action_spec):
+      continuous_actions = tf.nest.pack_sequence_as(env_action_spec,
+                                                    [continuous_actions])
     return self._env.step(continuous_actions)
 
 
@@ -315,8 +313,8 @@ class ActionClipWrapper(PyEnvironmentBaseWrapper):
         return act
       return np.clip(act, act_spec.minimum, act_spec.maximum)
 
-    clipped_actions = nest.map_structure_up_to(env_action_spec, _clip_to_spec,
-                                               env_action_spec, action)
+    clipped_actions = tf.contrib.framework.nest.map_structure_up_to(
+        env_action_spec, _clip_to_spec, env_action_spec, action)
 
     return self._env.step(clipped_actions)
 
@@ -332,7 +330,7 @@ class ActionOffsetWrapper(PyEnvironmentBaseWrapper):
 
   def __init__(self, env):
     super(ActionOffsetWrapper, self).__init__(env)
-    if nest.is_sequence(self._env.action_spec()):
+    if tf.contrib.framework.nest.is_sequence(self._env.action_spec()):
       raise ValueError('ActionOffsetWrapper only works with single-array '
                        'action specs (not nested specs).')
     if not tensor_spec.is_bounded(self._env.action_spec()):
@@ -515,9 +513,9 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
 
     # Flatten the individual observations if they are multi-dimensional and then
     # flatten the nested structure.
-    observations = nest.map_structure(np_flatten, observations)
+    observations = tf.nest.map_structure(np_flatten, observations)
     axis = 1 if is_batched else 0
-    return np.concatenate(nest.flatten(observations), axis=axis)
+    return np.concatenate(tf.nest.flatten(observations), axis=axis)
 
   def _step(self, action):
     """Steps the environment while packing the observations returned.

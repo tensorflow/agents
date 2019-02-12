@@ -30,8 +30,6 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DistributionPolicy(tf_policy.Base):
   """A policy which always returns the configured distribution."""
@@ -77,7 +75,7 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=1)
     action_step = policy.action(time_step)
-    nest.assert_same_structure(action_spec, action_step.action)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
     action_ = self.evaluate(action_step.action)
     self.assertEqual(action_[0][0], np.argmax(action_probs))
@@ -102,7 +100,7 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step)
-    nest.assert_same_structure(action_spec, action_step.action)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
     action_ = self.evaluate(action_step.action)
     self.assertAlmostEqual(action_[0], loc)

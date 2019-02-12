@@ -27,8 +27,6 @@ from tf_agents.policies import tf_policy
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class QPolicy(tf_policy.Base):
@@ -50,7 +48,7 @@ class QPolicy(tf_policy.Base):
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec`.
     """
-    flat_action_spec = nest.flatten(action_spec)
+    flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
           'action_spec can only contain a single BoundedTensorSpec.')
@@ -90,6 +88,5 @@ class QPolicy(tf_policy.Base):
     # TODO(kbanoop): Handle distributions over nests.
     distribution = tfp.distributions.Categorical(
         logits=q_values, dtype=self._action_dtype)
-    distribution = nest.pack_sequence_as(self._action_spec, [distribution])
+    distribution = tf.nest.pack_sequence_as(self._action_spec, [distribution])
     return policy_step.PolicyStep(distribution, policy_state)
-

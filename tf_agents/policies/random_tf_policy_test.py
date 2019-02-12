@@ -29,8 +29,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 from tensorflow.python.eager import context  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 @parameterized.named_parameters(
     ('tf.int32', tf.int32, context.graph_mode),
@@ -70,7 +68,7 @@ class RandomTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
           time_step_spec=time_step_spec, action_spec=action_spec)
 
       action_step = policy.action(time_step)
-      nest.assert_same_structure(action_spec, action_step.action)
+      tf.nest.assert_same_structure(action_spec, action_step.action)
 
       action_ = self.evaluate(action_step.action)
       self.assertTrue(np.all(action_[0] >= -10))
@@ -90,7 +88,7 @@ class RandomTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
           time_step_spec=time_step_spec, action_spec=action_spec)
 
       action_step = policy.action(time_step)
-      nest.assert_same_structure(action_spec, action_step.action)
+      tf.nest.assert_same_structure(action_spec, action_step.action)
 
       action_ = self.evaluate(action_step.action)
       # TODO(kbanoop) assertWithinBounds to test_utils.
@@ -111,7 +109,7 @@ class RandomTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
           time_step_spec=time_step_spec, action_spec=action_spec)
 
       action_step = policy.action(time_step)
-      nest.assert_same_structure(action_spec, action_step.action)
+      tf.nest.assert_same_structure(action_spec, action_step.action)
 
       action_ = self.evaluate(action_step.action)
       self.assertTrue(np.all(action_[0] >= -10))

@@ -28,8 +28,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 # TODO(kbanoop): Reduce code duplication with other actor networks.
 @gin.configurable
@@ -71,7 +69,7 @@ class ActorRnnNetwork(network.Network):
     Raises:
       ValueError: If `input_tensor_spec` contains more than one observation.
     """
-    if len(nest.flatten(input_tensor_spec)) > 1:
+    if len(tf.nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
     input_layers = utils.mlp_layers(
@@ -88,7 +86,7 @@ class ActorRnnNetwork(network.Network):
       cell = tf.keras.layers.StackedRNNCells(
           [tf.keras.layers.LSTMCell(size) for size in lstm_size])
 
-    state_spec = nest.map_structure(
+    state_spec = tf.nest.map_structure(
         functools.partial(
             tensor_spec.TensorSpec, dtype=tf.float32,
             name='network_state_spec'), list(cell.state_size))
@@ -96,7 +94,7 @@ class ActorRnnNetwork(network.Network):
     output_layers = utils.mlp_layers(fc_layer_params=output_fc_layer_params,
                                      name='output')
 
-    flat_action_spec = nest.flatten(output_tensor_spec)
+    flat_action_spec = tf.nest.flatten(output_tensor_spec)
     action_layers = [
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
@@ -130,11 +128,12 @@ class ActorRnnNetwork(network.Network):
     has_time_dim = num_outer_dims == 2
     if not has_time_dim:
       # Add a time dimension to the inputs.
-      observation = nest.map_structure(lambda t: tf.expand_dims(t, 1),
-                                       observation)
-      step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
+      observation = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                          observation)
+      step_type = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                        step_type)
 
-    states = tf.cast(nest.flatten(observation)[0], tf.float32)
+    states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
     batch_squash = utils.BatchSquash(2)  # Squash B, and T dims.
     states = batch_squash.flatten(states)  # [B, T, ...] -> [B x T, ...]
 
@@ -165,5 +164,5 @@ class ActorRnnNetwork(network.Network):
         action = tf.squeeze(action, axis=1)
       actions.append(action)
 
-    output_actions = nest.pack_sequence_as(self._output_tensor_spec, actions)
+    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec, actions)
     return output_actions, network_state

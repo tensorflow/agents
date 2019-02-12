@@ -23,8 +23,6 @@ import numbers
 import numpy as np
 import tensorflow as tf
 
-nest = tf.contrib.framework.nest
-
 
 def sample_bounded_spec(spec, rng):
   """Samples the given bounded spec.
@@ -94,7 +92,7 @@ def sample_spec_nest(structure, rng, outer_dims=()):
         spec.maximum, spec.name)
     return sample_bounded_spec(spec, rng)
 
-  return nest.map_structure(sample_fn, structure)
+  return tf.nest.map_structure(sample_fn, structure)
 
 
 def check_arrays_nest(arrays, spec):
@@ -109,7 +107,7 @@ def check_arrays_nest(arrays, spec):
   """
   # Check that arrays and spec has the same structure.
   try:
-    nest.assert_same_structure(arrays, spec)
+    tf.nest.assert_same_structure(arrays, spec)
   except (TypeError, ValueError):
     return False
 
@@ -119,9 +117,9 @@ def check_arrays_nest(arrays, spec):
     return spec.check_array(array)
 
   # Check all the elements in arrays match to their spec
-  checks = nest.map_structure(check_array, spec, arrays)
+  checks = tf.nest.map_structure(check_array, spec, arrays)
   # Only return True if all the checks pass.
-  return all(nest.flatten(checks))
+  return all(tf.nest.flatten(checks))
 
 
 def add_outer_dims_nest(structure, outer_dims):
@@ -132,7 +130,8 @@ def add_outer_dims_nest(structure, outer_dims):
       return BoundedArraySpec(shape, spec.dtype, spec.minimum,
                               spec.maximum, name)
     return ArraySpec(shape, spec.dtype, name=name)
-  return nest.map_structure(add_outer_dims, structure)
+
+  return tf.nest.map_structure(add_outer_dims, structure)
 
 
 class ArraySpec(object):

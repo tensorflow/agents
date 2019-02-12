@@ -25,8 +25,6 @@ from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 class RandomTFPolicy(tf_policy.Base):
   """Returns random samples of the given action_spec."""
@@ -41,8 +39,8 @@ class RandomTFPolicy(tf_policy.Base):
         self._action_spec, seed=seed, outer_dims=outer_dims)
     # TODO(b/78181147): Investigate why this control dependency is required.
     if time_step is not None:
-      with tf.control_dependencies(nest.flatten(time_step)):
-        action_ = nest.map_structure(tf.identity, action_)
+      with tf.control_dependencies(tf.nest.flatten(time_step)):
+        action_ = tf.nest.map_structure(tf.identity, action_)
     return policy_step.PolicyStep(action_, policy_state)
 
   def _distribution(self, time_step, policy_state):

@@ -27,8 +27,6 @@ import tensorflow_probability as tfp
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.environments import time_step as ts
 
-nest = tf.contrib.framework.nest
-
 
 class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
 

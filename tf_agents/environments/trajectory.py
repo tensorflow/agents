@@ -29,8 +29,6 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies import policy_step
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 class Trajectory(
     collections.namedtuple('Trajectory', [
@@ -145,7 +143,7 @@ def _create_trajectory(
     with tf.name_scope(name_scope):
       discount = tf.identity(discount)
       shape = tf.shape(input=discount)
-      make_tensors = lambda struct: nest.map_structure(tf.identity, struct)
+      make_tensors = lambda struct: tf.nest.map_structure(tf.identity, struct)
       return Trajectory(
           step_type=tf.fill(shape, step_type),
           observation=make_tensors(observation),
@@ -157,7 +155,7 @@ def _create_trajectory(
   else:
     discount = np.asarray(discount)
     shape = discount.shape
-    make_arrays = lambda struct: nest.map_structure(np.asarray, struct)
+    make_arrays = lambda struct: tf.nest.map_structure(np.asarray, struct)
     return Trajectory(
         step_type=np.full(shape, step_type),
         observation=make_arrays(observation),
@@ -309,7 +307,7 @@ def from_episode(observation, action, policy_info, reward, discount=None):
   `T`:
 
   ```
-  reward_0 = nest.flatten(reward)[0]
+  reward_0 = tf.nest.flatten(reward)[0]
   T = shape(reward_0)[0]
   ```
 
@@ -339,7 +337,7 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     concat_fn = tf.concat
     maximum_fn = tf.maximum
     fill_fn = tf.fill
-    identity_map = lambda struct: nest.map_structure(tf.identity, struct)
+    identity_map = lambda struct: tf.nest.map_structure(tf.identity, struct)
   else:
     ones_fn = np.ones
     float_dtype = np.float32
@@ -347,14 +345,14 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     concat_fn = np.concatenate
     maximum_fn = np.maximum
     fill_fn = np.full
-    identity_map = lambda struct: nest.map_structure(np.asarray, struct)
+    identity_map = lambda struct: tf.nest.map_structure(np.asarray, struct)
 
   def _from_episode(observation, action, policy_info, reward, discount):
     """Implementation of from_episode."""
     if discount is not None:
       time_source = discount
     else:
-      time_source = nest.flatten(reward)[0]
+      time_source = tf.nest.flatten(reward)[0]
     if tf.is_tensor(time_source):
       num_frames = (
           tf.compat.dimension_value(time_source.shape[0]) or
@@ -370,13 +368,10 @@ def from_episode(observation, action, policy_info, reward, discount=None):
         if t.shape[0] is not None and t.shape[0] != num_frames:
           raise ValueError('Expected first dimension to be {}, '
                            'but saw value: {}'.format(num_frames, t))
-      nest.map_structure(
+
+      tf.nest.map_structure(
           check_num_frames,
-          (observation,
-           action,
-           policy_info,
-           reward,
-           discount))
+          (observation, action, policy_info, reward, discount))
 
     ts_first = convert_fn(ts.StepType.FIRST)
     ts_last = convert_fn(ts.StepType.LAST)
@@ -433,14 +428,14 @@ def to_transition(trajectory, next_trajectory=None):
     cannot be deduced.
   """
   if next_trajectory is None:
-    next_trajectory = nest.map_structure(lambda x: x[:, 1:], trajectory)
-    trajectory = nest.map_structure(lambda x: x[:, :-1], trajectory)
+    next_trajectory = tf.nest.map_structure(lambda x: x[:, 1:], trajectory)
+    trajectory = tf.nest.map_structure(lambda x: x[:, :-1], trajectory)
   policy_steps = policy_step.PolicyStep(
       trajectory.action, (), trajectory.policy_info)
   # TODO(kbanoop): Consider replacing 0 rewards & discounts with ().
   time_steps = ts.TimeStep(
       trajectory.step_type,
-      reward=nest.map_structure(tf.zeros_like, trajectory.reward),  # unknown
+      reward=tf.nest.map_structure(tf.zeros_like, trajectory.reward),  # unknown
       discount=tf.zeros_like(trajectory.discount),  # unknown
       observation=trajectory.observation)
   next_time_steps = ts.TimeStep(trajectory.next_step_type,

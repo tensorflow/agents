@@ -27,8 +27,6 @@ from tf_agents.environments import time_step
 from tf_agents.policies import random_py_policy
 from tf_agents.specs import array_spec
 
-nest = tf.contrib.framework.nest
-
 
 class RandomPyPolicyTest(absltest.TestCase):
 
@@ -41,7 +39,7 @@ class RandomPyPolicyTest(absltest.TestCase):
         time_step_spec=None, action_spec=action_spec)
 
     action_step = policy.action(None)
-    nest.assert_same_structure(action_spec, action_step.action)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
     self.assertTrue(np.all(action_step.action[0] >= -10))
     self.assertTrue(np.all(action_step.action[0] <= 10))
@@ -57,7 +55,7 @@ class RandomPyPolicyTest(absltest.TestCase):
         time_step_spec=None, action_spec=action_spec, outer_dims=(3,))
 
     action_step = policy.action(None)
-    nest.assert_same_structure(action_spec, action_step.action)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
     self.assertEqual((3, 2, 3), action_step.action[0].shape)
     self.assertEqual((3, 1, 2), action_step.action[1].shape)
 
@@ -78,7 +76,7 @@ class RandomPyPolicyTest(absltest.TestCase):
 
     action_step = policy.action(
         time_step.restart(np.array([[1], [2], [3]], dtype=np.int32)))
-    nest.assert_same_structure(action_spec, action_step.action)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
     self.assertEqual((3, 2, 3), action_step.action[0].shape)
     self.assertEqual((3, 1, 2), action_step.action[1].shape)
 

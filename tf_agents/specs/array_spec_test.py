@@ -25,8 +25,6 @@ import tensorflow as tf
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 TYPE_PARAMETERS = (
     ("np.int8", np.int8),
@@ -177,7 +175,7 @@ class ArraySpecNestSampleTest(tf.test.TestCase, parameterized.TestCase):
     def _test_batched_shape(sample_, spec_):
       self.assertSequenceEqual(sample_.shape, outer_dims + list(spec_.shape))
 
-    nest.map_structure(_test_batched_shape, sample, spec)
+    tf.nest.map_structure(_test_batched_shape, sample, spec)
 
 
 class CheckArraysNestTest(parameterized.TestCase):

@@ -30,8 +30,6 @@ from tensorflow.python.keras.engine import network as keras_network  # TF intern
 from tensorflow.python.util import tf_decorator  # TF internal
 from tensorflow.python.util import tf_inspect  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 class _NetworkMeta(abc.ABCMeta):
   """Meta class for Network object.
@@ -149,7 +147,7 @@ class Network(keras_network.Network):
     return type(self)(**dict(self._saved_kwargs, **kwargs))
 
   def __call__(self, inputs, *args, **kwargs):
-    nest.assert_same_structure(inputs, self.input_tensor_spec)
+    tf.nest.assert_same_structure(inputs, self.input_tensor_spec)
     return super(Network, self).__call__(inputs, *args, **kwargs)
 
 

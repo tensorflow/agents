@@ -29,8 +29,6 @@ from tf_agents import specs
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import wrappers
 
-nest = tf.contrib.framework.nest
-
 
 def _spec_from_gym_space(space, dtype_map=None):
   """Converts gym spaces into array specs.
@@ -109,7 +107,7 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
         self._gym_env.observation_space, spec_dtype_map)
     self._action_spec = _spec_from_gym_space(self._gym_env.action_space,
                                              spec_dtype_map)
-    self._flat_obs_spec = nest.flatten(self._observation_spec)
+    self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._info = None
     self._done = True
 
@@ -170,12 +168,14 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
       The observation with a dtype matching the observation spec.
     """
     # Make sure we handle cases where observations are provided as a list.
-    flat_obs = nest.flatten_up_to(self._observation_spec, observation)
+    flat_obs = tf.contrib.framework.nest.flatten_up_to(
+        self._observation_spec, observation)
 
     matched_observations = []
     for spec, obs in zip(self._flat_obs_spec, flat_obs):
       matched_observations.append(np.asarray(obs, dtype=spec.dtype))
-    return nest.pack_sequence_as(self._observation_spec, matched_observations)
+    return tf.nest.pack_sequence_as(self._observation_spec,
+                                    matched_observations)
 
   def observation_spec(self):
     return self._observation_spec

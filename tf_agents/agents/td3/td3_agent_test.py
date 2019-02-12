@@ -26,8 +26,6 @@ from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common_utils
 
-nest = tf.contrib.framework.nest
-
 
 class DummyActorNetwork(network.Network):
   """Creates an actor network."""
@@ -46,7 +44,7 @@ class DummyActorNetwork(network.Network):
     activation = None if unbounded_actions else tf.keras.activations.tanh
 
     self._output_tensor_spec = output_tensor_spec
-    self._single_action_spec = nest.flatten(output_tensor_spec)[0]
+    self._single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
@@ -56,7 +54,7 @@ class DummyActorNetwork(network.Network):
 
   def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
-    observations = tf.cast(nest.flatten(observations)[0], tf.float32)
+    observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     output = self._layer(observations)
     actions = tf.reshape(output,
                          [-1] + self._single_action_spec.shape.as_list())
@@ -64,7 +62,8 @@ class DummyActorNetwork(network.Network):
     if not self._unbounded_actions:
       actions = common_utils.scale_to_spec(actions, self._single_action_spec)
 
-    output_actions = nest.pack_sequence_as(self._output_tensor_spec, [actions])
+    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
+                                              [actions])
     return output_actions, network_state
 
 
@@ -85,8 +84,8 @@ class DummyCriticNetwork(network.Network):
   def call(self, inputs, step_type=None, network_state=None):
     observations, actions = inputs
     del step_type
-    observations = self._obs_layer(nest.flatten(observations)[0])
-    actions = self._action_layer(nest.flatten(actions)[0])
+    observations = self._obs_layer(tf.nest.flatten(observations)[0])
+    actions = self._action_layer(tf.nest.flatten(actions)[0])
     joint = tf.concat([observations, actions], 1)
     q_value = self._joint_layer(joint)
     q_value = tf.reshape(q_value, [-1])

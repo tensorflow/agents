@@ -43,8 +43,6 @@ from tf_agents.utils import common as common_utils
 from tensorflow.python.framework import tensor_shape  # TF internal
 from tensorflow.python.keras import layers  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 __all__ = ["DynamicUnroll"]
 
@@ -72,8 +70,8 @@ def _infer_state_dtype(explicit_dtype, state):
   """
   if explicit_dtype is not None:
     return explicit_dtype
-  elif nest.is_sequence(state):
-    inferred_dtypes = [element.dtype for element in nest.flatten(state)]
+  elif tf.contrib.framework.nest.is_sequence(state):
+    inferred_dtypes = [element.dtype for element in tf.nest.flatten(state)]
     if not inferred_dtypes:
       raise ValueError("Unable to infer dtype from empty state.")
     all_same = all([x == inferred_dtypes[0] for x in inferred_dtypes])
@@ -252,8 +250,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
       raise ValueError("Must provide either dtype or initial_state")
 
     # Assume all inputs are batch major.  Convert to time major.
-    inputs = nest.map_structure(common_utils.transpose_batch_time, inputs)
-    inputs_flat = nest.flatten(inputs)
+    inputs = tf.nest.map_structure(common_utils.transpose_batch_time, inputs)
+    inputs_flat = tf.nest.flatten(inputs)
     inputs_static_shapes = tuple(x.shape for x in inputs_flat)
     batch_size = _best_effort_input_batch_size(inputs_flat)
     const_batch_size = tensor_shape.dimension_value(inputs_static_shapes[0][1])
@@ -326,16 +324,15 @@ def _static_unroll_single_step(cell,
       return t
 
   # Remove time dimension.
-  inputs = nest.map_structure(_squeeze, inputs)
+  inputs = tf.nest.map_structure(_squeeze, inputs)
   reset_mask = _squeeze(reset_mask)
 
-  state = nest.map_structure(
-      lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s),
-      state,
+  state = tf.nest.map_structure(
+      lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s), state,
       zero_state)
 
   outputs, final_state = cell(inputs, state)
-  outputs = nest.map_structure(lambda t: tf.expand_dims(t, 1), outputs)
+  outputs = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1), outputs)
 
   return (outputs, final_state)
 
@@ -359,7 +356,7 @@ def _dynamic_unroll_multi_step(cell,
                            element_shape=x.shape[1:])
             .unstack(x))
 
-  inputs_tas = nest.map_structure(ta_and_unstack, inputs)
+  inputs_tas = tf.nest.map_structure(ta_and_unstack, inputs)
   reset_mask_ta = ta_and_unstack(reset_mask)
 
   # Create a TensorArray for each output
@@ -370,7 +367,7 @@ def _dynamic_unroll_multi_step(cell,
         element_shape=(tf.TensorShape([const_batch_size])
                        .concatenate(_maybe_tensor_shape_from_tensor(s))))
 
-  output_tas = nest.map_structure(create_output_ta, cell.output_size)
+  output_tas = tf.nest.map_structure(create_output_ta, cell.output_size)
 
   def pred(time, *unused_args):
     return time < iterations
@@ -389,17 +386,16 @@ def _dynamic_unroll_multi_step(cell,
       - output_tas: output tensorarrays with values written @ time
       - masks_ta: optional mask tensorarray with mask written @ time
     """
-    input_ = nest.map_structure(lambda ta: ta.read(time), inputs_tas)
+    input_ = tf.nest.map_structure(lambda ta: ta.read(time), inputs_tas)
     is_reset = reset_mask_ta.read(time)
-    state = nest.map_structure(
-        lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s),
-        zero_state,
+    state = tf.nest.map_structure(
+        lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s), zero_state,
         state)
 
     outputs, next_state = cell(input_, state)
 
-    output_tas = nest.map_structure(
-        lambda ta, x: ta.write(time, x), output_tas, outputs)
+    output_tas = tf.nest.map_structure(lambda ta, x: ta.write(time, x),
+                                       output_tas, outputs)
 
     return (time + 1, next_state, output_tas)
 
@@ -421,18 +417,17 @@ def _dynamic_unroll_multi_step(cell,
             swap_memory=swap_memory,
             maximum_iterations=iterations))
 
-  outputs = nest.map_structure(lambda ta: ta.stack(), output_tas)
+  outputs = tf.nest.map_structure(lambda ta: ta.stack(), output_tas)
 
   if isinstance(iterations, int):
     # TensorArray.stack() doesn't set a static value for dimension 0,
     # even if the size is known. Set the shapes here.
     iterations_shape = tf.TensorShape([iterations])
-    nest.map_structure(
+    tf.nest.map_structure(
         lambda t: t.set_shape(iterations_shape.concatenate(t.shape[1:])),
         outputs)
 
   # Convert everything back to batch major
-  outputs = nest.map_structure(common_utils.transpose_batch_time,
-                               outputs)
+  outputs = tf.nest.map_structure(common_utils.transpose_batch_time, outputs)
 
   return (outputs, final_state)

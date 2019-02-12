@@ -25,8 +25,6 @@ from tf_agents import specs
 from tf_agents.environments import tf_environment
 from tf_agents.environments import time_step as ts
 
-nest = tf.contrib.framework.nest
-
 FIRST = ts.StepType.FIRST
 MID = ts.StepType.MID
 LAST = ts.StepType.LAST
@@ -89,7 +87,7 @@ class TFEnvironmentMock(tf_environment.Base):
 
   def step(self, action):
     action = tf.convert_to_tensor(value=action)
-    with tf.control_dependencies(nest.flatten(action)):
+    with tf.control_dependencies(tf.nest.flatten(action)):
       state_assign = self._state.assign_add(1)
     with tf.control_dependencies([state_assign]):
       state_value = self._state.value()

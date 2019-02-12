@@ -32,8 +32,6 @@ import tensorflow as tf
 from tf_agents.environments import py_environment
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class BatchedPyEnvironment(py_environment.Base):
@@ -146,16 +144,16 @@ def stack_time_steps(time_steps):
 
 def unstack_actions(batched_actions):
   """Returns a list of actions from potentially nested batch of actions."""
-  flattened_actions = nest.flatten(batched_actions)
+  flattened_actions = tf.nest.flatten(batched_actions)
   unstacked_actions = [
-      nest.pack_sequence_as(batched_actions, actions)
+      tf.nest.pack_sequence_as(batched_actions, actions)
       for actions in zip(*flattened_actions)
   ]
   return unstacked_actions
 
 
 def fast_map_structure(func, *structure):
-  """List nest.map_structure, but skipping the slow assert_same_structure."""
-  flat_structure = [nest.flatten(s) for s in structure]
+  """List tf.nest.map_structure, but skipping the slow assert_same_structure."""
+  flat_structure = [tf.nest.flatten(s) for s in structure]
   entries = zip(*flat_structure)
-  return nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
+  return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])

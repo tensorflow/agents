@@ -25,8 +25,6 @@ from tf_agents.utils import common as common_utils
 from tf_agents.utils import nest_utils
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class TrajectoryReplay(object):
@@ -113,14 +111,15 @@ class TrajectoryReplay(object):
     if policy_state is None:
       policy_state = self._policy.get_initial_state(batch_size)
     else:
-      nest.assert_same_structure(policy_state, self._policy.policy_state_spec())
+      tf.nest.assert_same_structure(policy_state,
+                                    self._policy.policy_state_spec())
 
     if not self._time_major:
       # Make trajectory time-major.
-      trajectory = nest.map_structure(
+      trajectory = tf.nest.map_structure(
           common_utils.transpose_batch_time, trajectory)
 
-    trajectory_tas = nest.map_structure(
+    trajectory_tas = tf.nest.map_structure(
         lambda t: tf.TensorArray(t.dtype, size=sequence_length).unstack(t),
         trajectory)
 
@@ -129,19 +128,20 @@ class TrajectoryReplay(object):
           spec.dtype, size=sequence_length,
           element_shape=(tf.TensorShape([static_batch_size])
                          .concatenate(spec.shape)))
-    output_action_tas = nest.map_structure(
-        create_output_ta, trajectory_spec.action)
-    output_policy_info_tas = nest.map_structure(
-        create_output_ta, trajectory_spec.policy_info)
+
+    output_action_tas = tf.nest.map_structure(create_output_ta,
+                                              trajectory_spec.action)
+    output_policy_info_tas = tf.nest.map_structure(create_output_ta,
+                                                   trajectory_spec.policy_info)
 
     read0 = lambda ta: ta.read(0)
     zeros_like0 = lambda t: tf.zeros_like(t[0])
     ones_like0 = lambda t: tf.ones_like(t[0])
     time_step = ts.TimeStep(
         step_type=read0(trajectory_tas.step_type),
-        reward=nest.map_structure(zeros_like0, trajectory.reward),
+        reward=tf.nest.map_structure(zeros_like0, trajectory.reward),
         discount=ones_like0(trajectory.discount),
-        observation=nest.map_structure(read0, trajectory_tas.observation))
+        observation=tf.nest.map_structure(read0, trajectory_tas.observation))
 
     def process_step(time, time_step, policy_state,
                      output_action_tas, output_policy_info_tas):
@@ -165,9 +165,9 @@ class TrajectoryReplay(object):
       action_step = self._policy.action(time_step, policy_state)
       policy_state = action_step.state
       write_ta = lambda ta, t: ta.write(time - 1, t)
-      next_output_action_tas = nest.map_structure(
+      next_output_action_tas = tf.nest.map_structure(
           write_ta, output_action_tas, action_step.action)
-      next_output_policy_info_tas = nest.map_structure(
+      next_output_policy_info_tas = tf.nest.map_structure(
           write_ta, output_policy_info_tas, action_step.info)
 
       return (action_step.state,
@@ -200,8 +200,9 @@ class TrajectoryReplay(object):
       ta_read_prev = lambda ta: ta.read(time - 1)
       time_step = ts.TimeStep(
           step_type=ta_read(trajectory_tas.step_type),
-          observation=nest.map_structure(ta_read, trajectory_tas.observation),
-          reward=nest.map_structure(ta_read_prev, trajectory_tas.reward),
+          observation=tf.nest.map_structure(ta_read,
+                                            trajectory_tas.observation),
+          reward=tf.nest.map_structure(ta_read_prev, trajectory_tas.reward),
           discount=ta_read_prev(trajectory_tas.discount))
 
       return (time + 1, time_step, policy_state,
@@ -228,10 +229,9 @@ class TrajectoryReplay(object):
         t = common_utils.transpose_batch_time(t)
       return t
 
-    stacked_output_actions = nest.map_structure(
-        stack_ta, output_action_tas)
-    stacked_output_policy_info = nest.map_structure(
-        stack_ta, output_policy_info_tas)
+    stacked_output_actions = tf.nest.map_structure(stack_ta, output_action_tas)
+    stacked_output_policy_info = tf.nest.map_structure(stack_ta,
+                                                       output_policy_info_tas)
 
     return (stacked_output_actions,
             stacked_output_policy_info,

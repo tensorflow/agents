@@ -35,8 +35,6 @@ from tf_agents.utils import nest_utils
 import tf_agents.utils.common as common_utils
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 class DdpgInfo(collections.namedtuple(
     'DdpgInfo', ('actor_loss', 'critic_loss'))):
@@ -172,8 +170,8 @@ class DdpgAgent(tf_agent.TFAgent):
 
     # Remove time dim if we are not using a recurrent network.
     if not self._actor_network.state_spec:
-      transitions = nest.map_structure(lambda x: tf.squeeze(x, [1]),
-                                       transitions)
+      transitions = tf.nest.map_structure(lambda x: tf.squeeze(x, [1]),
+                                          transitions)
 
     time_steps, policy_steps, next_time_steps = transitions
     actions = policy_steps.action
@@ -301,7 +299,7 @@ class DdpgAgent(tf_agent.TFAgent):
       critic_net_input = (time_steps.observation, actions)
       q_values, _ = self._critic_network(critic_net_input,
                                          time_steps.step_type)
-      actions = nest.flatten(actions)
+      actions = tf.nest.flatten(actions)
       dqdas = tf.gradients(ys=[q_values], xs=actions)
       actor_losses = []
       for dqda, action in zip(dqdas, actions):

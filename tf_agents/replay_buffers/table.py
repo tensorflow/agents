@@ -27,8 +27,6 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-nest = tf.contrib.framework.nest
-
 
 class Table(tf.contrib.checkpoint.Checkpointable):
   """A table that can store Tensors or nested Tensors."""
@@ -52,8 +50,8 @@ class Table(tf.contrib.checkpoint.Checkpointable):
     def _create_unique_slot_name(spec):
       return tf.compat.v1.get_default_graph().unique_name(spec.name or 'slot')
 
-    self._slots = nest.map_structure(_create_unique_slot_name,
-                                     self._tensor_spec)
+    self._slots = tf.nest.map_structure(_create_unique_slot_name,
+                                        self._tensor_spec)
 
     def _create_storage(spec, slot_name):
       """Create storage for a slot, track it."""
@@ -69,18 +67,18 @@ class Table(tf.contrib.checkpoint.Checkpointable):
       return new_storage
 
     with tf.compat.v1.variable_scope(scope):
-      self._storage = nest.map_structure(_create_storage, self._tensor_spec,
-                                         self._slots)
+      self._storage = tf.nest.map_structure(_create_storage, self._tensor_spec,
+                                            self._slots)
 
     self._slot2storage_map = dict(
-        zip(nest.flatten(self._slots), nest.flatten(self._storage)))
+        zip(tf.nest.flatten(self._slots), tf.nest.flatten(self._storage)))
 
   @property
   def slots(self):
     return self._slots
 
   def variables(self):
-    return nest.flatten(self._storage)
+    return tf.nest.flatten(self._storage)
 
   def read(self, rows, slots=None):
     """Returns values for the given rows.
@@ -101,12 +99,12 @@ class Table(tf.contrib.checkpoint.Checkpointable):
       Values at given rows.
     """
     slots = slots or self._slots
-    flattened_slots = nest.flatten(slots)
+    flattened_slots = tf.nest.flatten(slots)
     values = [
         self._slot2storage_map[slot].sparse_read(rows)
         for slot in flattened_slots
     ]
-    return nest.pack_sequence_as(slots, values)
+    return tf.nest.pack_sequence_as(slots, values)
 
   def write(self, rows, values, slots=None):
     """Returns ops for writing values at the given rows.
@@ -126,8 +124,8 @@ class Table(tf.contrib.checkpoint.Checkpointable):
       Ops for writing values at rows.
     """
     slots = slots or self._slots
-    flattened_slots = nest.flatten(slots)
-    flattened_values = nest.flatten(values)
+    flattened_slots = tf.nest.flatten(slots)
+    flattened_values = tf.nest.flatten(values)
     write_ops = [
         tf.compat.v1.scatter_update(self._slot2storage_map[slot], rows,
                                     value).op

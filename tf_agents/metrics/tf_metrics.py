@@ -28,7 +28,6 @@ from tf_agents.metrics import tf_metric
 from tf_agents.metrics import tf_py_metric
 
 
-nest = tf.contrib.framework.nest
 # TODO(kbanoop): Add reset to TF metrics for eval in eager mode.
 
 

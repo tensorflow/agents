@@ -78,7 +78,6 @@ from tf_agents.utils import value_ops
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
 PPOLossInfo = collections.namedtuple('PPOLossInfo', (
     'policy_gradient_loss',
     'value_estimation_loss',
@@ -538,7 +537,7 @@ class PPOAgent(tf_agent.TFAgent):
     loss_info = tf.no_op()
     for i_epoch in range(self._num_epochs):
       with tf.name_scope('epoch_%d' % i_epoch):
-        with tf.control_dependencies(nest.flatten(loss_info)):
+        with tf.control_dependencies(tf.nest.flatten(loss_info)):
           # Only save debug summaries for first and last epochs.
           debug_summaries = (
               self._debug_summaries and
@@ -561,7 +560,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     # After update epochs, update adaptive kl beta, then update observation
     #   normalizer and reward normalizer.
-    with tf.control_dependencies(nest.flatten(loss_info)):
+    with tf.control_dependencies(tf.nest.flatten(loss_info)):
       # Compute the mean kl from old.
       batch_size = nest_utils.get_outer_shape(time_steps,
                                               self._time_step_spec)[0]
@@ -585,7 +584,7 @@ class PPOAgent(tf_agent.TFAgent):
         update_reward_norm = tf.no_op()
 
     with tf.control_dependencies([update_obs_norm, update_reward_norm]):
-      loss_info = nest.map_structure(tf.identity, loss_info)
+      loss_info = tf.nest.map_structure(tf.identity, loss_info)
 
     # Make summaries for total loss across all epochs.
     # The *_losses lists will have been populated by
@@ -668,7 +667,7 @@ class PPOAgent(tf_agent.TFAgent):
                                   debug_summaries=False):
     """Create regularization loss tensor based on agent parameters."""
     if self._entropy_regularization > 0:
-      nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
       with tf.name_scope('entropy_regularization'):
         entropy = tf.cast(common_utils.entropy(
             current_policy_distribution, self.action_spec()), tf.float32)
@@ -763,7 +762,7 @@ class PPOAgent(tf_agent.TFAgent):
       policy_gradient_loss: A tensor that will contain policy gradient loss for
         the on-policy experience.
     """
-    nest.assert_same_structure(time_steps, self.time_step_spec())
+    tf.nest.assert_same_structure(time_steps, self.time_step_spec())
     action_log_prob = common_utils.log_probability(current_policy_distribution,
                                                    actions, self._action_spec)
     action_log_prob = tf.cast(action_log_prob, tf.float32)

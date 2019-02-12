@@ -31,8 +31,6 @@ import tensorflow as tf
 
 from tf_agents.environments import py_environment
 
-nest = tf.contrib.framework.nest
-
 
 class ParallelPyEnvironment(py_environment.Base):
   """Batch together environments and simulate them in external processes.
@@ -144,27 +142,28 @@ class ParallelPyEnvironment(py_environment.Base):
 
   def _unstack_actions(self, batched_actions):
     """Returns a list of actions from potentially nested batch of actions."""
-    flattened_actions = nest.flatten(batched_actions)
+    flattened_actions = tf.nest.flatten(batched_actions)
     if self._flatten:
       unstacked_actions = zip(*flattened_actions)
     else:
-      unstacked_actions = [nest.pack_sequence_as(batched_actions, actions)
-                           for actions in zip(*flattened_actions)]
+      unstacked_actions = [
+          tf.nest.pack_sequence_as(batched_actions, actions)
+          for actions in zip(*flattened_actions)
+      ]
     return unstacked_actions
 
 
 # TODO(sguada) Move to utils.
 def fast_map_structure_flatten(func, structure, *flat_structure):
   entries = zip(*flat_structure)
-  return nest.pack_sequence_as(structure, [func(*x) for x in entries])
+  return tf.nest.pack_sequence_as(structure, [func(*x) for x in entries])
 
 
 def fast_map_structure(func, *structure):
-  flat_structure = [nest.flatten(s) for s in structure]
+  flat_structure = [tf.nest.flatten(s) for s in structure]
   entries = zip(*flat_structure)
 
-  return nest.pack_sequence_as(
-      structure[0], [func(*x) for x in entries])
+  return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
 
 
 class ProcessPyEnvironment(object):
@@ -356,10 +355,10 @@ class ProcessPyEnvironment(object):
         if message == self._CALL:
           name, args, kwargs = payload
           if flatten and name == 'step':
-            args = [nest.pack_sequence_as(action_spec, args[0])]
+            args = [tf.nest.pack_sequence_as(action_spec, args[0])]
           result = getattr(env, name)(*args, **kwargs)
           if flatten and name in ['step', 'reset']:
-            result = nest.flatten(result)
+            result = tf.nest.flatten(result)
           conn.send((self._RESULT, result))
           continue
         if message == self._CLOSE:

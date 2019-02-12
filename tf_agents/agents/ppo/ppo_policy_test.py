@@ -29,15 +29,13 @@ from tf_agents.networks import network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DummyActorNet(network.Network):
 
   def __init__(self, action_spec, name=None):
     super(DummyActorNet, self).__init__(name, (), 'DummyActorNet')
     self._action_spec = action_spec
-    self._flat_action_spec = nest.flatten(self._action_spec)[0]
+    self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
 
     self._layers.append(
         tf.keras.layers.Dense(
@@ -48,7 +46,7 @@ class DummyActorNet(network.Network):
         ))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
+    hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     for layer in self.layers:
       hidden_state = layer(hidden_state)
 
@@ -60,15 +58,15 @@ class DummyActorNet(network.Network):
         self._flat_action_spec.maximum - self._flat_action_spec.minimum) / 2.0
     action_means = spec_means + spec_ranges * means
 
-    return nest.pack_sequence_as(self._action_spec,
-                                 [action_means]), network_state
+    return tf.nest.pack_sequence_as(self._action_spec,
+                                    [action_means]), network_state
 
 
 class DummyActorDistributionNet(network.DistributionNetwork):
 
   def __init__(self, action_spec, name=None):
-    output_spec = nest.map_structure(self._get_normal_distribution_spec,
-                                     action_spec)
+    output_spec = tf.nest.map_structure(self._get_normal_distribution_spec,
+                                        action_spec)
     super(DummyActorDistributionNet, self).__init__(
         name,
         (),
@@ -79,7 +77,7 @@ class DummyActorDistributionNet(network.DistributionNetwork):
   def _get_normal_distribution_spec(self, sample_spec):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
         sample_spec.shape)
-    input_param_spec = nest.map_structure(
+    input_param_spec = tf.nest.map_structure(
         lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
             shape=tensor_shape,
             dtype=sample_spec.dtype),
@@ -95,7 +93,8 @@ class DummyActorDistributionNet(network.DistributionNetwork):
       action_std = tf.ones_like(action_mean)
       return tfp.distributions.Normal(action_mean, action_std)
 
-    return nest.map_structure(_action_distribution, action_means), network_state
+    return tf.nest.map_structure(_action_distribution,
+                                 action_means), network_state
 
 
 class DummyValueNet(network.Network):
@@ -109,7 +108,7 @@ class DummyValueNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant([5])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
+    hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     for layer in self.layers:
       hidden_state = layer(hidden_state)
     return hidden_state, network_state

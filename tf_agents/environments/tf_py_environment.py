@@ -34,8 +34,6 @@ from tf_agents.specs import tensor_spec
 from tensorflow.python.autograph.impl import api as autograph  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import tensor_shape  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 @contextlib.contextmanager
 def _check_not_called_concurrently(lock):
@@ -60,7 +58,7 @@ class TFPyEnvironment(tf_environment.Base):
   Implementation notes:
 
   * Since `tf.py_func` deals in lists of tensors, this class has some additional
-    `nest.flatten` and `nest.pack_structure_as` calls.
+    `tf.nest.flatten` and `tf.nest.pack_structure_as` calls.
 
   * This class currently cast rewards and discount to float32.
   """
@@ -92,7 +90,7 @@ class TFPyEnvironment(tf_environment.Base):
 
     # Gather all the dtypes of the elements in time_step.
     self._time_step_dtypes = [
-        s.dtype for s in nest.flatten(self.time_step_spec())
+        s.dtype for s in tf.nest.flatten(self.time_step_spec())
     ]
 
     self._time_step = None
@@ -127,7 +125,7 @@ class TFPyEnvironment(tf_environment.Base):
       with _check_not_called_concurrently(self._lock):
         if self._time_step is None:
           self._time_step = self._env.reset()
-        return nest.flatten(self._time_step)
+        return tf.nest.flatten(self._time_step)
 
     with tf.name_scope('current_time_step'):
       outputs = tf.py_function(
@@ -196,13 +194,13 @@ class TFPyEnvironment(tf_environment.Base):
     def _step(*flattened_actions):
       with _check_not_called_concurrently(self._lock):
         flattened_actions = [x.numpy() for x in flattened_actions]
-        packed = nest.pack_sequence_as(
+        packed = tf.nest.pack_sequence_as(
             structure=self.action_spec(), flat_sequence=flattened_actions)
         self._time_step = self._env.step(packed)
-        return nest.flatten(self._time_step)
+        return tf.nest.flatten(self._time_step)
 
     with tf.name_scope('step', values=[actions]):
-      flat_actions = [tf.identity(x) for x in nest.flatten(actions)]
+      flat_actions = [tf.identity(x) for x in tf.nest.flatten(actions)]
       for action in flat_actions:
         dim_value = tensor_shape.dimension_value(action.shape[0])
         if (action.shape.ndims == 0 or
@@ -238,13 +236,13 @@ class TFPyEnvironment(tf_environment.Base):
     # Give each tensor a meaningful name and set the static shape.
     named_observations = []
     for obs, spec in zip(flat_observations,
-                         nest.flatten(self.observation_spec())):
+                         tf.nest.flatten(self.observation_spec())):
       named_observation = tf.identity(obs, name=spec.name)
       if not tf.executing_eagerly():
         named_observation.set_shape(batch_shape.concatenate(spec.shape))
       named_observations.append(named_observation)
 
-    observations = nest.pack_sequence_as(self.observation_spec(),
-                                         named_observations)
+    observations = tf.nest.pack_sequence_as(self.observation_spec(),
+                                            named_observations)
 
     return ts.TimeStep(step_type, reward, discount, observations)

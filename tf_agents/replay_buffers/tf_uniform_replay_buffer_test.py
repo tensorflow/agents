@@ -26,8 +26,6 @@ from tf_agents import specs
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import test_utils
 
-nest = tf.contrib.framework.nest
-
 
 def _get_add_op(spec, replay_buffer, batch_size):
   # TODO(b/68398658) Remove dtypes once scatter_update is fixed.
@@ -36,8 +34,8 @@ def _get_add_op(spec, replay_buffer, batch_size):
   camera = tf.constant(
       3 * np.ones(spec[1][1].shape.as_list(), dtype=np.float32))
   values = [action, [lidar, camera]]
-  values_batched = nest.map_structure(lambda t: tf.stack([t] * batch_size),
-                                      values)
+  values_batched = tf.nest.map_structure(lambda t: tf.stack([t] * batch_size),
+                                         values)
 
   return values, replay_buffer.add_batch(values_batched)
 
@@ -84,7 +82,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.evaluate(add_op)
     sample_ = self.evaluate(sample)
     values_ = self.evaluate(values)
-    nest.map_structure(self.assertAllClose, values_, sample_)
+    tf.nest.map_structure(self.assertAllClose, values_, sample_)
 
   def testGetNextEmpty(self):
     spec = self._data_spec()
@@ -111,8 +109,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.evaluate(add_op)
     values_ = self.evaluate(values)
     sample_ = self.evaluate(sample)
-    nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
-                       values_, sample_)
+    tf.nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
+                          values_, sample_)
 
   def testClear(self):
     if tf.executing_eagerly():
@@ -134,8 +132,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.evaluate(add_op)
     values_ = self.evaluate(values)
     sample_ = self.evaluate(sample)
-    nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
-                       values_, sample_)
+    tf.nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
+                          values_, sample_)
     self.assertNotEqual(last_id, self.evaluate(last_id_op))
 
     self.evaluate(clear_op)
@@ -145,8 +143,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       np.testing.assert_equal(x, y)
       self.assertEqual(x.dtype, y.dtype)
 
-    nest.map_structure(check_np_arrays_everything_equal, empty_items,
-                       self.evaluate(items_op))
+    tf.nest.map_structure(check_np_arrays_everything_equal, empty_items,
+                          self.evaluate(items_op))
 
   def testClearAllVariables(self):
     if tf.executing_eagerly():
@@ -162,8 +160,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     camera = tf.constant(
         3 * np.ones(spec[1][1].shape.as_list(), dtype=np.float32))
     values = [action, [lidar, camera]]
-    values_batched = nest.map_structure(lambda t: tf.stack([t] * batch_size),
-                                        values)
+    values_batched = tf.nest.map_structure(lambda t: tf.stack([t] * batch_size),
+                                           values)
 
     last_id_op = replay_buffer._get_last_id()
     add_op = replay_buffer.add_batch(values_batched)
@@ -185,12 +183,12 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.evaluate(add_op)
     values_ = self.evaluate(values)
     sample_ = self.evaluate(sample)
-    nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
-                       values_, sample_)
+    tf.nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
+                          values_, sample_)
     self.assertNotEqual(last_id, self.evaluate(last_id_op))
 
-    nest.map_structure(lambda x, y: self.assertFalse(np.all(x == y)),
-                       empty_table_vars, self.evaluate(table_vars))
+    tf.nest.map_structure(lambda x, y: self.assertFalse(np.all(x == y)),
+                          empty_table_vars, self.evaluate(table_vars))
 
     self.evaluate(clear_op)
     self.assertEqual(last_id, self.evaluate(last_id_op))
@@ -199,8 +197,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       np.testing.assert_equal(x, y)
       self.assertEqual(x.dtype, y.dtype)
 
-    nest.map_structure(check_np_arrays_everything_equal, empty_items,
-                       self.evaluate(items_op))
+    tf.nest.map_structure(check_np_arrays_everything_equal, empty_items,
+                          self.evaluate(items_op))
 
   @parameterized.named_parameters(
       ('BatchSizeOne', 1),

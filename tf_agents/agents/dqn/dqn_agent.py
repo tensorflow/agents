@@ -48,8 +48,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 class DqnLossInfo(collections.namedtuple(
     'DqnLossInfo', ('td_loss', 'td_error'))):
@@ -153,7 +151,7 @@ class DqnAgent(tf_agent.TFAgent):
       ValueError: If the action spec contains more than one action or action
         spec minimum is not equal to 0.
     """
-    flat_action_spec = nest.flatten(action_spec)
+    flat_action_spec = tf.nest.flatten(action_spec)
     self._num_actions = [
         spec.maximum - spec.minimum + 1 for spec in flat_action_spec
     ]
@@ -239,8 +237,8 @@ class DqnAgent(tf_agent.TFAgent):
 
     # Remove time dim if we are not using a recurrent network.
     if not self._q_network.state_spec:
-      transitions = nest.map_structure(lambda x: tf.squeeze(x, [1]),
-                                       transitions)
+      transitions = tf.nest.map_structure(lambda x: tf.squeeze(x, [1]),
+                                          transitions)
 
     time_steps, policy_steps, next_time_steps = transitions
     actions = policy_steps.action
@@ -281,7 +279,7 @@ class DqnAgent(tf_agent.TFAgent):
             self._target_update_tau, self._target_update_period)
 
     with tf.control_dependencies([self._target_update_train_op]):
-      loss_info = nest.map_structure(
+      loss_info = tf.nest.map_structure(
           lambda t: tf.identity(t, name='loss_info'), loss_info)
 
     return loss_info
@@ -319,13 +317,13 @@ class DqnAgent(tf_agent.TFAgent):
         if the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      actions = nest.flatten(actions)[0]
+      actions = tf.nest.flatten(actions)[0]
       q_values, _ = self._q_network(time_steps.observation,
                                     time_steps.step_type)
 
       # Handle action_spec.shape=(), and shape=(1,) by using the
       # multi_dim_actions param.
-      multi_dim_actions = nest.flatten(self._action_spec)[0].shape.ndims > 0
+      multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
       q_values = common_utils.index_with_actions(
           q_values, tf.cast(actions, dtype=tf.int32),
           multi_dim_actions=multi_dim_actions)

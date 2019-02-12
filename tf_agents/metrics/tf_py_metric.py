@@ -25,8 +25,6 @@ import threading
 import tensorflow as tf
 from tf_agents.metrics import tf_metric
 
-nest = tf.contrib.framework.nest
-
 
 @contextlib.contextmanager
 def _check_not_called_concurrently(lock):
@@ -75,12 +73,11 @@ class TFPyMetric(tf_metric.TFStepMetric):
     def _call(*flattened_trajectories):
       with _check_not_called_concurrently(self._lock):
         flat_sequence = [x.numpy() for x in flattened_trajectories]
-        packed_trajectories = nest.pack_sequence_as(
-            structure=(trajectory),
-            flat_sequence=flat_sequence)
+        packed_trajectories = tf.nest.pack_sequence_as(
+            structure=(trajectory), flat_sequence=flat_sequence)
         return self._py_metric(packed_trajectories)
 
-    flattened_trajectories = nest.flatten(trajectory)
+    flattened_trajectories = tf.nest.flatten(trajectory)
     metric_op = tf.py_function(
         _call,
         flattened_trajectories,
@@ -88,7 +85,7 @@ class TFPyMetric(tf_metric.TFStepMetric):
         name='metric_call_py_func')
 
     with tf.control_dependencies([metric_op]):
-      return nest.map_structure(tf.identity, trajectory)
+      return tf.nest.map_structure(tf.identity, trajectory)
 
   def result(self):
     def _result():

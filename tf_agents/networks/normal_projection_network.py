@@ -29,8 +29,6 @@ from tf_agents.specs import tensor_spec
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 def tanh_squash_to_spec(inputs, spec):
   means = (spec.maximum + spec.minimum) / 2.0
@@ -109,7 +107,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
   def _output_distribution_spec(self, sample_spec):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
         sample_spec.shape)
-    input_param_spec = nest.map_structure(
+    input_param_spec = tf.nest.map_structure(
         lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
             shape=tensor_shape,
             dtype=sample_spec.dtype),

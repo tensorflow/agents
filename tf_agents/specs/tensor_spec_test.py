@@ -28,8 +28,6 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 
 
-nest = tf.contrib.framework.nest
-
 TYPE_PARAMETERS = (
     ("tf.int32", tf.int32),
     ("tf.int64", tf.int64),
@@ -263,7 +261,7 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
 
     def _test_batched_shape(sample_, spec_):
       self.assertSequenceEqual(sample_.shape, outer_dims + tuple(spec_.shape))
-      nest.map_structure(_test_batched_shape, sample, nested_spec)
+      tf.nest.map_structure(_test_batched_shape, sample, nested_spec)
 
 
 @parameterized.named_parameters(*TYPE_PARAMETERS)
@@ -289,8 +287,8 @@ class FromSpecTest(tf.test.TestCase):
     example_array_spec = example_nested_array_spec(np.int32)
     example_tensor_spec = tensor_spec.from_spec(example_array_spec)
 
-    flat_tensor_spec = nest.flatten(example_tensor_spec)
-    expected_tensor_spec = nest.flatten(example_nested_tensor_spec(tf.int32))
+    flat_tensor_spec = tf.nest.flatten(example_tensor_spec)
+    expected_tensor_spec = tf.nest.flatten(example_nested_tensor_spec(tf.int32))
 
     for spec, expected_spec in zip(flat_tensor_spec, expected_tensor_spec):
       self.assertEqual(type(expected_spec), type(spec))

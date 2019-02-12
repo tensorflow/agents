@@ -29,8 +29,6 @@ from tf_agents.specs import tensor_spec
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class CategoricalProjectionNetwork(network.DistributionNetwork):

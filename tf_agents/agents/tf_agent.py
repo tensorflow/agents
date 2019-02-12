@@ -29,8 +29,6 @@ from tf_agents.environments import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
 
@@ -123,9 +121,9 @@ class TFAgent(tf.contrib.eager.Checkpointable):
     # Check experience matches collect data spec with batch & time dims.
     if not nest_utils.is_batched_nested_tensors(
         experience, self.collect_data_spec(), num_outer_dims=2):
-      debug_str_1 = nest.map_structure(lambda tp: tp.shape, experience)
-      debug_str_2 = nest.map_structure(lambda spec: spec.shape,
-                                       self.collect_data_spec())
+      debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
+      debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
+                                          self.collect_data_spec())
       raise ValueError("At least one of the tensors in `experience` does not "
                        "have two outer dimensions. Tensors should be shaped as "
                        "B x T x [F ...]; batch size, time step, and frame.\n"
@@ -137,14 +135,14 @@ class TFAgent(tf.contrib.eager.Checkpointable):
 
       def check_shape(t):  # pylint: disable=invalid-name
         if t.shape[1] != self.train_sequence_length():
-          debug_str = nest.map_structure(lambda tp: tp.shape, experience)
+          debug_str = tf.nest.map_structure(lambda tp: tp.shape, experience)
           raise ValueError(
               "One of the tensors in `experience` has a time axis "
               "dim value '%s', but we require dim value '%d'.  "
               "Full shape structure of experience:\n%s" %
               (t.shape[1], self.train_sequence_length(), debug_str))
 
-      nest.map_structure(check_shape, experience)
+      tf.nest.map_structure(check_shape, experience)
 
     loss_info = self._train(
         experience=experience,

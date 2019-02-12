@@ -45,8 +45,6 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 
-nest = tf.contrib.framework.nest
-
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_integer('num_iterations', 100000,

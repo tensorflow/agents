@@ -27,8 +27,6 @@ from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DummyActorNet(network.Network):
 
@@ -43,7 +41,7 @@ class DummyActorNet(network.Network):
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
         name='DummyActorNet')
-    single_action_spec = nest.flatten(output_tensor_spec)[0]
+    single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     activation_fn = None if unbounded_actions else tf.nn.tanh
     self._output_tensor_spec = output_tensor_spec
     self._layers = [
@@ -58,18 +56,18 @@ class DummyActorNet(network.Network):
   def call(self, observations, step_type, network_state):
     del step_type
 
-    states = tf.cast(nest.flatten(observations)[0], tf.float32)
+    states = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     for layer in self.layers:
       states = layer(states)
 
-    single_action_spec = nest.flatten(self._output_tensor_spec)[0]
+    single_action_spec = tf.nest.flatten(self._output_tensor_spec)[0]
     actions, stdevs = tf.split(states, 2, axis=1)
     actions = tf.reshape(actions, [-1] + single_action_spec.shape.as_list())
     stdevs = tf.reshape(stdevs, [-1] + single_action_spec.shape.as_list())
-    actions = nest.pack_sequence_as(self._output_tensor_spec, [actions])
-    stdevs = nest.pack_sequence_as(self._output_tensor_spec, [stdevs])
+    actions = tf.nest.pack_sequence_as(self._output_tensor_spec, [actions])
+    stdevs = tf.nest.pack_sequence_as(self._output_tensor_spec, [stdevs])
 
-    distribution = nest.map_structure_up_to(
+    distribution = tf.contrib.framework.nest.map_structure_up_to(
         self._output_tensor_spec, tfp.distributions.Normal, actions, stdevs)
     return distribution, network_state
 

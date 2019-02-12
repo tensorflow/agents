@@ -23,8 +23,6 @@ from tf_agents.utils import common as common_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class ActorNetwork(network.Network):
@@ -62,10 +60,10 @@ class ActorNetwork(network.Network):
         state_spec=(),
         name=name)
 
-    if len(nest.flatten(input_tensor_spec)) > 1:
+    if len(tf.nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
-    flat_action_spec = nest.flatten(output_tensor_spec)
+    flat_action_spec = tf.nest.flatten(output_tensor_spec)
     if len(flat_action_spec) > 1:
       raise ValueError('Only a single action is supported by this network')
     self._single_action_spec = flat_action_spec[0]
@@ -94,12 +92,13 @@ class ActorNetwork(network.Network):
 
   def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
-    observations = nest.flatten(observations)
+    observations = tf.nest.flatten(observations)
     output = tf.cast(observations[0], tf.float32)
     for layer in self._mlp_layers:
       output = layer(output)
 
     actions = common_utils.scale_to_spec(output, self._single_action_spec)
-    output_actions = nest.pack_sequence_as(self._output_tensor_spec, [actions])
+    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
+                                              [actions])
 
     return output_actions, network_state

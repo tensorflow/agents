@@ -51,8 +51,6 @@ from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common as common_utils
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_integer('num_iterations', 100000,

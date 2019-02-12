@@ -27,7 +27,6 @@ from tf_agents.specs import array_spec
 from tensorflow.python.framework import ops  # TF internal
 from tensorflow.python.framework import tensor_spec as ts  # TF internal
 
-nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 TensorSpec = ts.TensorSpec
@@ -66,7 +65,7 @@ def from_spec(spec):
       raise ValueError(
           "No known conversion from type `%s` to a TensorSpec" % type(s))
 
-  return nest.map_structure(_convert_to_tensor_spec, spec)
+  return tf.nest.map_structure(_convert_to_tensor_spec, spec)
 
 
 def to_array_spec(tensor_spec):
@@ -85,7 +84,7 @@ def to_array_spec(tensor_spec):
 
 def to_nest_array_spec(nest_array_spec):
   """Converted a nest of TensorSpecs to a nest of matching ArraySpecs."""
-  return nest.map_structure(to_array_spec, nest_array_spec)
+  return tf.nest.map_structure(to_array_spec, nest_array_spec)
 
 
 def to_placeholder(spec, outer_dims=()):
@@ -151,7 +150,7 @@ def to_nest_placeholder(nested_tensor_specs,
       return to_placeholder_with_default(const, spec, outer_dims=outer_dims)
 
   with tf.name_scope(name_scope):
-    return nest.map_structure(to_ph, nested_tensor_specs)
+    return tf.nest.map_structure(to_ph, nested_tensor_specs)
 
 
 def _random_uniform_int(shape, outer_dims, minval, maxval, dtype, seed=None):
@@ -291,4 +290,4 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
     spec = BoundedTensorSpec.from_spec(spec)
     return sample_bounded_spec(spec, outer_dims=outer_dims, seed=seed_stream())
 
-  return nest.map_structure(sample_fn, structure)
+  return tf.nest.map_structure(sample_fn, structure)

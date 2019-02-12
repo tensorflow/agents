@@ -26,14 +26,12 @@ from tf_agents.networks import network
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 def validate_specs(action_spec, observation_spec):
   """Validates the spec contains a single action."""
   del observation_spec  # not currently validated
 
-  flat_action_spec = nest.flatten(action_spec)
+  flat_action_spec = tf.nest.flatten(action_spec)
   if len(flat_action_spec) > 1:
     raise ValueError('Network only supports action_specs with a single action.')
 
@@ -93,7 +91,7 @@ class QNetwork(network.Network):
         if `action_spec` contains more than one action.
     """
     validate_specs(action_spec, input_tensor_spec)
-    action_spec = nest.flatten(action_spec)[0]
+    action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
     encoder = encoding_network.EncodingNetwork(

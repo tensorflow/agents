@@ -23,8 +23,6 @@ import tensorflow as tf
 
 from tf_agents.policies import tf_policy
 
-nest = tf.contrib.framework.nest
-
 
 class BoltzmannPolicy(tf_policy.Base):
   """Returns boltzmann samples of a given policy.
@@ -67,6 +65,7 @@ class BoltzmannPolicy(tf_policy.Base):
     def _apply_temperature(dist):
       logits = dist.logits / self._temperature
       return dist.copy(logits=logits)
-    action_dist = nest.map_structure(
-        _apply_temperature, distribution_step.action)
+
+    action_dist = tf.nest.map_structure(_apply_temperature,
+                                        distribution_step.action)
     return distribution_step._replace(action=action_dist)

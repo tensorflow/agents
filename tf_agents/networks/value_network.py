@@ -35,8 +35,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class ValueNetwork(network.Network):
@@ -74,7 +72,7 @@ class ValueNetwork(network.Network):
         state_spec=(),
         name=name)
 
-    if len(nest.flatten(input_tensor_spec)) > 1:
+    if len(tf.nest.flatten(input_tensor_spec)) > 1:
       raise ValueError(
           'Network only supports observation specs with a single observation.')
 
@@ -98,7 +96,7 @@ class ValueNetwork(network.Network):
                                            self.input_tensor_spec)
     batch_squash = utils.BatchSquash(outer_rank)
 
-    states = tf.cast(nest.flatten(observation)[0], tf.float32)
+    states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
     states = batch_squash.flatten(states)
     for layer in self._postprocessing_layers:
       states = layer(states)

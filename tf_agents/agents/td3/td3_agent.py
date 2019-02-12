@@ -40,8 +40,6 @@ from tf_agents.utils import nest_utils
 import tf_agents.utils.common as common_utils
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 class Td3Info(collections.namedtuple(
     'Td3Info', ('actor_loss', 'critic_loss'))):
@@ -198,8 +196,8 @@ class Td3Agent(tf_agent.TFAgent):
 
     # Remove time dim if we are not using a recurrent network.
     if not self._actor_network.state_spec:
-      transitions = nest.map_structure(lambda x: tf.squeeze(x, [1]),
-                                       transitions)
+      transitions = tf.nest.map_structure(lambda x: tf.squeeze(x, [1]),
+                                          transitions)
 
     time_steps, policy_steps, next_time_steps = transitions
     actions = policy_steps.action
@@ -292,8 +290,8 @@ class Td3Agent(tf_agent.TFAgent):
                                  self._target_policy_noise_clip)
         return action + noise
 
-      noisy_target_actions = nest.map_structure(add_noise_to_action,
-                                                target_actions)
+      noisy_target_actions = tf.nest.map_structure(add_noise_to_action,
+                                                   target_actions)
 
       # Target q-values are the min of the two networks
       target_q_input_1 = (next_time_steps.observation, noisy_target_actions)
@@ -382,7 +380,7 @@ class Td3Agent(tf_agent.TFAgent):
       q_values, _ = self._critic_network_1(critic_network_input,
                                            time_steps.step_type)
 
-      actions = nest.flatten(actions)
+      actions = tf.nest.flatten(actions)
       dqda = tf.gradients(ys=[q_values], xs=actions)
       actor_losses = []
       for dqda, action in zip(dqda, actions):

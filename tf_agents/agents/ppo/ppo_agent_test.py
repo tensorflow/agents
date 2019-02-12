@@ -36,8 +36,6 @@ from tf_agents.networks import value_network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DummyActorNet(network.DistributionNetwork):
 
@@ -49,7 +47,7 @@ class DummyActorNet(network.DistributionNetwork):
         output_spec=output_spec,
         name='DummyActorNet')
     self._action_spec = action_spec
-    self._flat_action_spec = nest.flatten(self._action_spec)[0]
+    self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
     self._outer_rank = 1  # TOOD(oars): Do we need this?
 
     self._layers.append(
@@ -64,7 +62,7 @@ class DummyActorNet(network.DistributionNetwork):
   def _get_normal_distribution_spec(self, sample_spec):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
         sample_spec.shape)
-    input_param_spec = nest.map_structure(
+    input_param_spec = tf.nest.map_structure(
         lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
             shape=tensor_shape,
             dtype=sample_spec.dtype),
@@ -74,7 +72,7 @@ class DummyActorNet(network.DistributionNetwork):
         tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
+    hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     batch_squash = network_utils.BatchSquash(self._outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
 
@@ -84,8 +82,8 @@ class DummyActorNet(network.DistributionNetwork):
     actions, stdevs = tf.split(hidden_state, 2, axis=1)
     actions = batch_squash.unflatten(actions)
     stdevs = batch_squash.unflatten(stdevs)
-    actions = nest.pack_sequence_as(self._action_spec, [actions])
-    stdevs = nest.pack_sequence_as(self._action_spec, [stdevs])
+    actions = tf.nest.pack_sequence_as(self._action_spec, [actions])
+    stdevs = tf.nest.pack_sequence_as(self._action_spec, [stdevs])
 
     return self.output_spec.build_distribution(
         loc=actions, scale=stdevs), network_state
@@ -103,7 +101,7 @@ class DummyValueNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant([5])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
-    hidden_state = tf.cast(nest.flatten(inputs), tf.float32)[0]
+    hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     batch_squash = network_utils.BatchSquash(self._outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
     for layer in self.layers:

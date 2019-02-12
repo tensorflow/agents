@@ -30,7 +30,6 @@ from tf_agents.policies import policy_step
 from tf_agents.specs import distribution_spec
 from tf_agents.utils import common as common_utils
 
-nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 
@@ -75,10 +74,10 @@ class PPOPolicy(actor_policy.ActorPolicy):
       if isinstance(actor_network, network.DistributionNetwork):
         network_output_spec = actor_network.output_spec
       else:
-        network_output_spec = nest.map_structure(
+        network_output_spec = tf.nest.map_structure(
             distribution_spec.deterministic_distribution_from_spec, action_spec)
-      info_spec = nest.map_structure(lambda spec: spec.input_params_spec,
-                                     network_output_spec)
+      info_spec = tf.nest.map_structure(lambda spec: spec.input_params_spec,
+                                        network_output_spec)
 
     super(PPOPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -139,8 +138,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
       return action
 
     distribution_step = self.distribution(time_step, policy_state)
-    actions = nest.map_structure(_sample, distribution_step.action,
-                                 self._action_spec)
+    actions = tf.nest.map_structure(_sample, distribution_step.action,
+                                    self._action_spec)
 
     return policy_step.PolicyStep(actions, distribution_step.state,
                                   distribution_step.info)
@@ -156,8 +155,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
         return tfp.distributions.Deterministic(loc=action_or_distribution)
       return action_or_distribution
 
-    distributions = nest.map_structure(_to_distribution,
-                                       actions_or_distributions)
+    distributions = tf.nest.map_structure(_to_distribution,
+                                          actions_or_distributions)
 
     # Prepare policy_info.
     if self._collect:

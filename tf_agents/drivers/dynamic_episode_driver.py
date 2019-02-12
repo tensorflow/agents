@@ -25,8 +25,6 @@ from tf_agents.environments import trajectory
 from tf_agents.utils import nest_utils
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class DynamicEpisodeDriver(driver.Driver):
@@ -99,7 +97,7 @@ class DynamicEpisodeDriver(driver.Driver):
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]
       with tf.control_dependencies([tf.group(observer_ops)]):
-        time_step, next_time_step, policy_state = nest.map_structure(
+        time_step, next_time_step, policy_state = tf.nest.map_structure(
             tf.identity, (time_step, next_time_step, policy_state))
 
       # While loop counter is only incremented for episode reset episodes.

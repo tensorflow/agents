@@ -24,8 +24,6 @@ import tensorflow as tf
 from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
 
-nest = tf.contrib.framework.nest
-
 
 def make_timestep_mask(batched_next_time_step):
   """Create a mask for final incomplete episodes and episode transitions.
@@ -67,7 +65,8 @@ def get_distribution_params(nested_distribution):
   """
   def _tensor_parameters_only(params):
     return {k: params[k] for k in params if isinstance(params[k], tf.Tensor)}
-  return nest.map_structure(
+
+  return tf.nest.map_structure(
       lambda single_dist: _tensor_parameters_only(single_dist.parameters),
       nested_distribution)
 
@@ -75,11 +74,12 @@ def get_distribution_params(nested_distribution):
 def nested_kl_divergence(nested_from_distribution, nested_to_distribution,
                          outer_dims=()):
   """Given two nested distributions, sum the KL divergences of the leaves."""
-  nest.assert_same_structure(nested_from_distribution, nested_to_distribution)
+  tf.nest.assert_same_structure(nested_from_distribution,
+                                nested_to_distribution)
 
   # Make list pairs of leaf distributions.
-  flat_from_distribution = nest.flatten(nested_from_distribution)
-  flat_to_distribution = nest.flatten(nested_to_distribution)
+  flat_from_distribution = tf.nest.flatten(nested_from_distribution)
+  flat_to_distribution = tf.nest.flatten(nested_to_distribution)
   all_kl_divergences = [from_dist.kl_divergence(to_dist)
                         for from_dist, to_dist
                         in zip(flat_from_distribution, flat_to_distribution)]

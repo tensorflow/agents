@@ -32,8 +32,6 @@ from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class ReinforceAgent(tf_agent.TFAgent):
@@ -93,7 +91,7 @@ class ReinforceAgent(tf_agent.TFAgent):
     if experience.step_type.shape[0] != 1:
       raise NotImplementedError('ReinforceAgent does not yet support batch '
                                 'dimensions greater than 1.')
-    experience = nest.map_structure(lambda t: tf.squeeze(t, 0), experience)
+    experience = tf.nest.map_structure(lambda t: tf.squeeze(t, 0), experience)
     returns = common.compute_returns(experience.reward,
                                      experience.discount)
     if self._debug_summaries:
@@ -162,7 +160,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       policy_gradient_loss: A tensor that will contain policy gradient loss for
         the on-policy experience.
     """
-    nest.assert_same_structure(time_steps, self.time_step_spec())
+    tf.nest.assert_same_structure(time_steps, self.time_step_spec())
     actions_distribution = self.collect_policy().distribution(time_steps).action
 
     # TODO(kbanoop): Add class IndependentNested(tfd.Distribution) to handle

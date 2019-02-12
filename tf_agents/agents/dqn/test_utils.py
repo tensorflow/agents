@@ -23,8 +23,6 @@ import tensorflow as tf
 
 from tf_agents.networks import network
 
-nest = tf.contrib.framework.nest
-
 
 class DummyNet(network.Network):
   """Dummy network for testing DqnAgent."""
@@ -32,7 +30,7 @@ class DummyNet(network.Network):
   def __init__(self, unused_observation_spec, action_spec, name=None):
     super(DummyNet, self).__init__(
         unused_observation_spec, state_spec=(), name=name)
-    action_spec = nest.flatten(action_spec)[0]
+    action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
         tf.keras.layers.Dense(

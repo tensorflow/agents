@@ -29,9 +29,6 @@ from tf_agents.replay_buffers import table
 from tensorflow.python.framework import test_util  # TF internal
 
 
-nest = tf.contrib.framework.nest
-
-
 class TableTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
@@ -53,7 +50,7 @@ class TableTest(tf.test.TestCase):
         [2 * np.ones(spec[1][0].shape.as_list()),
          3 * np.ones(spec[1][1].shape.as_list())]
     ]
-    tensors = nest.map_structure(
+    tensors = tf.nest.map_structure(
         lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
         expected_values)
 
@@ -62,7 +59,7 @@ class TableTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
-    nest.map_structure(self.assertAllClose, read_value_, expected_values)
+    tf.nest.map_structure(self.assertAllClose, read_value_, expected_values)
 
   @test_util.run_in_graph_and_eager_modes()
   def testReadWriteBatch(self):
@@ -80,7 +77,7 @@ class TableTest(tf.test.TestCase):
         [2 * np.ones([batch_size] + spec[1][0].shape.as_list()),
          3 * np.ones([batch_size] + spec[1][1].shape.as_list())]
     ]
-    tensors = nest.map_structure(
+    tensors = tf.nest.map_structure(
         lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
         expected_values)
 
@@ -89,7 +86,7 @@ class TableTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
-    nest.map_structure(self.assertAllClose, read_value_, expected_values)
+    tf.nest.map_structure(self.assertAllClose, read_value_, expected_values)
 
   @test_util.run_in_graph_and_eager_modes()
   def testReadPartialSlots(self):
@@ -107,7 +104,7 @@ class TableTest(tf.test.TestCase):
     lidar = 3 * np.ones([batch_size] + spec[1][1].shape.as_list())
 
     values = [action, [camera, lidar]]
-    tensors = nest.map_structure(
+    tensors = tf.nest.map_structure(
         lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), values)
 
     write_op = replay_table.write(list(range(batch_size)), tensors)
@@ -117,7 +114,7 @@ class TableTest(tf.test.TestCase):
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
     expected_values = [lidar, [action]]
-    nest.map_structure(self.assertAllClose, read_value_, expected_values)
+    tf.nest.map_structure(self.assertAllClose, read_value_, expected_values)
 
   @test_util.run_in_graph_and_eager_modes()
   def testWritePartialSlots(self):
@@ -147,7 +144,7 @@ class TableTest(tf.test.TestCase):
     self.evaluate(write_op2)
     read_value_ = self.evaluate(read_op)
     expected_values = [action2, [camera1, lidar2]]
-    nest.map_structure(self.assertAllClose, read_value_, expected_values)
+    tf.nest.map_structure(self.assertAllClose, read_value_, expected_values)
 
   @test_util.run_in_graph_and_eager_modes()
   def testReadWriteDict(self):
@@ -168,7 +165,7 @@ class TableTest(tf.test.TestCase):
         'camera': 2 * np.ones(spec['camera'].shape.as_list()),
         'lidar': 3 * np.ones(spec['lidar'].shape.as_list())
     }
-    tensors = nest.map_structure(
+    tensors = tf.nest.map_structure(
         lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
         expected_values)
 
@@ -177,7 +174,7 @@ class TableTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
-    nest.map_structure(self.assertAllClose, read_value_, expected_values)
+    tf.nest.map_structure(self.assertAllClose, read_value_, expected_values)
 
   @test_util.run_in_graph_and_eager_modes()
   def testReadWriteNamedTuple(self):
@@ -201,7 +198,7 @@ class TableTest(tf.test.TestCase):
         camera=2 * np.ones(spec.camera.shape.as_list()),
         lidar=3 * np.ones(spec.lidar.shape.as_list())
     )
-    tensors = nest.map_structure(
+    tensors = tf.nest.map_structure(
         lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
         expected_values)
 
@@ -210,7 +207,7 @@ class TableTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
     read_value_ = self.evaluate(read_op)
-    nest.map_structure(self.assertAllClose, read_value_, expected_values)
+    tf.nest.map_structure(self.assertAllClose, read_value_, expected_values)
 
   @test_util.run_in_graph_and_eager_modes()
   def testEmptySpecNames(self):
@@ -229,8 +226,8 @@ class TableTest(tf.test.TestCase):
     expected_slots = ['slot', 'slot_1', 'lidar']
     self.assertAllEqual(replay_table.slots, expected_slots)
     tensors = replay_table.read(0, expected_slots)
-    nest.map_structure(
-        lambda x, y: self.assertEqual(x.shape, y.shape), spec, tensors)
+    tf.nest.map_structure(lambda x, y: self.assertEqual(x.shape, y.shape), spec,
+                          tensors)
 
   @test_util.run_in_graph_and_eager_modes()
   def testDuplicateSpecNames(self):
@@ -249,8 +246,8 @@ class TableTest(tf.test.TestCase):
     expected_slots = ['lidar', 'lidar_1', 'lidar_2']
     self.assertAllEqual(replay_table.slots, expected_slots)
     tensors = replay_table.read(0, expected_slots)
-    nest.map_structure(
-        lambda x, y: self.assertEqual(x.shape, y.shape), spec, tensors)
+    tf.nest.map_structure(lambda x, y: self.assertEqual(x.shape, y.shape), spec,
+                          tensors)
 
   @test_util.run_in_graph_and_eager_modes()
   def testReadWriteString(self):
@@ -271,7 +268,7 @@ class TableTest(tf.test.TestCase):
         [b'foo',
          3 * np.ones(spec[1][1].shape.as_list())]
     ]
-    tensors = nest.map_structure(
+    tensors = tf.nest.map_structure(
         lambda x, dtype: tf.convert_to_tensor(value=x, dtype=dtype),
         expected_values, [tf.float32, [tf.string, tf.float32]])
 

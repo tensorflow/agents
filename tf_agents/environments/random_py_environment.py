@@ -25,8 +25,6 @@ from tf_agents.environments import py_environment
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
 
-nest = tf.contrib.framework.nest
-
 
 class RandomPyEnvironment(py_environment.Base):
   """Randomly generates observations following the given observation_spec.
@@ -134,7 +132,7 @@ class RandomPyEnvironment(py_environment.Base):
       return self.reset()
 
     if self._action_spec:
-      nest.assert_same_structure(self._action_spec, action)
+      tf.nest.assert_same_structure(self._action_spec, action)
 
     self._num_steps += 1
 

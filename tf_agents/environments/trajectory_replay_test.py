@@ -25,8 +25,6 @@ import tensorflow as tf
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import trajectory_replay
 
-nest = tf.contrib.framework.nest
-
 
 class TrajectoryReplayTest(tf.test.TestCase):
 
@@ -64,10 +62,10 @@ class TrajectoryReplayTest(tf.test.TestCase):
 
     # Ensure repeated run with the same deterministic policy recreates the same
     # actions & policy info.
-    nest.map_structure(
-        self.assertAllEqual, output_actions, repeat_output_actions)
-    nest.map_structure(
-        self.assertAllEqual, output_policy_info, repeat_output_policy_info)
+    tf.nest.map_structure(self.assertAllEqual, output_actions,
+                          repeat_output_actions)
+    tf.nest.map_structure(self.assertAllEqual, output_policy_info,
+                          repeat_output_policy_info)
 
   def testReplayBufferObserversWithInitialState(self):
     traj, time_step_spec, action_spec = (
@@ -93,10 +91,10 @@ class TrajectoryReplayTest(tf.test.TestCase):
 
     # Ensure repeated run with the same deterministic policy recreates the same
     # actions & policy info.
-    nest.map_structure(
-        self.assertAllEqual, output_actions, repeat_output_actions)
-    nest.map_structure(
-        self.assertAllEqual, output_policy_info, repeat_output_policy_info)
+    tf.nest.map_structure(self.assertAllEqual, output_actions,
+                          repeat_output_actions)
+    tf.nest.map_structure(self.assertAllEqual, output_policy_info,
+                          repeat_output_policy_info)
 
 
 if __name__ == '__main__':

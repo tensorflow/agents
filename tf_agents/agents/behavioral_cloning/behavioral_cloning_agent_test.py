@@ -33,8 +33,6 @@ from tf_agents.networks import q_rnn_network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common_utils
 
-nest = tf.contrib.framework.nest
-
 # Number of times to train in test loops.
 TRAIN_ITERATIONS = 30
 
@@ -44,7 +42,7 @@ class DummyNet(network.Network):
   def __init__(self, unused_observation_spec, action_spec, name=None):
     super(DummyNet, self).__init__(
         unused_observation_spec, state_spec=(), name=name)
-    action_spec = nest.flatten(action_spec)[0]
+    action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
         tf.keras.layers.Dense(
@@ -138,7 +136,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     traj, time_step_spec, action_spec = (
         driver_test_utils.make_random_trajectory())
     # Convert to shapes (batch=6, 1, ...) so this works with a non-RNN model.
-    traj = nest.map_structure(common_utils.transpose_batch_time, traj)
+    traj = tf.nest.map_structure(common_utils.transpose_batch_time, traj)
     cloning_net = q_network.QNetwork(
         time_step_spec.observation, action_spec)
     agent = behavioral_cloning_agent.BehavioralCloningAgent(

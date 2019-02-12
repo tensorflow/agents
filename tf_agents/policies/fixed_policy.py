@@ -30,8 +30,6 @@ from tf_agents.policies import tf_policy
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 class FixedPolicy(tf_policy.Base):
   """A policy which always returns a fixed action."""
@@ -46,11 +44,13 @@ class FixedPolicy(tf_policy.Base):
       action_spec: A nest of BoundedTensorSpec representing the actions.
     """
     super(FixedPolicy, self).__init__(time_step_spec, action_spec)
-    nest.assert_same_structure(self._action_spec, actions)
+    tf.nest.assert_same_structure(self._action_spec, actions)
+
     def convert(action, spec):
       return tf.convert_to_tensor(value=action, dtype=spec.dtype)
 
-    self._action_value = nest.map_structure(convert, actions, self._action_spec)
+    self._action_value = tf.nest.map_structure(convert, actions,
+                                               self._action_spec)
 
   def _variables(self):
     return []
@@ -68,5 +68,6 @@ class FixedPolicy(tf_policy.Base):
     def dist_fn(action):
       """Return a categorical distribution with all density on fixed action."""
       return tfp.distributions.Deterministic(loc=action)
-    return policy_step.PolicyStep(nest.map_structure(dist_fn, action),
-                                  policy_state)
+
+    return policy_step.PolicyStep(
+        tf.nest.map_structure(dist_fn, action), policy_state)

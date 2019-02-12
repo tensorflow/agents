@@ -28,9 +28,6 @@ from tf_agents.utils import nest_utils
 from tensorflow.python.eager import context  # TF internal
 
 
-nest = tf.contrib.framework.nest
-
-
 class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
 
   def _create_trajectories(self):
@@ -92,7 +89,7 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       for i in range(num_trajectories):
         with tf.control_dependencies(deps):
           traj = metric(trajectories[i])
-          deps = nest.flatten(traj)
+          deps = tf.nest.flatten(traj)
       with tf.control_dependencies(deps):
         result = metric.result()
       result_ = self.evaluate(result)

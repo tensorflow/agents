@@ -36,14 +36,11 @@ import tf_agents.utils.common as common_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 def std_clip_transform(stddevs):
-  stddevs = nest.map_structure(
-      lambda t: tf.clip_by_value(t, -20, 2),
-      stddevs)
+  stddevs = tf.nest.map_structure(lambda t: tf.clip_by_value(t, -20, 2),
+                                  stddevs)
   return tf.exp(stddevs)
 
 
@@ -120,7 +117,7 @@ class SacAgent(tf_agent.TFAgent):
     # If target_entropy was not passed, set it to negative of the total number
     # of action dimensions.
     if target_entropy is None:
-      flat_action_spec = nest.flatten(action_spec)
+      flat_action_spec = tf.nest.flatten(action_spec)
       target_entropy = -np.sum([np.product(single_spec.shape.as_list())
                                 for single_spec in flat_action_spec])
 
@@ -162,7 +159,7 @@ class SacAgent(tf_agent.TFAgent):
     time_steps, policy_steps, next_time_steps = transitions
     actions = policy_steps.action
     # TODO(eholly): Figure out how to properly deal with time dimension.
-    time_steps, actions, next_time_steps = nest.map_structure(
+    time_steps, actions, next_time_steps = tf.nest.map_structure(
         lambda t: tf.squeeze(t, axis=1), (time_steps, actions, next_time_steps))
     return time_steps, actions, next_time_steps
 
@@ -290,9 +287,9 @@ class SacAgent(tf_agent.TFAgent):
   def _action_spec_means_magnitudes(self):
     """Get the center and magnitude of the ranges in action spec."""
     action_spec = self.action_spec()
-    action_means = nest.map_structure(
+    action_means = tf.nest.map_structure(
         lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
-    action_magnitudes = nest.map_structure(
+    action_magnitudes = tf.nest.map_structure(
         lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec)
     return tf.cast(
         action_means, dtype=tf.float32), tf.cast(
@@ -321,8 +318,7 @@ class SacAgent(tf_agent.TFAgent):
           distribution=action_distribution, bijector=bijector_chain)
 
     # Sample actions and log_pis from transformed distribution.
-    actions = nest.map_structure(
-        lambda d: d.sample(), action_distribution)
+    actions = tf.nest.map_structure(lambda d: d.sample(), action_distribution)
     log_pi = common_utils.log_probability(
         action_distribution, actions, self.action_spec())
 
@@ -353,9 +349,9 @@ class SacAgent(tf_agent.TFAgent):
       critic_loss: A scalar critic loss.
     """
     with tf.name_scope('critic_loss'):
-      nest.assert_same_structure(actions, self.action_spec())
-      nest.assert_same_structure(time_steps, self.time_step_spec())
-      nest.assert_same_structure(next_time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(actions, self.action_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(next_time_steps, self.time_step_spec())
 
       next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps)
       target_input_1 = (next_time_steps.observation, next_actions)
@@ -412,7 +408,7 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss: A scalar actor loss.
     """
     with tf.name_scope('actor_loss'):
-      nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
 
       actions, log_pi = self._actions_and_log_probs(time_steps)
       target_input_1 = (time_steps.observation, actions)
@@ -457,7 +453,7 @@ class SacAgent(tf_agent.TFAgent):
       alpha_loss: A scalar alpha loss.
     """
     with tf.name_scope('alpha_loss'):
-      nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
 
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
       alpha_loss = (

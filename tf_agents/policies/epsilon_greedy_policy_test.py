@@ -28,8 +28,6 @@ from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import fixed_policy
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
@@ -77,7 +75,7 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     policy_state = policy.get_initial_state(batch_size=2)
     action_step = policy.action(self._time_step, policy_state, seed=54)
-    nest.assert_same_structure(self._action_spec, action_step.action)
+    tf.nest.assert_same_structure(self._action_spec, action_step.action)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     # Collect 100 steps with the current value of epsilon.
@@ -102,7 +100,7 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     policy_state = policy.get_initial_state(batch_size=2)
     action_step = policy.action(self._time_step, policy_state, seed=54)
-    nest.assert_same_structure(self._action_spec, action_step.action)
+    tf.nest.assert_same_structure(self._action_spec, action_step.action)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     with self.cached_session() as sess:

@@ -27,8 +27,6 @@ from tf_agents.networks import lstm_encoding_network
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
@@ -85,7 +83,7 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
       ValueError: If `action_spec` contains more than one action.
     """
     q_network.validate_specs(action_spec, input_tensor_spec)
-    action_spec = nest.flatten(action_spec)[0]
+    action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
     q_projection = layers.Dense(

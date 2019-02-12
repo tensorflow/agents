@@ -28,8 +28,6 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DistributionPolicy(tf_policy.Base):
   """A policy which always returns the configured distribution."""

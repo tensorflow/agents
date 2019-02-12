@@ -28,8 +28,6 @@ import tensorflow as tf
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 _as_float32_array = functools.partial(np.asarray, dtype=np.float32)
 
 
@@ -74,7 +72,7 @@ class TimeStep(
   def __hash__(self):
     # TODO(oars): Explore performance impact and consider converting dicts in
     # the observation into ordered dicts in __new__ call.
-    return hash(tuple(nest.flatten(self)))
+    return hash(tuple(tf.nest.flatten(self)))
 
 
 class StepType(object):
@@ -109,7 +107,7 @@ def restart(observation, batch_size=None):
   Returns:
     A `TimeStep`.
   """
-  first_observation = nest.flatten(observation)[0]
+  first_observation = tf.nest.flatten(observation)[0]
   if not tf.is_tensor(first_observation):
     if batch_size is not None:
       reward = np.zeros(batch_size, dtype=np.float32)
@@ -154,7 +152,7 @@ def transition(observation, reward, discount=1.0):
     ValueError: If observations are tensors but reward's statically known rank
       is not `0` or `1`.
   """
-  first_observation = nest.flatten(observation)[0]
+  first_observation = tf.nest.flatten(observation)[0]
   if not tf.is_tensor(first_observation):
     reward = _as_float32_array(reward)
     discount = _as_float32_array(discount)
@@ -202,7 +200,7 @@ def termination(observation, reward):
     ValueError: If observations are tensors but reward's statically known rank
       is not `0` or `1`.
   """
-  first_observation = nest.flatten(observation)[0]
+  first_observation = tf.nest.flatten(observation)[0]
   if not tf.is_tensor(first_observation):
     reward = _as_float32_array(reward)
     if reward.shape:
@@ -249,7 +247,7 @@ def truncation(observation, reward, discount=1.0):
     ValueError: If observations are tensors but reward's statically known rank
       is not `0` or `1`.
   """
-  first_observation = nest.flatten(observation)[0]
+  first_observation = tf.nest.flatten(observation)[0]
   if not tf.is_tensor(first_observation):
     reward = _as_float32_array(reward)
     discount = _as_float32_array(discount)
@@ -283,7 +281,7 @@ def time_step_spec(observation_spec=None):
   if observation_spec is None:
     return TimeStep(step_type=(), reward=(), discount=(), observation=())
 
-  first_observation_spec = nest.flatten(observation_spec)[0]
+  first_observation_spec = tf.nest.flatten(observation_spec)[0]
   if isinstance(first_observation_spec,
                 (tensor_spec.TensorSpec, tensor_spec.BoundedTensorSpec)):
     return TimeStep(

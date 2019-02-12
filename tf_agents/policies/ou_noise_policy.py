@@ -27,7 +27,6 @@ from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
-nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 
@@ -50,7 +49,8 @@ class OUNoisePolicy(tf_policy.Base):
     def _validate_action_spec(action_spec):
       if not tensor_spec.is_continuous(action_spec):
         raise ValueError('OU Noise is applicable only to continuous actions.')
-    nest.map_structure(_validate_action_spec, wrapped_policy.action_spec())
+
+    tf.nest.map_structure(_validate_action_spec, wrapped_policy.action_spec())
 
     super(OUNoisePolicy, self).__init__(
         wrapped_policy.time_step_spec(),
@@ -74,8 +74,8 @@ class OUNoisePolicy(tf_policy.Base):
           self._ou_damping, self._ou_stddev, seed=seed_stream())
 
     if self._ou_process is None:
-      self._ou_process = nest.map_structure(_create_ou_process,
-                                            self._action_spec)
+      self._ou_process = tf.nest.map_structure(_create_ou_process,
+                                               self._action_spec)
 
     action_step = self._wrapped_policy.action(time_step, policy_state,
                                               seed_stream())
@@ -86,8 +86,8 @@ class OUNoisePolicy(tf_policy.Base):
         return common.clip_to_spec(noisy_action, action_spec)
       return noisy_action
 
-    actions = nest.map_structure(_add_ou_noise, action_step.action,
-                                 self._ou_process, self._action_spec)
+    actions = tf.nest.map_structure(_add_ou_noise, action_step.action,
+                                    self._ou_process, self._action_spec)
     return policy_step.PolicyStep(actions, action_step.state, action_step.info)
 
   def _distribution(self, time_step, policy_state):

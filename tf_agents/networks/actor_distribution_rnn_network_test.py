@@ -27,8 +27,6 @@ from tf_agents.specs import tensor_spec
 
 from tensorflow.python.framework import test_util  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 class ActorDistributionNetworkTest(tf.test.TestCase):
 
@@ -119,7 +117,7 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
                    initial_state)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(nest.map_structure(lambda d: d.sample(), net_call[0]))
+    self.evaluate(tf.nest.map_structure(lambda d: d.sample(), net_call[0]))
 
 
 if __name__ == '__main__':

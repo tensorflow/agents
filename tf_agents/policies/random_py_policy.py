@@ -19,15 +19,12 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
 
 from tf_agents.environments import time_step as ts
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
-
-nest = tf.contrib.framework.nest
 
 
 class RandomPyPolicy(py_policy.Base):

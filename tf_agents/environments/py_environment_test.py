@@ -26,8 +26,6 @@ import tensorflow as tf
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
 
-nest = tf.contrib.framework.nest
-
 
 class PyEnvironmentTest(tf.test.TestCase):
 
@@ -40,7 +38,7 @@ class PyEnvironmentTest(tf.test.TestCase):
 
     time_step = random_env.reset()
     current_time_step = random_env.current_time_step()
-    nest.map_structure(self.assertAllEqual, time_step, current_time_step)
+    tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
 
   def testStepSavesCurrentTimeStep(self):
     obs_spec = array_spec.BoundedArraySpec((1,), np.int32)
@@ -52,7 +50,8 @@ class PyEnvironmentTest(tf.test.TestCase):
     random_env.reset()
     time_step = random_env.step(action=np.ones((1,)))
     current_time_step = random_env.current_time_step()
-    nest.map_structure(self.assertAllEqual, time_step, current_time_step)
+    tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
+
 
 if __name__ == '__main__':
   tf.test.main()

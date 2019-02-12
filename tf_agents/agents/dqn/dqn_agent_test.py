@@ -29,9 +29,6 @@ from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
 
 
-nest = tf.contrib.framework.nest
-
-
 class ComputeTDTargetsTest(tf.test.TestCase):
 
   def testComputeTDTargets(self):

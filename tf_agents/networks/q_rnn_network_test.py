@@ -28,8 +28,6 @@ from tf_agents.networks import expand_dims_layer
 from tf_agents.networks import q_rnn_network
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class QRnnNetworkTest(tf.test.TestCase):
 
@@ -119,7 +117,7 @@ class QRnnNetworkTest(tf.test.TestCase):
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(
         first_time_step.observation, first_time_step.step_type)
-    nest.assert_same_structure(rnn_network.state_spec, state)
+    tf.nest.assert_same_structure(rnn_network.state_spec, state)
     self.assertEqual(2, len(state))
 
     self.assertEqual((1, 2), q_values.shape)

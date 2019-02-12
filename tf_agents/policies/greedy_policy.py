@@ -25,8 +25,6 @@ import tensorflow_probability as tfp
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 
-nest = tf.contrib.framework.nest
-
 
 class GreedyPolicy(tf_policy.Base):
   """Returns greedy samples of a given policy."""
@@ -55,5 +53,5 @@ class GreedyPolicy(tf_policy.Base):
     distribution_step = self._wrapped_policy.distribution(
         time_step, policy_state)
     return policy_step.PolicyStep(
-        nest.map_structure(dist_fn, distribution_step.action),
+        tf.nest.map_structure(dist_fn, distribution_step.action),
         distribution_step.state, distribution_step.info)

@@ -32,7 +32,6 @@ from tf_agents.utils import common
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
 tfd = tfp.distributions
 
 
@@ -98,8 +97,8 @@ class ActorPolicy(tf_policy.Base):
         return common.clip_to_spec(action, action_spec)
       return action
 
-    actions = nest.map_structure(_sample, distribution_step.action,
-                                 self._action_spec)
+    actions = tf.nest.map_structure(_sample, distribution_step.action,
+                                    self._action_spec)
 
     return policy_step.PolicyStep(actions, distribution_step.state,
                                   distribution_step.info)
@@ -115,6 +114,6 @@ class ActorPolicy(tf_policy.Base):
         return tfp.distributions.Deterministic(loc=action_or_distribution)
       return action_or_distribution
 
-    distributions = nest.map_structure(_to_distribution,
-                                       actions_or_distributions)
+    distributions = tf.nest.map_structure(_to_distribution,
+                                          actions_or_distributions)
     return policy_step.PolicyStep(distributions, policy_state)

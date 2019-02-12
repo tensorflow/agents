@@ -31,8 +31,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 from tensorflow.python.framework import test_util  # TF internal
 
-nest = tf.contrib.framework.nest
-
 
 class CreateCounterTest(tf.test.TestCase):
 

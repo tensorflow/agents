@@ -42,8 +42,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class LSTMEncodingNetwork(network.Network):
@@ -155,10 +153,10 @@ class LSTMEncodingNetwork(network.Network):
         for num_units in output_fc_layer_params
     ])
 
-    state_spec = nest.map_structure(
+    state_spec = tf.nest.map_structure(
         functools.partial(
-            tensor_spec.TensorSpec, dtype=dtype,
-            name='network_state_spec'), cell.state_size)
+            tensor_spec.TensorSpec, dtype=dtype, name='network_state_spec'),
+        cell.state_size)
 
     super(LSTMEncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
@@ -194,9 +192,10 @@ class LSTMEncodingNetwork(network.Network):
     has_time_dim = num_outer_dims == 2
     if not has_time_dim:
       # Add a time dimension to the inputs.
-      observation = nest.map_structure(
-          lambda t: tf.expand_dims(t, 1), observation)
-      step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
+      observation = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                          observation)
+      step_type = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                        step_type)
 
     state, network_state = self._input_encoder(
         observation, step_type, network_state)

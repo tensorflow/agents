@@ -34,8 +34,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):
   return categorical_projection_network.CategoricalProjectionNetwork(
@@ -96,7 +94,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     Raises:
       ValueError: If `input_tensor_spec` contains more than one observation.
     """
-    if len(nest.flatten(input_tensor_spec)) > 1:
+    if len(tf.nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
     input_layers = utils.mlp_layers(
@@ -113,7 +111,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
       cell = tf.keras.layers.StackedRNNCells(
           [tf.keras.layers.LSTMCell(size) for size in lstm_size])
 
-    state_spec = nest.map_structure(
+    state_spec = tf.nest.map_structure(
         functools.partial(
             tensor_spec.TensorSpec, dtype=tf.float32,
             name='network_state_spec'), cell.state_size)
@@ -122,7 +120,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         fc_layer_params=output_fc_layer_params, name='output')
 
     projection_networks = []
-    for single_output_spec in nest.flatten(output_tensor_spec):
+    for single_output_spec in tf.nest.flatten(output_tensor_spec):
       if tensor_spec.is_discrete(single_output_spec):
         projection_networks.append(
             categorical_projection_net(single_output_spec))
@@ -132,8 +130,8 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     projection_distribution_specs = [
         proj_net.output_spec for proj_net in projection_networks
     ]
-    output_spec = nest.pack_sequence_as(
-        output_tensor_spec, projection_distribution_specs)
+    output_spec = tf.nest.pack_sequence_as(output_tensor_spec,
+                                           projection_distribution_specs)
 
     super(ActorDistributionRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
@@ -162,11 +160,12 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     has_time_dim = num_outer_dims == 2
     if not has_time_dim:
       # Add a time dimension to the inputs.
-      observation = nest.map_structure(lambda t: tf.expand_dims(t, 1),
-                                       observation)
-      step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
+      observation = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                          observation)
+      step_type = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                        step_type)
 
-    states = tf.cast(nest.flatten(observation)[0], tf.float32)
+    states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
     batch_squash = utils.BatchSquash(2)  # Squash B, and T dims.
     states = batch_squash.flatten(states)
 
@@ -194,5 +193,5 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         for projection in self._projection_networks
     ]
 
-    output_actions = nest.pack_sequence_as(self._output_tensor_spec, outputs)
+    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec, outputs)
     return output_actions, network_state

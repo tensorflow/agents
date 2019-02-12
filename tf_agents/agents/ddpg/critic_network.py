@@ -21,8 +21,6 @@ from tf_agents.networks import utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class CriticNetwork(network.Network):
@@ -65,10 +63,10 @@ class CriticNetwork(network.Network):
 
     observation_spec, action_spec = input_tensor_spec
 
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(tf.nest.flatten(observation_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
-    flat_action_spec = nest.flatten(action_spec)
+    flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise ValueError('Only a single action is supported by this network')
     self._single_action_spec = flat_action_spec[0]
@@ -109,11 +107,11 @@ class CriticNetwork(network.Network):
   def call(self, inputs, step_type=(), network_state=()):
     observations, actions = inputs
     del step_type  # unused.
-    observations = tf.cast(nest.flatten(observations)[0], tf.float32)
+    observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     for layer in self._observation_layers:
       observations = layer(observations)
 
-    actions = tf.cast(nest.flatten(actions)[0], tf.float32)
+    actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
     for layer in self._action_layers:
       actions = layer(actions)
 

@@ -28,8 +28,6 @@ from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_py_metric
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
 
@@ -79,7 +77,7 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
     for i in range(num_time_steps):
       with tf.control_dependencies(deps):
         traj = tf_avg_return_metric(self._ts[i])
-        deps = nest.flatten(traj)
+        deps = tf.nest.flatten(traj)
     with tf.control_dependencies(deps):
       result = tf_avg_return_metric.result()
     result_ = self.evaluate(result)
@@ -95,7 +93,7 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
     for i in range(3):
       with tf.control_dependencies(deps):
         traj = tf_avg_return_metric(self._ts[i])
-        deps = nest.flatten(traj)
+        deps = tf.nest.flatten(traj)
 
     # reset
     with tf.control_dependencies(deps):
@@ -106,7 +104,7 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
     for i in range(3, 6):
       with tf.control_dependencies(deps):
         traj = tf_avg_return_metric(self._ts[i])
-        deps = nest.flatten(traj)
+        deps = tf.nest.flatten(traj)
 
     # Test result is the reward for the second episode.
     with tf.control_dependencies(deps):

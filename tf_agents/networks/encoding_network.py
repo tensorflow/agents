@@ -36,8 +36,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 def _copy_layer(layer):
   if not isinstance(layer, tf.keras.layers.Layer):
@@ -141,7 +139,8 @@ class EncodingNetwork(network.Network):
       flat_preprocessing_layers = None
     else:
       flat_preprocessing_layers = [
-          _copy_layer(layer) for layer in nest.flatten(preprocessing_layers)]
+          _copy_layer(layer) for layer in tf.nest.flatten(preprocessing_layers)
+      ]
 
     if preprocessing_combiner is not None:
       preprocessing_combiner = _copy_layer(preprocessing_combiner)
@@ -200,14 +199,15 @@ class EncodingNetwork(network.Network):
       outer_rank = nest_utils.get_outer_rank(
           observation, self.input_tensor_spec)
       batch_squash = utils.BatchSquash(outer_rank)
-      observation = nest.map_structure(batch_squash.flatten, observation)
+      observation = tf.nest.map_structure(batch_squash.flatten, observation)
 
     if self._preprocessing_layers is None:
       processed = observation
     else:
       processed = []
       for obs, layer in zip(
-          nest.flatten_up_to(self.input_tensor_spec, observation),
+          tf.contrib.framework.nest.flatten_up_to(
+              self.input_tensor_spec, observation),
           self._preprocessing_layers):
         processed.append(layer(obs))
 
@@ -220,6 +220,6 @@ class EncodingNetwork(network.Network):
       states = layer(states)
 
     if self._batch_squash:
-      states = nest.map_structure(batch_squash.unflatten, states)
+      states = tf.nest.map_structure(batch_squash.unflatten, states)
 
     return states, network_state

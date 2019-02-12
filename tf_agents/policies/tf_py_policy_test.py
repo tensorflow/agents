@@ -46,8 +46,6 @@ from tf_agents.policies import tf_py_policy
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class TFPyPolicyTest(tf.test.TestCase):
 
@@ -90,7 +88,7 @@ class TFPyPolicyTest(tf.test.TestCase):
 
     expected_py_policy_state = np.ones(py_policy_state_spec.shape,
                                        py_policy_state_spec.dtype)
-    expected_py_time_step = nest.map_structure(
+    expected_py_time_step = tf.nest.map_structure(
         lambda arr_spec: np.ones(arr_spec.shape, arr_spec.dtype),
         py_time_step_spec)
     expected_py_action = np.ones(py_action_spec.shape, py_action_spec.dtype)
@@ -103,7 +101,7 @@ class TFPyPolicyTest(tf.test.TestCase):
         expected_py_action, expected_new_py_policy_state, expected_py_info)
 
     tf_mock_py_policy = tf_py_policy.TFPyPolicy(mock_py_policy)
-    time_step = nest.map_structure(
+    time_step = tf.nest.map_structure(
         lambda arr_spec: tf.ones(arr_spec.shape, arr_spec.dtype),
         py_time_step_spec)
     action_step = tf_mock_py_policy.action(

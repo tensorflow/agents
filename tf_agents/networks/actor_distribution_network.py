@@ -31,8 +31,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):
   return categorical_projection_network.CategoricalProjectionNetwork(
@@ -88,7 +86,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
       ValueError: If `input_tensor_spec` contains more than one observation.
     """
 
-    if len(nest.flatten(input_tensor_spec)) > 1:
+    if len(tf.nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
 
     mlp_layers = utils.mlp_layers(
@@ -99,7 +97,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         name='input_mlp')
 
     projection_networks = []
-    for single_output_spec in nest.flatten(output_tensor_spec):
+    for single_output_spec in tf.nest.flatten(output_tensor_spec):
       if tensor_spec.is_discrete(single_output_spec):
         projection_networks.append(discrete_projection_net(single_output_spec))
       else:
@@ -109,8 +107,8 @@ class ActorDistributionNetwork(network.DistributionNetwork):
     projection_distribution_specs = [
         proj_net.output_spec for proj_net in projection_networks
     ]
-    output_spec = nest.pack_sequence_as(
-        output_tensor_spec, projection_distribution_specs)
+    output_spec = tf.nest.pack_sequence_as(output_tensor_spec,
+                                           projection_distribution_specs)
 
     super(ActorDistributionNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
@@ -129,7 +127,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
   def call(self, observations, step_type, network_state):
     del step_type  # unused.
     outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
-    observations = nest.flatten(observations)
+    observations = tf.nest.flatten(observations)
     states = tf.cast(observations[0], tf.float32)
 
     # Reshape to only a single batch dimension for neural network functions.
@@ -146,5 +144,5 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         for projection in self._projection_networks
     ]
 
-    output_actions = nest.pack_sequence_as(self._output_tensor_spec, outputs)
+    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec, outputs)
     return output_actions, network_state

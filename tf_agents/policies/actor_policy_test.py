@@ -29,9 +29,6 @@ from tf_agents.policies import actor_policy
 from tf_agents.specs import tensor_spec
 
 
-nest = tf.contrib.framework.nest
-
-
 class DummyActionNet(network.Network):
 
   def __init__(self, input_tensor_spec, output_tensor_spec):
@@ -39,7 +36,7 @@ class DummyActionNet(network.Network):
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
         name='DummyActionNet')
-    single_action_spec = nest.flatten(output_tensor_spec)[0]
+    single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     self._output_tensor_spec = output_tensor_spec
     self._layers = [
         tf.keras.layers.Dense(
@@ -53,18 +50,18 @@ class DummyActionNet(network.Network):
   def call(self, observations, step_type, network_state):
     del step_type
 
-    states = tf.cast(nest.flatten(observations)[0], tf.float32)
+    states = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     for layer in self.layers:
       states = layer(states)
 
-    single_action_spec = nest.flatten(self._output_tensor_spec)[0]
+    single_action_spec = tf.nest.flatten(self._output_tensor_spec)[0]
     means = tf.reshape(states, [-1] + single_action_spec.shape.as_list())
     spec_means = (single_action_spec.maximum + single_action_spec.minimum) / 2.0
     spec_ranges = (
         single_action_spec.maximum - single_action_spec.minimum) / 2.0
     action_means = spec_means + spec_ranges * means
 
-    return (nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
+    return (tf.nest.pack_sequence_as(self._output_tensor_spec, [action_means]),
             network_state)
 
 
@@ -78,7 +75,8 @@ class DummyActionDistributionNet(DummyActionNet):
       action_std = tf.ones_like(action_mean)
       return tfp.distributions.Normal(action_mean, action_std)
 
-    return nest.map_structure(_action_distribution, action_means), network_state
+    return tf.nest.map_structure(_action_distribution,
+                                 action_means), network_state
 
 
 def test_cases():

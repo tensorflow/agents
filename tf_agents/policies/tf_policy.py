@@ -29,9 +29,6 @@ from tf_agents.policies import policy_step
 from tf_agents.utils import common
 
 
-nest = tf.contrib.framework.nest
-
-
 @six.add_metaclass(abc.ABCMeta)
 class Base(tf.contrib.eager.Checkpointable):
   """Abstract base class for TF Policies.
@@ -167,14 +164,14 @@ class Base(tf.contrib.eager.Checkpointable):
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """
-    nest.assert_same_structure(time_step, self._time_step_spec)
-    nest.assert_same_structure(policy_state, self._policy_state_spec)
-    with tf.control_dependencies(nest.flatten([time_step, policy_state])):
+    tf.nest.assert_same_structure(time_step, self._time_step_spec)
+    tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
+    with tf.control_dependencies(tf.nest.flatten([time_step, policy_state])):
       # TODO(ebrevdo,sfishman): Perhaps generate a seed stream here and pass
       # it down to _action instead?
       step = self._action(time_step=time_step, policy_state=policy_state,
                           seed=seed)
-    nest.assert_same_structure(step, self._policy_step_spec)
+    tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 
   def distribution(self, time_step, policy_state=()):
@@ -192,11 +189,11 @@ class Base(tf.contrib.eager.Checkpointable):
         `state`: A policy state tensor for the next call to distribution.
         `info`: Optional side information such as action log probabilities.
     """
-    nest.assert_same_structure(time_step, self._time_step_spec)
-    nest.assert_same_structure(policy_state, self._policy_state_spec)
-    with tf.control_dependencies(nest.flatten([time_step, policy_state])):
+    tf.nest.assert_same_structure(time_step, self._time_step_spec)
+    tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
+    with tf.control_dependencies(tf.nest.flatten([time_step, policy_state])):
       step = self._distribution(time_step=time_step, policy_state=policy_state)
-    nest.assert_same_structure(step, self._policy_step_spec)
+    tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 
   def update(self, policy, tau=1.0, sort_variables_by_name=False):
@@ -308,9 +305,8 @@ class Base(tf.contrib.eager.Checkpointable):
         `info`: Optional side information such as action log probabilities.
     """
     distribution_step = self._distribution(time_step, policy_state)
-    actions = nest.map_structure(
-        lambda d: d.sample(seed=seed),
-        distribution_step.action)
+    actions = tf.nest.map_structure(lambda d: d.sample(seed=seed),
+                                    distribution_step.action)
     return distribution_step._replace(action=actions)
 
   ## Subclasses MUST implement these.
@@ -360,4 +356,5 @@ class Base(tf.contrib.eager.Checkpointable):
         shape = tf.concat(([batch_size], spec_shape), axis=0)
       dtype = spec.dtype
       return tf.zeros(shape, dtype)
-    return nest.map_structure(_zero_tensor, self._policy_state_spec)
+
+    return tf.nest.map_structure(_zero_tensor, self._policy_state_spec)

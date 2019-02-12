@@ -39,9 +39,6 @@ import gin.tf
 from tensorflow.python.data.util import nest as data_nest  # TF internal
 
 
-nest = tf.contrib.framework.nest
-
-
 BufferInfo = collections.namedtuple('BufferInfo',
                                     ['ids', 'probabilities'])
 
@@ -131,7 +128,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
     Raises:
       ValueError: If called more than once.
     """
-    nest.assert_same_structure(items, self._data_spec)
+    tf.nest.assert_same_structure(items, self._data_spec)
 
     with tf.device(self._device), tf.name_scope(self._scope):
       id_ = self._increment_last_id()
@@ -258,14 +255,14 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
       ValueError: If the data spec contains lists that must be converted to
         tuples.
     """
-    # data_nest.flatten does not flatten python lists, nest.flatten does.
-    if nest.flatten(self._data_spec) != data_nest.flatten(self._data_spec):
+    # data_tf.nest.flatten does not flatten python lists, nest.flatten does.
+    if tf.nest.flatten(self._data_spec) != data_nest.flatten(self._data_spec):
       raise ValueError(
           'Cannot perform gather; data spec contains lists and this conflicts '
           'with gathering operator.  Convert any lists to tuples.  '
           'For example, if your spec looks like [a, b, c], '
           'change it to (a, b, c).  Spec structure is:\n  {}'.format(
-              nest.map_structure(lambda spec: spec.dtype, self._data_spec)))
+              tf.nest.map_structure(lambda spec: spec.dtype, self._data_spec)))
 
     def get_next(_):
       return self.get_next(sample_batch_size, num_steps, time_stacked=True)

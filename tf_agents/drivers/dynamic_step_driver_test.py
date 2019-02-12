@@ -26,8 +26,6 @@ from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
 from tf_agents.specs import tensor_spec
 
-nest = tf.contrib.framework.nest
-
 
 class DynamicStepDriverTest(tf.test.TestCase):
 

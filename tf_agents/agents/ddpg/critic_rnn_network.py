@@ -27,8 +27,6 @@ from tf_agents.utils import nest_utils
 
 import gin.tf
 
-nest = tf.contrib.framework.nest
-
 
 @gin.configurable
 class CriticRnnNetwork(network.Network):
@@ -77,11 +75,11 @@ class CriticRnnNetwork(network.Network):
     """
     observation_spec, action_spec = input_tensor_spec
 
-    if len(nest.flatten(observation_spec)) > 1:
+    if len(tf.nest.flatten(observation_spec)) > 1:
       raise ValueError(
           'Only a single observation is supported by this network.')
 
-    if len(nest.flatten(action_spec)) > 1:
+    if len(tf.nest.flatten(action_spec)) > 1:
       raise ValueError('Only a single action is supported by this network.')
 
     observation_layers = utils.mlp_layers(
@@ -115,7 +113,7 @@ class CriticRnnNetwork(network.Network):
       cell = tf.keras.layers.StackedRNNCells(
           [tf.keras.layers.LSTMCell(size) for size in lstm_size])
 
-    state_spec = nest.map_structure(
+    state_spec = tf.nest.map_structure(
         functools.partial(
             tensor_spec.TensorSpec, dtype=tf.float32,
             name='network_state_spec'), list(cell.state_size))
@@ -155,13 +153,14 @@ class CriticRnnNetwork(network.Network):
     has_time_dim = num_outer_dims == 2
     if not has_time_dim:
       # Add a time dimension to the inputs.
-      observation = nest.map_structure(lambda t: tf.expand_dims(t, 1),
-                                       observation)
-      action = nest.map_structure(lambda t: tf.expand_dims(t, 1), action)
-      step_type = nest.map_structure(lambda t: tf.expand_dims(t, 1), step_type)
+      observation = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                          observation)
+      action = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1), action)
+      step_type = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
+                                        step_type)
 
-    observation = tf.cast(nest.flatten(observation)[0], tf.float32)
-    action = tf.cast(nest.flatten(action)[0], tf.float32)
+    observation = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
+    action = tf.cast(tf.nest.flatten(action)[0], tf.float32)
 
     batch_squash = utils.BatchSquash(2)  # Squash B, and T dims.
     observation = batch_squash.flatten(observation)  # [B, T, ...] -> [BxT, ...]

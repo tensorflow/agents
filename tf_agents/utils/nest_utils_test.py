@@ -25,8 +25,6 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
-nest = tf.contrib.framework.nest
-
 
 class NestedTensorsTest(tf.test.TestCase):
   """Tests functions related to nested tensors."""
@@ -68,14 +66,14 @@ class NestedTensorsTest(tf.test.TestCase):
       A possibly nested tuple of Tensors matching the spec.
     """
     tensors = []
-    for s in nest.flatten(spec):
+    for s in tf.nest.flatten(spec):
       shape = s.shape
       if batch_size:
         extra_sizes = extra_sizes or []
         shape = tf.TensorShape([batch_size] + extra_sizes).concatenate(
             s.shape)
       tensors.append(tf.zeros(shape, dtype=s.dtype))
-    return nest.pack_sequence_as(spec, tensors)
+    return tf.nest.pack_sequence_as(spec, tensors)
 
   def testGetOuterShapeNotBatched(self):
     tensor = tf.zeros([2, 3], dtype=tf.float32)
@@ -305,26 +303,26 @@ class NestedTensorsTest(tf.test.TestCase):
     batch_shape = [1] + shape
     specs = self.nest_spec(shape)
     tensors = self.zeros_from_spec(specs)
-    nest.assert_same_structure(tensors, specs)
+    tf.nest.assert_same_structure(tensors, specs)
 
     batched_tensors = nest_utils.batch_nested_tensors(tensors)
 
-    nest.assert_same_structure(specs, batched_tensors)
+    tf.nest.assert_same_structure(specs, batched_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), batch_shape)
-    nest.map_structure(assert_shapes, batched_tensors)
+    tf.nest.map_structure(assert_shapes, batched_tensors)
 
   def testBatchNestedTensors(self):
     shape = [2, 3]
     batch_shape = [1] + shape
     specs = self.nest_spec(shape)
     tensors = self.zeros_from_spec(specs)
-    nest.assert_same_structure(tensors, specs)
+    tf.nest.assert_same_structure(tensors, specs)
 
     batched_tensors = nest_utils.batch_nested_tensors(tensors, specs)
 
-    nest.assert_same_structure(specs, batched_tensors)
+    tf.nest.assert_same_structure(specs, batched_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), batch_shape)
-    nest.map_structure(assert_shapes, batched_tensors)
+    tf.nest.map_structure(assert_shapes, batched_tensors)
 
   def testBatchedNestedTensors(self):
     shape = [2, 3]
@@ -332,13 +330,13 @@ class NestedTensorsTest(tf.test.TestCase):
     batch_shape = [batch_size] + shape
     specs = self.nest_spec(shape)
     tensors = self.zeros_from_spec(specs, batch_size=batch_size)
-    nest.assert_same_structure(tensors, specs)
+    tf.nest.assert_same_structure(tensors, specs)
 
     batched_tensors = nest_utils.batch_nested_tensors(tensors, specs)
 
-    nest.assert_same_structure(specs, batched_tensors)
+    tf.nest.assert_same_structure(specs, batched_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), batch_shape)
-    nest.map_structure(assert_shapes, batched_tensors)
+    tf.nest.map_structure(assert_shapes, batched_tensors)
 
   def testUnBatchSingleTensor(self):
     batched_tensor = tf.zeros([1, 2, 3], dtype=tf.float32)
@@ -362,13 +360,13 @@ class NestedTensorsTest(tf.test.TestCase):
 
     specs = self.nest_spec(shape)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
-    nest.assert_same_structure(batched_tensors, specs)
+    tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.unbatch_nested_tensors(batched_tensors)
 
-    nest.assert_same_structure(specs, tensors)
+    tf.nest.assert_same_structure(specs, tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), shape, t)
-    nest.map_structure(assert_shapes, tensors)
+    tf.nest.map_structure(assert_shapes, tensors)
 
   def testUnBatchNestedTensors(self):
     shape = [2, 3]
@@ -376,13 +374,13 @@ class NestedTensorsTest(tf.test.TestCase):
 
     specs = self.nest_spec(shape)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
-    nest.assert_same_structure(batched_tensors, specs)
+    tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.unbatch_nested_tensors(batched_tensors, specs)
 
-    nest.assert_same_structure(specs, tensors)
+    tf.nest.assert_same_structure(specs, tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), shape, t)
-    nest.map_structure(assert_shapes, tensors)
+    tf.nest.map_structure(assert_shapes, tensors)
 
   def testSplitNestedTensors(self):
     shape = [2, 3]
@@ -390,16 +388,16 @@ class NestedTensorsTest(tf.test.TestCase):
 
     specs = self.nest_spec(shape)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
-    nest.assert_same_structure(batched_tensors, specs)
+    tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.split_nested_tensors(batched_tensors, specs,
                                               batch_size)
     self.assertEqual(batch_size, len(tensors))
 
     for t in tensors:
-      nest.assert_same_structure(specs, t)
+      tf.nest.assert_same_structure(specs, t)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [1] + shape)
-    nest.map_structure(assert_shapes, tensors)
+    tf.nest.map_structure(assert_shapes, tensors)
 
   def testSplitNestedTensorsSizeSplits(self):
     shape = [2, 3]
@@ -408,20 +406,20 @@ class NestedTensorsTest(tf.test.TestCase):
 
     specs = self.nest_spec(shape)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
-    nest.assert_same_structure(batched_tensors, specs)
+    tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.split_nested_tensors(
         batched_tensors, specs, size_splits)
     self.assertEqual(len(tensors), len(size_splits))
 
     for i, tensor in enumerate(tensors):
-      nest.assert_same_structure(specs, tensor)
-      nest.map_structure(
+      tf.nest.assert_same_structure(specs, tensor)
+      tf.nest.map_structure(
           lambda t: self.assertEqual(t.shape.as_list()[0], size_splits[i]),  # pylint: disable=cell-var-from-loop
           tensor)
 
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list()[1:], shape)
-    nest.map_structure(assert_shapes, tensors)
+    tf.nest.map_structure(assert_shapes, tensors)
 
   def testUnstackNestedTensors(self):
     shape = [5, 8]
@@ -429,15 +427,15 @@ class NestedTensorsTest(tf.test.TestCase):
 
     specs = self.nest_spec(shape)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
-    nest.assert_same_structure(batched_tensors, specs)
+    tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.unstack_nested_tensors(batched_tensors, specs)
     self.assertEqual(batch_size, len(tensors))
 
     for t in tensors:
-      nest.assert_same_structure(specs, t)
+      tf.nest.assert_same_structure(specs, t)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), shape)
-    nest.map_structure(assert_shapes, tensors)
+    tf.nest.map_structure(assert_shapes, tensors)
 
   def testStackNestedTensors(self):
     shape = [5, 8]
@@ -448,22 +446,22 @@ class NestedTensorsTest(tf.test.TestCase):
     unstacked_tensors = [self.zeros_from_spec(specs) for _ in range(batch_size)]
     stacked_tensor = nest_utils.stack_nested_tensors(unstacked_tensors)
 
-    nest.assert_same_structure(specs, stacked_tensor)
+    tf.nest.assert_same_structure(specs, stacked_tensor)
     assert_shapes = lambda tensor: self.assertEqual(tensor.shape, batched_shape)
-    nest.map_structure(assert_shapes, stacked_tensor)
+    tf.nest.map_structure(assert_shapes, stacked_tensor)
 
   def testUnBatchedNestedTensors(self):
     shape = [2, 3]
 
     specs = self.nest_spec(shape)
     unbatched_tensors = self.zeros_from_spec(specs)
-    nest.assert_same_structure(unbatched_tensors, specs)
+    tf.nest.assert_same_structure(unbatched_tensors, specs)
 
     tensors = nest_utils.unbatch_nested_tensors(unbatched_tensors, specs)
 
-    nest.assert_same_structure(specs, tensors)
+    tf.nest.assert_same_structure(specs, tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), shape, t)
-    nest.map_structure(assert_shapes, tensors)
+    tf.nest.map_structure(assert_shapes, tensors)
 
   def testFlattenMultiBatchedSingleTensor(self):
     spec = tensor_spec.TensorSpec([2, 3], dtype=tf.float32)
@@ -487,9 +485,9 @@ class NestedTensorsTest(tf.test.TestCase):
      batch_dims) = nest_utils.flatten_multi_batched_nested_tensors(
          tensors, specs)
 
-    nest.assert_same_structure(specs, batch_flattened_tensors)
+    tf.nest.assert_same_structure(specs, batch_flattened_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [35, 2, 3])
-    nest.map_structure(assert_shapes, batch_flattened_tensors)
+    tf.nest.map_structure(assert_shapes, batch_flattened_tensors)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     batch_dims_ = self.evaluate(batch_dims)
@@ -537,7 +535,7 @@ class NestedArraysTest(tf.test.TestCase):
     def _zeros(spec):
       return np.zeros(type(spec.shape)(outer_dims) + spec.shape, spec.dtype)
 
-    return nest.map_structure(_zeros, specs)
+    return tf.nest.map_structure(_zeros, specs)
 
   def testUnstackNestedArrays(self):
     shape = (5, 8)
@@ -549,9 +547,9 @@ class NestedArraysTest(tf.test.TestCase):
     self.assertEqual(batch_size, len(unbatched_arrays))
 
     for array in unbatched_arrays:
-      nest.assert_same_structure(specs, array)
+      tf.nest.assert_same_structure(specs, array)
     assert_shapes = lambda a: self.assertEqual(a.shape, shape)
-    nest.map_structure(assert_shapes, unbatched_arrays)
+    tf.nest.map_structure(assert_shapes, unbatched_arrays)
 
   def testUnstackNestedArray(self):
     shape = (5, 8)
@@ -563,9 +561,9 @@ class NestedArraysTest(tf.test.TestCase):
     self.assertEqual(batch_size, len(unbatched_arrays))
 
     for array in unbatched_arrays:
-      nest.assert_same_structure(specs, array)
+      tf.nest.assert_same_structure(specs, array)
     assert_shapes = lambda a: self.assertEqual(a.shape, shape)
-    nest.map_structure(assert_shapes, unbatched_arrays)
+    tf.nest.map_structure(assert_shapes, unbatched_arrays)
 
   def testStackNestedArrays(self):
     shape = (5, 8)
@@ -576,9 +574,9 @@ class NestedArraysTest(tf.test.TestCase):
     unstacked_arrays = [self.zeros_from_spec(specs) for _ in range(batch_size)]
     stacked_array = nest_utils.stack_nested_arrays(unstacked_arrays)
 
-    nest.assert_same_structure(specs, stacked_array)
+    tf.nest.assert_same_structure(specs, stacked_array)
     assert_shapes = lambda a: self.assertEqual(a.shape, batched_shape)
-    nest.map_structure(assert_shapes, stacked_array)
+    tf.nest.map_structure(assert_shapes, stacked_array)
 
   def testGetOuterArrayShape(self):
     spec = (
