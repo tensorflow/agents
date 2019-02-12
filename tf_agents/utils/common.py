@@ -502,7 +502,7 @@ def discounted_future_sum(values, gamma, num_steps):
 
   convolved_values = tf.squeeze(
       tf.nn.conv1d(
-          tf.expand_dims(padded_values, -1),
+          input=tf.expand_dims(padded_values, -1),
           filters=discount_filter,
           stride=1,
           padding='VALID'), -1)
@@ -826,12 +826,12 @@ def assert_members_are_not_overridden(base_cls,
 
 def element_wise_squared_loss(x, y):
   return tf.compat.v1.losses.mean_squared_error(
-      x, y, reduction=tf.losses.Reduction.NONE)
+      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
 
 
 def element_wise_huber_loss(x, y):
   return tf.compat.v1.losses.huber_loss(
-      x, y, reduction=tf.losses.Reduction.NONE)
+      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
 
 
 def transpose_batch_time(x):
@@ -851,9 +851,7 @@ def transpose_batch_time(x):
     return x
 
   x_rank = tf.rank(x)
-  x_t = tf.transpose(
-      x, tf.concat(
-          ([1, 0], tf.range(2, x_rank)), axis=0))
+  x_t = tf.transpose(a=x, perm=tf.concat(([1, 0], tf.range(2, x_rank)), axis=0))
   x_t.set_shape(
       tf.TensorShape([
           x_static_shape.dims[1].value, x_static_shape.dims[0].value

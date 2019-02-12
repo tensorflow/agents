@@ -194,9 +194,9 @@ class IndexWithActionsTest(tf.test.TestCase):
         q_values, actions, expected_q_values, multi_dim_actions=True)
 
   def testTwoOuterDimsUnknownShape(self):
-    q_values = tf.convert_to_tensor(np.array([[[50, 51], [52, 53]]],
-                                             dtype=np.float32))
-    actions = tf.convert_to_tensor(np.array([[1, 0]], dtype=np.int32))
+    q_values = tf.convert_to_tensor(
+        value=np.array([[[50, 51], [52, 53]]], dtype=np.float32))
+    actions = tf.convert_to_tensor(value=np.array([[1, 0]], dtype=np.int32))
     values = common.index_with_actions(q_values, actions)
 
     self.assertAllClose([[51, 52]], self.evaluate(values))

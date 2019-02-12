@@ -76,12 +76,12 @@ class DqnLossInfo(collections.namedtuple(
 # this file. Move them to utils/common or utils/losses.
 def element_wise_squared_loss(x, y):
   return tf.compat.v1.losses.mean_squared_error(
-      x, y, reduction=tf.losses.Reduction.NONE)
+      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
 
 
 def element_wise_huber_loss(x, y):
   return tf.compat.v1.losses.huber_loss(
-      x, y, reduction=tf.losses.Reduction.NONE)
+      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
 
 
 def compute_td_targets(next_q_values, rewards, discounts):

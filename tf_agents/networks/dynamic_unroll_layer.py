@@ -49,7 +49,7 @@ __all__ = ["DynamicUnroll"]
 
 def _maybe_tensor_shape_from_tensor(shape):
   if isinstance(shape, tf.Tensor):
-    return tensor_shape.as_shape(tf.contrib.util.constant_value(shape))
+    return tensor_shape.as_shape(tf.get_static_value(shape))
   else:
     return shape
 
@@ -109,7 +109,7 @@ def _best_effort_input_batch_size(flat_input):
     if batch_size is not None:
       return batch_size
   # Fallback to the dynamic batch size of the first input.
-  return tf.shape(flat_input[0])[1]
+  return tf.shape(input=flat_input[0])[1]
 
 
 class DynamicUnroll(tf.keras.layers.Layer):

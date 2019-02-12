@@ -328,7 +328,7 @@ def create_train_op(total_loss,
                     variables_to_train=None,
                     transform_grads_fn=None,
                     summarize_gradients=False,
-                    gate_gradients=tf.train.Optimizer.GATE_OP,
+                    gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
                     aggregation_method=None,
                     check_numerics=True):
   """Creates an `Operation` that evaluates the gradients and returns the loss.
@@ -360,17 +360,19 @@ def create_train_op(total_loss,
       loss value.
   """
   if global_step is _USE_GLOBAL_STEP:
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
 
   # Update ops use GraphKeys.UPDATE_OPS collection if update_ops is None.
-  global_update_ops = set(tf.get_collection(tf.GraphKeys.UPDATE_OPS))
+  global_update_ops = set(
+      tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS))
   if update_ops is None:
     update_ops = global_update_ops
   else:
     update_ops = set(update_ops)
   if not global_update_ops.issubset(update_ops):
-    tf.logging.warning('update_ops in create_train_op does not contain all the '
-                       'update_ops in GraphKeys.UPDATE_OPS')
+    tf.compat.v1.logging.warning(
+        'update_ops in create_train_op does not contain all the '
+        'update_ops in GraphKeys.UPDATE_OPS')
 
   # Make sure update_ops are computed before total_loss.
   if update_ops:
@@ -381,10 +383,10 @@ def create_train_op(total_loss,
 
   if variables_to_train is None:
     # Default to tf.trainable_variables()
-    variables_to_train = tf.trainable_variables()
+    variables_to_train = tf.compat.v1.trainable_variables()
   else:
     # Make sure that variables_to_train are in tf.trainable_variables()
-    trainable_variables = tf.trainable_variables()
+    trainable_variables = tf.compat.v1.trainable_variables()
     for v in variables_to_train:
       assert v.trainable or v in trainable_variables
 
@@ -412,7 +414,8 @@ def create_train_op(total_loss,
   with tf.name_scope('train_op'):
     # Make sure total_loss is valid.
     if check_numerics:
-      total_loss = tf.check_numerics(total_loss, 'LossTensor is inf or nan')
+      total_loss = tf.debugging.check_numerics(total_loss,
+                                               'LossTensor is inf or nan')
 
     # Ensure the train_tensor computes grad_updates.
     with tf.control_dependencies([grad_updates]):
@@ -420,7 +423,7 @@ def create_train_op(total_loss,
 
   # Add the operation used for training to the 'train_op' collection
   # TODO(b/123908876) Remove use of collections.
-  train_ops = tf.get_collection_ref(tf.GraphKeys.TRAIN_OP)
+  train_ops = tf.compat.v1.get_collection_ref(tf.compat.v1.GraphKeys.TRAIN_OP)
   if train_op not in train_ops:
     train_ops.append(train_op)
 
