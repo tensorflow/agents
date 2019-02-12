@@ -219,7 +219,6 @@ def create_train_step(loss,
                       summarize_gradients=False,
                       gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
                       aggregation_method=None,
-                      colocate_gradients_with_ops=False,
                       check_numerics=True):
   """Creates a train_step that evaluates the gradients and returns the loss.
 
@@ -246,8 +245,6 @@ def create_train_step(loss,
     gate_gradients: How to gate the computation of gradients. See tf.Optimizer.
     aggregation_method: Specifies the method used to combine gradient terms.
       Valid values are defined in the class `AggregationMethod`.
-    colocate_gradients_with_ops: Whether or not to try colocating the gradients
-      with the ops that generated them.
     check_numerics: Whether or not we apply check_numerics.
 
   Returns:
@@ -283,8 +280,8 @@ def create_train_step(loss,
           summarize_gradients=summarize_gradients,
           gate_gradients=gate_gradients,
           aggregation_method=aggregation_method,
-          colocate_gradients_with_ops=colocate_gradients_with_ops,
           check_numerics=check_numerics)
+
     with tf.control_dependencies([train_op]):
       return tf.nest.map_structure(lambda t: tf.identity(t, 'loss'), loss)
 
@@ -333,7 +330,6 @@ def create_train_op(total_loss,
                     summarize_gradients=False,
                     gate_gradients=tf.train.Optimizer.GATE_OP,
                     aggregation_method=None,
-                    colocate_gradients_with_ops=False,
                     check_numerics=True):
   """Creates an `Operation` that evaluates the gradients and returns the loss.
 
@@ -357,8 +353,6 @@ def create_train_op(total_loss,
     gate_gradients: How to gate the computation of gradients. See tf.Optimizer.
     aggregation_method: Specifies the method used to combine gradient terms.
       Valid values are defined in the class `AggregationMethod`.
-    colocate_gradients_with_ops: Whether or not to try colocating the gradients
-      with the ops that generated them.
     check_numerics: Whether or not we apply check_numerics.
 
   Returns:
@@ -402,8 +396,7 @@ def create_train_op(total_loss,
       total_loss,
       variables_to_train,
       gate_gradients=gate_gradients,
-      aggregation_method=aggregation_method,
-      colocate_gradients_with_ops=colocate_gradients_with_ops)
+      aggregation_method=aggregation_method)
 
   if transform_grads_fn:
     grads = transform_grads_fn(grads)
