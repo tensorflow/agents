@@ -81,7 +81,9 @@ class ReplayBuffer(tf.contrib.eager.Checkpointable):
         and the rest of the dimensions match the corresponding data_spec. See
         examples below.
       num_steps: (Optional.)  Optional way to specify that sub-episodes are
-        desired. If None (default), a batch of single items is returned.
+        desired. If None (default), in non-episodic replay buffers, a batch of
+        single items is returned. In episodic buffers, full episodes are
+        returned (note that sample_batch_size must be None in that case).
         Otherwise, a batch of sub-episodes is returned, where a sub-episode is a
         sequence of consecutive items in the replay_buffer. The returned tensors
         will have first dimension equal to sample_batch_size (if
@@ -95,9 +97,11 @@ class ReplayBuffer(tf.contrib.eager.Checkpointable):
         (B = batch size, T = timestep, D = data spec)
 
         get_next(sample_batch_size=None, num_steps=None, time_stacked=True)
-          return shape: [D]
+          return shape (non-episodic): [D]
+          return shape (episodic): [T, D] (T = full length of the episode)
         get_next(sample_batch_size=B, num_steps=None, time_stacked=True)
-          return shape: [B, D]
+          return shape (non-episodic): [B, D]
+          return shape (episodic): Not supported
         get_next(sample_batch_size=B, num_steps=T, time_stacked=True)
           return shape: [B, T, D]
         get_next(sample_batch_size=None, num_steps=T, time_stacked=False)
