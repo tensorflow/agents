@@ -21,15 +21,71 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tf_agents.utils import common as common_utils
-from tensorflow.contrib.eager.python import metrics as eager_metrics  # TF internal
 
 
-class TFStepMetric(eager_metrics.Metric):
+class TFStepMetric(tf.experimental.Module):
   """Defines the interface for TF metrics."""
 
-  def __init__(self, name, prefix='Metrics', **kwargs):
-    super(TFStepMetric, self).__init__(name, **kwargs)
+  def __init__(self, name, prefix='Metrics'):
+    super(TFStepMetric, self).__init__(name)
     self._prefix = prefix
+
+  def call(self, *args, **kwargs):
+    """Accumulates statistics for the metric. Users should use __call__ instead.
+
+    Note: This function is executed as a graph function in graph mode.
+    This means:
+    a) Operations on the same resource are executed in textual order.
+       This should make it easier to do things like add the updated
+       value of a variable to another, for example.
+    b) You don't need to worry about collecting the update ops to execute.
+       All update ops added to the graph by this function will be executed.
+    As a result, code should generally work the same way with graph or
+    eager execution.
+
+    Args:
+      *args:
+      **kwargs: A mini-batch of inputs to the Metric, as passed to
+        `__call__()`.
+    """
+    raise NotImplementedError('Metrics must define a call() member function')
+
+  def result(self):
+    """Computes and returns a final value for the metric."""
+    raise NotImplementedError('Metrics must define a result() member function')
+
+  def init_variables(self):
+    """Initializes this Metric's variables.
+
+    Should be called after variables are created in the first execution
+    of `__call__()`. If using graph execution, the return value should be
+    `run()` in a session before running the op returned by `__call__()`.
+    (See example above.)
+
+    Returns:
+      If using graph execution, this returns an op to perform the
+      initialization. Under eager execution, the variables are reset to their
+      initial values as a side effect and this function returns None.
+    """
+    if not tf.executing_eagerly():
+      return tf.compat.v1.group([v.initializer for v in self.variables])
+
+  @common_utils.function
+  def _update_state(self, *arg, **kwargs):
+    """A function wrapping the implementor-defined call method."""
+    return self.call(*arg, **kwargs)
+
+  def __call__(self, *args, **kwargs):
+    """Returns op to execute to update this metric for these inputs.
+
+    Returns None if eager execution is enabled.
+    Returns a graph-mode function if graph execution is enabled.
+
+    Args:
+      *args:
+      **kwargs: A mini-batch of inputs to the Metric, passed on to `call()`.
+    """
+    return self._update_state(*args, **kwargs)
 
   def tf_summaries(self, step_metrics=()):
     prefix = self._prefix
@@ -48,4 +104,3 @@ class TFStepMetric(eager_metrics.Metric):
           name=step_tag,
           tensor=result,
           step=step)
-

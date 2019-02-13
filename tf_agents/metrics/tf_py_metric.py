@@ -55,9 +55,6 @@ class TFPyMetric(tf_metric.TFStepMetric):
     self._dtype = dtype
     self._lock = threading.Lock()
 
-  def build(self, *args, **kwargs):
-    pass
-
   def call(self, trajectory):
     """Update the value of the metric using trajectory.
 

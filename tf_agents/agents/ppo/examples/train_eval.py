@@ -188,8 +188,7 @@ def train_eval(
 
     # TODO(sguada): Reenable metrics when ready for batch data.
     environment_steps_metric = tf_metrics.EnvironmentSteps()
-    environment_steps_metric.build()
-    environment_steps_count = environment_steps_metric.value()
+    environment_steps_count = environment_steps_metric.result()
     step_metrics = [
         tf_metrics.NumberOfEpisodes(),
         environment_steps_metric,

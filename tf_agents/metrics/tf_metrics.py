@@ -26,6 +26,7 @@ import tensorflow as tf
 from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metric
 from tf_agents.metrics import tf_py_metric
+from tf_agents.utils import common
 
 
 # TODO(kbanoop): Add reset to TF metrics for eval in eager mode.
@@ -35,19 +36,13 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
   """Counts the number of steps taken in the environment."""
 
   def __init__(self, name='EnvironmentSteps', dtype=tf.int64):
-    super(EnvironmentSteps, self).__init__(name=name, use_global_variables=True)
+    super(EnvironmentSteps, self).__init__(name=name)
     self.dtype = dtype
-    self.build()
-
-  def build(self, *args, **kwargs):
-    del args, kwargs
-    if self._built:
-      return
-    self.environment_steps = self.add_variable(
-        name='environment_steps',
-        shape=(),
+    self.environment_steps = common.create_counter(
+        initial_value=0,
         dtype=self.dtype,
-        initializer=tf.compat.v1.initializers.zeros())
+        shape=(),
+        name='environment_steps')
 
   def call(self, trajectory):
     """Increase the number of environment_steps according to trajectory.
@@ -76,19 +71,13 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
   """Counts the number of episodes in the environment."""
 
   def __init__(self, name='NumberOfEpisodes', dtype=tf.int64):
-    super(NumberOfEpisodes, self).__init__(name=name, use_global_variables=True)
+    super(NumberOfEpisodes, self).__init__(name=name)
     self.dtype = dtype
-    self.build()
-
-  def build(self, *args, **kwargs):
-    del args, kwargs
-    if self._built:
-      return
-    self.number_episodes = self.add_variable(
-        name='number_episodes',
-        shape=(),
+    self.number_episodes = common.create_counter(
+        initial_value=0,
         dtype=self.dtype,
-        initializer=tf.compat.v1.initializers.zeros())
+        shape=(),
+        name='number_episodes')
 
   def call(self, trajectory):
     """Increase the number of number_episodes according to trajectory.

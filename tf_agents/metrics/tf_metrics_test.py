@@ -84,7 +84,6 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       trajectories = self._create_trajectories()
       metric = metric_class()
       deps = []
-      metric.build()
       self.evaluate(metric.init_variables())
       for i in range(num_trajectories):
         with tf.control_dependencies(deps):
