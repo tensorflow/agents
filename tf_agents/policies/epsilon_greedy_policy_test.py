@@ -27,6 +27,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import fixed_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
 
 
 class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
@@ -88,33 +89,40 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     self.checkActionDistribution(actions, epsilon, num_steps)
 
-  def testTensorEpsilon(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123770194')
-
-    epsilon_ph = tf.compat.v1.placeholder(tf.float32, shape=())
-    policy = epsilon_greedy_policy.EpsilonGreedyPolicy(self._policy,
-                                                       epsilon=epsilon_ph)
+  @parameterized.parameters({'epsilon': 0.0}, {'epsilon': 0.2},
+                            {'epsilon': 0.7}, {'epsilon': 1.0})
+  def testTensorEpsilon(self, epsilon):
+    policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+        self._policy, epsilon=epsilon)
     self.assertEqual(policy.time_step_spec(), self._time_step_spec)
     self.assertEqual(policy.action_spec(), self._action_spec)
 
     policy_state = policy.get_initial_state(batch_size=2)
-    action_step = policy.action(self._time_step, policy_state, seed=54)
-    tf.nest.assert_same_structure(self._action_spec, action_step.action)
+    time_step = tf.nest.map_structure(tf.convert_to_tensor, self._time_step)
 
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    with self.cached_session() as sess:
-      for epsilon in [0.0, 0.2, 0.7, 1.0]:
-        # Collect 100 steps with the current value of epsilon.
-        actions = []
-        num_steps = 1000
-        for _ in range(num_steps):
-          action_ = sess.run(action_step.action, {epsilon_ph: epsilon})[0]
-          self.assertIn(action_, [0, 1, 2])
-          actions.append(action_)
+    @common.function
+    def action_step_fn(time_step=time_step):
+      return policy.action(time_step, policy_state, seed=54)
 
-        # Verify that action distribution changes as we vary epsilon.
-        self.checkActionDistribution(actions, epsilon, num_steps)
+    tf.nest.assert_same_structure(
+        self._action_spec,
+        self.evaluate(action_step_fn(time_step)).action)
+
+    if tf.executing_eagerly():
+      action_step = action_step_fn
+    else:
+      action_step = action_step_fn()
+
+    actions = []
+
+    num_steps = 1000
+    for _ in range(num_steps):
+      action_ = self.evaluate(action_step).action[0]
+      self.assertIn(action_, [0, 1, 2])
+      actions.append(action_)
+
+    # Verify that action distribution changes as we vary epsilon.
+    self.checkActionDistribution(actions, epsilon, num_steps)
 
 
 if __name__ == '__main__':
