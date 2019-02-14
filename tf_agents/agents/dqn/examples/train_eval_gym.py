@@ -286,7 +286,7 @@ def train_eval(
 
 def main(_):
   logging.set_verbosity(logging.INFO)
-  agent_class = dqn_agent.DdqnAgent if FLAGS.use_ddqn else dqn_agent.DdqnAgent
+  agent_class = dqn_agent.DdqnAgent if FLAGS.use_ddqn else dqn_agent.DqnAgent
   train_eval(
       FLAGS.root_dir,
       agent_class=agent_class,
