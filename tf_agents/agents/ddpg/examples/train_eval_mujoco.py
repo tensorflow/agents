@@ -187,7 +187,7 @@ def train_eval(
     initial_collect_op = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
-        observers=[replay_buffer.add_batch],
+        observers=[replay_buffer.add_batch] + train_metrics,
         num_steps=initial_collect_steps).run()
 
     collect_op = dynamic_step_driver.DynamicStepDriver(

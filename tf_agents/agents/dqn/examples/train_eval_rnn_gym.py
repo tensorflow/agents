@@ -162,7 +162,7 @@ def train_eval(
     initial_collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         initial_collect_policy,
-        observers=[replay_buffer.add_batch],
+        observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=initial_collect_steps).run()
 
     collect_policy = tf_agent.collect_policy()

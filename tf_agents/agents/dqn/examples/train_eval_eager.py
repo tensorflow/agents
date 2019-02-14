@@ -167,7 +167,7 @@ def train_eval(
     dynamic_step_driver.DynamicStepDriver(
         tf_env,
         initial_collect_policy,
-        observers=[replay_buffer.add_batch],
+        observers=[replay_buffer.add_batch] + train_metrics,
         num_steps=initial_collect_steps).run()
 
     metrics = metric_utils.eager_compute(
