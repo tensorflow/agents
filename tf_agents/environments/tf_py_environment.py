@@ -48,7 +48,7 @@ def _check_not_called_concurrently(lock):
     lock.release()
 
 
-class TFPyEnvironment(tf_environment.Base):
+class TFPyEnvironment(tf_environment.TFEnvironment):
   """Exposes a Python environment as an in-graph TF environment.
 
   This class supports Python environments that return nests of arrays as
@@ -108,7 +108,7 @@ class TFPyEnvironment(tf_environment.Base):
   # autograph-converted functions.
   # TODO(b/123600776): Remove override.
   @autograph.do_not_convert()
-  def current_time_step(self):
+  def _current_time_step(self):
     """Returns the current ts.TimeStep.
 
     Returns:
@@ -121,7 +121,7 @@ class TFPyEnvironment(tf_environment.Base):
           corresponding to `observation_spec()`.
     """
 
-    def _current_time_step():
+    def _current_time_step_py():
       with _check_not_called_concurrently(self._lock):
         if self._time_step is None:
           self._time_step = self._env.reset()
@@ -129,7 +129,7 @@ class TFPyEnvironment(tf_environment.Base):
 
     with tf.name_scope('current_time_step'):
       outputs = tf.py_function(
-          _current_time_step,
+          _current_time_step_py,
           [],  # No inputs.
           self._time_step_dtypes,
           name='current_time_step_py_func')
@@ -141,7 +141,7 @@ class TFPyEnvironment(tf_environment.Base):
   # Make sure this is called without conversion from tf.function.
   # TODO(b/123600776): Remove override.
   @autograph.do_not_convert()
-  def reset(self):
+  def _reset(self):
     """Returns the current `TimeStep` after resetting the environment.
 
     Returns:
@@ -154,13 +154,13 @@ class TFPyEnvironment(tf_environment.Base):
           corresponding to `observation_spec()`.
     """
 
-    def _reset():
+    def _reset_py():
       with _check_not_called_concurrently(self._lock):
         self._time_step = self._env.reset()
 
     with tf.name_scope('reset'):
       reset_op = tf.py_function(
-          _reset,
+          _reset_py,
           [],  # No inputs.
           [],
           name='reset_py_func')
@@ -170,7 +170,7 @@ class TFPyEnvironment(tf_environment.Base):
   # Make sure this is called without conversion from tf.function.
   # TODO(b/123600776): Remove override.
   @autograph.do_not_convert()
-  def step(self, actions):
+  def _step(self, actions):
     """Returns a TensorFlow op to step the environment.
 
     Args:
@@ -191,7 +191,7 @@ class TFPyEnvironment(tf_environment.Base):
       and is not equal to `self.batch_size`.
     """
 
-    def _step(*flattened_actions):
+    def _step_py(*flattened_actions):
       with _check_not_called_concurrently(self._lock):
         flattened_actions = [x.numpy() for x in flattened_actions]
         packed = tf.nest.pack_sequence_as(
@@ -210,7 +210,7 @@ class TFPyEnvironment(tf_environment.Base):
               'but saw action with shape %s:\n   %s' % (self.batch_size,
                                                         action.shape, action))
       outputs = tf.py_function(
-          _step,
+          _step_py,
           flat_actions,
           self._time_step_dtypes,
           name='step_py_func')

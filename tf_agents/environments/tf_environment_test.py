@@ -30,7 +30,7 @@ MID = ts.StepType.MID
 LAST = ts.StepType.LAST
 
 
-class TFEnvironmentMock(tf_environment.Base):
+class TFEnvironmentMock(tf_environment.TFEnvironment):
   """MockTFEnvironment.
 
   Stores all actions taken in `actions_taken`. The returned values are:
@@ -55,8 +55,7 @@ class TFEnvironmentMock(tf_environment.Base):
       self.episodes = tf.Variable(0, name='episodes')
       self.resets = tf.Variable(0, name='resets')
 
-  def current_time_step(self):
-
+  def _current_time_step(self):
     def first():
       return (tf.constant(FIRST, dtype=tf.int32),
               tf.constant(0.0, dtype=tf.float32),
@@ -77,7 +76,7 @@ class TFEnvironmentMock(tf_environment.Base):
         exclusive=True, strict=True)
     return ts.TimeStep(step_type, reward, discount, state_value)
 
-  def reset(self):
+  def _reset(self):
     increase_resets = self.resets.assign_add(1)
     with tf.control_dependencies([increase_resets]):
       reset_op = self._state.assign(self._initial_state)
@@ -85,7 +84,7 @@ class TFEnvironmentMock(tf_environment.Base):
       time_step = self.current_time_step()
     return time_step
 
-  def step(self, action):
+  def _step(self, action):
     action = tf.convert_to_tensor(value=action)
     with tf.control_dependencies(tf.nest.flatten(action)):
       state_assign = self._state.assign_add(1)

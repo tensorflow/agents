@@ -32,12 +32,13 @@ def get_tf_env(environment):
     raise ValueError('`environment` cannot be None')
   if isinstance(environment, py_environment.Base):
     tf_env = tf_py_environment.TFPyEnvironment(environment)
-  elif isinstance(environment, tf_environment.Base):
+  elif isinstance(environment, tf_environment.TFEnvironment):
     tf_env = environment
   else:
     raise ValueError(
         '`environment` %s must be an instance of '
-        '`tf_environment.Base` or `py_environment.Base`.' % environment)
+        '`tf_environment.TFEnvironment` or `py_environment.Base`.' %
+        environment)
   return tf_env
 
 
