@@ -209,6 +209,35 @@ def add_gradients_summaries(grads_and_vars):
         logging.info('Var %s has no gradient', var.name)
 
 
+def clip_gradient_norms(gradients_to_variables, max_norm):
+  """Clips the gradients by the given value.
+
+  Args:
+    gradients_to_variables: A list of gradient to variable pairs (tuples).
+    max_norm: the maximum norm value.
+
+  Returns:
+    A list of clipped gradient to variable pairs.
+  """
+  clipped_grads_and_vars = []
+  for grad, var in gradients_to_variables:
+    if grad is not None:
+      if isinstance(grad, tf.IndexedSlices):
+        tmp = tf.clip_by_norm(grad.values, max_norm)
+        grad = tf.IndexedSlices(tmp, grad.indices, grad.dense_shape)
+      else:
+        grad = tf.clip_by_norm(grad, max_norm)
+    clipped_grads_and_vars.append((grad, var))
+  return clipped_grads_and_vars
+
+
+def clip_gradient_norms_fn(max_norm):
+  """Returns a `transform_grads_fn` function for gradient clipping."""
+  def clip_norms(gradients_to_variables):
+    return clip_gradient_norms(gradients_to_variables, max_norm)
+  return clip_norms
+
+
 def create_train_step(loss,
                       optimizer,
                       global_step=_USE_GLOBAL_STEP,

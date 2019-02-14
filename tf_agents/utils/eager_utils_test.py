@@ -301,6 +301,48 @@ class EagerUtilsTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(loss), final_loss)
 
 
+class ClipGradsTest(tf.test.TestCase):
+
+  def testClipGrads(self):
+    xs = tf.Variable(0.0)
+    grads = tf.constant(4.0)
+    gradients_to_variables = [(grads, xs)]
+    clipped_gradients_to_variables = eager_utils.clip_gradient_norms(
+        gradients_to_variables, 3.0)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAlmostEqual(4.0, self.evaluate(gradients_to_variables[0][0]))
+    self.assertAlmostEqual(3.0,
+                           self.evaluate(clipped_gradients_to_variables[0][0]))
+
+  def testClipGradsIndexedSlices(self):
+    xs = tf.Variable(0.0)
+    grads = tf.IndexedSlices(values=tf.constant(4.0),
+                             indices=tf.constant([0]),
+                             dense_shape=None)
+    gradients_to_variables = [(grads, xs)]
+    clipped_gradients_to_variables = eager_utils.clip_gradient_norms(
+        gradients_to_variables, 3.0)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAlmostEqual(
+        4.0, self.evaluate(gradients_to_variables[0][0].values))
+    self.assertAlmostEqual(
+        3.0, self.evaluate(clipped_gradients_to_variables[0][0].values))
+
+  def testClipGradsFn(self):
+    xs = tf.Variable(0.0)
+    grads = tf.constant(4.0)
+    gradients_to_variables = [(grads, xs)]
+    clipped_gradients_to_variables = eager_utils.clip_gradient_norms_fn(3.0)(
+        gradients_to_variables)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAlmostEqual(4.0, self.evaluate(gradients_to_variables[0][0]))
+    self.assertAlmostEqual(3.0,
+                           self.evaluate(clipped_gradients_to_variables[0][0]))
+
+
 class CreateTrainOpTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
