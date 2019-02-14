@@ -121,7 +121,7 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     clip_gradients = None
     if self._gradient_clipping:
-      clip_gradients = tf.contrib.training.clip_gradient_norms_fn(
+      clip_gradients = eager_utils.clip_gradient_norms_fn(
           self._gradient_clipping)
 
     loss_info = eager_utils.create_train_step(

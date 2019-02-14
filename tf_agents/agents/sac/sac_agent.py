@@ -32,6 +32,7 @@ from tf_agents.agents import tf_agent
 from tf_agents.distributions import tanh_bijector_stable
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
+from tf_agents.utils import eager_utils
 import tf_agents.utils.common as common_utils
 
 import gin.tf
@@ -201,8 +202,9 @@ class SacAgent(tf_agent.TFAgent):
     def clip_and_summarize_gradients(grads_and_vars):
       """Clips gradients, and summarizes gradients and variables."""
       if self._gradient_clipping is not None:
-        grads_and_vars = tf.contrib.training.clip_gradient_norms_fn(
-            self._gradient_clipping)(grads_and_vars)
+        grads_and_vars = eager_utils.clip_gradient_norms_fn(
+            self._gradient_clipping)(
+                grads_and_vars)
 
       if self._summarize_grads_and_vars:
         # TODO(kbanoop): Move gradient summaries to train_op after we switch to

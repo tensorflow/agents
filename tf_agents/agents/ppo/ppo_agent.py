@@ -388,8 +388,7 @@ class PPOAgent(tf_agent.TFAgent):
                   kl_penalty_loss)
 
     if gradient_clipping > 0:
-      clip_gradients = tf.contrib.training.clip_gradient_norms_fn(
-          gradient_clipping)
+      clip_gradients = eager_utils.clip_gradient_norms_fn(gradient_clipping)
     else:
       clip_gradients = lambda x: x
 

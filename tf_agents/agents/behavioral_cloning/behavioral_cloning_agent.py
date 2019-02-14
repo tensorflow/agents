@@ -186,7 +186,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
     transform_grads_fn = None
     if self._gradient_clipping is not None:
-      transform_grads_fn = tf.contrib.training.clip_gradient_norms_fn(
+      transform_grads_fn = eager_utils.clip_gradient_norms_fn(
           self._gradient_clipping)
 
     loss_info = eager_utils.create_train_step(
