@@ -34,7 +34,7 @@ from tf_agents.utils import nest_utils
 class FixedPolicy(tf_policy.Base):
   """A policy which always returns a fixed action."""
 
-  def __init__(self, actions, time_step_spec, action_spec):
+  def __init__(self, actions, time_step_spec, action_spec, name=None):
     """A policy which always returns a fixed action.
 
     Args:
@@ -42,8 +42,10 @@ class FixedPolicy(tf_policy.Base):
         corresponding to `action_spec()`.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
     """
-    super(FixedPolicy, self).__init__(time_step_spec, action_spec)
+    super(FixedPolicy, self).__init__(time_step_spec, action_spec, name=name)
     tf.nest.assert_same_structure(self._action_spec, actions)
 
     def convert(action, spec):

@@ -44,8 +44,7 @@ BufferInfo = collections.namedtuple('BufferInfo',
 
 
 @gin.configurable
-class TFUniformReplayBuffer(replay_buffer.ReplayBuffer,
-                            tf.contrib.eager.Checkpointable):
+class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
   """A TFUniformReplayBuffer with batched adds and uniform sampling."""
 
   def __init__(self,

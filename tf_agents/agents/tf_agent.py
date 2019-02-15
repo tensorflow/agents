@@ -21,8 +21,6 @@ from __future__ import print_function
 
 import abc
 import collections
-import six
-
 import tensorflow as tf
 
 from tf_agents.environments import trajectory
@@ -33,8 +31,8 @@ from tf_agents.utils import nest_utils
 LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
 
 
-@six.add_metaclass(abc.ABCMeta)
-class TFAgent(tf.contrib.eager.Checkpointable):
+# TODO(b/124516032) Rename to tf.Module once that symbol is exposed
+class TFAgent(tf.experimental.Module):
   """Abstract base class for TF RL agents."""
 
   def __init__(self,

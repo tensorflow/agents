@@ -45,7 +45,8 @@ class ReinforceAgent(tf_agent.TFAgent):
                normalize_returns=True,
                gradient_clipping=None,
                debug_summaries=False,
-               summarize_grads_and_vars=False):
+               summarize_grads_and_vars=False,
+               name=None):
     """Creates a REINFORCE Agent.
 
     Args:
@@ -60,7 +61,10 @@ class ReinforceAgent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
+      name: The name of this agent. All variables in this module will fall
+        under that name. Defaults to the class name.
     """
+    tf.experimental.Module.__init__(self, name=name)
 
     self._actor_network = actor_network
     collect_policy = actor_policy.ActorPolicy(

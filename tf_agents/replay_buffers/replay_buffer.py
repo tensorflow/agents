@@ -20,13 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import six
-
 import tensorflow as tf
 
 
-@six.add_metaclass(abc.ABCMeta)
-class ReplayBuffer(tf.contrib.eager.Checkpointable):
+class ReplayBuffer(tf.experimental.Module):
   """Abstract base class for TF-Agents replay buffer.
 
   In eager mode, methods modify the buffer or return values directly. In graph
@@ -41,6 +38,7 @@ class ReplayBuffer(tf.contrib.eager.Checkpointable):
         a single item that can be stored in this buffer
       capacity: number of elements that the replay buffer can hold.
     """
+    super(ReplayBuffer, self).__init__()
     self._data_spec = data_spec
     self._capacity = capacity
 

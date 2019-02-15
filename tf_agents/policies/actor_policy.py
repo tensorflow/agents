@@ -45,7 +45,8 @@ class ActorPolicy(tf_policy.Base):
                actor_network=None,
                info_spec=(),
                observation_normalizer=None,
-               clip=True):
+               clip=True,
+               name=None):
     """Builds an Actor Policy given a actor network.
 
     Args:
@@ -58,6 +59,8 @@ class ActorPolicy(tf_policy.Base):
       clip: Whether to clip actions to spec before returning them.  Default
         True. Most policy-based algorithms (PCL, PPO, REINFORCE) use unclipped
         continuous actions for training.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
 
     Raises:
       ValueError: if actor_network is not of type network.Network.
@@ -73,7 +76,8 @@ class ActorPolicy(tf_policy.Base):
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         policy_state_spec=actor_network.state_spec,
-        info_spec=info_spec)
+        info_spec=info_spec,
+        name=name)
 
   def _apply_actor_network(self, time_step, policy_state):
     observation = time_step.observation

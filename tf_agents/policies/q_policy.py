@@ -35,7 +35,8 @@ class QPolicy(tf_policy.Base):
   def __init__(self,
                time_step_spec=None,
                action_spec=None,
-               q_network=None):
+               q_network=None,
+               name=None):
     """Builds a Q-Policy given a q_network.
 
     Args:
@@ -43,6 +44,8 @@ class QPolicy(tf_policy.Base):
       action_spec: A nest of BoundedTensorSpec representing the actions.
       q_network: An instance of a `tf_agents.network.Network`,
         callable via `network(observation, step_type) -> (output, final_state)`.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
 
     Raises:
       NotImplementedError: If `action_spec` contains more than one
@@ -59,7 +62,8 @@ class QPolicy(tf_policy.Base):
     self._q_network = q_network
     super(QPolicy, self).__init__(
         time_step_spec, action_spec,
-        policy_state_spec=q_network.state_spec)
+        policy_state_spec=q_network.state_spec,
+        name=name)
 
   def _variables(self):
     return self._q_network.variables

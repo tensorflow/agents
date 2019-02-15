@@ -34,9 +34,10 @@ from tf_agents.specs import tensor_spec
 class DistributionPolicy(tf_policy.Base):
   """A policy which always returns the configured distribution."""
 
-  def __init__(self, distribution, time_step_spec, action_spec):
+  def __init__(self, distribution, time_step_spec, action_spec, name=None):
     self._distribution_value = distribution
-    super(DistributionPolicy, self).__init__(time_step_spec, action_spec)
+    super(DistributionPolicy, self).__init__(
+        time_step_spec, action_spec, name=name)
 
   def _action(self, time_step, policy_state, seed):
     raise NotImplementedError('Not implemented.')

@@ -197,7 +197,7 @@ def periodically(body, period, name='periodically'):
     return Periodically(body, period, name)()
 
 
-class Periodically(tf.contrib.eager.Checkpointable):
+class Periodically(tf.experimental.Module):
   """Periodically performs the ops defined in `body`."""
 
   def __init__(self, body, period, scope='periodically'):
@@ -229,6 +229,7 @@ class Periodically(tf.contrib.eager.Checkpointable):
     Returns:
       An op that periodically performs the specified op.
     """
+    super(Periodically, self).__init__(name=scope)
     if not callable(body):
       raise TypeError('body must be callable.')
     self._body = body

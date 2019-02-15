@@ -29,16 +29,19 @@ from tf_agents.policies import tf_policy
 class GreedyPolicy(tf_policy.Base):
   """Returns greedy samples of a given policy."""
 
-  def __init__(self, policy):
+  def __init__(self, policy, name=None):
     """Builds a greedy TFPolicy wrapping the given policy.
 
     Args:
       policy: A policy implementing the tf_policy.Base interface.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
     """
     super(GreedyPolicy, self).__init__(policy.time_step_spec(),
                                        policy.action_spec(),
                                        policy.policy_state_spec(),
-                                       policy.info_spec())
+                                       policy.info_spec(),
+                                       name=name)
     self._wrapped_policy = policy
 
   def _variables(self):

@@ -126,7 +126,8 @@ class PPOAgent(tf_agent.TFAgent):
                gradient_clipping=None,
                check_numerics=False,
                debug_summaries=False,
-               summarize_grads_and_vars=False):
+               summarize_grads_and_vars=False,
+               name=None):
     """Creates a PPO Agent.
 
     Args:
@@ -178,10 +179,14 @@ class PPOAgent(tf_agent.TFAgent):
         values. For debugging only.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
+      name: The name of this agent. All variables in this module will fall
+        under that name. Defaults to the class name.
 
     Raises:
       ValueError: If the actor_net is not a DistributionNetwork.
     """
+    tf.experimental.Module.__init__(self, name=name)
+
     if not isinstance(actor_net, network.DistributionNetwork):
       raise ValueError(
           'actor_net must be an instance of a DistributionNetwork.')

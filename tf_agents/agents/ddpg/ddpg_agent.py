@@ -63,7 +63,8 @@ class DdpgAgent(tf_agent.TFAgent):
                reward_scale_factor=1.0,
                gradient_clipping=None,
                debug_summaries=False,
-               summarize_grads_and_vars=False):
+               summarize_grads_and_vars=False,
+               name=None):
     """Creates a DDPG Agent.
 
     Args:
@@ -92,7 +93,10 @@ class DdpgAgent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
+      name: The name of this agent. All variables in this module will fall
+        under that name. Defaults to the class name.
     """
+    tf.experimental.Module.__init__(self, name=name)
     self._actor_network = actor_network
     self._target_actor_network = self._actor_network.copy(
         name='TargetActorNetwork')

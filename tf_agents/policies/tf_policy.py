@@ -20,8 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import six
-
 import tensorflow as tf
 
 from tf_agents.environments import trajectory
@@ -29,8 +27,7 @@ from tf_agents.policies import policy_step
 from tf_agents.utils import common
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Base(tf.contrib.eager.Checkpointable):
+class Base(tf.experimental.Module):
   """Abstract base class for TF Policies.
 
   Example of simple use in TF:
@@ -104,7 +101,7 @@ class Base(tf.contrib.eager.Checkpointable):
   """
 
   def __init__(self, time_step_spec, action_spec,
-               policy_state_spec=(), info_spec=()):
+               policy_state_spec=(), info_spec=(), name=None):
     """Initialization of Base class.
 
     Args:
@@ -116,7 +113,9 @@ class Base(tf.contrib.eager.Checkpointable):
         Provided by the subclass, not directly by the user.
       info_spec: A nest of TensorSpec representing the policy info.
         Provided by the subclass, not directly by the user.
+      name: A name for this module. Defaults to the class name.
     """
+    super(Base, self).__init__(name=name)
     common.assert_members_are_not_overridden(base_cls=Base, instance=self)
 
     self._time_step_spec = time_step_spec

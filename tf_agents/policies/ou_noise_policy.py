@@ -37,7 +37,8 @@ class OUNoisePolicy(tf_policy.Base):
                wrapped_policy,
                ou_stddev=1.0,
                ou_damping=1.0,
-               clip=True):
+               clip=True,
+               name=None):
     """Builds an OUNoisePolicy wrapping wrapped_policy.
 
     Args:
@@ -45,6 +46,7 @@ class OUNoisePolicy(tf_policy.Base):
       ou_stddev:  stddev for the Ornstein-Uhlenbeck noise.
       ou_damping: damping factor for the Ornstein-Uhlenbeck noise.
       clip: Whether to clip actions to spec. Default True.
+      name: The name of this policy.
     """
     def _validate_action_spec(action_spec):
       if not tensor_spec.is_continuous(action_spec):
@@ -56,7 +58,8 @@ class OUNoisePolicy(tf_policy.Base):
         wrapped_policy.time_step_spec(),
         wrapped_policy.action_spec(),
         wrapped_policy.policy_state_spec(),
-        wrapped_policy.info_spec())
+        wrapped_policy.info_spec(),
+        name=name)
     self._ou_stddev = ou_stddev
     self._ou_damping = ou_damping
     self._ou_process = None

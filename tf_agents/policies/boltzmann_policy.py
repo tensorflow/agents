@@ -30,7 +30,7 @@ class BoltzmannPolicy(tf_policy.Base):
   The wrapped policy must expose a distribution parameterized by logits.
   """
 
-  def __init__(self, policy, temperature=1.0):
+  def __init__(self, policy, temperature=1.0, name=None):
     """Builds a BoltzmannPolicy wrapping the given policy.
 
     Args:
@@ -41,11 +41,14 @@ class BoltzmannPolicy(tf_policy.Base):
 
         If `temperature` is close to 0.0 this is equivalent to calling
         `tf.argmax` on the output of the network.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
     """
     super(BoltzmannPolicy, self).__init__(policy.time_step_spec(),
                                           policy.action_spec(),
                                           policy.policy_state_spec(),
-                                          policy.info_spec())
+                                          policy.info_spec(),
+                                          name=name)
     if temperature == 1.0:
       self._temperature = None
     else:

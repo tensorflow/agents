@@ -28,13 +28,16 @@ from tf_agents.policies import tf_policy
 class TfPolicyHoldsVariables(tf_policy.Base):
   """Test tf_policy which contains only trainable variables."""
 
-  def __init__(self, init_var_value, var_scope):
+  def __init__(self, init_var_value, var_scope, name=None):
     """Initializes policy containing variables with specified value.
 
     Args:
       init_var_value: A scalar specifies the initial value of all variables.
       var_scope: A String defines variable scope.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
     """
+    tf.experimental.Module.__init__(self, name=name)
     const_init = tf.compat.v1.initializers.constant(init_var_value)
     with tf.compat.v1.variable_scope(var_scope):
       self._variables_list = [

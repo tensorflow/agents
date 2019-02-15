@@ -37,13 +37,14 @@ tfd = tfp.distributions
 class EpsilonGreedyPolicy(tf_policy.Base):
   """Returns epsilon-greedy samples of a given policy."""
 
-  def __init__(self, policy, epsilon):
+  def __init__(self, policy, epsilon, name=None):
     """Builds an epsilon-greedy MixturePolicy wrapping the given policy.
 
     Args:
       policy: A policy implementing the tf_policy.Base interface.
       epsilon: A float scalar or a scalar Tensor of shape=(), corresponding to
         the probability of taking the random action.
+      name: The name of this policy.
     Raises:
       ValueError: If epsilon is invalid.
     """
@@ -54,7 +55,8 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     super(EpsilonGreedyPolicy, self).__init__(policy.time_step_spec(),
                                               policy.action_spec(),
                                               policy.policy_state_spec(),
-                                              policy.info_spec())
+                                              policy.info_spec(),
+                                              name=name)
 
   def _variables(self):
     return self._greedy_policy.variables()

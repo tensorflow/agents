@@ -43,24 +43,21 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import six
-
 import tensorflow as tf
 
 from tf_agents.utils.common import create_counter
 
 
-@six.add_metaclass(abc.ABCMeta)
-class TensorNormalizer(tf.contrib.eager.Checkpointable):
+class TensorNormalizer(tf.experimental.Module):
   """Encapsulates tensor normalization and owns normalization variables."""
 
   def __init__(self,
                tensor_spec,
                scope='normalize_tensor'):
+    super(TensorNormalizer, self).__init__(name=scope)
     self._scope = scope
     self._tensor_spec = tensor_spec
-    with tf.compat.v1.variable_scope(self._scope):
-      self._create_variables()
+    self._create_variables()
 
   @property
   def nested(self):

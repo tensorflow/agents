@@ -37,11 +37,13 @@ class TFPyPolicy(tf_policy.Base):
   # converting between TF and Py policies.
   """
 
-  def __init__(self, policy):
+  def __init__(self, policy, name=None):
     """Initializes a new `TFPyPolicy` instance with an Pyton policy .
 
     Args:
       policy: Python policy implementing `py_policy.Base`.
+      name: The name of this policy. All variables in this module will fall
+        under that name. Defaults to the class name.
 
     Raises:
       TypeError: if a non python policy is passed to constructor.
@@ -63,7 +65,8 @@ class TFPyPolicy(tf_policy.Base):
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         policy_state_spec=policy_state_spec,
-        info_spec=info_spec)
+        info_spec=info_spec,
+        name=name)
 
     # Output types of py_funcs.
     self._policy_state_dtypes = map_tensor_spec_to_dtypes_list(

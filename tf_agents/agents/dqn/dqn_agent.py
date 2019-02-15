@@ -119,7 +119,8 @@ class DqnAgent(tf_agent.TFAgent):
       gradient_clipping=None,
       # Params for debugging
       debug_summaries=False,
-      summarize_grads_and_vars=False):
+      summarize_grads_and_vars=False,
+      name=None):
     """Creates a DQN Agent.
 
     Args:
@@ -146,11 +147,15 @@ class DqnAgent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
+      name: The name of this agent. All variables in this module will fall
+        under that name. Defaults to the class name.
 
     Raises:
       ValueError: If the action spec contains more than one action or action
         spec minimum is not equal to 0.
     """
+    tf.experimental.Module.__init__(self, name=name)
+
     flat_action_spec = tf.nest.flatten(action_spec)
     self._num_actions = [
         spec.maximum - spec.minimum + 1 for spec in flat_action_spec
