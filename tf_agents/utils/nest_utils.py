@@ -24,6 +24,18 @@ import numpy as np
 import tensorflow as tf
 
 
+def fast_map_structure_flatten(func, structure, *flat_structure):
+  entries = zip(*flat_structure)
+  return tf.nest.pack_sequence_as(structure, [func(*x) for x in entries])
+
+
+def fast_map_structure(func, *structure):
+  flat_structure = [tf.nest.flatten(s) for s in structure]
+  entries = zip(*flat_structure)
+
+  return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
+
+
 def has_tensors(*x):
   return np.any([tf.is_tensor(t) for t in tf.nest.flatten(x)])
 
