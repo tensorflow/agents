@@ -31,8 +31,7 @@ from tf_agents.utils import nest_utils
 LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
 
 
-# TODO(b/124516032) Rename to tf.Module once that symbol is exposed
-class TFAgent(tf.experimental.Module):
+class TFAgent(tf.Module):
   """Abstract base class for TF RL agents."""
 
   def __init__(self,

@@ -37,7 +37,7 @@ class TfPolicyHoldsVariables(tf_policy.Base):
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    tf.experimental.Module.__init__(self, name=name)
+    tf.Module.__init__(self, name=name)
     const_init = tf.compat.v1.initializers.constant(init_var_value)
     with tf.compat.v1.variable_scope(var_scope):
       self._variables_list = [

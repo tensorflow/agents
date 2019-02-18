@@ -100,7 +100,7 @@ class SacAgent(tf_agent.TFAgent):
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    tf.experimental.Module.__init__(self, name=name)
+    tf.Module.__init__(self, name=name)
 
     self._critic_network1 = critic_network
     self._critic_network2 = critic_network.copy(

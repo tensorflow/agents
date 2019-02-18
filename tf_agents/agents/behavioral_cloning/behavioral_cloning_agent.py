@@ -125,7 +125,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     Raises:
       NotImplementedError: If the action spec contains more than one action.
     """
-    tf.experimental.Module.__init__(self, name=name)
+    tf.Module.__init__(self, name=name)
 
     flat_action_spec = tf.nest.flatten(action_spec)
     self._num_actions = [

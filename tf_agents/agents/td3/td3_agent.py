@@ -105,7 +105,7 @@ class Td3Agent(tf_agent.TFAgent):
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    tf.experimental.Module.__init__(self, name=name)
+    tf.Module.__init__(self, name=name)
 
     self._actor_network = actor_network
     self._target_actor_network = actor_network.copy(

@@ -197,7 +197,7 @@ def periodically(body, period, name='periodically'):
     return Periodically(body, period, name)()
 
 
-class Periodically(tf.experimental.Module):
+class Periodically(tf.Module):
   """Periodically performs the ops defined in `body`."""
 
   def __init__(self, body, period, scope='periodically'):

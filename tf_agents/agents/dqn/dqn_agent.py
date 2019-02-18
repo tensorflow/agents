@@ -154,7 +154,7 @@ class DqnAgent(tf_agent.TFAgent):
       ValueError: If the action spec contains more than one action or action
         spec minimum is not equal to 0.
     """
-    tf.experimental.Module.__init__(self, name=name)
+    tf.Module.__init__(self, name=name)
 
     flat_action_spec = tf.nest.flatten(action_spec)
     self._num_actions = [

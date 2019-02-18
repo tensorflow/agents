@@ -48,7 +48,7 @@ import tensorflow as tf
 from tf_agents.utils.common import create_counter
 
 
-class TensorNormalizer(tf.experimental.Module):
+class TensorNormalizer(tf.Module):
   """Encapsulates tensor normalization and owns normalization variables."""
 
   def __init__(self,

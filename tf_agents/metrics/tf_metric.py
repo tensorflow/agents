@@ -23,7 +23,7 @@ import tensorflow as tf
 from tf_agents.utils import common as common_utils
 
 
-class TFStepMetric(tf.experimental.Module):
+class TFStepMetric(tf.Module):
   """Defines the interface for TF metrics."""
 
   def __init__(self, name, prefix='Metrics'):

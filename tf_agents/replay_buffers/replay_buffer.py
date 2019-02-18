@@ -23,7 +23,7 @@ import abc
 import tensorflow as tf
 
 
-class ReplayBuffer(tf.experimental.Module):
+class ReplayBuffer(tf.Module):
   """Abstract base class for TF-Agents replay buffer.
 
   In eager mode, methods modify the buffer or return values directly. In graph

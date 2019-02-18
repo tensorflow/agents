@@ -27,7 +27,7 @@ from tf_agents.policies import policy_step
 from tf_agents.utils import common
 
 
-class Base(tf.experimental.Module):
+class Base(tf.Module):
   """Abstract base class for TF Policies.
 
   Example of simple use in TF:
