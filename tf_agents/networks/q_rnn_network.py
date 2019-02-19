@@ -55,12 +55,12 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         actions.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
         representing preprocessing for the different observations.
-        All of these layers must not be already built.  For more details see
+        All of these layers must not be already built. For more details see
         the documentation of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
         of tensors and combines them.  Good options include
         `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must be already built.  For more details see
+        This layer must not be already built. For more details see
         the documentation of `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
