@@ -287,7 +287,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     continuous_actions = self._map_actions(action, self._action_map)
     env_action_spec = self._env.action_spec()
 
-    if tf.contrib.framework.nest.is_sequence(env_action_spec):
+    if tf.nest.is_nested(env_action_spec):
       continuous_actions = tf.nest.pack_sequence_as(env_action_spec,
                                                     [continuous_actions])
     return self._env.step(continuous_actions)
@@ -330,7 +330,7 @@ class ActionOffsetWrapper(PyEnvironmentBaseWrapper):
 
   def __init__(self, env):
     super(ActionOffsetWrapper, self).__init__(env)
-    if tf.contrib.framework.nest.is_sequence(self._env.action_spec()):
+    if tf.nest.is_nested(self._env.action_spec()):
       raise ValueError('ActionOffsetWrapper only works with single-array '
                        'action specs (not nested specs).')
     if not tensor_spec.is_bounded(self._env.action_spec()):

@@ -70,7 +70,7 @@ def _infer_state_dtype(explicit_dtype, state):
   """
   if explicit_dtype is not None:
     return explicit_dtype
-  elif tf.contrib.framework.nest.is_sequence(state):
+  elif tf.nest.is_nested(state):
     inferred_dtypes = [element.dtype for element in tf.nest.flatten(state)]
     if not inferred_dtypes:
       raise ValueError("Unable to infer dtype from empty state.")

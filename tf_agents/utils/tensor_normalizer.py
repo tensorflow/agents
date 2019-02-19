@@ -62,7 +62,7 @@ class TensorNormalizer(tf.Module):
   @property
   def nested(self):
     """True if tensor is nested, False otherwise."""
-    return tf.contrib.framework.nest.is_sequence(self._tensor_spec)
+    return tf.nest.is_nested(self._tensor_spec)
 
   @abc.abstractmethod
   def copy(self, scope=None):
