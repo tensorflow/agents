@@ -228,7 +228,7 @@ class SacAgent(tf_agent.TFAgent):
       tf.contrib.summary.scalar('actor_loss', actor_loss)
       tf.contrib.summary.scalar('alpha_loss', alpha_loss)
 
-    critic_train_op = tf.contrib.training.create_train_op(
+    critic_train_op = eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
         global_step=train_step_counter,
@@ -237,7 +237,7 @@ class SacAgent(tf_agent.TFAgent):
                             self._critic_network2.trainable_weights),
     )
 
-    actor_train_op = tf.contrib.training.create_train_op(
+    actor_train_op = eager_utils.create_train_op(
         actor_loss,
         self._actor_optimizer,
         global_step=None,
@@ -245,7 +245,7 @@ class SacAgent(tf_agent.TFAgent):
         variables_to_train=self._actor_network.trainable_weights,
     )
 
-    alpha_train_op = tf.contrib.training.create_train_op(
+    alpha_train_op = eager_utils.create_train_op(
         alpha_loss,
         self._alpha_optimizer,
         global_step=None,

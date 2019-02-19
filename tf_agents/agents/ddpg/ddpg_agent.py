@@ -210,7 +210,7 @@ class DdpgAgent(tf_agent.TFAgent):
               tf.contrib.summary.histogram(var.op.name, var)
       return grads_and_vars
 
-    critic_train_op = tf.contrib.training.create_train_op(
+    critic_train_op = eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
         global_step=train_step_counter,
@@ -218,7 +218,7 @@ class DdpgAgent(tf_agent.TFAgent):
         variables_to_train=self._critic_network.trainable_weights,
     )
 
-    actor_train_op = tf.contrib.training.create_train_op(
+    actor_train_op = eager_utils.create_train_op(
         actor_loss,
         self._actor_optimizer,
         global_step=None,

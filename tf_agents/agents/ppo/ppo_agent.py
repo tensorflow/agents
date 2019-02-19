@@ -411,7 +411,7 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       transform_grads_fn = clip_gradients
 
-    total_loss = tf.contrib.training.create_train_op(
+    total_loss = eager_utils.create_train_op(
         total_loss,
         self._optimizer,
         global_step=train_step,
