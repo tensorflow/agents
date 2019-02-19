@@ -45,9 +45,6 @@ class QRnnNetworkTest(tf.test.TestCase):
     self.assertEqual((1, 40), state[1].shape)
 
   def test_network_can_preprocess_and_combine(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123776211')
-
     batch_size = 3
     frames = 5
     num_actions = 2
@@ -68,7 +65,8 @@ class QRnnNetworkTest(tf.test.TestCase):
         lstm_size=(lstm_size,),
         action_spec=tensor_spec.BoundedTensorSpec(
             [1], tf.int32, 0, num_actions - 1))
-    empty_step_type = tf.constant([time_step.StepType.FIRST] * batch_size)
+    empty_step_type = tf.constant(
+        [[time_step.StepType.FIRST] * frames] * batch_size)
     q_values, _ = network(states, empty_step_type)
     self.assertAllEqual(
         q_values.shape.as_list(), [batch_size, frames, num_actions])
