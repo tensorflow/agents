@@ -127,7 +127,7 @@ from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at
 
 REQUIRED_PACKAGES = [
     'absl-py >= 0.6.1',
-    'gin-config >= 0.1.2',
+    'gin-config == 0.1.3',
     'numpy >= 1.13.3',
     'six >= 1.10.0',
     # tensorflow-probability added below
