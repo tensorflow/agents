@@ -37,7 +37,7 @@ class SuiteDMControlTest(absltest.TestCase):
 
   def testEnvRegistered(self):
     env = suite_dm_control.load('ball_in_cup', 'catch')
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
 
     utils.validate_py_environment(env)
 

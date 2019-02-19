@@ -36,8 +36,8 @@ from tf_agents.specs import tensor_spec
 import gin.tf
 
 
-class PyEnvironmentBaseWrapper(py_environment.Base):
-  """Base environment wrapper forwards calls to the given environment."""
+class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
+  """PyEnvironment wrapper forwards calls to the given environment."""
 
   def __init__(self, env):
     super(PyEnvironmentBaseWrapper, self).__init__()
@@ -383,7 +383,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     """Initializes a wrapper to flatten environment observations.
 
     Args:
-      env: A `py_environment.Base` environment to wrap.
+      env: A `py_environment.PyEnvironment` environment to wrap.
       observations_whitelist: A list of observation keys that want to be
         observed from the environment.  All other observations returned are
         filtered out.  If not provided, all observations will be kept.
@@ -571,7 +571,7 @@ class GoalReplayEnvWrapper(PyEnvironmentBaseWrapper):
     """Initializes a wrapper to add a goal to the observation.
 
     Args:
-      env: A `py_environment.Base` environment to wrap.
+      env: A `py_environment.PyEnvironment` environment to wrap.
 
     Raises:
       ValueError: If environment observation is not a dict

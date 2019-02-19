@@ -68,13 +68,15 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
 
     Args:
       environment: Environment to interact with, implementing
-        `py_environment.Base`.
+        `py_environment.PyEnvironment`.
 
     Raises:
-      TypeError: If `environment` is not a subclass of `py_environment.Base`.
+      TypeError: If `environment` is not a subclass of
+      `py_environment.PyEnvironment`.
     """
-    if not isinstance(environment, py_environment.Base):
-      raise TypeError('Environment should implement py_environment.Base')
+    if not isinstance(environment, py_environment.PyEnvironment):
+      raise TypeError(
+          'Environment should implement py_environment.PyEnvironment')
 
     if not environment.batched:
       environment = batched_py_environment.BatchedPyEnvironment([environment])

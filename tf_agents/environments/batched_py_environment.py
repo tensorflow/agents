@@ -34,7 +34,7 @@ import gin.tf
 
 
 @gin.configurable
-class BatchedPyEnvironment(py_environment.Base):
+class BatchedPyEnvironment(py_environment.PyEnvironment):
   """Batch together multiple py environments and act as a single batch.
 
   The environments should only access shared python variables using
@@ -136,7 +136,7 @@ class BatchedPyEnvironment(py_environment.Base):
     self._pool.join()
 
 
-# TODO(ebrevdo,sguada): Factor these helper functions out into common utils.
+# TODO(b/124447001): Factor these helper functions out into common utils.
 def stack_time_steps(time_steps):
   """Given a list of TimeStep, combine to one with a batch dimension."""
   return fast_map_structure(lambda *arrays: np.stack(arrays), *time_steps)

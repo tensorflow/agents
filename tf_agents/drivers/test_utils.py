@@ -39,7 +39,7 @@ def make_replay_buffer(policy):
       policy.trajectory_spec(), batch_size=1)
 
 
-class PyEnvironmentMock(py_environment.Base):
+class PyEnvironmentMock(py_environment.PyEnvironment):
   """Dummy Blackjack-like environment that increments `state` by `action`.
 
   The environment resets when state becomes greater or equal than final_state.

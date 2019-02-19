@@ -31,7 +31,7 @@ from tf_agents.environments import tf_py_environment
 from tf_agents.environments import time_step as ts
 
 
-class PYEnvironmentMock(py_environment.Base):
+class PYEnvironmentMock(py_environment.PyEnvironment):
   """MockPyEnvironment.
 
   Stores all actions taken in `actions_taken`. The returned values are:

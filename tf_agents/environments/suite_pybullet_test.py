@@ -37,7 +37,7 @@ class SuitePybulletTest(absltest.TestCase):
 
   def testPybulletEnvRegistered(self):
     env = suite_pybullet.load('InvertedPendulumBulletEnv-v0')
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
   def testGinConfig(self):
@@ -45,7 +45,7 @@ class SuitePybulletTest(absltest.TestCase):
         test_utils.test_src_dir_path('environments/configs/suite_pybullet.gin')
     )
     env = suite_pybullet.load()
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
 

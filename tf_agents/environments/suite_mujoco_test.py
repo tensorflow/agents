@@ -42,7 +42,7 @@ class SuiteMujocoTest(absltest.TestCase):
 
   def testMujocoEnvRegistered(self):
     env = suite_mujoco.load('HalfCheetah-v1')
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
   def testObservationSpec(self):
@@ -60,7 +60,7 @@ class SuiteMujocoTest(absltest.TestCase):
         test_utils.test_src_dir_path('environments/configs/suite_mujoco.gin')
     )
     env = suite_mujoco.load()
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
 

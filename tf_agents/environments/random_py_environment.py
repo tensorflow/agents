@@ -26,7 +26,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
 
 
-class RandomPyEnvironment(py_environment.Base):
+class RandomPyEnvironment(py_environment.PyEnvironment):
   """Randomly generates observations following the given observation_spec.
 
   If an action_spec is provided it validates that the actions used to step the
@@ -104,6 +104,12 @@ class RandomPyEnvironment(py_environment.Base):
     self._render_size = render_size
     super(RandomPyEnvironment, self).__init__()
 
+  def observation_spec(self):
+    return self._observation_spec
+
+  def action_spec(self):
+    return self._action_spec
+
   @property
   def batch_size(self):
     return self._batch_size
@@ -155,12 +161,6 @@ class RandomPyEnvironment(py_environment.Base):
       time_step = ts.transition(observation, reward, self._discount)
 
     return time_step
-
-  def observation_spec(self):
-    return self._observation_spec
-
-  def action_spec(self):
-    return self._action_spec
 
   def render(self, mode='rgb_array'):
     if mode != 'rgb_array':

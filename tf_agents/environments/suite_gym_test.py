@@ -38,24 +38,24 @@ class SuiteGymTest(absltest.TestCase):
 
   def test_load_adds_time_limit_steps(self):
     env = suite_gym.load('CartPole-v1')
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
   def test_load_disable_step_limit(self):
     env = suite_gym.load('CartPole-v1', max_episode_steps=0)
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertNotIsInstance(env, wrappers.TimeLimit)
 
   def test_load_disable_wrappers_applied(self):
     duration_wrapper = functools.partial(wrappers.TimeLimit, duration=10)
     env = suite_gym.load(
         'CartPole-v1', max_episode_steps=0, env_wrappers=(duration_wrapper,))
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
   def test_custom_max_steps(self):
     env = suite_gym.load('CartPole-v1', max_episode_steps=5)
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
     self.assertEqual(5, env._duration)
 
@@ -64,7 +64,7 @@ class SuiteGymTest(absltest.TestCase):
         test_utils.test_src_dir_path('environments/configs/suite_gym.gin')
     )
     env = suite_gym.load()
-    self.assertIsInstance(env, py_environment.Base)
+    self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
 

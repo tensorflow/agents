@@ -33,7 +33,7 @@ from tf_agents.environments import py_environment
 from tf_agents.utils import nest_utils
 
 
-class ParallelPyEnvironment(py_environment.Base):
+class ParallelPyEnvironment(py_environment.PyEnvironment):
   """Batch together environments and simulate them in external processes.
 
   The environments are created in external processes by calling the provided
