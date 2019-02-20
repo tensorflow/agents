@@ -29,6 +29,8 @@ from tf_agents import specs
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import wrappers
 
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
 
 def _spec_from_gym_space(space, dtype_map=None):
   """Converts gym spaces into array specs.
@@ -168,8 +170,7 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
       The observation with a dtype matching the observation spec.
     """
     # Make sure we handle cases where observations are provided as a list.
-    flat_obs = tf.contrib.framework.nest.flatten_up_to(
-        self._observation_spec, observation)
+    flat_obs = nest.flatten_up_to(self._observation_spec, observation)
 
     matched_observations = []
     for spec, obs in zip(self._flat_obs_spec, flat_obs):

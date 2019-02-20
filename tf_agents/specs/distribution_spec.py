@@ -19,8 +19,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
 import tensorflow_probability as tfp
+
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -108,6 +109,6 @@ def nested_distributions_from_specs(specs, parameters):
   Returns:
     Nest of distribution instances with the same structure as the given specs.
   """
-  return tf.contrib.framework.nest.map_structure_up_to(
+  return nest.map_structure_up_to(
       specs, lambda spec, parameters: spec.build_distribution(**parameters),
       specs, parameters)

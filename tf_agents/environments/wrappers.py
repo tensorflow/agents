@@ -34,6 +34,7 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 
 import gin.tf
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
@@ -313,8 +314,8 @@ class ActionClipWrapper(PyEnvironmentBaseWrapper):
         return act
       return np.clip(act, act_spec.minimum, act_spec.maximum)
 
-    clipped_actions = tf.contrib.framework.nest.map_structure_up_to(
-        env_action_spec, _clip_to_spec, env_action_spec, action)
+    clipped_actions = nest.map_structure_up_to(env_action_spec, _clip_to_spec,
+                                               env_action_spec, action)
 
     return self._env.step(clipped_actions)
 

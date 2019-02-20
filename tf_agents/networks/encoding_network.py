@@ -35,6 +35,7 @@ from tf_agents.networks import utils
 from tf_agents.utils import nest_utils
 
 import gin.tf
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 def _copy_layer(layer):
@@ -158,29 +159,28 @@ class EncodingNetwork(network.Network):
     layers = []
 
     if conv_layer_params:
-      layers.extend([
-          tf.keras.layers.Conv2D(
-              filters=filters,
-              kernel_size=kernel_size,
-              strides=strides,
-              activation=activation_fn,
-              kernel_initializer=kernel_initializer,
-              dtype=dtype,
-              name='%s/conv2d' % name)
-          for (filters, kernel_size, strides) in conv_layer_params
-      ])
+      for (filters, kernel_size, strides) in conv_layer_params:
+        layers.append(
+            tf.keras.layers.Conv2D(
+                filters=filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                activation=activation_fn,
+                kernel_initializer=kernel_initializer,
+                dtype=dtype,
+                name='%s/conv2d' % name))
 
     layers.append(tf.keras.layers.Flatten())
 
     if fc_layer_params:
-      layers.extend([
-          tf.keras.layers.Dense(
-              num_units,
-              activation=activation_fn,
-              kernel_initializer=kernel_initializer,
-              dtype=dtype,
-              name='%s/dense' % name) for num_units in fc_layer_params
-      ])
+      for num_units in fc_layer_params:
+        layers.append(
+            tf.keras.layers.Dense(
+                num_units,
+                activation=activation_fn,
+                kernel_initializer=kernel_initializer,
+                dtype=dtype,
+                name='%s/dense' % name))
 
     super(EncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
@@ -206,8 +206,7 @@ class EncodingNetwork(network.Network):
     else:
       processed = []
       for obs, layer in zip(
-          tf.contrib.framework.nest.flatten_up_to(
-              self.input_tensor_spec, observation),
+          nest.flatten_up_to(self.input_tensor_spec, observation),
           self._preprocessing_layers):
         processed.append(layer(obs))
 

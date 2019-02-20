@@ -21,12 +21,13 @@ from __future__ import print_function
 from absl import logging
 
 import numpy as np
-import tensorflow as tf
 
 from tf_agents.environments import time_step as ts
 from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
+
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class ScriptedPyPolicy(py_policy.Base):
@@ -106,7 +107,7 @@ class ScriptedPyPolicy(py_policy.Base):
     def actions_as_array(action_spec, action):
       return np.asarray(action, dtype=action_spec.dtype)
 
-    current_action = tf.contrib.framework.nest.map_structure_up_to(
+    current_action = nest.map_structure_up_to(
         self._action_spec, actions_as_array, self._action_spec, current_action)
 
     if not array_spec.check_arrays_nest(current_action, self._action_spec):

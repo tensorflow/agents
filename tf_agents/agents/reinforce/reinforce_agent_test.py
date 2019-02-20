@@ -27,6 +27,8 @@ from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
 
 class DummyActorNet(network.Network):
 
@@ -67,7 +69,7 @@ class DummyActorNet(network.Network):
     actions = tf.nest.pack_sequence_as(self._output_tensor_spec, [actions])
     stdevs = tf.nest.pack_sequence_as(self._output_tensor_spec, [stdevs])
 
-    distribution = tf.contrib.framework.nest.map_structure_up_to(
+    distribution = nest.map_structure_up_to(
         self._output_tensor_spec, tfp.distributions.Normal, actions, stdevs)
     return distribution, network_state
 

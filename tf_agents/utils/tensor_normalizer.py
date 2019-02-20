@@ -47,6 +47,8 @@ import tensorflow as tf
 
 from tf_agents.utils.common import create_counter
 
+from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
 
 class TensorNormalizer(tf.Module):
   """Encapsulates tensor normalization and owns normalization variables."""
@@ -128,9 +130,9 @@ class TensorNormalizer(tf.Module):
             offset=None, scale=None, variance_epsilon=variance_epsilon,
             name='normalized_tensor')
 
-      normalized_tensor = tf.contrib.framework.nest.map_structure_up_to(
-          self._tensor_spec, _normalize_single_tensor, tensor, mean,
-          var_estimate)
+      normalized_tensor = nest.map_structure_up_to(self._tensor_spec,
+                                                   _normalize_single_tensor,
+                                                   tensor, mean, var_estimate)
 
       if clip_value > 0:
         def _clip(t):
@@ -281,8 +283,8 @@ class StreamingTensorNormalizer(TensorNormalizer):
 
   def _get_mean_var_estimates(self):
     """Returns this normalizer's current estimates for mean & variance."""
-    mean_estimate = tf.contrib.framework.nest.map_structure_up_to(
+    mean_estimate = nest.map_structure_up_to(
         self._tensor_spec, lambda a, b: a / b, self._mean_sum, self._count)
-    var_estimate = tf.contrib.framework.nest.map_structure_up_to(
+    var_estimate = nest.map_structure_up_to(
         self._tensor_spec, lambda a, b: a / b, self._var_sum, self._count)
     return mean_estimate, var_estimate
