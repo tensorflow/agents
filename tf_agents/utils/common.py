@@ -717,7 +717,7 @@ class Checkpointer(object):
     if not tf.io.gfile.exists(ckpt_dir):
       tf.io.gfile.makedirs(ckpt_dir)
 
-    self._manager = tf.contrib.checkpoint.CheckpointManager(
+    self._manager = tf.train.CheckpointManager(
         self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
 
     if self._manager.latest_checkpoint is not None:
