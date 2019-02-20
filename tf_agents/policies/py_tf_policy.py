@@ -102,7 +102,8 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
 
     self._construct(batch_size, graph)
     self.session.run(
-        tf.compat.v1.initializers.variables(self._tf_policy.variables()))
+        tf.compat.v1.initializers.variables(
+            tf.nest.flatten(self._tf_policy.variables())))
 
     self._built = True
 

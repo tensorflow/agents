@@ -95,7 +95,9 @@ class TensorNormalizer(tf.Module):
 
   def update(self, tensor, outer_dims=(0,)):
     """Updates tensor normalizer variables."""
-    tensor = tf.cast(tensor, tf.float32)
+    tensor = tf.nest.map_structure(
+        lambda t: tf.cast(t, tf.float32),
+        tensor)
     return tf.group(self._update_ops(tensor, outer_dims))
 
   def normalize(self,
@@ -192,24 +194,30 @@ class EMATensorNormalizer(TensorNormalizer):
       A list of ops, which when run will update all necessary normaliztion
       variables.
     """
-    # Take the moments across batch dimension. Calculate variance with
-    #   moving avg mean, so that this works even with batch size 1.
-    mean = tf.reduce_mean(input_tensor=tensor, axis=outer_dims)
-    var = tf.reduce_mean(
-        input_tensor=tf.square(tensor - self._mean_moving_avg), axis=outer_dims)
+    def _tensor_update_ops(single_tensor, mean_var, var_var):
+      """Make update ops for a single non-nested tensor."""
+      # Take the moments across batch dimension. Calculate variance with
+      #   moving avg mean, so that this works even with batch size 1.
+      mean = tf.reduce_mean(input_tensor=single_tensor, axis=outer_dims)
+      var = tf.reduce_mean(
+          input_tensor=tf.square(single_tensor - mean_var),
+          axis=outer_dims)
 
-    # Ops to update moving average. Make sure that all stats are computed
-    #   before updates are performed.
-    with tf.control_dependencies([mean, var]):
-      update_ops = [
-          tf.compat.v1.assign_add(
-              self._mean_moving_avg,
-              self._norm_update_rate * (mean - self._mean_moving_avg)),
-          tf.compat.v1.assign_add(
-              self._var_moving_avg,
-              self._norm_update_rate * (var - self._var_moving_avg))
-      ]
-    return update_ops
+      # Ops to update moving average. Make sure that all stats are computed
+      #   before updates are performed.
+      with tf.control_dependencies([mean, var]):
+        update_ops = [
+            mean_var.assign_add(self._norm_update_rate * (mean - mean_var)),
+            var_var.assign_add(self._norm_update_rate * (var - var_var))
+        ]
+      return update_ops
+
+    # Aggregate update ops for all parts of potentially nested tensor.
+    updates = tf.nest.map_structure(
+        _tensor_update_ops, tensor, self._mean_moving_avg, self._var_moving_avg)
+    all_update_ops = tf.nest.flatten(updates)
+
+    return all_update_ops
 
   def _get_mean_var_estimates(self):
     """Returns EMANormalizer's current estimates for mean & variance."""
@@ -256,30 +264,44 @@ class StreamingTensorNormalizer(TensorNormalizer):
       A list of ops, which when run will update all necessary normaliztion
       variables.
     """
-    mean_estimate, _ = self._get_mean_var_estimates()
-    # Num samples in batch is the product of batch dimensions.
-    num_samples = tf.cast(
-        tf.reduce_prod(
-            input_tensor=tf.gather(tf.shape(input=tensor), outer_dims)),
-        tf.float32)
-    mean_sum = tf.reduce_sum(input_tensor=tensor, axis=outer_dims)
-    var_sum = tf.reduce_sum(
-        input_tensor=tf.square(tensor - mean_estimate), axis=outer_dims)
+    def _tensor_update_ops(single_tensor, single_mean_est, count_var, mean_var,
+                           var_var):
+      """Make update ops for a single non-nested tensor."""
+      # Num samples in batch is the product of batch dimensions.
+      num_samples = tf.cast(
+          tf.reduce_prod(
+              input_tensor=tf.gather(
+                  tf.shape(input=single_tensor), outer_dims)),
+          tf.float32)
+      mean_sum = tf.reduce_sum(input_tensor=single_tensor, axis=outer_dims)
+      var_sum = tf.reduce_sum(
+          input_tensor=tf.square(
+              single_tensor - single_mean_est), axis=outer_dims)
 
-    # Ops to update streaming norm. Make sure that all stats are computed
-    #   before updates are performed.
-    with tf.control_dependencies([num_samples, mean_sum, var_sum]):
-      update_ops = [
-          tf.compat.v1.assign_add(
-              self._count,
-              tf.ones_like(self._count) * num_samples,
-              name='update_count'),
-          tf.compat.v1.assign_add(
-              self._mean_sum, mean_sum, name='update_mean_sum'),
-          tf.compat.v1.assign_add(
-              self._var_sum, var_sum, name='update_var_sum'),
-      ]
-    return update_ops
+      # Ops to update streaming norm. Make sure that all stats are computed
+      #   before updates are performed.
+      with tf.control_dependencies([num_samples, mean_sum, var_sum]):
+        update_ops = [
+            tf.compat.v1.assign_add(
+                count_var,
+                tf.ones_like(count_var) * num_samples,
+                name='update_count'),
+            tf.compat.v1.assign_add(
+                mean_var, mean_sum, name='update_mean_sum'),
+            tf.compat.v1.assign_add(
+                var_var, var_sum, name='update_var_sum'),
+        ]
+      return update_ops
+
+    mean_estimate, _ = self._get_mean_var_estimates()
+
+    # Aggregate update ops for all parts of potentially nested tensor.
+    updates = tf.nest.map_structure(
+        _tensor_update_ops, tensor, mean_estimate, self._count, self._mean_sum,
+        self._var_sum)
+    all_update_ops = tf.nest.flatten(updates)
+
+    return all_update_ops
 
   def _get_mean_var_estimates(self):
     """Returns this normalizer's current estimates for mean & variance."""

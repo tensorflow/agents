@@ -30,6 +30,7 @@ from tf_agents.utils import tensor_normalizer
 class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
+    super(EMATensorNormalizerTest, self).setUp()
     tf.compat.v1.reset_default_graph()
     self._tensor_spec = tensor_spec.TensorSpec([3], tf.float32, 'obs')
     self._tensor_normalizer = tensor_normalizer.EMATensorNormalizer(
@@ -63,6 +64,31 @@ class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     for new_val, old_val in (list(zip(new_means, original_means)) +
                              list(zip(new_variances, original_variances))):
       self.assertNotEqual(new_val, old_val)
+
+  def testUpdateVariablesDictNest(self):
+    # Get original mean and variance.
+    original_means, original_variances = self.evaluate(
+        self._dict_tensor_normalizer.variables)
+
+    # Construct and evaluate normalized tensor. Should update mean &
+    #   variance.
+    tensor = {'a': tf.constant([[1.3, 4.2, 7.5]], dtype=tf.float32),
+              'b': tf.constant([[1.3, 4.2, 7.5]], dtype=tf.float32)}
+    update_norm_vars = self._dict_tensor_normalizer.update(tensor)
+    self.evaluate(update_norm_vars)
+
+    # Get new mean and variance, and make sure they changed.
+    new_means, new_variances = self.evaluate(
+        self._dict_tensor_normalizer.variables)
+
+    def _assert_dict_changed(dict1, dict2):
+      self.assertAllEqual(sorted(dict1.keys()), sorted(dict2.keys()))
+      for k in dict1.keys():
+        for i in range(len(dict1[k])):
+          self.assertNotEqual(dict1[k][i], dict2[k][i])
+
+    _assert_dict_changed(original_means, new_means)
+    _assert_dict_changed(original_variances, new_variances)
 
   @parameterized.named_parameters(
       ('OneReduceAxis', 1),
@@ -122,6 +148,7 @@ class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
+    super(StreamingTensorNormalizerTest, self).setUp()
     tf.compat.v1.reset_default_graph()
     self._tensor_spec = tensor_spec.TensorSpec([3], tf.float32, 'obs')
     self._tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
@@ -163,6 +190,42 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
         new_variance_sum,
         np.sum(np.square(np_array - original_mean_sum), axis=0) +
         original_variance_sum)
+
+  def testUpdateVariablesDictNest(self):
+    # Get original mean and variance.
+    original_count, original_mean_sum, original_variance_sum = self.evaluate(
+        self._dict_tensor_normalizer.variables)
+
+    # Construct and evaluate normalized tensor. Should update mean &
+    #   variance.
+    np_array = np.array([[1.3, 4.2, 7.5],
+                         [8.3, 2.2, 9.5],
+                         [3.3, 5.2, 6.5]], np.float32)
+    tensor = {'a': tf.constant(np_array, dtype=tf.float32),
+              'b': tf.constant(np_array, dtype=tf.float32)}
+    update_norm_vars = self._dict_tensor_normalizer.update(tensor)
+    self.evaluate(update_norm_vars)
+
+    # Get new mean and variance, and make sure they changed.
+    new_count, new_mean_sum, new_variance_sum = self.evaluate(
+        self._dict_tensor_normalizer.variables)
+
+    expected_count = {k: (np.array([3, 3, 3], dtype=np.float32) +
+                          original_count[k]) for k in original_count}
+    expected_mean_sum = {k: (np.sum(np_array, axis=0) +
+                             original_mean_sum[k]) for k in original_mean_sum}
+    expected_variance_sum = {
+        k: (np.sum(np.square(np_array - original_mean_sum[k]), axis=0) +
+            original_variance_sum[k]) for k in original_variance_sum}
+
+    def _assert_dicts_close(dict1, dict2):
+      self.assertAllEqual(sorted(dict1.keys()), sorted(dict2.keys()))
+      self.assertAllClose([dict1[k] for k in dict1.keys()],
+                          [dict2[k] for k in dict1.keys()])
+
+    _assert_dicts_close(new_count, expected_count)
+    _assert_dicts_close(new_mean_sum, expected_mean_sum)
+    _assert_dicts_close(new_variance_sum, expected_variance_sum)
 
   @parameterized.named_parameters(
       ('OneReduceAxis', 1),
