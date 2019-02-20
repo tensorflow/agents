@@ -352,7 +352,7 @@ class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
     ou = common.ornstein_uhlenbeck_process(
         tf.zeros([10]), damping=theta, stddev=sigma)
     samples = np.ndarray([num_samples, 10])
-    self.evaluate(tf.compat.v1.local_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     for i in range(num_samples):
       samples[i] = self.evaluate(ou)
 
@@ -379,7 +379,7 @@ class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
         tf.zeros([10]), damping=theta, stddev=sigma)
 
     samples = np.ndarray([100, 10, 2])
-    self.evaluate(tf.compat.v1.local_variables_initializer())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     for i in range(100):
       samples[i, :, 0], samples[i, :, 1] = self.evaluate([ou1, ou2])
 

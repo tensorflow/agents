@@ -353,7 +353,7 @@ def ornstein_uhlenbeck_process(initial_value,
     return OUProcess(initial_value, damping, stddev, seed, scope)()
 
 
-class OUProcess(object):
+class OUProcess(tf.Module):
   """A zero-mean Ornstein-Uhlenbeck process."""
 
   def __init__(self,
@@ -383,12 +383,14 @@ class OUProcess(object):
       seed: Seed for random number generation.
       scope: Scope of the variables.
     """
+    super(OUProcess, self).__init__()
     self._damping = damping
     self._stddev = stddev
     self._seed = seed
-    with tf.compat.v1.variable_scope(scope):
-      self._x = tf.contrib.framework.local_variable(
-          initial_value, use_resource=True)
+    with tf.name_scope(scope):
+      self._x = tf.Variable(initial_value=initial_value,
+                            trainable=False,
+                            use_resource=True)
 
   def __call__(self):
     noise = tf.random.normal(
