@@ -62,6 +62,7 @@ from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_atari
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
+from tf_agents.metrics import metric_utils
 from tf_agents.metrics import py_metric
 from tf_agents.metrics import py_metrics
 from tf_agents.policies import epsilon_greedy_policy
@@ -352,9 +353,9 @@ class TrainEval(object):
             agent=tf_agent,
             global_step=self._global_step,
             optimizer=optimizer,
-            metrics=tf.contrib.checkpoint.List(
+            metrics=metric_utils.MetricsGroup(
                 self._train_metrics + self._train_phase_metrics +
-                [self._iteration_metric]))
+                [self._iteration_metric], 'train_metrics'))
         self._policy_checkpointer = common_utils.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'policy'),
             policy=tf_agent.policy(),

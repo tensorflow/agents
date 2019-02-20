@@ -30,9 +30,21 @@ from tf_agents.metrics import py_metric
 from tf_agents.utils import common as common_utils
 
 
+class MetricsGroup(tf.Module):
+  """Group a list of Metrics into a container."""
+
+  def __init__(self, metrics, name=None):
+    super(MetricsGroup, self).__init__(name=name)
+    self.metrics = metrics
+
+  def results(self):
+    results = [(metric.name, metric.result()) for metric in self.metrics]
+    return collections.OrderedDict(results)
+
+
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.result()) for m in metrics]
-  logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
+  logging.info('%s \n\t\t %s', prefix, '\n\t\t '.join(log))
 
 
 def compute(metrics,

@@ -94,7 +94,7 @@ class PyMetric(object):
 
   def log(self):
     tag = common_utils.join_scope(self.prefix, self.name)
-    logging.info('{0} = {1}'.format(tag, self.result()))
+    logging.info('%s', '{0} = {1}'.format(tag, self.result()))
 
   def tf_summaries(self, step_metrics=()):
     """Build TF summary op and placeholder for this metric.

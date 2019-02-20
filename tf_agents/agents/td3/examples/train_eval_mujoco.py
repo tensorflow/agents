@@ -203,7 +203,7 @@ def train_eval(
         ckpt_dir=train_dir,
         agent=tf_agent,
         global_step=global_step,
-        metrics=tf.contrib.checkpoint.List(train_metrics))
+        metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
     policy_checkpointer = common_utils.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'policy'),
         policy=tf_agent.policy(),
