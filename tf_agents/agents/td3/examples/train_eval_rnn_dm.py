@@ -267,6 +267,7 @@ def train_eval(
           num_episodes=num_eval_episodes,
           global_step=global_step_val,
           callback=eval_metrics_callback,
+          log=True,
       )
 
       collect_call = sess.make_callable(collect_op)
@@ -314,6 +315,7 @@ def train_eval(
               num_episodes=num_eval_episodes,
               global_step=global_step_val,
               callback=eval_metrics_callback,
+              log=True,
           )
 
 

@@ -260,6 +260,7 @@ def train_eval(
             num_episodes=num_eval_episodes,
             global_step=global_step_val,
             callback=eval_metrics_callback,
+            log=True,
         )
 
         # Run initial collect.
@@ -310,7 +311,7 @@ def train_eval(
               num_episodes=num_eval_episodes,
               global_step=global_step_val,
               callback=eval_metrics_callback,
-
+              log=True,
           )
 
         if global_step_val % train_checkpoint_interval == 0:

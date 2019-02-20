@@ -274,6 +274,7 @@ def train_eval(
               num_episodes=num_eval_episodes,
               global_step=global_step_val,
               callback=eval_metrics_callback,
+              log=True,
           )
           sess.run(eval_summary_writer_flush_op)
 
@@ -316,6 +317,7 @@ def train_eval(
           num_episodes=num_eval_episodes,
           global_step=global_step_val,
           callback=eval_metrics_callback,
+          log=True,
       )
       sess.run(eval_summary_writer_flush_op)
 
