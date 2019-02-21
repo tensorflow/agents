@@ -32,8 +32,8 @@ from tf_agents.agents import tf_agent
 from tf_agents.distributions import tanh_bijector_stable
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
+from tf_agents.utils import common
 from tf_agents.utils import eager_utils
-import tf_agents.utils.common as common_utils
 
 import gin.tf
 
@@ -116,9 +116,11 @@ class SacAgent(tf_agent.TFAgent):
         action_spec=action_spec,
         actor_network=self._actor_network)
 
-    self._log_alpha = common_utils.create_counter(
-        'initial_log_alpha', initial_value=initial_log_alpha,
-        dtype=tf.float32, trainable=True)
+    self._log_alpha = common.create_variable(
+        'initial_log_alpha',
+        initial_value=initial_log_alpha,
+        dtype=tf.float32,
+        trainable=True)
 
     # If target_entropy was not passed, set it to negative of the total number
     # of action dimensions.
@@ -281,15 +283,15 @@ class SacAgent(tf_agent.TFAgent):
     with tf.name_scope('update_target'):
       def update():
         """Update target network."""
-        critic_update_1 = common_utils.soft_variables_update(
+        critic_update_1 = common.soft_variables_update(
             self._critic_network1.variables,
             self._target_critic_network1.variables, tau)
-        critic_update_2 = common_utils.soft_variables_update(
+        critic_update_2 = common.soft_variables_update(
             self._critic_network2.variables,
             self._target_critic_network2.variables, tau)
         return tf.group(critic_update_1, critic_update_2)
 
-      return common_utils.periodically(update, period, 'update_targets')
+      return common.periodically(update, period, 'update_targets')
 
   def _action_spec_means_magnitudes(self):
     """Get the center and magnitude of the ranges in action spec."""
@@ -326,8 +328,8 @@ class SacAgent(tf_agent.TFAgent):
 
     # Sample actions and log_pis from transformed distribution.
     actions = tf.nest.map_structure(lambda d: d.sample(), action_distribution)
-    log_pi = common_utils.log_probability(
-        action_distribution, actions, self.action_spec())
+    log_pi = common.log_probability(action_distribution, actions,
+                                    self.action_spec())
 
     return actions, log_pi
 
@@ -394,12 +396,10 @@ class SacAgent(tf_agent.TFAgent):
         td_errors1 = td_targets - pred_td_targets1
         td_errors2 = td_targets - pred_td_targets2
         td_errors = tf.concat([td_errors1, td_errors2], axis=0)
-        common_utils.generate_tensor_summaries('td_errors', td_errors)
-        common_utils.generate_tensor_summaries('td_targets', td_targets)
-        common_utils.generate_tensor_summaries('pred_td_targets1',
-                                               pred_td_targets1)
-        common_utils.generate_tensor_summaries('pred_td_targets2',
-                                               pred_td_targets2)
+        common.generate_tensor_summaries('td_errors', td_errors)
+        common.generate_tensor_summaries('td_targets', td_targets)
+        common.generate_tensor_summaries('pred_td_targets1', pred_td_targets1)
+        common.generate_tensor_summaries('pred_td_targets2', pred_td_targets2)
 
       return critic_loss
 
@@ -431,20 +431,18 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss = tf.reduce_mean(input_tensor=actor_loss)
 
       if self._debug_summaries:
-        common_utils.generate_tensor_summaries('actor_loss', actor_loss)
-        common_utils.generate_tensor_summaries('actions', actions)
-        common_utils.generate_tensor_summaries('log_pi', log_pi)
+        common.generate_tensor_summaries('actor_loss', actor_loss)
+        common.generate_tensor_summaries('actions', actions)
+        common.generate_tensor_summaries('log_pi', log_pi)
         tf.contrib.summary.scalar('entropy_avg',
                                   -tf.reduce_mean(input_tensor=log_pi))
-        common_utils.generate_tensor_summaries('target_q_values',
-                                               target_q_values)
+        common.generate_tensor_summaries('target_q_values', target_q_values)
         action_distribution = self.policy().distribution(time_steps).action
-        common_utils.generate_tensor_summaries('act_mean',
-                                               action_distribution.loc)
-        common_utils.generate_tensor_summaries('act_stddev',
-                                               action_distribution.scale)
-        common_utils.generate_tensor_summaries('entropy_raw_action',
-                                               action_distribution.entropy())
+        common.generate_tensor_summaries('act_mean', action_distribution.loc)
+        common.generate_tensor_summaries('act_stddev',
+                                         action_distribution.scale)
+        common.generate_tensor_summaries('entropy_raw_action',
+                                         action_distribution.entropy())
 
       return actor_loss
 
@@ -473,6 +471,6 @@ class SacAgent(tf_agent.TFAgent):
       alpha_loss = tf.reduce_mean(input_tensor=alpha_loss)
 
       if self._debug_summaries:
-        common_utils.generate_tensor_summaries('alpha_loss', alpha_loss)
+        common.generate_tensor_summaries('alpha_loss', alpha_loss)
 
       return alpha_loss

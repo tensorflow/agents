@@ -38,11 +38,8 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
   def __init__(self, name='EnvironmentSteps', dtype=tf.int64):
     super(EnvironmentSteps, self).__init__(name=name)
     self.dtype = dtype
-    self.environment_steps = common.create_counter(
-        initial_value=0,
-        dtype=self.dtype,
-        shape=(),
-        name='environment_steps')
+    self.environment_steps = common.create_variable(
+        initial_value=0, dtype=self.dtype, shape=(), name='environment_steps')
 
   def call(self, trajectory):
     """Increase the number of environment_steps according to trajectory.
@@ -73,11 +70,8 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
   def __init__(self, name='NumberOfEpisodes', dtype=tf.int64):
     super(NumberOfEpisodes, self).__init__(name=name)
     self.dtype = dtype
-    self.number_episodes = common.create_counter(
-        initial_value=0,
-        dtype=self.dtype,
-        shape=(),
-        name='number_episodes')
+    self.number_episodes = common.create_variable(
+        initial_value=0, dtype=self.dtype, shape=(), name='number_episodes')
 
   def call(self, trajectory):
     """Increase the number of number_episodes according to trajectory.
@@ -128,4 +122,4 @@ class AverageEpisodeLengthMetric(tf_py_metric.TFPyMetric):
 
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.log().numpy()) for m in metrics]
-  logging.info('{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
+  logging.info('%s', '{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))

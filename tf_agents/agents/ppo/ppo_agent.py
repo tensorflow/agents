@@ -70,7 +70,7 @@ from tf_agents.networks import network
 from tf_agents.policies import greedy_policy
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
@@ -215,7 +215,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     if initial_adaptive_kl_beta > 0.0:
       # TODO(kbanoop): Rename create_variable.
-      self._adaptive_kl_beta = common_utils.create_counter(
+      self._adaptive_kl_beta = common.create_variable(
           'adaptive_kl_beta', initial_adaptive_kl_beta, dtype=tf.float32)
     else:
       self._adaptive_kl_beta = None
@@ -461,7 +461,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     # Make discount 0.0 at end of each episode to restart cumulative sum
     #   end of each episode.
-    episode_mask = common_utils.get_episode_mask(next_time_steps)
+    episode_mask = common.get_episode_mask(next_time_steps)
     discounts *= episode_mask
 
     # Compute Monte Carlo returns.
@@ -508,8 +508,8 @@ class PPOAgent(tf_agent.TFAgent):
 
     # Compute log probability of actions taken during data collection, using the
     #   collect policy distribution.
-    act_log_probs = common_utils.log_probability(old_actions_distribution,
-                                                 actions, self._action_spec)
+    act_log_probs = common.log_probability(old_actions_distribution, actions,
+                                           self._action_spec)
 
     # Compute the value predictions for states using the current value function.
     # To be used for return & advantage computation.
@@ -673,8 +673,9 @@ class PPOAgent(tf_agent.TFAgent):
     if self._entropy_regularization > 0:
       tf.nest.assert_same_structure(time_steps, self.time_step_spec())
       with tf.name_scope('entropy_regularization'):
-        entropy = tf.cast(common_utils.entropy(
-            current_policy_distribution, self.action_spec()), tf.float32)
+        entropy = tf.cast(
+            common.entropy(current_policy_distribution, self.action_spec()),
+            tf.float32)
         entropy_reg_loss = (
             tf.reduce_mean(input_tensor=-entropy * weights) *
             self._entropy_regularization)
@@ -767,8 +768,8 @@ class PPOAgent(tf_agent.TFAgent):
         the on-policy experience.
     """
     tf.nest.assert_same_structure(time_steps, self.time_step_spec())
-    action_log_prob = common_utils.log_probability(current_policy_distribution,
-                                                   actions, self._action_spec)
+    action_log_prob = common.log_probability(current_policy_distribution,
+                                             actions, self._action_spec)
     action_log_prob = tf.cast(action_log_prob, tf.float32)
     if self._log_prob_clipping > 0.0:
       action_log_prob = tf.clip_by_value(
@@ -828,8 +829,7 @@ class PPOAgent(tf_agent.TFAgent):
                                    per_timestep_objective_clipped)
       tf.contrib.summary.histogram('per_timestep_objective_min',
                                    per_timestep_objective_min)
-      entropy = common_utils.entropy(current_policy_distribution,
-                                     self.action_spec())
+      entropy = common.entropy(current_policy_distribution, self.action_spec())
       tf.contrib.summary.histogram('policy_entropy', entropy)
       tf.contrib.summary.scalar('policy_entropy_mean',
                                 tf.reduce_mean(input_tensor=entropy))

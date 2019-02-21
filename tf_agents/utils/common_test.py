@@ -29,41 +29,41 @@ import tensorflow_probability as tfp
 from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
-from tensorflow.python.framework import test_util  # TF internal
+from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class CreateCounterTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testDefaults(self):
-    counter = common.create_counter('counter')
+    counter = common.create_variable('counter')
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 0)
 
   @test_util.run_in_graph_and_eager_modes()
   def testInitialValue(self):
-    counter = common.create_counter('counter', 1)
+    counter = common.create_variable('counter', 1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 1)
 
   @test_util.run_in_graph_and_eager_modes()
   def testIncrement(self):
-    counter = common.create_counter('counter', 0)
+    counter = common.create_variable('counter', 0)
     inc_counter = counter.assign_add(1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(inc_counter), 1)
 
   @test_util.run_in_graph_and_eager_modes()
   def testMultipleCounters(self):
-    counter1 = common.create_counter('counter', 1)
-    counter2 = common.create_counter('counter', 2)
+    counter1 = common.create_variable('counter', 1)
+    counter2 = common.create_variable('counter', 2)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter1), 1)
     self.assertEqual(self.evaluate(counter2), 2)
 
   @test_util.run_in_graph_and_eager_modes()
   def testInitialValueWithShape(self):
-    counter = common.create_counter('counter', 1, shape=(2,))
+    counter = common.create_variable('counter', 1, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(counter), [1, 1])
 

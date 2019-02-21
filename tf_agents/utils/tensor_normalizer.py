@@ -45,9 +45,12 @@ from __future__ import print_function
 import abc
 import tensorflow as tf
 
-from tf_agents.utils.common import create_counter
+from tf_agents.utils import common
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
+
+create_variable = common.create_variable
 
 
 class TensorNormalizer(tf.Module):
@@ -165,10 +168,10 @@ class EMATensorNormalizer(TensorNormalizer):
   def _create_variables(self):
     """Creates the variables needed for EMATensorNormalizer."""
     self._mean_moving_avg = tf.nest.map_structure(
-        lambda spec: create_counter('mean', 0, spec.shape, tf.float32),
+        lambda spec: create_variable('mean', 0, spec.shape, tf.float32),
         self._tensor_spec)
     self._var_moving_avg = tf.nest.map_structure(
-        lambda spec: create_counter('var', 1, spec.shape, tf.float32),
+        lambda spec: create_variable('var', 1, spec.shape, tf.float32),
         self._tensor_spec)
 
   @property
@@ -230,13 +233,13 @@ class StreamingTensorNormalizer(TensorNormalizer):
   def _create_variables(self):
     """Uses self._scope and creates all variables needed for the normalizer."""
     self._count = tf.nest.map_structure(
-        lambda spec: create_counter('count', 1e-8, spec.shape, tf.float32),
+        lambda spec: create_variable('count', 1e-8, spec.shape, tf.float32),
         self._tensor_spec)
     self._mean_sum = tf.nest.map_structure(
-        lambda spec: create_counter('mean_sum', 0, spec.shape, tf.float32),
+        lambda spec: create_variable('mean_sum', 0, spec.shape, tf.float32),
         self._tensor_spec)
     self._var_sum = tf.nest.map_structure(
-        lambda spec: create_counter('var_sum', 0, spec.shape, tf.float32),
+        lambda spec: create_variable('var_sum', 0, spec.shape, tf.float32),
         self._tensor_spec)
 
   def copy(self, scope=None):

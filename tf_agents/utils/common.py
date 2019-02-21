@@ -26,7 +26,7 @@ import tensorflow as tf
 from tf_agents.environments import time_step as ts
 from tf_agents.utils import nest_utils
 
-from tensorflow.python.eager import context  # TF internal
+from tensorflow.python.eager import context  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 def function(*args, **kwargs):
@@ -34,23 +34,25 @@ def function(*args, **kwargs):
   return tf.function(*args, autograph=autograph, **kwargs)  # allow-tf-function
 
 
-def create_counter(name,
-                   initial_value=0,
-                   shape=(),
-                   dtype=tf.int64,
-                   use_local_variable=False,
-                   use_resource=True,
-                   trainable=False):
+def create_variable(name,
+                    initial_value=0,
+                    shape=(),
+                    dtype=tf.int64,
+                    use_local_variable=False,
+                    use_resource=True,
+                    trainable=False,
+                    initializer=None):
   """Create a variable."""
   collections = [tf.compat.v1.GraphKeys.GLOBAL_VARIABLES]
   if use_local_variable:
     collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
+  if initializer is None:
+    initializer = tf.compat.v1.initializers.constant(initial_value, dtype=dtype)
   return tf.compat.v1.get_variable(
       name=tf.compat.v1.get_default_graph().unique_name(name),
       shape=shape,
       dtype=dtype,
-      initializer=tf.compat.v1.initializers.constant(
-          initial_value, dtype=dtype),
+      initializer=initializer,
       collections=collections,
       use_resource=use_resource,
       trainable=trainable)
@@ -235,7 +237,7 @@ class Periodically(tf.Module):
     self._body = body
     self._period = period
     with tf.compat.v1.variable_scope(scope):
-      self._counter = create_counter('counter', 0)
+      self._counter = create_variable('counter', 0)
 
   def __call__(self):
     if self._period is None:
@@ -723,10 +725,11 @@ class Checkpointer(object):
         self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
 
     if self._manager.latest_checkpoint is not None:
-      logging.info('Checkpoint available: {}'.format(
-          self._manager.latest_checkpoint))
+      logging.info(
+          '%s',
+          'Checkpoint available: {}'.format(self._manager.latest_checkpoint))
     else:
-      logging.info('No checkpoint available at {}'.format(ckpt_dir))
+      logging.info('%s', 'No checkpoint available at {}'.format(ckpt_dir))
     self._load_status = self._checkpoint.restore(
         self._manager.latest_checkpoint)
 
@@ -738,7 +741,7 @@ class Checkpointer(object):
   def save(self, global_step):
     """Save state to checkpoint."""
     saved_checkpoint = self._manager.save(checkpoint_number=global_step)
-    logging.info('Saved checkpoint: {}'.format(saved_checkpoint))
+    logging.info('%s', 'Saved checkpoint: {}'.format(saved_checkpoint))
 
 
 def replicate(tensor, outer_shape):
