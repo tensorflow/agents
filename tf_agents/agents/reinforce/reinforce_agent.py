@@ -116,7 +116,6 @@ class ReinforceAgent(tf_agent.TFAgent):
                             tf.zeros_like(experience.reward),
                             tf.zeros_like(experience.discount),
                             experience.observation)
-    # TODO(kbanoop): Filter boundary steps.
 
     loss_info = self._loss(time_step,
                            experience.action,
@@ -171,6 +170,12 @@ class ReinforceAgent(tf_agent.TFAgent):
     # nests of independent distributions like this.
     action_log_prob = common.log_probability(actions_distribution, actions,
                                              self.action_spec())
+
+    # Filter out transitions between end state of previous episode and start
+    # state of next episode.
+    valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
+    action_log_prob *= valid_mask
+
     action_log_prob_times_return = action_log_prob * returns
 
     if weights is not None:
