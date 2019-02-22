@@ -23,7 +23,10 @@ import tensorflow as tf
 
 from tf_agents.policies import tf_policy
 
+import gin.tf
 
+
+@gin.configurable
 class BoltzmannPolicy(tf_policy.Base):
   """Returns boltzmann samples of a given policy.
 
@@ -36,11 +39,10 @@ class BoltzmannPolicy(tf_policy.Base):
     Args:
       policy: A policy implementing the tf_policy.Base interface, using
         a distribution parameterized by logits.
-      temperature: temperature for sampling when `action` is called.
-        This parameter applies when the action spec is discrete.
-
-        If `temperature` is close to 0.0 this is equivalent to calling
-        `tf.argmax` on the output of the network.
+      temperature: Tensor or function that returns the temperature for sampling
+        when `action` is called. This parameter applies when the action spec is
+        discrete. If the temperature is close to 0.0 this is equivalent to
+        calling `tf.argmax` on the output of the network.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
@@ -49,14 +51,21 @@ class BoltzmannPolicy(tf_policy.Base):
                                           policy.policy_state_spec,
                                           policy.info_spec,
                                           name=name)
-    if temperature == 1.0:
-      self._temperature = None
-    else:
-      self._temperature = tf.convert_to_tensor(value=temperature)
+    self._temperature = temperature
     self._wrapped_policy = policy
 
   def _variables(self):
     return self._wrapped_policy.variables()
+
+  def _get_temperature_value(self):
+    if callable(self._temperature):
+      return self._temperature()
+    return self._temperature
+
+  def _apply_temperature(self, dist):
+    """Change the action distribution to incorporate the temperature."""
+    logits = dist.logits / self._get_temperature_value()
+    return dist.copy(logits=logits)
 
   def _distribution(self, time_step, policy_state):
     distribution_step = self._wrapped_policy.distribution(
@@ -64,11 +73,6 @@ class BoltzmannPolicy(tf_policy.Base):
     if self._temperature is None:
       return distribution_step
 
-    # Change the action distribution to incorporate the temperature.
-    def _apply_temperature(dist):
-      logits = dist.logits / self._temperature
-      return dist.copy(logits=logits)
-
-    action_dist = tf.nest.map_structure(_apply_temperature,
+    action_dist = tf.nest.map_structure(self._apply_temperature,
                                         distribution_step.action)
     return distribution_step._replace(action=action_dist)
