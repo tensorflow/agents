@@ -101,10 +101,8 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       graph = tf.compat.v1.get_default_graph()
 
     self._construct(batch_size, graph)
-    self.session.run(
-        tf.compat.v1.initializers.variables(
-            tf.nest.flatten(self._tf_policy.variables())))
-
+    var_list = tf.nest.flatten(self._tf_policy.variables())
+    common_utils.initialize_uninitialized_variables(self.session, var_list)
     self._built = True
 
   def save(self, policy_dir=None, graph=None):
@@ -117,9 +115,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     with graph.as_default():
       global_step = tf.compat.v1.train.get_or_create_global_step()
       policy_checkpointer = common_utils.Checkpointer(
-          ckpt_dir=policy_dir,
-          policy=self._tf_policy,
-          global_step=global_step)
+          ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
       policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():
         policy_checkpointer.save(global_step)
@@ -134,17 +130,15 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     with graph.as_default():
       global_step = tf.compat.v1.train.get_or_create_global_step()
       policy_checkpointer = common_utils.Checkpointer(
-          ckpt_dir=policy_dir,
-          policy=self._tf_policy,
-          global_step=global_step)
+          ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
       status = policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():
         status.assert_consumed().run_restore_ops()
       return self.session.run(global_step)
 
   def _build_from_time_step(self, time_step):
-    outer_shape = nest_utils.get_outer_array_shape(
-        time_step, self._time_step_spec)
+    outer_shape = nest_utils.get_outer_array_shape(time_step,
+                                                   self._time_step_spec)
     if len(outer_shape) == 1:
       self.initialize(outer_shape[0])
     elif not outer_shape:
@@ -160,8 +154,8 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     if batch_size != self._batch_size:
       raise ValueError(
           '`batch_size` argument is different from the batch size provided '
-          'previously. Expected {}, but saw {}.'.format(
-              self._batch_size, batch_size))
+          'previously. Expected {}, but saw {}.'.format(self._batch_size,
+                                                        batch_size))
     return self.session.run(self._tf_initial_state)
 
   def _action(self, time_step, policy_state):

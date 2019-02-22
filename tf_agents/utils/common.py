@@ -686,9 +686,10 @@ def compute_returns(rewards, discounts):
   return returns
 
 
-def initialize_uninitialized_variables(session):
+def initialize_uninitialized_variables(session, var_list=None):
   """Initialize any pending variables that are uninitialized."""
-  var_list = tf.compat.v1.global_variables() + tf.compat.v1.local_variables()
+  if var_list is None:
+    var_list = tf.compat.v1.global_variables() + tf.compat.v1.local_variables()
   is_initialized = session.run(
       [tf.compat.v1.is_variable_initialized(v) for v in var_list])
   uninitialized_vars = []
