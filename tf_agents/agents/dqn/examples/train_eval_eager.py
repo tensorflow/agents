@@ -146,8 +146,8 @@ def train_eval(
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
 
-    eval_policy = tf_agent.policy()
-    collect_policy = tf_agent.collect_policy()
+    eval_policy = tf_agent.policy
+    collect_policy = tf_agent.collect_policy
 
     collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,

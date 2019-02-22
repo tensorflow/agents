@@ -55,8 +55,8 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     if not isinstance(policy, tf_policy.Base):
       logging.warning('Policy should implement tf_policy.Base')
 
-    time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec())
-    action_spec = tensor_spec.to_nest_array_spec(policy.action_spec())
+    time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec)
+    action_spec = tensor_spec.to_nest_array_spec(policy.action_spec)
     super(PyTFPolicy, self).__init__(
         time_step_spec, action_spec, policy_state_spec=(), info_spec=())
 
@@ -64,7 +64,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     self.session = None
 
     self._policy_state_spec = tensor_spec.to_nest_array_spec(
-        self._tf_policy.policy_state_spec())
+        self._tf_policy.policy_state_spec)
 
     self._batch_size = None
     self._batched = None
@@ -80,7 +80,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     outer_dims = [self._batch_size] if self._batched else [1]
     with graph.as_default():
       self._time_step = tensor_spec.to_nest_placeholder(
-          self._tf_policy.time_step_spec(), outer_dims=outer_dims)
+          self._tf_policy.time_step_spec, outer_dims=outer_dims)
       self._tf_initial_state = self._tf_policy.get_initial_state(
           batch_size=self._batch_size or 1)
 

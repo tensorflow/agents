@@ -234,7 +234,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       error = boundary_weights * self._loss_fn(logits, actions)
 
       if nest_utils.is_batched_nested_tensors(
-          experience.action, self.action_spec(), num_outer_dims=2):
+          experience.action, self.action_spec, num_outer_dims=2):
         # Do a sum over the time dimension.
         error = tf.reduce_sum(input_tensor=error, axis=1)
 

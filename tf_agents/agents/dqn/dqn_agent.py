@@ -344,7 +344,7 @@ class DqnAgent(tf_agent.TFAgent):
       td_loss = valid_mask * td_errors_loss_fn(td_targets, q_values)
 
       if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec(), num_outer_dims=2):
+          time_steps, self.time_step_spec, num_outer_dims=2):
         # Do a sum over the time dimension.
         td_loss = tf.reduce_sum(input_tensor=td_loss, axis=1)
 

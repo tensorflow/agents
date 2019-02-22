@@ -179,7 +179,7 @@ class TD3AgentTest(tf.test.TestCase):
 
     observations = [tf.constant([[1, 2]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=1)
-    action = agent.policy().action(time_steps).action[0]
+    action = agent.policy.action(time_steps).action[0]
     self.assertEqual(action.shape.as_list(), [1, 1])
 
     self.evaluate([
@@ -201,8 +201,8 @@ class TD3AgentTest(tf.test.TestCase):
 
     observations = [tf.constant([[1, 2]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=1)
-    action = agent.policy().action(time_steps).action[0]
-    collect_policy_action = agent.collect_policy().action(time_steps).action[0]
+    action = agent.policy.action(time_steps).action[0]
+    collect_policy_action = agent.collect_policy.action(time_steps).action[0]
     self.assertEqual(action.shape, collect_policy_action.shape)
 
     self.evaluate([

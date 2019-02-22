@@ -107,7 +107,7 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     actions = tf.constant([[0], [1]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy().distribution(
+    actions_distribution = agent.collect_policy.distribution(
         time_steps).action
     returns = tf.constant([1.9, 1.0], dtype=tf.float32)
 
@@ -147,7 +147,7 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     )
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
-    actions = agent.policy().action(time_steps).action
+    actions = agent.policy.action(time_steps).action
     self.assertEqual(actions.shape.as_list(), [1, 1])
 
     self.evaluate(tf.compat.v1.global_variables_initializer())

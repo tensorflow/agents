@@ -88,7 +88,7 @@ class RandomPyPolicyTest(absltest.TestCase):
   def testPolicyStateSpecIsEmpty(self):
     policy = random_py_policy.RandomPyPolicy(
         time_step_spec=None, action_spec=[])
-    self.assertEqual(policy.policy_state_spec(), ())
+    self.assertEqual(policy.policy_state_spec, ())
 
 
 if __name__ == '__main__':

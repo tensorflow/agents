@@ -177,11 +177,11 @@ def train_eval(
         debug_summaries=debug_summaries)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-        tf_agent.collect_data_spec(),
+        tf_agent.collect_data_spec,
         batch_size=tf_env.batch_size,
         max_length=replay_buffer_capacity)
 
-    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy())
+    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy)
 
     train_metrics = [
         tf_metrics.NumberOfEpisodes(),
@@ -194,7 +194,7 @@ def train_eval(
 
     # TODO(oars): Refactor drivers to better handle policy states. Remove the
     # policy reset and passing down an empyt policy state to the driver.
-    collect_policy = tf_agent.collect_policy()
+    collect_policy = tf_agent.collect_policy
     policy_state = collect_policy.get_initial_state(tf_env.batch_size)
     initial_collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
@@ -229,7 +229,7 @@ def train_eval(
         metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
     policy_checkpointer = common_utils.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'policy'),
-        policy=tf_agent.policy(),
+        policy=tf_agent.policy,
         global_step=global_step)
     rb_checkpointer = common_utils.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'replay_buffer'),

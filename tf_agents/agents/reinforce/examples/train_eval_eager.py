@@ -114,7 +114,7 @@ def train_eval(
         summarize_grads_and_vars=summarize_grads_and_vars)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-        tf_agent.collect_data_spec(),
+        tf_agent.collect_data_spec,
         batch_size=tf_env.batch_size,
         max_length=replay_buffer_capacity)
 
@@ -129,8 +129,8 @@ def train_eval(
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
 
-    eval_policy = tf_agent.policy()
-    collect_policy = tf_agent.collect_policy()
+    eval_policy = tf_agent.policy
+    collect_policy = tf_agent.collect_policy
 
     collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,

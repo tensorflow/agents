@@ -38,7 +38,7 @@ class DynamicStepDriverTest(tf.test.TestCase):
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     policy_state_ph = tensor_spec.to_nest_placeholder(
-        policy.policy_state_spec(),
+        policy.policy_state_spec,
         default=0,
         name_scope='policy_state_ph',
         outer_dims=(1,))
@@ -104,7 +104,7 @@ class DynamicStepDriverTest(tf.test.TestCase):
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     policy_state_ph = tensor_spec.to_nest_placeholder(
-        policy.policy_state_spec(),
+        policy.policy_state_spec,
         default=0,
         name_scope='policy_state_ph',
         outer_dims=(1,))

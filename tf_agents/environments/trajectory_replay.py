@@ -88,7 +88,7 @@ class TrajectoryReplay(object):
         match `self.policy.trajectory_spec`.
       ValueError: If `trajectory` lacks two outer dims.
     """
-    trajectory_spec = self._policy.trajectory_spec()
+    trajectory_spec = self._policy.trajectory_spec
     outer_dims = nest_utils.get_outer_shape(trajectory, trajectory_spec)
 
     if tf.compat.dimension_value(outer_dims.shape[0]) != 2:
@@ -112,7 +112,7 @@ class TrajectoryReplay(object):
       policy_state = self._policy.get_initial_state(batch_size)
     else:
       tf.nest.assert_same_structure(policy_state,
-                                    self._policy.policy_state_spec())
+                                    self._policy.policy_state_spec)
 
     if not self._time_major:
       # Make trajectory time-major.

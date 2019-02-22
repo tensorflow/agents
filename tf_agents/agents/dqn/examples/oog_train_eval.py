@@ -149,16 +149,16 @@ def train_eval(
       debug_summaries=debug_summaries,
       summarize_grads_and_vars=summarize_grads_and_vars)
 
-  tf_collect_policy = agent.collect_policy()
+  tf_collect_policy = agent.collect_policy
   collect_policy = py_tf_policy.PyTFPolicy(tf_collect_policy)
-  greedy_policy = py_tf_policy.PyTFPolicy(agent.policy())
+  greedy_policy = py_tf_policy.PyTFPolicy(agent.policy)
   random_policy = random_py_policy.RandomPyPolicy(env.time_step_spec(),
                                                   env.action_spec())
 
   # Python replay buffer.
   replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
       capacity=replay_buffer_capacity,
-      data_spec=tensor_spec.to_nest_array_spec(agent.collect_data_spec()))
+      data_spec=tensor_spec.to_nest_array_spec(agent.collect_data_spec))
 
   time_step = env.reset()
 
@@ -176,7 +176,7 @@ def train_eval(
 
   policy_checkpointer = common_utils.Checkpointer(
       ckpt_dir=os.path.join(train_dir, 'policy'),
-      policy=agent.policy(),
+      policy=agent.policy,
       global_step=global_step)
 
   ds = replay_buffer.as_dataset(sample_batch_size=batch_size, num_steps=2)

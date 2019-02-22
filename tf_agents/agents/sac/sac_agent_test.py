@@ -200,7 +200,7 @@ class SacAgentTest(tf.test.TestCase):
 
     observations = [tf.constant([1, 2], dtype=tf.float32)]
     time_steps = ts.restart(observations)
-    action_step = agent.policy().action(time_steps)
+    action_step = agent.policy.action(time_steps)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     action_ = self.evaluate(action_step.action)

@@ -142,11 +142,11 @@ def train_eval(
         summarize_grads_and_vars=summarize_grads_and_vars)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-        tf_agent.collect_data_spec(),
+        tf_agent.collect_data_spec,
         batch_size=tf_env.batch_size,
         max_length=replay_buffer_capacity)
 
-    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy())
+    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy)
 
     train_metrics = [
         tf_metrics.NumberOfEpisodes(),
@@ -165,7 +165,7 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=initial_collect_steps).run()
 
-    collect_policy = tf_agent.collect_policy()
+    collect_policy = tf_agent.collect_policy
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
@@ -191,7 +191,7 @@ def train_eval(
         metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
     policy_checkpointer = common_utils.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'policy'),
-        policy=tf_agent.policy(),
+        policy=tf_agent.policy,
         global_step=global_step)
     rb_checkpointer = common_utils.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'replay_buffer'),

@@ -72,8 +72,8 @@ class EpsilonGreedyPolicy(py_policy.Base):
     self._greedy_policy = greedy_policy
     if random_policy is None:
       self._random_policy = random_py_policy.RandomPyPolicy(
-          time_step_spec=greedy_policy.time_step_spec(),
-          action_spec=greedy_policy.action_spec(),
+          time_step_spec=greedy_policy.time_step_spec,
+          action_spec=greedy_policy.action_spec,
           seed=random_seed)
     else:
       self._random_policy = random_policy

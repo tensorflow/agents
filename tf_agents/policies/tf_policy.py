@@ -218,6 +218,7 @@ class Base(tf.Module):
     else:
       return tf.no_op()
 
+  @property
   def time_step_spec(self):
     """Describes the `TimeStep` tensors returned by `step()`.
 
@@ -228,6 +229,7 @@ class Base(tf.Module):
     """
     return self._time_step_spec
 
+  @property
   def action_spec(self):
     """Describes the TensorSpecs of the Tensors expected by `step(action)`.
 
@@ -241,6 +243,7 @@ class Base(tf.Module):
     """
     return self._action_spec
 
+  @property
   def policy_state_spec(self):
     """Describes the Tensors expected by `step(_, policy_state)`.
 
@@ -254,6 +257,7 @@ class Base(tf.Module):
     """
     return self._policy_state_spec
 
+  @property
   def info_spec(self):
     """Describes the Tensors emitted as info by `action` and `distribution`.
 
@@ -267,6 +271,7 @@ class Base(tf.Module):
     """
     return self._info_spec
 
+  @property
   def policy_step_spec(self):
     """Describes the output of `action()`.
 
@@ -277,6 +282,7 @@ class Base(tf.Module):
     return self._policy_step_spec
 
   # TODO(kbanoop, ebrevdo): Should this be collect_data_spec to mirror agents?
+  @property
   def trajectory_spec(self):
     """Describes the Tensors written when using this policy with an environment.
 

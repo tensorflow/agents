@@ -59,7 +59,7 @@ class AgentTest(tf.test.TestCase):
         self._action_spec,
         q_network=q_net,
         optimizer=None)
-    self.assertTrue(agent.policy() is not None)
+    self.assertIsNotNone(agent.policy)
 
   def testAgentFollowsActionSpec(self, agent_class):
     agent = agent_class(
@@ -67,8 +67,8 @@ class AgentTest(tf.test.TestCase):
         self._action_spec,
         q_network=q_network.QNetwork(self._observation_spec, self._action_spec),
         optimizer=None)
-    self.assertTrue(agent.policy() is not None)
-    policy = agent.policy()
+    self.assertIsNotNone(agent.policy)
+    policy = agent.policy
     observation = tensor_spec.sample_spec_nest(
         self._time_step_spec, seed=42, outer_dims=(1,))
     action_op = policy.action(observation).action
@@ -85,8 +85,8 @@ class AgentTest(tf.test.TestCase):
         action_spec,
         q_network=q_network.QNetwork(self._observation_spec, action_spec),
         optimizer=None)
-    self.assertTrue(agent.policy() is not None)
-    policy = agent.policy()
+    self.assertIsNotNone(agent.policy)
+    policy = agent.policy
     observation = tensor_spec.sample_spec_nest(
         self._time_step_spec, seed=42, outer_dims=(1,))
 
@@ -149,7 +149,7 @@ class AgentTest(tf.test.TestCase):
         optimizer=None)
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
-    policy = agent.policy()
+    policy = agent.policy
     action_step = policy.action(time_steps)
     # Batch size 2.
     self.assertAllEqual(
@@ -170,7 +170,7 @@ class AgentTest(tf.test.TestCase):
         optimizer=None)
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
-    policy = agent.policy()
+    policy = agent.policy
     action_step = policy.action(time_steps)
     self.evaluate(tf.compat.v1.initialize_all_variables())
 

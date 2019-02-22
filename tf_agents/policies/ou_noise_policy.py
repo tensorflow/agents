@@ -52,13 +52,13 @@ class OUNoisePolicy(tf_policy.Base):
       if not tensor_spec.is_continuous(action_spec):
         raise ValueError('OU Noise is applicable only to continuous actions.')
 
-    tf.nest.map_structure(_validate_action_spec, wrapped_policy.action_spec())
+    tf.nest.map_structure(_validate_action_spec, wrapped_policy.action_spec)
 
     super(OUNoisePolicy, self).__init__(
-        wrapped_policy.time_step_spec(),
-        wrapped_policy.action_spec(),
-        wrapped_policy.policy_state_spec(),
-        wrapped_policy.info_spec(),
+        wrapped_policy.time_step_spec,
+        wrapped_policy.action_spec,
+        wrapped_policy.policy_state_spec,
+        wrapped_policy.info_spec,
         name=name)
     self._ou_stddev = ou_stddev
     self._ou_damping = ou_damping

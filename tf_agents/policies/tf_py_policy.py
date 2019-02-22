@@ -58,8 +58,8 @@ class TFPyPolicy(tf_policy.Base):
     (time_step_spec, action_spec,
      policy_state_spec, info_spec) = tf.nest.map_structure(
          tensor_spec.BoundedTensorSpec.from_spec,
-         (policy.time_step_spec(), policy.action_spec(),
-          policy.policy_state_spec(), policy.info_spec()))
+         (policy.time_step_spec, policy.action_spec,
+          policy.policy_state_spec, policy.info_spec))
 
     super(TFPyPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -70,9 +70,9 @@ class TFPyPolicy(tf_policy.Base):
 
     # Output types of py_funcs.
     self._policy_state_dtypes = map_tensor_spec_to_dtypes_list(
-        self.policy_state_spec())
+        self.policy_state_spec)
     self._policy_step_dtypes = map_tensor_spec_to_dtypes_list(
-        self.policy_step_spec())
+        self.policy_step_spec)
 
   def _get_initial_state(self, batch_size):
     """Invokes  python policy reset through py_func.
@@ -97,7 +97,7 @@ class TFPyPolicy(tf_policy.Base):
           stateful=False,
           name='get_initial_state_py_func')
       return tf.nest.pack_sequence_as(
-          structure=self.policy_state_spec(), flat_sequence=flat_policy_state)
+          structure=self.policy_state_spec, flat_sequence=flat_policy_state)
 
   def _action(self, time_step, policy_state, seed):
     if seed is not None:
@@ -105,8 +105,8 @@ class TFPyPolicy(tf_policy.Base):
           'seed is not supported; but saw seed: {}'.format(seed))
     def _action_fn(*flattened_time_step_and_policy_state):
       packed_py_time_step, packed_py_policy_state = tf.nest.pack_sequence_as(
-          structure=(self._py_policy.time_step_spec(),
-                     self._py_policy.policy_state_spec()),
+          structure=(self._py_policy.time_step_spec,
+                     self._py_policy.policy_state_spec),
           flat_sequence=flattened_time_step_and_policy_state)
       py_action_step = self._py_policy.action(
           time_step=packed_py_time_step, policy_state=packed_py_policy_state)
@@ -122,7 +122,7 @@ class TFPyPolicy(tf_policy.Base):
             stateful=True,
             name='action_py_func')
         return tf.nest.pack_sequence_as(
-            structure=self.policy_step_spec(), flat_sequence=flat_action_step)
+            structure=self.policy_step_spec, flat_sequence=flat_action_step)
 
   def _variables(self):
     """Returns default [] representing a policy that has no variables."""

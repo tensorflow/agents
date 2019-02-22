@@ -416,7 +416,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1].
     expected_loss = l2_reg * ((2**2 + 1) + (2**2 + 1 + 1 + 1))
     # Make sure the network is built before we try to get variables.
-    agent.policy().action(
+    agent.policy.action(
         tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
     loss = agent.l2_regularization_loss()
 
@@ -677,7 +677,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
         value_net=value_net)
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=1)
-    action_step = agent.policy().action(time_steps)
+    action_step = agent.policy.action(time_steps)
     actions = action_step.action
     self.assertEqual(actions.shape.as_list(), [1, 1])
     self.evaluate(tf.compat.v1.global_variables_initializer())

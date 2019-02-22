@@ -75,7 +75,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         self._action_spec,
         cloning_network=cloning_net,
         optimizer=None)
-    self.assertTrue(agent.policy() is not None)
+    self.assertIsNotNone(agent.policy)
 
   def testCreateAgentNestSizeChecks(self):
     action_spec = [
@@ -151,7 +151,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
       train_and_loss = lambda: agent.train(traj)
     else:
       train_and_loss = agent.train(traj)
-    replay = trajectory_replay.TrajectoryReplay(agent.policy())
+    replay = trajectory_replay.TrajectoryReplay(agent.policy)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
     for _ in range(TRAIN_ITERATIONS):
@@ -179,7 +179,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
       train_and_loss = lambda: agent.train(traj)
     else:
       train_and_loss = agent.train(traj)
-    replay = trajectory_replay.TrajectoryReplay(agent.policy())
+    replay = trajectory_replay.TrajectoryReplay(agent.policy)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     initial_actions = self.evaluate(replay.run(traj)[0])
     for _ in range(TRAIN_ITERATIONS):
@@ -198,7 +198,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         optimizer=None)
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
-    policy = agent.policy()
+    policy = agent.policy
     action_step = policy.action(time_steps)
     # Batch size 2.
     self.assertAllEqual(
@@ -219,7 +219,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         optimizer=None)
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
-    policy = agent.policy()
+    policy = agent.policy
     action_step = policy.action(time_steps)
     self.evaluate(tf.compat.v1.initialize_all_variables())
 

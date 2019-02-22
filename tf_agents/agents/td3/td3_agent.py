@@ -358,7 +358,7 @@ class Td3Agent(tf_agent.TFAgent):
       critic_loss = (self._td_errors_loss_fn(td_targets, pred_td_targets_1)
                      + self._td_errors_loss_fn(td_targets, pred_td_targets_2))
       if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec(), num_outer_dims=2):
+          time_steps, self.time_step_spec, num_outer_dims=2):
         # Sum over the time dimension.
         critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
 
@@ -397,7 +397,7 @@ class Td3Agent(tf_agent.TFAgent):
         loss = common_utils.element_wise_squared_loss(
             tf.stop_gradient(dqda + action), action)
         if nest_utils.is_batched_nested_tensors(
-            time_steps, self.time_step_spec(), num_outer_dims=2):
+            time_steps, self.time_step_spec, num_outer_dims=2):
           # Sum over the time dimension.
           loss = tf.reduce_sum(input_tensor=loss, axis=1)
 

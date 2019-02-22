@@ -70,8 +70,8 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
     ], self._time_step_spec, action_spec)
     policy = greedy_policy.GreedyPolicy(wrapped_policy)
 
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, action_spec)
 
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=1)
@@ -95,8 +95,8 @@ class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
         action_spec)
     policy = greedy_policy.GreedyPolicy(wrapped_policy)
 
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, action_spec)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)

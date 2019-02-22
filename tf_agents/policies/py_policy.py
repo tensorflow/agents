@@ -117,6 +117,7 @@ class Base(object):
     """
     return self._action(time_step, policy_state)
 
+  @property
   def time_step_spec(self):
     """Describes the `TimeStep` np.Arrays expected by `action(time_step)`.
 
@@ -127,6 +128,7 @@ class Base(object):
     """
     return self._time_step_spec
 
+  @property
   def action_spec(self):
     """Describes the ArraySpecs of the np.Array returned by `action()`.
 
@@ -140,6 +142,7 @@ class Base(object):
     """
     return self._action_spec
 
+  @property
   def policy_state_spec(self):
     """Describes the arrays expected by functions with `policy_state` as input.
 
@@ -150,6 +153,7 @@ class Base(object):
     """
     return self._policy_state_spec
 
+  @property
   def info_spec(self):
     """Describes the Arrays emitted as info by `action()`.
 
@@ -159,6 +163,7 @@ class Base(object):
     """
     return self._info_spec
 
+  @property
   def policy_step_spec(self):
     """Describes the output of `action()`.
 
@@ -168,6 +173,7 @@ class Base(object):
     """
     return self._policy_step_spec
 
+  @property
   def trajectory_spec(self):
     """Describes the data collected when using this policy with an environment.
 
@@ -197,7 +203,7 @@ class Base(object):
     """Default implementation of `get_initial_state`.
 
     This implementation returns arrays of all zeros matching `batch_size` and
-    spec `self.policy_state_spec()`.
+    spec `self.policy_state_spec`.
 
     Args:
       batch_size: The batch shape.

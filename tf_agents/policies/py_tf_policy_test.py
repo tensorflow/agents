@@ -94,8 +94,8 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
     expected_time_step_spec = ts.time_step_spec(
         tensor_spec.to_nest_array_spec(self._obs_spec))
     expected_action_spec = tensor_spec.to_nest_array_spec(self._action_spec)
-    self.assertEqual(expected_time_step_spec, policy.time_step_spec())
-    self.assertEqual(expected_action_spec, policy.action_spec())
+    self.assertEqual(expected_time_step_spec, policy.time_step_spec)
+    self.assertEqual(expected_action_spec, policy.action_spec)
 
   def testRaiseValueErrorWithoutSession(self):
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)

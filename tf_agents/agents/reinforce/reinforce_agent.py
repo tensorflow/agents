@@ -170,8 +170,8 @@ class ReinforceAgent(tf_agent.TFAgent):
 
   @eager_utils.future_in_eager_mode
   def _loss(self, time_steps, actions, returns, weights):
-    tf.nest.assert_same_structure(time_steps, self.time_step_spec())
-    actions_distribution = self.collect_policy().distribution(time_steps).action
+    tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+    actions_distribution = self.collect_policy.distribution(time_steps).action
 
     policy_gradient_loss = self.policy_gradient_loss(
         actions_distribution, actions, time_steps.is_last(), returns, weights)
@@ -210,7 +210,7 @@ class ReinforceAgent(tf_agent.TFAgent):
     # TODO(kbanoop): Add class IndependentNested(tfd.Distribution) to handle
     # nests of independent distributions like this.
     action_log_prob = common.log_probability(actions_distribution, actions,
-                                             self.action_spec())
+                                             self.action_spec)
 
     # Filter out transitions between end state of previous episode and start
     # state of next episode.
@@ -253,7 +253,7 @@ class ReinforceAgent(tf_agent.TFAgent):
     """
     if self._entropy_regularization:
       loss = _entropy_loss(
-          actions_distribution, self.action_spec(), weights)
+          actions_distribution, self.action_spec, weights)
       loss *= self._entropy_regularization
     else:
       loss = tf.constant(0.0, dtype=tf.float32)

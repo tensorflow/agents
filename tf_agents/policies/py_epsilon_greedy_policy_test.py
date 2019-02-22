@@ -37,8 +37,8 @@ class EpsilonGreedyPolicyTest(absltest.TestCase):
     self.greedy_policy.action_spec = mock.MagicMock()
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
         self.greedy_policy, 0.5)
-    self.assertEqual(self.greedy_policy.action_spec(),
-                     policy._random_policy.action_spec())
+    self.assertEqual(self.greedy_policy.action_spec,
+                     policy._random_policy.action_spec)
 
   def testCtorValueErrorNegativeEpsilon(self):
     with self.assertRaises(ValueError):

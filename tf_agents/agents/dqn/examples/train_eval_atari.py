@@ -277,12 +277,12 @@ class TrainEval(object):
             summarize_grads_and_vars=summarize_grads_and_vars)
 
         self._collect_policy = py_tf_policy.PyTFPolicy(
-            tf_agent.collect_policy())
+            tf_agent.collect_policy)
 
         if self._do_eval:
           self._eval_policy = py_tf_policy.PyTFPolicy(
               epsilon_greedy_policy.EpsilonGreedyPolicy(
-                  policy=tf_agent.policy(),
+                  policy=tf_agent.policy,
                   epsilon=self._eval_epsilon_greedy))
 
         py_observation_spec = self._env.observation_spec()
@@ -358,7 +358,7 @@ class TrainEval(object):
                 [self._iteration_metric], 'train_metrics'))
         self._policy_checkpointer = common_utils.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'policy'),
-            policy=tf_agent.policy(),
+            policy=tf_agent.policy,
             global_step=self._global_step)
         self._rb_checkpointer = common_utils.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'replay_buffer'),

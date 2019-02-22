@@ -81,10 +81,10 @@ class TFPyPolicyTest(tf.test.TestCase):
     py_policy_info_spec = array_spec.BoundedArraySpec((3,), np.int32, 0, 1)
 
     mock_py_policy = mock.create_autospec(py_policy.Base)
-    mock_py_policy.time_step_spec.return_value = py_time_step_spec
-    mock_py_policy.action_spec.return_value = py_action_spec
-    mock_py_policy.policy_state_spec.return_value = py_policy_state_spec
-    mock_py_policy.info_spec.return_value = py_policy_info_spec
+    mock_py_policy.time_step_spec = py_time_step_spec
+    mock_py_policy.action_spec = py_action_spec
+    mock_py_policy.policy_state_spec = py_policy_state_spec
+    mock_py_policy.info_spec = py_policy_info_spec
 
     expected_py_policy_state = np.ones(py_policy_state_spec.shape,
                                        py_policy_state_spec.dtype)
@@ -125,15 +125,14 @@ class TFPyPolicyTest(tf.test.TestCase):
     batch_size = 3
     mock_py_policy = mock.create_autospec(py_policy.Base)
     observation_spec = array_spec.ArraySpec((3,), np.float32)
-    mock_py_policy.time_step_spec.return_value = ts.time_step_spec(
-        observation_spec)
-    mock_py_policy.action_spec.return_value = array_spec.BoundedArraySpec(
+    mock_py_policy.time_step_spec = ts.time_step_spec(observation_spec)
+    mock_py_policy.action_spec = array_spec.BoundedArraySpec(
         (7,), np.int32, 1, 1)
     py_policy_state_spec = array_spec.BoundedArraySpec((policy_state_length,),
                                                        np.int32, 1, 1)
     # Make the mock policy and reset return value.
-    mock_py_policy.policy_state_spec.return_value = py_policy_state_spec
-    mock_py_policy.info_spec.return_value = ()
+    mock_py_policy.policy_state_spec = py_policy_state_spec
+    mock_py_policy.info_spec = ()
 
     expected_py_policy_state = np.zeros(
         [batch_size] + list(py_policy_state_spec.shape),
@@ -163,12 +162,11 @@ class TFPyPolicyTest(tf.test.TestCase):
   def _get_mock_py_policy(self):
     mock_py_policy = mock.create_autospec(py_policy.Base)
     observation_spec = tensor_spec.TensorSpec([5], dtype=tf.float32)
-    mock_py_policy.time_step_spec.return_value = ts.time_step_spec(
-        observation_spec)
-    mock_py_policy.action_spec.return_value = tensor_spec.BoundedTensorSpec(
+    mock_py_policy.time_step_spec = ts.time_step_spec(observation_spec)
+    mock_py_policy.action_spec = tensor_spec.BoundedTensorSpec(
         [3], tf.float32, -1.0, 1.0)
-    mock_py_policy.policy_state_spec.return_value = ()
-    mock_py_policy.info_spec.return_value = ()
+    mock_py_policy.policy_state_spec = ()
+    mock_py_policy.info_spec = ()
     return mock_py_policy
 
 if __name__ == '__main__':

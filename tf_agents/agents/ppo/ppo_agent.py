@@ -671,10 +671,10 @@ class PPOAgent(tf_agent.TFAgent):
                                   debug_summaries=False):
     """Create regularization loss tensor based on agent parameters."""
     if self._entropy_regularization > 0:
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
       with tf.name_scope('entropy_regularization'):
         entropy = tf.cast(
-            common.entropy(current_policy_distribution, self.action_spec()),
+            common.entropy(current_policy_distribution, self.action_spec),
             tf.float32)
         entropy_reg_loss = (
             tf.reduce_mean(input_tensor=-entropy * weights) *
@@ -767,7 +767,7 @@ class PPOAgent(tf_agent.TFAgent):
       policy_gradient_loss: A tensor that will contain policy gradient loss for
         the on-policy experience.
     """
-    tf.nest.assert_same_structure(time_steps, self.time_step_spec())
+    tf.nest.assert_same_structure(time_steps, self.time_step_spec)
     action_log_prob = common.log_probability(current_policy_distribution,
                                              actions, self._action_spec)
     action_log_prob = tf.cast(action_log_prob, tf.float32)
@@ -829,13 +829,13 @@ class PPOAgent(tf_agent.TFAgent):
                                    per_timestep_objective_clipped)
       tf.contrib.summary.histogram('per_timestep_objective_min',
                                    per_timestep_objective_min)
-      entropy = common.entropy(current_policy_distribution, self.action_spec())
+      entropy = common.entropy(current_policy_distribution, self.action_spec)
       tf.contrib.summary.histogram('policy_entropy', entropy)
       tf.contrib.summary.scalar('policy_entropy_mean',
                                 tf.reduce_mean(input_tensor=entropy))
       # Categorical distribution (used for discrete actions)
       # doesn't have a mean.
-      if not tensor_spec.is_discrete(self.action_spec()):
+      if not tensor_spec.is_discrete(self.action_spec):
         tf.contrib.summary.histogram('actions_distribution_mean',
                                      current_policy_distribution.mean())
         tf.contrib.summary.histogram('actions_distribution_stddev',
@@ -882,7 +882,7 @@ class PPOAgent(tf_agent.TFAgent):
   def _kl_divergence(self, time_steps, action_distribution_parameters,
                      current_policy_distribution):
     outer_dims = list(
-        range(nest_utils.get_outer_rank(time_steps, self.time_step_spec())))
+        range(nest_utils.get_outer_rank(time_steps, self.time_step_spec)))
 
     old_actions_distribution = (
         distribution_spec.nested_distributions_from_specs(

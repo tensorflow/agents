@@ -62,8 +62,8 @@ class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     policy = boltzmann_policy.BoltzmannPolicy(wrapped, temperature=0.9)
 
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
     self.assertEmpty(policy.variables())
 
   @test_util.run_in_graph_and_eager_modes()

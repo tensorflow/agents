@@ -160,8 +160,8 @@ class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
         actor_network=actor_network,
         value_network=value_network)
 
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
 
   @parameterized.named_parameters(*_test_cases('test_reset'))
   def testReset(self, network_cls):

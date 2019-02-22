@@ -51,11 +51,11 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
     self._random_policy = random_tf_policy.RandomTFPolicy(
-        policy.time_step_spec(), policy.action_spec())
-    super(EpsilonGreedyPolicy, self).__init__(policy.time_step_spec(),
-                                              policy.action_spec(),
-                                              policy.policy_state_spec(),
-                                              policy.info_spec(),
+        policy.time_step_spec, policy.action_spec)
+    super(EpsilonGreedyPolicy, self).__init__(policy.time_step_spec,
+                                              policy.action_spec,
+                                              policy.policy_state_spec,
+                                              policy.info_spec,
                                               name=name)
 
   def _variables(self):

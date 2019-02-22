@@ -116,8 +116,8 @@ class DdpgAgentTest(tf.test.TestCase):
         actor_optimizer=None,
         critic_optimizer=None,
     )
-    self.assertTrue(agent.policy() is not None)
-    self.assertTrue(agent.collect_policy() is not None)
+    self.assertIsNotNone(agent.policy)
+    self.assertIsNotNone(agent.collect_policy)
 
   def testCriticLoss(self):
     agent = ddpg_agent.DdpgAgent(
@@ -180,7 +180,7 @@ class DdpgAgentTest(tf.test.TestCase):
 
     observations = [tf.constant([[1, 2]], dtype=tf.float32)]
     time_steps = ts.restart(observations)
-    action_step = agent.policy().action(time_steps)
+    action_step = agent.policy.action(time_steps)
     self.assertEqual(action_step.action[0].shape.as_list(), [1, 1])
 
     self.evaluate(tf.compat.v1.global_variables_initializer())

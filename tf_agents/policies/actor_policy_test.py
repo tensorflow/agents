@@ -116,8 +116,8 @@ class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
     policy = actor_policy.ActorPolicy(
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
     self.assertLen(policy.variables(), 2)
 
   @test_cases()

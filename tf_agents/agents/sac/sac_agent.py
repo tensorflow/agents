@@ -295,7 +295,7 @@ class SacAgent(tf_agent.TFAgent):
 
   def _action_spec_means_magnitudes(self):
     """Get the center and magnitude of the ranges in action spec."""
-    action_spec = self.action_spec()
+    action_spec = self.action_spec
     action_means = tf.nest.map_structure(
         lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
     action_magnitudes = tf.nest.map_structure(
@@ -307,7 +307,7 @@ class SacAgent(tf_agent.TFAgent):
   def _actions_and_log_probs(self, time_steps):
     """Get actions and corresponding log probabilities from policy."""
     # Get raw action distribution from policy, and initialize bijectors list.
-    action_distribution = self.policy().distribution(time_steps).action
+    action_distribution = self.policy.distribution(time_steps).action
 
     if self._squash_actions:
       bijectors = []
@@ -329,7 +329,7 @@ class SacAgent(tf_agent.TFAgent):
     # Sample actions and log_pis from transformed distribution.
     actions = tf.nest.map_structure(lambda d: d.sample(), action_distribution)
     log_pi = common.log_probability(action_distribution, actions,
-                                    self.action_spec())
+                                    self.action_spec)
 
     return actions, log_pi
 
@@ -358,9 +358,9 @@ class SacAgent(tf_agent.TFAgent):
       critic_loss: A scalar critic loss.
     """
     with tf.name_scope('critic_loss'):
-      tf.nest.assert_same_structure(actions, self.action_spec())
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
-      tf.nest.assert_same_structure(next_time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(actions, self.action_spec)
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+      tf.nest.assert_same_structure(next_time_steps, self.time_step_spec)
 
       next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps)
       target_input_1 = (next_time_steps.observation, next_actions)
@@ -415,7 +415,7 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss: A scalar actor loss.
     """
     with tf.name_scope('actor_loss'):
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
 
       actions, log_pi = self._actions_and_log_probs(time_steps)
       target_input_1 = (time_steps.observation, actions)
@@ -437,7 +437,7 @@ class SacAgent(tf_agent.TFAgent):
         tf.contrib.summary.scalar('entropy_avg',
                                   -tf.reduce_mean(input_tensor=log_pi))
         common.generate_tensor_summaries('target_q_values', target_q_values)
-        action_distribution = self.policy().distribution(time_steps).action
+        action_distribution = self.policy.distribution(time_steps).action
         common.generate_tensor_summaries('act_mean', action_distribution.loc)
         common.generate_tensor_summaries('act_stddev',
                                          action_distribution.scale)
@@ -458,7 +458,7 @@ class SacAgent(tf_agent.TFAgent):
       alpha_loss: A scalar alpha loss.
     """
     with tf.name_scope('alpha_loss'):
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec())
+      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
 
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
       alpha_loss = (

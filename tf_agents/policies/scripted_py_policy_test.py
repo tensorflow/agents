@@ -187,7 +187,7 @@ class ScriptedPyPolicyTest(absltest.TestCase):
   def testPolicyStateSpecIsEmpty(self):
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=None, action_spec=[], action_script=[])
-    self.assertEqual(policy.policy_state_spec(), ())
+    self.assertEqual(policy.policy_state_spec, ())
 
 if __name__ == '__main__':
   absltest.main()

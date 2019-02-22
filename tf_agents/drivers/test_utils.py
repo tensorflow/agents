@@ -37,7 +37,7 @@ from tf_agents.utils import common
 def make_replay_buffer(policy):
   """Default replay buffer factory."""
   return tf_uniform_replay_buffer.TFUniformReplayBuffer(
-      policy.trajectory_spec(), batch_size=1)
+      policy.trajectory_spec, batch_size=1)
 
 
 class PyEnvironmentMock(py_environment.PyEnvironment):

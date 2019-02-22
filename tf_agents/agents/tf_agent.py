@@ -117,10 +117,10 @@ class TFAgent(tf.Module):
 
     # Check experience matches collect data spec with batch & time dims.
     if not nest_utils.is_batched_nested_tensors(
-        experience, self.collect_data_spec(), num_outer_dims=2):
+        experience, self.collect_data_spec, num_outer_dims=2):
       debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
       debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
-                                          self.collect_data_spec())
+                                          self.collect_data_spec)
       raise ValueError("At least one of the tensors in `experience` does not "
                        "have two outer dimensions. Tensors should be shaped as "
                        "B x T x [F ...]; batch size, time step, and frame.\n"
@@ -128,16 +128,16 @@ class TFAgent(tf.Module):
                        "Full expected shapes (minus outer dimensions):\n%s." %
                        (debug_str_1, debug_str_2))
 
-    if self.train_sequence_length() is not None:
+    if self.train_sequence_length is not None:
 
       def check_shape(t):  # pylint: disable=invalid-name
-        if t.shape[1] != self.train_sequence_length():
+        if t.shape[1] != self.train_sequence_length:
           debug_str = tf.nest.map_structure(lambda tp: tp.shape, experience)
           raise ValueError(
               "One of the tensors in `experience` has a time axis "
               "dim value '%s', but we require dim value '%d'.  "
               "Full shape structure of experience:\n%s" %
-              (t.shape[1], self.train_sequence_length(), debug_str))
+              (t.shape[1], self.train_sequence_length, debug_str))
 
       tf.nest.map_structure(check_shape, experience)
 
@@ -150,6 +150,7 @@ class TFAgent(tf.Module):
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))
     return loss_info
 
+  @property
   def time_step_spec(self):
     """Describes the `TimeStep` tensors expected by the agent.
 
@@ -159,6 +160,7 @@ class TFAgent(tf.Module):
     """
     return self._time_step_spec
 
+  @property
   def action_spec(self):
     """TensorSpec describing the action produced by the agent.
 
@@ -169,6 +171,7 @@ class TFAgent(tf.Module):
     """
     return self._action_spec
 
+  @property
   def policy(self):
     """Return the current policy held by the agent.
 
@@ -177,6 +180,7 @@ class TFAgent(tf.Module):
     """
     return self._policy
 
+  @property
   def collect_policy(self):
     """Return a policy that can be used to collect data from the environment.
 
@@ -185,14 +189,16 @@ class TFAgent(tf.Module):
     """
     return self._collect_policy
 
+  @property
   def collect_data_spec(self):
     """Returns a `Trajectory` spec, as expected by the `collect_policy`.
 
     Returns:
       A `Trajectory` spec.
     """
-    return self.collect_policy().trajectory_spec()
+    return self.collect_policy.trajectory_spec
 
+  @property
   def train_sequence_length(self):
     """The number of time steps needed in experience tensors passed to `train`.
 
@@ -212,9 +218,11 @@ class TFAgent(tf.Module):
     """
     return self._train_sequence_length
 
+  @property
   def debug_summaries(self):
     return self._debug_summaries
 
+  @property
   def summarize_grads_and_vars(self):
     return self._summarize_grads_and_vars
 

@@ -48,10 +48,10 @@ class RandomPyPolicy(py_policy.Base):
   def _action(self, time_step, policy_state):
     outer_dims = self._outer_dims
     if outer_dims is None:
-      if self.time_step_spec().observation:
+      if self.time_step_spec.observation:
         outer_dims = nest_utils.get_outer_array_shape(
             time_step.observation,
-            self.time_step_spec().observation)
+            self.time_step_spec.observation)
       else:
         outer_dims = ()
 

@@ -71,8 +71,8 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(self._policy,
                                                        epsilon=epsilon)
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
 
     policy_state = policy.get_initial_state(batch_size=2)
     action_step = policy.action(self._time_step, policy_state, seed=54)
@@ -94,8 +94,8 @@ class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
   def testTensorEpsilon(self, epsilon):
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         self._policy, epsilon=epsilon)
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
 
     policy_state = policy.get_initial_state(batch_size=2)
     time_step = tf.nest.map_structure(tf.convert_to_tensor, self._time_step)

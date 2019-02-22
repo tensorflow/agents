@@ -58,8 +58,8 @@ class QPolicyTest(tf.test.TestCase):
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
-    self.assertEqual(policy.time_step_spec(), self._time_step_spec)
-    self.assertEqual(policy.action_spec(), self._action_spec)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
     self.assertEqual(policy.variables(), [])
 
   @test_util.run_in_graph_and_eager_modes()
