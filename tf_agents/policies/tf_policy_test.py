@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 from tf_agents.policies import tf_policy
+from tf_agents.utils import common as common
 
 
 class TfPolicyHoldsVariables(tf_policy.Base):
@@ -38,11 +39,12 @@ class TfPolicyHoldsVariables(tf_policy.Base):
         under that name. Defaults to the class name.
     """
     tf.Module.__init__(self, name=name)
-    const_init = tf.compat.v1.initializers.constant(init_var_value)
     with tf.compat.v1.variable_scope(var_scope):
       self._variables_list = [
-          tf.compat.v1.get_variable("var_1", [3, 3], initializer=const_init),
-          tf.compat.v1.get_variable("var_2", [5, 5], initializer=const_init)
+          common.create_variable("var_1", init_var_value, [3, 3],
+                                 dtype=tf.float32),
+          common.create_variable("var_2", init_var_value, [5, 5],
+                                 dtype=tf.float32)
       ]
 
   def _variables(self):
@@ -62,8 +64,10 @@ class TfPolicyTest(tf.test.TestCase, parameterized.TestCase):
       ("SyncVariables", 1.0, True),
   )
   def testUpdate(self, tau, sort_variables_by_name):
-    source_policy = TfPolicyHoldsVariables(init_var_value=1, var_scope="source")
-    target_policy = TfPolicyHoldsVariables(init_var_value=0, var_scope="target")
+    source_policy = TfPolicyHoldsVariables(init_var_value=1.,
+                                           var_scope="source")
+    target_policy = TfPolicyHoldsVariables(init_var_value=0.,
+                                           var_scope="target")
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     for var in self.evaluate(target_policy.variables()):

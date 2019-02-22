@@ -35,8 +35,10 @@ import tensorflow as tf
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.replay_buffers import table
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
+
 import gin.tf
-from tensorflow.python.data.util import nest as data_nest  # TF internal
+from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 BufferInfo = collections.namedtuple('BufferInfo',
@@ -88,13 +90,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       self._capacity = tf.constant(capacity, dtype=tf.int64)
       self._data_table = table_fn(self._data_spec, self._capacity_value)
       self._id_table = table_fn(self._id_spec, self._capacity_value)
-      self._last_id = tf.compat.v1.get_variable(
-          name='last_id',
-          shape=[],
-          dtype=tf.int64,
-          initializer=tf.compat.v1.initializers.constant(-1, dtype=tf.int64),
-          use_resource=True,
-          trainable=False)
+      self._last_id = common.create_variable('last_id', -1)
       self._last_id_cs = tf.CriticalSection(name='last_id')
 
   def variables(self):

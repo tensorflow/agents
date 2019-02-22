@@ -40,9 +40,10 @@ import tensorflow as tf
 
 from tf_agents.utils import common as common_utils
 
+# pylint:disable=g-direct-tensorflow-import
 from tensorflow.python.framework import tensor_shape  # TF internal
 from tensorflow.python.keras import layers  # TF internal
-
+# pylint:enable=g-direct-tensorflow-import
 
 __all__ = ["DynamicUnroll"]
 

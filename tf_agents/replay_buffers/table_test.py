@@ -19,14 +19,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from collections import namedtuple
+import collections
 
 import numpy as np
 import tensorflow as tf
 
 from tf_agents import specs
 from tf_agents.replay_buffers import table
-from tensorflow.python.framework import test_util  # TF internal
+
+from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class TableTest(tf.test.TestCase):
@@ -179,7 +180,8 @@ class TableTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testReadWriteNamedTuple(self):
     # pylint: disable=invalid-name
-    Observation = namedtuple('Observation', ['action', 'camera', 'lidar'])
+    Observation = collections.namedtuple('Observation',
+                                         ['action', 'camera', 'lidar'])
     # pylint: enable=invalid-name
     spec = Observation(
         action=specs.TensorSpec([3], tf.float32, 'action'),

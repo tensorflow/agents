@@ -31,6 +31,7 @@ from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
 
 
 def make_replay_buffer(policy):
@@ -104,11 +105,11 @@ class TFPolicyMock(tf_policy.Base):
         (), tf.int32, minimum=minimum, maximum=maximum,
         name=policy_state_spec_name)
     info_spec = action_spec
-    self._policy_state = tf.compat.v1.get_variable(
+    self._policy_state = common.create_variable(
         name=policy_state_name,
+        initial_value=maximum,
         shape=batch_shape,
-        dtype=tf.int32,
-        initializer=tf.compat.v1.initializers.constant(maximum))
+        dtype=tf.int32)
     self._initial_policy_state = tf.constant(
         0, shape=batch_shape, dtype=tf.int32)
 
@@ -181,11 +182,8 @@ class NumStepsObserver(object):
 
   def __init__(self, variable_scope='num_steps_step_observer'):
     with tf.compat.v1.variable_scope(variable_scope):
-      self._num_steps = tf.compat.v1.get_variable(
-          'num_steps',
-          shape=[],
-          dtype=tf.int32,
-          initializer=tf.compat.v1.initializers.zeros())
+      self._num_steps = common.create_variable(
+          'num_steps', 0, shape=[], dtype=tf.int32)
 
   @property
   def num_steps(self):
@@ -203,11 +201,8 @@ class NumEpisodesObserver(object):
 
   def __init__(self, variable_scope='num_episodes_step_observer'):
     with tf.compat.v1.variable_scope(variable_scope):
-      self._num_episodes = tf.compat.v1.get_variable(
-          'num_episodes',
-          shape=[],
-          dtype=tf.int32,
-          initializer=tf.compat.v1.initializers.zeros())
+      self._num_episodes = common.create_variable(
+          'num_episodes', 0, shape=[], dtype=tf.int32)
 
   @property
   def num_episodes(self):

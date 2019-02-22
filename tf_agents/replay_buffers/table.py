@@ -27,6 +27,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+from tf_agents.utils import common
+
 
 class Table(tf.contrib.checkpoint.Checkpointable):
   """A table that can store Tensors or nested Tensors."""
@@ -55,14 +57,13 @@ class Table(tf.contrib.checkpoint.Checkpointable):
 
     def _create_storage(spec, slot_name):
       """Create storage for a slot, track it."""
-      new_storage = tf.compat.v1.get_variable(
+      shape = [self._capacity] + spec.shape.as_list()
+      new_storage = common.create_variable(
           name=slot_name,
-          shape=[self._capacity] + spec.shape.as_list(),
+          initializer=tf.zeros(shape, dtype=spec.dtype),
+          shape=None,
           dtype=spec.dtype,
-          initializer=tf.compat.v1.initializers.zeros,
-          trainable=False,
-          use_resource=True,
-      )
+          unique_name=False)
       self._tracker.track(new_storage, slot_name)
       return new_storage
 
