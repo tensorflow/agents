@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import parameterized
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -74,7 +75,7 @@ class DummyActorNet(network.Network):
     return distribution, network_state
 
 
-class ReinforceAgentTest(tf.test.TestCase):
+class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(ReinforceAgentTest, self).setUp()
@@ -106,14 +107,32 @@ class ReinforceAgentTest(tf.test.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     actions = tf.constant([[0], [1]], dtype=tf.float32)
+    actions_distribution = agent.collect_policy().distribution(
+        time_steps).action
     returns = tf.constant([1.9, 1.0], dtype=tf.float32)
 
     expected_loss = 10.983667373657227
-    loss = agent.policy_gradient_loss(time_steps, actions, returns)
+    loss = agent.policy_gradient_loss(
+        actions_distribution, actions, time_steps.is_last(), returns)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
-    self.assertAllClose(loss_.loss, expected_loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  @parameterized.parameters(
+      ([[[0.8, 0.2]]], [1],),
+      ([[[0.8, 0.2]], [[0.3, 0.7]]], [0.5, 0.5],),
+  )
+  def testEntropyLoss(self, probs, weights):
+    probs = tf.convert_to_tensor(probs)
+    distribution = tfp.distributions.Categorical(probs=probs)
+    shape = probs.shape.as_list()
+    action_spec = tensor_spec.TensorSpec(shape[2:-1], dtype=tf.int32)
+    expected = tf.reduce_mean(
+        -tf.reduce_mean(distribution.entropy()) * weights)
+    actual = reinforce_agent._entropy_loss(distribution, action_spec, weights)
+    self.assertAlmostEqual(self.evaluate(actual), self.evaluate(expected),
+                           places=4)
 
   def testPolicy(self):
     if tf.executing_eagerly():
