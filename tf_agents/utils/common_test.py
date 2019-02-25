@@ -73,17 +73,23 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters(0.0, 0.5, 1.0)
   def testUpdateOnlyTargetVariables(self, tau):
     inputs = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    tf.contrib.layers.fully_connected(inputs, 2, scope='source')
-    tf.contrib.layers.fully_connected(inputs, 2, scope='target')
+    source_net = tf.keras.layers.Dense(2, name='source_net')
+    target_net = tf.keras.layers.Dense(2, name='target_net')
 
-    source_vars = tf.contrib.framework.get_model_variables('source')
-    target_vars = tf.contrib.framework.get_model_variables('target')
-    update_op = common.soft_variables_update(source_vars, target_vars, tau)
+    # Force variable creation
+    source_net(inputs)
+    target_net(inputs)
+
+    source_vars = source_net.trainable_weights
+    target_vars = target_net.trainable_weights
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     v_s, v_t = self.evaluate([source_vars, target_vars])
+
+    update_op = common.soft_variables_update(source_vars, target_vars, tau)
     self.evaluate(update_op)
     new_v_s, new_v_t = self.evaluate([source_vars, target_vars])
+
     for i_v_s, i_v_t, n_v_s, n_v_t in zip(v_s, v_t, new_v_s, new_v_t):
       # Source variables don't change
       self.assertAllClose(n_v_s, i_v_s)
@@ -93,24 +99,28 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters(0.0, 0.5, 1.0)
   def testShuffleOrderVariables(self, tau):
     inputs = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    tf.contrib.layers.fully_connected(inputs, 2, scope='source')
-    tf.contrib.layers.fully_connected(inputs, 2, scope='target')
+    source_net = tf.keras.layers.Dense(2, name='source_net')
+    target_net = tf.keras.layers.Dense(2, name='target_net')
 
-    source_vars = tf.contrib.framework.get_model_variables('source')
-    target_vars = tf.contrib.framework.get_model_variables('target')
+    # Force variable creation
+    source_net(inputs)
+    target_net(inputs)
+
+    source_vars = source_net.trainable_weights
+    target_vars = target_net.trainable_weights
 
     shuffled_source_vars = sorted(source_vars,
                                   key=lambda x: random.random())
     shuffled_target_vars = sorted(target_vars,
                                   key=lambda x: random.random())
 
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    v_s, v_t = self.evaluate([source_vars, target_vars])
     update_op = common.soft_variables_update(shuffled_source_vars,
                                              shuffled_target_vars,
                                              tau,
                                              sort_variables_by_name=True)
 
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    v_s, v_t = self.evaluate([source_vars, target_vars])
     self.evaluate(update_op)
     new_v_s, new_v_t = self.evaluate([source_vars, target_vars])
     for i_v_s, i_v_t, n_v_s, n_v_t in zip(v_s, v_t, new_v_s, new_v_t):
