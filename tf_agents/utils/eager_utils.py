@@ -593,7 +593,8 @@ def dataset_iterator(dataset):
   """Constructs a `Dataset` iterator.
 
   The method used to construct the iterator is conditioned on whether Graph mode
-  is enabled.
+  is enabled. `dataset_iterator` and `get_next` are useful when we need to
+  construct an iterator and iterate through it inside a `tensorflow.function`.
 
   Args:
     dataset: a `tf.data.Dataset`.
@@ -610,7 +611,8 @@ def get_next(iterator):
   """Returns the next element in a `Dataset` iterator.
 
   The syntax used to retrieve the next item is conditioned on whether Graph mode
-  is enabled.
+  is enabled. `dataset_iterator` and `get_next` are useful when we need to
+  construct an iterator and iterate through it inside a `tensorflow.function`.
 
   Args:
     iterator: a `tf.data.Iterator` if in Graph mode; a `tf.data.EagerIterator`
