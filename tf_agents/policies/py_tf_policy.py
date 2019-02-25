@@ -40,10 +40,6 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
   # In that case, the initial policy state could be given with no batch
   # dimension.
   # TODO(sfishman): Remove batch_size param entirely.
-  @tf.contrib.framework.deprecated_args(
-      '2019-05-01',
-      '`batch_size ` is deprecated, This parameter has no effect.',
-      'batch_size')
   def __init__(self, policy, batch_size=None, seed=None):
     """Initializes a new `PyTFPolicy`.
 
@@ -54,6 +50,11 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
     """
     if not isinstance(policy, tf_policy.Base):
       logging.warning('Policy should implement tf_policy.Base')
+
+    if batch_size is not None:
+      logging.warning('In PyTFPolicy constructor, `batch_size` is deprecated, '
+                      'this parameter has no effect. This argument will be '
+                      'removed on 2019-05-01')
 
     time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec)
     action_spec = tensor_spec.to_nest_array_spec(policy.action_spec)

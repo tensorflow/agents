@@ -407,9 +407,8 @@ class OUProcess(tf.Module):
     self._stddev = stddev
     self._seed = seed
     with tf.name_scope(scope):
-      self._x = tf.Variable(initial_value=initial_value,
-                            trainable=False,
-                            use_resource=True)
+      self._x = tf.compat.v2.Variable(initial_value=initial_value,
+                                      trainable=False)
 
   def __call__(self):
     noise = tf.random.normal(
