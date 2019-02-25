@@ -208,7 +208,7 @@ class PeriodicallyTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testPeriodically(self):
     """Tests that a function is called exactly every `period` steps."""
-    target = tf.Variable(0, use_resource=True)
+    target = tf.compat.v2.Variable(0)
     period = 3
 
     periodic_update = common.periodically(
@@ -224,7 +224,7 @@ class PeriodicallyTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testPeriodOne(self):
     """Tests that the function is called every time if period == 1."""
-    target = tf.Variable(0, use_resource=True)
+    target = tf.compat.v2.Variable(0)
 
     periodic_update = common.periodically(
         lambda: tf.group(target.assign_add(1)), period=1)
@@ -238,7 +238,7 @@ class PeriodicallyTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testPeriodNone(self):
     """Tests that the function is never called if period == None."""
-    target = tf.Variable(0, use_resource=True)
+    target = tf.compat.v2.Variable(0)
 
     periodic_update = common.periodically(
         body=lambda: target.assign_add(1), period=None)
@@ -258,8 +258,8 @@ class PeriodicallyTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testPeriodVariable(self):
     """Tests that a function is called exactly every `period` steps."""
-    target = tf.Variable(0, use_resource=True)
-    period = tf.Variable(1, use_resource=True)
+    target = tf.compat.v2.Variable(0)
+    period = tf.compat.v2.Variable(1)
 
     periodic_update = common.periodically(
         body=lambda: tf.group(target.assign_add(1)), period=period)
@@ -284,11 +284,11 @@ class PeriodicallyTest(tf.test.TestCase):
   @test_util.run_in_graph_and_eager_modes()
   def testMultiplePeriodically(self):
     """Tests that 2 periodically ops run independently."""
-    target1 = tf.Variable(0, use_resource=True)
+    target1 = tf.compat.v2.Variable(0)
     periodic_update1 = common.periodically(
         body=lambda: tf.group(target1.assign_add(1)), period=1)
 
-    target2 = tf.Variable(0, use_resource=True)
+    target2 = tf.compat.v2.Variable(0)
     periodic_update2 = common.periodically(
         body=lambda: tf.group(target2.assign_add(2)), period=2)
 

@@ -39,7 +39,6 @@ def create_variable(name,
                     shape=(),
                     dtype=tf.int64,
                     use_local_variable=False,
-                    use_resource=True,
                     trainable=False,
                     initializer=None,
                     unique_name=True):
@@ -72,7 +71,7 @@ def create_variable(name,
       dtype=dtype,
       initializer=initializer,
       collections=collections,
-      use_resource=use_resource,
+      use_resource=True,
       trainable=trainable)
 
 
