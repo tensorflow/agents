@@ -24,6 +24,7 @@ import tensorflow as tf
 from tf_agents import specs
 from tf_agents.environments import tf_environment
 from tf_agents.environments import time_step as ts
+from tf_agents.utils import common
 
 FIRST = ts.StepType.FIRST
 MID = ts.StepType.MID
@@ -49,11 +50,11 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
     action_spec = specs.BoundedTensorSpec([], tf.int32, minimum=0, maximum=10)
     time_step_spec = ts.time_step_spec(observation_spec)
     super(TFEnvironmentMock, self).__init__(time_step_spec, action_spec)
-    with tf.compat.v1.variable_scope(self._scope):
-      self._state = tf.Variable(initial_state, name='state', dtype=self._dtype)
-      self.steps = tf.Variable(0, name='steps')
-      self.episodes = tf.Variable(0, name='episodes')
-      self.resets = tf.Variable(0, name='resets')
+    self._state = common.create_variable('state', initial_state,
+                                         dtype=self._dtype)
+    self.steps = common.create_variable('steps', 0)
+    self.episodes = common.create_variable('episodes', 0)
+    self.resets = common.create_variable('resets', 0)
 
   def _current_time_step(self):
     def first():
@@ -113,16 +114,13 @@ class TFEnvironmentTest(tf.test.TestCase):
     self.assertEqual(0, self.evaluate(tf_env.episodes))
 
   def testMultipleReset(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123881612')
     tf_env = TFEnvironmentMock()
-    reset_op = tf_env.reset()
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(reset_op)
+    self.evaluate(tf_env.reset())
     self.assertEqual(1, self.evaluate(tf_env.resets))
-    self.evaluate(reset_op)
+    self.evaluate(tf_env.reset())
     self.assertEqual(2, self.evaluate(tf_env.resets))
-    self.evaluate(reset_op)
+    self.evaluate(tf_env.reset())
     self.assertEqual(3, self.evaluate(tf_env.resets))
     self.assertEqual(0, self.evaluate(tf_env.steps))
     self.assertEqual(0, self.evaluate(tf_env.episodes))
@@ -280,24 +278,24 @@ class TFEnvironmentTest(tf.test.TestCase):
     self.assertEqual(0, self.evaluate(tf_env.episodes))
 
   def testRunEpisode(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123881612')
     tf_env = TFEnvironmentMock()
-    time_step = tf_env.reset()
     c = lambda t: tf.logical_not(t.is_last())
     body = lambda t: [tf_env.step(t.observation)]
 
-    final_time_step = tf.while_loop(cond=c, body=body, loop_vars=[time_step])
+    @common.function
+    def run_episode():
+      time_step = tf_env.reset()
+      return tf.while_loop(cond=c, body=body, loop_vars=[time_step])
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    [final_time_step_np] = self.evaluate(final_time_step)
+    [final_time_step_np] = self.evaluate(run_episode())
     self.assertEqual([2], final_time_step_np.step_type)
     self.assertEqual([2], final_time_step_np.observation)
     self.assertEqual(1, self.evaluate(tf_env.resets))
     self.assertEqual(2, self.evaluate(tf_env.steps))
     self.assertEqual(1, self.evaluate(tf_env.episodes))
     # Run another episode.
-    [final_time_step_np] = self.evaluate(final_time_step)
+    [final_time_step_np] = self.evaluate(run_episode())
     self.assertEqual([2], final_time_step_np.step_type)
     self.assertEqual([2], final_time_step_np.observation)
     self.assertEqual(2, self.evaluate(tf_env.resets))
