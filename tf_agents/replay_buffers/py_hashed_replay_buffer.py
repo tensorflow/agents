@@ -65,13 +65,17 @@ class FrameBuffer(tf.contrib.checkpoint.PythonStateWrapper):
   def __len__(self):
     return len(self._frames)
 
-  def _serialize(self):
+  def serialize(self):
     """Callback for `PythonStateWrapper` to serialize the dictionary."""
     return pickle.dumps(self._frames)
 
-  def _deserialize(self, string_value):
+  def deserialize(self, string_value):
     """Callback for `PythonStateWrapper` to deserialize the array."""
     self._frames = pickle.loads(string_value)
+
+  # TODO(b/126237089): Remove this after the new tf nightly is built
+  _serialize = serialize
+  _deserialize = deserialize
 
   def compress(self, observation, split_axis=-1):
     # e.g. When split_axis is -1, turns an array of size 84x84x4
