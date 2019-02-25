@@ -587,3 +587,38 @@ def np_function(func=None, output_dtypes=None):
   # @np_function(...)
   # def foo(...):
   return decorated
+
+
+def dataset_iterator(dataset):
+  """Constructs a `Dataset` iterator.
+
+  The method used to construct the iterator is conditioned on whether Graph mode
+  is enabled.
+
+  Args:
+    dataset: a `tf.data.Dataset`.
+  Returns:
+    A `tf.data.Iterator` if Graph mode is enabled; a tf.data.EagerIterator if
+    in eager mode.
+  """
+  if tf.executing_eagerly():
+    return iter(dataset)
+  return dataset.make_one_shot_iterator()
+
+
+def get_next(iterator):
+  """Returns the next element in a `Dataset` iterator.
+
+  The syntax used to retrieve the next item is conditioned on whether Graph mode
+  is enabled.
+
+  Args:
+    iterator: a `tf.data.Iterator` if in Graph mode; a `tf.data.EagerIterator`
+      if in eager mode.
+  Returns:
+    A `tf.data.Iterator` if Graph mode is enabled; a Python iterator if in eager
+    mode.
+  """
+  if tf.executing_eagerly():
+    return next(iterator)
+  return iterator.get_next()

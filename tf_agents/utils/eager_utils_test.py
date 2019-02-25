@@ -609,5 +609,17 @@ class NpDescentTest(tf.test.TestCase):
     self.assertAllClose([2.96, 2.03], self.evaluate(w), atol=0.01, rtol=0.01)
 
 
+@test_util.run_all_in_graph_and_eager_modes
+class DatasetIteratorTest(tf.test.TestCase):
+
+  def testIteration(self):
+    data = np.arange(100)
+    ds = tf.data.Dataset.from_tensor_slices(data)
+    itr = eager_utils.dataset_iterator(ds)
+    for d in data:
+      self.assertEqual(np.array([d]),
+                       self.evaluate(eager_utils.get_next(itr)))
+
+
 if __name__ == '__main__':
   tf.test.main()
