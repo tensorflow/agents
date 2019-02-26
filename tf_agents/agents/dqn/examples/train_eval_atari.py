@@ -274,7 +274,8 @@ class TrainEval(object):
             reward_scale_factor=reward_scale_factor,
             gradient_clipping=gradient_clipping,
             debug_summaries=debug_summaries,
-            summarize_grads_and_vars=summarize_grads_and_vars)
+            summarize_grads_and_vars=summarize_grads_and_vars,
+            train_step_counter=self._global_step)
 
         self._collect_policy = py_tf_policy.PyTFPolicy(
             tf_agent.collect_policy)
@@ -303,9 +304,7 @@ class TrainEval(object):
         experience = self._ds_itr.get_next()
 
       with tf.device('/gpu:0'):
-        self._train_op = tf_agent.train(
-            experience,
-            train_step_counter=self._global_step)
+        self._train_op = tf_agent.train(experience)
 
         self._summary_op = tf.contrib.summary.all_summary_ops()
 

@@ -169,6 +169,7 @@ def train_eval(
       value_net = value_network.ValueNetwork(
           tf_env.observation_spec(), fc_layer_params=value_fc_layers)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = ppo_agent.PPOAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -177,7 +178,8 @@ def train_eval(
         value_net=value_net,
         num_epochs=num_epochs,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -201,7 +203,6 @@ def train_eval(
     # Add to replay buffer and other agent specific observers.
     replay_buffer_observer = [replay_buffer.add_batch]
 
-    global_step = tf.compat.v1.train.get_or_create_global_step()
     collect_policy = tf_agent.collect_policy
 
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
@@ -212,8 +213,7 @@ def train_eval(
 
     trajectories = replay_buffer.gather_all()
 
-    train_op, _ = tf_agent.train(
-        experience=trajectories, train_step_counter=global_step)
+    train_op, _ = tf_agent.train(experience=trajectories)
 
     with tf.control_dependencies([train_op]):
       clear_replay_op = replay_buffer.clear()

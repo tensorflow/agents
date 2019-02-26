@@ -110,6 +110,7 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=actor_fc_layers)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = reinforce_agent.ReinforceAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -118,7 +119,8 @@ def train_eval(
         normalize_returns=normalize_returns,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -134,7 +136,6 @@ def train_eval(
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
 
-    global_step = tf.compat.v1.train.get_or_create_global_step()
     collect_policy = tf_agent.collect_policy
 
     collect_op = dynamic_episode_driver.DynamicEpisodeDriver(
@@ -144,7 +145,7 @@ def train_eval(
         num_episodes=collect_episodes_per_iteration).run()
 
     experience = replay_buffer.gather_all()
-    train_op = tf_agent.train(experience, train_step_counter=global_step)
+    train_op = tf_agent.train(experience)
     clear_rb_op = replay_buffer.clear()
 
     train_checkpointer = common_utils.Checkpointer(

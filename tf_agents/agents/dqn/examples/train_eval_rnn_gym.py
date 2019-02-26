@@ -125,6 +125,7 @@ def train_eval(
         lstm_size=lstm_size,
         output_fc_layer_params=output_fc_layer_params)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = dqn_agent.DqnAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -139,7 +140,8 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -154,8 +156,6 @@ def train_eval(
         tf_metrics.AverageReturnMetric(),
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
-
-    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     initial_collect_policy = random_tf_policy.RandomTFPolicy(
         tf_env.time_step_spec(), tf_env.action_spec())
@@ -181,8 +181,7 @@ def train_eval(
 
     iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     experience, _ = iterator.get_next()
-    loss_info = tf_agent.train(
-        experience=experience, train_step_counter=global_step)
+    loss_info = tf_agent.train(experience=experience)
 
     train_checkpointer = common_utils.Checkpointer(
         ckpt_dir=train_dir,

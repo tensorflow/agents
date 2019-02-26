@@ -66,6 +66,7 @@ class ReinforceAgent(tf_agent.TFAgent):
                debug_summaries=False,
                summarize_grads_and_vars=False,
                entropy_regularization=None,
+               train_step_counter=None,
                name=None):
     """Creates a REINFORCE Agent.
 
@@ -82,6 +83,8 @@ class ReinforceAgent(tf_agent.TFAgent):
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
       entropy_regularization: Coefficient for entropy regularization loss term.
+      train_step_counter: An optional counter to increment every time the train
+        op is run.  Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
     """
@@ -109,12 +112,13 @@ class ReinforceAgent(tf_agent.TFAgent):
         collect_policy,
         train_sequence_length=None,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter)
 
   def _initialize(self):
     return tf.no_op()
 
-  def _train(self, experience, weights=None, train_step_counter=None):
+  def _train(self, experience, weights=None):
     # TODO(sfishman): Support batch dimensions >1.
     if experience.step_type.shape[0] != 1:
       raise NotImplementedError('ReinforceAgent does not yet support batch '
@@ -155,7 +159,7 @@ class ReinforceAgent(tf_agent.TFAgent):
         loss_info,
         self._optimizer,
         total_loss_fn=lambda loss_info: loss_info.loss,
-        global_step=train_step_counter,
+        global_step=self.train_step_counter,
         transform_grads_fn=clip_gradients,
         summarize_gradients=self._summarize_grads_and_vars,
         variables_to_train=lambda: self._actor_network.trainable_weights,

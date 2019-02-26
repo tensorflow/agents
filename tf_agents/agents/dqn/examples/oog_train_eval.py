@@ -134,6 +134,7 @@ def train_eval(
       fc_layer_params=fc_layer_params)
 
   # The agent must be in graph.
+  global_step = tf.compat.v1.train.get_or_create_global_step()
   agent = dqn_agent.DqnAgent(
       time_step_spec,
       action_spec,
@@ -147,7 +148,8 @@ def train_eval(
       reward_scale_factor=reward_scale_factor,
       gradient_clipping=gradient_clipping,
       debug_summaries=debug_summaries,
-      summarize_grads_and_vars=summarize_grads_and_vars)
+      summarize_grads_and_vars=summarize_grads_and_vars,
+      train_step_counter=global_step)
 
   tf_collect_policy = agent.collect_policy
   collect_policy = py_tf_policy.PyTFPolicy(tf_collect_policy)
@@ -168,8 +170,6 @@ def train_eval(
   for _ in range(initial_collect_steps):
     time_step = collect_step(env, time_step, random_policy, replay_buffer)
 
-  global_step = tf.compat.v1.train.get_or_create_global_step()
-
   # TODO(b/112041045) Use global_step as counter.
   train_checkpointer = common_utils.Checkpointer(
       ckpt_dir=train_dir, agent=agent, global_step=global_step)
@@ -185,7 +185,7 @@ def train_eval(
 
   experience = itr.get_next()
 
-  train_op = agent.train(experience, train_step_counter=global_step)
+  train_op = agent.train(experience)
   summary_op = tf.contrib.summary.all_summary_ops()
 
   with eval_summary_writer.as_default(), \

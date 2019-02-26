@@ -69,6 +69,7 @@ class SacAgent(tf_agent.TFAgent):
                gradient_clipping=None,
                debug_summaries=False,
                summarize_grads_and_vars=False,
+               train_step_counter=None,
                name=None):
     """Creates a SAC Agent.
 
@@ -97,6 +98,8 @@ class SacAgent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
+      train_step_counter: An optional counter to increment every time the train
+        op is run.  Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
     """
@@ -150,7 +153,8 @@ class SacAgent(tf_agent.TFAgent):
         collect_policy=policy,
         train_sequence_length=2,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter)
 
   def _initialize(self):
     """Returns an op to initialize the agent.
@@ -171,7 +175,7 @@ class SacAgent(tf_agent.TFAgent):
         lambda t: tf.squeeze(t, axis=1), (time_steps, actions, next_time_steps))
     return time_steps, actions, next_time_steps
 
-  def _train(self, experience, weights, train_step_counter):
+  def _train(self, experience, weights):
     """Returns a train op to update the agent's networks.
 
     This method trains with the provided batched experience.
@@ -180,8 +184,6 @@ class SacAgent(tf_agent.TFAgent):
       experience: A time-stacked trajectory object.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.
-      train_step_counter: An optional counter to increment every time the train
-        op is run. Typically the global_step.
 
     Returns:
       A train_op.
@@ -233,7 +235,7 @@ class SacAgent(tf_agent.TFAgent):
     critic_train_op = eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
-        global_step=train_step_counter,
+        global_step=self.train_step_counter,
         transform_grads_fn=clip_and_summarize_gradients,
         variables_to_train=(self._critic_network1.trainable_weights +
                             self._critic_network2.trainable_weights),

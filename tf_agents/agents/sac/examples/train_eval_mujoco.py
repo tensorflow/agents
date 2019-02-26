@@ -152,6 +152,7 @@ def train_eval(
         action_fc_layer_params=critic_action_fc_layers,
         joint_fc_layer_params=critic_joint_fc_layers)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = sac_agent.SacAgent(
         time_step_spec,
         action_spec,
@@ -170,7 +171,8 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     # Make the replay buffer.
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
@@ -188,9 +190,8 @@ def train_eval(
         tf_py_metric.TFPyMetric(py_metrics.AverageEpisodeLengthMetric()),
     ]
 
-    global_step = tf.compat.v1.train.get_or_create_global_step()
-
     collect_policy = tf_agent.collect_policy
+
     initial_collect_op = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
@@ -213,7 +214,7 @@ def train_eval(
                 batch_size * 5)
     dataset_iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     trajectories, unused_info = dataset_iterator.get_next()
-    train_op = tf_agent.train(trajectories, train_step_counter=global_step)
+    train_op = tf_agent.train(trajectories)
 
     for train_metric in train_metrics:
       train_metric.tf_summaries(step_metrics=train_metrics[:2])

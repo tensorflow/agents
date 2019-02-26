@@ -120,6 +120,7 @@ class DqnAgent(tf_agent.TFAgent):
       # Params for debugging
       debug_summaries=False,
       summarize_grads_and_vars=False,
+      train_step_counter=None,
       name=None):
     """Creates a DQN Agent.
 
@@ -147,6 +148,8 @@ class DqnAgent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
+      train_step_counter: An optional counter to increment every time the train
+        op is run.  Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -209,7 +212,8 @@ class DqnAgent(tf_agent.TFAgent):
         collect_policy,
         train_sequence_length=2 if not q_network.state_spec else None,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter)
 
   def _initialize(self):
     return self._update_targets(1.0, 1)
@@ -249,7 +253,7 @@ class DqnAgent(tf_agent.TFAgent):
     actions = policy_steps.action
     return time_steps, actions, next_time_steps
 
-  def _train(self, experience, train_step_counter=None, weights=None):
+  def _train(self, experience, weights=None):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
@@ -271,7 +275,7 @@ class DqnAgent(tf_agent.TFAgent):
         loss_info,
         self._optimizer,
         total_loss_fn=lambda loss_info: loss_info.loss,
-        global_step=train_step_counter,
+        global_step=self.train_step_counter,
         transform_grads_fn=transform_grads_fn,
         summarize_gradients=self._summarize_grads_and_vars,
         variables_to_train=lambda: self._q_network.trainable_weights,

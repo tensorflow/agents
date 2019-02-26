@@ -122,6 +122,7 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=fc_layer_params)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = dqn_agent.DqnAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -136,7 +137,8 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     tf_agent.initialize()
     train_metrics = [
@@ -154,8 +156,6 @@ def train_eval(
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
         num_steps=collect_steps_per_iteration)
-
-    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     initial_collect_policy = random_tf_policy.RandomTFPolicy(
         tf_env.time_step_spec(), tf_env.action_spec())
@@ -202,7 +202,7 @@ def train_eval(
       )
       for _ in range(train_steps_per_iteration):
         experience, _ = next(iterator)
-        train_loss = tf_agent.train(experience, train_step_counter=global_step)
+        train_loss = tf_agent.train(experience)
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:

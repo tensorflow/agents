@@ -140,6 +140,7 @@ def train_eval(
         joint_fc_layer_params=critic_joint_fc_layers,
     )
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = td3_agent.Td3Agent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -160,7 +161,7 @@ def train_eval(
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-    )
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -175,7 +176,6 @@ def train_eval(
         tf_metrics.AverageReturnMetric(),
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
-    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     collect_policy = tf_agent.collect_policy
     initial_collect_op = dynamic_step_driver.DynamicStepDriver(
@@ -196,8 +196,7 @@ def train_eval(
         num_steps=2).prefetch(3)
     iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     trajectories, unused_info = iterator.get_next()
-    train_op = tf_agent.train(
-        experience=trajectories, train_step_counter=global_step)
+    train_op = tf_agent.train(experience=trajectories)
 
     train_checkpointer = common_utils.Checkpointer(
         ckpt_dir=train_dir,

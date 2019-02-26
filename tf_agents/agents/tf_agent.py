@@ -41,7 +41,8 @@ class TFAgent(tf.Module):
                collect_policy,
                train_sequence_length,
                debug_summaries=False,
-               summarize_grads_and_vars=False):
+               summarize_grads_and_vars=False,
+               train_step_counter=None):
     """Meant to be called by subclass constructors.
 
     Args:
@@ -65,6 +66,8 @@ class TFAgent(tf.Module):
         summaries.
       summarize_grads_and_vars: A bool; if true, subclasses should additionally
         collect gradient and variable summaries.
+      train_step_counter: An optional counter to increment every time the train
+        op is run.  Defaults to the global_step.
     """
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
 
@@ -75,12 +78,15 @@ class TFAgent(tf.Module):
     self._train_sequence_length = train_sequence_length
     self._debug_summaries = debug_summaries
     self._summarize_grads_and_vars = summarize_grads_and_vars
+    if train_step_counter is None:
+      train_step_counter = tf.compat.v1.train.get_or_create_global_step()
+    self._train_step_counter = train_step_counter
 
   def initialize(self):
     """Returns an op to initialize the agent."""
     return self._initialize()
 
-  def train(self, experience, weights=None, train_step_counter=None):
+  def train(self, experience, weights=None):
     """Trains the agent.
 
     Args:
@@ -93,8 +99,6 @@ class TFAgent(tf.Module):
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
         but the implementation is up to the Agent.
-      train_step_counter: An optional counter to increment every time the train
-        op is run.  Defaults to the global_step.
 
     Returns:
         A `LossInfo` loss tuple containing loss and info tensors.
@@ -141,10 +145,7 @@ class TFAgent(tf.Module):
 
       tf.nest.map_structure(check_shape, experience)
 
-    loss_info = self._train(
-        experience=experience,
-        weights=weights,
-        train_step_counter=train_step_counter)
+    loss_info = self._train(experience=experience, weights=weights)
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))
@@ -226,14 +227,21 @@ class TFAgent(tf.Module):
   def summarize_grads_and_vars(self):
     return self._summarize_grads_and_vars
 
+  @property
+  def train_step_counter(self):
+    return self._train_step_counter
+
   # Subclasses must implement these methods.
   @abc.abstractmethod
   def _initialize(self):
     """Returns an op to initialize the agent."""
 
   @abc.abstractmethod
-  def _train(self, experience, weights, train_step_counter):
+  def _train(self, experience, weights):
     """Returns an op to train the agent.
+
+    This method *must* increment self.train_step_counter exactly once.
+    TODO(b/126271669): Consider automatically incrementing this
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
@@ -245,8 +253,6 @@ class TFAgent(tf.Module):
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
         but the implementation is up to the Agent.
-      train_step_counter: An optional counter to increment every time the train
-        op is run.  Defaults to the global_step.
 
     Returns:
         A `LossInfo` containing the loss *before* the training step is taken.

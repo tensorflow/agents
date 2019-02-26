@@ -127,6 +127,7 @@ class PPOAgent(tf_agent.TFAgent):
                check_numerics=False,
                debug_summaries=False,
                summarize_grads_and_vars=False,
+               train_step_counter=None,
                name=None):
     """Creates a PPO Agent.
 
@@ -179,6 +180,8 @@ class PPOAgent(tf_agent.TFAgent):
         values. For debugging only.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
+      train_step_counter: An optional counter to increment every time the train
+        op is run.  Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -259,7 +262,8 @@ class PPOAgent(tf_agent.TFAgent):
         collect_policy,
         train_sequence_length=None,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter)
 
   @property
   def actor_net(self):
@@ -489,7 +493,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     return returns, normalized_advantages
 
-  def _train(self, experience, weights, train_step_counter):
+  def _train(self, experience, weights):
     # Get individual tensors from transitions.
     (time_steps, policy_steps_, next_time_steps) = trajectory.to_transition(
         experience)
@@ -551,7 +555,7 @@ class PPOAgent(tf_agent.TFAgent):
           loss_info = self.build_train_op(
               time_steps, actions, act_log_probs, returns,
               normalized_advantages, action_distribution_parameters, weights,
-              train_step_counter, self._summarize_grads_and_vars,
+              self.train_step_counter, self._summarize_grads_and_vars,
               self._gradient_clipping, debug_summaries)
 
           policy_gradient_losses.append(loss_info.extra.policy_gradient_loss)

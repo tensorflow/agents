@@ -103,6 +103,7 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=actor_fc_layers)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = reinforce_agent.ReinforceAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -111,7 +112,8 @@ def train_eval(
         normalize_returns=normalize_returns,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -126,8 +128,6 @@ def train_eval(
         tf_metrics.AverageReturnMetric(),
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
-
-    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     eval_policy = tf_agent.policy
     collect_policy = tf_agent.collect_policy
@@ -164,7 +164,7 @@ def train_eval(
           policy_state=policy_state,
       )
       experience = replay_buffer.gather_all()
-      total_loss = tf_agent.train(experience, train_step_counter=global_step)
+      total_loss = tf_agent.train(experience)
       replay_buffer.clear()
       time_acc += time.time() - start_time
 

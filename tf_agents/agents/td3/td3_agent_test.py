@@ -138,9 +138,7 @@ class TD3AgentTest(tf.test.TestCase):
     next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
-    # TODO(kbanoop): The loss changed from 119.054 to 118.910903931. Is this
-    # worth investigating?
-    expected_loss = 118.9109
+    expected_loss = 119.0354
     loss = agent.critic_loss(time_steps, actions, next_time_steps)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())

@@ -158,6 +158,7 @@ def train_eval(
         output_fc_layer_params=critic_output_fc_layers,
     )
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = td3_agent.Td3Agent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -174,7 +175,8 @@ def train_eval(
         dqda_clipping=dqda_clipping,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
-        debug_summaries=debug_summaries)
+        debug_summaries=debug_summaries,
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -189,8 +191,6 @@ def train_eval(
         tf_metrics.AverageReturnMetric(),
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
-
-    global_step = tf.compat.v1.train.get_or_create_global_step()
 
     # TODO(oars): Refactor drivers to better handle policy states. Remove the
     # policy reset and passing down an empyt policy state to the driver.
@@ -219,8 +219,7 @@ def train_eval(
 
     iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     trajectories, unused_info = iterator.get_next()
-    train_op = tf_agent.train(
-        experience=trajectories, train_step_counter=global_step)
+    train_op = tf_agent.train(experience=trajectories)
 
     train_checkpointer = common_utils.Checkpointer(
         ckpt_dir=train_dir,

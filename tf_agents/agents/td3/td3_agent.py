@@ -71,6 +71,7 @@ class Td3Agent(tf_agent.TFAgent):
                gradient_clipping=None,
                debug_summaries=False,
                summarize_grads_and_vars=False,
+               train_step_counter=None,
                name=None):
     """Creates a Td3Agent Agent.
 
@@ -102,6 +103,8 @@ class Td3Agent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
+      train_step_counter: An optional counter to increment every time the train
+        op is run.  Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
     """
@@ -155,7 +158,8 @@ class Td3Agent(tf_agent.TFAgent):
         collect_policy,
         train_sequence_length=2 if not self._actor_network.state_spec else None,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter)
 
   def _initialize(self):
     """Returns an op to initialize the agent.
@@ -209,7 +213,7 @@ class Td3Agent(tf_agent.TFAgent):
     actions = policy_steps.action
     return time_steps, actions, next_time_steps
 
-  def _train(self, experience, weights=None, train_step_counter=None):
+  def _train(self, experience, weights=None):
     # TODO(b/120034503): Move the conversion to transitions to the base class.
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
@@ -245,7 +249,7 @@ class Td3Agent(tf_agent.TFAgent):
     critic_train_op = eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
-        global_step=train_step_counter,
+        global_step=self.train_step_counter,
         transform_grads_fn=clip_and_summarize_gradients,
         variables_to_train=self._critic_network_1.trainable_weights +
         self._critic_network_2.trainable_weights,
