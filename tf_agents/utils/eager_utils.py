@@ -604,7 +604,7 @@ def dataset_iterator(dataset):
   """
   if tf.executing_eagerly():
     return iter(dataset)
-  return dataset.make_one_shot_iterator()
+  return tf.compat.v1.data.make_one_shot_iterator(dataset)
 
 
 def get_next(iterator):

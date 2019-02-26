@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os
 
+from absl import flags
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -158,7 +159,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testSaveRestore(self, batch_size):
-    policy_save_path = os.path.join(tf.flags.FLAGS.test_tmpdir, 'policy',
+    policy_save_path = os.path.join(flags.FLAGS.test_tmpdir, 'policy',
                                     str(batch_size))
 
     # Construct a policy to be saved under a tf.Graph instance.
