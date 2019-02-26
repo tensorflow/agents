@@ -31,7 +31,7 @@ from tf_agents.metrics import py_metric
 class DummyMetric(py_metric.PyStepMetric):
 
   def __init__(self, name='Metric'):
-    super(DummyMetric, self).__init__(name, prefix='')
+    super(DummyMetric, self).__init__(name)
     self.reset()
 
   def reset(self):
@@ -105,8 +105,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     # 2 summaries + 1 file header
     self.assertEqual(3, len(records))
 
-    self.assert_summary_equals(records, 'Metric1', 0, 3)
-    self.assert_summary_equals(records, 'Metric2', 0, 0)
+    self.assert_summary_equals(records, 'Metrics/Metric1', 0, 3)
+    self.assert_summary_equals(records, 'Metrics/Metric2', 0, 0)
 
   def testSummaryUpdates(self):
     if tf.executing_eagerly():
@@ -132,10 +132,10 @@ class PyMetricSummariesTest(tf.test.TestCase):
     # 4 summaries + 1 file header
     self.assertEqual(5, len(records))
 
-    self.assert_summary_equals(records, 'Metric1', 0, 3)
-    self.assert_summary_equals(records, 'Metric2', 0, 0)
-    self.assert_summary_equals(records, 'Metric1', 1, 5)
-    self.assert_summary_equals(records, 'Metric2', 1, 2)
+    self.assert_summary_equals(records, 'Metrics/Metric1', 0, 3)
+    self.assert_summary_equals(records, 'Metrics/Metric2', 0, 0)
+    self.assert_summary_equals(records, 'Metrics/Metric1', 1, 5)
+    self.assert_summary_equals(records, 'Metrics/Metric2', 1, 2)
 
   def testSummaryStepMetrics(self):
     if tf.executing_eagerly():
@@ -157,10 +157,10 @@ class PyMetricSummariesTest(tf.test.TestCase):
     # (2 records for metric1, 1 for metric2) + 1 file header
     self.assertEqual(4, len(records))
 
-    self.assert_summary_equals(records, 'Metric1', 0, 3)
-    self.assert_summary_equals(records, 'vs_Metric2/Metric1', 2, 3)
+    self.assert_summary_equals(records, 'Metrics/Metric1', 0, 3)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric2/Metric1', 2, 3)
 
-    self.assert_summary_equals(records, 'Metric2', 0, 2)
+    self.assert_summary_equals(records, 'Metrics/Metric2', 0, 2)
 
   def testSummaryStepMetricsUpdate(self):
     if tf.executing_eagerly():
@@ -185,8 +185,8 @@ class PyMetricSummariesTest(tf.test.TestCase):
     # (2 records for metric1, 1 for metric2) * 2 + 1 file header
     self.assertEqual(7, len(records))
 
-    self.assert_summary_equals(records, 'vs_Metric2/Metric1', 2, 3)
-    self.assert_summary_equals(records, 'vs_Metric2/Metric1', 3, 4)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric2/Metric1', 2, 3)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric2/Metric1', 3, 4)
 
   def testSummaryMultipleStepMetrics(self):
     if tf.executing_eagerly():
@@ -210,15 +210,15 @@ class PyMetricSummariesTest(tf.test.TestCase):
     # (3 records for metric1, 2 for metric2, 2 for metric3) + 1 file header
     self.assertEqual(8, len(records))
 
-    self.assert_summary_equals(records, 'Metric1', 0, 1)
-    self.assert_summary_equals(records, 'vs_Metric2/Metric1', 2, 1)
-    self.assert_summary_equals(records, 'vs_Metric3/Metric1', 3, 1)
+    self.assert_summary_equals(records, 'Metrics/Metric1', 0, 1)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric2/Metric1', 2, 1)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric3/Metric1', 3, 1)
 
-    self.assert_summary_equals(records, 'Metric2', 0, 2)
-    self.assert_summary_equals(records, 'vs_Metric3/Metric2', 3, 2)
+    self.assert_summary_equals(records, 'Metrics/Metric2', 0, 2)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric3/Metric2', 3, 2)
 
-    self.assert_summary_equals(records, 'Metric3', 0, 3)
-    self.assert_summary_equals(records, 'vs_Metric2/Metric3', 2, 3)
+    self.assert_summary_equals(records, 'Metrics/Metric3', 0, 3)
+    self.assert_summary_equals(records, 'Metrics_vs_Metric2/Metric3', 2, 3)
 
 
 if __name__ == '__main__':

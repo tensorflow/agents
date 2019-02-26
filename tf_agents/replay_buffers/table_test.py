@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -282,6 +283,22 @@ class TableTest(tf.test.TestCase):
     self.assertAllClose(read_value_[0], expected_values[0])
     self.assertEqual(read_value_[1][0], expected_values[1][0])
     self.assertAllClose(read_value_[1][1], expected_values[1][1])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testSaveRestore(self):
+    spec = [
+        specs.TensorSpec([3], tf.float32),
+        specs.TensorSpec([5], tf.float32, 'lidar'),
+        specs.TensorSpec([3, 2], tf.float32, 'lidar')
+    ]
+    replay_table = table.Table(spec, capacity=3)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    directory = self.get_temp_dir()
+    prefix = os.path.join(directory, 'table')
+    root = tf.train.Checkpoint(table=replay_table)
+    save_path = root.save(prefix)
+    root.restore(save_path).assert_consumed().run_restore_ops()
 
 
 if __name__ == '__main__':

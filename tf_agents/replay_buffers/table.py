@@ -30,7 +30,7 @@ import tensorflow as tf
 from tf_agents.utils import common
 
 
-class Table(tf.contrib.checkpoint.Checkpointable):
+class Table(tf.Module):
   """A table that can store Tensors or nested Tensors."""
 
   def __init__(self, tensor_spec, capacity, scope='Table'):
@@ -44,10 +44,9 @@ class Table(tf.contrib.checkpoint.Checkpointable):
     Raises:
       ValueError: If the names in tensor_spec are empty or not unique.
     """
+    super(Table, self).__init__(name=scope)
     self._tensor_spec = tensor_spec
     self._capacity = capacity
-    # For tracking slots as a checkpointable dependencies.
-    self._tracker = tf.contrib.checkpoint.UniqueNameTracker()
 
     def _create_unique_slot_name(spec):
       return tf.compat.v1.get_default_graph().unique_name(spec.name or 'slot')
@@ -64,7 +63,6 @@ class Table(tf.contrib.checkpoint.Checkpointable):
           shape=None,
           dtype=spec.dtype,
           unique_name=False)
-      self._tracker.track(new_storage, slot_name)
       return new_storage
 
     with tf.compat.v1.variable_scope(scope):

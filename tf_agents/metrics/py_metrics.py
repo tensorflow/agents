@@ -79,8 +79,7 @@ class NumpyDeque(tf.contrib.checkpoint.NumpyState):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class StreamingMetric(py_metric.PyStepMetric,
-                      tf.contrib.checkpoint.Checkpointable):
+class StreamingMetric(py_metric.PyStepMetric):
   """Abstract base class for streaming metrics.
 
   Streaming metrics keep track of the last (upto) K values of the metric in a
@@ -196,8 +195,7 @@ class AverageEpisodeLengthMetric(StreamingMetric):
     episode_steps[np.where(trajectory.is_last())] = 0
 
 
-class EnvironmentSteps(py_metric.PyStepMetric,
-                       tf.contrib.checkpoint.Checkpointable):
+class EnvironmentSteps(py_metric.PyStepMetric):
   """Counts the number of steps taken in the environment."""
 
   def __init__(self, name='EnvironmentSteps'):
@@ -219,8 +217,7 @@ class EnvironmentSteps(py_metric.PyStepMetric,
     self._np_state.environment_steps += new_steps
 
 
-class NumberOfEpisodes(py_metric.PyStepMetric,
-                       tf.contrib.checkpoint.Checkpointable):
+class NumberOfEpisodes(py_metric.PyStepMetric):
   """Counts the number of episodes in the environment."""
 
   def __init__(self, name='NumberOfEpisodes'):
@@ -242,7 +239,7 @@ class NumberOfEpisodes(py_metric.PyStepMetric,
     self._np_state.number_episodes += completed_episodes
 
 
-class CounterMetric(py_metric.PyMetric, tf.contrib.checkpoint.Checkpointable):
+class CounterMetric(py_metric.PyMetric):
   """Metric to track an arbitrary counter.
 
   This is useful for, e.g., tracking the current train/eval iteration number.

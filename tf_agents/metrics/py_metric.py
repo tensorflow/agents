@@ -64,20 +64,15 @@ def run_summaries(metrics, session=None):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class PyMetric(object):
+class PyMetric(tf.Module):
   """Defines the interface for metrics."""
 
   def __init__(self, name, prefix='Metrics'):
     """Creates a metric."""
-    self._name = name
+    super(PyMetric, self).__init__(name)
     self._prefix = prefix
     self._summary_placeholder = None
     self._summary_op = None
-
-  @property
-  def name(self):
-    """Name of the metric."""
-    return self._name
 
   @property
   def prefix(self):
@@ -139,6 +134,7 @@ class PyMetric(object):
           name=step_tag,
           tensor=self.summary_placeholder,
           step=step_tensor))
+
     self._summary_op = tf.group(*summaries)
     return self._summary_op
 

@@ -58,7 +58,7 @@ import numpy as np
 import six
 import tensorflow as tf
 
-from tensorflow.python.util import tf_decorator  # TF internal
+from tensorflow.python.util import tf_decorator  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 _USE_GLOBAL_STEP = 0
 
