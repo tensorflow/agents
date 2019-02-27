@@ -22,13 +22,13 @@ import abc
 
 import numpy as np
 import six
-import tensorflow as tf
 
 from tf_agents.metrics import py_metric
+from tf_agents.replay_buffers import numpy_storage
 from tf_agents.utils import nest_utils
 
 
-class NumpyDeque(tf.contrib.checkpoint.NumpyState):
+class NumpyDeque(numpy_storage.NumpyState):
   """Deque implementation using a numpy array as a circular buffer."""
 
   def __init__(self, maxlen, dtype):
@@ -134,7 +134,7 @@ class AverageReturnMetric(StreamingMetric):
 
   def __init__(self, name='AverageReturn', buffer_size=10, batch_size=None):
     """Creates an AverageReturnMetric."""
-    self._np_state = tf.contrib.checkpoint.NumpyState()
+    self._np_state = numpy_storage.NumpyState()
     # Set a dummy value on self._np_state.episode_return so it gets included in
     # the first checkpoint (before metric is first called).
     self._np_state.episode_return = np.float64(0)
@@ -169,7 +169,7 @@ class AverageEpisodeLengthMetric(StreamingMetric):
   def __init__(self, name='AverageEpisodeLength', buffer_size=10,
                batch_size=None):
     """Creates an AverageEpisodeLengthMetric."""
-    self._np_state = tf.contrib.checkpoint.NumpyState()
+    self._np_state = numpy_storage.NumpyState()
     # Set a dummy value on self._np_state.episode_return so it gets included in
     # the first checkpoint (before metric is first called).
     self._np_state.episode_steps = np.float64(0)
@@ -200,7 +200,7 @@ class EnvironmentSteps(py_metric.PyStepMetric):
 
   def __init__(self, name='EnvironmentSteps'):
     super(EnvironmentSteps, self).__init__(name)
-    self._np_state = tf.contrib.checkpoint.NumpyState()
+    self._np_state = numpy_storage.NumpyState()
     self.reset()
 
   def reset(self):
@@ -222,7 +222,7 @@ class NumberOfEpisodes(py_metric.PyStepMetric):
 
   def __init__(self, name='NumberOfEpisodes'):
     super(NumberOfEpisodes, self).__init__(name)
-    self._np_state = tf.contrib.checkpoint.NumpyState()
+    self._np_state = numpy_storage.NumpyState()
     self.reset()
 
   def reset(self):
@@ -249,7 +249,7 @@ class CounterMetric(py_metric.PyMetric):
 
   def __init__(self, name='Counter'):
     super(CounterMetric, self).__init__(name)
-    self._np_state = tf.contrib.checkpoint.NumpyState()
+    self._np_state = numpy_storage.NumpyState()
     self.reset()
 
   def reset(self):

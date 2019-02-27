@@ -61,7 +61,7 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
     self._storage = numpy_storage.NumpyStorage(self._encoded_data_spec(),
                                                capacity)
     self._lock = threading.Lock()
-    self._np_state = tf.contrib.checkpoint.NumpyState()
+    self._np_state = numpy_storage.NumpyState()
 
     # Adding elements to the replay buffer is done in a circular way.
     # Keeps track of the actual size of the replay buffer and the location

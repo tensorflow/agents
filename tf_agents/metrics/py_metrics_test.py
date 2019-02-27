@@ -29,6 +29,8 @@ from tf_agents.environments import trajectory
 from tf_agents.metrics import py_metrics
 from tf_agents.utils import nest_utils
 
+from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
 
 class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
 
@@ -186,6 +188,31 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(0, counter.result())
     counter()
     self.assertEqual(1, counter.result())
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testSaveRestore(self):
+    metrics = [
+        py_metrics.AverageReturnMetric(),
+        py_metrics.AverageEpisodeLengthMetric(),
+        py_metrics.EnvironmentSteps(),
+        py_metrics.NumberOfEpisodes()
+    ]
+
+    for metric in metrics:
+      metric(trajectory.boundary((), (), (), 0., 1.))
+      metric(trajectory.mid((), (), (), 1., 1.))
+      metric(trajectory.mid((), (), (), 2., 1.))
+      metric(trajectory.last((), (), (), 3., 0.))
+
+    checkpoint = tf.train.Checkpoint(**{m.name: m for m in metrics})
+    prefix = self.get_temp_dir() + '/ckpt'
+    save_path = checkpoint.save(prefix)
+    for metric in metrics:
+      metric.reset()
+      self.assertEqual(0, metric.result())
+    checkpoint.restore(save_path).assert_consumed()
+    for metric in metrics:
+      self.assertGreater(metric.result(), 0)
 
 
 class NumpyDequeTest(tf.test.TestCase):
