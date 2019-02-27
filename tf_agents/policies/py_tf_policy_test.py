@@ -235,6 +235,9 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       self.assertAllEqual(action_steps.state, ())
 
   def testDeferredBatchingStateful(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140')
+
     # Construct policy without providing batch_size.
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
 
