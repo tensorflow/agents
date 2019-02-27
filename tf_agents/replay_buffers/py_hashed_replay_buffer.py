@@ -36,7 +36,7 @@ from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import array_spec
 
 
-class FrameBuffer(tf.contrib.checkpoint.PythonStateWrapper):
+class FrameBuffer(tf.train.experimental.PythonState):
   """Saves some frames in a memory efficient way.
 
   Thread safety: cannot add multiple frames in parallel.
@@ -72,10 +72,6 @@ class FrameBuffer(tf.contrib.checkpoint.PythonStateWrapper):
   def deserialize(self, string_value):
     """Callback for `PythonStateWrapper` to deserialize the array."""
     self._frames = pickle.loads(string_value)
-
-  # TODO(b/126237089): Remove this after the new tf nightly is built
-  _serialize = serialize
-  _deserialize = deserialize
 
   def compress(self, observation, split_axis=-1):
     # e.g. When split_axis is -1, turns an array of size 84x84x4
@@ -149,7 +145,7 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
 
     if (self._log_interval and
         self._np_state.item_count % self._log_interval == 0):
-      logging.info('Effective Replay buffer frame count: {}'.format(
+      logging.info('%s', 'Effective Replay buffer frame count: {}'.format(
           len(self._frame_buffer)))
 
     return traj._replace(observation=observation)
