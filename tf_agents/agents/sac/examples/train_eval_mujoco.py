@@ -63,9 +63,10 @@ flags.DEFINE_multi_string('binding', None, 'Gin binding to pass through.')
 FLAGS = flags.FLAGS
 
 
-def _normal_projection_net(action_spec,
-                           init_action_stddev=0.35,
-                           init_means_output_factor=0.1):
+@gin.configurable
+def normal_projection_net(action_spec,
+                          init_action_stddev=0.35,
+                          init_means_output_factor=0.1):
   del init_action_stddev
   return normal_projection_network.NormalProjectionNetwork(
       action_spec,
@@ -75,6 +76,7 @@ def _normal_projection_net(action_spec,
       std_transform=sac_agent.std_clip_transform)
 
 
+@gin.configurable
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v1',
@@ -143,9 +145,10 @@ def train_eval(
     action_spec = tf_env.action_spec()
 
     actor_net = actor_distribution_network.ActorDistributionNetwork(
-        observation_spec, action_spec,
+        observation_spec,
+        action_spec,
         fc_layer_params=actor_fc_layers,
-        continuous_projection_net=_normal_projection_net)
+        continuous_projection_net=normal_projection_net)
     critic_net = critic_network.CriticNetwork(
         (observation_spec, action_spec),
         observation_fc_layer_params=critic_obs_fc_layers,
