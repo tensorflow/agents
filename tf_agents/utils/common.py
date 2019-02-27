@@ -648,20 +648,26 @@ def convert_q_logits_to_values(logits, support):
   return tf.reduce_sum(input_tensor=support * probabilities, axis=-1)
 
 
-def generate_tensor_summaries(tag, tensor):
+def generate_tensor_summaries(tag, tensor, step):
   """Generates various summaries of `tensor` such as histogram, max, min, etc.
 
   Args:
     tag: A namescope tag for the summaries.
     tensor: The tensor to generate summaries of.
+    step: Variable to use for summaries.
   """
   with tf.name_scope(tag):
-    tf.contrib.summary.histogram('histogram', tensor)
-    tf.contrib.summary.scalar('mean', tf.reduce_mean(input_tensor=tensor))
-    tf.contrib.summary.scalar('mean_abs',
-                              tf.reduce_mean(input_tensor=tf.abs(tensor)))
-    tf.contrib.summary.scalar('max', tf.reduce_max(input_tensor=tensor))
-    tf.contrib.summary.scalar('min', tf.reduce_min(input_tensor=tensor))
+    tf.compat.v2.summary.histogram(name='histogram', data=tensor, step=step)
+    tf.compat.v2.summary.scalar(
+        name='mean', data=tf.reduce_mean(input_tensor=tensor), step=step)
+    tf.compat.v2.summary.scalar(
+        name='mean_abs',
+        data=tf.reduce_mean(input_tensor=tf.abs(tensor)),
+        step=step)
+    tf.compat.v2.summary.scalar(
+        name='max', data=tf.reduce_max(input_tensor=tensor), step=step)
+    tf.compat.v2.summary.scalar(
+        name='min', data=tf.reduce_min(input_tensor=tensor), step=step)
 
 
 # TODO(kbanoop): Support batch mode

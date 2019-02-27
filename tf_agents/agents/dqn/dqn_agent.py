@@ -365,20 +365,29 @@ class DqnAgent(tf_agent.TFAgent):
       loss = tf.reduce_mean(input_tensor=td_loss)
 
       with tf.name_scope('Losses/'):
-        tf.contrib.summary.scalar('loss', loss)
+        tf.compat.v2.summary.scalar(
+            name='loss', data=loss, step=self.train_step_counter)
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
           for var in self._q_network.trainable_weights:
-            tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
+            tf.compat.v2.summary.histogram(
+                name=var.name.replace(':', '_'),
+                data=var,
+                step=self.train_step_counter)
 
       if self._debug_summaries:
         diff_q_values = q_values - next_q_values
-        common_utils.generate_tensor_summaries('td_error', td_error)
-        common_utils.generate_tensor_summaries('td_loss', td_loss)
-        common_utils.generate_tensor_summaries('q_values', q_values)
-        common_utils.generate_tensor_summaries('next_q_values', next_q_values)
-        common_utils.generate_tensor_summaries('diff_q_values', diff_q_values)
+        common_utils.generate_tensor_summaries('td_error', td_error,
+                                               self.train_step_counter)
+        common_utils.generate_tensor_summaries('td_loss', td_loss,
+                                               self.train_step_counter)
+        common_utils.generate_tensor_summaries('q_values', q_values,
+                                               self.train_step_counter)
+        common_utils.generate_tensor_summaries('next_q_values', next_q_values,
+                                               self.train_step_counter)
+        common_utils.generate_tensor_summaries('diff_q_values', diff_q_values,
+                                               self.train_step_counter)
 
       return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss,
                                                  td_error=td_error))

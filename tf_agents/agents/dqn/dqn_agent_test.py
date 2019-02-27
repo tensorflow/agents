@@ -116,29 +116,30 @@ class AgentTest(tf.test.TestCase):
 
   # TODO(b/123890005): Add a test where the target network has different values.
   def testLoss(self, agent_class):
-    q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
-    agent = agent_class(
-        self._time_step_spec,
-        self._action_spec,
-        q_network=q_net,
-        optimizer=None)
+    with tf.compat.v2.summary.record_if(False):
+      q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)
+      agent = agent_class(
+          self._time_step_spec,
+          self._action_spec,
+          q_network=q_net,
+          optimizer=None)
 
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_steps = ts.restart(observations, batch_size=2)
+      observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+      time_steps = ts.restart(observations, batch_size=2)
 
-    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
+      actions = [tf.constant([[0], [1]], dtype=tf.int32)]
 
-    rewards = tf.constant([10, 20], dtype=tf.float32)
-    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
-    next_time_steps = ts.transition(next_observations, rewards, discounts)
+      rewards = tf.constant([10, 20], dtype=tf.float32)
+      discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+      next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
+      next_time_steps = ts.transition(next_observations, rewards, discounts)
 
-    expected_loss = 26.0
-    loss_info = agent._loss(time_steps, actions, next_time_steps)
-    self.evaluate(tf.compat.v1.initialize_all_variables())
-    total_loss, _ = self.evaluate(loss_info)
+      expected_loss = 26.0
+      loss_info = agent._loss(time_steps, actions, next_time_steps)
+      self.evaluate(tf.compat.v1.initialize_all_variables())
+      total_loss, _ = self.evaluate(loss_info)
 
-    self.assertAllClose(total_loss, expected_loss)
+      self.assertAllClose(total_loss, expected_loss)
 
   def testPolicy(self, agent_class):
     q_net = test_utils.DummyNet(self._observation_spec, self._action_spec)

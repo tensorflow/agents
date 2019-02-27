@@ -60,12 +60,11 @@ class PyMetricSummariesTest(tf.test.TestCase):
   def setUp(self):
     super(PyMetricSummariesTest, self).setUp()
     self.summary_dir = tempfile.mkdtemp(dir=os.getenv('TEST_TMPDIR'))
-    writer = tf.contrib.summary.create_file_writer(self.summary_dir)
+    writer = tf.compat.v2.summary.create_file_writer(self.summary_dir)
     writer.set_as_default()
     self.metric1 = DummyMetric('Metric1')
     self.metric2 = DummyMetric('Metric2')
     self.metric3 = DummyMetric('Metric3')
-    self.flush_op = tf.contrib.summary.flush()
     self.global_step = tf.compat.v1.train.get_or_create_global_step()
     self.incr_global_step = tf.compat.v1.assign_add(self.global_step, 1)
 
@@ -98,7 +97,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       tf.contrib.summary.initialize(session=sess)
       self.metric1.value = 3
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(self.flush_op)
+      sess.run(tf.contrib.summary.flush())
 
     records = self.get_records()
 
@@ -125,7 +124,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric1.value = 5
       self.metric2.value = 2
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(self.flush_op)
+      sess.run(tf.contrib.summary.flush())
 
     records = self.get_records()
 
@@ -150,7 +149,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric1.value = 3
       self.metric2.value = 2
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(self.flush_op)
+      sess.run(tf.contrib.summary.flush())
 
     records = self.get_records()
 
@@ -178,7 +177,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric1.value = 4
       self.metric2.value = 3
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(self.flush_op)
+      sess.run(tf.contrib.summary.flush())
 
     records = self.get_records()
 
@@ -203,7 +202,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric2.value = 2
       self.metric3.value = 3
       py_metric.run_summaries([self.metric1, self.metric2, self.metric3])
-      sess.run(self.flush_op)
+      sess.run(tf.contrib.summary.flush())
 
     records = self.get_records()
 

@@ -221,16 +221,21 @@ class SacAgent(tf_agent.TFAgent):
         for grad, var in grads_and_vars:
           with tf.name_scope('Gradients/'):
             if grad is not None:
-              tf.contrib.summary.histogram(grad.op.name, grad)
+              tf.compat.v2.summary.histogram(
+                  name=grad.op.name, data=grad, step=self.train_step_counter)
           with tf.name_scope('Variables/'):
             if var is not None:
-              tf.contrib.summary.histogram(var.op.name, var)
+              tf.compat.v2.summary.histogram(
+                  name=var.op.name, data=var, step=self.train_step_counter)
       return grads_and_vars
 
     with tf.name_scope('Losses'):
-      tf.contrib.summary.scalar('critic_loss', critic_loss)
-      tf.contrib.summary.scalar('actor_loss', actor_loss)
-      tf.contrib.summary.scalar('alpha_loss', alpha_loss)
+      tf.compat.v2.summary.scalar(
+          name='critic_loss', data=critic_loss, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='actor_loss', data=actor_loss, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='alpha_loss', data=alpha_loss, step=self.train_step_counter)
 
     critic_train_op = eager_utils.create_train_op(
         critic_loss,
@@ -398,10 +403,14 @@ class SacAgent(tf_agent.TFAgent):
         td_errors1 = td_targets - pred_td_targets1
         td_errors2 = td_targets - pred_td_targets2
         td_errors = tf.concat([td_errors1, td_errors2], axis=0)
-        common.generate_tensor_summaries('td_errors', td_errors)
-        common.generate_tensor_summaries('td_targets', td_targets)
-        common.generate_tensor_summaries('pred_td_targets1', pred_td_targets1)
-        common.generate_tensor_summaries('pred_td_targets2', pred_td_targets2)
+        common.generate_tensor_summaries('td_errors', td_errors,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('td_targets', td_targets,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('pred_td_targets1', pred_td_targets1,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('pred_td_targets2', pred_td_targets2,
+                                         self.train_step_counter)
 
       return critic_loss
 
@@ -436,15 +445,18 @@ class SacAgent(tf_agent.TFAgent):
         common.generate_tensor_summaries('actor_loss', actor_loss)
         common.generate_tensor_summaries('actions', actions)
         common.generate_tensor_summaries('log_pi', log_pi)
-        tf.contrib.summary.scalar('entropy_avg',
-                                  -tf.reduce_mean(input_tensor=log_pi))
+        tf.compat.v2.summary.scalar(
+            name='entropy_avg',
+            data=-tf.reduce_mean(input_tensor=log_pi),
+            step=self.train_step_counter)
         common.generate_tensor_summaries('target_q_values', target_q_values)
         action_distribution = self.policy.distribution(time_steps).action
         common.generate_tensor_summaries('act_mean', action_distribution.loc)
-        common.generate_tensor_summaries('act_stddev',
-                                         action_distribution.scale)
+        common.generate_tensor_summaries(
+            'act_stddev', action_distribution.scale, self.train_step_counter)
         common.generate_tensor_summaries('entropy_raw_action',
-                                         action_distribution.entropy())
+                                         action_distribution.entropy(),
+                                         self.train_step_counter)
 
       return actor_loss
 
@@ -473,6 +485,7 @@ class SacAgent(tf_agent.TFAgent):
       alpha_loss = tf.reduce_mean(input_tensor=alpha_loss)
 
       if self._debug_summaries:
-        common.generate_tensor_summaries('alpha_loss', alpha_loss)
+        common.generate_tensor_summaries('alpha_loss', alpha_loss,
+                                         self.train_step_counter)
 
       return alpha_loss

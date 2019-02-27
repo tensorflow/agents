@@ -240,10 +240,12 @@ class Td3Agent(tf_agent.TFAgent):
         for grad, var in grads_and_vars:
           with tf.name_scope('Gradients/'):
             if grad is not None:
-              tf.contrib.summary.histogram(grad.op.name, grad)
+              tf.compat.v2.summary.histogram(
+                  name=grad.op.name, data=grad, step=self.train_step_counter)
           with tf.name_scope('Variables/'):
             if var is not None:
-              tf.contrib.summary.histogram(var.op.name, var)
+              tf.compat.v2.summary.histogram(
+                  name=var.op.name, data=var, step=self.train_step_counter)
       return grads_and_vars
 
     critic_train_op = eager_utils.create_train_op(
@@ -327,37 +329,62 @@ class Td3Agent(tf_agent.TFAgent):
       pred_td_targets_all = [pred_td_targets_1, pred_td_targets_2]
 
       if self._debug_summaries:
-        tf.contrib.summary.histogram('td_targets', td_targets)
+        tf.compat.v2.summary.histogram(
+            name='td_targets', data=td_targets, step=self.train_step_counter)
         with tf.name_scope('td_targets'):
-          tf.contrib.summary.scalar('mean',
-                                    tf.reduce_mean(input_tensor=td_targets))
-          tf.contrib.summary.scalar('max',
-                                    tf.reduce_max(input_tensor=td_targets))
-          tf.contrib.summary.scalar('min',
-                                    tf.reduce_min(input_tensor=td_targets))
+          tf.compat.v2.summary.scalar(
+              name='mean',
+              data=tf.reduce_mean(input_tensor=td_targets),
+              step=self.train_step_counter)
+          tf.compat.v2.summary.scalar(
+              name='max',
+              data=tf.reduce_max(input_tensor=td_targets),
+              step=self.train_step_counter)
+          tf.compat.v2.summary.scalar(
+              name='min',
+              data=tf.reduce_min(input_tensor=td_targets),
+              step=self.train_step_counter)
 
         for td_target_idx in range(2):
           pred_td_targets = pred_td_targets_all[td_target_idx]
           td_errors = td_targets - pred_td_targets
           with tf.name_scope('critic_net_%d' % (td_target_idx + 1)):
-            tf.contrib.summary.histogram('td_errors', td_errors)
-            tf.contrib.summary.histogram('pred_td_targets', pred_td_targets)
+            tf.compat.v2.summary.histogram(
+                name='td_errors', data=td_errors, step=self.train_step_counter)
+            tf.compat.v2.summary.histogram(
+                name='pred_td_targets',
+                data=pred_td_targets,
+                step=self.train_step_counter)
             with tf.name_scope('td_errors'):
-              tf.contrib.summary.scalar('mean',
-                                        tf.reduce_mean(input_tensor=td_errors))
-              tf.contrib.summary.scalar(
-                  'mean_abs', tf.reduce_mean(input_tensor=tf.abs(td_errors)))
-              tf.contrib.summary.scalar('max',
-                                        tf.reduce_max(input_tensor=td_errors))
-              tf.contrib.summary.scalar('min',
-                                        tf.reduce_min(input_tensor=td_errors))
+              tf.compat.v2.summary.scalar(
+                  name='mean',
+                  data=tf.reduce_mean(input_tensor=td_errors),
+                  step=self.train_step_counter)
+              tf.compat.v2.summary.scalar(
+                  name='mean_abs',
+                  data=tf.reduce_mean(input_tensor=tf.abs(td_errors)),
+                  step=self.train_step_counter)
+              tf.compat.v2.summary.scalar(
+                  name='max',
+                  data=tf.reduce_max(input_tensor=td_errors),
+                  step=self.train_step_counter)
+              tf.compat.v2.summary.scalar(
+                  name='min',
+                  data=tf.reduce_min(input_tensor=td_errors),
+                  step=self.train_step_counter)
             with tf.name_scope('pred_td_targets'):
-              tf.contrib.summary.scalar(
-                  'mean', tf.reduce_mean(input_tensor=pred_td_targets))
-              tf.contrib.summary.scalar(
-                  'max', tf.reduce_max(input_tensor=pred_td_targets))
-              tf.contrib.summary.scalar(
-                  'min', tf.reduce_min(input_tensor=pred_td_targets))
+              tf.compat.v2.summary.scalar(
+                  name='mean',
+                  data=tf.reduce_mean(input_tensor=pred_td_targets),
+                  step=self.train_step_counter)
+              tf.compat.v2.summary.scalar(
+                  name='max',
+                  data=tf.reduce_max(input_tensor=pred_td_targets),
+                  step=self.train_step_counter)
+              tf.compat.v2.summary.scalar(
+                  name='min',
+                  data=tf.reduce_min(input_tensor=pred_td_targets),
+                  step=self.train_step_counter)
 
       critic_loss = (self._td_errors_loss_fn(td_targets, pred_td_targets_1)
                      + self._td_errors_loss_fn(td_targets, pred_td_targets_2))

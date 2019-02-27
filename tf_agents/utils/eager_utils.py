@@ -169,11 +169,12 @@ def future_in_eager_mode(func_or_method):
   return tf_decorator.make_decorator(func_or_method, decorator)
 
 
-def add_variables_summaries(grads_and_vars):
+def add_variables_summaries(grads_and_vars, step):
   """Add summaries for variables.
 
   Args:
     grads_and_vars: A list of (gradient, variable) pairs.
+    step: Variable to use for summaries.
   """
   with tf.name_scope('summarize_vars'):
     for grad, var in grads_and_vars:
@@ -183,16 +184,20 @@ def add_variables_summaries(grads_and_vars):
         else:
           var_values = var
         var_name = var.name.replace(':', '_')
-        tf.contrib.summary.histogram(var_name + '_value', var_values)
-        tf.contrib.summary.scalar(var_name + '_value_norm',
-                                  tf.linalg.global_norm([var_values]))
+        tf.compat.v2.summary.histogram(
+            name=var_name + '_value', data=var_values, step=step)
+        tf.compat.v2.summary.scalar(
+            name=var_name + '_value_norm',
+            data=tf.linalg.global_norm([var_values]),
+            step=step)
 
 
-def add_gradients_summaries(grads_and_vars):
+def add_gradients_summaries(grads_and_vars, step):
   """Add summaries to gradients.
 
   Args:
     grads_and_vars: A list of gradient to variable pairs (tuples).
+    step: Variable to use for summaries.
   """
   with tf.name_scope('summarize_grads'):
     for grad, var in grads_and_vars:
@@ -202,9 +207,12 @@ def add_gradients_summaries(grads_and_vars):
         else:
           grad_values = grad
         var_name = var.name.replace(':', '_')
-        tf.contrib.summary.histogram(var_name + '_gradient', grad_values)
-        tf.contrib.summary.scalar(var_name + '_gradient_norm',
-                                  tf.linalg.global_norm([grad_values]))
+        tf.compat.v2.summary.histogram(
+            name=var_name + '_gradient', data=grad_values, step=step)
+        tf.compat.v2.summary.scalar(
+            name=var_name + '_gradient_norm',
+            data=tf.linalg.global_norm([grad_values]),
+            step=step)
       else:
         logging.info('Var %s has no gradient', var.name)
 
@@ -339,7 +347,7 @@ def create_train_step(loss,
 
   if summarize_gradients:
     with tf.name_scope('summarize_grads'):
-      add_gradients_summaries(grads_and_vars)
+      add_gradients_summaries(grads_and_vars, global_step)
 
   if check_numerics:
     with tf.name_scope('train_op'):
@@ -435,7 +443,7 @@ def create_train_op(total_loss,
   # Summarize gradients.
   if summarize_gradients:
     with tf.name_scope('summarize_grads'):
-      add_gradients_summaries(grads)
+      add_gradients_summaries(grads, global_step)
 
   # Create gradient updates.
   grad_updates = optimizer.apply_gradients(grads, global_step=global_step)

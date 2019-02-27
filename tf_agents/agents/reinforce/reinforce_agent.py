@@ -49,7 +49,7 @@ def _entropy_loss(distributions, spec, weights=None):
     entropy = -tf.cast(common.entropy(distributions, spec), tf.float32)
     if weights is not None:
       entropy *= weights
-    return tf.reduce_mean(entropy)
+    return tf.reduce_mean(input_tensor=entropy)
 
 
 @gin.configurable
@@ -127,16 +127,24 @@ class ReinforceAgent(tf_agent.TFAgent):
     returns = common.compute_returns(experience.reward,
                                      experience.discount)
     if self._debug_summaries:
-      tf.contrib.summary.histogram('rewards', experience.reward)
-      tf.contrib.summary.histogram('discounts', experience.discount)
-      tf.contrib.summary.histogram('returns', returns)
+      tf.compat.v2.summary.histogram(
+          name='rewards', data=experience.reward, step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='discounts',
+          data=experience.discount,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='returns', data=returns, step=self.train_step_counter)
 
     # TODO(kbnaoop): replace with tensor normalizer.
     if self._normalize_returns:
       ret_mean, ret_var = tf.nn.moments(x=returns, axes=[0])
       returns = (returns - ret_mean) / (tf.sqrt(ret_var) + 1e-6)
       if self._debug_summaries:
-        tf.contrib.summary.histogram('normalized_returns', returns)
+        tf.compat.v2.summary.histogram(
+            name='normalized_returns',
+            data=returns,
+            step=self.train_step_counter)
 
     # TODO(kbanoop): remove after changing network interface to accept
     # observations and step_types, instead of time_steps.
@@ -168,7 +176,10 @@ class ReinforceAgent(tf_agent.TFAgent):
     if self._summarize_grads_and_vars:
       with tf.name_scope('Variables/'):
         for var in self._actor_network.trainable_weights:
-          tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
+          tf.compat.v2.summary.histogram(
+              name=var.name.replace(':', '_'),
+              data=var,
+              step=self.train_step_counter)
 
     return loss_info
 
@@ -185,11 +196,16 @@ class ReinforceAgent(tf_agent.TFAgent):
     total_loss = policy_gradient_loss + entropy_regularization_loss
 
     with tf.name_scope('Losses/'):
-      tf.contrib.summary.scalar('policy_gradient_loss',
-                                policy_gradient_loss)
-      tf.contrib.summary.scalar('entropy_regularization_loss',
-                                entropy_regularization_loss)
-      tf.contrib.summary.scalar('total_loss', total_loss)
+      tf.compat.v2.summary.scalar(
+          name='policy_gradient_loss',
+          data=policy_gradient_loss,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='entropy_regularization_loss',
+          data=entropy_regularization_loss,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='total_loss', data=total_loss, step=self.train_step_counter)
 
     return tf_agent.LossInfo(total_loss, ())
 
@@ -227,9 +243,14 @@ class ReinforceAgent(tf_agent.TFAgent):
       action_log_prob_times_return *= weights
 
     if self._debug_summaries:
-      tf.contrib.summary.histogram('action_log_prob', action_log_prob)
-      tf.contrib.summary.histogram('action_log_prob_times_return',
-                                   action_log_prob_times_return)
+      tf.compat.v2.summary.histogram(
+          name='action_log_prob',
+          data=action_log_prob,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='action_log_prob_times_return',
+          data=action_log_prob_times_return,
+          step=self.train_step_counter)
 
     # Policy gradient loss is defined as the sum, over timesteps, of action
     #   log-probability times the cumulative return from that timestep onward.

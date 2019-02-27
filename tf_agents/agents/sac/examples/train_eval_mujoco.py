@@ -119,11 +119,11 @@ def train_eval(
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
 
-  train_summary_writer = tf.contrib.summary.create_file_writer(
+  train_summary_writer = tf.compat.v2.summary.create_file_writer(
       train_dir, flush_millis=summaries_flush_secs * 1000)
   train_summary_writer.set_as_default()
 
-  eval_summary_writer = tf.contrib.summary.create_file_writer(
+  eval_summary_writer = tf.compat.v2.summary.create_file_writer(
       eval_dir, flush_millis=summaries_flush_secs * 1000)
   eval_metrics = [
       py_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),

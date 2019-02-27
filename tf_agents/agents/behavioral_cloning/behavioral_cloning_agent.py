@@ -254,14 +254,19 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       loss = tf.reduce_mean(input_tensor=error)
 
       with tf.name_scope('Losses/'):
-        tf.contrib.summary.scalar('loss', loss)
+        tf.compat.v2.summary.scalar(
+            name='loss', data=loss, step=self.train_step_counter)
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
           for var in self._cloning_network.trainable_weights:
-            tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
+            tf.compat.v2.summary.histogram(
+                name=var.name.replace(':', '_'),
+                data=var,
+                step=self.train_step_counter)
 
       if self._debug_summaries:
-        common_utils.generate_tensor_summaries('errors', error)
+        common_utils.generate_tensor_summaries('errors', error,
+                                               self.train_step_counter)
 
       return tf_agent.LossInfo(loss, BehavioralCloningLossInfo(loss=error))

@@ -195,61 +195,66 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
   def testTrain(self, num_epochs, use_td_lambda_return):
     if tf.executing_eagerly():
       self.skipTest('b/123777119')  # Secondary bug: ('b/123770140')
-    agent = ppo_agent.PPOAgent(
-        self._time_step_spec,
-        self._action_spec,
-        tf.compat.v1.train.AdamOptimizer(),
-        actor_net=DummyActorNet(self._action_spec,),
-        value_net=DummyValueNet(outer_rank=2),
-        normalize_observations=False,
-        num_epochs=num_epochs,
-        use_gae=use_td_lambda_return,
-        use_td_lambda_return=use_td_lambda_return)
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ], dtype=tf.float32)
 
-    time_steps = ts.TimeStep(
-        step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
-        reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        observation=observations)
-    actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
+    with tf.compat.v2.summary.record_if(False):
+      agent = ppo_agent.PPOAgent(
+          self._time_step_spec,
+          self._action_spec,
+          tf.compat.v1.train.AdamOptimizer(),
+          actor_net=DummyActorNet(self._action_spec,),
+          value_net=DummyValueNet(outer_rank=2),
+          normalize_observations=False,
+          num_epochs=num_epochs,
+          use_gae=use_td_lambda_return,
+          use_td_lambda_return=use_td_lambda_return)
+      observations = tf.constant([
+          [[1, 2], [3, 4], [5, 6]],
+          [[1, 2], [3, 4], [5, 6]],
+      ], dtype=tf.float32)
 
-    action_distribution_parameters = {
-        'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
-        'scale': tf.constant([[[1.0]]* 3] * 2, dtype=tf.float32),
-    }
+      time_steps = ts.TimeStep(
+          step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
+          reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+          discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+          observation=observations)
+      actions = tf.constant(
+          [[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
-    policy_info = action_distribution_parameters
+      action_distribution_parameters = {
+          'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
+          'scale': tf.constant([[[1.0]]* 3] * 2, dtype=tf.float32),
+      }
 
-    experience = trajectory.Trajectory(
-        time_steps.step_type, observations, actions, policy_info,
-        time_steps.step_type, time_steps.reward, time_steps.discount)
+      policy_info = action_distribution_parameters
 
-    # Mock the build_train_op to return an op for incrementing this counter.
-    counter = tf.compat.v1.train.get_or_create_global_step()
-    zero = tf.constant(0, dtype=tf.float32)
-    agent.build_train_op = (
-        lambda *_, **__: tf_agent.LossInfo(counter.assign_add(1),  # pylint: disable=g-long-lambda
-                                           ppo_agent.PPOLossInfo(*[zero] * 5)))
+      experience = trajectory.Trajectory(
+          time_steps.step_type, observations, actions, policy_info,
+          time_steps.step_type, time_steps.reward, time_steps.discount)
 
-    train_op = agent.train(experience)
+      # Mock the build_train_op to return an op for incrementing this counter.
+      counter = tf.compat.v1.train.get_or_create_global_step()
+      zero = tf.constant(0, dtype=tf.float32)
+      agent.build_train_op = (
+          lambda *_, **__: tf_agent.LossInfo(  # pylint: disable=g-long-lambda
+              counter.assign_add(1),
+              ppo_agent.PPOLossInfo(*[zero] * 5)))
 
-    self.evaluate(tf.compat.v1.global_variables_initializer())
+      train_op = agent.train(experience)
 
-    # Assert that counter starts out at zero.
-    self.assertEqual(0, self.evaluate(counter))
+      self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(train_op)
+      # Assert that counter starts out at zero.
+      self.assertEqual(0, self.evaluate(counter))
 
-    # Assert that train_op ran increment_counter num_epochs times.
-    self.assertEqual(num_epochs, self.evaluate(counter))
+      self.evaluate(train_op)
+
+      # Assert that train_op ran increment_counter num_epochs times.
+      self.assertEqual(num_epochs, self.evaluate(counter))
 
   def testBuildTrainOp(self):
     if tf.executing_eagerly():
       self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
+
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -327,10 +332,12 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(1, self.evaluate(train_step))
 
   def testDebugSummaries(self):
+    self.skipTest('b/125483077')
+
     if tf.executing_eagerly():
       self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     logdir = self.get_temp_dir()
-    with tf.contrib.summary.create_file_writer(
+    with tf.compat.v2.summary.create_file_writer(
         logdir,
         max_queue=None,
         flush_millis=None,

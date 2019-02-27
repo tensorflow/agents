@@ -208,10 +208,12 @@ class DdpgAgent(tf_agent.TFAgent):
         for grad, var in grads_and_vars:
           with tf.name_scope('Gradients/'):
             if grad is not None:
-              tf.contrib.summary.histogram(grad.op.name, grad)
+              tf.compat.v2.summary.histogram(
+                  name=grad.op.name, data=grad, step=self.train_step_counter)
           with tf.name_scope('Variables/'):
             if var is not None:
-              tf.contrib.summary.histogram(var.op.name, var)
+              tf.compat.v2.summary.histogram(
+                  name=var.op.name, data=var, step=self.train_step_counter)
       return grads_and_vars
 
     critic_train_op = eager_utils.create_train_op(
@@ -282,13 +284,17 @@ class DdpgAgent(tf_agent.TFAgent):
       critic_loss = tf.reduce_mean(input_tensor=critic_loss)
 
       with tf.name_scope('Losses/'):
-        tf.contrib.summary.scalar('critic_loss', critic_loss)
+        tf.compat.v2.summary.scalar(
+            name='critic_loss', data=critic_loss, step=self.train_step_counter)
 
       if self._debug_summaries:
         td_errors = td_targets - q_values
-        common_utils.generate_tensor_summaries('td_errors', td_errors)
-        common_utils.generate_tensor_summaries('td_targets', td_targets)
-        common_utils.generate_tensor_summaries('q_values', q_values)
+        common_utils.generate_tensor_summaries('td_errors', td_errors,
+                                               self.train_step_counter)
+        common_utils.generate_tensor_summaries('td_targets', td_targets,
+                                               self.train_step_counter)
+        common_utils.generate_tensor_summaries('q_values', q_values,
+                                               self.train_step_counter)
 
       return critic_loss
 
@@ -329,6 +335,7 @@ class DdpgAgent(tf_agent.TFAgent):
 
       actor_loss = tf.add_n(actor_losses)
       with tf.name_scope('Losses/'):
-        tf.contrib.summary.scalar('actor_loss', actor_loss)
+        tf.compat.v2.summary.scalar(
+            name='actor_loss', data=actor_loss, step=self.train_step_counter)
 
     return actor_loss

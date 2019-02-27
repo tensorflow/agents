@@ -406,8 +406,10 @@ class PPOAgent(tf_agent.TFAgent):
     if summarize_gradients and debug_summaries:
 
       def _create_summaries(grads_and_vars):
-        eager_utils.add_gradients_summaries(grads_and_vars)
-        eager_utils.add_variables_summaries(grads_and_vars)
+        eager_utils.add_gradients_summaries(grads_and_vars,
+                                            self.train_step_counter)
+        eager_utils.add_variables_summaries(grads_and_vars,
+                                            self.train_step_counter)
         grads_and_vars = clip_gradients(grads_and_vars)
         return grads_and_vars
 
@@ -454,14 +456,18 @@ class PPOAgent(tf_agent.TFAgent):
     rewards = next_time_steps.reward
     if self._debug_summaries:
       # Summarize rewards before they get normalized below.
-      tf.contrib.summary.histogram('rewards', rewards)
+      tf.compat.v2.summary.histogram(
+          name='rewards', data=rewards, step=self.train_step_counter)
 
     # Normalize rewards if self._reward_normalizer is defined.
     if self._reward_normalizer:
       rewards = self._reward_normalizer.normalize(
           rewards, center_mean=False, clip_value=self._reward_norm_clipping)
       if self._debug_summaries:
-        tf.contrib.summary.histogram('rewards_normalized', rewards)
+        tf.compat.v2.summary.histogram(
+            name='rewards_normalized',
+            data=rewards,
+            step=self.train_step_counter)
 
     # Make discount 0.0 at end of each episode to restart cumulative sum
     #   end of each episode.
@@ -471,16 +477,20 @@ class PPOAgent(tf_agent.TFAgent):
     # Compute Monte Carlo returns.
     returns = value_ops.discounted_return(rewards, discounts, time_major=False)
     if self._debug_summaries:
-      tf.contrib.summary.histogram('returns', returns)
+      tf.compat.v2.summary.histogram(
+          name='returns', data=returns, step=self.train_step_counter)
 
     # Compute advantages.
     advantages = self.compute_advantages(rewards, returns, discounts,
                                          value_preds)
     normalized_advantages = _normalize_advantages(advantages, axes=(0, 1))
     if self._debug_summaries:
-      tf.contrib.summary.histogram('advantages', advantages)
-      tf.contrib.summary.histogram('advantages_normalized',
-                                   normalized_advantages)
+      tf.compat.v2.summary.histogram(
+          name='advantages', data=advantages, step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='advantages_normalized',
+          data=normalized_advantages,
+          step=self.train_step_counter)
 
     # Return TD-Lambda returns if both use_td_lambda_return and use_gae.
     if self._use_td_lambda_return:
@@ -500,7 +510,8 @@ class PPOAgent(tf_agent.TFAgent):
     actions = policy_steps_.action
 
     if self._debug_summaries:
-      tf.contrib.summary.histogram('actions', actions)
+      tf.compat.v2.summary.histogram(
+          name='actions', data=actions, step=self.train_step_counter)
 
     action_distribution_parameters = policy_steps_.info
 
@@ -604,16 +615,27 @@ class PPOAgent(tf_agent.TFAgent):
       total_entropy_regularization_loss = tf.add_n(
           entropy_regularization_losses)
       total_kl_penalty_loss = tf.add_n(kl_penalty_losses)
-      tf.contrib.summary.scalar('policy_gradient_loss',
-                                total_policy_gradient_loss)
-      tf.contrib.summary.scalar('value_estimation_loss',
-                                total_value_estimation_loss)
-      tf.contrib.summary.scalar('l2_regularization_loss',
-                                total_l2_regularization_loss)
+      tf.compat.v2.summary.scalar(
+          name='policy_gradient_loss',
+          data=total_policy_gradient_loss,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='value_estimation_loss',
+          data=total_value_estimation_loss,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='l2_regularization_loss',
+          data=total_l2_regularization_loss,
+          step=self.train_step_counter)
       if self._entropy_regularization:
-        tf.contrib.summary.scalar('entropy_regularization_loss',
-                                  total_entropy_regularization_loss)
-      tf.contrib.summary.scalar('kl_penalty_loss', total_kl_penalty_loss)
+        tf.compat.v2.summary.scalar(
+            name='entropy_regularization_loss',
+            data=total_entropy_regularization_loss,
+            step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='kl_penalty_loss',
+          data=total_kl_penalty_loss,
+          step=self.train_step_counter)
 
       total_abs_loss = (
           tf.abs(total_policy_gradient_loss) +
@@ -622,14 +644,20 @@ class PPOAgent(tf_agent.TFAgent):
           tf.abs(total_l2_regularization_loss) +
           tf.abs(total_kl_penalty_loss))
 
-      tf.contrib.summary.scalar('total_abs_loss', total_abs_loss)
+      tf.compat.v2.summary.scalar(
+          name='total_abs_loss',
+          data=total_abs_loss,
+          step=self.train_step_counter)
 
     if self._summarize_grads_and_vars:
       with tf.name_scope('Variables/'):
         all_vars = (self._actor_net.trainable_weights +
                     self._value_net.trainable_weights)
         for var in all_vars:
-          tf.contrib.summary.histogram(var.name.replace(':', '_'), var)
+          tf.compat.v2.summary.histogram(
+              name=var.name.replace(':', '_'),
+              data=var,
+              step=self.train_step_counter)
 
     return loss_info
 
@@ -662,7 +690,8 @@ class PPOAgent(tf_agent.TFAgent):
                                                       'total_l2_loss')
 
         if debug_summaries:
-          tf.contrib.summary.histogram('l2_loss', total_l2_loss)
+          tf.compat.v2.summary.histogram(
+              name='l2_loss', data=total_l2_loss, step=self.train_step_counter)
     else:
       total_l2_loss = tf.constant(0.0, dtype=tf.float32, name='zero_l2_loss')
 
@@ -688,7 +717,10 @@ class PPOAgent(tf_agent.TFAgent):
               entropy_reg_loss, 'entropy_reg_loss')
 
         if debug_summaries:
-          tf.contrib.summary.histogram('entropy_reg_loss', entropy_reg_loss)
+          tf.compat.v2.summary.histogram(
+              name='entropy_reg_loss',
+              data=entropy_reg_loss,
+              step=self.train_step_counter)
     else:
       entropy_reg_loss = tf.constant(
           0.0, dtype=tf.float32, name='zero_entropy_reg_loss')
@@ -717,7 +749,8 @@ class PPOAgent(tf_agent.TFAgent):
     """
     observation = time_steps.observation
     if debug_summaries:
-      tf.contrib.summary.histogram('observations', observation)
+      tf.compat.v2.summary.histogram(
+          name='observations', data=observation, step=self.train_step_counter)
 
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     policy_state = self._collect_policy.get_initial_state(batch_size=batch_size)
@@ -731,11 +764,16 @@ class PPOAgent(tf_agent.TFAgent):
         tf.reduce_mean(input_tensor=value_estimation_error) *
         self._value_pred_loss_coef)
     if debug_summaries:
-      tf.contrib.summary.scalar('value_pred_avg',
-                                tf.reduce_mean(input_tensor=value_preds))
-      tf.contrib.summary.histogram('value_preds', value_preds)
-      tf.contrib.summary.histogram('value_estimation_error',
-                                   value_estimation_error)
+      tf.compat.v2.summary.scalar(
+          name='value_pred_avg',
+          data=tf.reduce_mean(input_tensor=value_preds),
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='value_preds', data=value_preds, step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='value_estimation_error',
+          data=value_estimation_error,
+          step=self.train_step_counter)
 
     if self._check_numerics:
       value_estimation_loss = tf.debugging.check_numerics(
@@ -818,33 +856,64 @@ class PPOAgent(tf_agent.TFAgent):
                 tf.greater(
                     tf.abs(importance_ratio -
                            1.0), self._importance_ratio_clipping), tf.float32))
-        tf.contrib.summary.scalar('clip_fraction', clip_fraction)
-      tf.contrib.summary.histogram('action_log_prob', action_log_prob)
-      tf.contrib.summary.histogram('action_log_prob_sample',
-                                   sample_action_log_probs)
-      tf.contrib.summary.histogram('importance_ratio', importance_ratio)
-      tf.contrib.summary.scalar('importance_ratio_mean',
-                                tf.reduce_mean(input_tensor=importance_ratio))
-      tf.contrib.summary.histogram('importance_ratio_clipped',
-                                   importance_ratio_clipped)
-      tf.contrib.summary.histogram('per_timestep_objective',
-                                   per_timestep_objective)
-      tf.contrib.summary.histogram('per_timestep_objective_clipped',
-                                   per_timestep_objective_clipped)
-      tf.contrib.summary.histogram('per_timestep_objective_min',
-                                   per_timestep_objective_min)
+        tf.compat.v2.summary.scalar(
+            name='clip_fraction',
+            data=clip_fraction,
+            step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='action_log_prob',
+          data=action_log_prob,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='action_log_prob_sample',
+          data=sample_action_log_probs,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='importance_ratio',
+          data=importance_ratio,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='importance_ratio_mean',
+          data=tf.reduce_mean(input_tensor=importance_ratio),
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='importance_ratio_clipped',
+          data=importance_ratio_clipped,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='per_timestep_objective',
+          data=per_timestep_objective,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='per_timestep_objective_clipped',
+          data=per_timestep_objective_clipped,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='per_timestep_objective_min',
+          data=per_timestep_objective_min,
+          step=self.train_step_counter)
       entropy = common.entropy(current_policy_distribution, self.action_spec)
-      tf.contrib.summary.histogram('policy_entropy', entropy)
-      tf.contrib.summary.scalar('policy_entropy_mean',
-                                tf.reduce_mean(input_tensor=entropy))
+      tf.compat.v2.summary.histogram(
+          name='policy_entropy', data=entropy, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='policy_entropy_mean',
+          data=tf.reduce_mean(input_tensor=entropy),
+          step=self.train_step_counter)
       # Categorical distribution (used for discrete actions)
       # doesn't have a mean.
       if not tensor_spec.is_discrete(self.action_spec):
-        tf.contrib.summary.histogram('actions_distribution_mean',
-                                     current_policy_distribution.mean())
-        tf.contrib.summary.histogram('actions_distribution_stddev',
-                                     current_policy_distribution.stddev())
-      tf.contrib.summary.histogram('policy_gradient_loss', policy_gradient_loss)
+        tf.compat.v2.summary.histogram(
+            name='actions_distribution_mean',
+            data=current_policy_distribution.mean(),
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='actions_distribution_stddev',
+            data=current_policy_distribution.stddev(),
+            step=self.train_step_counter)
+      tf.compat.v2.summary.histogram(
+          name='policy_gradient_loss',
+          data=policy_gradient_loss,
+          step=self.train_step_counter)
 
     if self._check_numerics:
       policy_gradient_loss = tf.debugging.check_numerics(
@@ -862,11 +931,15 @@ class PPOAgent(tf_agent.TFAgent):
     kl_cutoff_loss = self._kl_cutoff_coef * tf.square(kl_over_cutoff)
 
     if debug_summaries:
-      tf.contrib.summary.scalar(
-          'kl_cutoff_count',
-          tf.reduce_sum(
-              input_tensor=tf.cast(kl_divergence > kl_cutoff, dtype=tf.int64)))
-      tf.contrib.summary.scalar('kl_cutoff_loss', kl_cutoff_loss)
+      tf.compat.v2.summary.scalar(
+          name='kl_cutoff_count',
+          data=tf.reduce_sum(
+              input_tensor=tf.cast(kl_divergence > kl_cutoff, dtype=tf.int64)),
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='kl_cutoff_loss',
+          data=kl_cutoff_loss,
+          step=self.train_step_counter)
 
     return tf.identity(kl_cutoff_loss, name='kl_cutoff_loss')
 
@@ -879,7 +952,10 @@ class PPOAgent(tf_agent.TFAgent):
     adaptive_kl_loss = self._adaptive_kl_beta * mean_kl
 
     if debug_summaries:
-      tf.contrib.summary.scalar('adaptive_kl_loss', adaptive_kl_loss)
+      tf.compat.v2.summary.scalar(
+          name='adaptive_kl_loss',
+          data=adaptive_kl_loss,
+          step=self.train_step_counter)
 
     return adaptive_kl_loss
 
@@ -932,7 +1008,10 @@ class PPOAgent(tf_agent.TFAgent):
         current_policy_distribution) * weights
 
     if debug_summaries:
-      tf.contrib.summary.histogram('kl_divergence', kl_divergence)
+      tf.compat.v2.summary.histogram(
+          name='kl_divergence',
+          data=kl_divergence,
+          step=self.train_step_counter)
 
     kl_cutoff_loss = self.kl_cutoff_loss(kl_divergence, debug_summaries)
     adaptive_kl_loss = self.adaptive_kl_loss(kl_divergence, debug_summaries)
@@ -968,9 +1047,15 @@ class PPOAgent(tf_agent.TFAgent):
                                                   new_adaptive_kl_beta)
 
     if self._debug_summaries:
-      tf.contrib.summary.scalar('adaptive_kl_update_factor',
-                                adaptive_kl_update_factor)
-      tf.contrib.summary.scalar('mean_kl_divergence', mean_kl)
-      tf.contrib.summary.scalar('adaptive_kl_beta', self._adaptive_kl_beta)
+      tf.compat.v2.summary.scalar(
+          name='adaptive_kl_update_factor',
+          data=adaptive_kl_update_factor,
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='mean_kl_divergence', data=mean_kl, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='adaptive_kl_beta',
+          data=self._adaptive_kl_beta,
+          step=self.train_step_counter)
 
     return update_adaptive_kl_beta
