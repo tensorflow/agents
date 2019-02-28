@@ -94,8 +94,9 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       self._last_id_cs = tf.CriticalSection(name='last_id')
 
   def variables(self):
-    # TODO(sguada) - make this Eager-compatible. Don't rely on scopes.
-    return tf.contrib.framework.get_variables(self._scope)
+    return (self._data_table.variables() +
+            self._id_table.variables() +
+            [self._last_id])
 
   @property
   def device(self):
