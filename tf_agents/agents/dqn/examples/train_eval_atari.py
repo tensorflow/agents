@@ -101,7 +101,7 @@ class AtariQNetwork(q_network.QNetwork):
 
 def log_metric(metric, prefix):
   tag = common_utils.join_scope(prefix, metric.name)
-  logging.info('{0} = {1}'.format(tag, metric.result()))
+  logging.info('%s', '{0} = {1}'.format(tag, metric.result()))
 
 
 @gin.configurable
@@ -215,10 +215,13 @@ class TrainEval(object):
     train_summary_writer = tf.compat.v2.summary.create_file_writer(
         train_dir, flush_millis=summaries_flush_secs * 1000)
     train_summary_writer.set_as_default()
+    self._train_summary_writer = train_summary_writer
 
+    self._eval_summary_writer = None
     if self._do_eval:
       eval_summary_writer = tf.compat.v2.summary.create_file_writer(
           eval_dir, flush_millis=summaries_flush_secs * 1000)
+      self._eval_summary_writer = eval_summary_writer
       self._eval_metrics = [
           py_metrics.AverageReturnMetric(
               name='PhaseAverageReturn', buffer_size=np.inf),
@@ -298,13 +301,11 @@ class TrainEval(object):
             sample_batch_size=batch_size, num_steps=2).prefetch(4)
         # TODO(b/123242430): Add prefetch_to_device back here in order to
         # improve performance once errors are resolved.
-        self._ds_itr = tf.compat.v1.data.make_initializable_iterator(ds)
+        self._ds_itr = tf.compat.v1.data.make_one_shot_iterator(ds)
         experience = self._ds_itr.get_next()
 
       with tf.device('/gpu:0'):
         self._train_op = tf_agent.train(experience)
-
-        self._summary_op = tf.contrib.summary.all_summary_ops()
 
         self._env_steps_metric = py_metrics.EnvironmentSteps()
         self._step_metrics = [
@@ -422,11 +423,9 @@ class TrainEval(object):
     # TODO(sguada) Remove once Periodically can be saved.
     common_utils.initialize_uninitialized_variables(sess)
 
-    sess.run(self._ds_itr.initializer)
     sess.run(self._init_agent_op)
 
-    self._train_step_call = sess.make_callable(
-        [self._train_op, self._summary_op])
+    self._train_step_call = sess.make_callable(self._train_op)
 
     self._collect_timer = timer.Timer()
     self._train_timer = timer.Timer()
@@ -442,9 +441,10 @@ class TrainEval(object):
     self._train_checkpointer.save(global_step=global_step_val)
     self._policy_checkpointer.save(global_step=global_step_val)
     self._rb_checkpointer.save(global_step=global_step_val)
+    sess.run(self._train_summary_writer.init())
 
-    tf.contrib.summary.initialize(
-        session=sess, graph=tf.compat.v1.get_default_graph())
+    if self._do_eval:
+      sess.run(self._eval_summary_writer.init())
 
   def _initial_collect(self):
     """Collect initial experience before training begins."""
@@ -479,7 +479,7 @@ class TrainEval(object):
         break
       elif train and self._env_steps_metric.result() % self._update_period == 0:
         with self._train_timer:
-          total_loss, _ = self._train_step_call()
+          total_loss = self._train_step_call()
           global_step_val = sess.run(self._global_step)
         self._maybe_log(sess, global_step_val, total_loss)
         self._maybe_record_summaries(global_step_val)
@@ -560,16 +560,17 @@ class TrainEval(object):
     """Log some stats if global_step_val is a multiple of log_interval."""
     if global_step_val % self._log_interval == 0:
       logging.info('step = %d, loss = %f', global_step_val, total_loss.loss)
-      logging.info('action_time = {}'.format(self._action_timer.value()))
-      logging.info('step_time = {}'.format(self._step_timer.value()))
-      logging.info('oberver_time = {}'.format(self._observer_timer.value()))
+      logging.info('%s', 'action_time = {}'.format(self._action_timer.value()))
+      logging.info('%s', 'step_time = {}'.format(self._step_timer.value()))
+      logging.info('%s', 'oberver_time = {}'.format(
+          self._observer_timer.value()))
       steps_per_sec = ((global_step_val - self._timed_at_step) /
                        (self._collect_timer.value()
                         + self._train_timer.value()))
       sess.run(self._steps_per_second_summary,
                feed_dict={self._steps_per_second_ph: steps_per_sec})
       logging.info('%.3f steps/sec', steps_per_sec)
-      logging.info('collect_time = {}, train_time = {}'.format(
+      logging.info('%s', 'collect_time = {}, train_time = {}'.format(
           self._collect_timer.value(), self._train_timer.value()))
       for metric in self._train_metrics:
         log_metric(metric, prefix='Train/Metrics')

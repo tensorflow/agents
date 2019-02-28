@@ -119,8 +119,16 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
       """Gets a single item from the replay buffer."""
       with self._lock:
         if self._np_state.size <= 0:
-          raise ValueError('Read error: empty replay buffer')
-
+          def empty_item(spec):
+            return np.empty(spec.shape, dtype=spec.dtype)
+          if num_steps is not None:
+            item = [tf.nest.map_structure(empty_item, self.data_spec)
+                    for n in range(num_steps)]
+            if time_stacked:
+              item = nest_utils.stack_nested_arrays(item)
+          else:
+            item = tf.nest.map_structure(empty_item, self.data_spec)
+          return item
         idx = np.random.randint(self._np_state.size - num_steps_value + 1)
         if self._np_state.size == self._capacity:
           # If the buffer is full, add cur_id (head of circular buffer) so that
