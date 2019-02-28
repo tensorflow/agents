@@ -168,9 +168,12 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       tf_policy = q_policy.QPolicy(self._time_step_spec, self._action_spec,
                                    DummyNet(use_constant_initializer=False))
 
-      # Parameterized tests reuse temp directories, check it doesn't exist.
-      with self.assertRaises(tf.errors.NotFoundError):
+      # Parameterized tests reuse temp directories, make no save exists.
+      try:
         tf.io.gfile.listdir(policy_save_path)
+        tf.io.gfile.remove(policy_save_path)
+      except tf.errors.NotFoundError:
+        pass
       policy_saved = py_tf_policy.PyTFPolicy(tf_policy)
       policy_saved.session = tf.compat.v1.Session(graph=policy_saved_graph)
       policy_saved.initialize(batch_size)
