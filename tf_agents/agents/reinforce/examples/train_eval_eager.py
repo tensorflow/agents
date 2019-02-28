@@ -91,9 +91,9 @@ def train_eval(
       tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
 
-  with tf.contrib.summary.record_summaries_every_n_global_steps(
-      summary_interval):
-
+  global_step = tf.compat.v1.train.get_or_create_global_step()
+  with tf.compat.v2.summary.record_if(
+      lambda: tf.math.equal(global_step % summary_interval, 0)):
     tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
     eval_tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
@@ -103,7 +103,6 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=actor_fc_layers)
 
-    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = reinforce_agent.ReinforceAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),

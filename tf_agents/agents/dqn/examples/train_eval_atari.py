@@ -226,9 +226,9 @@ class TrainEval(object):
               name='PhaseAverageEpisodeLength', buffer_size=np.inf),
       ]
 
-    with tf.contrib.summary.record_summaries_every_n_global_steps(
-        self._summary_interval):
-
+    self._global_step = tf.compat.v1.train.get_or_create_global_step()
+    with tf.compat.v2.summary.record_if(
+        lambda: tf.math.equal(self._global_step % self._summary_interval, 0)):
       self._env = suite_atari.load(
           env_name,
           max_episode_steps=max_episode_frames / ATARI_FRAME_SKIP,
@@ -238,8 +238,6 @@ class TrainEval(object):
       observation_spec = tensor_spec.from_spec(self._env.observation_spec())
       time_step_spec = ts.time_step_spec(observation_spec)
       action_spec = tensor_spec.from_spec(self._env.action_spec())
-
-      self._global_step = tf.compat.v1.train.get_or_create_global_step()
 
       with tf.device('/cpu:0'):
         epsilon = tf.compat.v1.train.polynomial_decay(
@@ -329,7 +327,7 @@ class TrainEval(object):
 
         # Summaries written from python should run every time they are
         # generated.
-        with tf.contrib.summary.always_record_summaries():
+        with tf.compat.v2.summary.record_if(True):
           self._steps_per_second_ph = tf.compat.v1.placeholder(
               tf.float32, shape=(), name='steps_per_sec_ph')
           self._steps_per_second_summary = tf.contrib.summary.scalar(

@@ -88,7 +88,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
   def testSummarySimple(self):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
-    with tf.contrib.summary.always_record_summaries():
+    with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries()
       self.metric2.tf_summaries()
 
@@ -110,7 +110,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
   def testSummaryUpdates(self):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
-    with tf.contrib.summary.always_record_summaries():
+    with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries()
       self.metric2.tf_summaries()
 
@@ -139,7 +139,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
   def testSummaryStepMetrics(self):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
-    with tf.contrib.summary.always_record_summaries():
+    with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries(step_metrics=(self.metric2,))
       self.metric2.tf_summaries(step_metrics=(self.metric2,))
 
@@ -164,7 +164,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
   def testSummaryStepMetricsUpdate(self):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
-    with tf.contrib.summary.always_record_summaries():
+    with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries(step_metrics=(self.metric2,))
       self.metric2.tf_summaries(step_metrics=(self.metric2,))
 
@@ -190,7 +190,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
   def testSummaryMultipleStepMetrics(self):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
-    with tf.contrib.summary.always_record_summaries():
+    with tf.compat.v2.summary.record_if(True):
       self.metric1.tf_summaries(step_metrics=(self.metric2, self.metric3))
       self.metric2.tf_summaries(step_metrics=(self.metric2, self.metric3))
       self.metric3.tf_summaries(step_metrics=(self.metric2, self.metric3))

@@ -189,7 +189,7 @@ def train_eval(
   summary_op = tf.contrib.summary.all_summary_ops()
 
   with eval_summary_writer.as_default(), \
-       tf.contrib.summary.always_record_summaries():
+       tf.compat.v2.summary.record_if(True):
     for eval_metric in eval_metrics:
       eval_metric.tf_summaries()
 
