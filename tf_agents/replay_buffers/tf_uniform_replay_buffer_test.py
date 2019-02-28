@@ -114,42 +114,33 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
                           values_, sample_)
 
   def testClear(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123886086')
     batch_size = 1
     spec = self._data_spec()
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size, max_length=10)
 
-    values, add_op = _get_add_op(spec, replay_buffer, batch_size)
-    sample, _ = replay_buffer.get_next(sample_batch_size=3)
-    clear_op = replay_buffer.clear()
-    items_op = replay_buffer.gather_all()
-    last_id_op = replay_buffer._get_last_id()
-
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    last_id = self.evaluate(last_id_op)
-    empty_items = self.evaluate(items_op)
-    self.evaluate(add_op)
-    values_ = self.evaluate(values)
-    sample_ = self.evaluate(sample)
-    tf.nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
-                          values_, sample_)
-    self.assertNotEqual(last_id, self.evaluate(last_id_op))
 
-    self.evaluate(clear_op)
-    self.assertEqual(last_id, self.evaluate(last_id_op))
+    initial_id = self.evaluate(replay_buffer._get_last_id())
+    empty_items = self.evaluate(replay_buffer.gather_all())
+
+    values, _ = self.evaluate(_get_add_op(spec, replay_buffer, batch_size))
+    sample, _ = self.evaluate(replay_buffer.get_next(sample_batch_size=3))
+    tf.nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
+                          values, sample)
+    self.assertNotEqual(initial_id, self.evaluate(replay_buffer._get_last_id()))
+
+    self.evaluate(replay_buffer.clear())
+    self.assertEqual(initial_id, self.evaluate(replay_buffer._get_last_id()))
 
     def check_np_arrays_everything_equal(x, y):
       np.testing.assert_equal(x, y)
       self.assertEqual(x.dtype, y.dtype)
 
     tf.nest.map_structure(check_np_arrays_everything_equal, empty_items,
-                          self.evaluate(items_op))
+                          self.evaluate(replay_buffer.gather_all()))
 
   def testClearAllVariables(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123886086')
     batch_size = 1
     spec = self._data_spec()
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
@@ -164,65 +155,67 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     values_batched = tf.nest.map_structure(lambda t: tf.stack([t] * batch_size),
                                            values)
 
-    last_id_op = replay_buffer._get_last_id()
-    add_op = replay_buffer.add_batch(values_batched)
-    sample, _ = replay_buffer.get_next(sample_batch_size=3)
-    clear_op = replay_buffer._clear(clear_all_variables=True)
-    items_op = replay_buffer.gather_all()
-    table_vars = [
-        var for var in replay_buffer.variables() if 'Table' in var.name
-    ]
+    if tf.executing_eagerly():
+      add_op = lambda: replay_buffer.add_batch(values_batched)
+    else:
+      add_op = replay_buffer.add_batch(values_batched)
+
+    def get_table_vars():
+      return [var for var in replay_buffer.variables() if 'Table' in var.name]
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(clear_op)
-    empty_table_vars = self.evaluate(table_vars)
-    last_id = self.evaluate(last_id_op)
-    empty_items = self.evaluate(items_op)
+    self.evaluate(replay_buffer._clear(clear_all_variables=True))
+    empty_table_vars = self.evaluate(get_table_vars())
+    initial_id = self.evaluate(replay_buffer._get_last_id())
+    empty_items = self.evaluate(replay_buffer.gather_all())
     self.evaluate(add_op)
     self.evaluate(add_op)
     self.evaluate(add_op)
     self.evaluate(add_op)
     values_ = self.evaluate(values)
-    sample_ = self.evaluate(sample)
+    sample, _ = self.evaluate(replay_buffer.get_next(sample_batch_size=3))
     tf.nest.map_structure(lambda x, y: self._assertContains([x], list(y)),
-                          values_, sample_)
-    self.assertNotEqual(last_id, self.evaluate(last_id_op))
+                          values_, sample)
+    self.assertNotEqual(initial_id, self.evaluate(replay_buffer._get_last_id()))
 
     tf.nest.map_structure(lambda x, y: self.assertFalse(np.all(x == y)),
-                          empty_table_vars, self.evaluate(table_vars))
+                          empty_table_vars, self.evaluate(get_table_vars()))
 
-    self.evaluate(clear_op)
-    self.assertEqual(last_id, self.evaluate(last_id_op))
+    self.evaluate(replay_buffer._clear(clear_all_variables=True))
+    self.assertEqual(initial_id, self.evaluate(replay_buffer._get_last_id()))
 
     def check_np_arrays_everything_equal(x, y):
       np.testing.assert_equal(x, y)
       self.assertEqual(x.dtype, y.dtype)
 
     tf.nest.map_structure(check_np_arrays_everything_equal, empty_items,
-                          self.evaluate(items_op))
+                          self.evaluate(replay_buffer.gather_all()))
 
   @parameterized.named_parameters(
       ('BatchSizeOne', 1),
       ('BatchSizeFive', 5),
   )
   def testMultiStepSampling(self, batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123885577')
-    spec = specs.TensorSpec([], tf.int32, 'action')
+    spec = specs.TensorSpec([], tf.int64, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
 
-    action = tf.stack([tf.Variable(0).count_up_to(10)] * batch_size)
+    @common.function(autograph=True)
+    def add_data():
+      for i in tf.range(10, dtype=tf.int64):
+        replay_buffer.add_batch(tf.ones((batch_size,), dtype=tf.int64) * i)
 
-    add_op = replay_buffer.add_batch(action)
-    (step, next_step), _ = replay_buffer.get_next(num_steps=2,
-                                                  time_stacked=False)
+    if tf.executing_eagerly():
+      sample = lambda: replay_buffer.get_next(num_steps=2, time_stacked=False)
+    else:
+      sample = replay_buffer.get_next(
+          num_steps=2, time_stacked=False)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    for _ in range(10):
-      self.evaluate(add_op)
+    self.evaluate(add_data())
+
     for _ in range(100):
-      step_, next_step_ = self.evaluate([step, next_step])
+      (step_, next_step_), _ = self.evaluate(sample)
       self.assertEqual((step_ + 1) % 10, next_step_)
 
   @parameterized.named_parameters(
@@ -230,20 +223,22 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testMultiStepStackedSampling(self, batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123885577')
-    spec = specs.TensorSpec([], tf.int32, 'action')
+    spec = specs.TensorSpec([], tf.int64, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
 
-    actions = tf.stack([tf.Variable(0).count_up_to(10)] * batch_size)
+    @common.function(autograph=True)
+    def add_data():
+      for i in tf.range(10, dtype=tf.int64):
+        replay_buffer.add_batch(tf.ones((batch_size,), dtype=tf.int64) * i)
 
-    add_op = replay_buffer.add_batch(actions)
-    steps, _ = replay_buffer.get_next(num_steps=2)
+    if tf.executing_eagerly():
+      steps = lambda: replay_buffer.get_next(num_steps=2)[0]
+    else:
+      steps, _ = replay_buffer.get_next(num_steps=2)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    for _ in range(10):
-      self.evaluate(add_op)
+    self.evaluate(add_data())
     for _ in range(100):
       steps_ = self.evaluate(steps)
       self.assertEqual((steps_[0] + 1) % 10, steps_[1])
@@ -253,21 +248,26 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testMultiStepStackedBatchedSampling(self, batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123885577')
-    spec = specs.TensorSpec([], tf.int32, 'action')
+    spec = specs.TensorSpec([], tf.int64, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
 
-    actions = tf.stack([tf.Variable(0).count_up_to(10)] * batch_size)
-
-    add_op = replay_buffer.add_batch(actions)
-    steps, _ = replay_buffer._get_next(3, num_steps=2, time_stacked=True)
-    self.assertEqual(steps.shape, [3, 2])
+    @common.function(autograph=True)
+    def add_data():
+      for i in tf.range(10, dtype=tf.int64):
+        replay_buffer.add_batch(tf.ones((batch_size,), dtype=tf.int64) * i)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    for _ in range(10):
-      self.evaluate(add_op)
+    self.evaluate(add_data())
+
+    if tf.executing_eagerly():
+      steps = lambda: replay_buffer._get_next(3,  # pylint: disable=g-long-lambda
+                                              num_steps=2,
+                                              time_stacked=True)[0]
+    else:
+      steps, _ = replay_buffer._get_next(3, num_steps=2, time_stacked=True)
+    self.assertEqual(self.evaluate(steps).shape, (3, 2))
+
     for _ in range(100):
       steps_ = self.evaluate(steps)
       self.assertAllEqual((steps_[:, 0] + 1) % 10, steps_[:, 1])
@@ -277,24 +277,22 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testGatherAll(self, batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123883577')
-    spec = specs.TensorSpec([], tf.int32, 'action')
+    spec = specs.TensorSpec([], tf.int64, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size)
 
-    action_variables = [
-        tf.Variable(i).count_up_to(i + 10) for i in range(0, batch_size)
-    ]
-    actions = tf.stack(action_variables)
+    @common.function(autograph=True)
+    def add_data():
+      for i in tf.range(10, dtype=tf.int64):
+        batch = tf.range(i, i + batch_size, 1, dtype=tf.int64)
+        replay_buffer.add_batch(batch)
 
-    add_op = replay_buffer.add_batch(actions)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(add_data())
+
     items = replay_buffer.gather_all()
     expected = [list(range(i, i + 10)) for i in range(0, batch_size)]
 
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    for _ in range(10):
-      self.evaluate(add_op)
     items_ = self.evaluate(items)
     self.assertAllClose(expected, items_)
 
@@ -303,27 +301,24 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testGatherAllOverCapacity(self, batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123883577')
-    spec = specs.TensorSpec([], tf.int32, 'action')
+    spec = specs.TensorSpec([], tf.int64, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=batch_size, max_length=10)
 
-    # Each element has its batch index in the 100s place.
-    actions = tf.stack([
-        tf.Variable(x * 100).count_up_to(15 + x * 100)
-        for x in range(batch_size)
-    ])
+    @common.function(autograph=True)
+    def add_data():
+      # Each element has its batch index in the 100s place.
+      for i in tf.range(15, dtype=tf.int64):
+        batch = tf.range(0, batch_size * 100, 100, dtype=tf.int64) + i
+        replay_buffer.add_batch(batch)
 
-    add_op = replay_buffer.add_batch(actions)
-    items = replay_buffer.gather_all()
     expected = [
         list(range(5 + x * 100, 15 + x * 100)) for x in range(batch_size)
     ]
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    for _ in range(15):
-      self.evaluate(add_op)
+    self.evaluate(add_data())
+    items = replay_buffer.gather_all()
     items_ = self.evaluate(items)
     self.assertAllClose(expected, items_)
 
@@ -410,27 +405,30 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       ('BatchSizeFive', 5),
   )
   def testSampleSingleCorrectProbabilityAsDataset(self, buffer_batch_size):
-    if tf.executing_eagerly():
-      self.skipTest('b/123771990')
     max_length = 3
     spec = specs.TensorSpec([], tf.int32, 'action')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         spec, batch_size=buffer_batch_size, max_length=max_length)
 
     actions = tf.stack([tf.Variable(0).count_up_to(9)] * buffer_batch_size)
-    add_op = replay_buffer.add_batch(actions)
-
-    ds = replay_buffer.as_dataset()
-    itr = tf.compat.v1.data.make_initializable_iterator(ds)
-    _, buffer_info = itr.get_next()
-    probabilities = buffer_info.probabilities
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(itr.initializer)
+
+    ds = replay_buffer.as_dataset()
+    if tf.executing_eagerly():
+      add_op = lambda: replay_buffer.add_batch(actions)
+      itr = iter(ds)
+      sample = lambda: next(itr)
+    else:
+      add_op = replay_buffer.add_batch(actions)
+      itr = tf.compat.v1.data.make_initializable_iterator(ds)
+      self.evaluate(itr.initializer)
+      sample = itr.get_next()
+
     num_adds = 5
     for i in range(1, num_adds):
       self.evaluate(add_op)
-      probabilities_ = self.evaluate(probabilities)
+      probabilities_ = self.evaluate(sample)[1].probabilities
       expected_probability = (
           1. / min(i * buffer_batch_size, max_length * buffer_batch_size))
       self.assertAllClose(expected_probability, probabilities_)
