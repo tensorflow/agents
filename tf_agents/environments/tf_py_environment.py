@@ -22,6 +22,7 @@ from __future__ import print_function
 import contextlib
 import threading
 
+import gin
 import tensorflow as tf
 
 from tf_agents.environments import batched_py_environment
@@ -32,7 +33,7 @@ from tf_agents.specs import tensor_spec
 
 # TODO(b/123022201): Use tf.autograph instead.
 from tensorflow.python.autograph.impl import api as autograph  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.framework import tensor_shape  # TF internal
+from tensorflow.python.framework import tensor_shape  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 @contextlib.contextmanager
@@ -48,6 +49,7 @@ def _check_not_called_concurrently(lock):
     lock.release()
 
 
+@gin.configurable
 class TFPyEnvironment(tf_environment.TFEnvironment):
   """Exposes a Python environment as an in-graph TF environment.
 
