@@ -21,9 +21,23 @@ from tf_agents.distributions import masked
 
 class MaskedCategoricalTest(tf.test.TestCase):
 
-  def testMasking(self):
+  def testCopy(self):
+    """Confirm we can copy the distribution."""
     distribution = masked.MaskedCategorical([100.0, 100.0, 100.0],
                                             mask=[True, False, True])
+    copy = distribution.copy()
+    with self.cached_session() as s:
+      probs_np = s.run(copy.probs)
+      logits_np = s.run(copy.logits)
+      ref_probs_np = s.run(distribution.probs)
+      ref_logits_np = s.run(distribution.logits)
+    self.assertAllEqual(ref_logits_np, logits_np)
+    self.assertAllEqual(ref_probs_np, probs_np)
+
+  def testMasking(self):
+    distribution = masked.MaskedCategorical([100.0, 100.0, 100.0],
+                                            mask=[True, False, True],
+                                            neg_inf=None)
     sample = distribution.sample()
     results = []
 
@@ -39,7 +53,7 @@ class MaskedCategoricalTest(tf.test.TestCase):
         results.append(s.run(sample))
 
     self.assertAllEqual([0.5, 0, 0.5], probs_np)
-    self.assertAllEqual([100, float('-inf'), 100], logits_np)
+    self.assertAllEqual([100, logits_tensor.dtype.min, 100], logits_np)
     self.assertNotIn(1, results)
 
 

@@ -34,9 +34,11 @@ class MaskedCategorical(tfp.distributions.Categorical):
   def __init__(self,
                logits,
                mask,
+               probs=None,
                dtype=tf.int32,
                validate_args=False,
                allow_nan_stats=True,
+               neg_inf=-1e10,
                name='MaskedCategorical'):
     """Initialize Categorical distributions using class log-probabilities.
 
@@ -47,6 +49,8 @@ class MaskedCategorical(tfp.distributions.Categorical):
         represents a vector of logits for each class. Only one of `logits` or
         `probs` should be passed in.
       mask: A boolean mask. False/0 values mean a position should be masked out.
+      probs: Must be `None`. Required to conform with base
+        class `tfp.distributions.Categorical`.
       dtype: The type of the event samples (default: int32).
       validate_args: Python `bool`, default `False`. When `True` distribution
         parameters are checked for validity despite possibly degrading runtime
@@ -56,14 +60,23 @@ class MaskedCategorical(tfp.distributions.Categorical):
         (e.g., mean, mode, variance) use the value "`NaN`" to indicate the
         result is undefined. When `False`, an exception is raised if one or more
         of the statistic's batch members are undefined.
+      neg_inf: None or Float. Value used to mask out invalid positions. If None,
+        use logits.dtype.min to get a large negative number.
+        Otherwise use given value.
       name: Python `str` name prefixed to Ops created by this class.
     """
     logits = tf.convert_to_tensor(value=logits)
     mask = tf.convert_to_tensor(value=mask)
     self._mask = tf.cast(mask, tf.bool)  # Nonzero values are True
+    if probs is not None:
+      raise ValueError('Must provide masked predictions as logits.'
+                       ' Probs are accepted for API compatibility with '
+                       ' Categorical distribution. Given `%s`.' % probs)
 
+    if neg_inf is None:
+      neg_inf = logits.dtype.min
     neg_inf = tf.cast(
-        tf.fill(dims=tf.shape(input=logits), value=float('-inf')), logits.dtype)
+        tf.fill(dims=tf.shape(input=logits), value=neg_inf), logits.dtype)
 
     logits = tf.where(self._mask, logits, neg_inf)
     super(MaskedCategorical, self).__init__(
@@ -73,6 +86,12 @@ class MaskedCategorical(tfp.distributions.Categorical):
         validate_args=validate_args,
         allow_nan_stats=allow_nan_stats,
         name=name)
+
+  def _entropy(self):
+    entropy = tf.nn.log_softmax(self.logits) * self.probs
+    # Replace the (potentially -inf) values with 0s before summing.
+    entropy = tf.where(self._mask, entropy, tf.zeros_like(entropy))
+    return -tf.reduce_sum(input_tensor=entropy, axis=-1)
 
   @property
   def mask(self):
