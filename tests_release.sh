@@ -29,7 +29,7 @@ run_tests() {
   # TensorFlow isn't a regular dependency because there are many different pip
   # packages a user might have installed.
   if [[ $2 == "nightly" ]] ; then
-    pip install tf-nightly
+    pip install tf-nightly==1.13.0.dev20190228
 
     # Run the tests
     python setup.py test
@@ -71,6 +71,6 @@ fi
 
 # Test on Python2.7
 run_tests "python2.7" $1
-# Test on Python3.5
-run_tests "python3.5" $1
+# Test on Python3.6
+run_tests "python3.6" $1
 
