@@ -203,7 +203,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
         self._time_step = self._env.step(packed)
         return tf.nest.flatten(self._time_step)
 
-    with tf.name_scope('step', values=[actions]):
+    with tf.name_scope('step'):
       flat_actions = [tf.identity(x) for x in tf.nest.flatten(actions)]
       for action in flat_actions:
         dim_value = tensor_shape.dimension_value(action.shape[0])

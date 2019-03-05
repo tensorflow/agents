@@ -113,7 +113,7 @@ def generalized_advantage_estimation(values,
       rewards = tf.transpose(a=rewards)
       values = tf.transpose(a=values)
 
-  with tf.name_scope("gae", values=[discounts, rewards, values, final_value]):
+  with tf.name_scope("gae"):
 
     next_values = tf.concat(
         [values[1:], tf.expand_dims(final_value, 0)], axis=0)
