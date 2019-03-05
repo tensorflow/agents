@@ -337,12 +337,13 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     logdir = self.get_temp_dir()
-    with tf.compat.v2.summary.create_file_writer(
+    summary_writer = tf.compat.v2.summary.create_file_writer(
         logdir,
         max_queue=None,
         flush_millis=None,
         filename_suffix=None,
-        name=None).as_default():
+        name=None)
+    with summary_writer.as_default():
       agent = ppo_agent.PPOAgent(
           self._time_step_spec,
           self._action_spec,
@@ -365,7 +366,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       train_step = tf.compat.v1.train.get_or_create_global_step()
 
       with self.cached_session() as sess:
-        tf.contrib.summary.initialize(session=sess)
+        sess.run(summary_writer.init())
 
       (_, _) = (
           agent.build_train_op(

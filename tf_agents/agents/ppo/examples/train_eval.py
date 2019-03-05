@@ -237,7 +237,6 @@ def train_eval(
 
     for train_metric in train_metrics:
       train_metric.tf_summaries()
-    summary_op = tf.contrib.summary.all_summary_ops()
 
     with eval_summary_writer.as_default(), \
          tf.compat.v2.summary.record_if(True):
@@ -254,7 +253,8 @@ def train_eval(
       common_utils.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(train_summary_writer.init())
+      sess.run(eval_summary_writer.init())
 
       collect_time = 0
       train_time = 0
@@ -282,7 +282,7 @@ def train_eval(
         sess.run(collect_op)
         collect_time += time.time() - start_time
         start_time = time.time()
-        total_loss, _ = sess.run([train_op, summary_op])
+        total_loss = sess.run(train_op)
         train_time += time.time() - start_time
 
         global_step_val = sess.run(global_step)
@@ -294,7 +294,7 @@ def train_eval(
           sess.run(
               steps_per_second_summary,
               feed_dict={steps_per_second_ph: steps_per_sec})
-          logging.info('collect_time = {}, train_time = {}'.format(
+          logging.info('%s', 'collect_time = {}, train_time = {}'.format(
               collect_time, train_time))
           timed_at_step = global_step_val
           collect_time = 0

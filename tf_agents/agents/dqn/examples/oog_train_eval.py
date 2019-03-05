@@ -186,7 +186,6 @@ def train_eval(
   experience = itr.get_next()
 
   train_op = agent.train(experience)
-  summary_op = tf.contrib.summary.all_summary_ops()
 
   with eval_summary_writer.as_default(), \
        tf.compat.v2.summary.record_if(True):
@@ -200,11 +199,13 @@ def train_eval(
     session.run(itr.initializer)
     # Copy critic network values to the target critic network.
     session.run(agent.initialize())
-    train = session.make_callable([train_op, global_step, summary_op])
-    tf.contrib.summary.initialize(session=session)
+    train = session.make_callable(train_op)
+    global_step_call = session.make_callable(global_step)
+    session.run(train_summary_writer.init())
+    session.run(eval_summary_writer.init())
 
     # Compute inital evaluation metrics.
-    global_step_val = session.run(global_step)
+    global_step_val = global_step_call()
     metric_utils.compute_summaries(
         eval_metrics,
         eval_py_env,
@@ -229,9 +230,9 @@ def train_eval(
       collect_time += time.time() - start_time
       start_time = time.time()
       for _ in range(train_steps_per_iteration):
-        loss, global_step_val, _ = train()
+        loss = train()
       train_time += time.time() - start_time
-
+      global_step_val = global_step_call()
       if global_step_val % log_interval == 0:
         logging.info('step = %d, loss = %f', global_step_val, loss.loss)
         steps_per_sec = (
@@ -240,7 +241,7 @@ def train_eval(
             steps_per_second_summary,
             feed_dict={steps_per_second_ph: steps_per_sec})
         logging.info('%.3f steps/sec', steps_per_sec)
-        logging.info('collect_time = {}, train_time = {}'.format(
+        logging.info('%s', 'collect_time = {}, train_time = {}'.format(
             collect_time, train_time))
         timed_at_step = global_step_val
         collect_time = 0

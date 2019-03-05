@@ -220,7 +220,6 @@ def train_eval(
 
     for train_metric in train_metrics:
       train_metric.tf_summaries(step_metrics=train_metrics[:2])
-    summary_op = tf.contrib.summary.all_summary_ops()
 
     with eval_summary_writer.as_default(), \
          tf.compat.v2.summary.record_if(True):
@@ -250,7 +249,8 @@ def train_eval(
       # Initialize training.
       sess.run(dataset_iterator.initializer)
       common_utils.initialize_uninitialized_variables(sess)
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(train_summary_writer.init())
+      sess.run(eval_summary_writer.init())
 
       global_step_val = sess.run(global_step)
 
@@ -280,9 +280,10 @@ def train_eval(
                      global_step_val)
 
       collect_call = sess.make_callable(collect_op)
-      train_step_call = sess.make_callable([train_op, summary_op, global_step])
+      train_step_call = sess.make_callable(train_op)
+      global_step_call = sess.make_callable(global_step)
 
-      timed_at_step = sess.run(global_step)
+      timed_at_step = global_step_call()
       time_acc = 0
       steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
@@ -293,9 +294,9 @@ def train_eval(
         start_time = time.time()
         collect_call()
         for _ in range(train_steps_per_iteration):
-          total_loss, _, global_step_val = train_step_call()
+          total_loss = train_step_call()
         time_acc += time.time() - start_time
-
+        global_step_val = global_step_call()
         if global_step_val % log_interval == 0:
           logging.info('step = %d, loss = %f', global_step_val, total_loss.loss)
           steps_per_sec = (global_step_val - timed_at_step) / time_acc
