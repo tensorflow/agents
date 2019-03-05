@@ -47,7 +47,7 @@ for tutorials on the major components provided.
 End-to-end examples training agents can be found under each agent directory.
 e.g.:
 
-* DQN: [`tf_agents/agents/dqn/examples/train_eval_gym.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/examples/train_eval_gym.py)
+* DQN: [`tf_agents/agents/dqn/examples/v1/train_eval_gym.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/examples/v1/train_eval_gym.py)
 
 <a id='Installation'></a>
 ## Installation

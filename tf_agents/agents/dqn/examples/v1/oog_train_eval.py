@@ -185,7 +185,7 @@ def train_eval(
 
   experience = itr.get_next()
 
-  train_op = agent.train(experience)
+  train_op = common_utils.function(agent.train)(experience)
 
   with eval_summary_writer.as_default(), \
        tf.compat.v2.summary.record_if(True):
@@ -194,7 +194,6 @@ def train_eval(
 
   with tf.compat.v1.Session() as session:
     train_checkpointer.initialize_or_restore(session)
-    # TODO(sguada) Remove once Periodically can be saved.
     common_utils.initialize_uninitialized_variables(session)
     session.run(itr.initializer)
     # Copy critic network values to the target critic network.
@@ -270,6 +269,7 @@ def train_eval(
 
 def main(_):
   logging.set_verbosity(logging.INFO)
+  tf.enable_resource_variables()
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 

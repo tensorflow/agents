@@ -13,20 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A DQN Agents.
+"""A DQN Agent.
 
 Implements the DQN algorithm from
 
 "Human level control through deep reinforcement learning"
   Mnih et al., 2015
   https://deepmind.com/research/dqn/
-
-Implements the Double-DQN algorithm from
-
-"Deep Reinforcement Learning with Double Q-learning"
- Hasselt et al., 2015
- https://arxiv.org/abs/1509.06461
-
 """
 
 from __future__ import absolute_import
@@ -49,8 +42,8 @@ from tf_agents.utils import nest_utils
 import gin.tf
 
 
-class DqnLossInfo(collections.namedtuple(
-    'DqnLossInfo', ('td_loss', 'td_error'))):
+class DqnLossInfo(collections.namedtuple('DqnLossInfo',
+                                         ('td_loss', 'td_error'))):
   """DqnLossInfo is stored in the `extras` field of the LossInfo instance.
 
   Both `td_loss` and `td_error` have a validity mask applied to ensure that
@@ -97,8 +90,6 @@ class DqnAgent(tf_agent.TFAgent):
   "Human level control through deep reinforcement learning"
     Mnih et al., 2015
     https://deepmind.com/research/dqn/
-
-  TODO(kbanoop): Provide a simple g3doc explaining DQN and these parameters.
   """
 
   def __init__(
@@ -179,19 +170,21 @@ class DqnAgent(tf_agent.TFAgent):
           'however only one of them can be used for exploration.'.format(
               epsilon_greedy, boltzmann_temperature))
 
+    # TODO(b/121391781) Handle actions which are scalars or vectors.
+    self._multi_dim_actions = flat_action_spec[0].shape.ndims > 1
+
     self._q_network = q_network
     self._target_q_network = self._q_network.copy(name='TargetQNetwork')
     self._epsilon_greedy = epsilon_greedy
     self._boltzmann_temperature = boltzmann_temperature
-    self._target_update_tau = target_update_tau
-    self._target_update_period = target_update_period
     self._optimizer = optimizer
     self._td_errors_loss_fn = td_errors_loss_fn or element_wise_huber_loss
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
 
-    self._target_update_train_op = None
+    self._update_target = self._update_targets(target_update_tau,
+                                               target_update_period)
 
     policy = q_policy.QPolicy(
         time_step_spec, action_spec, q_network=self._q_network)
@@ -202,7 +195,6 @@ class DqnAgent(tf_agent.TFAgent):
     else:
       collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
           policy, epsilon=self._epsilon_greedy)
-
     policy = greedy_policy.GreedyPolicy(policy)
 
     super(DqnAgent, self).__init__(
@@ -216,7 +208,7 @@ class DqnAgent(tf_agent.TFAgent):
         train_step_counter=train_step_counter)
 
   def _initialize(self):
-    return self._update_targets(1.0, 1)
+    return self._update_targets(1.0, 1)()
 
   def _update_targets(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
@@ -238,8 +230,8 @@ class DqnAgent(tf_agent.TFAgent):
         return common_utils.soft_variables_update(
             self._q_network.variables, self._target_q_network.variables, tau)
 
-      return common_utils.periodically(update, period,
-                                       'periodic_update_targets')
+      return common_utils.Periodically(update, period,
+                                       'periodic_update_target')
 
   def _experience_to_transitions(self, experience):
     transitions = trajectory.to_transition(experience)
@@ -253,57 +245,49 @@ class DqnAgent(tf_agent.TFAgent):
     actions = policy_steps.action
     return time_steps, actions, next_time_steps
 
-  def _train(self, experience, weights=None):
+  # Use @common_utils.function in graph mode or for speeding up.
+  def _train(self, experience, weights):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
-    loss_info = self._loss(
-        time_steps,
-        actions,
-        next_time_steps,
-        td_errors_loss_fn=self._td_errors_loss_fn,
-        gamma=self._gamma,
-        reward_scale_factor=self._reward_scale_factor,
-        weights=weights)
-
-    transform_grads_fn = None
+    with tf.GradientTape() as tape:
+      loss_info = self.loss(time_steps,
+                            actions,
+                            next_time_steps,
+                            td_errors_loss_fn=self._td_errors_loss_fn,
+                            gamma=self._gamma,
+                            reward_scale_factor=self._reward_scale_factor,
+                            weights=weights)
+    tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
+    variables_to_train = self._q_network.trainable_weights
+    assert variables_to_train, "No variables found in the agent's q_network."
+    grads = tape.gradient(loss_info.loss, variables_to_train)
+    grads_and_vars = zip(grads, variables_to_train)
     if self._gradient_clipping is not None:
-      transform_grads_fn = eager_utils.clip_gradient_norms_fn(
-          self._gradient_clipping)
+      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
+                                                       self._gradient_clipping)
 
-    loss_info = eager_utils.create_train_step(
-        loss_info,
-        self._optimizer,
-        total_loss_fn=lambda loss_info: loss_info.loss,
-        global_step=self.train_step_counter,
-        transform_grads_fn=transform_grads_fn,
-        summarize_gradients=self._summarize_grads_and_vars,
-        variables_to_train=lambda: self._q_network.trainable_weights,
-    )
+    if self._summarize_grads_and_vars:
+      eager_utils.add_variables_summaries(grads_and_vars,
+                                          self.train_step_counter)
+      eager_utils.add_gradients_summaries(grads_and_vars,
+                                          self.train_step_counter)
 
-    # Make sure the update_targets periodically object is only created once.
-    if self._target_update_train_op is None:
-      with tf.control_dependencies([loss_info.loss]):
-        self._target_update_train_op = self._update_targets(
-            self._target_update_tau, self._target_update_period)
+    self._optimizer.apply_gradients(grads_and_vars,
+                                    global_step=self.train_step_counter)
 
-    with tf.control_dependencies([self._target_update_train_op]):
-      loss_info = tf.nest.map_structure(
-          lambda t: tf.identity(t, name='loss_info'), loss_info)
+    self._update_target()
 
     return loss_info
 
-  @eager_utils.future_in_eager_mode
-  # TODO(b/79688437): Figure out how to enable defun for Eager mode.
-  # @tfe.defun
-  def _loss(self,
-            time_steps,
-            actions,
-            next_time_steps,
-            td_errors_loss_fn=element_wise_huber_loss,
-            gamma=1.0,
-            reward_scale_factor=1.0,
-            weights=None):
+  def loss(self,
+           time_steps,
+           actions,
+           next_time_steps,
+           td_errors_loss_fn=element_wise_huber_loss,
+           gamma=1.0,
+           reward_scale_factor=1.0,
+           weights=None):
     """Computes loss for DQN training.
 
     Args:
@@ -320,7 +304,6 @@ class DqnAgent(tf_agent.TFAgent):
 
     Returns:
       loss: An instance of `DqnLossInfo`.
-
     Raises:
       ValueError:
         if the number of actions is greater than 1.
@@ -330,12 +313,9 @@ class DqnAgent(tf_agent.TFAgent):
       q_values, _ = self._q_network(time_steps.observation,
                                     time_steps.step_type)
 
-      # Handle action_spec.shape=(), and shape=(1,) by using the
-      # multi_dim_actions param.
-      multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
       q_values = common_utils.index_with_actions(
           q_values, tf.cast(actions, dtype=tf.int32),
-          multi_dim_actions=multi_dim_actions)
+          multi_dim_actions=self._multi_dim_actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
       td_targets = compute_td_targets(
@@ -345,6 +325,7 @@ class DqnAgent(tf_agent.TFAgent):
 
       valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
       td_error = valid_mask * (td_targets - q_values)
+
       td_loss = valid_mask * td_errors_loss_fn(td_targets, q_values)
 
       if nest_utils.is_batched_nested_tensors(

@@ -40,7 +40,7 @@ tf_agents/agents/dqn/examples/train_eval_atari \
  --atari_roms_path=/tmp
  --alsologtostderr
 ```
-END GOOGLE-INTERNAL
+
 """
 
 from __future__ import absolute_import
@@ -305,7 +305,7 @@ class TrainEval(object):
         experience = self._ds_itr.get_next()
 
       with tf.device('/gpu:0'):
-        self._train_op = tf_agent.train(experience)
+        self._train_op = common_utils.function(tf_agent.train)(experience)
 
         self._env_steps_metric = py_metrics.EnvironmentSteps()
         self._step_metrics = [
@@ -420,7 +420,6 @@ class TrainEval(object):
     """Initialize the graph for sess."""
     self._train_checkpointer.initialize_or_restore(sess)
     self._rb_checkpointer.initialize_or_restore(sess)
-    # TODO(sguada) Remove once Periodically can be saved.
     common_utils.initialize_uninitialized_variables(sess)
 
     sess.run(self._init_agent_op)
@@ -584,6 +583,7 @@ class TrainEval(object):
 
 def main(_):
   logging.set_verbosity(logging.INFO)
+  tf.enable_resource_variables()
   gin.parse_config_files_and_bindings(None, FLAGS.gin_binding)
   TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name)).run()
 
