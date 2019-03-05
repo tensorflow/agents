@@ -171,7 +171,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       # Parameterized tests reuse temp directories, make no save exists.
       try:
         tf.io.gfile.listdir(policy_save_path)
-        tf.io.gfile.remove(policy_save_path)
+        tf.io.gfile.rmtree(policy_save_path)
       except tf.errors.NotFoundError:
         pass
       policy_saved = py_tf_policy.PyTFPolicy(tf_policy)
