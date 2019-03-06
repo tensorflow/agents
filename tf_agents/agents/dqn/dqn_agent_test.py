@@ -75,8 +75,8 @@ class ComputeTDTargetsTest(tf.test.TestCase):
 class AgentTest(tf.test.TestCase):
 
   def setUp(self):
-    tf.compat.v1.enable_resource_variables()
     super(AgentTest, self).setUp()
+    tf.compat.v1.enable_resource_variables()
     self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
