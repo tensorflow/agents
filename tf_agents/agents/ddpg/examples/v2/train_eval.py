@@ -214,6 +214,7 @@ def train_eval(
         eval_tf_env,
         eval_policy,
         num_episodes=num_eval_episodes,
+        train_step=global_step,
         summary_writer=eval_summary_writer,
         summary_prefix='Metrics',
     )
@@ -250,12 +251,14 @@ def train_eval(
                      train_loss.loss)
         steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
         logging.info('%.3f steps/sec', steps_per_sec)
-        tf.contrib.summary.scalar(name='global_steps/sec', tensor=steps_per_sec)
+        tf.compat.v2.summary.scalar(
+            name='global_steps_per_sec', data=steps_per_sec, step=global_step)
         timed_at_step = global_step.numpy()
         time_acc = 0
 
       for train_metric in train_metrics:
-        train_metric.tf_summaries(step_metrics=train_metrics[:2])
+        train_metric.tf_summaries(
+            train_step=global_step, step_metrics=train_metrics[:2])
 
       if global_step.numpy() % eval_interval == 0:
         results = metric_utils.eager_compute(
@@ -263,6 +266,7 @@ def train_eval(
             eval_tf_env,
             eval_policy,
             num_episodes=num_eval_episodes,
+            train_step=global_step,
             summary_writer=eval_summary_writer,
             summary_prefix='Metrics',
         )

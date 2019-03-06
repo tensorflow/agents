@@ -87,18 +87,21 @@ class TFPyMetric(tf_metric.TFStepMetric):
   def result(self):
     def _result():
       with _check_not_called_concurrently(self._lock):
-        return  self._py_metric.result()
+        return self._py_metric.result()
 
-    return tf.py_function(
+    result_value = tf.py_function(
         _result,
         [],
         self._dtype,
         name='metric_result_py_func')
+    if not tf.executing_eagerly():
+      result_value.set_shape(())
+    return result_value
 
   def reset(self):
     def _reset():
       with _check_not_called_concurrently(self._lock):
-        return  self._py_metric.reset()
+        return self._py_metric.reset()
 
     return tf.py_function(
         _reset, [], [],

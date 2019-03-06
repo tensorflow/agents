@@ -87,11 +87,20 @@ class TFStepMetric(tf.Module):
     """
     return self._update_state(*args, **kwargs)
 
-  def tf_summaries(self, step_metrics=()):
+  def tf_summaries(self, train_step=None, step_metrics=()):
+    """Generates summaries against train_step and all step_metrics.
+
+    Args:
+      train_step: (Optional) Step counter for training iterations. If None, no
+        metric is generated against the global step.
+      step_metrics: (Optional) Iterable of step metrics to generate summaries
+        against.
+    """
     prefix = self._prefix
     tag = common_utils.join_scope(prefix, self.name)
     result = self.result()
-    tf.contrib.summary.scalar(name=tag, tensor=result)
+    if train_step is not None:
+      tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step)
     if prefix:
       prefix += '_'
     for step_metric in step_metrics:
@@ -100,7 +109,7 @@ class TFStepMetric(tf.Module):
         continue
       step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
       step = step_metric.result()
-      tf.contrib.summary.scalar(
+      tf.compat.v2.summary.scalar(
           name=step_tag,
-          tensor=result,
+          data=result,
           step=step)

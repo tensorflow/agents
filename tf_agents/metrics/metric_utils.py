@@ -122,6 +122,7 @@ def eager_compute(metrics,
                   environment,
                   policy,
                   num_episodes=1,
+                  train_step=None,
                   summary_writer=None,
                   summary_prefix=''):
   """Compute metrics using `policy` on the `environment`.
@@ -136,6 +137,7 @@ def eager_compute(metrics,
     environment: tf_environment instance.
     policy: tf_policy instance used to step the environment.
     num_episodes: Number of episodes to compute the metrics over.
+    train_step: An optional step to write summaries against.
     summary_writer: An optional writer for generating metric summaries.
     summary_prefix: An optional prefix scope for metric summaries.
   Returns:
@@ -156,10 +158,10 @@ def eager_compute(metrics,
 
   results = [(metric.name, metric.result()) for metric in metrics]
   # TODO(b/120301678) remove the summaries and merge with compute
-  if summary_writer:
+  if train_step and summary_writer:
     with summary_writer.as_default():
       for m in metrics:
         tag = common_utils.join_scope(summary_prefix, m.name)
-        tf.contrib.summary.scalar(name=tag, tensor=m.result())
+        tf.compat.v2.summary.scalar(name=tag, data=m.result(), step=train_step)
   # TODO(kbanoop): Add an option to log metrics.
   return collections.OrderedDict(results)

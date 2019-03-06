@@ -223,7 +223,8 @@ def train_eval(
         replay_buffer=replay_buffer)
 
     for train_metric in train_metrics:
-      train_metric.tf_summaries(step_metrics=train_metrics[:2])
+      train_metric.tf_summaries(
+          train_step=global_step, step_metrics=train_metrics[:2])
     summary_op = tf.contrib.summary.all_summary_ops()
 
     with eval_summary_writer.as_default(), \
