@@ -232,10 +232,10 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       # Force variable creation.
       agent.policy.variables()
 
-      if not tf.executing_eagerly():
-        loss = agent.train(experience)
-      else:
+      if tf.executing_eagerly():
         loss = lambda: agent.train(experience)
+      else:
+        loss = agent.train(experience)
 
       # Assert that counter starts out at zero.
       self.evaluate(tf.compat.v1.initialize_all_variables())
