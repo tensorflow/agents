@@ -35,7 +35,7 @@ from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
@@ -204,7 +204,7 @@ class DqnAgent(tf_agent.TFAgent):
         train_step_counter=train_step_counter)
 
   def _initialize(self):
-    common_utils.soft_variables_update(
+    common.soft_variables_update(
         self._q_network.variables, self._target_q_network.variables, tau=1.0)
 
   def _get_target_updater(self, tau=1.0, period=1):
@@ -224,11 +224,10 @@ class DqnAgent(tf_agent.TFAgent):
     with tf.name_scope('update_targets'):
 
       def update():
-        return common_utils.soft_variables_update(
+        return common.soft_variables_update(
             self._q_network.variables, self._target_q_network.variables, tau)
 
-      return common_utils.Periodically(update, period,
-                                       'periodic_update_targets')
+      return common.Periodically(update, period, 'periodic_update_targets')
 
   def _experience_to_transitions(self, experience):
     transitions = trajectory.to_transition(experience)
@@ -242,7 +241,7 @@ class DqnAgent(tf_agent.TFAgent):
     actions = policy_steps.action
     return time_steps, actions, next_time_steps
 
-  # Use @common_utils.function in graph mode or for speeding up.
+  # Use @common.function in graph mode or for speeding up.
   def _train(self, experience, weights):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
@@ -313,8 +312,9 @@ class DqnAgent(tf_agent.TFAgent):
       # Handle action_spec.shape=(), and shape=(1,) by using the
       # multi_dim_actions param.
       multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
-      q_values = common_utils.index_with_actions(
-          q_values, tf.cast(actions, dtype=tf.int32),
+      q_values = common.index_with_actions(
+          q_values,
+          tf.cast(actions, dtype=tf.int32),
           multi_dim_actions=multi_dim_actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
@@ -359,16 +359,16 @@ class DqnAgent(tf_agent.TFAgent):
 
       if self._debug_summaries:
         diff_q_values = q_values - next_q_values
-        common_utils.generate_tensor_summaries('td_error', td_error,
-                                               self.train_step_counter)
-        common_utils.generate_tensor_summaries('td_loss', td_loss,
-                                               self.train_step_counter)
-        common_utils.generate_tensor_summaries('q_values', q_values,
-                                               self.train_step_counter)
-        common_utils.generate_tensor_summaries('next_q_values', next_q_values,
-                                               self.train_step_counter)
-        common_utils.generate_tensor_summaries('diff_q_values', diff_q_values,
-                                               self.train_step_counter)
+        common.generate_tensor_summaries('td_error', td_error,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('td_loss', td_loss,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('q_values', q_values,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('next_q_values', next_q_values,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('diff_q_values', diff_q_values,
+                                         self.train_step_counter)
 
       return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss,
                                                  td_error=td_error))
@@ -418,7 +418,7 @@ class DdqnAgent(DqnAgent):
     next_target_q_values, _ = self._target_q_network(
         next_time_steps.observation, next_time_steps.step_type)
     multi_dim_actions = best_next_actions.shape.ndims > 1
-    return common_utils.index_with_actions(
+    return common.index_with_actions(
         next_target_q_values,
         best_next_actions,
         multi_dim_actions=multi_dim_actions)

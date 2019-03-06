@@ -20,7 +20,7 @@ import tensorflow as tf
 
 from tf_agents.networks import network
 from tf_agents.networks import utils
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 
 @gin.configurable
@@ -96,7 +96,7 @@ class ActorNetwork(network.Network):
     for layer in self._mlp_layers:
       output = layer(output)
 
-    actions = common_utils.scale_to_spec(output, self._single_action_spec)
+    actions = common.scale_to_spec(output, self._single_action_spec)
     output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
                                               [actions])
 

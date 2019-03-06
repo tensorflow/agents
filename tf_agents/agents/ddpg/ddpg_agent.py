@@ -31,9 +31,9 @@ from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
+from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-import tf_agents.utils.common as common_utils
 
 
 class DdpgInfo(collections.namedtuple(
@@ -116,7 +116,7 @@ class DdpgAgent(tf_agent.TFAgent):
     self._target_update_period = target_update_period
     self._dqda_clipping = dqda_clipping
     self._td_errors_loss_fn = (
-        td_errors_loss_fn or common_utils.element_wise_huber_loss)
+        td_errors_loss_fn or common.element_wise_huber_loss)
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
@@ -147,12 +147,14 @@ class DdpgAgent(tf_agent.TFAgent):
         train_step_counter=train_step_counter)
 
   def _initialize(self):
-    common_utils.soft_variables_update(
+    common.soft_variables_update(
         self._critic_network.variables,
-        self._target_critic_network.variables, tau=1.0)
-    common_utils.soft_variables_update(
+        self._target_critic_network.variables,
+        tau=1.0)
+    common.soft_variables_update(
         self._actor_network.variables,
-        self._target_actor_network.variables, tau=1.0)
+        self._target_actor_network.variables,
+        tau=1.0)
 
   def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
@@ -170,16 +172,15 @@ class DdpgAgent(tf_agent.TFAgent):
     with tf.name_scope('get_target_updater'):
       def update():
         # TODO(b/124381161): What about observation normalizer variables?
-        critic_update = common_utils.soft_variables_update(
+        critic_update = common.soft_variables_update(
             self._critic_network.variables,
             self._target_critic_network.variables, tau)
-        actor_update = common_utils.soft_variables_update(
-            self._actor_network.variables,
-            self._target_actor_network.variables, tau)
+        actor_update = common.soft_variables_update(
+            self._actor_network.variables, self._target_actor_network.variables,
+            tau)
         return tf.group(critic_update, actor_update)
 
-      return common_utils.Periodically(update, period,
-                                       'periodic_update_targets')
+      return common.Periodically(update, period, 'periodic_update_targets')
 
   def _experience_to_transitions(self, experience):
     transitions = trajectory.to_transition(experience)
@@ -240,7 +241,7 @@ class DdpgAgent(tf_agent.TFAgent):
 
     optimizer.apply_gradients(grads_and_vars)
 
-  @common_utils.function
+  @common.function
   def critic_loss(self,
                   time_steps,
                   actions,
@@ -287,16 +288,16 @@ class DdpgAgent(tf_agent.TFAgent):
 
       if self._debug_summaries:
         td_errors = td_targets - q_values
-        common_utils.generate_tensor_summaries('td_errors', td_errors,
-                                               self.train_step_counter)
-        common_utils.generate_tensor_summaries('td_targets', td_targets,
-                                               self.train_step_counter)
-        common_utils.generate_tensor_summaries('q_values', q_values,
-                                               self.train_step_counter)
+        common.generate_tensor_summaries('td_errors', td_errors,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('td_targets', td_targets,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('q_values', q_values,
+                                         self.train_step_counter)
 
       return critic_loss
 
-  @common_utils.function
+  @common.function
   def actor_loss(self, time_steps, weights=None):
     """Computes the actor_loss for DDPG training.
 
@@ -324,7 +325,7 @@ class DdpgAgent(tf_agent.TFAgent):
         if self._dqda_clipping is not None:
           dqda = tf.clip_by_value(dqda, -1 * self._dqda_clipping,
                                   self._dqda_clipping)
-        loss = common_utils.element_wise_squared_loss(
+        loss = common.element_wise_squared_loss(
             tf.stop_gradient(dqda + action), action)
         if nest_utils.is_batched_nested_tensors(
             time_steps, self.time_step_spec, num_outer_dims=2):

@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 
 class TFStepMetric(tf.Module):
@@ -70,7 +70,7 @@ class TFStepMetric(tf.Module):
     if not tf.executing_eagerly():
       return tf.compat.v1.group([v.initializer for v in self.variables])
 
-  @common_utils.function
+  @common.function
   def _update_state(self, *arg, **kwargs):
     """A function wrapping the implementor-defined call method."""
     return self.call(*arg, **kwargs)
@@ -97,7 +97,7 @@ class TFStepMetric(tf.Module):
         against.
     """
     prefix = self._prefix
-    tag = common_utils.join_scope(prefix, self.name)
+    tag = common.join_scope(prefix, self.name)
     result = self.result()
     if train_step is not None:
       tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step)

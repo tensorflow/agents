@@ -49,7 +49,7 @@ from tf_agents.networks import q_rnn_network
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
@@ -180,18 +180,18 @@ def train_eval(
 
     iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     experience, _ = iterator.get_next()
-    loss_info = common_utils.function(tf_agent.train)(experience=experience)
+    loss_info = common.function(tf_agent.train)(experience=experience)
 
-    train_checkpointer = common_utils.Checkpointer(
+    train_checkpointer = common.Checkpointer(
         ckpt_dir=train_dir,
         agent=tf_agent,
         global_step=global_step,
         metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
-    policy_checkpointer = common_utils.Checkpointer(
+    policy_checkpointer = common.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'policy'),
         policy=tf_agent.policy,
         global_step=global_step)
-    rb_checkpointer = common_utils.Checkpointer(
+    rb_checkpointer = common.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
         max_to_keep=1,
         replay_buffer=replay_buffer)
@@ -214,7 +214,7 @@ def train_eval(
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
       sess.run(iterator.initializer)
-      common_utils.initialize_uninitialized_variables(sess)
+      common.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
       logging.info('Collecting initial experience.')

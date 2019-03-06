@@ -31,7 +31,7 @@ from tf_agents.agents import tf_agent
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
@@ -269,7 +269,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
                 step=self.train_step_counter)
 
       if self._debug_summaries:
-        common_utils.generate_tensor_summaries('errors', error,
-                                               self.train_step_counter)
+        common.generate_tensor_summaries('errors', error,
+                                         self.train_step_counter)
 
       return tf_agent.LossInfo(loss, BehavioralCloningLossInfo(loss=error))

@@ -31,7 +31,7 @@ from tf_agents.environments import trajectory_replay
 from tf_agents.networks import network
 from tf_agents.networks import q_rnn_network
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 # Number of times to train in test loops.
 TRAIN_ITERATIONS = 30
@@ -139,7 +139,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
       traj, time_step_spec, action_spec = (
           driver_test_utils.make_random_trajectory())
       # Convert to shapes (batch=6, 1, ...) so this works with a non-RNN model.
-      traj = tf.nest.map_structure(common_utils.transpose_batch_time, traj)
+      traj = tf.nest.map_structure(common.transpose_batch_time, traj)
       cloning_net = q_network.QNetwork(
           time_step_spec.observation, action_spec)
       agent = behavioral_cloning_agent.BehavioralCloningAgent(

@@ -54,7 +54,7 @@ from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 import gin.tf
 
@@ -220,16 +220,16 @@ def train_eval(
     with tf.control_dependencies([clear_replay_op]):
       train_op = tf.identity(train_op)
 
-    train_checkpointer = common_utils.Checkpointer(
+    train_checkpointer = common.Checkpointer(
         ckpt_dir=train_dir,
         agent=tf_agent,
         global_step=global_step,
         metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
-    policy_checkpointer = common_utils.Checkpointer(
+    policy_checkpointer = common.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'policy'),
         policy=tf_agent.policy,
         global_step=global_step)
-    rb_checkpointer = common_utils.Checkpointer(
+    rb_checkpointer = common.Checkpointer(
         ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
         max_to_keep=1,
         replay_buffer=replay_buffer)
@@ -249,7 +249,7 @@ def train_eval(
       # Initialize graph.
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
-      common_utils.initialize_uninitialized_variables(sess)
+      common.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
       sess.run(train_summary_writer.init())

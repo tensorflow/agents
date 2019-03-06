@@ -28,7 +28,7 @@ from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_step
 from tf_agents.specs import distribution_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 tfd = tfp.distributions
 
@@ -134,7 +134,7 @@ class PPOPolicy(actor_policy.ActorPolicy):
     def _sample(dist, action_spec):
       action = dist.sample(seed=seed_stream())
       if self._clip:
-        return common_utils.clip_to_spec(action, action_spec)
+        return common.clip_to_spec(action, action_spec)
       return action
 
     distribution_step = self.distribution(time_step, policy_state)

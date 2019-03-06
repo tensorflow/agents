@@ -53,7 +53,7 @@ from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
@@ -171,10 +171,10 @@ def train_eval(
     time_step = collect_step(env, time_step, random_policy, replay_buffer)
 
   # TODO(b/112041045) Use global_step as counter.
-  train_checkpointer = common_utils.Checkpointer(
+  train_checkpointer = common.Checkpointer(
       ckpt_dir=train_dir, agent=agent, global_step=global_step)
 
-  policy_checkpointer = common_utils.Checkpointer(
+  policy_checkpointer = common.Checkpointer(
       ckpt_dir=os.path.join(train_dir, 'policy'),
       policy=agent.policy,
       global_step=global_step)
@@ -185,7 +185,7 @@ def train_eval(
 
   experience = itr.get_next()
 
-  train_op = common_utils.function(agent.train)(experience)
+  train_op = common.function(agent.train)(experience)
 
   with eval_summary_writer.as_default(), \
        tf.compat.v2.summary.record_if(True):
@@ -194,7 +194,7 @@ def train_eval(
 
   with tf.compat.v1.Session() as session:
     train_checkpointer.initialize_or_restore(session)
-    common_utils.initialize_uninitialized_variables(session)
+    common.initialize_uninitialized_variables(session)
     session.run(itr.initializer)
     # Copy critic network values to the target critic network.
     session.run(agent.initialize())

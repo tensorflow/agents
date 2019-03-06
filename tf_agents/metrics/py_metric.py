@@ -27,7 +27,7 @@ import six
 import tensorflow as tf
 
 from tf_agents.metrics import tf_metric
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 
 def run_summaries(metrics, session=None):
@@ -88,7 +88,7 @@ class PyMetric(tf.Module):
     """Evaluates the current value of the metric."""
 
   def log(self):
-    tag = common_utils.join_scope(self.prefix, self.name)
+    tag = common.join_scope(self.prefix, self.name)
     logging.info('%s', '{0} = {1}'.format(tag, self.result()))
 
   def tf_summaries(self, step_metrics=()):
@@ -111,7 +111,7 @@ class PyMetric(tf.Module):
     if self.summary_op is not None:
       raise RuntimeError('metric.tf_summaries() can only be called once.')
 
-    tag = common_utils.join_scope(self.prefix, self.name)
+    tag = common.join_scope(self.prefix, self.name)
     summaries = []
     summaries.append(tf.contrib.summary.scalar(
         name=tag, tensor=self.summary_placeholder))

@@ -27,7 +27,7 @@ import tensorflow as tf
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import py_driver
 from tf_agents.metrics import py_metric
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 
 class MetricsGroup(tf.Module):
@@ -161,7 +161,7 @@ def eager_compute(metrics,
   if train_step and summary_writer:
     with summary_writer.as_default():
       for m in metrics:
-        tag = common_utils.join_scope(summary_prefix, m.name)
+        tag = common.join_scope(summary_prefix, m.name)
         tf.compat.v2.summary.scalar(name=tag, data=m.result(), step=train_step)
   # TODO(kbanoop): Add an option to log metrics.
   return collections.OrderedDict(results)

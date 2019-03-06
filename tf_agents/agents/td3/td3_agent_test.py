@@ -24,7 +24,7 @@ from tf_agents.agents.td3 import td3_agent
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 
 class DummyActorNetwork(network.Network):
@@ -60,7 +60,7 @@ class DummyActorNetwork(network.Network):
                          [-1] + self._single_action_spec.shape.as_list())
 
     if not self._unbounded_actions:
-      actions = common_utils.scale_to_spec(actions, self._single_action_spec)
+      actions = common.scale_to_spec(actions, self._single_action_spec)
 
     output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
                                               [actions])

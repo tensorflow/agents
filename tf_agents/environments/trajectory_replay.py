@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tf_agents.environments import time_step as ts
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 import gin.tf
 
@@ -116,8 +116,8 @@ class TrajectoryReplay(object):
 
     if not self._time_major:
       # Make trajectory time-major.
-      trajectory = tf.nest.map_structure(
-          common_utils.transpose_batch_time, trajectory)
+      trajectory = tf.nest.map_structure(common.transpose_batch_time,
+                                         trajectory)
 
     trajectory_tas = tf.nest.map_structure(
         lambda t: tf.TensorArray(t.dtype, size=sequence_length).unstack(t),
@@ -226,7 +226,7 @@ class TrajectoryReplay(object):
     def stack_ta(ta):
       t = ta.stack()
       if not self._time_major:
-        t = common_utils.transpose_batch_time(t)
+        t = common.transpose_batch_time(t)
       return t
 
     stacked_output_actions = tf.nest.map_structure(stack_ta, output_action_tas)

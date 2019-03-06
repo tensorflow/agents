@@ -24,7 +24,7 @@ from tf_agents.networks import dynamic_unroll_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
@@ -157,7 +157,7 @@ class ActorRnnNetwork(network.Network):
     actions = []
     for layer, spec in zip(self._action_layers, self._flat_action_spec):
       action = layer(states)
-      action = common_utils.scale_to_spec(action, spec)
+      action = common.scale_to_spec(action, spec)
       action = batch_squash.unflatten(action)  # [B x T, ...] -> [B, T, ...]
       if not has_time_dim:
         action = tf.squeeze(action, axis=1)

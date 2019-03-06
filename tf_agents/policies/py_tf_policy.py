@@ -26,7 +26,7 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import session_utils
 
@@ -103,7 +103,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
 
     self._construct(batch_size, graph)
     var_list = tf.nest.flatten(self._tf_policy.variables())
-    common_utils.initialize_uninitialized_variables(self.session, var_list)
+    common.initialize_uninitialized_variables(self.session, var_list)
     self._built = True
 
   def save(self, policy_dir=None, graph=None):
@@ -115,7 +115,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
 
     with graph.as_default():
       global_step = tf.compat.v1.train.get_or_create_global_step()
-      policy_checkpointer = common_utils.Checkpointer(
+      policy_checkpointer = common.Checkpointer(
           ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
       policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():
@@ -130,7 +130,7 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
 
     with graph.as_default():
       global_step = tf.compat.v1.train.get_or_create_global_step()
-      policy_checkpointer = common_utils.Checkpointer(
+      policy_checkpointer = common.Checkpointer(
           ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
       status = policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():

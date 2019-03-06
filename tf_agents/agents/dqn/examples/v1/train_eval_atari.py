@@ -71,7 +71,7 @@ from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import py_hashed_replay_buffer
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 from tf_agents.utils import timer
 import gin.tf
 
@@ -100,7 +100,7 @@ class AtariQNetwork(q_network.QNetwork):
 
 
 def log_metric(metric, prefix):
-  tag = common_utils.join_scope(prefix, metric.name)
+  tag = common.join_scope(prefix, metric.name)
   logging.info('%s', '{0} = {1}'.format(tag, metric.result()))
 
 
@@ -305,7 +305,7 @@ class TrainEval(object):
         experience = self._ds_itr.get_next()
 
       with tf.device('/gpu:0'):
-        self._train_op = common_utils.function(tf_agent.train)(experience)
+        self._train_op = common.function(tf_agent.train)(experience)
 
         self._env_steps_metric = py_metrics.EnvironmentSteps()
         self._step_metrics = [
@@ -346,7 +346,7 @@ class TrainEval(object):
               for metric in self._eval_metrics:
                 metric.tf_summaries(step_metrics=(self._iteration_metric,))
 
-        self._train_checkpointer = common_utils.Checkpointer(
+        self._train_checkpointer = common.Checkpointer(
             ckpt_dir=train_dir,
             agent=tf_agent,
             global_step=self._global_step,
@@ -354,11 +354,11 @@ class TrainEval(object):
             metrics=metric_utils.MetricsGroup(
                 self._train_metrics + self._train_phase_metrics +
                 [self._iteration_metric], 'train_metrics'))
-        self._policy_checkpointer = common_utils.Checkpointer(
+        self._policy_checkpointer = common.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'policy'),
             policy=tf_agent.policy,
             global_step=self._global_step)
-        self._rb_checkpointer = common_utils.Checkpointer(
+        self._rb_checkpointer = common.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
             max_to_keep=1,
             replay_buffer=self._replay_buffer)
@@ -420,7 +420,7 @@ class TrainEval(object):
     """Initialize the graph for sess."""
     self._train_checkpointer.initialize_or_restore(sess)
     self._rb_checkpointer.initialize_or_restore(sess)
-    common_utils.initialize_uninitialized_variables(sess)
+    common.initialize_uninitialized_variables(sess)
 
     sess.run(self._init_agent_op)
 

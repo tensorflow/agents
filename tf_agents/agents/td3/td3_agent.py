@@ -36,9 +36,9 @@ from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
+from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-import tf_agents.utils.common as common_utils
 import gin.tf
 
 
@@ -135,7 +135,7 @@ class Td3Agent(tf_agent.TFAgent):
     self._target_update_period = target_update_period
     self._dqda_clipping = dqda_clipping
     self._td_errors_loss_fn = (
-        td_errors_loss_fn or common_utils.element_wise_huber_loss)
+        td_errors_loss_fn or common.element_wise_huber_loss)
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._target_policy_noise = target_policy_noise
@@ -172,15 +172,18 @@ class Td3Agent(tf_agent.TFAgent):
     Copies weights from the actor and critic networks to the respective
     target actor and critic networks.
     """
-    common_utils.soft_variables_update(
+    common.soft_variables_update(
         self._critic_network_1.variables,
-        self._target_critic_network_1.variables, tau=1.0)
-    common_utils.soft_variables_update(
+        self._target_critic_network_1.variables,
+        tau=1.0)
+    common.soft_variables_update(
         self._critic_network_2.variables,
-        self._target_critic_network_2.variables, tau=1.0)
-    common_utils.soft_variables_update(
+        self._target_critic_network_2.variables,
+        tau=1.0)
+    common.soft_variables_update(
         self._actor_network.variables,
-        self._target_actor_network.variables, tau=1.0)
+        self._target_actor_network.variables,
+        tau=1.0)
 
   def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
@@ -198,17 +201,18 @@ class Td3Agent(tf_agent.TFAgent):
     with tf.name_scope('update_targets'):
       def update():  # pylint: disable=missing-docstring
         # TODO(kbanoop): What about observation normalizer variables?
-        critic_update_1 = common_utils.soft_variables_update(
+        critic_update_1 = common.soft_variables_update(
             self._critic_network_1.variables,
             self._target_critic_network_1.variables, tau)
-        critic_update_2 = common_utils.soft_variables_update(
+        critic_update_2 = common.soft_variables_update(
             self._critic_network_2.variables,
             self._target_critic_network_2.variables, tau)
-        actor_update = common_utils.soft_variables_update(
-            self._actor_network.variables,
-            self._target_actor_network.variables, tau)
+        actor_update = common.soft_variables_update(
+            self._actor_network.variables, self._target_actor_network.variables,
+            tau)
         return tf.group(critic_update_1, critic_update_2, actor_update)
-      return common_utils.Periodically(update, period, 'update_targets')
+
+      return common.Periodically(update, period, 'update_targets')
 
   # TODO(kbanoop): Rename experience to trajectory?
   def _experience_to_transitions(self, experience):
@@ -435,7 +439,7 @@ class Td3Agent(tf_agent.TFAgent):
           # pylint: disable=invalid-unary-operand-type
           dqda = tf.clip_by_value(dqda, -self._dqda_clipping,
                                   self._dqda_clipping)
-        loss = common_utils.element_wise_squared_loss(
+        loss = common.element_wise_squared_loss(
             tf.stop_gradient(dqda + action), action)
         if nest_utils.is_batched_nested_tensors(
             time_steps, self.time_step_spec, num_outer_dims=2):

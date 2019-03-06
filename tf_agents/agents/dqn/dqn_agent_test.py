@@ -26,7 +26,7 @@ from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 from tensorflow.python.eager import context  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
@@ -105,7 +105,7 @@ class AgentTest(tf.test.TestCase):
       init_op = agent.initialize()
       if not tf.executing_eagerly():
         with self.cached_session() as sess:
-          common_utils.initialize_uninitialized_variables(sess)
+          common.initialize_uninitialized_variables(sess)
           self.assertIsNone(sess.run(init_op))
 
   def testCreateAgentNestSizeChecks(self, agent_class, run_mode):

@@ -38,7 +38,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from tf_agents.utils import common as common_utils
+from tf_agents.utils import common
 
 # pylint:disable=g-direct-tensorflow-import
 from tensorflow.python.framework import tensor_shape  # TF internal
@@ -251,7 +251,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
       raise ValueError("Must provide either dtype or initial_state")
 
     # Assume all inputs are batch major.  Convert to time major.
-    inputs = tf.nest.map_structure(common_utils.transpose_batch_time, inputs)
+    inputs = tf.nest.map_structure(common.transpose_batch_time, inputs)
     inputs_flat = tf.nest.flatten(inputs)
     inputs_static_shapes = tuple(x.shape for x in inputs_flat)
     batch_size = _best_effort_input_batch_size(inputs_flat)
@@ -428,6 +428,6 @@ def _dynamic_unroll_multi_step(cell,
         outputs)
 
   # Convert everything back to batch major
-  outputs = tf.nest.map_structure(common_utils.transpose_batch_time, outputs)
+  outputs = tf.nest.map_structure(common.transpose_batch_time, outputs)
 
   return (outputs, final_state)
