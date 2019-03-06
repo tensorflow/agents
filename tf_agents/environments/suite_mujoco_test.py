@@ -41,17 +41,17 @@ class SuiteMujocoTest(absltest.TestCase):
       gin.clear_config()
 
   def testMujocoEnvRegistered(self):
-    env = suite_mujoco.load('HalfCheetah-v1')
+    env = suite_mujoco.load('HalfCheetah-v2')
     self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
   def testObservationSpec(self):
-    env = suite_mujoco.load('HalfCheetah-v1')
+    env = suite_mujoco.load('HalfCheetah-v2')
     self.assertEqual(np.float32, env.observation_spec().dtype)
     self.assertEqual((17,), env.observation_spec().shape)
 
   def testActionSpec(self):
-    env = suite_mujoco.load('HalfCheetah-v1')
+    env = suite_mujoco.load('HalfCheetah-v2')
     self.assertEqual(np.float32, env.observation_spec().dtype)
     self.assertEqual((17,), env.observation_spec().shape)
 

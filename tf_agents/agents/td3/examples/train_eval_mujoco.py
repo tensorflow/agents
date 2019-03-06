@@ -19,7 +19,7 @@ To run:
 
 ```bash
 tf_agents/agents/td3/examples/train_eval_mujoco \
- --root_dir=$HOME/tmp/td3/gym/HalfCheetah-v1/ \
+ --root_dir=$HOME/tmp/td3/gym/HalfCheetah-v2/ \
  --num_iterations=1000000 \
  --alsologtostderr
 ```
@@ -63,7 +63,7 @@ FLAGS = flags.FLAGS
 @gin.configurable
 def train_eval(
     root_dir,
-    env_name='HalfCheetah-v1',
+    env_name='HalfCheetah-v2',
     num_iterations=2000000,
     actor_fc_layers=(400, 300),
     critic_obs_fc_layers=(400,),

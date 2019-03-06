@@ -56,7 +56,7 @@ import gin.tf
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_string('env_name', 'HalfCheetah-v1', 'Name of an environment')
+flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'Name of an environment')
 flags.DEFINE_integer('replay_buffer_capacity', 1001,
                      'Replay buffer capacity per env.')
 flags.DEFINE_integer('num_parallel_environments', 30,
@@ -80,7 +80,7 @@ FLAGS = flags.FLAGS
 @gin.configurable
 def train_eval(
     root_dir,
-    env_name='HalfCheetah-v1',
+    env_name='HalfCheetah-v2',
     env_load_fn=suite_mujoco.load,
     random_seed=0,
     # TODO(b/127576522): rename to policy_fc_layers.

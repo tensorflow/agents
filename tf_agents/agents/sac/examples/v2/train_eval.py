@@ -47,7 +47,7 @@ from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_string('env_name', 'HalfCheetah-v1', 'Agent test environment.')
+flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'Agent test environment.')
 flags.DEFINE_integer('num_iterations', 100000,
                      'Total number train/eval iterations to perform.')
 flags.DEFINE_integer('initial_collect_steps', 100000,
@@ -79,7 +79,7 @@ def normal_projection_net(action_spec,
 
 def train_eval(
     root_dir,
-    env_name='HalfCheetah-v1',
+    env_name='HalfCheetah-v2',
     num_iterations=1000000,
     actor_fc_layers=(256, 256),
     critic_obs_fc_layers=None,
