@@ -329,6 +329,7 @@ def train_eval(
 
 
 def main(_):
+  tf.compat.v1.enable_resource_variables()
   if tf.executing_eagerly():
     # Need a tf2 / eager version of this.
     # Uses lots of sessions & Runs into datasets issue: b/78320626

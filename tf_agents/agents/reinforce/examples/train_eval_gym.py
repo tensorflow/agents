@@ -244,6 +244,7 @@ def train_eval(
 
 
 def main(_):
+  tf.compat.v1.enable_resource_variables()
   if tf.executing_eagerly():
     # train_eval_eager is already the tf2 version of this file: b/123777589
     return

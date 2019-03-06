@@ -64,6 +64,9 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   theory (pp. 101-103). ACM.
   """
 
+  # TODO(b/127327645): This causes a loop failure when RNNs are enabled.
+  _enable_functions = False
+
   def __init__(
       self,
       time_step_spec,

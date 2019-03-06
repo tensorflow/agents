@@ -42,6 +42,9 @@ import tf_agents.utils.common as common_utils
 import gin.tf
 
 
+tfd = tfp.distributions
+
+
 class Td3Info(collections.namedtuple(
     'Td3Info', ('actor_loss', 'critic_loss'))):
   pass
@@ -138,6 +141,8 @@ class Td3Agent(tf_agent.TFAgent):
     self._target_policy_noise = target_policy_noise
     self._target_policy_noise_clip = target_policy_noise_clip
     self._gradient_clipping = gradient_clipping
+    self._update_target = self._get_target_updater(self._target_update_tau,
+                                                   self._target_update_period)
 
     policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec, action_spec=action_spec,
@@ -166,13 +171,18 @@ class Td3Agent(tf_agent.TFAgent):
 
     Copies weights from the actor and critic networks to the respective
     target actor and critic networks.
-
-    Returns:
-      An op to initialize the agent.
     """
-    return self._update_targets(tau=1.0, period=1)
+    common_utils.soft_variables_update(
+        self._critic_network_1.variables,
+        self._target_critic_network_1.variables, tau=1.0)
+    common_utils.soft_variables_update(
+        self._critic_network_2.variables,
+        self._target_critic_network_2.variables, tau=1.0)
+    common_utils.soft_variables_update(
+        self._actor_network.variables,
+        self._target_actor_network.variables, tau=1.0)
 
-  def _update_targets(self, tau=1.0, period=1):
+  def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
 
     For each weight w_s in the original network, and its corresponding
@@ -198,7 +208,7 @@ class Td3Agent(tf_agent.TFAgent):
             self._actor_network.variables,
             self._target_actor_network.variables, tau)
         return tf.group(critic_update_1, critic_update_2, actor_update)
-      return common_utils.periodically(update, period, 'update_targets')
+      return common_utils.Periodically(update, period, 'update_targets')
 
   # TODO(kbanoop): Rename experience to trajectory?
   def _experience_to_transitions(self, experience):
@@ -248,7 +258,7 @@ class Td3Agent(tf_agent.TFAgent):
                   name=var.op.name, data=var, step=self.train_step_counter)
       return grads_and_vars
 
-    critic_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
         global_step=self.train_step_counter,
@@ -257,7 +267,7 @@ class Td3Agent(tf_agent.TFAgent):
         self._critic_network_2.trainable_weights,
     )
 
-    actor_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         actor_loss,
         self._actor_optimizer,
         global_step=None,
@@ -265,23 +275,22 @@ class Td3Agent(tf_agent.TFAgent):
         variables_to_train=self._actor_network.trainable_weights,
     )
 
-    with tf.control_dependencies([critic_train_op, actor_train_op]):
-      update_targets_op = self._update_targets(self._target_update_tau,
-                                               self._target_update_period)
+    self._update_target()
 
-    with tf.control_dependencies([update_targets_op]):
-      total_loss = actor_loss + critic_loss
+    total_loss = actor_loss + critic_loss
 
     # TODO(kbanoop): Compute per element TD loss and return in loss_info.
     return tf_agent.LossInfo(total_loss, Td3Info(actor_loss, critic_loss))
 
-  def critic_loss(self, time_steps, actions, next_time_steps, weights=None):
+  def critic_loss(self, time_steps, actions, next_time_steps,
+                  seed=None, weights=None):
     """Computes the critic loss for TD3 training.
 
     Args:
       time_steps: A batch of timesteps.
       actions: A batch of actions.
       next_time_steps: A batch of next timesteps.
+      seed: (Python integer) A random seed for additive gaussian noise.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
 
@@ -292,12 +301,13 @@ class Td3Agent(tf_agent.TFAgent):
       target_actions, _ = self._target_actor_network(
           next_time_steps.observation, next_time_steps.step_type)
 
+      seed_stream = tfd.SeedStream(seed=seed, salt='td3_critic_loss')
       # Add gaussian noise to each action before computing target q values
       def add_noise_to_action(action):  # pylint: disable=missing-docstring
-        dist = tfp.distributions.Normal(loc=tf.zeros_like(action),
-                                        scale=self._target_policy_noise * \
-                                        tf.ones_like(action))
-        noise = dist.sample()
+        dist = tfp.distributions.Normal(
+            loc=tf.zeros_like(action),
+            scale=self._target_policy_noise * tf.ones_like(action))
+        noise = dist.sample(seed=seed_stream())
         noise = tf.clip_by_value(noise, -self._target_policy_noise_clip,
                                  self._target_policy_noise_clip)
         return action + noise

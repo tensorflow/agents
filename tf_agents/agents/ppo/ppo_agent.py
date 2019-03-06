@@ -276,7 +276,7 @@ class PPOAgent(tf_agent.TFAgent):
     Returns:
       tf.no_op(). No initialization required for this agent.
     """
-    return tf.no_op()
+    pass
 
   def compute_advantages(self, rewards, returns, discounts, value_preds):
     """Compute advantages, optionally using GAE.
@@ -553,57 +553,47 @@ class PPOAgent(tf_agent.TFAgent):
     kl_penalty_losses = []
 
     # For each epoch, create its own train op that depends on the previous one.
-    loss_info = tf.no_op()
+    loss_info = []
     for i_epoch in range(self._num_epochs):
       with tf.name_scope('epoch_%d' % i_epoch):
-        with tf.control_dependencies(tf.nest.flatten(loss_info)):
-          # Only save debug summaries for first and last epochs.
-          debug_summaries = (
-              self._debug_summaries and
-              (i_epoch == 0 or i_epoch == self._num_epochs - 1))
+        # Only save debug summaries for first and last epochs.
+        debug_summaries = (
+            self._debug_summaries and
+            (i_epoch == 0 or i_epoch == self._num_epochs - 1))
 
-          # Build one epoch train op.
-          loss_info = self.build_train_op(
-              time_steps, actions, act_log_probs, returns,
-              normalized_advantages, action_distribution_parameters, weights,
-              self.train_step_counter, self._summarize_grads_and_vars,
-              self._gradient_clipping, debug_summaries)
+        # Build one epoch train op.
+        loss_info = self.build_train_op(
+            time_steps, actions, act_log_probs, returns,
+            normalized_advantages, action_distribution_parameters, weights,
+            self.train_step_counter, self._summarize_grads_and_vars,
+            self._gradient_clipping, debug_summaries)
 
-          policy_gradient_losses.append(loss_info.extra.policy_gradient_loss)
-          value_estimation_losses.append(loss_info.extra.value_estimation_loss)
-          l2_regularization_losses.append(
-              loss_info.extra.l2_regularization_loss)
-          entropy_regularization_losses.append(
-              loss_info.extra.entropy_regularization_loss)
-          kl_penalty_losses.append(loss_info.extra.kl_penalty_loss)
+        policy_gradient_losses.append(loss_info.extra.policy_gradient_loss)
+        value_estimation_losses.append(loss_info.extra.value_estimation_loss)
+        l2_regularization_losses.append(
+            loss_info.extra.l2_regularization_loss)
+        entropy_regularization_losses.append(
+            loss_info.extra.entropy_regularization_loss)
+        kl_penalty_losses.append(loss_info.extra.kl_penalty_loss)
 
     # After update epochs, update adaptive kl beta, then update observation
     #   normalizer and reward normalizer.
-    with tf.control_dependencies(tf.nest.flatten(loss_info)):
-      # Compute the mean kl from old.
-      batch_size = nest_utils.get_outer_shape(time_steps,
-                                              self._time_step_spec)[0]
-      policy_state = self._collect_policy.get_initial_state(batch_size)
-      kl_divergence = self._kl_divergence(
-          time_steps, action_distribution_parameters,
-          self._collect_policy.distribution(time_steps, policy_state).action)
-      update_adaptive_kl_beta_op = self.update_adaptive_kl_beta(kl_divergence)
+    # Compute the mean kl from old.
+    batch_size = nest_utils.get_outer_shape(time_steps,
+                                            self._time_step_spec)[0]
+    policy_state = self._collect_policy.get_initial_state(batch_size)
+    kl_divergence = self._kl_divergence(
+        time_steps, action_distribution_parameters,
+        self._collect_policy.distribution(time_steps, policy_state).action)
+    self.update_adaptive_kl_beta(kl_divergence)
 
-    with tf.control_dependencies([update_adaptive_kl_beta_op]):
-      if self._observation_normalizer:
-        update_obs_norm = (
-            self._observation_normalizer.update(
-                time_steps.observation, outer_dims=[0, 1]))
-      else:
-        update_obs_norm = tf.no_op()
+    if self._observation_normalizer:
+      self._observation_normalizer.update(
+          time_steps.observation, outer_dims=[0, 1])
+    else:
       if self._reward_normalizer:
-        update_reward_norm = self._reward_normalizer.update(
+        self._reward_normalizer.update(
             next_time_steps.reward, outer_dims=[0, 1])
-      else:
-        update_reward_norm = tf.no_op()
-
-    with tf.control_dependencies([update_obs_norm, update_reward_norm]):
-      loss_info = tf.nest.map_structure(tf.identity, loss_info)
 
     # Make summaries for total loss across all epochs.
     # The *_losses lists will have been populated by
@@ -1043,8 +1033,9 @@ class PPOAgent(tf_agent.TFAgent):
         default=lambda: tf.constant(1.0, dtype=tf.float32), exclusive=True)
     new_adaptive_kl_beta = tf.maximum(
         self._adaptive_kl_beta * adaptive_kl_update_factor, 10e-16)
-    update_adaptive_kl_beta = tf.compat.v1.assign(self._adaptive_kl_beta,
-                                                  new_adaptive_kl_beta)
+    update_adaptive_kl_beta = tf.compat.v1.assign(
+        self._adaptive_kl_beta,
+        new_adaptive_kl_beta)
 
     if self._debug_summaries:
       tf.compat.v2.summary.scalar(

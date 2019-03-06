@@ -305,6 +305,7 @@ def train_eval(
 
 
 def main(_):
+  tf.compat.v1.enable_resource_variables()
   logging.set_verbosity(logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 

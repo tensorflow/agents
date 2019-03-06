@@ -47,6 +47,7 @@ def env_load_fn(env_name):
 
 
 def main(_):
+  tf.compat.v1.enable_resource_variables()
   if tf.executing_eagerly():
     # self.skipTest('b/123777119')  # Secondary bug: ('b/123775375')
     return

@@ -75,6 +75,7 @@ class ComputeTDTargetsTest(tf.test.TestCase):
 class AgentTest(tf.test.TestCase):
 
   def setUp(self):
+    tf.compat.v1.enable_resource_variables()
     super(AgentTest, self).setUp()
     self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
@@ -92,6 +93,8 @@ class AgentTest(tf.test.TestCase):
       self.assertIsNotNone(agent.policy)
 
   def testInitializeAgent(self, agent_class, run_mode):
+    if tf.executing_eagerly() and run_mode == context.graph_mode:
+      self.skipTest('b/123778560')
     with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(
@@ -127,7 +130,7 @@ class AgentTest(tf.test.TestCase):
 
   # TODO(b/127383724): Add a test where the target network has different values.
   def testLoss(self, agent_class, run_mode):
-    if tf.executing_eagerly and run_mode == context.graph_mode:
+    if tf.executing_eagerly() and run_mode == context.graph_mode:
       self.skipTest('b/123778560')
     with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)

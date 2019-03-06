@@ -53,9 +53,9 @@ class DummyActorNet(network.DistributionNetwork):
     self._layers.append(
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements() * 2,
-            kernel_initializer=tf.compat.v1.initializers.constant([[2, 1],
-                                                                   [1, 1]]),
-            bias_initializer=tf.compat.v1.initializers.constant([5, 5]),
+            kernel_initializer=tf.compat.v1.initializers.constant([[2.0, 1.0],
+                                                                   [1.0, 1.0]]),
+            bias_initializer=tf.compat.v1.initializers.constant([5.0, 5.0]),
             activation=None,
         ))
 
@@ -85,8 +85,8 @@ class DummyActorNet(network.DistributionNetwork):
     actions = tf.nest.pack_sequence_as(self._action_spec, [actions])
     stdevs = tf.nest.pack_sequence_as(self._action_spec, [stdevs])
 
-    return self.output_spec.build_distribution(
-        loc=actions, scale=stdevs), network_state
+    return (self.output_spec.build_distribution(loc=actions, scale=stdevs),
+            network_state)
 
 
 class DummyValueNet(network.Network):
@@ -122,6 +122,7 @@ def _compute_returns_fn(rewards, discounts, next_state_return=0.0):
 class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
 
   def setUp(self):
+    tf.compat.v1.enable_resource_variables()
     super(PPOAgentTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)

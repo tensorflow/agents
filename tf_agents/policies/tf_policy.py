@@ -190,8 +190,7 @@ class Base(tf.Module):
     """
     tf.nest.assert_same_structure(time_step, self._time_step_spec)
     tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
-    with tf.control_dependencies(tf.nest.flatten([time_step, policy_state])):
-      step = self._distribution(time_step=time_step, policy_state=policy_state)
+    step = self._distribution(time_step=time_step, policy_state=policy_state)
     tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 

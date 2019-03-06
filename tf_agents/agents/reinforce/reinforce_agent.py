@@ -116,7 +116,7 @@ class ReinforceAgent(tf_agent.TFAgent):
         train_step_counter=train_step_counter)
 
   def _initialize(self):
-    return tf.no_op()
+    pass
 
   def _train(self, experience, weights=None):
     # TODO(sfishman): Support batch dimensions >1.

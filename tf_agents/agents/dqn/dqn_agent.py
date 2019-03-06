@@ -182,9 +182,8 @@ class DqnAgent(tf_agent.TFAgent):
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
-
-    self._update_target = self._update_targets(target_update_tau,
-                                               target_update_period)
+    self._update_target = self._get_target_updater(
+        target_update_tau, target_update_period)
 
     policy = q_policy.QPolicy(
         time_step_spec, action_spec, q_network=self._q_network)
@@ -208,9 +207,10 @@ class DqnAgent(tf_agent.TFAgent):
         train_step_counter=train_step_counter)
 
   def _initialize(self):
-    return self._update_targets(1.0, 1)()
+    common_utils.soft_variables_update(
+        self._q_network.variables, self._target_q_network.variables, tau=1.0)
 
-  def _update_targets(self, tau=1.0, period=1):
+  def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
 
     For each weight w_s in the q network, and its corresponding
@@ -222,7 +222,7 @@ class DqnAgent(tf_agent.TFAgent):
       period: Step interval at which the target network is updated.
 
     Returns:
-      An operation that performs a soft update of the target network parameters.
+      A callable that performs a soft update of the target network parameters.
     """
     with tf.name_scope('update_targets'):
 
@@ -231,7 +231,7 @@ class DqnAgent(tf_agent.TFAgent):
             self._q_network.variables, self._target_q_network.variables, tau)
 
       return common_utils.Periodically(update, period,
-                                       'periodic_update_target')
+                                       'periodic_update_targets')
 
   def _experience_to_transitions(self, experience):
     transitions = trajectory.to_transition(experience)

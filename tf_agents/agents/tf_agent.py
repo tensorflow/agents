@@ -34,6 +34,11 @@ LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
 class TFAgent(tf.Module):
   """Abstract base class for TF RL agents."""
 
+  # TODO(b/127327645) Remove this attribute.
+  # This attribute allows subclasses to back out of automatic tf.function
+  # attribute inside TF1 (for autodeps).
+  _enable_functions = True
+
   def __init__(self,
                time_step_spec,
                action_spec,
@@ -81,10 +86,27 @@ class TFAgent(tf.Module):
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
     self._train_step_counter = train_step_counter
+    self._train_fn = common.function_in_tf1()(self._train)
+    self._initialize_fn = common.function_in_tf1()(self._initialize)
 
   def initialize(self):
-    """Returns an op to initialize the agent."""
-    return self._initialize()
+    """Initializes the agent.
+
+    Returns:
+      An operation that can be used to initialize the agent.
+
+    Raises:
+      RuntimeError: If the class was not initialized properly (`super.__init__`
+        was not called).
+    """
+    if getattr(self, "_initialize_fn", None) is None:
+      raise RuntimeError(
+          "Cannot find _initialize_fn.  Did %s.__init__ call super?"
+          % type(self).__name__)
+    if self._enable_functions:
+      return self._initialize_fn()
+    else:
+      return self._initialize()
 
   def train(self, experience, weights=None):
     """Trains the agent.
@@ -114,7 +136,13 @@ class TFAgent(tf.Module):
       ValueError: If experience tensors' time axes are not compatible with
         `self.train_sequene_length`.  Or if experience does not match
         `self.collect_data_spec` structure.
+      RuntimeError: If the class was not initialized properly (`super.__init__`
+        was not called).
     """
+    if getattr(self, "_train_fn", None) is None:
+      raise RuntimeError(
+          "Cannot find _train_fn.  Did %s.__init__ call super?"
+          % type(self).__name__)
     if not isinstance(experience, trajectory.Trajectory):
       raise ValueError(
           "experience must be type Trajectory, saw type: %s" % type(experience))
@@ -145,7 +173,11 @@ class TFAgent(tf.Module):
 
       tf.nest.map_structure(check_shape, experience)
 
-    loss_info = self._train(experience=experience, weights=weights)
+    if self._enable_functions:
+      loss_info = self._train_fn(experience=experience, weights=weights)
+    else:
+      loss_info = self._train(experience=experience, weights=weights)
+
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))

@@ -192,6 +192,7 @@ def train_eval(
 
 
 def main(_):
+  tf.compat.v1.enable_resource_variables()
   logging.set_verbosity(logging.INFO)
   tf.compat.v1.enable_eager_execution(
       config=tf.compat.v1.ConfigProto(allow_soft_placement=True))

@@ -145,6 +145,8 @@ class SacAgent(tf_agent.TFAgent):
     self._gradient_clipping = gradient_clipping
     self._debug_summaries = debug_summaries
     self._summarize_grads_and_vars = summarize_grads_and_vars
+    self._update_target = self._get_target_updater(
+        tau=self._target_update_tau, period=self._target_update_period)
 
     super(SacAgent, self).__init__(
         time_step_spec,
@@ -160,11 +162,13 @@ class SacAgent(tf_agent.TFAgent):
     """Returns an op to initialize the agent.
 
     Copies weights from the Q networks to the target Q network.
-
-    Returns:
-      An op to initialize the agent.
     """
-    return self._update_targets(1.0, 1)
+    common.soft_variables_update(
+        self._critic_network1.variables,
+        self._target_critic_network1.variables, tau=1.0)
+    common.soft_variables_update(
+        self._critic_network2.variables,
+        self._target_critic_network2.variables, tau=1.0)
 
   def _experience_to_transitions(self, experience):
     transitions = trajectory.to_transition(experience)
@@ -237,7 +241,7 @@ class SacAgent(tf_agent.TFAgent):
       tf.compat.v2.summary.scalar(
           name='alpha_loss', data=alpha_loss, step=self.train_step_counter)
 
-    critic_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
         global_step=self.train_step_counter,
@@ -246,7 +250,7 @@ class SacAgent(tf_agent.TFAgent):
                             self._critic_network2.trainable_weights),
     )
 
-    actor_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         actor_loss,
         self._actor_optimizer,
         global_step=None,
@@ -254,7 +258,7 @@ class SacAgent(tf_agent.TFAgent):
         variables_to_train=self._actor_network.trainable_weights,
     )
 
-    alpha_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         alpha_loss,
         self._alpha_optimizer,
         global_step=None,
@@ -262,19 +266,13 @@ class SacAgent(tf_agent.TFAgent):
         variables_to_train=[self._log_alpha],
     )
 
-    with tf.control_dependencies([critic_train_op,
-                                  actor_train_op,
-                                  alpha_train_op]):
-      update_targets_op = self._update_targets(
-          tau=self._target_update_tau, period=self._target_update_period)
+    self._update_target()
 
-    with tf.control_dependencies([update_targets_op]):
-      train_op = (
-          critic_train_op + actor_train_op + alpha_train_op)
+    total_loss = critic_loss + actor_loss + alpha_loss
 
-    return tf_agent.LossInfo(loss=train_op, extra=tf.no_op())
+    return tf_agent.LossInfo(loss=total_loss, extra=())
 
-  def _update_targets(self, tau=1.0, period=1):
+  def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
 
     For each weight w_s in the original network, and its corresponding
@@ -285,7 +283,7 @@ class SacAgent(tf_agent.TFAgent):
       tau: A float scalar in [0, 1]. Default `tau=1.0` means hard update.
       period: Step interval at which the target network is updated.
     Returns:
-      An operation that performs a soft update of the target network parameters.
+      A callable that performs a soft update of the target network parameters.
     """
     with tf.name_scope('update_target'):
       def update():
@@ -298,7 +296,7 @@ class SacAgent(tf_agent.TFAgent):
             self._target_critic_network2.variables, tau)
         return tf.group(critic_update_1, critic_update_2)
 
-      return common.periodically(update, period, 'update_targets')
+      return common.Periodically(update, period, 'update_targets')
 
   def _action_spec_means_magnitudes(self):
     """Get the center and magnitude of the ranges in action spec."""

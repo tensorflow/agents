@@ -121,6 +121,8 @@ class DdpgAgent(tf_agent.TFAgent):
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
+    self._update_target = self._get_target_updater(self._target_update_tau,
+                                                   self._target_update_period)
 
     policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec, action_spec=action_spec,
@@ -145,9 +147,14 @@ class DdpgAgent(tf_agent.TFAgent):
         train_step_counter=train_step_counter)
 
   def _initialize(self):
-    return self._update_targets(1.0, 1)
+    common_utils.soft_variables_update(
+        self._critic_network.variables,
+        self._target_critic_network.variables, tau=1.0)
+    common_utils.soft_variables_update(
+        self._actor_network.variables,
+        self._target_actor_network.variables, tau=1.0)
 
-  def _update_targets(self, tau=1.0, period=1):
+  def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
 
     For each weight w_s in the original network, and its corresponding
@@ -158,7 +165,7 @@ class DdpgAgent(tf_agent.TFAgent):
       tau: A float scalar in [0, 1]. Default `tau=1.0` means hard update.
       period: Step interval at which the target networks are updated.
     Returns:
-      An operation that performs a soft update of the target network parameters.
+      A callable that performs a soft update of the target network parameters.
     """
     with tf.name_scope('update_targets'):
       def update():
@@ -171,7 +178,7 @@ class DdpgAgent(tf_agent.TFAgent):
             self._target_actor_network.variables, tau)
         return tf.group(critic_update, actor_update)
 
-      return common_utils.periodically(update, period,
+      return common_utils.Periodically(update, period,
                                        'periodic_update_targets')
 
   def _experience_to_transitions(self, experience):
@@ -216,7 +223,7 @@ class DdpgAgent(tf_agent.TFAgent):
                   name=var.op.name, data=var, step=self.train_step_counter)
       return grads_and_vars
 
-    critic_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         critic_loss,
         self._critic_optimizer,
         global_step=self.train_step_counter,
@@ -224,7 +231,7 @@ class DdpgAgent(tf_agent.TFAgent):
         variables_to_train=self._critic_network.trainable_weights,
     )
 
-    actor_train_op = eager_utils.create_train_op(
+    eager_utils.create_train_op(
         actor_loss,
         self._actor_optimizer,
         global_step=None,
@@ -232,12 +239,9 @@ class DdpgAgent(tf_agent.TFAgent):
         variables_to_train=self._actor_network.trainable_weights,
     )
 
-    with tf.control_dependencies([critic_train_op, actor_train_op]):
-      update_targets_op = self._update_targets(self._target_update_tau,
-                                               self._target_update_period)
+    self._update_target()
 
-    with tf.control_dependencies([update_targets_op]):
-      total_loss = actor_loss + critic_loss
+    total_loss = actor_loss + critic_loss
 
     # TODO(kbanoop): Compute per element TD loss and return in loss_info.
     return tf_agent.LossInfo(total_loss,

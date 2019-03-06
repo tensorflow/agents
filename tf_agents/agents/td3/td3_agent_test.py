@@ -95,6 +95,7 @@ class DummyCriticNetwork(network.Network):
 class TD3AgentTest(tf.test.TestCase):
 
   def setUp(self):
+    tf.compat.v1.enable_resource_variables()
     super(TD3AgentTest, self).setUp()
     self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
@@ -138,8 +139,8 @@ class TD3AgentTest(tf.test.TestCase):
     next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
-    expected_loss = 119.0354
-    loss = agent.critic_loss(time_steps, actions, next_time_steps)
+    expected_loss = 120.0912
+    loss = agent.critic_loss(time_steps, actions, next_time_steps, seed=1234)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)

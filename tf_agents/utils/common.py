@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import functools
 from absl import logging
 
 import tensorflow as tf
@@ -30,8 +31,52 @@ from tensorflow.python.eager import context  # pylint:disable=g-direct-tensorflo
 
 
 def function(*args, **kwargs):
+  """Wrapper for tf.function with TF Agents-specific customizations."""
   autograph = kwargs.pop('autograph', False)
   return tf.function(*args, autograph=autograph, **kwargs)  # allow-tf-function
+
+
+def has_eager_been_enabled():
+  """Returns true iff in TF2 or in TF1 with eager execution enabled."""
+  with tf.init_scope():
+    return tf.executing_eagerly()
+
+
+def function_in_tf1(*args, **kwargs):
+  """Wrapper that returns common.function if using TF1.
+
+  This allows for code that assumes autodeps is available to be written once,
+  in the same way, for both TF1 and TF2.
+
+  Usage:
+
+  ```python
+  train = function_in_tf1()(agent.train)
+  loss = train(experience)
+  ```
+
+  Args:
+    *args: Arguments for common.function.
+    **kwargs: Keyword arguments for common.function.
+
+  Returns:
+    A callable that wraps a function.
+  """
+  def maybe_wrap(fn):
+    """Helper function."""
+    if has_eager_been_enabled():
+      # We're either in eager mode or in tf.function mode (no in-between); so
+      # autodep-like behavior is already expected of fn.
+      return fn
+    else:
+      # We're in TF1 mode and want to wrap in common.function to get autodeps.
+      @functools.wraps(fn)
+      def with_resource_vars(*fn_args, **fn_kwargs):
+        with tf.compat.v1.variable_scope('', use_resource=True):
+          return fn(*fn_args, **fn_kwargs)
+      wrapped = function(*args, **kwargs)(with_resource_vars)
+      return wrapped
+  return maybe_wrap
 
 
 def create_variable(name,
@@ -43,7 +88,7 @@ def create_variable(name,
                     initializer=None,
                     unique_name=True):
   """Create a variable."""
-  if context.executing_eagerly():
+  if has_eager_been_enabled():
     if initializer is None:
       if shape:
         initial_value = tf.constant(initial_value, shape=shape, dtype=dtype)
@@ -219,7 +264,7 @@ def periodically(body, period, name='periodically'):
 class Periodically(tf.Module):
   """Periodically performs the ops defined in `body`."""
 
-  def __init__(self, body, period, scope='periodically'):
+  def __init__(self, body, period, name='periodically'):
     """Periodically performs the ops defined in `body`.
 
     The body tensorflow op will be executed every `period` times the
@@ -240,7 +285,7 @@ class Periodically(tf.Module):
         output (for example, a tf.group()).
       period: inverse frequency with which to perform the op.
         It can be a Tensor or a Variable.
-      scope: name of the variable_scope.
+      name: name of the object.
 
     Raises:
       TypeError: if body is not a callable.
@@ -248,13 +293,12 @@ class Periodically(tf.Module):
     Returns:
       An op that periodically performs the specified op.
     """
-    super(Periodically, self).__init__(name=scope)
+    super(Periodically, self).__init__(name=name)
     if not callable(body):
       raise TypeError('body must be callable.')
     self._body = body
     self._period = period
-    with tf.compat.v1.variable_scope(scope):
-      self._counter = create_variable('counter', 0)
+    self._counter = create_variable(self.name + '/counter', 0)
 
   def __call__(self):
     if self._period is None:
