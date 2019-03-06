@@ -31,7 +31,7 @@ from absl import logging
 import numpy as np
 import tensorflow as tf
 
-from tf_agents.agents.ppo.examples import train_eval
+from tf_agents.agents.ppo.examples.v1 import train_eval
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
 

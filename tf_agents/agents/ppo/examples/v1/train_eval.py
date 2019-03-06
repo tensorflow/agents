@@ -20,7 +20,7 @@ To run:
 ```bash
 tensorboard --logdir ~/tmp/ppo --port 2223 &
 
-tf_agents/agents/ppo/examples/train_eval.py -- \
+tf_agents/agents/ppo/examples/v1/train_eval.py -- \
   --root_dir=~/tmp/ppo_example --logtostderr
 ```
 """
@@ -90,7 +90,7 @@ def train_eval(
     env_name='HalfCheetah-v1',
     env_load_fn=suite_mujoco.load,
     random_seed=0,
-    # TODO(kbanoop): rename to policy_fc_layers.
+    # TODO(b/127576522): rename to policy_fc_layers.
     actor_fc_layers=(200, 100),
     value_fc_layers=(200, 100),
     use_rnns=False,
@@ -188,7 +188,6 @@ def train_eval(
 
     eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy)
 
-    # TODO(sguada): Reenable metrics when ready for batch data.
     environment_steps_metric = tf_metrics.EnvironmentSteps()
     environment_steps_count = environment_steps_metric.result()
     step_metrics = [
@@ -249,7 +248,6 @@ def train_eval(
       # Initialize graph.
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
-      # TODO(sguada) Remove once Periodically can be saved.
       common_utils.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
