@@ -99,7 +99,7 @@ class TFAgent(tf.Module):
       RuntimeError: If the class was not initialized properly (`super.__init__`
         was not called).
     """
-    if getattr(self, "_initialize_fn", None) is None:
+    if self._enable_functions and getattr(self, "_initialize_fn", None) is None:
       raise RuntimeError(
           "Cannot find _initialize_fn.  Did %s.__init__ call super?"
           % type(self).__name__)
@@ -139,7 +139,7 @@ class TFAgent(tf.Module):
       RuntimeError: If the class was not initialized properly (`super.__init__`
         was not called).
     """
-    if getattr(self, "_train_fn", None) is None:
+    if self._enable_functions and getattr(self, "_train_fn", None) is None:
       raise RuntimeError(
           "Cannot find _train_fn.  Did %s.__init__ call super?"
           % type(self).__name__)
