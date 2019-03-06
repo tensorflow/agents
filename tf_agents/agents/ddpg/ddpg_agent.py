@@ -24,8 +24,8 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import gin
 import tensorflow as tf
-
 
 from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
@@ -34,7 +34,6 @@ from tf_agents.policies import ou_noise_policy
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 import tf_agents.utils.common as common_utils
-import gin.tf
 
 
 class DdpgInfo(collections.namedtuple(
@@ -121,8 +120,9 @@ class DdpgAgent(tf_agent.TFAgent):
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
-    self._update_target = self._get_target_updater(self._target_update_tau,
-                                                   self._target_update_period)
+
+    self._update_target = self._get_target_updater(
+        target_update_tau, target_update_period)
 
     policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec, action_spec=action_spec,
@@ -165,11 +165,11 @@ class DdpgAgent(tf_agent.TFAgent):
       tau: A float scalar in [0, 1]. Default `tau=1.0` means hard update.
       period: Step interval at which the target networks are updated.
     Returns:
-      A callable that performs a soft update of the target network parameters.
+      An operation that performs a soft update of the target network parameters.
     """
-    with tf.name_scope('update_targets'):
+    with tf.name_scope('get_target_updater'):
       def update():
-        # TODO(kbanoop): What about observation normalizer variables?
+        # TODO(b/124381161): What about observation normalizer variables?
         critic_update = common_utils.soft_variables_update(
             self._critic_network.variables,
             self._target_critic_network.variables, tau)
@@ -197,56 +197,50 @@ class DdpgAgent(tf_agent.TFAgent):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
-    # TODO(kbanoop): Apply a loss mask or filter boundary transitions.
-    critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
-                                   weights=weights)
-    actor_loss = self.actor_loss(time_steps, weights=weights)
+    # TODO(b/124382524): Apply a loss mask or filter boundary transitions.
+    critic_variables = self._critic_network.variables
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      assert critic_variables, 'No critic variables to optimize.'
+      tape.watch(critic_variables)
+      critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
+                                     weights=weights)
+    tf.check_numerics(critic_loss, 'Critic loss is inf or nan.')
+    critic_grads = tape.gradient(critic_loss, critic_variables)
+    self._apply_gradients(critic_grads, critic_variables,
+                          self._critic_optimizer)
 
-    def clip_and_summarize_gradients(grads_and_vars):
-      """Clips gradients, and summarizes gradients and variables."""
-      if self._gradient_clipping is not None:
-        grads_and_vars = eager_utils.clip_gradient_norms_fn(
-            self._gradient_clipping)(
-                grads_and_vars)
+    actor_variables = self._actor_network.variables
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      assert actor_variables, 'No actor variables to optimize.'
+      tape.watch(actor_variables)
+      actor_loss = self.actor_loss(time_steps, weights=weights)
+    tf.check_numerics(actor_loss, 'Actor loss is inf or nan.')
+    actor_grads = tape.gradient(actor_loss, actor_variables)
+    self._apply_gradients(actor_grads, actor_variables, self._actor_optimizer)
 
-      if self._summarize_grads_and_vars:
-        # TODO(kbanoop): Move gradient summaries to train_op after we switch to
-        # eager train op, and move variable summaries to critic_loss.
-        for grad, var in grads_and_vars:
-          with tf.name_scope('Gradients/'):
-            if grad is not None:
-              tf.compat.v2.summary.histogram(
-                  name=grad.op.name, data=grad, step=self.train_step_counter)
-          with tf.name_scope('Variables/'):
-            if var is not None:
-              tf.compat.v2.summary.histogram(
-                  name=var.op.name, data=var, step=self.train_step_counter)
-      return grads_and_vars
-
-    eager_utils.create_train_op(
-        critic_loss,
-        self._critic_optimizer,
-        global_step=self.train_step_counter,
-        transform_grads_fn=clip_and_summarize_gradients,
-        variables_to_train=self._critic_network.trainable_weights,
-    )
-
-    eager_utils.create_train_op(
-        actor_loss,
-        self._actor_optimizer,
-        global_step=None,
-        transform_grads_fn=clip_and_summarize_gradients,
-        variables_to_train=self._actor_network.trainable_weights,
-    )
-
+    self.train_step_counter.assign_add(1)
     self._update_target()
 
+    # TODO(b/124382360): Compute per element TD loss and return in loss_info.
     total_loss = actor_loss + critic_loss
-
-    # TODO(kbanoop): Compute per element TD loss and return in loss_info.
     return tf_agent.LossInfo(total_loss,
                              DdpgInfo(actor_loss, critic_loss))
 
+  def _apply_gradients(self, gradients, variables, optimizer):
+    grads_and_vars = zip(gradients, variables)
+    if self._gradient_clipping is not None:
+      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
+                                                       self._gradient_clipping)
+
+    if self._summarize_grads_and_vars:
+      eager_utils.add_variables_summaries(grads_and_vars,
+                                          self.train_step_counter)
+      eager_utils.add_gradients_summaries(grads_and_vars,
+                                          self.train_step_counter)
+
+    optimizer.apply_gradients(grads_and_vars)
+
+  @common_utils.function
   def critic_loss(self,
                   time_steps,
                   actions,
@@ -282,10 +276,10 @@ class DdpgAgent(tf_agent.TFAgent):
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec, num_outer_dims=2):
         # Do a sum over the time dimension.
-        critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
+        critic_loss = tf.reduce_sum(critic_loss, axis=1)
       if weights is not None:
         critic_loss *= weights
-      critic_loss = tf.reduce_mean(input_tensor=critic_loss)
+      critic_loss = tf.reduce_mean(critic_loss)
 
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(
@@ -302,6 +296,7 @@ class DdpgAgent(tf_agent.TFAgent):
 
       return critic_loss
 
+  @common_utils.function
   def actor_loss(self, time_steps, weights=None):
     """Computes the actor_loss for DDPG training.
 
@@ -309,18 +304,21 @@ class DdpgAgent(tf_agent.TFAgent):
       time_steps: A batch of timesteps.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
-      # TODO(kbanoop): Add an action norm regularizer.
+      # TODO(b/124383618): Add an action norm regularizer.
     Returns:
       actor_loss: A scalar actor loss.
     """
     with tf.name_scope('actor_loss'):
       actions, _ = self._actor_network(time_steps.observation,
                                        time_steps.step_type)
-      critic_net_input = (time_steps.observation, actions)
-      q_values, _ = self._critic_network(critic_net_input,
-                                         time_steps.step_type)
-      actions = tf.nest.flatten(actions)
-      dqdas = tf.gradients(ys=[q_values], xs=actions)
+      with tf.GradientTape(watch_accessed_variables=False) as tape:
+        tape.watch(actions)
+        q_values, _ = self._critic_network((time_steps.observation, actions),
+                                           time_steps.step_type)
+        actions = tf.nest.flatten(actions)
+
+      dqdas = tape.gradient([q_values], actions)
+
       actor_losses = []
       for dqda, action in zip(dqdas, actions):
         if self._dqda_clipping is not None:
@@ -331,13 +329,14 @@ class DdpgAgent(tf_agent.TFAgent):
         if nest_utils.is_batched_nested_tensors(
             time_steps, self.time_step_spec, num_outer_dims=2):
           # Sum over the time dimension.
-          loss = tf.reduce_sum(input_tensor=loss, axis=1)
+          loss = tf.reduce_sum(loss, axis=1)
         if weights is not None:
           loss *= weights
-        loss = tf.reduce_mean(input_tensor=loss)
+        loss = tf.reduce_mean(loss)
         actor_losses.append(loss)
 
       actor_loss = tf.add_n(actor_losses)
+
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(
             name='actor_loss', data=actor_loss, step=self.train_step_counter)

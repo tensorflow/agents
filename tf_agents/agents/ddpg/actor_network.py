@@ -15,13 +15,12 @@
 
 """Sample Actor network to use with DDPG agents."""
 
+import gin
 import tensorflow as tf
+
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.utils import common as common_utils
-
-
-import gin.tf
 
 
 @gin.configurable

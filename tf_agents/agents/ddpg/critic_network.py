@@ -15,11 +15,11 @@
 
 """Sample Critic/Q network to use with DDPG agents."""
 
+import gin
 import tensorflow as tf
+
 from tf_agents.networks import network
 from tf_agents.networks import utils
-
-import gin.tf
 
 
 @gin.configurable

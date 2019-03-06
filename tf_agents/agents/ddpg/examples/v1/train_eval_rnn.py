@@ -18,9 +18,9 @@ r"""Train and Eval DDPG.
 To run:
 
 ```bash
-tf_agents/agents/ddpg/examples/train_eval_rnn_dm \
- --root_dir=$HOME/tmp/ddpg_rnn/dm/point_mass/ \
- --alsologtostderr
+tf_agents/agents/ddpg/examples/v1/train_eval_rnn -- \
+  --root_dir=$HOME/tmp/ddpg_rnn_v1/dm/CartPole-Balance/ \
+  --alsologtostderr
 ```
 """
 
@@ -36,6 +36,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import tensorflow as tf
 
 from tf_agents.agents.ddpg import actor_rnn_network
@@ -51,7 +52,6 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common as common_utils
-import gin.tf
 
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
@@ -114,11 +114,11 @@ def train_eval(
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
 
-  train_summary_writer = tf.compat.v2.summary.create_file_writer(
+  train_summary_writer = tf.contrib.summary.create_file_writer(
       train_dir, flush_millis=summaries_flush_secs * 1000)
   train_summary_writer.set_as_default()
 
-  eval_summary_writer = tf.compat.v2.summary.create_file_writer(
+  eval_summary_writer = tf.contrib.summary.create_file_writer(
       eval_dir, flush_millis=summaries_flush_secs * 1000)
   eval_metrics = [
       py_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
@@ -180,8 +180,7 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=global_step)
+        summarize_grads_and_vars=summarize_grads_and_vars)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -220,7 +219,10 @@ def train_eval(
 
     iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     trajectories, unused_info = iterator.get_next()
-    train_op = tf_agent.train(experience=trajectories)
+
+    train_fn = common_utils.function(tf_agent.train)
+    train_op = train_fn(
+        experience=trajectories, train_step_counter=global_step)
 
     train_checkpointer = common_utils.Checkpointer(
         ckpt_dir=train_dir,
@@ -238,6 +240,7 @@ def train_eval(
 
     for train_metric in train_metrics:
       train_metric.tf_summaries(step_metrics=train_metrics[:2])
+    summary_op = tf.contrib.summary.all_summary_ops()
 
     with eval_summary_writer.as_default(), \
          tf.compat.v2.summary.record_if(True):
@@ -251,12 +254,11 @@ def train_eval(
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
       sess.run(iterator.initializer)
-      # TODO(sguada) Remove once Periodically can be saved.
+      # TODO(b/126239733) Remove once Periodically can be saved.
       common_utils.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
-      sess.run(train_summary_writer.init())
-      sess.run(eval_summary_writer.init())
+      tf.contrib.summary.initialize(session=sess)
       sess.run(initial_collect_op)
 
       global_step_val = sess.run(global_step)
@@ -271,7 +273,7 @@ def train_eval(
       )
 
       collect_call = sess.make_callable(collect_op)
-      train_step_call = sess.make_callable(train_op)
+      train_step_call = sess.make_callable([train_op, summary_op])
       global_step_call = sess.make_callable(global_step)
 
       timed_at_step = global_step_call()
@@ -285,9 +287,9 @@ def train_eval(
         start_time = time.time()
         collect_call()
         for _ in range(train_steps_per_iteration):
-          loss_info_value = train_step_call()
+          loss_info_value, _ = train_step_call()
+          global_step_val = global_step_call()
         time_acc += time.time() - start_time
-        global_step_val = global_step_call()
 
         if global_step_val % log_interval == 0:
           logging.info('step = %d, loss = %f', global_step_val,
@@ -322,8 +324,8 @@ def train_eval(
 
 
 def main(_):
-  tf.compat.v1.enable_resource_variables()
   logging.set_verbosity(logging.INFO)
+  tf.enable_resource_variables()
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 
