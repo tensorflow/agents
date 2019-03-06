@@ -177,8 +177,8 @@ class PPOAgent(tf_agent.TFAgent):
         + tol) * adaptive_kl_target, or below (1 - tol) * adaptive_kl_target,
         will cause adaptive_kl_beta to be updated.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
-      check_numerics: If true, adds tf.check_numerics to help find NaN / Inf
-        values. For debugging only.
+      check_numerics: If true, adds tf.debugging.check_numerics to help find
+        NaN / Inf values. For debugging only.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train

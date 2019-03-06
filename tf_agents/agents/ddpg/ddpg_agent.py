@@ -204,7 +204,7 @@ class DdpgAgent(tf_agent.TFAgent):
       tape.watch(critic_variables)
       critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
                                      weights=weights)
-    tf.check_numerics(critic_loss, 'Critic loss is inf or nan.')
+    tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     critic_grads = tape.gradient(critic_loss, critic_variables)
     self._apply_gradients(critic_grads, critic_variables,
                           self._critic_optimizer)
@@ -214,7 +214,7 @@ class DdpgAgent(tf_agent.TFAgent):
       assert actor_variables, 'No actor variables to optimize.'
       tape.watch(actor_variables)
       actor_loss = self.actor_loss(time_steps, weights=weights)
-    tf.check_numerics(actor_loss, 'Actor loss is inf or nan.')
+    tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
     actor_grads = tape.gradient(actor_loss, actor_variables)
     self._apply_gradients(actor_grads, actor_variables, self._actor_optimizer)
 
