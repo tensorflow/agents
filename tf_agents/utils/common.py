@@ -27,11 +27,32 @@ import tensorflow as tf
 from tf_agents.environments import time_step as ts
 from tf_agents.utils import nest_utils
 
-from tensorflow.python.eager import context  # pylint:disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.ops import variable_scope  # pylint: disable=g-direct-tensorflow-import  # TF internal
+
+
+def resource_variables_enabled():
+  # TODO(b/127641038): Need a public TF API here.
+  return variable_scope._DEFAULT_USE_RESOURCE  # pylint: disable=protected-access
 
 
 def function(*args, **kwargs):
-  """Wrapper for tf.function with TF Agents-specific customizations."""
+  """Wrapper for tf.function with TF Agents-specific customizations.
+
+  Example:
+
+  ```python
+  @common.function()
+  def my_eager_code(x, y):
+    ...
+  ```
+
+  Args:
+    *args: Args for tf.function.
+    **kwargs: Keyword args for tf.function.
+
+  Returns:
+    A tf.function wrapper.
+  """
   autograph = kwargs.pop('autograph', False)
   return tf.function(*args, autograph=autograph, **kwargs)  # allow-tf-function
 
@@ -71,10 +92,16 @@ def function_in_tf1(*args, **kwargs):
     else:
       # We're in TF1 mode and want to wrap in common.function to get autodeps.
       @functools.wraps(fn)
-      def with_resource_vars(*fn_args, **fn_kwargs):
-        with tf.compat.v1.variable_scope('', use_resource=True):
-          return fn(*fn_args, **fn_kwargs)
-      wrapped = function(*args, **kwargs)(with_resource_vars)
+      def with_check_resource_vars(*fn_args, **fn_kwargs):
+        if not resource_variables_enabled():
+          raise RuntimeError(
+              'tf.function wrapping is being requested, but resource variables '
+              'are not enabled.  Please enable them by adding the following '
+              'code to your main() method or to the setUp() method in your '
+              'unit test:\n'
+              '  tf.compat.v1.enable_resource_variables()')
+        return fn(*fn_args, **fn_kwargs)
+      wrapped = function(*args, **kwargs)(with_check_resource_vars)
       return wrapped
   return maybe_wrap
 
@@ -253,7 +280,7 @@ def periodically(body, period, name='periodically'):
   Returns:
     An op that periodically performs the specified op.
   """
-  if context.executing_eagerly():
+  if tf.executing_eagerly():
     if isinstance(period, tf.Variable):
       return Periodically(body, period, name)
     return EagerPeriodically(body, period)
@@ -410,7 +437,7 @@ def ornstein_uhlenbeck_process(initial_value,
   Returns:
     An op that generates noise.
   """
-  if context.executing_eagerly():
+  if tf.executing_eagerly():
     return OUProcess(initial_value, damping, stddev, seed, scope)
   else:
     return OUProcess(initial_value, damping, stddev, seed, scope)()
