@@ -170,9 +170,6 @@ class DqnAgent(tf_agent.TFAgent):
           'however only one of them can be used for exploration.'.format(
               epsilon_greedy, boltzmann_temperature))
 
-    # TODO(b/121391781) Handle actions which are scalars or vectors.
-    self._multi_dim_actions = flat_action_spec[0].shape.ndims > 1
-
     self._q_network = q_network
     self._target_q_network = self._q_network.copy(name='TargetQNetwork')
     self._epsilon_greedy = epsilon_greedy
@@ -260,7 +257,7 @@ class DqnAgent(tf_agent.TFAgent):
                             weights=weights)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
-    assert variables_to_train, "No variables found in the agent's q_network."
+    assert list(variables_to_train), "No variables in the agent's q_network."
     grads = tape.gradient(loss_info.loss, variables_to_train)
     grads_and_vars = zip(grads, variables_to_train)
     if self._gradient_clipping is not None:
@@ -313,9 +310,12 @@ class DqnAgent(tf_agent.TFAgent):
       q_values, _ = self._q_network(time_steps.observation,
                                     time_steps.step_type)
 
+      # Handle action_spec.shape=(), and shape=(1,) by using the
+      # multi_dim_actions param.
+      multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
       q_values = common_utils.index_with_actions(
           q_values, tf.cast(actions, dtype=tf.int32),
-          multi_dim_actions=self._multi_dim_actions)
+          multi_dim_actions=multi_dim_actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
       td_targets = compute_td_targets(

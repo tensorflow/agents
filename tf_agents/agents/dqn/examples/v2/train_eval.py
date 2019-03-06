@@ -13,7 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Train and Eval DQN."""
+r"""Train and Eval DQN.
+
+To run DQN on CartPole:
+
+```bash
+tf_agents/agents/dqn/examples/train_eval_gym \
+ --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
+ --alsologtostderr
+```
+
+To run DQN-RNNs on MaskedCartPole:
+
+```bash
+tf_agents/agents/dqn/examples/train_eval_gym \
+ --root_dir=$HOME/tmp/dqn/gym/masked-cart-pole/ \
+ --gin_param='train_eval.env_name="MaskedCartPole-v0"' \
+ --gin_param='train_eval.train_sequence_length=10' \
+ --alsologtostderr
+```
+
+"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -41,7 +61,6 @@ from tf_agents.networks import q_rnn_network
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
@@ -85,6 +104,10 @@ def train_eval(
     # Params for eval
     num_eval_episodes=10,
     eval_interval=1000,
+    # Params for checkpoints
+    train_checkpoint_interval=10000,
+    policy_checkpoint_interval=5000,
+    rb_checkpoint_interval=20000,
     # Params for summaries and logging
     log_interval=1000,
     summary_interval=1000,
@@ -166,6 +189,23 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_steps=collect_steps_per_iteration)
 
+    train_checkpointer = common.Checkpointer(
+        ckpt_dir=train_dir,
+        agent=tf_agent,
+        global_step=global_step,
+        metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
+    policy_checkpointer = common.Checkpointer(
+        ckpt_dir=os.path.join(train_dir, 'policy'),
+        policy=eval_policy,
+        global_step=global_step)
+    rb_checkpointer = common.Checkpointer(
+        ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
+        max_to_keep=1,
+        replay_buffer=replay_buffer)
+
+    train_checkpointer.initialize_or_restore()
+    rb_checkpointer.initialize_or_restore()
+
     if use_tf_functions:
       # To speed up collect use common.function.
       collect_driver.run = common.function(collect_driver.run)
@@ -221,8 +261,7 @@ def train_eval(
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
-        logging.info('step = %d, loss = %f',
-                     global_step.numpy(),
+        logging.info('step = %d, loss = %f', global_step.numpy(),
                      train_loss.loss)
         steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
         logging.info('%.3f steps/sec', steps_per_sec)
@@ -232,6 +271,15 @@ def train_eval(
 
       for train_metric in train_metrics:
         train_metric.tf_summaries(step_metrics=train_metrics[:2])
+
+      if global_step.numpy() % train_checkpoint_interval == 0:
+        train_checkpointer.save(global_step=global_step.numpy())
+
+      if global_step.numpy() % policy_checkpoint_interval == 0:
+        policy_checkpointer.save(global_step=global_step.numpy())
+
+      if global_step.numpy() % rb_checkpoint_interval == 0:
+        rb_checkpointer.save(global_step=global_step.numpy())
 
       if global_step.numpy() % eval_interval == 0:
         results = metric_utils.eager_compute(

@@ -132,7 +132,7 @@ class AgentTest(tf.test.TestCase):
   def testLoss(self, agent_class, run_mode):
     if tf.executing_eagerly() and run_mode == context.graph_mode:
       self.skipTest('b/123778560')
-    with run_mode():
+    with run_mode(), tf.compat.v2.summary.record_if(False):
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(
           self._time_step_spec,
@@ -143,7 +143,7 @@ class AgentTest(tf.test.TestCase):
       observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
       time_steps = ts.restart(observations, batch_size=2)
 
-      actions = [tf.constant([0, 1], dtype=tf.int32)]
+      actions = [tf.constant([[0], [1]], dtype=tf.int32)]
 
       rewards = tf.constant([10, 20], dtype=tf.float32)
       discounts = tf.constant([0.9, 0.9], dtype=tf.float32)

@@ -800,7 +800,7 @@ class Checkpointer(object):
     self._load_status = self._checkpoint.restore(
         self._manager.latest_checkpoint)
 
-  def initialize_or_restore(self, session):
+  def initialize_or_restore(self, session=None):
     """Initialize or restore graph (based on checkpoint if exists)."""
     self._load_status.initialize_or_restore(session)
     return self._load_status
