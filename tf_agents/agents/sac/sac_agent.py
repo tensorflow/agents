@@ -24,6 +24,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -34,8 +35,6 @@ from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
-
-import gin.tf
 
 
 @gin.configurable
@@ -79,13 +78,13 @@ class SacAgent(tf_agent.TFAgent):
       critic_network: A function critic_network((observations, actions)) that
         returns the q_values for each observation and action.
       actor_network: A function actor_network(observation, action_spec) that
-       returns action distribution.
+        returns action distribution.
       actor_optimizer: The optimizer to use for the actor network.
       critic_optimizer: The default optimizer to use for the critic network.
       alpha_optimizer: The default optimizer to use for the alpha variable.
       actor_policy_ctor: The policy class to use.
-      squash_actions: Whether or not to use tanh to squash actions between
-        -1 and 1.
+      squash_actions: Whether or not to use tanh to squash actions between -1
+        and 1.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn:  A function for computing the elementwise TD errors
@@ -100,14 +99,13 @@ class SacAgent(tf_agent.TFAgent):
         will be written during training.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
-      name: The name of this agent. All variables in this module will fall
-        under that name. Defaults to the class name.
+      name: The name of this agent. All variables in this module will fall under
+        that name. Defaults to the class name.
     """
     tf.Module.__init__(self, name=name)
 
     self._critic_network1 = critic_network
-    self._critic_network2 = critic_network.copy(
-        name='CriticNetwork2')
+    self._critic_network2 = critic_network.copy(name='CriticNetwork2')
     self._target_critic_network1 = critic_network.copy(
         name='TargetCriticNetwork1')
     self._target_critic_network2 = critic_network.copy(
@@ -129,8 +127,10 @@ class SacAgent(tf_agent.TFAgent):
     # of action dimensions.
     if target_entropy is None:
       flat_action_spec = tf.nest.flatten(action_spec)
-      target_entropy = -np.sum([np.product(single_spec.shape.as_list())
-                                for single_spec in flat_action_spec])
+      target_entropy = -np.sum([
+          np.product(single_spec.shape.as_list())
+          for single_spec in flat_action_spec
+      ])
 
     self._squash_actions = squash_actions
     self._target_update_tau = target_update_tau
@@ -165,16 +165,18 @@ class SacAgent(tf_agent.TFAgent):
     """
     common.soft_variables_update(
         self._critic_network1.variables,
-        self._target_critic_network1.variables, tau=1.0)
+        self._target_critic_network1.variables,
+        tau=1.0)
     common.soft_variables_update(
         self._critic_network2.variables,
-        self._target_critic_network2.variables, tau=1.0)
+        self._target_critic_network2.variables,
+        tau=1.0)
 
   def _experience_to_transitions(self, experience):
     transitions = trajectory.to_transition(experience)
     time_steps, policy_steps, next_time_steps = transitions
     actions = policy_steps.action
-    # TODO(eholly): Figure out how to properly deal with time dimension.
+    # TODO(b/127584522): Figure out how to properly deal with time dimension.
     time_steps, actions, next_time_steps = tf.nest.map_structure(
         lambda t: tf.squeeze(t, axis=1), (time_steps, actions, next_time_steps))
     return time_steps, actions, next_time_steps
@@ -199,39 +201,42 @@ class SacAgent(tf_agent.TFAgent):
     time_steps, actions, next_time_steps = self._experience_to_transitions(
         experience)
 
-    critic_loss = self.critic_loss(
-        time_steps,
-        actions,
-        next_time_steps,
-        td_errors_loss_fn=self._td_errors_loss_fn,
-        gamma=self._gamma,
-        reward_scale_factor=self._reward_scale_factor,
-        weights=weights)
+    critic_variables = (
+        self._critic_network1.variables + self._critic_network2.variables)
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      assert critic_variables, 'No critic variables to optimize.'
+      tape.watch(critic_variables)
+      critic_loss = self.critic_loss(
+          time_steps,
+          actions,
+          next_time_steps,
+          td_errors_loss_fn=self._td_errors_loss_fn,
+          gamma=self._gamma,
+          reward_scale_factor=self._reward_scale_factor,
+          weights=weights)
 
-    actor_loss = self.actor_loss(time_steps, weights=weights)
+    tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
+    critic_grads = tape.gradient(critic_loss, critic_variables)
+    self._apply_gradients(critic_grads, critic_variables,
+                          self._critic_optimizer)
 
-    alpha_loss = self.alpha_loss(time_steps, weights=weights)
+    actor_variables = self._actor_network.variables
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      assert actor_variables, 'No actor variables to optimize.'
+      tape.watch(actor_variables)
+      actor_loss = self.actor_loss(time_steps, weights=weights)
+    tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
+    actor_grads = tape.gradient(actor_loss, actor_variables)
+    self._apply_gradients(actor_grads, actor_variables, self._actor_optimizer)
 
-    def clip_and_summarize_gradients(grads_and_vars):
-      """Clips gradients, and summarizes gradients and variables."""
-      if self._gradient_clipping is not None:
-        grads_and_vars = eager_utils.clip_gradient_norms_fn(
-            self._gradient_clipping)(
-                grads_and_vars)
-
-      if self._summarize_grads_and_vars:
-        # TODO(kbanoop): Move gradient summaries to train_op after we switch to
-        # eager train op, and move variable summaries to critic_loss.
-        for grad, var in grads_and_vars:
-          with tf.name_scope('Gradients/'):
-            if grad is not None:
-              tf.compat.v2.summary.histogram(
-                  name=grad.op.name, data=grad, step=self.train_step_counter)
-          with tf.name_scope('Variables/'):
-            if var is not None:
-              tf.compat.v2.summary.histogram(
-                  name=var.op.name, data=var, step=self.train_step_counter)
-      return grads_and_vars
+    alpha_variable = [self._log_alpha]
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      assert actor_variables, 'No actor variables to optimize.'
+      tape.watch(alpha_variable)
+      alpha_loss = self.alpha_loss(time_steps, weights=weights)
+    tf.debugging.check_numerics(alpha_loss, 'Alpha loss is inf or nan.')
+    alpha_grads = tape.gradient(alpha_loss, alpha_variable)
+    self._apply_gradients(alpha_grads, alpha_variable, self._alpha_optimizer)
 
     with tf.name_scope('Losses'):
       tf.compat.v2.summary.scalar(
@@ -241,36 +246,26 @@ class SacAgent(tf_agent.TFAgent):
       tf.compat.v2.summary.scalar(
           name='alpha_loss', data=alpha_loss, step=self.train_step_counter)
 
-    eager_utils.create_train_op(
-        critic_loss,
-        self._critic_optimizer,
-        global_step=self.train_step_counter,
-        transform_grads_fn=clip_and_summarize_gradients,
-        variables_to_train=(self._critic_network1.trainable_weights +
-                            self._critic_network2.trainable_weights),
-    )
-
-    eager_utils.create_train_op(
-        actor_loss,
-        self._actor_optimizer,
-        global_step=None,
-        transform_grads_fn=clip_and_summarize_gradients,
-        variables_to_train=self._actor_network.trainable_weights,
-    )
-
-    eager_utils.create_train_op(
-        alpha_loss,
-        self._alpha_optimizer,
-        global_step=None,
-        transform_grads_fn=clip_and_summarize_gradients,
-        variables_to_train=[self._log_alpha],
-    )
-
+    self.train_step_counter.assign_add(1)
     self._update_target()
 
     total_loss = critic_loss + actor_loss + alpha_loss
 
     return tf_agent.LossInfo(loss=total_loss, extra=())
+
+  def _apply_gradients(self, gradients, variables, optimizer):
+    grads_and_vars = zip(gradients, variables)
+    if self._gradient_clipping is not None:
+      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
+                                                       self._gradient_clipping)
+
+    if self._summarize_grads_and_vars:
+      eager_utils.add_variables_summaries(grads_and_vars,
+                                          self.train_step_counter)
+      eager_utils.add_gradients_summaries(grads_and_vars,
+                                          self.train_step_counter)
+
+    optimizer.apply_gradients(grads_and_vars)
 
   def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
@@ -282,10 +277,12 @@ class SacAgent(tf_agent.TFAgent):
     Args:
       tau: A float scalar in [0, 1]. Default `tau=1.0` means hard update.
       period: Step interval at which the target network is updated.
+
     Returns:
       A callable that performs a soft update of the target network parameters.
     """
     with tf.name_scope('update_target'):
+
       def update():
         """Update target network."""
         critic_update_1 = common.soft_variables_update(
@@ -319,8 +316,9 @@ class SacAgent(tf_agent.TFAgent):
 
       # Bijector to rescale actions to ranges in action spec.
       action_means, action_magnitudes = self._action_spec_means_magnitudes()
-      bijectors.append(tfp.bijectors.AffineScalar(
-          shift=action_means, scale=action_magnitudes))
+      bijectors.append(
+          tfp.bijectors.AffineScalar(
+              shift=action_means, scale=action_magnitudes))
 
       # Bijector to squash actions to range (-1.0, +1.0).
       bijectors.append(tanh_bijector_stable.Tanh())
@@ -374,8 +372,9 @@ class SacAgent(tf_agent.TFAgent):
       target_input_2 = (next_time_steps.observation, next_actions)
       target_q_values2, unused_network_state2 = self._target_critic_network2(
           target_input_2, next_time_steps.step_type)
-      target_q_values = (tf.minimum(target_q_values1, target_q_values2) -
-                         tf.exp(self._log_alpha) * next_log_pis)
+      target_q_values = (
+          tf.minimum(target_q_values1, target_q_values2) -
+          tf.exp(self._log_alpha) * next_log_pis)
 
       td_targets = tf.stop_gradient(
           reward_scale_factor * next_time_steps.reward +
@@ -474,8 +473,7 @@ class SacAgent(tf_agent.TFAgent):
 
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
       alpha_loss = (
-          self._log_alpha *
-          tf.stop_gradient(-log_pi - self._target_entropy))
+          self._log_alpha * tf.stop_gradient(-log_pi - self._target_entropy))
 
       if weights is not None:
         alpha_loss *= weights

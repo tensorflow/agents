@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.google.agents.sac.sac_agent."""
+"""Tests for tf_agents.agents.sac.sac_agent."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -87,6 +87,7 @@ class SacAgentTest(tf.test.TestCase):
 
   def setUp(self):
     super(SacAgentTest, self).setUp()
+    tf.compat.v1.enable_resource_variables()
     self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
