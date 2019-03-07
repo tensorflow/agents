@@ -529,8 +529,8 @@ class PPOAgent(tf_agent.TFAgent):
             self._actor_net.trainable_weights +
             self._value_net.trainable_weights)
         grads = tape.gradient(loss_info.loss, variables_to_train)
-        grads_and_vars = zip(grads, variables_to_train)
-
+        # Tuple is used for py3, where zip is a generator producing values once.
+        grads_and_vars = tuple(zip(grads, variables_to_train))
         if self._gradient_clipping > 0:
           grads_and_vars = eager_utils.clip_gradient_norms(
               grads_and_vars, self._gradient_clipping)

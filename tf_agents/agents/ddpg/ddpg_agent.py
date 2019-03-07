@@ -228,7 +228,8 @@ class DdpgAgent(tf_agent.TFAgent):
                              DdpgInfo(actor_loss, critic_loss))
 
   def _apply_gradients(self, gradients, variables, optimizer):
-    grads_and_vars = zip(gradients, variables)
+    # Tuple is used for py3, where zip is a generator producing values once.
+    grads_and_vars = tuple(zip(gradients, variables))
     if self._gradient_clipping is not None:
       grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
                                                        self._gradient_clipping)
