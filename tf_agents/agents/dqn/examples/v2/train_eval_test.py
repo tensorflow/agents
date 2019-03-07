@@ -30,6 +30,9 @@ FLAGS = flags.FLAGS
 class TrainEval(tf.test.TestCase):
 
   def testDQNCartPole(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Binary is eager-only.')
+
     root_dir = self.get_temp_dir()
     train_loss = train_eval.train_eval(root_dir,
                                        num_iterations=1,
@@ -38,6 +41,9 @@ class TrainEval(tf.test.TestCase):
     self.assertGreater(train_loss.loss, 0.0)
 
   def testRNNDQNMaskedCartPole(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Binary is eager-only.')
+
     root_dir = self.get_temp_dir()
     train_loss = train_eval.train_eval(
         root_dir,
