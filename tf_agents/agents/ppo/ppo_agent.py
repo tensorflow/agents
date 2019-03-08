@@ -272,11 +272,6 @@ class PPOAgent(tf_agent.TFAgent):
     return self._actor_net
 
   def _initialize(self):
-    """Returns an op to initialize the agent.
-
-    Returns:
-      tf.no_op(). No initialization required for this agent.
-    """
     pass
 
   def compute_advantages(self, rewards, returns, discounts, value_preds):
