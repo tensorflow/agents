@@ -54,7 +54,7 @@ e.g.:
 
 To install the latest version, use nightly builds of TF-Agents under the pip package
 `tf-agents-nightly`, which requires you install on one of `tf-nightly` and
-`tf-nightly-gpu` and also `tensorflow-probability-nightly`.
+`tf-nightly-gpu` and also `tfp-nightly`.
 Nightly builds include newer features, but may be less stable than the versioned releases.
 
 To install the nightly build version, run the following:
