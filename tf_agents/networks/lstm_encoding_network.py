@@ -43,6 +43,9 @@ from tf_agents.utils import nest_utils
 import gin.tf
 
 
+KERAS_LSTM_FUSED_IMPLEMENTATION = 2
+
+
 @gin.configurable
 class LSTMEncodingNetwork(network.Network):
   """Recurrent network."""
@@ -138,10 +141,18 @@ class LSTMEncodingNetwork(network.Network):
 
     # Create RNN cell
     if len(lstm_size) == 1:
-      cell = tf.keras.layers.LSTMCell(lstm_size[0], dtype=dtype)
+      cell = tf.keras.layers.LSTMCell(
+          lstm_size[0],
+          dtype=dtype,
+          implementation=KERAS_LSTM_FUSED_IMPLEMENTATION)
     else:
-      cell = tf.keras.layers.StackedRNNCells(
-          [tf.keras.layers.LSTMCell(size, dtype=dtype) for size in lstm_size])
+      cell = tf.keras.layers.StackedRNNCells([
+          tf.keras.layers.LSTMCell(  # pylint: disable=g-complex-comprehension
+              size,
+              dtype=dtype,
+              implementation=KERAS_LSTM_FUSED_IMPLEMENTATION)
+          for size in lstm_size
+      ])
 
     output_encoder = ([
         tf.keras.layers.Dense(

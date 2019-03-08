@@ -34,7 +34,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
 # Number of times to train in test loops.
-TRAIN_ITERATIONS = 30
+TRAIN_ITERATIONS = 150
 
 
 class DummyNet(network.Network):
