@@ -119,13 +119,13 @@ class ReinforceAgent(tf_agent.TFAgent):
     pass
 
   def _train(self, experience, weights=None):
-    # TODO(sfishman): Support batch dimensions >1.
+    # TODO(b/126593927): Support batch dimensions >1.
     if experience.step_type.shape[0] != 1:
       raise NotImplementedError('ReinforceAgent does not yet support batch '
                                 'dimensions greater than 1.')
+
     experience = tf.nest.map_structure(lambda t: tf.squeeze(t, 0), experience)
-    returns = common.compute_returns(experience.reward,
-                                     experience.discount)
+    returns = common.compute_returns(experience.reward, experience.discount)
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
           name='rewards', data=experience.reward, step=self.train_step_counter)
@@ -136,7 +136,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       tf.compat.v2.summary.histogram(
           name='returns', data=returns, step=self.train_step_counter)
 
-    # TODO(kbnaoop): replace with tensor normalizer.
+    # TODO(b/126592060): replace with tensor normalizer.
     if self._normalize_returns:
       ret_mean, ret_var = tf.nn.moments(x=returns, axes=[0])
       returns = (returns - ret_mean) / (tf.sqrt(ret_var) + 1e-6)
@@ -146,44 +146,36 @@ class ReinforceAgent(tf_agent.TFAgent):
             data=returns,
             step=self.train_step_counter)
 
-    # TODO(kbanoop): remove after changing network interface to accept
-    # observations and step_types, instead of time_steps.
     time_step = ts.TimeStep(experience.step_type,
                             tf.zeros_like(experience.reward),
                             tf.zeros_like(experience.discount),
                             experience.observation)
 
-    loss_info = self._loss(time_step,
-                           experience.action,
-                           tf.stop_gradient(returns),
-                           weights=weights)
+    variables_to_train = self._actor_network.variables
+    with tf.GradientTape() as tape:
+      loss_info = self._loss(time_step,
+                             experience.action,
+                             tf.stop_gradient(returns),
+                             weights=weights)
+      tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
+    grads = tape.gradient(loss_info.loss, variables_to_train)
 
-    clip_gradients = None
+    grads_and_vars = zip(grads, variables_to_train)
     if self._gradient_clipping:
-      clip_gradients = eager_utils.clip_gradient_norms_fn(
-          self._gradient_clipping)
-
-    loss_info = eager_utils.create_train_step(
-        loss_info,
-        self._optimizer,
-        total_loss_fn=lambda loss_info: loss_info.loss,
-        global_step=self.train_step_counter,
-        transform_grads_fn=clip_gradients,
-        summarize_gradients=self._summarize_grads_and_vars,
-        variables_to_train=lambda: self._actor_network.trainable_weights,
-    )
+      grads_and_vars = eager_utils.clip_gradient_norms(
+          grads_and_vars, self._gradient_clipping)
 
     if self._summarize_grads_and_vars:
-      with tf.name_scope('Variables/'):
-        for var in self._actor_network.trainable_weights:
-          tf.compat.v2.summary.histogram(
-              name=var.name.replace(':', '_'),
-              data=var,
-              step=self.train_step_counter)
+      eager_utils.add_variables_summaries(
+          grads_and_vars, self.train_step_counter)
+      eager_utils.add_gradients_summaries(
+          grads_and_vars, self.train_step_counter)
 
-    return loss_info
+    self._optimizer.apply_gradients(
+        grads_and_vars, global_step=self.train_step_counter)
 
-  @eager_utils.future_in_eager_mode
+    return tf.nest.map_structure(tf.identity, loss_info)
+
   def _loss(self, time_steps, actions, returns, weights):
     tf.nest.assert_same_structure(time_steps, self.time_step_spec)
     actions_distribution = self.collect_policy.distribution(time_steps).action
@@ -227,7 +219,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       policy_gradient_loss: A tensor that will contain policy gradient loss for
         the on-policy experience.
     """
-    # TODO(kbanoop): Add class IndependentNested(tfd.Distribution) to handle
+    # TODO(b/126594799): Add class IndependentNested(tfd.Distribution) to handle
     # nests of independent distributions like this.
     action_log_prob = common.log_probability(actions_distribution, actions,
                                              self.action_spec)

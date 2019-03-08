@@ -18,9 +18,10 @@ r"""Train and Eval REINFORCE.
 To run:
 
 ```bash
-tf_agents/agents/reinforce/examples/train_eval_eager \
+python tf_agents/agents/reinforce/examples/train_eval.py \
  --root_dir=$HOME/tmp/reinforce/gym/ \
  --alsologtostderr
+```
 """
 
 from __future__ import absolute_import
@@ -44,6 +45,7 @@ from tf_agents.metrics import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
+from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
@@ -56,8 +58,8 @@ def train_eval(
     root_dir,
     env_name='CartPole-v0',
     num_iterations=1000,
-    # TODO(kbanoop): rename to policy_fc_layers.
-    actor_fc_layers=(100,),
+    fc_layers=(100,),
+    use_tf_functions=True,
     # Params for collect
     collect_episodes_per_iteration=2,
     replay_buffer_capacity=2000,
@@ -91,18 +93,17 @@ def train_eval(
       tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
 
-  global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
     tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
     eval_tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
-    # TODO(kbanoop): Handle distributions without gin.
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         tf_env.time_step_spec().observation,
         tf_env.action_spec(),
-        fc_layer_params=actor_fc_layers)
+        fc_layer_params=fc_layers)
 
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = reinforce_agent.ReinforceAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
@@ -137,16 +138,23 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=collect_episodes_per_iteration)
 
+    if use_tf_functions:
+      # To speed up collect use TF function.
+      collect_driver.run = common.function(collect_driver.run)
+      # To speed up train use TF function.
+      tf_agent.train = common.function(tf_agent.train)
+
     # Compute evaluation metrics.
     metrics = metric_utils.eager_compute(
         eval_metrics,
         eval_tf_env,
         eval_policy,
         num_episodes=num_eval_episodes,
+        train_step=global_step,
         summary_writer=eval_summary_writer,
         summary_prefix='Metrics',
     )
-    # TODO(sfishman): Move this functionality into eager_compute_summaries
+    # TODO(b/126590894): Move this functionality into eager_compute_summaries
     if eval_metrics_callback is not None:
       eval_metrics_callback(metrics, global_step.numpy())
 
@@ -183,19 +191,21 @@ def train_eval(
             eval_tf_env,
             eval_policy,
             num_episodes=num_eval_episodes,
+            train_step=global_step,
             summary_writer=eval_summary_writer,
             summary_prefix='Metrics',
         )
-        # TODO(sfishman): Move this functionality into eager_compute_summaries
+        # TODO(b/126590894): Move this functionality into
+        # eager_compute_summaries.
         if eval_metrics_callback is not None:
           eval_metrics_callback(metrics, global_step_val)
 
 
 def main(_):
-  tf.compat.v1.enable_resource_variables()
-  logging.set_verbosity(logging.INFO)
   tf.compat.v1.enable_eager_execution(
       config=tf.compat.v1.ConfigProto(allow_soft_placement=True))
+  tf.compat.v1.enable_v2_behavior()
+  logging.set_verbosity(logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 
 

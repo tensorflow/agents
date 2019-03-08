@@ -18,9 +18,10 @@ r"""Train and Eval REINFORCE.
 To run:
 
 ```bash
-tf_agents/agents/reinforce/examples/train_eval_gym \
+python tf_agents/agents/reinforce/examples/train_eval.py \
  --root_dir=$HOME/tmp/reinforce/gym/ \
  --alsologtostderr
+```
 """
 
 from __future__ import absolute_import
@@ -60,7 +61,7 @@ def train_eval(
     root_dir,
     env_name='CartPole-v0',
     num_iterations=1000,
-    # TODO(kbanoop): rename to policy_fc_layers.
+    # TODO(b/127576522): rename to policy_fc_layers.
     actor_fc_layers=(100,),
     # Params for collect
     collect_episodes_per_iteration=2,
@@ -104,7 +105,7 @@ def train_eval(
     eval_py_env = suite_gym.load(env_name)
     tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
-    # TODO(kbanoop): Handle distributions without gin.
+    # TODO(b/127870767): Handle distributions without gin.
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         tf_env.time_step_spec().observation,
         tf_env.action_spec(),
@@ -177,7 +178,7 @@ def train_eval(
       # Initialize the graph.
       train_checkpointer.initialize_or_restore(sess)
       rb_checkpointer.initialize_or_restore(sess)
-      # TODO(sguada) Remove once Periodically can be saved.
+      # TODO(b/126239733): Remove once Periodically can be saved.
       common.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
@@ -248,9 +249,6 @@ def train_eval(
 
 def main(_):
   tf.compat.v1.enable_resource_variables()
-  if tf.executing_eagerly():
-    # train_eval_eager is already the tf2 version of this file: b/123777589
-    return
   logging.set_verbosity(logging.INFO)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
 

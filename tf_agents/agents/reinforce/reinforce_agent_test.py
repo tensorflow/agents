@@ -51,8 +51,9 @@ class DummyActorNet(network.Network):
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements() * 2,
             activation=activation_fn,
-            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5]),
+            kernel_initializer=tf.compat.v1.initializers.constant(
+                [[2, 1], [1, 1]]),
+            bias_initializer=tf.compat.v1.initializers.constant(5),
         ),
     ]
 
@@ -93,9 +94,6 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     )
 
   def testPolicyGradientLoss(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123777433')
-
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,
@@ -130,14 +128,12 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = tensor_spec.TensorSpec(shape[2:-1], dtype=tf.int32)
     expected = tf.reduce_mean(
         -tf.reduce_mean(distribution.entropy()) * weights)
-    actual = reinforce_agent._entropy_loss(distribution, action_spec, weights)
+    actual = reinforce_agent._entropy_loss(
+        distribution, action_spec, weights)
     self.assertAlmostEqual(self.evaluate(actual), self.evaluate(expected),
                            places=4)
 
   def testPolicy(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123777433')
-
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,
@@ -149,9 +145,11 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_steps = ts.restart(observations, batch_size=2)
     actions = agent.policy.action(time_steps).action
     self.assertEqual(actions.shape.as_list(), [1, 1])
-
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    _ = self.evaluate(actions)
+    action_values = self.evaluate(actions)
+    tf.nest.map_structure(
+        lambda v, s: self.assertAllInRange(v, s.minimum, s.maximum),
+        action_values, self._action_spec)
 
 
 if __name__ == '__main__':
