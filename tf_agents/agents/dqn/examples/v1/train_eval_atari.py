@@ -219,9 +219,8 @@ class TrainEval(object):
 
     self._eval_summary_writer = None
     if self._do_eval:
-      eval_summary_writer = tf.compat.v2.summary.create_file_writer(
+      self._eval_summary_writer = tf.compat.v2.summary.create_file_writer(
           eval_dir, flush_millis=summaries_flush_secs * 1000)
-      self._eval_summary_writer = eval_summary_writer
       self._eval_metrics = [
           py_metrics.AverageReturnMetric(
               name='PhaseAverageReturn', buffer_size=np.inf),
@@ -305,7 +304,7 @@ class TrainEval(object):
         experience = self._ds_itr.get_next()
 
       with tf.device('/gpu:0'):
-        self._train_op = common.function(tf_agent.train)(experience)
+        self._train_op = tf_agent.train(experience)
 
         self._env_steps_metric = py_metrics.EnvironmentSteps()
         self._step_metrics = [
@@ -331,20 +330,26 @@ class TrainEval(object):
         with tf.compat.v2.summary.record_if(True):
           self._steps_per_second_ph = tf.compat.v1.placeholder(
               tf.float32, shape=(), name='steps_per_sec_ph')
-          self._steps_per_second_summary = tf.contrib.summary.scalar(
-              name='global_steps/sec', tensor=self._steps_per_second_ph)
+          self._steps_per_second_summary = tf.compat.v2.summary.scalar(
+              name='global_steps_per_sec', data=self._steps_per_second_ph,
+              step=self._global_step)
 
           for metric in self._train_metrics:
-            metric.tf_summaries(step_metrics=self._step_metrics)
+            metric.tf_summaries(
+                train_step=self._global_step, step_metrics=self._step_metrics)
 
           for metric in self._train_phase_metrics:
-            metric.tf_summaries(step_metrics=(self._iteration_metric,))
-          self._iteration_metric.tf_summaries()
+            metric.tf_summaries(
+                train_step=self._global_step,
+                step_metrics=(self._iteration_metric,))
+          self._iteration_metric.tf_summaries(train_step=self._global_step)
 
           if self._do_eval:
-            with eval_summary_writer.as_default():
+            with self._eval_summary_writer.as_default():
               for metric in self._eval_metrics:
-                metric.tf_summaries(step_metrics=(self._iteration_metric,))
+                metric.tf_summaries(
+                    train_step=self._global_step,
+                    step_metrics=(self._iteration_metric,))
 
         self._train_checkpointer = common.Checkpointer(
             ckpt_dir=train_dir,

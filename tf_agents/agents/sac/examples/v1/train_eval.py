@@ -221,15 +221,15 @@ def train_eval(
     trajectories, unused_info = dataset_iterator.get_next()
     train_op = tf_agent.train(trajectories)
 
+    summary_ops = []
     for train_metric in train_metrics:
-      train_metric.tf_summaries(
-          train_step=global_step, step_metrics=train_metrics[:2])
-    summary_op = tf.contrib.summary.all_summary_ops()
+      summary_ops.append(train_metric.tf_summaries(
+          train_step=global_step, step_metrics=train_metrics[:2]))
 
     with eval_summary_writer.as_default(), \
          tf.compat.v2.summary.record_if(True):
       for eval_metric in eval_metrics:
-        eval_metric.tf_summaries()
+        eval_metric.tf_summaries(train_step=global_step)
 
     train_checkpointer = common.Checkpointer(
         ckpt_dir=train_dir,
@@ -285,15 +285,16 @@ def train_eval(
                      global_step_val)
 
       collect_call = sess.make_callable(collect_op)
-      train_step_call = sess.make_callable([train_op, summary_op])
+      train_step_call = sess.make_callable([train_op, summary_ops])
       global_step_call = sess.make_callable(global_step)
 
       timed_at_step = global_step_call()
       time_acc = 0
       steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
-      steps_per_second_summary = tf.contrib.summary.scalar(
-          name='global_steps/sec', tensor=steps_per_second_ph)
+      steps_per_second_summary = tf.compat.v2.summary.scalar(
+          name='global_steps_per_sec', data=steps_per_second_ph,
+          step=global_step)
 
       for _ in range(num_iterations):
         start_time = time.time()

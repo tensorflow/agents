@@ -95,12 +95,17 @@ class TFStepMetric(tf.Module):
         metric is generated against the global step.
       step_metrics: (Optional) Iterable of step metrics to generate summaries
         against.
+
+    Returns:
+      A list of summaries.
     """
+    summaries = []
     prefix = self._prefix
     tag = common.join_scope(prefix, self.name)
     result = self.result()
     if train_step is not None:
-      tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step)
+      summaries.append(
+          tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step))
     if prefix:
       prefix += '_'
     for step_metric in step_metrics:
@@ -109,7 +114,8 @@ class TFStepMetric(tf.Module):
         continue
       step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
       step = step_metric.result()
-      tf.compat.v2.summary.scalar(
+      summaries.append(tf.compat.v2.summary.scalar(
           name=step_tag,
           data=result,
-          step=step)
+          step=step))
+    return summaries

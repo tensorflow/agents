@@ -114,11 +114,11 @@ def train_eval(
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
 
-  train_summary_writer = tf.contrib.summary.create_file_writer(
+  train_summary_writer = tf.compat.v2.summary.create_file_writer(
       train_dir, flush_millis=summaries_flush_secs * 1000)
   train_summary_writer.set_as_default()
 
-  eval_summary_writer = tf.contrib.summary.create_file_writer(
+  eval_summary_writer = tf.compat.v2.summary.create_file_writer(
       eval_dir, flush_millis=summaries_flush_secs * 1000)
   eval_metrics = [
       py_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
@@ -238,15 +238,15 @@ def train_eval(
         max_to_keep=1,
         replay_buffer=replay_buffer)
 
+    summary_ops = []
     for train_metric in train_metrics:
-      train_metric.tf_summaries(
-          train_step=global_step, step_metrics=train_metrics[:2])
-    summary_op = tf.contrib.summary.all_summary_ops()
+      summary_ops.append(train_metric.tf_summaries(
+          train_step=global_step, step_metrics=train_metrics[:2]))
 
     with eval_summary_writer.as_default(), \
          tf.compat.v2.summary.record_if(True):
       for eval_metric in eval_metrics:
-        eval_metric.tf_summaries()
+        eval_metric.tf_summaries(train_step=global_step)
 
     init_agent_op = tf_agent.initialize()
 
@@ -259,7 +259,8 @@ def train_eval(
       common.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(train_summary_writer.init())
+      sess.run(eval_summary_writer.init())
       sess.run(initial_collect_op)
 
       global_step_val = sess.run(global_step)
@@ -274,15 +275,16 @@ def train_eval(
       )
 
       collect_call = sess.make_callable(collect_op)
-      train_step_call = sess.make_callable([train_op, summary_op])
+      train_step_call = sess.make_callable([train_op, summary_ops])
       global_step_call = sess.make_callable(global_step)
 
       timed_at_step = global_step_call()
       time_acc = 0
       steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
-      steps_per_second_summary = tf.contrib.summary.scalar(
-          name='global_steps/sec', tensor=steps_per_second_ph)
+      steps_per_second_summary = tf.compat.v2.summary.scalar(
+          name='global_steps_per_sec', data=steps_per_second_ph,
+          step=global_step)
 
       for _ in range(num_iterations):
         start_time = time.time()

@@ -91,12 +91,14 @@ class PyMetric(tf.Module):
     tag = common.join_scope(self.prefix, self.name)
     logging.info('%s', '{0} = {1}'.format(tag, self.result()))
 
-  def tf_summaries(self, step_metrics=()):
+  def tf_summaries(self, train_step=None, step_metrics=()):
     """Build TF summary op and placeholder for this metric.
 
     To execute the op, call py_metric.run_summaries.
 
     Args:
+      train_step: Step counter for training iterations. If None, no metric is
+        generated against the global step.
       step_metrics: Step values to plot as X axis in addition to global_step.
 
     Returns:
@@ -113,8 +115,8 @@ class PyMetric(tf.Module):
 
     tag = common.join_scope(self.prefix, self.name)
     summaries = []
-    summaries.append(tf.contrib.summary.scalar(
-        name=tag, tensor=self.summary_placeholder))
+    summaries.append(tf.compat.v2.summary.scalar(
+        name=tag, data=self.summary_placeholder, step=train_step))
     prefix = self.prefix
     if prefix:
       prefix += '_'
@@ -130,9 +132,9 @@ class PyMetric(tf.Module):
       else:
         raise ValueError('step_metric is not PyMetric or TFStepMetric: '
                          '{}'.format(step_metric))
-      summaries.append(tf.contrib.summary.scalar(
+      summaries.append(tf.compat.v2.summary.scalar(
           name=step_tag,
-          tensor=self.summary_placeholder,
+          data=self.summary_placeholder,
           step=step_tensor))
 
     self._summary_op = tf.group(*summaries)

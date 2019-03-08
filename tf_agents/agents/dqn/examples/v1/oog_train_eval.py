@@ -190,7 +190,7 @@ def train_eval(
   with eval_summary_writer.as_default(), \
        tf.compat.v2.summary.record_if(True):
     for eval_metric in eval_metrics:
-      eval_metric.tf_summaries()
+      eval_metric.tf_summaries(train_step=global_step)
 
   with tf.compat.v1.Session() as session:
     train_checkpointer.initialize_or_restore(session)
@@ -220,8 +220,10 @@ def train_eval(
     train_time = 0
     steps_per_second_ph = tf.compat.v1.placeholder(
         tf.float32, shape=(), name='steps_per_sec_ph')
-    steps_per_second_summary = tf.contrib.summary.scalar(
-        name='global_steps/sec', tensor=steps_per_second_ph)
+    steps_per_second_summary = tf.compat.v2.summary.scalar(
+        name='global_steps_per_sec', data=steps_per_second_ph,
+        step=global_step)
+
     for _ in range(num_iterations):
       start_time = time.time()
       for _ in range(collect_steps_per_iteration):

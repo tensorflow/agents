@@ -44,29 +44,26 @@ class DummyMetric(py_metric.PyStepMetric):
     pass
 
 
-class PyMetricTest(tf.test.TestCase):
+class PyMetricSummariesTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(PyMetricSummariesTest, self).setUp()
+    self.summary_dir = tempfile.mkdtemp(dir=os.getenv('TEST_TMPDIR'))
+    self.writer = tf.compat.v2.summary.create_file_writer(self.summary_dir)
+    self.writer.set_as_default()
+    self.metric1 = DummyMetric('Metric1')
+    self.metric2 = DummyMetric('Metric2')
+    self.metric3 = DummyMetric('Metric3')
+    self.global_step = tf.compat.v1.train.get_or_create_global_step()
+    self.incr_global_step = tf.compat.v1.assign_add(self.global_step, 1)
 
   def testBuildsSummary(self):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
     metric = DummyMetric()
     self.assertIsNone(metric.summary_op)
-    metric.tf_summaries()
+    metric.tf_summaries(train_step=self.global_step)
     self.assertIsNotNone(metric.summary_op)
-
-
-class PyMetricSummariesTest(tf.test.TestCase):
-
-  def setUp(self):
-    super(PyMetricSummariesTest, self).setUp()
-    self.summary_dir = tempfile.mkdtemp(dir=os.getenv('TEST_TMPDIR'))
-    writer = tf.compat.v2.summary.create_file_writer(self.summary_dir)
-    writer.set_as_default()
-    self.metric1 = DummyMetric('Metric1')
-    self.metric2 = DummyMetric('Metric2')
-    self.metric3 = DummyMetric('Metric3')
-    self.global_step = tf.compat.v1.train.get_or_create_global_step()
-    self.incr_global_step = tf.compat.v1.assign_add(self.global_step, 1)
 
   def assert_summary_equals(self, records, tag, step, value):
     for record in records[1:]:
@@ -74,7 +71,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
         continue
       if record.step != step:
         continue
-      self.assertEqual(value, record.summary.value[0].simple_value)
+      self.assertEqual(value, tf.make_ndarray(record.summary.value[0].tensor))
       return
     self.fail(
         'Could not find record for tag {} and step {}'.format(tag, step))
@@ -89,15 +86,15 @@ class PyMetricSummariesTest(tf.test.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
-      self.metric1.tf_summaries()
-      self.metric2.tf_summaries()
+      self.metric1.tf_summaries(train_step=self.global_step)
+      self.metric2.tf_summaries(train_step=self.global_step)
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(self.writer.init())
       self.metric1.value = 3
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(tf.contrib.summary.flush())
+      sess.run(self.writer.flush())
 
     records = self.get_records()
 
@@ -111,12 +108,12 @@ class PyMetricSummariesTest(tf.test.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
-      self.metric1.tf_summaries()
-      self.metric2.tf_summaries()
+      self.metric1.tf_summaries(train_step=self.global_step)
+      self.metric2.tf_summaries(train_step=self.global_step)
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(self.writer.init())
       self.metric1.value = 3
       self.metric2.value = 0
       py_metric.run_summaries([self.metric1, self.metric2])
@@ -124,7 +121,7 @@ class PyMetricSummariesTest(tf.test.TestCase):
       self.metric1.value = 5
       self.metric2.value = 2
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(tf.contrib.summary.flush())
+      sess.run(self.writer.flush())
 
     records = self.get_records()
 
@@ -140,16 +137,18 @@ class PyMetricSummariesTest(tf.test.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
-      self.metric1.tf_summaries(step_metrics=(self.metric2,))
-      self.metric2.tf_summaries(step_metrics=(self.metric2,))
+      self.metric1.tf_summaries(
+          train_step=self.global_step, step_metrics=(self.metric2,))
+      self.metric2.tf_summaries(
+          train_step=self.global_step, step_metrics=(self.metric2,))
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(self.writer.init())
       self.metric1.value = 3
       self.metric2.value = 2
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(tf.contrib.summary.flush())
+      sess.run(self.writer.flush())
 
     records = self.get_records()
 
@@ -165,19 +164,21 @@ class PyMetricSummariesTest(tf.test.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
-      self.metric1.tf_summaries(step_metrics=(self.metric2,))
-      self.metric2.tf_summaries(step_metrics=(self.metric2,))
+      self.metric1.tf_summaries(
+          train_step=self.global_step, step_metrics=(self.metric2,))
+      self.metric2.tf_summaries(
+          train_step=self.global_step, step_metrics=(self.metric2,))
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(self.writer.init())
       self.metric1.value = 3
       self.metric2.value = 2
       py_metric.run_summaries([self.metric1, self.metric2])
       self.metric1.value = 4
       self.metric2.value = 3
       py_metric.run_summaries([self.metric1, self.metric2])
-      sess.run(tf.contrib.summary.flush())
+      sess.run(self.writer.flush())
 
     records = self.get_records()
 
@@ -191,18 +192,24 @@ class PyMetricSummariesTest(tf.test.TestCase):
     if tf.executing_eagerly():
       self.skipTest('b/123881100')
     with tf.compat.v2.summary.record_if(True):
-      self.metric1.tf_summaries(step_metrics=(self.metric2, self.metric3))
-      self.metric2.tf_summaries(step_metrics=(self.metric2, self.metric3))
-      self.metric3.tf_summaries(step_metrics=(self.metric2, self.metric3))
+      self.metric1.tf_summaries(
+          train_step=self.global_step,
+          step_metrics=(self.metric2, self.metric3))
+      self.metric2.tf_summaries(
+          train_step=self.global_step,
+          step_metrics=(self.metric2, self.metric3))
+      self.metric3.tf_summaries(
+          train_step=self.global_step,
+          step_metrics=(self.metric2, self.metric3))
 
     with self.cached_session() as sess:
       sess.run(tf.compat.v1.global_variables_initializer())
-      tf.contrib.summary.initialize(session=sess)
+      sess.run(self.writer.init())
       self.metric1.value = 1
       self.metric2.value = 2
       self.metric3.value = 3
       py_metric.run_summaries([self.metric1, self.metric2, self.metric3])
-      sess.run(tf.contrib.summary.flush())
+      sess.run(self.writer.flush())
 
     records = self.get_records()
 

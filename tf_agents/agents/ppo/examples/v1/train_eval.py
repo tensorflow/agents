@@ -234,14 +234,16 @@ def train_eval(
         max_to_keep=1,
         replay_buffer=replay_buffer)
 
+    summary_ops = []
     for train_metric in train_metrics:
-      train_metric.tf_summaries(
-          train_step=global_step, step_metrics=step_metrics)
+      summary_ops.append(train_metric.tf_summaries(
+          train_step=global_step, step_metrics=step_metrics))
 
     with eval_summary_writer.as_default(), \
          tf.compat.v2.summary.record_if(True):
       for eval_metric in eval_metrics:
-        eval_metric.tf_summaries(step_metrics=step_metrics)
+        eval_metric.tf_summaries(
+            train_step=global_step, step_metrics=step_metrics)
 
     init_agent_op = tf_agent.initialize()
 
@@ -260,8 +262,9 @@ def train_eval(
       timed_at_step = sess.run(global_step)
       steps_per_second_ph = tf.compat.v1.placeholder(
           tf.float32, shape=(), name='steps_per_sec_ph')
-      steps_per_second_summary = tf.contrib.summary.scalar(
-          name='global_steps/sec', tensor=steps_per_second_ph)
+      steps_per_second_summary = tf.compat.v2.summary.scalar(
+          name='global_steps_per_sec', data=steps_per_second_ph,
+          step=global_step)
 
       while sess.run(environment_steps_count) < num_environment_steps:
         global_step_val = sess.run(global_step)
@@ -281,7 +284,7 @@ def train_eval(
         sess.run(collect_op)
         collect_time += time.time() - start_time
         start_time = time.time()
-        total_loss = sess.run(train_op)
+        total_loss, _ = sess.run([train_op, summary_ops])
         train_time += time.time() - start_time
 
         global_step_val = sess.run(global_step)

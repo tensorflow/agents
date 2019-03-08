@@ -100,7 +100,7 @@ def compute_summaries(metrics,
     global_step: An optional global step for summaries.
     tf_summaries: If True, write TF summaries for each computed metric.
     log: If True, log computed metrics.
-    callback: If provided, call this function with (computed_metrics,
+    callback: If provided, this function is called with (computed_metrics,
       global_step).
 
   Returns:
@@ -110,8 +110,7 @@ def compute_summaries(metrics,
   if tf_summaries:
     py_metric.run_summaries(metrics)
   if log:
-    log_metrics(
-        metrics, prefix='Step = {}'.format(global_step))
+    log_metrics(metrics, prefix='Step = {}'.format(global_step))
   if callback is not None:
     callback(results, global_step)
   return results
