@@ -313,17 +313,24 @@ def from_episode(observation, action, policy_info, reward, discount=None):
 
   In this case, a `discount` of all ones having dtype `float32` is generated.
 
+  Notice: all tensors/numpy arrays passed to this function has the same time
+  dimension T. When the generated trajectory passes through `to_transition`, it
+  will only return (time_steps, next_time_steps) pair with T-1 in time
+  dimension, which means the reward at step T is dropped. So if the reward at
+  step T is important, please make sure the episode passed to this function
+  contains an additional step.
+
   Args:
-    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
-    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[T]` (optional).
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[T,
+      ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[T,
+      ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[T]`
+      (optional).
 
   Returns:
     An instance of `Trajectory`.
@@ -397,6 +404,21 @@ def from_episode(observation, action, policy_info, reward, discount=None):
 
 
 def from_transition(time_step, action_step, next_time_step):
+  """Returns a `Trajectory` given transitions.
+
+  `from_transition` is used by a driver to convert sequence of transitions into
+  a `Trajectory` for efficient storage. Then an agent (e.g.
+  `ppo_agent.PPOAgent`) converts it back to transitions by invoking
+  `to_transition`.
+
+  Args:
+    time_step: A `time_step.TimeStep` representing the first step in a
+      transition.
+    action_step: A `policy_step.PolicyStep` representing actions corresponding
+      to observations from time_step.
+    next_time_step: A `time_step.TimeStep` representing the second step in a
+      transition.
+  """
   return Trajectory(
       step_type=time_step.step_type,
       observation=time_step.observation,
@@ -414,32 +436,64 @@ def to_transition(trajectory, next_trajectory=None):
   sliced along their *second* (`time`) dimension; for example:
 
   ```
-  time_steps.observation = trajectory.observation[:, :-1]
-  next_time_steps.observation = trajectory.observation[:, 1:]
+  time_steps.step_type = trajectory.step_type[:,:-1]
+  time_steps.observation = trajectory.observation[:,:-1]
+  next_time_steps.observation = trajectory.observation[:,1:]
+  next_time_steps. step_type = trajectory. next_step_type[:,:-1]
+  next_time_steps.reward = trajectory.reward[:,:-1]
+  next_time_steps. discount = trajectory. discount[:,:-1]
+
   ```
+  Notice that reward and discount for time_steps are undefined, therefore filled
+  with zero.
 
   Args:
-    trajectory: An instance of `Trajectory`.
+    trajectory: An instance of `Trajectory`. The tensors in Trajectory must have
+      shape `[ B, T, ...]` when next_trajectory is None.
     next_trajectory: (optional) An instance of `Trajectory`.
 
   Returns:
     A tuple `(time_steps, policy_steps, next_time_steps)`.  The `reward` and
     `discount` fields of `time_steps` are filled with zeros because these
-    cannot be deduced.
+    cannot be deduced (please do not use them).
   """
+  _validate_rank(trajectory.discount, min_rank=1, max_rank=2)
+
+  if next_trajectory is not None:
+    _validate_rank(next_trajectory.discount, min_rank=1, max_rank=2)
+
   if next_trajectory is None:
     next_trajectory = tf.nest.map_structure(lambda x: x[:, 1:], trajectory)
     trajectory = tf.nest.map_structure(lambda x: x[:, :-1], trajectory)
   policy_steps = policy_step.PolicyStep(
-      trajectory.action, (), trajectory.policy_info)
+      action=trajectory.action, state=(), info=trajectory.policy_info)
   # TODO(kbanoop): Consider replacing 0 rewards & discounts with ().
   time_steps = ts.TimeStep(
       trajectory.step_type,
       reward=tf.nest.map_structure(tf.zeros_like, trajectory.reward),  # unknown
       discount=tf.zeros_like(trajectory.discount),  # unknown
       observation=trajectory.observation)
-  next_time_steps = ts.TimeStep(trajectory.next_step_type,
-                                trajectory.reward,
-                                trajectory.discount,
-                                next_trajectory.observation)
+  next_time_steps = ts.TimeStep(
+      step_type=trajectory.next_step_type,
+      reward=trajectory.reward,
+      discount=trajectory.discount,
+      observation=next_trajectory.observation)
   return [time_steps, policy_steps, next_time_steps]
+
+
+def _validate_rank(variable, min_rank, max_rank=None):
+  """Validates if a variable has the correct rank.
+
+  Args:
+    variable: A `tf.Tensor` or `numpy.array`.
+    min_rank: An int representing the min expected rank of the variable.
+    max_rank: An int representing the max expected rank of the variable.
+
+  Raises:
+    ValueError: if variable doesn't have expected rank.
+  """
+  rank = len(variable.shape)
+  if rank < min_rank or rank > max_rank:
+    raise ValueError(
+        'Expect variable within rank [{},{}], but got rank {}.'.format(
+            min_rank, max_rank, rank))
