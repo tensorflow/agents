@@ -17,7 +17,7 @@
 
 Adapted from Dopamine.
 
-https://github.com/google/dopamine/blob/master/dopamine/atari/preprocessing.py
+https://github.com/google/dopamine/blob/master/dopamine/discrete_domains/atari_lib.py
 
 This includes:
   . Emitting a terminal signal when losing a life (optional).

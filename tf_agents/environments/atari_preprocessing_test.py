@@ -17,7 +17,7 @@
 
 Adapted from Dopamine.
 
-https://github.com/google/dopamine/blob/master/dopamine/atari/preprocessing_test.py
+https://github.com/google/dopamine/blob/master/tests/dopamine/discrete_domains/atari_lib_test.py
 
 """
 
