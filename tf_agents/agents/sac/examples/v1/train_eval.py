@@ -48,16 +48,6 @@ from tf_agents.utils import common
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'Agent test environment.')
-flags.DEFINE_integer('num_iterations', 100000,
-                     'Total number train/eval iterations to perform.')
-flags.DEFINE_integer('initial_collect_steps', 100000,
-                     'Initial number of collect steps.')
-flags.DEFINE_integer('log_interval', 10000,
-                     'Interval for logging to stdout.')
-flags.DEFINE_integer('eval_interval', 500000,
-                     'Interval for performing evaluations.')
-flags.DEFINE_integer('num_eval_episodes', 100,
-                     'Number of episodes to perform during evaluation.')
 flags.DEFINE_multi_string('gin_file', None,
                           'Path to the gin config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding to pass through.')
@@ -105,8 +95,8 @@ def train_eval(
     reward_scale_factor=1.0,
     gradient_clipping=None,
     # Params for eval
-    num_eval_episodes=100,
-    eval_interval=50000,
+    num_eval_episodes=30,
+    eval_interval=10000,
     # Params for summaries and logging
     train_checkpoint_interval=10000,
     policy_checkpoint_interval=5000,
@@ -339,13 +329,7 @@ def main(_):
   tf.compat.v1.enable_resource_variables()
   logging.set_verbosity(logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
-  train_eval(FLAGS.root_dir,
-             num_iterations=FLAGS.num_iterations,
-             initial_collect_steps=FLAGS.initial_collect_steps,
-             log_interval=FLAGS.log_interval,
-             eval_interval=FLAGS.eval_interval,
-             num_eval_episodes=FLAGS.num_eval_episodes,
-             env_name=FLAGS.env_name)
+  train_eval(FLAGS.root_dir)
 
 
 if __name__ == '__main__':
