@@ -439,16 +439,21 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss = tf.reduce_mean(input_tensor=actor_loss)
 
       if self._debug_summaries:
-        common.generate_tensor_summaries('actor_loss', actor_loss)
-        common.generate_tensor_summaries('actions', actions)
-        common.generate_tensor_summaries('log_pi', log_pi)
+        common.generate_tensor_summaries('actor_loss', actor_loss,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('actions', actions,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('log_pi', log_pi,
+                                         self.train_step_counter)
         tf.compat.v2.summary.scalar(
             name='entropy_avg',
             data=-tf.reduce_mean(input_tensor=log_pi),
             step=self.train_step_counter)
-        common.generate_tensor_summaries('target_q_values', target_q_values)
+        common.generate_tensor_summaries('target_q_values', target_q_values,
+                                         self.train_step_counter)
         action_distribution = self.policy.distribution(time_steps).action
-        common.generate_tensor_summaries('act_mean', action_distribution.loc)
+        common.generate_tensor_summaries('act_mean', action_distribution.loc,
+                                         self.train_step_counter)
         common.generate_tensor_summaries(
             'act_stddev', action_distribution.scale, self.train_step_counter)
         common.generate_tensor_summaries('entropy_raw_action',
