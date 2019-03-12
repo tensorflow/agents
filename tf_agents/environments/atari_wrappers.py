@@ -74,14 +74,14 @@ class AtariTimeLimit(wrappers.PyEnvironmentBaseWrapper):
   def __init__(self, env, duration):
     super(AtariTimeLimit, self).__init__(env)
     self._duration = duration
-    self._num_steps = None
+    self._num_steps = 0
 
   def _reset(self):
     self._num_steps = 0
     return self._env.reset()
 
   def _step(self, action):
-    if self._num_steps is None:
+    if self.game_over:
       return self.reset()
 
     time_step = self._env.step(action)
@@ -90,14 +90,8 @@ class AtariTimeLimit(wrappers.PyEnvironmentBaseWrapper):
     if self._num_steps >= self._duration:
       time_step = time_step._replace(step_type=ts.StepType.LAST)
 
-    if time_step.is_last() and self.game_over:
-      self._num_steps = None
-
     return time_step
 
   @property
   def game_over(self):
-    if self._num_steps >= self._duration:
-      return True
-    else:
-      return self.gym.game_over
+    return self._num_steps >= self._duration or self.gym.game_over
