@@ -47,7 +47,6 @@ from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'Agent test environment.')
 flags.DEFINE_multi_string('config_file', None,
                           'Path to the trainer config files.')
 flags.DEFINE_multi_string('binding', None, 'Gin binding to pass through.')
