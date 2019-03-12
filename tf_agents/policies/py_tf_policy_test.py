@@ -28,6 +28,8 @@ import tensorflow as tf
 
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
+from tf_agents.policies import actor_policy
+from tf_agents.policies import ou_noise_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
@@ -71,6 +73,24 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
+class DummyActionNet(network.Network):
+
+  def __init__(self, input_tensor_spec, output_tensor_spec):
+    super(DummyActionNet, self).__init__(
+        input_tensor_spec=input_tensor_spec,
+        state_spec=(),
+        name='DummyActionNet')
+    self._forward = tf.keras.layers.Dense(
+        output_tensor_spec.shape.num_elements(),
+        activation=tf.nn.tanh,
+        kernel_initializer=None,
+        bias_initializer=None)
+
+  def call(self, observations, step_type, network_state):
+    del step_type
+    return self._forward(observations), network_state
+
+
 # TODO(damienv): This function should belong to nest_utils
 def fast_map_structure(func, *structure):
   flat_structure = [tf.nest.flatten(s) for s in structure]
@@ -87,6 +107,8 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1,
                                                       'action')
+    self._float_action_spec = tensor_spec.BoundedTensorSpec([], tf.float32,
+                                                            0, 1, 'action')
     self._tf_policy = q_policy.QPolicy(
         self._time_step_spec,
         self._action_spec,
@@ -261,6 +283,67 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       for a in action_steps.action:
         self.assertIn(a, (0, 1))
       self.assertAllEqual(action_steps.state, np.zeros([5, 1]))
+
+  def testSaveWrappedPolicyRestoreOuterCheckAssertConsumed(self, batch_size=5):
+
+    actor_policy_save_path = os.path.join(tf.test.get_temp_dir(),
+                                          'actor_policy', str(batch_size))
+    noise_policy_save_path = os.path.join(tf.test.get_temp_dir(),
+                                          'noise_policy', str(batch_size))
+
+    # Construct a policy to be saved under a tf.Graph instance.
+    policy_saved_graph = tf.Graph()
+    with policy_saved_graph.as_default():
+      actor_network = DummyActionNet(self._obs_spec, self._float_action_spec)
+      wrapped_policy = actor_policy.ActorPolicy(
+          time_step_spec=self._time_step_spec,
+          action_spec=self._float_action_spec,
+          actor_network=actor_network,
+          clip=False)
+      tf_policy = ou_noise_policy.OUNoisePolicy(wrapped_policy)
+
+      # Save the exploration policy and the wrapped actor policy.
+      actor_policy_saved = py_tf_policy.PyTFPolicy(wrapped_policy)
+      noise_policy_saved = py_tf_policy.PyTFPolicy(tf_policy)
+      for policy_saved, policy_save_path in zip(
+          [actor_policy_saved, noise_policy_saved],
+          [actor_policy_save_path, noise_policy_save_path]):
+        policy_saved.session = tf.compat.v1.Session(graph=policy_saved_graph)
+        policy_saved.initialize(batch_size)
+        policy_saved.save(policy_dir=policy_save_path, graph=policy_saved_graph)
+
+    # Construct a policy to be restored under another tf.Graph instance.
+    policy_restore_graph = tf.Graph()
+    with policy_restore_graph.as_default():
+      actor_network = DummyActionNet(self._obs_spec, self._float_action_spec)
+      wrapped_policy = actor_policy.ActorPolicy(
+          time_step_spec=self._time_step_spec,
+          action_spec=self._float_action_spec,
+          actor_network=actor_network,
+          clip=False)
+      tf_policy = ou_noise_policy.OUNoisePolicy(wrapped_policy)
+
+      policy_restored = py_tf_policy.PyTFPolicy(tf_policy)
+      policy_restored.session = tf.compat.v1.Session(graph=policy_restore_graph)
+      policy_restored.initialize(batch_size)
+      # 1). Restoring the same noise policy as was saved.
+      policy_restored.restore(
+          policy_dir=noise_policy_save_path, graph=policy_restore_graph)
+      # 2). Restoring the actor policy inside of the noise policy. While the
+      # graph for policy restore contains additional local variable for the
+      # OUNoise, if there is no checking that checkpoint was consumed, this
+      # also works.
+      policy_restored.restore(
+          policy_dir=actor_policy_save_path, graph=policy_restore_graph,
+          assert_consumed=False)
+      # 3). Restoring the actor policy while checking that all variables in
+      # the checkpoint were found in the graph should fail.
+      with self.assertRaisesRegexp(
+          AssertionError,
+          'Some Python objects were not bound to checkpointed values*'):
+        policy_restored.restore(
+            policy_dir=actor_policy_save_path,
+            graph=policy_restore_graph)
 
 
 if __name__ == '__main__':

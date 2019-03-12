@@ -121,7 +121,25 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
       with self.session.as_default():
         policy_checkpointer.save(global_step)
 
-  def restore(self, policy_dir=None, graph=None):
+  def restore(self, policy_dir, graph=None, assert_consumed=True):
+    """Restores the policy from the checkpoint.
+
+    Args:
+      policy_dir: Directory with the checkpoint.
+      graph: A graph, inside which policy the is restored (optional).
+      assert_consumed: If true, contents of the checkpoint will be checked
+        for a match against graph variables.
+
+    Returns:
+      step: Global step associated with the restored policy checkpoint.
+
+    Raises:
+      RuntimeError: if the policy is not initialized.
+      AssertionError: if the checkpoint contains variables which do not have
+        matching names in the graph, and assert_consumed is set to True.
+
+    """
+
     if not self._built:
       raise RuntimeError(
           'PyTFPolicy must be initialized before being restored.')
@@ -134,7 +152,9 @@ class PyTFPolicy(py_policy.Base, session_utils.SessionUser):
           ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
       status = policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():
-        status.assert_consumed().run_restore_ops()
+        if assert_consumed:
+          status.assert_consumed()
+        status.run_restore_ops()
       return self.session.run(global_step)
 
   def _build_from_time_step(self, time_step):
