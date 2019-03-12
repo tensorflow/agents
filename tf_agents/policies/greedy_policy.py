@@ -50,7 +50,12 @@ class GreedyPolicy(tf_policy.Base):
   def _distribution(self, time_step, policy_state):
 
     def dist_fn(dist):
-      greedy_action = dist.mode()
+      try:
+        greedy_action = dist.mode()
+      except NotImplementedError:
+        raise ValueError("Your network's distriution does not implement mode "
+                         "making it incompatible with a greedy policy.")
+
       return tfp.distributions.Deterministic(loc=greedy_action)
 
     distribution_step = self._wrapped_policy.distribution(

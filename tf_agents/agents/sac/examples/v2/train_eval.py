@@ -64,7 +64,8 @@ def normal_projection_net(action_spec,
       mean_transform=None,
       state_dependent_std=True,
       init_means_output_factor=init_means_output_factor,
-      std_transform=sac_agent.std_clip_transform)
+      std_transform=sac_agent.std_clip_transform,
+      scale_distribution=True)
 
 
 @gin.configurable

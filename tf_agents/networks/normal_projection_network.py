@@ -26,6 +26,7 @@ from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
 
 import gin.tf
 
@@ -52,11 +53,12 @@ class NormalProjectionNetwork(network.DistributionNetwork):
                mean_transform=tanh_squash_to_spec,
                std_transform=tf.nn.softplus,
                state_dependent_std=False,
+               scale_distribution=False,
                name='NormalProjectionNetwork'):
     """Creates an instance of NormalProjectionNetwork.
 
     Args:
-      sample_spec: An spec (either BoundedArraySpec or BoundedTensorSpec)
+      sample_spec: A spec (either BoundedArraySpec or BoundedTensorSpec)
         detailing the shape and dtypes of samples pulled from the output
         distribution.
       activation_fn: Activation function to use in dense layer.
@@ -67,8 +69,16 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       std_transform: Transform to apply to the stddevs.
       state_dependent_std: If true, stddevs will be produced by MLP from state.
         else, stddevs will be an independent variable.
+      scale_distribution: Whether or not to use a bijector chain to scale
+        distributions to match the sample spec. Note the TransformedDistribution
+        does not support certain operations required by some agents or policies
+        such as KL divergence calculations or Mode.
       name: A string representing name of the network.
     """
+    if len(tf.nest.flatten(sample_spec)) != 1:
+      raise ValueError('Normal Projection network only supports single spec '
+                       'samples.')
+    self._scale_distribution = scale_distribution
     output_spec = self._output_distribution_spec(sample_spec)
     super(NormalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
@@ -113,8 +123,14 @@ class NormalProjectionNetwork(network.DistributionNetwork):
             dtype=sample_spec.dtype),
         input_param_shapes)
 
+    def distribution_builder(*args, **kwargs):
+      distribution = tfp.distributions.Normal(*args, **kwargs)
+      if self._scale_distribution:
+        return common.scale_distribution_to_spec(distribution, sample_spec)
+      return distribution
+
     return distribution_spec.DistributionSpec(
-        tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
+        distribution_builder, input_param_spec, sample_spec=sample_spec)
 
   def call(self, inputs, outer_rank):
     if inputs.dtype != self._sample_spec.dtype:
@@ -128,6 +144,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
 
     means = self._means_projection_layer(inputs)
     means = tf.reshape(means, [-1] + self._sample_spec.shape.as_list())
+
     if self._mean_transform is not None:
       means = self._mean_transform(means, self._sample_spec)
     means = tf.cast(means, self._sample_spec.dtype)
@@ -136,8 +153,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       stds = self._stddev_projection_layer(inputs)
     else:
       stds = self._bias(tf.zeros_like(means))
-
       stds = tf.reshape(stds, [-1] + self._sample_spec.shape.as_list())
+
     if self._std_transform is not None:
       stds = self._std_transform(stds)
     stds = tf.cast(stds, self._sample_spec.dtype)

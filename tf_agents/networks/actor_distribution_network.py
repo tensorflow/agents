@@ -45,7 +45,8 @@ def _normal_projection_net(action_spec,
   return normal_projection_network.NormalProjectionNetwork(
       action_spec,
       init_means_output_factor=init_means_output_factor,
-      std_initializer_value=std_initializer_value)
+      std_initializer_value=std_initializer_value,
+      scale_distribution=False)
 
 
 @gin.configurable
