@@ -286,9 +286,9 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   def testSaveWrappedPolicyRestoreOuterCheckAssertConsumed(self, batch_size=5):
 
-    actor_policy_save_path = os.path.join(tf.test.get_temp_dir(),
+    actor_policy_save_path = os.path.join(self.get_temp_dir(),
                                           'actor_policy', str(batch_size))
-    noise_policy_save_path = os.path.join(tf.test.get_temp_dir(),
+    noise_policy_save_path = os.path.join(self.get_temp_dir(),
                                           'noise_policy', str(batch_size))
 
     # Construct a policy to be saved under a tf.Graph instance.
