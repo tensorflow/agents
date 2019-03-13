@@ -124,6 +124,7 @@ class AtariPreprocessing(object):
     """
     self.environment.reset()
     self.lives = self.environment.ale.lives()
+    self.game_over = False
     self._fetch_grayscale_observation(self.screen_buffer[0])
     self.screen_buffer[1].fill(0)
     return self._pool_and_resize()
