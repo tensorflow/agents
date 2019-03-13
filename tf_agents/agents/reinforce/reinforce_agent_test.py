@@ -202,30 +202,15 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
           train_step_counter=counter
       )
 
-      observations = tf.constant([
-          [[1, 2], [3, 4], [5, 6]],
-          [[1, 2], [3, 4], [5, 6]],
-      ], dtype=tf.float32)
-      time_steps = ts.TimeStep(
-          step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
-          reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-          discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-          observation=observations)
-      actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]],
-                            dtype=tf.float32)
-
-      batch_size = 1
-      observations = tf.constant([
-          [[1, 2], [3, 4], [5, 6]] * batch_size,
-      ], dtype=tf.float32)
-
+      batch_size = 5
+      observations = tf.constant(
+          [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
       time_steps = ts.TimeStep(
           step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
           reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
           discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
           observation=observations)
-      actions = tf.constant([[[0], [1], [1]]],
-                            dtype=tf.float32)
+      actions = tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32)
 
       experience = trajectory.Trajectory(
           time_steps.step_type, observations, actions, (),
