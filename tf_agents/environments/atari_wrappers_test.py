@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for environments.gym_wrapper."""
+"""Tests for environments.atari_wrappers."""
 
 from __future__ import absolute_import
 from __future__ import division
