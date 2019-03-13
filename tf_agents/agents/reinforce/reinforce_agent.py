@@ -52,6 +52,13 @@ def _entropy_loss(distributions, spec, weights=None):
     return tf.reduce_mean(input_tensor=entropy)
 
 
+def _get_initial_policy_state(policy, time_steps):
+  """Gets the initial state of a policy."""
+  batch_size = (tf.compat.dimension_at_index(time_steps.discount.shape, 0) or
+                tf.shape(time_steps.discount)[0])
+  return policy.get_initial_state(batch_size=batch_size)
+
+
 @gin.configurable
 class ReinforceAgent(tf_agent.TFAgent):
   """A REINFORCE Agent."""
@@ -178,7 +185,9 @@ class ReinforceAgent(tf_agent.TFAgent):
 
   def _loss(self, time_steps, actions, returns, weights):
     tf.nest.assert_same_structure(time_steps, self.time_step_spec)
-    actions_distribution = self.collect_policy.distribution(time_steps).action
+    policy_state = _get_initial_policy_state(self.collect_policy, time_steps)
+    actions_distribution = self.collect_policy.distribution(
+        time_steps, policy_state=policy_state).action
 
     policy_gradient_loss = self.policy_gradient_loss(
         actions_distribution, actions, time_steps.is_last(), returns, weights)
