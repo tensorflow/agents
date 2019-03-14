@@ -41,6 +41,36 @@ class GymWrapperSpecTest(absltest.TestCase):
     self.assertEqual(0, spec.minimum)
     self.assertEqual(2, spec.maximum)
 
+  def test_spec_from_gym_space_multi_discrete(self):
+    multi_discrete_space = gym.spaces.MultiDiscrete([1, 2, 3, 4])
+    spec = gym_wrapper._spec_from_gym_space(multi_discrete_space)
+
+    self.assertEqual((4,), spec.shape)
+    self.assertEqual(np.uint32, spec.dtype)
+    np.testing.assert_array_equal(
+      np.array([0, 0, 0, 0], dtype=np.int),
+      spec.minimum
+    )
+    np.testing.assert_array_equal(
+      np.array([0, 1, 2, 3], dtype=np.int),
+      spec.maximum
+    )
+
+  def test_spec_from_gym_space_multi_binary(self):
+    multi_binary_space = gym.spaces.MultiBinary(4)
+    spec = gym_wrapper._spec_from_gym_space(multi_binary_space)
+
+    self.assertEqual((4,), spec.shape)
+    self.assertEqual(np.int8, spec.dtype)
+    np.testing.assert_array_equal(
+      np.array([0, 0, 0, 0], dtype=np.int),
+      spec.minimum
+    )
+    np.testing.assert_array_equal(
+      np.array([1, 1, 1, 1], dtype=np.int),
+      spec.maximum
+    )
+
   def test_spec_from_gym_space_box_scalars(self):
     box_space = gym.spaces.Box(-1.0, 1.0, (3, 4))
     spec = gym_wrapper._spec_from_gym_space(box_space)
