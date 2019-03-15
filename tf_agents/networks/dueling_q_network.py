@@ -134,6 +134,6 @@ class DuelingQNetwork(network.Network):
         observation, step_type=step_type, network_state=network_state)
     value = self._fc_value_layer(state)
     advantage = self._fc_advantage_layer(state)
-    q_value = tf.add(value, tf.subtract(
-        advantage, tf.reduce_mean(advantage, axis=1, keep_dims=True)))
+    q_value = value + (advantage - tf.reduce_mean(
+        advantage, axis=1, keep_dims=True))
     return q_value, network_state
