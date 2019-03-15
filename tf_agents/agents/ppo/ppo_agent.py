@@ -715,8 +715,15 @@ class PPOAgent(tf_agent.TFAgent):
     """
     observation = time_steps.observation
     if debug_summaries:
-      tf.compat.v2.summary.histogram(
-          name='observations', data=observation, step=self.train_step_counter)
+      observation_list = tf.nest.flatten(observation)
+      show_observation_index = len(observation_list) != 1
+      for i, single_observation in enumerate(observation_list):
+        observation_name = ('observations_{}'.format(i) if
+                            show_observation_index else
+                            'observations')
+        tf.compat.v2.summary.histogram(
+            name=observation_name, data=single_observation,
+            step=self.train_step_counter)
 
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     policy_state = self._collect_policy.get_initial_state(batch_size=batch_size)
