@@ -118,6 +118,7 @@ class PPOAgent(tf_agent.TFAgent):
                normalize_rewards=True,
                reward_norm_clipping=10.0,
                normalize_observations=True,
+               train_only_on_full_episodes=True,
                log_prob_clipping=0.0,
                kl_cutoff_factor=2.0,
                kl_cutoff_coef=1000.0,
@@ -164,6 +165,9 @@ class PPOAgent(tf_agent.TFAgent):
       reward_norm_clipping: Value above an below to clip normalized reward.
       normalize_observations: If true, keeps moving mean and variance of
         observations and normalizes incoming observations.
+      train_only_on_full_episodes: If true, then only experience that contains
+        episode ends will be used. Otherwise, all experience is used to update
+        parameters.
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       kl_cutoff_factor: If policy KL changes more than this much for any single
@@ -209,6 +213,7 @@ class PPOAgent(tf_agent.TFAgent):
     self._use_gae = use_gae
     self._use_td_lambda_return = use_td_lambda_return
     self._reward_norm_clipping = reward_norm_clipping
+    self._train_only_on_full_episodes = train_only_on_full_episodes
     self._log_prob_clipping = log_prob_clipping
     self._kl_cutoff_factor = kl_cutoff_factor
     self._kl_cutoff_coef = kl_cutoff_coef
@@ -487,7 +492,10 @@ class PPOAgent(tf_agent.TFAgent):
         experience.observation, experience.step_type, policy_state=policy_state)
     value_preds = tf.stop_gradient(value_preds)
 
-    valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
+    if self._train_only_on_full_episodes:
+      valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
+    else:
+      valid_mask = tf.ones(next_time_steps.step_type.shape)
 
     if weights is None:
       weights = valid_mask

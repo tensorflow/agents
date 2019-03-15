@@ -186,10 +186,12 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllClose(gae_vals, advantages)
 
   @parameterized.named_parameters([
-      ('OneEpoch', 1, True),
-      ('FiveEpochs', 5, False),
+      ('OneEpoch', 1, True, True),
+      ('FiveEpochs', 5, False, True),
+      ('IncompleteEpisodesReturnsZeroLossOnOnlyFullTrain', 1, False, True),
+      ('IncompleteEpisodesReturnsNonZeroLossOnIncomplTrain', 1, False, False),
   ])
-  def testTrain(self, num_epochs, use_td_lambda_return):
+  def testTrain(self, num_epochs, use_td_lambda_return, train_on_full_only):
     with tf.compat.v2.summary.record_if(False):
       # Mock the build_train_op to return an op for incrementing this counter.
       counter = common.create_variable('test_train_counter')
@@ -203,15 +205,17 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
           num_epochs=num_epochs,
           use_gae=use_td_lambda_return,
           use_td_lambda_return=use_td_lambda_return,
-          train_step_counter=counter)
+          train_step_counter=counter,
+          train_only_on_full_episodes=train_on_full_only)
       observations = tf.constant([
           [[1, 2], [3, 4], [5, 6]],
           [[1, 2], [3, 4], [5, 6]],
       ],
                                  dtype=tf.float32)
 
+      mid_time_step_val = ts.StepType.MID
       time_steps = ts.TimeStep(
-          step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
+          step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
           reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
           discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
           observation=observations)
@@ -240,7 +244,19 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       # Assert that counter starts out at zero.
       self.evaluate(tf.compat.v1.initialize_all_variables())
       self.assertEqual(0, self.evaluate(counter))
-      self.evaluate(loss)
+      loss_type = self.evaluate(loss)
+      loss_numpy = loss_type.loss
+
+      if not train_on_full_only:
+        # Assert that loss is not zero as we are training in a non-episodic env
+        self.assertNotEqual(loss_numpy, 0.0,
+                            msg=('Loss is exactly zero, looks like no training '
+                                 'was performed due to incomplete episodes.'))
+      else:
+        self.assertEqual(loss_numpy, 0.0,
+                         msg=('Expected that training loss is zero as episode '
+                              'is incomplete.'))
+
       # Assert that train_op ran increment_counter num_epochs times.
       self.assertEqual(num_epochs, self.evaluate(counter))
 
