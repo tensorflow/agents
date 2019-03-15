@@ -78,7 +78,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     if not self._blocking:
       logging.info('Waiting for all processes to start.')
       for env in self._envs:
-          env.wait_start()
+        env.wait_start()
     logging.info('All processes started.')
 
   @property
@@ -209,7 +209,7 @@ class ProcessPyEnvironment(object):
       self.wait_start()
 
   def wait_start(self):
-    """Wait for the started process to finish initialization"""
+    """Wait for the started process to finish initialization."""
     result = self._conn.recv()
     if isinstance(result, Exception):
       self._conn.close()

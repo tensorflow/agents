@@ -33,7 +33,10 @@ from tf_agents.specs import array_spec
 
 
 class SlowStartingEnvironment(random_py_environment.RandomPyEnvironment):
-  def __init__(self, *args, time_sleep=0.1, **kwargs):
+  def __init__(self, *args, **kwargs):
+    time_sleep = kwargs.pop('time_sleep', 1.0)
+     super().__init__(*args, **kwargs)
+￼     time.sleep(time_sleep)
     super().__init__(*args, **kwargs)
     time.sleep(time_sleep)
 
@@ -95,13 +98,13 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     self._set_default_specs()
     constructor = functools.partial(SlowStartingEnvironment,
                                     self.observation_spec,
-                                    self.action_spec, time_sleep=0.1)
+                                    self.action_spec, time_sleep=1.0)
     start_time = time.time()
     self._make_parallel_py_environment(constructor=constructor,
                                        num_envs=10,
                                        blocking=False)
     end_time = time.time()
-    self.assertLessEqual(end_time - start_time, 0.5,
+    self.assertLessEqual(end_time - start_time, 5.0,
                          msg=('Expected all processes to start together, '
                               'got {} wait time').format(
                            end_time - start_time))
@@ -110,13 +113,13 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     self._set_default_specs()
     constructor = functools.partial(SlowStartingEnvironment,
                                     self.observation_spec,
-                                    self.action_spec, time_sleep=0.05)
+                                    self.action_spec, time_sleep=1.0)
     start_time = time.time()
     self._make_parallel_py_environment(constructor=constructor,
                                        num_envs=10,
                                        blocking=True)
     end_time = time.time()
-    self.assertGreater(end_time - start_time, 0.3,
+    self.assertGreater(end_time - start_time, 10,
                        msg=('Expected all processes to start one '
                             'after another, got {} wait time').format(
                          end_time - start_time))
