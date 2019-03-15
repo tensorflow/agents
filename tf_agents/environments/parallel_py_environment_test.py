@@ -21,8 +21,8 @@ from __future__ import print_function
 
 import collections
 import functools
-import time
 import multiprocessing.dummy as dummy_multiprocessing
+import time
 
 import numpy as np
 import tensorflow as tf
