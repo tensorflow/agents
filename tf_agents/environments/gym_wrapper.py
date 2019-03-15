@@ -67,7 +67,7 @@ def _spec_from_gym_space(space, dtype_map=None):
     return specs.BoundedArraySpec(
         shape=(), dtype=dtype, minimum=0, maximum=maximum)
   elif isinstance(space, gym.spaces.MultiDiscrete):
-    dtype = dtype_map.get(gym.spaces.MultiDiscrete, np.uint32)
+    dtype = dtype_map.get(gym.spaces.MultiDiscrete, np.int32)
     minimum = np.zeros_like(space.nvec, dtype=dtype)
     maximum = np.asarray(space.nvec - 1, dtype=dtype)
     return specs.BoundedArraySpec(
