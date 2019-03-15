@@ -492,14 +492,13 @@ class PPOAgent(tf_agent.TFAgent):
         experience.observation, experience.step_type, policy_state=policy_state)
     value_preds = tf.stop_gradient(value_preds)
 
+    valid_mask = None
     if self._train_only_on_full_episodes:
       valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
-    else:
-      valid_mask = tf.ones(next_time_steps.step_type.shape)
 
     if weights is None:
       weights = valid_mask
-    else:
+    elif valid_mask is not None:
       weights *= valid_mask
 
     returns, normalized_advantages = self.compute_return_and_advantage(
@@ -683,8 +682,12 @@ class PPOAgent(tf_agent.TFAgent):
         entropy = tf.cast(
             common.entropy(current_policy_distribution, self.action_spec),
             tf.float32)
+
+        if weights is not None:
+          entropy *= weights
+
         entropy_reg_loss = (
-            tf.reduce_mean(input_tensor=-entropy * weights) *
+            tf.reduce_mean(input_tensor=-entropy) *
             self._entropy_regularization)
         if self._check_numerics:
           entropy_reg_loss = tf.debugging.check_numerics(
@@ -732,7 +735,8 @@ class PPOAgent(tf_agent.TFAgent):
     value_preds, unused_policy_state = self._collect_policy.apply_value_network(
         time_steps.observation, time_steps.step_type, policy_state=policy_state)
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
-    value_estimation_error *= weights
+    if weights is not None:
+      value_estimation_error *= weights
 
     value_estimation_loss = (
         tf.reduce_mean(input_tensor=value_estimation_error) *
@@ -820,8 +824,11 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       policy_gradient_loss = -per_timestep_objective
 
+    if weights is not None:
+      policy_gradient_loss *= weights
+
     policy_gradient_loss = tf.reduce_mean(
-        input_tensor=policy_gradient_loss * weights)
+        input_tensor=policy_gradient_loss)
 
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
@@ -979,7 +986,9 @@ class PPOAgent(tf_agent.TFAgent):
     """
     kl_divergence = self._kl_divergence(time_steps,
                                         action_distribution_parameters,
-                                        current_policy_distribution) * weights
+                                        current_policy_distribution)
+    if weights is not None:
+      kl_divergence *= weights
 
     if debug_summaries:
       tf.compat.v2.summary.histogram(
