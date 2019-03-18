@@ -193,6 +193,7 @@ setup(
     packages=find_packages(),
     install_requires=REQUIRED_PACKAGES,
     tests_require=TEST_REQUIRED_PACKAGES,
+    extras_require={'tests': TEST_REQUIRED_PACKAGES},
     # Add in any packaged data.
     zip_safe=False,
     distclass=BinaryDistribution,
