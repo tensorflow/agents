@@ -64,7 +64,7 @@ To install the nightly build version, run the following:
 pip install --user --upgrade tf-agents-nightly  # depends on tf-nightly
 ```
 
-If you clone the repository you will still need a `tf-nighly` installation. You can then run `pip install -e .[tests]` to get dependencies to run tests.
+If you clone the repository you will still need a `tf-nighly` installation. You can then run `pip install -e .[tests]` from the agents directory to get dependencies to run tests.
 
 <a id='Contributing'></a>
 ## Contributing
