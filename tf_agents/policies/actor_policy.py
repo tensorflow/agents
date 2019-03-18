@@ -28,7 +28,6 @@ import tensorflow_probability as tfp
 from tf_agents.networks import network
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
-from tf_agents.utils import common
 
 import gin.tf
 
@@ -70,13 +69,13 @@ class ActorPolicy(tf_policy.Base):
                        '{}.'.format(type(actor_network)))
     self._actor_network = actor_network
     self._observation_normalizer = observation_normalizer
-    self._clip = clip
 
     super(ActorPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         policy_state_spec=actor_network.state_spec,
         info_spec=info_spec,
+        clip=clip,
         name=name)
 
   def _apply_actor_network(self, time_step, policy_state):
@@ -91,21 +90,6 @@ class ActorPolicy(tf_policy.Base):
 
   def _variables(self):
     return self._actor_network.variables
-
-  def _action(self, time_step, policy_state, seed):
-    distribution_step = self.distribution(time_step, policy_state)
-
-    def _sample(dist, action_spec):
-      action = dist.sample(seed=seed)
-      if self._clip:
-        return common.clip_to_spec(action, action_spec)
-      return action
-
-    actions = tf.nest.map_structure(_sample, distribution_step.action,
-                                    self._action_spec)
-
-    return policy_step.PolicyStep(actions, distribution_step.state,
-                                  distribution_step.info)
 
   def _distribution(self, time_step, policy_state):
     # Actor network outputs nested structure of distributions or actions.

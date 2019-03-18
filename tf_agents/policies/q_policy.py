@@ -63,6 +63,7 @@ class QPolicy(tf_policy.Base):
     super(QPolicy, self).__init__(
         time_step_spec, action_spec,
         policy_state_spec=q_network.state_spec,
+        clip=False,
         name=name)
 
   def _variables(self):
