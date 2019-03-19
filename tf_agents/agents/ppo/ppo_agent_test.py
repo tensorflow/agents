@@ -72,7 +72,7 @@ class DummyActorNet(network.DistributionNetwork):
     # Calls coming from agent.train() has a time dimension. Direct loss calls
     # may not have a time dimension. It order to make BatchSquash work, we need
     # to specify the outer dimension properly.
-    has_time_dim = hidden_state.ndim == 3
+    has_time_dim = tf.rank(hidden_state) == 3
     outer_rank = 2 if has_time_dim else 1
     batch_squash = network_utils.BatchSquash(outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
