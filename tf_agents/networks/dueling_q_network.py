@@ -30,8 +30,6 @@ from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 
 
-
-
 def validate_action_spec(action_spec):
   """Validates the spec contains a single action."""
   
