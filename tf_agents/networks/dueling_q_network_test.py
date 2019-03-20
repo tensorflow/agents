@@ -27,9 +27,6 @@ from tf_agents.networks import dueling_q_network
 from tf_agents.specs import tensor_spec
 
 
-
-
-
 class SingleObservationSingleActionTest(tf.test.TestCase):
 
   def setUp(self):
