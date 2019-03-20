@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Simple Keras Dueling DQNetwork."""
+"""Sample Keras Dueling DQNetwork according to
+Dueling Network Architectures for Deep Reinforcement Learning, 
+Ziyu Wang et al., 2015
+https://arxiv.org/abs/1511.06581
+"""
 
 from __future__ import absolute_import
 from __future__ import division
