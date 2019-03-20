@@ -90,7 +90,7 @@ class DuelingQNetwork(network.Network):
       ValueError: If `input_tensor_spec` contains more than one observation. Or
         if `action_spec` contains more than one action.
     """
-    validate_specs(action_spec, input_tensor_spec)
+    validate_action_spec(action_spec)
     action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
