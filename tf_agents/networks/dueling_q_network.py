@@ -32,10 +32,9 @@ from tf_agents.networks import network
 
 
 
-def validate_specs(action_spec, observation_spec):
+def validate_action_spec(action_spec):
   """Validates the spec contains a single action."""
-  del observation_spec  # not currently validated
-
+  
   flat_action_spec = tf.nest.flatten(action_spec)
   if len(flat_action_spec) > 1:
     raise ValueError('Network only supports action_specs with a single action.')
