@@ -51,6 +51,7 @@ class QNetwork(network.Network):
                preprocessing_combiner=None,
                conv_layer_params=None,
                fc_layer_params=(75, 40),
+               dropout_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
                batch_squash=True,
@@ -77,6 +78,12 @@ class QNetwork(network.Network):
         stride).
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
+      dropout_layer_params: Optional list of dropout layer parameters, where
+        each item is the fraction of input units to drop. The dropout layers are
+        interleaved with the fully connected layers; there is a dropout layer
+        after each fully connected layer, except if the entry in the list is
+        None. This list must have the same length of fc_layer_params, or be
+        None.
       activation_fn: Activation function, e.g. tf.keras.activations.relu.
       kernel_initializer: Initializer to use for the kernels of the conv and
         dense layers. If none is provided a default variance_scaling_initializer
@@ -100,6 +107,7 @@ class QNetwork(network.Network):
         preprocessing_combiner=preprocessing_combiner,
         conv_layer_params=conv_layer_params,
         fc_layer_params=fc_layer_params,
+        dropout_layer_params=dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
         batch_squash=batch_squash,

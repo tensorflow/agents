@@ -21,6 +21,28 @@ from __future__ import print_function
 import tensorflow as tf
 
 
+def maybe_permanent_dropout(rate, noise_shape=None, seed=None, permanent=False):
+  """Adds a Keras dropout layer with the option of applying it at inference.
+
+  Args:
+    rate: the probability of dropping an input.
+    noise_shape: 1D integer tensor representing the dropout mask multiplied to
+      the input.
+    seed: A Python integer to use as random seed.
+    permanent: If set, applies dropout during inference and not only during
+      training. This flag is used for approximated Bayesian inference.
+  Returns:
+    A function adding a dropout layer according to the parameters for the given
+      input.
+  """
+  if permanent:
+    def _keras_dropout(x):
+      return tf.keras.dropout(
+          x, level=rate, noise_shape=noise_shape, seed=seed)
+    return tf.keras.layers.Lambda(_keras_dropout)
+  return tf.keras.layers.Dropout(rate, noise_shape, seed)
+
+
 class BatchSquash(object):
   """Facilitates flattening and unflattening batch dims of a tensor.
 
@@ -82,33 +104,46 @@ class BatchSquash(object):
 
 def mlp_layers(conv_layer_params=None,
                fc_layer_params=None,
+               dropout_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
                name=None):
   """Generates conv and fc layers to encode into a hidden state.
 
   Args:
-      conv_layer_params: Optional list of convolution layers parameters, where
-        each item is a length-three tuple indicating (filters, kernel_size,
-        stride).
-      fc_layer_params: Optional list of fully_connected parameters, where each
-        item is the number of units in the layer.
-      activation_fn: Activation function, e.g. tf.keras.activations.relu,.
-      kernel_initializer: Initializer to use for the kernels of the conv and
-        dense layers. If none is provided a default variance_scaling_initializer
-        is used.
-      name: Name for the mlp layers.
+    conv_layer_params: Optional list of convolution layers parameters, where
+      each item is a length-three tuple indicating (filters, kernel_size,
+      stride).
+    fc_layer_params: Optional list of fully_connected parameters, where each
+      item is the number of units in the layer.
+    dropout_layer_params: Optional list of dropout layer parameters, each item
+      is the fraction of input units to drop or a dictionary of parameters
+      according to the keras.Dropout documentation. The additional parameter
+      `permanent', if set to True, allows to apply dropout at inference for
+      approximated Bayesian inference. The dropout layers are interleaved with
+      the fully connected layers; there is a dropout layer after each fully
+      connected layer, except if the entry in the list is None. This list must
+      have the same length of fc_layer_params, or be None.
+    activation_fn: Activation function, e.g. tf.keras.activations.relu,.
+    kernel_initializer: Initializer to use for the kernels of the conv and
+      dense layers. If none is provided a default variance_scaling_initializer
+      is used.
+    name: Name for the mlp layers.
 
   Returns:
-     List of mlp layers.
+    List of mlp layers.
+
+  Raises:
+    ValueError: If the number of dropout layer parameters does not match the
+      number of fully connected layer parameters.
   """
-  if not kernel_initializer:
+  if kernel_initializer is None:
     kernel_initializer = tf.compat.v1.variance_scaling_initializer(
         scale=2.0, mode='fan_in', distribution='truncated_normal')
 
   layers = []
 
-  if conv_layer_params:
+  if conv_layer_params is not None:
     layers.extend([
         tf.keras.layers.Conv2D(
             filters=filters,
@@ -121,13 +156,24 @@ def mlp_layers(conv_layer_params=None,
     ])
   layers.append(tf.keras.layers.Flatten())
 
-  if fc_layer_params:
-    layers.extend([
-        tf.keras.layers.Dense(
-            num_units,
-            activation=activation_fn,
-            kernel_initializer=kernel_initializer,
-            name='/'.join([name, 'dense']) if name else None)
-        for num_units in fc_layer_params
-    ])
+  if fc_layer_params is not None:
+    if dropout_layer_params is None:
+      dropout_layer_params = [None] * len(fc_layer_params)
+    else:
+      if len(dropout_layer_params) != len(fc_layer_params):
+        raise ValueError('Dropout and full connected layer parameter lists have'
+                         ' different lengths (%d vs. %d.)' %
+                         (len(dropout_layer_params), len(fc_layer_params)))
+    for num_units, dropout_params in zip(fc_layer_params, dropout_layer_params):
+      layers.append(tf.keras.layers.Dense(
+          num_units,
+          activation=activation_fn,
+          kernel_initializer=kernel_initializer,
+          name='/'.join([name, 'dense']) if name else None))
+      if not isinstance(dropout_params, dict):
+        dropout_params = {'rate': dropout_params} if dropout_params else None
+
+      if dropout_params is not None:
+        layers.append(maybe_permanent_dropout(**dropout_params))
+
   return layers

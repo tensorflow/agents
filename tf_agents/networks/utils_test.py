@@ -56,6 +56,56 @@ class NetworkUtilsTest(tf.test.TestCase):
     self.assertAllEqual((5, 4, 3, 2, 1), flat.shape)
     self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
 
+  def test_mlp_layers(self):
+    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+                              fc_layer_params=[10, 20],
+                              activation_fn=tf.keras.activations.tanh,
+                              name='testnet')
+    self.assertEqual(5, len(layers))
+
+    self.assertAllEqual([tf.keras.layers.Conv2D, tf.keras.layers.Conv2D,
+                         tf.keras.layers.Flatten, tf.keras.layers.Dense,
+                         tf.keras.layers.Dense],
+                        [type(layer) for layer in layers])
+
+    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+                              fc_layer_params=[10, 20],
+                              activation_fn=tf.keras.activations.tanh,
+                              dropout_layer_params=[0.5, 0.3],
+                              name='testnet')
+    self.assertEqual(7, len(layers))
+
+    self.assertAllEqual([tf.keras.layers.Conv2D, tf.keras.layers.Conv2D,
+                         tf.keras.layers.Flatten, tf.keras.layers.Dense,
+                         tf.keras.layers.Dropout, tf.keras.layers.Dense,
+                         tf.keras.layers.Dropout],
+                        [type(layer) for layer in layers])
+
+    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+                              fc_layer_params=[10, 20],
+                              activation_fn=tf.keras.activations.tanh,
+                              dropout_layer_params=[None, 0.3],
+                              name='testnet')
+    self.assertEqual(6, len(layers))
+
+    self.assertAllEqual([tf.keras.layers.Conv2D, tf.keras.layers.Conv2D,
+                         tf.keras.layers.Flatten, tf.keras.layers.Dense,
+                         tf.keras.layers.Dense, tf.keras.layers.Dropout],
+                        [type(layer) for layer in layers])
+
+    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+                              fc_layer_params=[10, 20],
+                              activation_fn=tf.keras.activations.tanh,
+                              dropout_layer_params=[
+                                  dict(rate=0.5, permanent=True), None],
+                              name='testnet')
+    self.assertEqual(6, len(layers))
+
+    self.assertAllEqual([tf.keras.layers.Conv2D, tf.keras.layers.Conv2D,
+                         tf.keras.layers.Flatten, tf.keras.layers.Dense,
+                         tf.keras.layers.Lambda, tf.keras.layers.Dense],
+                        [type(layer) for layer in layers])
+
 
 if __name__ == '__main__':
   tf.test.main()
