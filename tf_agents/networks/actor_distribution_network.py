@@ -45,7 +45,8 @@ def _normal_projection_net(action_spec,
   return normal_projection_network.NormalProjectionNetwork(
       action_spec,
       init_means_output_factor=init_means_output_factor,
-      std_initializer_value=std_initializer_value)
+      std_initializer_value=std_initializer_value,
+      scale_distribution=False)
 
 
 @gin.configurable
@@ -56,6 +57,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
                input_tensor_spec,
                output_tensor_spec,
                fc_layer_params=(200, 100),
+               dropout_layer_params=None,
                conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                discrete_projection_net=_categorical_projection_net,
@@ -70,6 +72,14 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         the output.
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
+      dropout_layer_params: Optional list of dropout layer parameters, each item
+        is the fraction of input units to drop or a dictionary of parameters
+        according to the keras.Dropout documentation. The additional parameter
+        `permanent', if set to True, allows to apply dropout at inference for
+        approximated Bayesian inference. The dropout layers are interleaved with
+        the fully connected layers; there is a dropout layer after each fully
+        connected layer, except if the entry in the list is None. This list must
+        have the same length of fc_layer_params, or be None.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -94,6 +104,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         fc_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
+        dropout_layer_params=dropout_layer_params,
         name='input_mlp')
 
     projection_networks = []

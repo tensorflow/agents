@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import abc
 
+import gin
 import numpy as np
 import six
 
@@ -129,6 +130,7 @@ class StreamingMetric(py_metric.PyStepMetric):
     self._batched_call(trajectory)
 
 
+@gin.configurable
 class AverageReturnMetric(StreamingMetric):
   """Computes the average undiscounted reward."""
 
@@ -163,6 +165,7 @@ class AverageReturnMetric(StreamingMetric):
     self.add_to_buffer(episode_return[is_last])
 
 
+@gin.configurable
 class AverageEpisodeLengthMetric(StreamingMetric):
   """Computes the average episode length."""
 
@@ -195,6 +198,7 @@ class AverageEpisodeLengthMetric(StreamingMetric):
     episode_steps[np.where(trajectory.is_last())] = 0
 
 
+@gin.configurable
 class EnvironmentSteps(py_metric.PyStepMetric):
   """Counts the number of steps taken in the environment."""
 
@@ -217,6 +221,7 @@ class EnvironmentSteps(py_metric.PyStepMetric):
     self._np_state.environment_steps += new_steps
 
 
+@gin.configurable
 class NumberOfEpisodes(py_metric.PyStepMetric):
   """Counts the number of episodes in the environment."""
 
@@ -239,6 +244,7 @@ class NumberOfEpisodes(py_metric.PyStepMetric):
     self._np_state.number_episodes += completed_episodes
 
 
+@gin.configurable
 class CounterMetric(py_metric.PyMetric):
   """Metric to track an arbitrary counter.
 

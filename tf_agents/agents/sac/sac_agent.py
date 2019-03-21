@@ -16,8 +16,7 @@
 """A Soft Actor-Critic Agent.
 
 Implements the Soft Actor-Critic (SAC) algorithm from
-"Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement
-Learning with a Soft Actor" by Haarnoja et al (2017).
+"Soft Actor-Critic Algorithms and Applications" by Haarnoja et al (2019).
 """
 
 from __future__ import absolute_import
@@ -27,10 +26,8 @@ from __future__ import print_function
 import gin
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 from tf_agents.agents import tf_agent
-from tf_agents.distributions import tanh_bijector_stable
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.utils import common
@@ -57,7 +54,6 @@ class SacAgent(tf_agent.TFAgent):
                critic_optimizer,
                alpha_optimizer,
                actor_policy_ctor=actor_policy.ActorPolicy,
-               squash_actions=True,
                target_update_tau=1.0,
                target_update_period=1,
                td_errors_loss_fn=tf.math.squared_difference,
@@ -83,8 +79,6 @@ class SacAgent(tf_agent.TFAgent):
       critic_optimizer: The default optimizer to use for the critic network.
       alpha_optimizer: The default optimizer to use for the alpha variable.
       actor_policy_ctor: The policy class to use.
-      squash_actions: Whether or not to use tanh to squash actions between -1
-        and 1.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn:  A function for computing the elementwise TD errors
@@ -132,7 +126,6 @@ class SacAgent(tf_agent.TFAgent):
           for single_spec in flat_action_spec
       ])
 
-    self._squash_actions = squash_actions
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._actor_optimizer = actor_optimizer
@@ -295,39 +288,10 @@ class SacAgent(tf_agent.TFAgent):
 
       return common.Periodically(update, period, 'update_targets')
 
-  def _action_spec_means_magnitudes(self):
-    """Get the center and magnitude of the ranges in action spec."""
-    action_spec = self.action_spec
-    action_means = tf.nest.map_structure(
-        lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
-    action_magnitudes = tf.nest.map_structure(
-        lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec)
-    return tf.cast(
-        action_means, dtype=tf.float32), tf.cast(
-            action_magnitudes, dtype=tf.float32)
-
   def _actions_and_log_probs(self, time_steps):
     """Get actions and corresponding log probabilities from policy."""
     # Get raw action distribution from policy, and initialize bijectors list.
     action_distribution = self.policy.distribution(time_steps).action
-
-    if self._squash_actions:
-      bijectors = []
-
-      # Bijector to rescale actions to ranges in action spec.
-      action_means, action_magnitudes = self._action_spec_means_magnitudes()
-      bijectors.append(
-          tfp.bijectors.AffineScalar(
-              shift=action_means, scale=action_magnitudes))
-
-      # Bijector to squash actions to range (-1.0, +1.0).
-      bijectors.append(tanh_bijector_stable.Tanh())
-
-      # Chain applies bijectors in reverse order, so squash will happen before
-      # rescaling to action spec.
-      bijector_chain = tfp.bijectors.Chain(bijectors)
-      action_distribution = tfp.distributions.TransformedDistribution(
-          distribution=action_distribution, bijector=bijector_chain)
 
     # Sample actions and log_pis from transformed distribution.
     actions = tf.nest.map_structure(lambda d: d.sample(), action_distribution)
@@ -439,16 +403,21 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss = tf.reduce_mean(input_tensor=actor_loss)
 
       if self._debug_summaries:
-        common.generate_tensor_summaries('actor_loss', actor_loss)
-        common.generate_tensor_summaries('actions', actions)
-        common.generate_tensor_summaries('log_pi', log_pi)
+        common.generate_tensor_summaries('actor_loss', actor_loss,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('actions', actions,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('log_pi', log_pi,
+                                         self.train_step_counter)
         tf.compat.v2.summary.scalar(
             name='entropy_avg',
             data=-tf.reduce_mean(input_tensor=log_pi),
             step=self.train_step_counter)
-        common.generate_tensor_summaries('target_q_values', target_q_values)
+        common.generate_tensor_summaries('target_q_values', target_q_values,
+                                         self.train_step_counter)
         action_distribution = self.policy.distribution(time_steps).action
-        common.generate_tensor_summaries('act_mean', action_distribution.loc)
+        common.generate_tensor_summaries('act_mean', action_distribution.loc,
+                                         self.train_step_counter)
         common.generate_tensor_summaries(
             'act_stddev', action_distribution.scale, self.train_step_counter)
         common.generate_tensor_summaries('entropy_raw_action',

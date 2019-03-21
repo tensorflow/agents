@@ -331,6 +331,20 @@ class ClipToSpecTest(tf.test.TestCase):
 
 class ScaleToSpecTest(tf.test.TestCase):
 
+  def testSpecMeansAndMagnitudes(self):
+    spec = tensor_spec.BoundedTensorSpec(
+        (3, 2),
+        tf.float32,
+        [[-5, -5], [-4, -4], [-2, -6]],
+        [[5, 5], [4, 4], [2, 6]],
+    )
+    means, magnitudes = self.evaluate(common.spec_means_and_magnitudes(spec))
+    expected_means = np.zeros((3, 2), dtype=np.float32)
+    expected_magnitudes = np.array([[5.0, 5.0], [4.0, 4.0], [2.0, 6.0]],
+                                   dtype=np.float32)
+    self.assertAllClose(expected_means, means)
+    self.assertAllClose(expected_magnitudes, magnitudes)
+
   def testScaleToSpec(self):
     value = tf.constant([[1, -1], [0.5, -0.5], [1.0, 0.0]])
     spec = tensor_spec.BoundedTensorSpec(
@@ -774,6 +788,25 @@ class ReplicateTensorTest(tf.test.TestCase, parameterized.TestCase):
       # The shape should be fully defined in this case.
       self.assertEqual(tf.TensorShape(outer_shape + list(value.shape)),
                        replicated_value.shape)
+
+
+class ScaleDistributionTest(tf.test.TestCase):
+
+  def testScaleDistribution(self):
+    action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -2, 4)
+    distribution = tfp.distributions.Normal(0, 4)
+    scaled_distribution = common.scale_distribution_to_spec(distribution,
+                                                            action_spec)
+    if tf.executing_eagerly():
+      sample = scaled_distribution.sample
+    else:
+      sample = scaled_distribution.sample()
+
+    for _ in range(1000):
+      sample_np = self.evaluate(sample)
+
+      self.assertGreater(sample_np, -2.00001)
+      self.assertLess(sample_np, 4.00001)
 
 
 if __name__ == '__main__':

@@ -55,6 +55,7 @@ class EncodingNetwork(network.Network):
                preprocessing_combiner=None,
                conv_layer_params=None,
                fc_layer_params=None,
+               dropout_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
                batch_squash=True,
@@ -123,6 +124,14 @@ class EncodingNetwork(network.Network):
         stride).
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
+      dropout_layer_params: Optional list of dropout layer parameters, each item
+        is the fraction of input units to drop or a dictionary of parameters
+        according to the keras.Dropout documentation. The additional parameter
+        `permanent', if set to True, allows to apply dropout at inference for
+        approximated Bayesian inference. The dropout layers are interleaved with
+        the fully connected layers; there is a dropout layer after each fully
+        connected layer, except if the entry in the list is None. This list must
+        have the same length of fc_layer_params, or be None.
       activation_fn: Activation function, e.g. tf.keras.activations.relu,.
       kernel_initializer: Initializer to use for the kernels of the conv and
         dense layers. If none is provided a default variance_scaling_initializer
@@ -135,6 +144,8 @@ class EncodingNetwork(network.Network):
     Raises:
       ValueError: If any of `preprocessing_layers` is already built.
       ValueError: If `preprocessing_combiner` is already built.
+      ValueError: If the number of dropout layer parameters does not match the
+        number of fully connected layer parameters.
     """
     if preprocessing_layers is None:
       flat_preprocessing_layers = None
@@ -173,7 +184,15 @@ class EncodingNetwork(network.Network):
     layers.append(tf.keras.layers.Flatten())
 
     if fc_layer_params:
-      for num_units in fc_layer_params:
+      if dropout_layer_params is None:
+        dropout_layer_params = [None] * len(fc_layer_params)
+      else:
+        if len(dropout_layer_params) != len(fc_layer_params):
+          raise ValueError('Dropout and fully connected layer parameter lists'
+                           'have different lengths (%d vs. %d.)' %
+                           (len(dropout_layer_params), len(fc_layer_params)))
+      for num_units, dropout_params in zip(
+          fc_layer_params, dropout_layer_params):
         layers.append(
             tf.keras.layers.Dense(
                 num_units,
@@ -181,6 +200,11 @@ class EncodingNetwork(network.Network):
                 kernel_initializer=kernel_initializer,
                 dtype=dtype,
                 name='%s/dense' % name))
+        if not isinstance(dropout_params, dict):
+          dropout_params = {'rate': dropout_params} if dropout_params else None
+
+        if dropout_params is not None:
+          layers.append(utils.maybe_permanent_dropout(**dropout_params))
 
     super(EncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,

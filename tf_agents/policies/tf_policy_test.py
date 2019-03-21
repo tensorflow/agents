@@ -20,9 +20,15 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
+
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
+
+from tf_agents.environments import time_step as ts
+from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common
 
 
@@ -41,10 +47,10 @@ class TfPolicyHoldsVariables(tf_policy.Base):
     tf.Module.__init__(self, name=name)
     with tf.compat.v1.variable_scope(var_scope):
       self._variables_list = [
-          common.create_variable("var_1", init_var_value, [3, 3],
-                                 dtype=tf.float32),
-          common.create_variable("var_2", init_var_value, [5, 5],
-                                 dtype=tf.float32)
+          common.create_variable(
+              "var_1", init_var_value, [3, 3], dtype=tf.float32),
+          common.create_variable(
+              "var_2", init_var_value, [5, 5], dtype=tf.float32)
       ]
 
   def _variables(self):
@@ -57,6 +63,53 @@ class TfPolicyHoldsVariables(tf_policy.Base):
     pass
 
 
+class TFPolicyMismatchedDtypes(tf_policy.Base):
+  """Dummy tf_policy with mismatched dtypes."""
+
+  def __init__(self):
+    observation_spec = tensor_spec.TensorSpec([2, 2], tf.float32)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+    super(TFPolicyMismatchedDtypes, self).__init__(time_step_spec, action_spec)
+
+  def _action(self, time_step, policy_state, seed):
+    # This action's dtype intentionally doesn't match action_spec's dtype.
+    return policy_step.PolicyStep(action=tf.constant([0], dtype=tf.int64))
+
+
+class TFPolicyMismatchedDtypesListAction(tf_policy.Base):
+  """Dummy tf_policy with mismatched dtypes and a list action_spec."""
+
+  def __init__(self):
+    observation_spec = tensor_spec.TensorSpec([2, 2], tf.float32)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    action_spec = [
+        tensor_spec.BoundedTensorSpec([1], tf.int64, 0, 1),
+        tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+    ]
+    super(TFPolicyMismatchedDtypesListAction, self).__init__(
+        time_step_spec, action_spec)
+
+  def _action(self, time_step, policy_state, seed):
+    # This time, the action is a list where only the second dtype doesn't match.
+    return policy_step.PolicyStep(action=[
+        tf.constant([0], dtype=tf.int64),
+        tf.constant([0], dtype=tf.int64)
+    ])
+
+
+class TfPassThroughPolicy(tf_policy.Base):
+
+  def _variables(self):
+    return self._variables_list
+
+  def _distribution(self, time_step, policy_state):
+    action_distribution = tf.nest.map_structure(
+        lambda loc: tfp.distributions.Deterministic(loc=loc),
+        time_step.observation)
+    return policy_step.PolicyStep(action_distribution, (), ())
+
+
 class TfPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(
@@ -64,10 +117,10 @@ class TfPolicyTest(tf.test.TestCase, parameterized.TestCase):
       ("SyncVariables", 1.0, True),
   )
   def testUpdate(self, tau, sort_variables_by_name):
-    source_policy = TfPolicyHoldsVariables(init_var_value=1.,
-                                           var_scope="source")
-    target_policy = TfPolicyHoldsVariables(init_var_value=0.,
-                                           var_scope="target")
+    source_policy = TfPolicyHoldsVariables(
+        init_var_value=1., var_scope="source")
+    target_policy = TfPolicyHoldsVariables(
+        init_var_value=0., var_scope="target")
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     for var in self.evaluate(target_policy.variables()):
@@ -77,7 +130,65 @@ class TfPolicyTest(tf.test.TestCase, parameterized.TestCase):
         source_policy, tau=tau, sort_variables_by_name=sort_variables_by_name)
     self.evaluate(update_op)
     for var in self.evaluate(target_policy.variables()):
-      self.assertAllEqual(var, np.ones(var.shape)*tau)
+      self.assertAllEqual(var, np.ones(var.shape) * tau)
+
+  def testClipping(self):
+    action_spec = (tensor_spec.BoundedTensorSpec([1], tf.float32, 2, 3),
+                   tensor_spec.TensorSpec([1], tf.float32),
+                   tensor_spec.BoundedTensorSpec([1], tf.int32, 2, 3),
+                   tensor_spec.TensorSpec([1], tf.int32))
+    time_step_spec = ts.time_step_spec(action_spec)
+
+    policy = TfPassThroughPolicy(time_step_spec, action_spec, clip=True)
+
+    observation = (tf.constant(1, shape=(1,), dtype=tf.float32),
+                   tf.constant(1, shape=(1,), dtype=tf.float32),
+                   tf.constant(1, shape=(1,), dtype=tf.int32),
+                   tf.constant(1, shape=(1,), dtype=tf.int32))
+    time_step = ts.restart(observation)
+
+    clipped_action = self.evaluate(policy.action(time_step).action)
+    self.assertEqual(2, clipped_action[0])
+    self.assertEqual(1, clipped_action[1])
+    self.assertEqual(2, clipped_action[2])
+    self.assertEqual(1, clipped_action[3])
+
+  def testMismatchedDtypes(self):
+    with self.assertRaisesRegexp(TypeError, ".*dtype that doesn't match.*"):
+      policy = TFPolicyMismatchedDtypes()
+      observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+      time_step = ts.restart(observation)
+      policy.action(time_step)
+
+  def testMatchedDtypes(self):
+    policy = TFPolicyMismatchedDtypes()
+
+    # Overwrite the action_spec to match the dtype of _action.
+    policy._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int64, 0, 1)
+
+    observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observation)
+    policy.action(time_step)
+
+  def testMismatchedDtypesListAction(self):
+    with self.assertRaisesRegexp(TypeError, ".*dtype that doesn't match.*"):
+      policy = TFPolicyMismatchedDtypesListAction()
+      observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+      time_step = ts.restart(observation)
+      policy.action(time_step)
+
+  def testMatchedDtypesListAction(self):
+    policy = TFPolicyMismatchedDtypesListAction()
+
+    # Overwrite the action_spec to match the dtype of _action.
+    policy._action_spec = [
+        tensor_spec.BoundedTensorSpec([1], tf.int64, 0, 1),
+        tensor_spec.BoundedTensorSpec([1], tf.int64, 0, 1)
+    ]
+
+    observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observation)
+    policy.action(time_step)
 
 
 if __name__ == "__main__":

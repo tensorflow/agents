@@ -47,9 +47,9 @@ from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_multi_string('config_file', None,
+flags.DEFINE_multi_string('gin_file', None,
                           'Path to the trainer config files.')
-flags.DEFINE_multi_string('binding', None, 'Gin binding to pass through.')
+flags.DEFINE_multi_string('gin_param', None, 'Gin binding to pass through.')
 
 FLAGS = flags.FLAGS
 
@@ -64,7 +64,8 @@ def normal_projection_net(action_spec,
       mean_transform=None,
       state_dependent_std=True,
       init_means_output_factor=init_means_output_factor,
-      std_transform=sac_agent.std_clip_transform)
+      std_transform=sac_agent.std_clip_transform,
+      scale_distribution=True)
 
 
 @gin.configurable
@@ -303,7 +304,7 @@ def train_eval(
 def main(_):
   tf.compat.v1.enable_v2_behavior()
   logging.set_verbosity(logging.INFO)
-  gin.parse_config_files_and_bindings(FLAGS.config_file, FLAGS.binding)
+  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
   train_eval(FLAGS.root_dir)
 
 if __name__ == '__main__':

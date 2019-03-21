@@ -60,6 +60,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     self._envs = [ProcessPyEnvironment(ctor, flatten=flatten)
                   for ctor in env_constructors]
     self._num_envs = len(env_constructors)
+    self._blocking = blocking
     self.start()
     self._action_spec = self._envs[0].action_spec()
     self._observation_spec = self._envs[0].observation_spec()
@@ -68,13 +69,16 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
       raise ValueError('All environments must have the same action spec.')
     if any(env.time_step_spec() != self._time_step_spec for env in self._envs):
       raise ValueError('All environments must have the same time_step_spec.')
-    self._blocking = blocking
     self._flatten = flatten
 
   def start(self):
-    logging.info('Starting all processes.')
+    logging.info('Spawning all processes.')
     for env in self._envs:
-      env.start()
+      env.start(wait_to_start=self._blocking)
+    if not self._blocking:
+      logging.info('Waiting for all processes to start.')
+      for env in self._envs:
+        env.wait_start()
     logging.info('All processes started.')
 
   @property
@@ -189,14 +193,23 @@ class ProcessPyEnvironment(object):
     self._action_spec = None
     self._time_step_spec = None
 
-  def start(self):
-    """Start the process."""
+  def start(self, wait_to_start=True):
+    """Start the process.
+
+    Args:
+      wait_to_start: Whether the call should wait for an env initialization.
+    """
     self._conn, conn = multiprocessing.Pipe()
     self._process = multiprocessing.Process(
         target=self._worker,
         args=(conn, self._env_constructor, self._flatten))
     atexit.register(self.close)
     self._process.start()
+    if wait_to_start:
+      self.wait_start()
+
+  def wait_start(self):
+    """Wait for the started process to finish initialization."""
     result = self._conn.recv()
     if isinstance(result, Exception):
       self._conn.close()

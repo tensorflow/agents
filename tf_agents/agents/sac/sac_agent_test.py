@@ -112,7 +112,6 @@ class SacAgentTest(tf.test.TestCase):
         actor_optimizer=None,
         critic_optimizer=None,
         alpha_optimizer=None,
-        squash_actions=False,
         actor_policy_ctor=DummyActorPolicy)
 
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
@@ -152,7 +151,6 @@ class SacAgentTest(tf.test.TestCase):
         actor_optimizer=None,
         critic_optimizer=None,
         alpha_optimizer=None,
-        squash_actions=False,
         actor_policy_ctor=DummyActorPolicy)
 
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
@@ -174,7 +172,6 @@ class SacAgentTest(tf.test.TestCase):
         actor_optimizer=None,
         critic_optimizer=None,
         alpha_optimizer=None,
-        squash_actions=False,
         target_entropy=3.0,
         initial_log_alpha=4.0,
         actor_policy_ctor=DummyActorPolicy)

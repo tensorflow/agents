@@ -25,8 +25,11 @@ import tensorflow_probability as tfp
 
 from tf_agents.agents.reinforce import reinforce_agent
 from tf_agents.environments import time_step as ts
+from tf_agents.environments import trajectory
+from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -36,13 +39,18 @@ class DummyActorNet(network.Network):
   def __init__(self,
                input_tensor_spec,
                output_tensor_spec,
-               unbounded_actions=False):
+               unbounded_actions=False,
+               stateful=False):
     # When unbounded_actions=True, we skip the final tanh activation and the
     # action shift and scale. This allows us to compute the actor and critic
     # losses by hand more easily.
+    # If stateful=True, the network state has the same shape as
+    # `input_tensor_spec`. Otherwise it is empty.
+    state_spec = (tf.TensorSpec(input_tensor_spec.shape, tf.float32)
+                  if stateful else ())
     super(DummyActorNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
-        state_spec=(),
+        state_spec=state_spec,
         name='DummyActorNet')
     single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     activation_fn = None if unbounded_actions else tf.nn.tanh
@@ -80,6 +88,7 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(ReinforceAgentTest, self).setUp()
+    tf.compat.v1.enable_resource_variables()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
@@ -150,6 +159,75 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     tf.nest.map_structure(
         lambda v, s: self.assertAllInRange(v, s.minimum, s.maximum),
         action_values, self._action_spec)
+
+  @parameterized.parameters(
+      (False,),
+      (True,),
+  )
+  def testGetInitialPolicyState(self, stateful):
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=False,
+            stateful=stateful),
+        optimizer=None,
+    )
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=3)
+    initial_state = reinforce_agent._get_initial_policy_state(
+        agent.collect_policy, time_steps)
+    if stateful:
+      self.assertAllEqual(self.evaluate(initial_state),
+                          self.evaluate(tf.zeros((3, 2), dtype=tf.float32)))
+    else:
+      self.assertEqual(initial_state, ())
+
+  def testTrainWithRnn(self):
+    with tf.compat.v2.summary.record_if(False):
+      actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+          self._obs_spec,
+          self._action_spec,
+          input_fc_layer_params=None,
+          output_fc_layer_params=None,
+          conv_layer_params=None,
+          lstm_size=(40,))
+
+      counter = common.create_variable('test_train_counter')
+      agent = reinforce_agent.ReinforceAgent(
+          self._time_step_spec,
+          self._action_spec,
+          actor_network=actor_net,
+          optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+          train_step_counter=counter
+      )
+
+      batch_size = 5
+      observations = tf.constant(
+          [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
+      time_steps = ts.TimeStep(
+          step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
+          reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
+          discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
+          observation=observations)
+      actions = tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32)
+
+      experience = trajectory.Trajectory(
+          time_steps.step_type, observations, actions, (),
+          time_steps.step_type, time_steps.reward, time_steps.discount)
+
+      # Force variable creation.
+      agent.policy.variables()
+
+      if tf.executing_eagerly():
+        loss = lambda: agent.train(experience)
+      else:
+        loss = agent.train(experience)
+
+      self.evaluate(tf.compat.v1.initialize_all_variables())
+      self.assertEqual(self.evaluate(counter), 0)
+      self.evaluate(loss)
+      self.assertEqual(self.evaluate(counter), 1)
 
 
 if __name__ == '__main__':

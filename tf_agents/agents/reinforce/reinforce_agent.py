@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
@@ -30,7 +31,25 @@ from tf_agents.policies import actor_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
+from tf_agents.utils import value_ops
 import gin.tf
+
+
+def _standard_normalize(values, axes=(0,)):
+  """Standard normalizes values `values`.
+
+  Args:
+    values: Tensor with values to be standardized.
+    axes: Axes used to compute mean and variances.
+
+  Returns:
+    Standardized values (values - mean(values[axes])) / std(values[axes]).
+  """
+  values_mean, values_var = tf.nn.moments(x=values, axes=axes, keepdims=True)
+  epsilon = np.finfo(values.dtype.as_numpy_dtype).eps
+  normalized_values = (
+      (values - values_mean) / (tf.sqrt(values_var) + epsilon))
+  return normalized_values
 
 
 def _entropy_loss(distributions, spec, weights=None):
@@ -50,6 +69,13 @@ def _entropy_loss(distributions, spec, weights=None):
     if weights is not None:
       entropy *= weights
     return tf.reduce_mean(input_tensor=entropy)
+
+
+def _get_initial_policy_state(policy, time_steps):
+  """Gets the initial state of a policy."""
+  batch_size = (tf.compat.dimension_at_index(time_steps.discount.shape, 0) or
+                tf.shape(time_steps.discount)[0])
+  return policy.get_initial_state(batch_size=batch_size)
 
 
 @gin.configurable
@@ -119,13 +145,9 @@ class ReinforceAgent(tf_agent.TFAgent):
     pass
 
   def _train(self, experience, weights=None):
-    # TODO(b/126593927): Support batch dimensions >1.
-    if experience.step_type.shape[0] != 1:
-      raise NotImplementedError('ReinforceAgent does not yet support batch '
-                                'dimensions greater than 1.')
+    returns = value_ops.discounted_return(
+        experience.reward, experience.discount, time_major=False)
 
-    experience = tf.nest.map_structure(lambda t: tf.squeeze(t, 0), experience)
-    returns = common.compute_returns(experience.reward, experience.discount)
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
           name='rewards', data=experience.reward, step=self.train_step_counter)
@@ -138,8 +160,7 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     # TODO(b/126592060): replace with tensor normalizer.
     if self._normalize_returns:
-      ret_mean, ret_var = tf.nn.moments(x=returns, axes=[0])
-      returns = (returns - ret_mean) / (tf.sqrt(ret_var) + 1e-6)
+      returns = _standard_normalize(returns, axes=(0, 1))
       if self._debug_summaries:
         tf.compat.v2.summary.histogram(
             name='normalized_returns',
@@ -178,7 +199,9 @@ class ReinforceAgent(tf_agent.TFAgent):
 
   def _loss(self, time_steps, actions, returns, weights):
     tf.nest.assert_same_structure(time_steps, self.time_step_spec)
-    actions_distribution = self.collect_policy.distribution(time_steps).action
+    policy_state = _get_initial_policy_state(self.collect_policy, time_steps)
+    actions_distribution = self.collect_policy.distribution(
+        time_steps, policy_state=policy_state).action
 
     policy_gradient_loss = self.policy_gradient_loss(
         actions_distribution, actions, time_steps.is_last(), returns, weights)

@@ -78,7 +78,8 @@ import gin.tf
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_string('game_name', 'Pong', 'Name of Atari game to run.')
-flags.DEFINE_multi_string('gin_binding', None, 'Gin binding.')
+flags.DEFINE_multi_string('gin_file', None, 'Path to gin config files.')
+flags.DEFINE_multi_string('gin_param', None, 'Gin binding.')
 FLAGS = flags.FLAGS
 
 # AtariPreprocessing runs 4 frames at a time, max-pooling over the last 2
@@ -589,7 +590,7 @@ class TrainEval(object):
 def main(_):
   logging.set_verbosity(logging.INFO)
   tf.enable_resource_variables()
-  gin.parse_config_files_and_bindings(None, FLAGS.gin_binding)
+  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
   TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name)).run()
 
 

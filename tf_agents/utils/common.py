@@ -23,7 +23,9 @@ import functools
 from absl import logging
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
+from tf_agents.distributions import tanh_bijector_stable
 from tf_agents.environments import time_step as ts
 from tf_agents.utils import nest_utils
 
@@ -388,6 +390,17 @@ def clip_to_spec(value, spec):
   return tf.clip_by_value(value, spec.minimum, spec.maximum)
 
 
+def spec_means_and_magnitudes(action_spec):
+  """Get the center and magnitude of the ranges in action spec."""
+  action_means = tf.nest.map_structure(
+      lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
+  action_magnitudes = tf.nest.map_structure(
+      lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec)
+  return tf.cast(
+      action_means, dtype=tf.float32), tf.cast(
+          action_magnitudes, dtype=tf.float32)
+
+
 def scale_to_spec(tensor, spec):
   """Shapes and scales a batch into the given spec bounds.
 
@@ -400,8 +413,7 @@ def scale_to_spec(tensor, spec):
   tensor = tf.reshape(tensor, [-1] + spec.shape.as_list())
 
   # Scale the tensor.
-  means = (spec.maximum + spec.minimum) / 2.0
-  magnitudes = (spec.maximum - spec.minimum) / 2.0
+  means, magnitudes = spec_means_and_magnitudes(spec)
   tensor = means + magnitudes * tensor
 
   # Set type.
@@ -957,3 +969,24 @@ def transpose_batch_time(x):
           x_static_shape.dims[1].value, x_static_shape.dims[0].value
       ]).concatenate(x_static_shape[2:]))
   return x_t
+
+
+def scale_distribution_to_spec(distribution, spec):
+  """Scales the given distribution to the bounds of the given spec."""
+  bijectors = []
+
+  # Bijector to rescale actions to ranges in action spec.
+  action_means, action_magnitudes = spec_means_and_magnitudes(spec)
+  bijectors.append(
+      tfp.bijectors.AffineScalar(
+          shift=action_means, scale=action_magnitudes))
+
+  # Bijector to squash actions to range (-1.0, +1.0).
+  bijectors.append(tanh_bijector_stable.Tanh())
+
+  # Chain applies bijectors in reverse order, so squash will happen
+  # before rescaling to action spec.
+  bijector_chain = tfp.bijectors.Chain(bijectors)
+  distributions = tfp.distributions.TransformedDistribution(
+      distribution=distribution, bijector=bijector_chain)
+  return distributions
