@@ -330,14 +330,23 @@ class Periodically(tf.Module):
     self._counter = create_variable(self.name + '/counter', 0)
 
   def __call__(self):
-    if self._period is None:
-      return tf.no_op()
-    if self._period == 1:
-      return self._body()
-    period = tf.cast(self._period, self._counter.dtype)
-    remainder = tf.mod(self._counter.assign_add(1), period)
-    return tf.cond(
-        pred=tf.equal(remainder, 0), true_fn=self._body, false_fn=tf.no_op)
+    def call(strategy=None):
+      del strategy  # unused
+      if self._period is None:
+        return tf.no_op()
+      if self._period == 1:
+        return self._body()
+      period = tf.cast(self._period, self._counter.dtype)
+      remainder = tf.mod(self._counter.assign_add(1), period)
+      return tf.cond(
+          pred=tf.equal(remainder, 0), true_fn=self._body, false_fn=tf.no_op)
+
+    # TODO(b/129083817) add an explicit unit test to ensure correct behavior
+    ctx = tf.distribute.get_replica_context()
+    if ctx:
+      return  tf.distribute.get_replica_context().merge_call(call)
+    else:
+      return call()
 
 
 class EagerPeriodically(object):
