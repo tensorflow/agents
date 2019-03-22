@@ -179,11 +179,8 @@ class Base(tf.Module):
     """
     tf.nest.assert_same_structure(time_step, self._time_step_spec)
     tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
-    with tf.control_dependencies(tf.nest.flatten([time_step, policy_state])):
-      # TODO(ebrevdo,sfishman): Perhaps generate a seed stream here and pass
-      # it down to _action instead?
-      step = self._action(
-          time_step=time_step, policy_state=policy_state, seed=seed)
+    step = self._action(
+        time_step=time_step, policy_state=policy_state, seed=seed)
 
     def clip_action(action, action_spec):
       if isinstance(action_spec, tensor_spec.BoundedTensorSpec):
