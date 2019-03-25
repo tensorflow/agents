@@ -66,6 +66,19 @@ def _spec_from_gym_space(space, dtype_map=None):
     dtype = dtype_map.get(gym.spaces.Discrete, np.int64)
     return specs.BoundedArraySpec(
         shape=(), dtype=dtype, minimum=0, maximum=maximum)
+  elif isinstance(space, gym.spaces.MultiDiscrete):
+    dtype = dtype_map.get(gym.spaces.MultiDiscrete, np.int32)
+    minimum = np.zeros_like(space.nvec, dtype=dtype)
+    maximum = np.asarray(space.nvec - 1, dtype=dtype)
+    return specs.BoundedArraySpec(
+        shape=space.shape, dtype=dtype, minimum=minimum, maximum=maximum)
+  elif isinstance(space, gym.spaces.MultiBinary):
+    dtype = dtype_map.get(gym.spaces.MultiBinary, np.int8)
+    shape = (space.n,)
+    minimum = np.zeros(shape, dtype=dtype)
+    maximum = np.ones(shape, dtype=dtype)
+    return specs.BoundedArraySpec(
+        shape=shape, dtype=dtype, minimum=minimum, maximum=maximum)
   elif isinstance(space, gym.spaces.Box):
     # TODO(oars): change to use dtype in space once Gym is updated.
     dtype = dtype_map.get(gym.spaces.Box, np.float32)
