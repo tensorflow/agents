@@ -183,3 +183,6 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
 
   def action_spec(self):
     return self._action_spec
+
+  def close(self):
+    return self._gym_env.close()
