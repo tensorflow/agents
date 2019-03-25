@@ -34,6 +34,7 @@ from tf_agents.networks import value_network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+from tf_agents.utils import test_utils
 
 
 class DummyActorNet(network.DistributionNetwork):
@@ -115,7 +116,7 @@ def _compute_returns_fn(rewards, discounts, next_state_return=0.0):
   return returns
 
 
-class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
+class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
     super(PPOAgentTest, self).setUp()

@@ -104,6 +104,11 @@ class Base(tf.Module):
     sess.run([time_step, action_step, next_time_step, next_action_step])
   """
 
+  # TODO(b/127327645) Remove this attribute.
+  # This attribute allows subclasses to back out of automatic tf.function
+  # attribute inside TF1 (for autodeps).
+  _enable_functions = True
+
   def __init__(self,
                time_step_spec,
                action_spec,
@@ -136,6 +141,7 @@ class Base(tf.Module):
     self._info_spec = info_spec
     self._setup_specs()
     self._clip = clip
+    self._action_fn = common.function_in_tf1()(self._action)
 
   def _setup_specs(self):
     self._policy_step_spec = policy_step.PolicyStep(
@@ -176,10 +182,22 @@ class Base(tf.Module):
         `action`: An action Tensor matching the `action_spec()`.
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
+
+    Raises:
+      RuntimeError: If subclass __init__ didn't call super().__init__.
     """
+    if self._enable_functions and getattr(self, '_action_fn', None) is None:
+      raise RuntimeError(
+          'Cannot find _action_fn.  Did %s.__init__ call super?'
+          % type(self).__name__)
+    if self._enable_functions:
+      action_fn = self._action_fn
+    else:
+      action_fn = self._action
+
     tf.nest.assert_same_structure(time_step, self._time_step_spec)
     tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
-    step = self._action(
+    step = action_fn(
         time_step=time_step, policy_state=policy_state, seed=seed)
 
     def clip_action(action, action_spec):

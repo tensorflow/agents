@@ -33,6 +33,7 @@ from tf_agents.policies import ou_noise_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
 class DummyNet(network.Network):
@@ -99,7 +100,7 @@ def fast_map_structure(func, *structure):
   return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
 
 
-class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(PyTFPolicyTest, self).setUp()

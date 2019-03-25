@@ -22,13 +22,14 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.drivers import dynamic_episode_driver
-from tf_agents.drivers import test_utils
+from tf_agents.drivers import test_utils as drivers_test_utils
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
+from tf_agents.utils import test_utils
 
 
-class TrajectoryTest(tf.test.TestCase):
+class TrajectoryTest(test_utils.TestCase):
 
   def testFirstTensors(self):
     observation = ()
@@ -122,9 +123,11 @@ class TrajectoryTest(tf.test.TestCase):
     self.assertAllEqual(policy_steps.info, np.array([[1.0, 2.0]]))
 
   def testToTransitionHandlesTrajectoryFromDriverCorrectly(self):
-    env = tf_py_environment.TFPyEnvironment(test_utils.PyEnvironmentMock())
-    policy = test_utils.TFPolicyMock(env.time_step_spec(), env.action_spec())
-    replay_buffer = test_utils.make_replay_buffer(policy)
+    env = tf_py_environment.TFPyEnvironment(
+        drivers_test_utils.PyEnvironmentMock())
+    policy = drivers_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec())
+    replay_buffer = drivers_test_utils.make_replay_buffer(policy)
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env, policy, num_episodes=3, observers=[replay_buffer.add_batch])

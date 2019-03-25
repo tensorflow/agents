@@ -24,6 +24,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 from tensorflow.python.framework import test_util  # TF internal
 
 
@@ -45,7 +46,7 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
-class QPolicyTest(tf.test.TestCase):
+class QPolicyTest(test_utils.TestCase):
 
   def setUp(self):
     super(QPolicyTest, self).setUp()

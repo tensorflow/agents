@@ -27,6 +27,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
 class DummyActionNet(network.Network):
@@ -89,7 +90,7 @@ def test_cases():
   })
 
 
-class ActorPolicyTest(parameterized.TestCase, tf.test.TestCase):
+class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
     super(ActorPolicyTest, self).setUp()

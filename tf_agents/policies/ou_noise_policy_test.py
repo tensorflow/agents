@@ -28,6 +28,7 @@ from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
 class DummyActionNet(network.Network):
@@ -66,7 +67,7 @@ class DummyActionNet(network.Network):
             network_state)
 
 
-class OuNoisePolicyTest(tf.test.TestCase):
+class OuNoisePolicyTest(test_utils.TestCase):
 
   def setUp(self):
     super(OuNoisePolicyTest, self).setUp()

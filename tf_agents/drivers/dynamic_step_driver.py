@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tf_agents.drivers import driver
 from tf_agents.environments import trajectory
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 import gin.tf
 
@@ -67,6 +68,7 @@ class DynamicStepDriver(driver.Driver):
     """
     super(DynamicStepDriver, self).__init__(env, policy, observers)
     self._num_steps = num_steps
+    self._run_fn = common.function_in_tf1()(self._run)
 
   def _loop_condition_fn(self):
     """Returns a function with the condition needed for tf.while_loop."""
@@ -113,11 +115,7 @@ class DynamicStepDriver(driver.Driver):
 
     return loop_body
 
-  # TODO(b/113529538): Add tests for policy_state.
-  def run(self,
-          time_step=None,
-          policy_state=None,
-          maximum_iterations=None):
+  def run(self, time_step=None, policy_state=None, maximum_iterations=None):
     """Takes steps in the environment using the policy while updating observers.
 
     Args:
@@ -134,6 +132,15 @@ class DynamicStepDriver(driver.Driver):
       time_step: TimeStep named tuple with final observation, reward, etc.
       policy_state: Tensor with final step policy state.
     """
+    return self._run_fn(time_step=time_step, policy_state=policy_state,
+                        maximum_iterations=maximum_iterations)
+
+  # TODO(b/113529538): Add tests for policy_state.
+  def _run(self,
+           time_step=None,
+           policy_state=None,
+           maximum_iterations=None):
+    """See `run()` docstring for details."""
     if time_step is None:
       time_step = self.env.current_time_step()
     if policy_state is None:

@@ -27,6 +27,7 @@ from tf_agents.policies import fixed_policy
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
 class DistributionPolicy(tf_policy.Base):
@@ -41,7 +42,7 @@ class DistributionPolicy(tf_policy.Base):
     return policy_step.PolicyStep(self._distribution_value, policy_state)
 
 
-class FixedPolicyTest(tf.test.TestCase):
+class FixedPolicyTest(test_utils.TestCase):
 
   def setUp(self):
     super(FixedPolicyTest, self).setUp()

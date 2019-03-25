@@ -30,6 +30,7 @@ from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common as common
+from tf_agents.utils import test_utils
 
 
 class TfPolicyHoldsVariables(tf_policy.Base):
@@ -110,7 +111,7 @@ class TfPassThroughPolicy(tf_policy.Base):
     return policy_step.PolicyStep(action_distribution, (), ())
 
 
-class TfPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(
       ("SoftUpdate", 0.5, False),
