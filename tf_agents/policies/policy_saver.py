@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import functools
 
 import tensorflow as tf
@@ -40,7 +41,7 @@ class PolicySaver(object):
   ```python
 
   my_policy = agent.collect_policy
-  saver = PolicySaver(policy, batch_size=1)
+  saver = PolicySaver(policy, batch_size=None)
 
   for i in range(...):
     agent.train(...)
@@ -48,31 +49,36 @@ class PolicySaver(object):
       saver.save('policy_%d' % global_step)
   ```
 
-  To load and use the saved policy:
+  To load and use the saved policy directly:
 
   ```python
-  policy_step_spec = ...
-  flat_spec = tf.nest.flatten(time_step_spec)
-
-
   saved_policy = tf.compat.v2.saved_model.load('policy_0')
-  get_initial_state = saved_policy.signatures['get_initial_state']
-  action = saved_policy.signatures['action']
-  policy_state_dict = get_initial_state(batch_size)
-
+  policy_state = saved_policy.get_initial_state(batch_size=3)
+  time_step = ...
   while True:
-    flat_time_step = tf.nest.flatten(time_step)
+    policy_step = saved_policy.action(time_step, policy_state)
+    policy_state = policy_step.state
+    time_step = f(policy_step.action)
+    ...
+  ```
 
-    time_step_dict = dict(
-      (spec.name, value) for spec, value in zip(flat_spec, flat_time_step))
-    policy_step_dict = action(time_step_dict, policy_state_dict)
-    policy_step = tf.nest.map_structure(
-      lambda spec: policy_step_dict[spec.name], policy_step_spec)
-    policy_state_dict = dict(
-      (k, policy_step_dict[k]) for k in policy_state_dict)
+  If using the flattened (signature) version, you will be limited to using
+  dicts keyed by the specs' name fields.
 
-    # Calculate the next time_step via interaction with the environment using
-    # policy_step.action
+  ```python
+  saved_policy = tf.compat.v2.saved_model.load('policy_0')
+  get_initial_state_fn = saved_policy.signatures['get_initial_state']
+  action_fn = saved_policy.signatures['action']
+
+  policy_state_dict = get_initial_state_fn(batch_size=3)
+  time_step_dict = ...
+  while True:
+    time_step_state = dict(time_step_dict)
+    time_step_state.update(policy_state_dict)
+    policy_step_dict = action_fn(time_step_state)
+    policy_state_dict = extract_policy_state_fields(policy_step_dict)
+    action_dict = extract_action_fields(policy_step_dict)
+    time_step_dict = f(action_dict)
     ...
   ```
   """
@@ -127,6 +133,9 @@ class PolicySaver(object):
                 'policy_state_spec': policy.policy_state_spec})
     check_spec(policy.policy_step_spec)
 
+    # Make a shallow copy as we'll be making some changes in-place.
+    policy = copy.copy(policy)
+
     if batch_size is None:
       get_initial_state_fn = policy.get_initial_state
       get_initial_state_input_specs = (
@@ -136,19 +145,52 @@ class PolicySaver(object):
           policy.get_initial_state, batch_size=batch_size)
       get_initial_state_input_specs = ()
 
+    get_initial_state_fn = common.function()(get_initial_state_fn)
+
+    original_action_fn = policy.action
+    if seed is not None:
+      def action_fn(time_step, policy_state):
+        return original_action_fn(time_step, policy_state, seed=seed)
+    else:
+      action_fn = original_action_fn
+
+    # We call get_concrete_function() for its side effect.
+    get_initial_state_fn.get_concrete_function(
+        *get_initial_state_input_specs)
+
+    action_fn = common.function()(action_fn)
+
+    def add_batch_dim(spec):
+      return tf.TensorSpec(
+          shape=tf.TensorShape([batch_size]).concatenate(spec.shape),
+          name=spec.name,
+          dtype=spec.dtype)
+    batched_time_step_spec = tf.nest.map_structure(
+        add_batch_dim, policy.time_step_spec)
+    batched_policy_state_spec = tf.nest.map_structure(
+        add_batch_dim, policy.policy_state_spec)
+
+    # We call get_concrete_function() for its side effect.
+    action_fn.get_concrete_function(
+        time_step=batched_time_step_spec,
+        policy_state=batched_policy_state_spec)
+
     signatures = {
-        'action': _function_with_signature(
-            functools.partial(policy.action, seed=seed),
+        'action': _function_with_flat_signature(
+            action_fn,
             input_specs=(policy.time_step_spec, policy.policy_state_spec),
             output_spec=policy.policy_step_spec,
             include_batch_dimension=True,
             batch_size=batch_size),
-        'get_initial_state': _function_with_signature(
+        'get_initial_state': _function_with_flat_signature(
             get_initial_state_fn,
             input_specs=get_initial_state_input_specs,
             output_spec=policy.policy_state_spec,
             include_batch_dimension=False),
     }
+
+    policy.action = action_fn
+    policy.get_initial_state = get_initial_state_fn
 
     self._policy = policy
     self._signatures = signatures
@@ -159,11 +201,11 @@ class PolicySaver(object):
         self._policy, export_dir, signatures=self._signatures)
 
 
-def _function_with_signature(function,
-                             input_specs,
-                             output_spec,
-                             include_batch_dimension,
-                             batch_size=None):
+def _function_with_flat_signature(function,
+                                  input_specs,
+                                  output_spec,
+                                  include_batch_dimension,
+                                  batch_size=None):
   """Create a tf.function with a given signature for export.
 
   Args:

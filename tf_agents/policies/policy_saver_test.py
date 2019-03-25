@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os
 
+from absl.testing import parameterized
 import tensorflow as tf
 
 from tf_agents.environments import time_step as ts
@@ -30,7 +31,7 @@ from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 
 
-class PolicySaverTest(tf.test.TestCase):
+class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(PolicySaverTest, self).setUp()
@@ -52,7 +53,8 @@ class PolicySaverTest(tf.test.TestCase):
     self._global_seed = 12345
     tf.compat.v1.set_random_seed(self._global_seed)
 
-  def testSaveAction(self):
+  @parameterized.named_parameters(('NotSeeded', False), ('Seeded', True))
+  def testSaveAction(self, seeded):
     if not tf.executing_eagerly():
       self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
 
@@ -66,6 +68,7 @@ class PolicySaverTest(tf.test.TestCase):
         q_network=q_network)
 
     action_seed = 98723
+
     saver = policy_saver.PolicySaver(policy, batch_size=None, seed=action_seed)
     path = os.path.join(tf.compat.v1.test.get_temp_dir(), 'save_model_action')
     saver.save(path)
@@ -96,25 +99,54 @@ class PolicySaverTest(tf.test.TestCase):
     # PolicySaver helps ensure equality of the output of action() in both cases.
     self.assertEqual(reloaded_action.graph.seed, self._global_seed)
     action_output = policy.action(*action_inputs, seed=action_seed)
+
     # The seed= argument for the SavedModel action call was given at creation of
     # the PolicySaver.
-    reloaded_action_output_dict = reloaded_action(**function_action_input_dict)
+
+    # This is the flat-signature function.
+    reloaded_action_output_dict = reloaded_action(
+        **function_action_input_dict)
+
+    # This is the non-flat function.
+    reloaded_action_output = reloaded.action(*action_inputs)
 
     action_output_dict = dict((
         (spec.name, value) for (spec, value) in
         zip(tf.nest.flatten(policy.policy_step_spec),
             tf.nest.flatten(action_output))))
 
+    # Check output of the flattened signature call.
     action_output_dict = self.evaluate(action_output_dict)
     reloaded_action_output_dict = self.evaluate(reloaded_action_output_dict)
-
     self.assertAllEqual(
         action_output_dict.keys(), reloaded_action_output_dict.keys())
+
+    def match_dtype_shape(x, y, msg=None):
+      self.assertEqual(x.shape, y.shape, msg=msg)
+      self.assertEqual(x.dtype, y.dtype, msg=msg)
+
     for k in action_output_dict:
-      self.assertAllClose(
-          action_output_dict[k],
-          reloaded_action_output_dict[k],
-          msg='\nMismatched dict key: %s.' % k)
+      if seeded:
+        self.assertAllClose(
+            action_output_dict[k],
+            reloaded_action_output_dict[k],
+            msg='\nMismatched dict key: %s.' % k)
+      else:
+        match_dtype_shape(action_output_dict[k],
+                          reloaded_action_output_dict[k],
+                          msg='\nMismatch dict key: %s.' % k)
+
+    # Check output of the proper structured call.
+    action_output = self.evaluate(action_output)
+    reloaded_action_output = self.evaluate(reloaded_action_output)
+    # With non-signature functions, we can check that passing a seed does the
+    # right thing the second time.
+    if seeded:
+      tf.nest.map_structure(
+          self.assertAllClose, action_output, reloaded_action_output)
+    else:
+      tf.nest.map_structure(
+          match_dtype_shape, action_output, reloaded_action_output)
 
   def testSaveGetInitialState(self):
     if not tf.executing_eagerly():
@@ -145,6 +177,16 @@ class PolicySaverTest(tf.test.TestCase):
         batch_input=False,
         batch_size=None)
 
+    initial_state = policy.get_initial_state(batch_size=3)
+    initial_state = self.evaluate(initial_state)
+
+    reloaded_nobatch_initial_state = reloaded_nobatch.get_initial_state(
+        batch_size=3)
+    reloaded_nobatch_initial_state = self.evaluate(
+        reloaded_nobatch_initial_state)
+    tf.nest.map_structure(
+        self.assertAllClose, initial_state, reloaded_nobatch_initial_state)
+
     saver_batch = policy_saver.PolicySaver(policy, batch_size=3)
     path = os.path.join(tf.compat.v1.test.get_temp_dir(),
                         'save_model_initial_state_batch')
@@ -158,6 +200,11 @@ class PolicySaverTest(tf.test.TestCase):
         expected_output_spec=policy.policy_state_spec,
         batch_input=False,
         batch_size=3)
+
+    reloaded_batch_initial_state = reloaded_batch.get_initial_state()
+    reloaded_batch_initial_state = self.evaluate(reloaded_batch_initial_state)
+    tf.nest.map_structure(
+        self.assertAllClose, initial_state, reloaded_batch_initial_state)
 
   def _compare_input_output_specs(self,
                                   function,
