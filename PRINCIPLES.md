@@ -124,8 +124,6 @@ constraints.
 * Weapons or other technologies whose principal purpose or implementation is to
 cause or directly facilitate injury to people.
 
-#Ok...well dqn controlled missiles is obviously a serious issue.
-#So...is that on me to try and prevent myself or...
 
 * Technologies that gather or use information for surveillance violating
 internationally accepted norms.
