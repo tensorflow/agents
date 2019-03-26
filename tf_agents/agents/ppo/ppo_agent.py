@@ -438,6 +438,8 @@ class PPOAgent(tf_agent.TFAgent):
     discounts *= episode_mask
 
     # Compute Monte Carlo returns.
+    # If the final step is terminal, the bootstrapped estimation will never be
+    # used, as it will be multiplied by zero (the discount on the last step).
     final_value_bootstrapped = (value_preds[:, -1]
                                 if use_last_value_pred_for_bootstrapping
                                 else None)
