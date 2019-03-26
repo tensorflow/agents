@@ -28,9 +28,10 @@ from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import fixed_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+from tf_agents.utils import test_utils
 
 
-class EpsilonGreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(EpsilonGreedyPolicyTest, self).setUp()

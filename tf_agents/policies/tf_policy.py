@@ -21,10 +21,14 @@ from __future__ import print_function
 
 import abc
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+
+tfd = tfp.distributions
 
 
 class Base(tf.Module):
@@ -100,19 +104,32 @@ class Base(tf.Module):
     sess.run([time_step, action_step, next_time_step, next_action_step])
   """
 
-  def __init__(self, time_step_spec, action_spec,
-               policy_state_spec=(), info_spec=(), name=None):
+  # TODO(b/127327645) Remove this attribute.
+  # This attribute allows subclasses to back out of automatic tf.function
+  # attribute inside TF1 (for autodeps).
+  _enable_functions = True
+
+  def __init__(self,
+               time_step_spec,
+               action_spec,
+               policy_state_spec=(),
+               info_spec=(),
+               clip=True,
+               name=None):
     """Initialization of Base class.
 
     Args:
-      time_step_spec: A `TimeStep` spec of the expected time_steps.
-        Usually provided by the user to the subclass.
-      action_spec: A nest of BoundedTensorSpec representing the actions.
-        Usually provided by the user to the subclass.
+      time_step_spec: A `TimeStep` spec of the expected time_steps. Usually
+        provided by the user to the subclass.
+      action_spec: A nest of BoundedTensorSpec representing the actions. Usually
+        provided by the user to the subclass.
       policy_state_spec: A nest of TensorSpec representing the policy_state.
         Provided by the subclass, not directly by the user.
-      info_spec: A nest of TensorSpec representing the policy info.
-        Provided by the subclass, not directly by the user.
+      info_spec: A nest of TensorSpec representing the policy info. Provided by
+        the subclass, not directly by the user.
+      clip: Whether to clip actions to spec before returning them.  Default
+        True. Most policy-based algorithms (PCL, PPO, REINFORCE) use unclipped
+        continuous actions for training.
       name: A name for this module. Defaults to the class name.
     """
     super(Base, self).__init__(name=name)
@@ -123,10 +140,13 @@ class Base(tf.Module):
     self._policy_state_spec = policy_state_spec
     self._info_spec = info_spec
     self._setup_specs()
+    self._clip = clip
+    self._action_fn = common.function_in_tf1()(self._action)
 
   def _setup_specs(self):
     self._policy_step_spec = policy_step.PolicyStep(
-        action=self._action_spec, state=self._policy_state_spec,
+        action=self._action_spec,
+        state=self._policy_state_spec,
         info=self._info_spec)
     self._trajectory_spec = trajectory.from_transition(
         self._time_step_spec, self._policy_step_spec, self._time_step_spec)
@@ -153,8 +173,8 @@ class Base(tf.Module):
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
-      policy_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous policy_state.
+      policy_state: A Tensor, or a nested dict, list or tuple of Tensors
+        representing the previous policy_state.
       seed: Seed to use if action performs sampling (optional).
 
     Returns:
@@ -162,14 +182,34 @@ class Base(tf.Module):
         `action`: An action Tensor matching the `action_spec()`.
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
+
+    Raises:
+      RuntimeError: If subclass __init__ didn't call super().__init__.
     """
+    if self._enable_functions and getattr(self, '_action_fn', None) is None:
+      raise RuntimeError(
+          'Cannot find _action_fn.  Did %s.__init__ call super?'
+          % type(self).__name__)
+    if self._enable_functions:
+      action_fn = self._action_fn
+    else:
+      action_fn = self._action
+
     tf.nest.assert_same_structure(time_step, self._time_step_spec)
     tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
-    with tf.control_dependencies(tf.nest.flatten([time_step, policy_state])):
-      # TODO(ebrevdo,sfishman): Perhaps generate a seed stream here and pass
-      # it down to _action instead?
-      step = self._action(time_step=time_step, policy_state=policy_state,
-                          seed=seed)
+    step = action_fn(
+        time_step=time_step, policy_state=policy_state, seed=seed)
+
+    def clip_action(action, action_spec):
+      if isinstance(action_spec, tensor_spec.BoundedTensorSpec):
+        return common.clip_to_spec(action, action_spec)
+      return action
+
+    if self._clip:
+      clipped_actions = tf.nest.map_structure(clip_action, step.action,
+                                              self._action_spec)
+      step = step._replace(action=clipped_actions)
+
     tf.nest.assert_same_structure(step, self._policy_step_spec)
 
     def compare_to_spec(value, spec):
@@ -194,8 +234,8 @@ class Base(tf.Module):
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
-      policy_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous policy_state.
+      policy_state: A Tensor, or a nested dict, list or tuple of Tensors
+        representing the previous policy_state.
 
     Returns:
       A `PolicyStep` named tuple containing:
@@ -218,9 +258,10 @@ class Base(tf.Module):
     Args:
       policy: Another policy it can update from.
       tau: A float scalar in [0, 1]. When tau is 1.0 (default), we do a hard
-      update.
+        update.
       sort_variables_by_name: A bool, when True would sort the variables by name
-      before doing the update.
+        before doing the update.
+
     Returns:
       An TF op to do the update.
     """
@@ -314,8 +355,8 @@ class Base(tf.Module):
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
-      policy_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous policy_state.
+      policy_state: A Tensor, or a nested dict, list or tuple of Tensors
+        representing the previous policy_state.
       seed: Seed to use if action performs sampling (optional).
 
     Returns:
@@ -324,8 +365,9 @@ class Base(tf.Module):
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """
+    seed_stream = tfd.SeedStream(seed=seed, salt='ppo_policy')
     distribution_step = self._distribution(time_step, policy_state)
-    actions = tf.nest.map_structure(lambda d: d.sample(seed=seed),
+    actions = tf.nest.map_structure(lambda d: d.sample(seed=seed_stream()),
                                     distribution_step.action)
     return distribution_step._replace(action=actions)
 
@@ -337,8 +379,8 @@ class Base(tf.Module):
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
-      policy_state: A Tensor, or a nested dict, list or tuple of
-        Tensors representing the previous policy_state.
+      policy_state: A Tensor, or a nested dict, list or tuple of Tensors
+        representing the previous policy_state.
 
     Returns:
       A `PolicyStep` named tuple containing:
@@ -368,6 +410,7 @@ class Base(tf.Module):
       A nested object of type `policy_state` containing properly
       initialized Tensors.
     """
+
     def _zero_tensor(spec):
       if batch_size is None:
         shape = spec.shape

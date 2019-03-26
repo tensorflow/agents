@@ -28,7 +28,6 @@ from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_step
 from tf_agents.specs import distribution_spec
-from tf_agents.utils import common
 
 tfd = tfp.distributions
 
@@ -127,22 +126,6 @@ class PPOPolicy(actor_policy.ActorPolicy):
     if self._observation_normalizer:
       var_list += self._observation_normalizer.variables
     return var_list
-
-  def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='ppo_policy')
-
-    def _sample(dist, action_spec):
-      action = dist.sample(seed=seed_stream())
-      if self._clip:
-        return common.clip_to_spec(action, action_spec)
-      return action
-
-    distribution_step = self.distribution(time_step, policy_state)
-    actions = tf.nest.map_structure(_sample, distribution_step.action,
-                                    self._action_spec)
-
-    return policy_step.PolicyStep(actions, distribution_step.state,
-                                  distribution_step.info)
 
   def _distribution(self, time_step, policy_state):
     # Actor network outputs nested structure of distributions or actions.

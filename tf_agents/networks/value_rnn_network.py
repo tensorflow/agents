@@ -50,6 +50,7 @@ class ValueRnnNetwork(network.Network):
                input_tensor_spec,
                conv_layer_params=None,
                input_fc_layer_params=(75, 40),
+               input_dropout_layer_params=None,
                lstm_size=(40,),
                output_fc_layer_params=(75, 40),
                activation_fn=tf.keras.activations.relu,
@@ -68,6 +69,12 @@ class ValueRnnNetwork(network.Network):
       input_fc_layer_params: Optional list of fully_connected parameters, where
         each item is the number of units in the layer. This is applied before
         the LSTM cell.
+      input_dropout_layer_params: Optional list of dropout layer parameters,
+        where each item is the fraction of input units to drop. The dropout
+        layers are interleaved with the fully connected layers; there is a
+        dropout layer after each fully connected layer, except if the entry in
+        the list is None. This list must have the same length of
+        input_fc_layer_params, or be None.
       lstm_size: An iterable of ints specifying the LSTM cell sizes to use.
       output_fc_layer_params: Optional list of fully_connected parameters, where
         each item is the number of units in the layer. This is applied after the
@@ -85,6 +92,7 @@ class ValueRnnNetwork(network.Network):
     input_layers = utils.mlp_layers(
         conv_layer_params,
         input_fc_layer_params,
+        input_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
         name='input_mlp')

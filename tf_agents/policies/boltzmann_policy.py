@@ -50,6 +50,7 @@ class BoltzmannPolicy(tf_policy.Base):
                                           policy.action_spec,
                                           policy.policy_state_spec,
                                           policy.info_spec,
+                                          clip=False,
                                           name=name)
     self._temperature = temperature
     self._wrapped_policy = policy

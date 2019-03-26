@@ -157,6 +157,8 @@ class AgentTest(tf.test.TestCase):
       self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testPolicy(self, agent_class, run_mode):
+    if tf.executing_eagerly() and run_mode == context.graph_mode:
+      self.skipTest('b/123778560')
     with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(
@@ -179,6 +181,8 @@ class AgentTest(tf.test.TestCase):
       self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
 
   def testInitializeRestoreAgent(self, agent_class, run_mode):
+    if tf.executing_eagerly() and run_mode == context.graph_mode:
+      self.skipTest('b/123778560')
     with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(

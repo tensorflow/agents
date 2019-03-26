@@ -24,9 +24,10 @@ import tensorflow as tf
 
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import trajectory_replay
+from tf_agents.utils import test_utils
 
 
-class TrajectoryReplayTest(tf.test.TestCase):
+class TrajectoryReplayTest(test_utils.TestCase):
 
   def _compare_to_original(self,
                            output_actions,

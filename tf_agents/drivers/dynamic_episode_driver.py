@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tf_agents.drivers import driver
 from tf_agents.environments import trajectory
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 import gin.tf
 
@@ -61,6 +62,7 @@ class DynamicEpisodeDriver(driver.Driver):
     """
     super(DynamicEpisodeDriver, self).__init__(env, policy, observers)
     self._num_episodes = num_episodes
+    self._run_fn = common.function_in_tf1()(self._run)
 
   def _loop_condition_fn(self, num_episodes):
     """Returns a function with the condition needed for tf.while_loop."""
@@ -133,6 +135,17 @@ class DynamicEpisodeDriver(driver.Driver):
       time_step: TimeStep named tuple with final observation, reward, etc.
       policy_state: Tensor with final step policy state.
     """
+    return self._run_fn(time_step=time_step,
+                        policy_state=policy_state,
+                        num_episodes=num_episodes,
+                        maximum_iterations=maximum_iterations)
+
+  def _run(self,
+           time_step=None,
+           policy_state=None,
+           num_episodes=None,
+           maximum_iterations=None):
+    """See `run()` docstring for details."""
     if time_step is None:
       time_step = self.env.reset()
 

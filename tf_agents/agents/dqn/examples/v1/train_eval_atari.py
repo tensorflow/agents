@@ -299,12 +299,11 @@ class TrainEval(object):
       with tf.device('/cpu:0'):
         ds = self._replay_buffer.as_dataset(
             sample_batch_size=batch_size, num_steps=2).prefetch(4)
-        # TODO(b/123242430): Add prefetch_to_device back here in order to
-        # improve performance once errors are resolved.
-        self._ds_itr = tf.compat.v1.data.make_one_shot_iterator(ds)
-        experience = self._ds_itr.get_next()
+        ds = ds.apply(tf.data.experimental.prefetch_to_device('/gpu:0'))
 
       with tf.device('/gpu:0'):
+        self._ds_itr = tf.compat.v1.data.make_one_shot_iterator(ds)
+        experience = self._ds_itr.get_next()
         self._train_op = tf_agent.train(experience)
 
         self._env_steps_metric = py_metrics.EnvironmentSteps()

@@ -30,8 +30,11 @@ class CriticNetwork(network.Network):
                input_tensor_spec,
                observation_conv_layer_params=None,
                observation_fc_layer_params=None,
+               observation_dropout_layer_params=None,
                action_fc_layer_params=None,
+               action_dropout_layer_params=None,
                joint_fc_layer_params=None,
+               joint_dropout_layer_params=None,
                activation_fn=tf.nn.relu,
                name='CriticNetwork'):
     """Creates an instance of `CriticNetwork`.
@@ -44,11 +47,38 @@ class CriticNetwork(network.Network):
         indicating (num_units, kernel_size, stride).
       observation_fc_layer_params: Optional list of fully connected parameters
         for observations, where each item is the number of units in the layer.
+      observation_dropout_layer_params: Optional list of dropout layer
+        parameters, each item is the fraction of input units to drop or a
+        dictionary of parameters according to the keras.Dropout documentation.
+        The additional parameter `permanent', if set to True, allows to apply
+        dropout at inference for approximated Bayesian inference. The dropout
+        layers are interleaved with the fully connected layers; there is a
+        dropout layer after each fully connected layer, except if the entry in
+        the list is None. This list must have the same length of
+        observation_fc_layer_params, or be None.
       action_fc_layer_params: Optional list of fully connected parameters for
         actions, where each item is the number of units in the layer.
+      action_dropout_layer_params: Optional list of dropout layer parameters,
+        each item is the fraction of input units to drop or a dictionary of
+        parameters according to the keras.Dropout documentation. The additional
+        parameter `permanent', if set to True, allows to apply dropout at
+        inference for approximated Bayesian inference. The dropout layers are
+        interleaved with the fully connected layers; there is a dropout layer
+        after each fully connected layer, except if the entry in the list is
+        None. This list must have the same length of action_fc_layer_params, or
+        be None.
       joint_fc_layer_params: Optional list of fully connected parameters after
         merging observations and actions, where each item is the number of units
         in the layer.
+      joint_dropout_layer_params: Optional list of dropout layer parameters,
+        each item is the fraction of input units to drop or a dictionary of
+        parameters according to the keras.Dropout documentation. The additional
+        parameter `permanent', if set to True, allows to apply dropout at
+        inference for approximated Bayesian inference. The dropout layers are
+        interleaved with the fully connected layers; there is a dropout layer
+        after each fully connected layer, except if the entry in the list is
+        None. This list must have the same length of joint_fc_layer_params, or
+        be None.
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
       name: A string representing name of the network.
 
@@ -75,6 +105,7 @@ class CriticNetwork(network.Network):
     self._observation_layers = utils.mlp_layers(
         observation_conv_layer_params,
         observation_fc_layer_params,
+        observation_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),
@@ -83,6 +114,7 @@ class CriticNetwork(network.Network):
     self._action_layers = utils.mlp_layers(
         None,
         action_fc_layer_params,
+        action_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),
@@ -91,6 +123,7 @@ class CriticNetwork(network.Network):
     self._joint_layers = utils.mlp_layers(
         None,
         joint_fc_layer_params,
+        joint_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
             scale=1. / 3., mode='fan_in', distribution='uniform'),

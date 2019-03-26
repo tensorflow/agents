@@ -28,6 +28,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
 class DummyActorNet(network.Network):
@@ -124,7 +125,7 @@ def _test_cases(prefix=''):
   }]
 
 
-class PPOPolicyTest(parameterized.TestCase, tf.test.TestCase):
+class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
     super(PPOPolicyTest, self).setUp()

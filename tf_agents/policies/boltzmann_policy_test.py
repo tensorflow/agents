@@ -27,6 +27,7 @@ from tf_agents.networks import network
 from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 from tensorflow.python.framework import test_util  # TF internal
 
 
@@ -48,7 +49,7 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
-class BoltzmannPolicyTest(tf.test.TestCase, absltest.TestCase):
+class BoltzmannPolicyTest(test_utils.TestCase, absltest.TestCase):
 
   def setUp(self):
     super(BoltzmannPolicyTest, self).setUp()

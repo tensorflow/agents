@@ -66,6 +66,7 @@ class TFPyPolicy(tf_policy.Base):
         action_spec=action_spec,
         policy_state_spec=policy_state_spec,
         info_spec=info_spec,
+        clip=False,
         name=name)
 
     # Output types of py_funcs.

@@ -41,6 +41,7 @@ class RandomTFPolicy(tf_policy.Base):
     if time_step is not None:
       with tf.control_dependencies(tf.nest.flatten(time_step)):
         action_ = tf.nest.map_structure(tf.identity, action_)
+
     return policy_step.PolicyStep(action_, policy_state)
 
   def _distribution(self, time_step, policy_state):

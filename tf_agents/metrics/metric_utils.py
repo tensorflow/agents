@@ -153,7 +153,7 @@ def eager_compute(metrics,
       policy,
       observers=metrics,
       num_episodes=num_episodes)
-  driver.run(time_step, policy_state)
+  common.function(driver.run)(time_step, policy_state)
 
   results = [(metric.name, metric.result()) for metric in metrics]
   # TODO(b/120301678) remove the summaries and merge with compute

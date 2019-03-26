@@ -29,6 +29,7 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
 class DistributionPolicy(tf_policy.Base):
@@ -49,7 +50,7 @@ class DistributionPolicy(tf_policy.Base):
     return []
 
 
-class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class GreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(GreedyPolicyTest, self).setUp()
