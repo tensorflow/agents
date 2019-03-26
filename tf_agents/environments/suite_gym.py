@@ -58,7 +58,7 @@ def load(environment_name,
       `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
 
   Returns:
-    A PyEnvironmentBase instance.
+    A PyEnvironment instance.
   """
   gym_spec = gym.spec(environment_name)
   gym_env = gym_spec.make()
@@ -111,7 +111,7 @@ def wrap_env(gym_env,
       terminal state is reached.
 
   Returns:
-    A PyEnvironmentBase instance.
+    A PyEnvironment instance.
   """
 
   for wrapper in gym_env_wrappers:

@@ -46,9 +46,8 @@ class TimeStep(
   will equal `StepType.MID.
 
   Attributes:
-    step_type: A scalar mapping to `StepType` enum value.
-    reward: A scalar, or `None` if `step_type` equals `StepType.FIRST`, i.e. at
-      the start of a sequence.
+    step_type: a `Tensor` or array of `StepType` enum values.
+    reward: a `Tensor` or array of reward values.
     discount: A discount value in the range `[0, 1]`.
     observation: A NumPy array, or a nested dict, list or tuple of arrays.
   """
@@ -57,17 +56,17 @@ class TimeStep(
   def is_first(self):
     if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.FIRST)
-    return self.step_type == StepType.FIRST
+    return np.equal(self.step_type, StepType.FIRST)
 
   def is_mid(self):
     if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.MID)
-    return self.step_type == StepType.MID
+    return np.equal(self.step_type, StepType.MID)
 
   def is_last(self):
     if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.LAST)
-    return self.step_type == StepType.LAST
+    return np.equal(self.step_type, StepType.LAST)
 
   def __hash__(self):
     # TODO(oars): Explore performance impact and consider converting dicts in
