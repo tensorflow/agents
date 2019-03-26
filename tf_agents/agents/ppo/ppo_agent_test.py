@@ -188,10 +188,10 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
   @parameterized.named_parameters([
       ('OneEpoch', 1, True, True),
       ('FiveEpochs', 5, False, True),
-      ('IncompleteEpisodesReturnsZeroLossOnOnlyFullTrain', 1, False, True),
-      ('IncompleteEpisodesReturnsNonZeroLossOnIncomplTrain', 1, False, False),
+      ('IncompleteEpisodesReturnsZeroLossOnOnlyFullTrain', 1, False, False),
+      ('IncompleteEpisodesReturnsNonZeroLossOnIncomplTrain', 1, False, True),
   ])
-  def testTrain(self, num_epochs, use_td_lambda_return, train_on_full_only):
+  def testTrain(self, num_epochs, use_td_lambda_return, train_on_partial):
     with tf.compat.v2.summary.record_if(False):
       # Mock the build_train_op to return an op for incrementing this counter.
       counter = common.create_variable('test_train_counter')
@@ -206,7 +206,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
           use_gae=use_td_lambda_return,
           use_td_lambda_return=use_td_lambda_return,
           train_step_counter=counter,
-          train_only_on_full_episodes=train_on_full_only)
+          train_on_partial_episodes=train_on_partial)
       observations = tf.constant([
           [[1, 2], [3, 4], [5, 6]],
           [[1, 2], [3, 4], [5, 6]],
@@ -247,7 +247,7 @@ class PPOAgentTest(parameterized.TestCase, tf.test.TestCase):
       loss_type = self.evaluate(loss)
       loss_numpy = loss_type.loss
 
-      if not train_on_full_only:
+      if train_on_partial:
         # Assert that loss is not zero as we are training in a non-episodic env
         self.assertNotEqual(loss_numpy, 0.0,
                             msg=('Loss is exactly zero, looks like no training '

@@ -30,7 +30,11 @@ from tf_agents.environments import time_step as ts
 
 class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
 
-  def testMakeTimestepMaskWithPartialEpisode(self):
+  @parameterized.named_parameters(
+      ('OnNotAllowPartialReturnsZerosOnIncompleteSteps', False),
+      ('OnAllowPartialReturnsOnesOnIncompleteStepsAndZerosBetween', True)
+  )
+  def testMakeTimestepMaskWithPartialEpisode(self, allow_partial):
     first, mid, last = ts.StepType.FIRST, ts.StepType.MID, ts.StepType.LAST
 
     next_step_types = tf.constant([[mid, mid, last, first,
@@ -42,15 +46,26 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     zeros = tf.zeros_like(next_step_types)
     next_time_step = ts.TimeStep(next_step_types, zeros, zeros, zeros)
 
-    # Mask should be 0.0 for transition timesteps (3, 7) and for all timesteps
-    #   belonging to the final, incomplete episode.
-    expected_mask = [[1.0, 1.0, 1.0, 0.0,
-                      1.0, 1.0, 1.0, 0.0,
-                      0.0, 0.0],
-                     [1.0, 1.0, 1.0, 0.0,
-                      1.0, 1.0, 1.0, 1.0,
-                      1.0, 1.0]]
-    timestep_mask = ppo_utils.make_timestep_mask(next_time_step)
+    if not allow_partial:
+      # Mask should be 0.0 for transition timesteps (3, 7) and for all timesteps
+      #   belonging to the final, incomplete episode.
+      expected_mask = [[1.0, 1.0, 1.0, 0.0,
+                        1.0, 1.0, 1.0, 0.0,
+                        0.0, 0.0],
+                       [1.0, 1.0, 1.0, 0.0,
+                        1.0, 1.0, 1.0, 1.0,
+                        1.0, 1.0]]
+    else:
+      # Zeros only between episodes. Incomplete episodes are valid and not
+      # zeroed out.
+      expected_mask = [[1.0, 1.0, 1.0, 0.0,
+                        1.0, 1.0, 1.0, 0.0,
+                        1.0, 1.0],
+                       [1.0, 1.0, 1.0, 0.0,
+                        1.0, 1.0, 1.0, 1.0,
+                        1.0, 1.0]]
+    timestep_mask = ppo_utils.make_timestep_mask(
+        next_time_step, allow_partial_episodes=allow_partial)
 
     timestep_mask_ = self.evaluate(timestep_mask)
     self.assertAllClose(expected_mask, timestep_mask_)

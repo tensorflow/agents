@@ -25,29 +25,36 @@ from tf_agents.environments import trajectory
 from tf_agents.policies import policy_step
 
 
-def make_timestep_mask(batched_next_time_step):
+def make_timestep_mask(batched_next_time_step, allow_partial_episodes=False):
   """Create a mask for final incomplete episodes and episode transitions.
 
   Args:
     batched_next_time_step: Next timestep, doubly-batched
       [batch_dim, time_dim, ...].
+    allow_partial_episodes: If true, then steps on incomplete episodes are
+      allowed.
 
   Returns:
     A mask, type tf.float32, that is 0.0 for all between-episode timesteps
       (batched_next_time_step is FIRST), or where the episode is
       not compelete, so the return computation would not be correct.
   """
-  # 1.0 for timesteps of all complete episodes. 0.0 for incomplete episode at
-  #   the end of the sequence.
-  episode_is_complete = tf.cumsum(
-      tf.cast(batched_next_time_step.is_last(), tf.float32),
-      axis=1,
-      reverse=True) > 0
+  if allow_partial_episodes:
+    episode_is_complete = None
+  else:
+    # 1.0 for timesteps of all complete episodes. 0.0 for incomplete episode at
+    #   the end of the sequence.
+    episode_is_complete = tf.cumsum(
+        tf.cast(batched_next_time_step.is_last(), tf.float32),
+        axis=1,
+        reverse=True) > 0
 
   # 1.0 for all valid timesteps. 0.0 where between episodes.
   not_between_episodes = ~batched_next_time_step.is_first()
-
-  return tf.cast(episode_is_complete & not_between_episodes, tf.float32)
+  if episode_is_complete is None:
+    return tf.cast(not_between_episodes, tf.float32)
+  else:
+    return tf.cast(episode_is_complete & not_between_episodes, tf.float32)
 
 
 def get_distribution_params(nested_distribution):
