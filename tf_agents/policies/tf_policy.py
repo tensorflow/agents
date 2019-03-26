@@ -171,6 +171,22 @@ class Base(tf.Module):
       step = self._action(time_step=time_step, policy_state=policy_state,
                           seed=seed)
     tf.nest.assert_same_structure(step, self._policy_step_spec)
+
+    def compare_to_spec(value, spec):
+      return value.dtype.is_compatible_with(spec.dtype)
+
+    compatibility = tf.nest.flatten(tf.nest.map_structure(
+        compare_to_spec, step.action, self.action_spec))
+
+    if not all(compatibility):
+      get_dtype = lambda x: x.dtype
+      action_dtypes = tf.nest.map_structure(get_dtype, step.action)
+      spec_dtypes = tf.nest.map_structure(get_dtype, self.action_spec)
+
+      raise TypeError('Policy produced an action with a dtype that doesn\'t '
+                      'match its action_spec. Got action: %s with '
+                      'action_spec: %s' % (action_dtypes, spec_dtypes))
+
     return step
 
   def distribution(self, time_step, policy_state=()):
