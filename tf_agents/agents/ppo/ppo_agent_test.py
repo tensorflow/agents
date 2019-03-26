@@ -34,6 +34,7 @@ from tf_agents.networks import value_network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 
 class DummyActorNet(network.DistributionNetwork):
@@ -72,7 +73,8 @@ class DummyActorNet(network.DistributionNetwork):
     # Calls coming from agent.train() has a time dimension. Direct loss calls
     # may not have a time dimension. It order to make BatchSquash work, we need
     # to specify the outer dimension properly.
-    has_time_dim = tf.rank(hidden_state) == 3
+    has_time_dim = nest_utils.get_outer_rank(inputs,
+                                             self.input_tensor_spec) == 2
     outer_rank = 2 if has_time_dim else 1
     batch_squash = network_utils.BatchSquash(outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
