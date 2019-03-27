@@ -19,11 +19,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl import flags
 from absl.testing import parameterized
 from absl.testing.absltest import mock
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
@@ -34,7 +37,10 @@ from tf_agents.networks import value_network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 from tf_agents.utils import test_utils
+
+FLAGS = flags.FLAGS
 
 
 class DummyActorNet(network.DistributionNetwork):
@@ -45,7 +51,6 @@ class DummyActorNet(network.DistributionNetwork):
         input_spec, (), output_spec=output_spec, name='DummyActorNet')
     self._action_spec = action_spec
     self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
-    self._outer_rank = 1  # TOOD(oars): Do we need this?
 
     self._layers.append(
         tf.keras.layers.Dense(
@@ -70,7 +75,14 @@ class DummyActorNet(network.DistributionNetwork):
 
   def call(self, inputs, unused_step_type=None, network_state=()):
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
-    batch_squash = network_utils.BatchSquash(self._outer_rank)
+
+    # Calls coming from agent.train() has a time dimension. Direct loss calls
+    # may not have a time dimension. It order to make BatchSquash work, we need
+    # to specify the outer dimension properly.
+    has_time_dim = nest_utils.get_outer_rank(inputs,
+                                             self.input_tensor_spec) == 2
+    outer_rank = 2 if has_time_dim else 1
+    batch_squash = network_utils.BatchSquash(outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
 
     for layer in self.layers:
@@ -632,6 +644,88 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(advantages, dtype=tf.float32), variance_epsilon=0.0)
     self.assertAllClose(expected_advantages,
                         self.evaluate(normalized_advantages))
+
+  def testAgentDoesNotFailWhenNestedObservationActionAndDebugSummaries(self):
+    summary_writer = tf.compat.v2.summary.create_file_writer(FLAGS.test_tmpdir,
+                                                             flush_millis=10000)
+    summary_writer.set_as_default()
+
+    nested_obs_spec = (self._obs_spec, self._obs_spec, {
+        'a': self._obs_spec,
+        'b': self._obs_spec,
+    })
+    nested_time_spec = ts.time_step_spec(nested_obs_spec)
+
+    nested_act_spec = (self._action_spec, {
+        'c': self._action_spec,
+        'd': self._action_spec
+    })
+
+    class NestedActorNet(network.DistributionNetwork):
+
+      def __init__(self, dummy_model):
+        output_spec = (dummy_model.output_spec, {
+            'c': dummy_model.output_spec,
+            'd': dummy_model.output_spec,
+        })
+        super(NestedActorNet, self).__init__(
+            dummy_model.input_tensor_spec, (),
+            output_spec=output_spec,
+            name='NestedActorNet')
+        self.dummy_model = dummy_model
+
+      def call(self, *args, **kwargs):
+        dummy_ans, _ = self.dummy_model(*args, **kwargs)
+        return (dummy_ans, {'c': dummy_ans, 'd': dummy_ans}), ()
+
+    dummy_model = DummyActorNet(nested_obs_spec, self._action_spec)
+    agent = ppo_agent.PPOAgent(
+        nested_time_spec,
+        nested_act_spec,
+        tf.compat.v1.train.AdamOptimizer(),
+        actor_net=NestedActorNet(dummy_model),
+        value_net=DummyValueNet(nested_obs_spec),
+        debug_summaries=True)
+
+    observations = tf.constant([
+        [[1, 2], [3, 4], [5, 6]],
+        [[1, 2], [3, 4], [5, 6]],
+    ], dtype=tf.float32)
+
+    observations = (observations, observations, {
+        'a': observations,
+        'b': observations,
+    })
+
+    time_steps = ts.TimeStep(
+        step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
+        reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+        discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+        observation=observations)
+    actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
+
+    actions = (actions, {
+        'c': actions,
+        'd': actions,
+    })
+
+    action_distribution_parameters = {
+        'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
+        'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
+    }
+    action_distribution_parameters = (action_distribution_parameters, {
+        'c': action_distribution_parameters,
+        'd': action_distribution_parameters,
+    })
+
+    policy_info = action_distribution_parameters
+
+    experience = trajectory.Trajectory(time_steps.step_type, observations,
+                                       actions, policy_info,
+                                       time_steps.step_type, time_steps.reward,
+                                       time_steps.discount)
+
+    agent.train(experience)
 
 
 if __name__ == '__main__':

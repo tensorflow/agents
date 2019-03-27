@@ -462,8 +462,13 @@ class PPOAgent(tf_agent.TFAgent):
     actions = policy_steps_.action
 
     if self._debug_summaries:
-      tf.compat.v2.summary.histogram(
-          name='actions', data=actions, step=self.train_step_counter)
+      actions_list = tf.nest.flatten(actions)
+      show_action_index = len(actions_list) != 1
+      for i, single_action in enumerate(actions_list):
+        action_name = ('actions_{}'.format(i)
+                       if show_action_index else 'actions')
+        tf.compat.v2.summary.histogram(
+            name=action_name, data=single_action, step=self.train_step_counter)
 
     action_distribution_parameters = policy_steps_.info
 
@@ -715,8 +720,15 @@ class PPOAgent(tf_agent.TFAgent):
     """
     observation = time_steps.observation
     if debug_summaries:
-      tf.compat.v2.summary.histogram(
-          name='observations', data=observation, step=self.train_step_counter)
+      observation_list = tf.nest.flatten(observation)
+      show_observation_index = len(observation_list) != 1
+      for i, single_observation in enumerate(observation_list):
+        observation_name = ('observations_{}'.format(i)
+                            if show_observation_index else 'observations')
+        tf.compat.v2.summary.histogram(
+            name=observation_name,
+            data=single_observation,
+            step=self.train_step_counter)
 
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     policy_state = self._collect_policy.get_initial_state(batch_size=batch_size)
@@ -865,17 +877,22 @@ class PPOAgent(tf_agent.TFAgent):
           name='policy_entropy_mean',
           data=tf.reduce_mean(input_tensor=entropy),
           step=self.train_step_counter)
-      # Categorical distribution (used for discrete actions)
-      # doesn't have a mean.
-      if not tensor_spec.is_discrete(self.action_spec):
-        tf.compat.v2.summary.histogram(
-            name='actions_distribution_mean',
-            data=current_policy_distribution.mean(),
-            step=self.train_step_counter)
-        tf.compat.v2.summary.histogram(
-            name='actions_distribution_stddev',
-            data=current_policy_distribution.stddev(),
-            step=self.train_step_counter)
+      for i, (single_action, single_distribution) in enumerate(
+          zip(
+              tf.nest.flatten(self.action_spec),
+              tf.nest.flatten(current_policy_distribution))):
+        # Categorical distribution (used for discrete actions) doesn't have a
+        # mean.
+        distribution_index = '_{}'.format(i) if i > 0 else ''
+        if not tensor_spec.is_discrete(single_action):
+          tf.compat.v2.summary.histogram(
+              name='actions_distribution_mean' + distribution_index,
+              data=single_distribution.mean(),
+              step=self.train_step_counter)
+          tf.compat.v2.summary.histogram(
+              name='actions_distribution_stddev' + distribution_index,
+              data=single_distribution.stddev(),
+              step=self.train_step_counter)
       tf.compat.v2.summary.histogram(
           name='policy_gradient_loss',
           data=policy_gradient_loss,
