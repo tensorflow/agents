@@ -171,13 +171,31 @@ class PolicySaver(object):
         add_batch_dim, policy.policy_state_spec)
 
     # We call get_concrete_function() for its side effect.
-    action_fn.get_concrete_function(
-        time_step=batched_time_step_spec,
-        policy_state=batched_policy_state_spec)
+    if batched_policy_state_spec:
+      # Store the signature with a required policy state spec
+      polymorphic_action_fn = action_fn
+      polymorphic_action_fn.get_concrete_function(
+          time_step=batched_time_step_spec,
+          policy_state=batched_policy_state_spec)
+    else:
+      # Create a polymorphic action_fn which you can call as
+      #  restored.action(time_step)
+      # or
+      #  restored.action(time_step, ())
+      # (without retracing the inner action twice)
+      @common.function()
+      def polymorphic_action_fn(
+          time_step, policy_state=batched_policy_state_spec):
+        return action_fn(time_step, policy_state)
+      polymorphic_action_fn.get_concrete_function(
+          time_step=batched_time_step_spec,
+          policy_state=batched_policy_state_spec)
+      polymorphic_action_fn.get_concrete_function(
+          time_step=batched_time_step_spec)
 
     signatures = {
         'action': _function_with_flat_signature(
-            action_fn,
+            polymorphic_action_fn,
             input_specs=(policy.time_step_spec, policy.policy_state_spec),
             output_spec=policy.policy_step_spec,
             include_batch_dimension=True,
@@ -189,7 +207,7 @@ class PolicySaver(object):
             include_batch_dimension=False),
     }
 
-    policy.action = action_fn
+    policy.action = polymorphic_action_fn
     policy.get_initial_state = get_initial_state_fn
 
     self._policy = policy

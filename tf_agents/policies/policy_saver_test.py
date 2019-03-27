@@ -24,6 +24,7 @@ import os
 from absl.testing import parameterized
 import tensorflow as tf
 
+from tf_agents.agents.dqn import q_network
 from tf_agents.environments import time_step as ts
 from tf_agents.networks import q_rnn_network
 from tf_agents.policies import policy_saver
@@ -53,24 +54,32 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     self._global_seed = 12345
     tf.compat.v1.set_random_seed(self._global_seed)
 
-  @parameterized.named_parameters(('NotSeeded', False), ('Seeded', True))
-  def testSaveAction(self, seeded):
+  @parameterized.named_parameters(('NotSeededNoState', False, False),
+                                  ('NotSeededWithState', False, True),
+                                  ('SeededNoState', True, False),
+                                  ('SeededWithState', True, True))
+  def testSaveAction(self, seeded, has_state):
     if not tf.executing_eagerly():
       self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
 
-    q_network = q_rnn_network.QRnnNetwork(
-        input_tensor_spec=self._time_step_spec.observation,
-        action_spec=self._action_spec)
+    if has_state:
+      network = q_rnn_network.QRnnNetwork(
+          input_tensor_spec=self._time_step_spec.observation,
+          action_spec=self._action_spec)
+    else:
+      network = q_network.QNetwork(
+          input_tensor_spec=self._time_step_spec.observation,
+          action_spec=self._action_spec)
 
     policy = q_policy.QPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=self._action_spec,
-        q_network=q_network)
+        q_network=network)
 
     action_seed = 98723
 
     saver = policy_saver.PolicySaver(policy, batch_size=None, seed=action_seed)
-    path = os.path.join(tf.compat.v1.test.get_temp_dir(), 'save_model_action')
+    path = os.path.join(self.get_temp_dir(), 'save_model_action')
     saver.save(path)
 
     reloaded = tf.compat.v2.saved_model.load(path)
@@ -107,8 +116,28 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     reloaded_action_output_dict = reloaded_action(
         **function_action_input_dict)
 
+    def match_dtype_shape(x, y, msg=None):
+      self.assertEqual(x.shape, y.shape, msg=msg)
+      self.assertEqual(x.dtype, y.dtype, msg=msg)
+
     # This is the non-flat function.
-    reloaded_action_output = reloaded.action(*action_inputs)
+    if has_state:
+      reloaded_action_output = reloaded.action(*action_inputs)
+    else:
+      # Try both cases: one with an empty policy_state and one with no
+      # policy_state.  Compare them.
+
+      # NOTE(ebrevdo): The first call to .action() must be stored in
+      # reloaded_action_output because this is the version being compared later
+      # against the true action_output and the values will change after the
+      # first call due to randomness.
+      reloaded_action_output = reloaded.action(*action_inputs)
+      reloaded_action_output_no_input_state = reloaded.action(action_inputs[0])
+      # Even with a seed, multiple calls to action will get different values,
+      # so here we just check the signature matches.
+      tf.nest.map_structure(match_dtype_shape,
+                            reloaded_action_output_no_input_state,
+                            reloaded_action_output)
 
     action_output_dict = dict((
         (spec.name, value) for (spec, value) in
@@ -120,10 +149,6 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     reloaded_action_output_dict = self.evaluate(reloaded_action_output_dict)
     self.assertAllEqual(
         action_output_dict.keys(), reloaded_action_output_dict.keys())
-
-    def match_dtype_shape(x, y, msg=None):
-      self.assertEqual(x.shape, y.shape, msg=msg)
-      self.assertEqual(x.dtype, y.dtype, msg=msg)
 
     for k in action_output_dict:
       if seeded:
@@ -152,17 +177,17 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     if not tf.executing_eagerly():
       self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
 
-    q_network = q_rnn_network.QRnnNetwork(
+    network = q_rnn_network.QRnnNetwork(
         input_tensor_spec=self._time_step_spec.observation,
         action_spec=self._action_spec)
 
     policy = q_policy.QPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=self._action_spec,
-        q_network=q_network)
+        q_network=network)
 
     saver_nobatch = policy_saver.PolicySaver(policy, batch_size=None)
-    path = os.path.join(tf.compat.v1.test.get_temp_dir(),
+    path = os.path.join(self.get_temp_dir(),
                         'save_model_initial_state_nobatch')
     saver_nobatch.save(path)
     reloaded_nobatch = tf.compat.v2.saved_model.load(path)
@@ -188,7 +213,7 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
         self.assertAllClose, initial_state, reloaded_nobatch_initial_state)
 
     saver_batch = policy_saver.PolicySaver(policy, batch_size=3)
-    path = os.path.join(tf.compat.v1.test.get_temp_dir(),
+    path = os.path.join(self.get_temp_dir(),
                         'save_model_initial_state_batch')
     saver_batch.save(path)
     reloaded_batch = tf.compat.v2.saved_model.load(path)
