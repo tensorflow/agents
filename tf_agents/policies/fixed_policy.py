@@ -45,7 +45,8 @@ class FixedPolicy(tf_policy.Base):
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    super(FixedPolicy, self).__init__(time_step_spec, action_spec, name=name)
+    super(FixedPolicy, self).__init__(time_step_spec, action_spec, clip=False,
+                                      name=name)
     tf.nest.assert_same_structure(self._action_spec, actions)
 
     def convert(action, spec):

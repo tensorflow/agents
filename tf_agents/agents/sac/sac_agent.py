@@ -16,8 +16,7 @@
 """A Soft Actor-Critic Agent.
 
 Implements the Soft Actor-Critic (SAC) algorithm from
-"Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement
-Learning with a Soft Actor" by Haarnoja et al (2017).
+"Soft Actor-Critic Algorithms and Applications" by Haarnoja et al (2019).
 """
 
 from __future__ import absolute_import

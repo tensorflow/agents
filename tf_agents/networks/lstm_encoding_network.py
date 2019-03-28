@@ -30,7 +30,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import tensorflow as tf
 
 from tf_agents.environments import time_step
@@ -164,10 +163,12 @@ class LSTMEncodingNetwork(network.Network):
         for num_units in output_fc_layer_params
     ])
 
-    state_spec = tf.nest.map_structure(
-        functools.partial(
-            tensor_spec.TensorSpec, dtype=dtype, name='network_state_spec'),
-        cell.state_size)
+    counter = [-1]
+    def create_spec(size):
+      counter[0] += 1
+      return tensor_spec.TensorSpec(
+          size, dtype=dtype, name='network_state_%d' % counter[0])
+    state_spec = tf.nest.map_structure(create_spec, cell.state_size)
 
     super(LSTMEncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,

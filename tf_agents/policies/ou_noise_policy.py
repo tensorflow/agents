@@ -48,6 +48,7 @@ class OUNoisePolicy(tf_policy.Base):
       clip: Whether to clip actions to spec. Default True.
       name: The name of this policy.
     """
+
     def _validate_action_spec(action_spec):
       if not tensor_spec.is_continuous(action_spec):
         raise ValueError('OU Noise is applicable only to continuous actions.')
@@ -59,22 +60,25 @@ class OUNoisePolicy(tf_policy.Base):
         wrapped_policy.action_spec,
         wrapped_policy.policy_state_spec,
         wrapped_policy.info_spec,
+        clip=clip,
         name=name)
     self._ou_stddev = ou_stddev
     self._ou_damping = ou_damping
     self._ou_process = None
     self._wrapped_policy = wrapped_policy
-    self._clip = clip
 
   def _variables(self):
     return self._wrapped_policy.variables()
 
   def _action(self, time_step, policy_state, seed):
     seed_stream = tfd.SeedStream(seed=seed, salt='ou_noise')
+
     def _create_ou_process(action_spec):
       return common.OUProcess(
           lambda: tf.zeros(action_spec.shape, dtype=action_spec.dtype),
-          self._ou_damping, self._ou_stddev, seed=seed_stream())
+          self._ou_damping,
+          self._ou_stddev,
+          seed=seed_stream())
 
     if self._ou_process is None:
       self._ou_process = tf.nest.map_structure(_create_ou_process,
@@ -83,14 +87,11 @@ class OUNoisePolicy(tf_policy.Base):
     action_step = self._wrapped_policy.action(time_step, policy_state,
                                               seed_stream())
 
-    def _add_ou_noise(action, ou_process, action_spec):
-      noisy_action = action + ou_process()
-      if self._clip:
-        return common.clip_to_spec(noisy_action, action_spec)
-      return noisy_action
+    def _add_ou_noise(action, ou_process):
+      return action + ou_process()
 
     actions = tf.nest.map_structure(_add_ou_noise, action_step.action,
-                                    self._ou_process, self._action_spec)
+                                    self._ou_process)
     return policy_step.PolicyStep(actions, action_step.state, action_step.info)
 
   def _distribution(self, time_step, policy_state):

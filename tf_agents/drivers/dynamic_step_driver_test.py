@@ -25,9 +25,10 @@ from tf_agents.drivers import dynamic_step_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import test_utils
 
 
-class DynamicStepDriverTest(tf.test.TestCase):
+class DynamicStepDriverTest(test_utils.TestCase):
 
   def testOneStepUpdatesObservers(self):
     if tf.executing_eagerly():

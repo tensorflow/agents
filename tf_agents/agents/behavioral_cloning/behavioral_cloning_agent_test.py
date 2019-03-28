@@ -147,6 +147,8 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
           action_spec,
           cloning_network=cloning_net,
           optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
+      # Disable clipping to make sure we can see the difference in behavior
+      agent.policy._clip = False
       # Remove policy_info, as BehavioralCloningAgent expects none.
       traj = traj.replace(policy_info=())
       # TODO(b/123883319)
@@ -176,6 +178,8 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
           action_spec,
           cloning_network=cloning_net,
           optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
+      # Disable clipping to make sure we can see the difference in behavior
+      agent.policy._clip = False
       # Remove policy_info, as BehavioralCloningAgent expects none.
       traj = traj.replace(policy_info=())
       # TODO(b/123883319)

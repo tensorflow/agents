@@ -43,6 +43,7 @@ class ValueNetwork(network.Network):
   def __init__(self,
                input_tensor_spec,
                fc_layer_params=(75, 40),
+               dropout_layer_params=None,
                conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                name='ValueNetwork'):
@@ -56,6 +57,14 @@ class ValueNetwork(network.Network):
         representing the input observations.
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
+      dropout_layer_params: Optional list of dropout layer parameters, each item
+        is the fraction of input units to drop or a dictionary of parameters
+        according to the keras.Dropout documentation. The additional parameter
+        `permanent', if set to True, allows to apply dropout at inference for
+        approximated Bayesian inference. The dropout layers are interleaved with
+        the fully connected layers; there is a dropout layer after each fully
+        connected layer, except if the entry in the list is None. This list must
+        have the same length of fc_layer_params, or be None.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -79,6 +88,7 @@ class ValueNetwork(network.Network):
     self._postprocessing_layers = utils.mlp_layers(
         conv_layer_params,
         fc_layer_params,
+        dropout_layer_params=dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
         name='input_mlp')

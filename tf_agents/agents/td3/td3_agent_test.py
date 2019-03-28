@@ -25,6 +25,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+from tf_agents.utils import test_utils
 
 
 class DummyActorNetwork(network.Network):
@@ -92,7 +93,7 @@ class DummyCriticNetwork(network.Network):
     return q_value, network_state
 
 
-class TD3AgentTest(tf.test.TestCase):
+class TD3AgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(TD3AgentTest, self).setUp()

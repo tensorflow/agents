@@ -27,6 +27,7 @@ from tf_agents.environments import time_step as ts
 from tf_agents.policies import random_tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
+from tf_agents.utils import test_utils
 from tensorflow.python.eager import context  # TF internal
 
 
@@ -40,7 +41,7 @@ from tensorflow.python.eager import context  # TF internal
     ('tf.float64', tf.float64, context.graph_mode),
     ('tf.float64_eager', tf.float64, context.eager_mode),
 )
-class RandomTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def create_batch(self, single_time_step, batch_size):
     batch_time_step = nest_utils.stack_nested_tensors(

@@ -24,9 +24,10 @@ import tensorflow as tf
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
+from tf_agents.utils import test_utils
 
 
-class DynamicEpisodeDriverTest(tf.test.TestCase):
+class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testPolicyState(self):
     env = tf_py_environment.TFPyEnvironment(

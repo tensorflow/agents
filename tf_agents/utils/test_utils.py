@@ -24,6 +24,7 @@ import os
 from absl import flags
 
 import numpy as np
+import tensorflow as tf
 
 
 FLAGS = flags.FLAGS
@@ -63,3 +64,10 @@ def test_src_dir_path(relative_path):
   return os.path.join(FLAGS.test_srcdir,
                       'tf_agents',
                       relative_path)
+
+
+class TestCase(tf.test.TestCase):
+
+  def setUp(self):
+    super(TestCase, self).setUp()
+    tf.compat.v1.enable_resource_variables()
