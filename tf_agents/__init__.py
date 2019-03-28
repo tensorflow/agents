@@ -17,7 +17,7 @@
 
 # We need to put some imports inside a function call below, and the function
 # call needs to come before the *actual* imports that populate the
-# tensorflow_probability namespace. Hence, we disable this lint check throughout
+# tf_agents namespace. Hence, we disable this lint check throughout
 # the file.
 #
 # pylint: disable=g-import-not-at-top
@@ -69,5 +69,3 @@ _ensure_tf_install()
 import sys as _sys
 for symbol in ["_ensure_tf_install", "_sys"]:
   delattr(_sys.modules[__name__], symbol)
-
-# pylint: enable=g-import-not-at-top
