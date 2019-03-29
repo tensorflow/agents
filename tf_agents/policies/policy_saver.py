@@ -26,6 +26,36 @@ import tensorflow as tf
 
 from tf_agents.policies import tf_policy
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
+
+
+def _true_if_missing_or_collision(spec, spec_names):
+  if not spec.name or spec.name in spec_names:
+    return True
+  spec_names.add(spec.name)
+  return False
+
+
+def _rename_spec_with_nest_paths(spec):
+  renamed_spec = [
+      tf.TensorSpec(shape=s.shape, name=path, dtype=s.dtype)
+      for path, s in nest_utils.flatten_with_joined_paths(spec)
+  ]
+  return tf.nest.pack_sequence_as(spec, renamed_spec)
+
+
+def _check_spec(spec):
+  """Checks for missing or colliding names in specs."""
+  spec_names = set()
+  checked = [
+      _true_if_missing_or_collision(s, spec_names)
+      for s in tf.nest.flatten(spec)
+  ]
+  if any(checked):
+    raise ValueError(
+        'Specs contain either a missing name or a name collision.\n  '
+        'Spec names: %s\n' %
+        (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),))
 
 
 class PolicySaver(object):
@@ -83,20 +113,28 @@ class PolicySaver(object):
   ```
   """
 
-  def __init__(self, policy, batch_size=None, seed=None):
+  def __init__(self,
+               policy,
+               batch_size=None,
+               use_nest_path_signatures=True,
+               seed=None):
     """Initialize PolicySaver for  TF policy `policy`.
 
     Args:
       policy: A TF Policy.
       batch_size: The number of batch entries the policy will process at a time.
         This must be either `None` (unknown batch size) or a python integer.
+      use_nest_path_signatures: SavedModel spec signatures will be created based
+        on the sructure of the specs. Otherwise all specs must have unique
+        names.
       seed: Random seed for the `policy.action` call, if any (this should
         usually be `None`, except for testing).
 
     Raises:
       TypeError: If `policy` is not an instance of TFPolicy.
-      ValueError: If any of the following `policy` specs are missing names, or
-        the names collide: `policy.time_step_spec`, `policy.action_spec`,
+      ValueError: If use_nest_path_signatures is not used and any of the
+        following `policy` specs are missing names, or the names collide:
+        `policy.time_step_spec`, `policy.action_spec`,
         `policy.policy_state_spec`, `policy.info_spec`.
       ValueError: If `batch_size` is not either `None` or a python integer > 0.
       NotImplementedError: If created from TF1 with eager mode disabled.
@@ -109,29 +147,15 @@ class PolicySaver(object):
       raise TypeError('policy is not a TFPolicy.  Saw: %s' % type(policy))
     if (batch_size is not None and
         (not isinstance(batch_size, int) or batch_size < 1)):
-      raise ValueError('Expected batch_size == None or python int > 0, saw: %s'
-                       % (batch_size,))
+      raise ValueError(
+          'Expected batch_size == None or python int > 0, saw: %s' %
+          (batch_size,))
 
-    def true_if_missing_or_collision(spec, spec_names):
-      if not spec.name or spec.name in spec_names:
-        return True
-      spec_names.add(spec.name)
-      return False
-
-    def check_spec(spec):
-      spec_names = set()
-      checked = [
-          true_if_missing_or_collision(s, spec_names)
-          for s in tf.nest.flatten(spec)]
-      if any(checked):
-        raise ValueError(
-            'Specs contain either a missing name or a name collision.\n  '
-            'Spec names: %s\n'
-            % (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),))
-
-    check_spec({'time_step_spec': policy.time_step_spec,
-                'policy_state_spec': policy.policy_state_spec})
-    check_spec(policy.policy_step_spec)
+    action_fn_input_spec = (policy.time_step_spec, policy.policy_state_spec)
+    if use_nest_path_signatures:
+      action_fn_input_spec = _rename_spec_with_nest_paths(action_fn_input_spec)
+    else:
+      _check_spec(action_fn_input_spec)
 
     # Make a shallow copy as we'll be making some changes in-place.
     policy = copy.copy(policy)
@@ -165,10 +189,27 @@ class PolicySaver(object):
           shape=tf.TensorShape([batch_size]).concatenate(spec.shape),
           name=spec.name,
           dtype=spec.dtype)
-    batched_time_step_spec = tf.nest.map_structure(
-        add_batch_dim, policy.time_step_spec)
-    batched_policy_state_spec = tf.nest.map_structure(
-        add_batch_dim, policy.policy_state_spec)
+
+    batched_time_step_spec = tf.nest.map_structure(add_batch_dim,
+                                                   policy.time_step_spec)
+    batched_policy_state_spec = tf.nest.map_structure(add_batch_dim,
+                                                      policy.policy_state_spec)
+
+    policy_step_spec = policy.policy_step_spec
+    policy_state_spec = policy.policy_state_spec
+
+    if use_nest_path_signatures:
+      batched_time_step_spec = _rename_spec_with_nest_paths(
+          batched_time_step_spec)
+      batched_policy_state_spec = _rename_spec_with_nest_paths(
+          batched_policy_state_spec)
+      policy_step_spec = _rename_spec_with_nest_paths(policy_step_spec)
+      policy_state_spec = _rename_spec_with_nest_paths(policy_state_spec)
+    else:
+      _check_spec(batched_time_step_spec)
+      _check_spec(batched_policy_state_spec)
+      _check_spec(policy_step_spec)
+      _check_spec(policy_state_spec)
 
     # We call get_concrete_function() for its side effect.
     if batched_policy_state_spec:
@@ -196,14 +237,14 @@ class PolicySaver(object):
     signatures = {
         'action': _function_with_flat_signature(
             polymorphic_action_fn,
-            input_specs=(policy.time_step_spec, policy.policy_state_spec),
-            output_spec=policy.policy_step_spec,
+            input_specs=action_fn_input_spec,
+            output_spec=policy_step_spec,
             include_batch_dimension=True,
             batch_size=batch_size),
         'get_initial_state': _function_with_flat_signature(
             get_initial_state_fn,
             input_specs=get_initial_state_input_specs,
-            output_spec=policy.policy_state_spec,
+            output_spec=policy_state_spec,
             include_batch_dimension=False),
     }
 

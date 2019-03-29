@@ -54,6 +54,60 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     self._global_seed = 12345
     tf.compat.v1.set_random_seed(self._global_seed)
 
+  def testUniqueSignatures(self):
+    if not tf.executing_eagerly():
+      self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
+
+    network = q_network.QNetwork(
+        input_tensor_spec=self._time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    action_signature_names = [
+        s.name for s in saver._signatures['action'].input_signature
+    ]
+    self.assertAllEqual(
+        ['0/step_type', '0/reward', '0/discount', '0/observation'],
+        action_signature_names)
+    initial_state_signature_names = [
+        s.name for s in saver._signatures['get_initial_state'].input_signature
+    ]
+    self.assertAllEqual(['batch_size'], initial_state_signature_names)
+
+  def testRenamedSignatures(self):
+    if not tf.executing_eagerly():
+      self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
+
+    time_step_spec = self._time_step_spec._replace(
+        observation=tensor_spec.BoundedTensorSpec(
+            dtype=tf.float32, shape=(4,), minimum=-10.0, maximum=10.0))
+
+    network = q_network.QNetwork(
+        input_tensor_spec=time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    action_signature_names = [
+        s.name for s in saver._signatures['action'].input_signature
+    ]
+    self.assertAllEqual(
+        ['0/step_type', '0/reward', '0/discount', '0/observation'],
+        action_signature_names)
+    initial_state_signature_names = [
+        s.name for s in saver._signatures['get_initial_state'].input_signature
+    ]
+    self.assertAllEqual(['batch_size'], initial_state_signature_names)
+
   @parameterized.named_parameters(('NotSeededNoState', False, False),
                                   ('NotSeededWithState', False, True),
                                   ('SeededNoState', True, False),
@@ -78,7 +132,9 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
 
     action_seed = 98723
 
-    saver = policy_saver.PolicySaver(policy, batch_size=None, seed=action_seed)
+    saver = policy_saver.PolicySaver(
+        policy, batch_size=None, use_nest_path_signatures=False,
+        seed=action_seed)
     path = os.path.join(self.get_temp_dir(), 'save_model_action')
     saver.save(path)
 
@@ -186,9 +242,9 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
-    saver_nobatch = policy_saver.PolicySaver(policy, batch_size=None)
-    path = os.path.join(self.get_temp_dir(),
-                        'save_model_initial_state_nobatch')
+    saver_nobatch = policy_saver.PolicySaver(
+        policy, batch_size=None, use_nest_path_signatures=False)
+    path = os.path.join(self.get_temp_dir(), 'save_model_initial_state_nobatch')
     saver_nobatch.save(path)
     reloaded_nobatch = tf.compat.v2.saved_model.load(path)
     self.assertIn('get_initial_state', reloaded_nobatch.signatures)
@@ -212,9 +268,9 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     tf.nest.map_structure(
         self.assertAllClose, initial_state, reloaded_nobatch_initial_state)
 
-    saver_batch = policy_saver.PolicySaver(policy, batch_size=3)
-    path = os.path.join(self.get_temp_dir(),
-                        'save_model_initial_state_batch')
+    saver_batch = policy_saver.PolicySaver(policy, batch_size=3,
+                                           use_nest_path_signatures=False)
+    path = os.path.join(self.get_temp_dir(), 'save_model_initial_state_batch')
     saver_batch.save(path)
     reloaded_batch = tf.compat.v2.saved_model.load(path)
     self.assertIn('get_initial_state', reloaded_batch.signatures)
@@ -230,6 +286,67 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     reloaded_batch_initial_state = self.evaluate(reloaded_batch_initial_state)
     tf.nest.map_structure(
         self.assertAllClose, initial_state, reloaded_batch_initial_state)
+
+  def testNoSpecMissingOrColliding(self):
+    spec_names = set()
+    flat_spec = tf.nest.flatten(self._time_step_spec)
+    missing_or_colliding = [
+        policy_saver._true_if_missing_or_collision(s, spec_names)
+        for s in flat_spec
+    ]
+
+    self.assertFalse(any(missing_or_colliding))
+
+  def testTrueIfMissing(self):
+    time_step_spec = self._time_step_spec._replace(
+        observation=tensor_spec.BoundedTensorSpec(
+            dtype=tf.float32, shape=(4,), minimum=-10.0, maximum=10.0))
+    spec_names = set()
+    flat_spec = tf.nest.flatten(time_step_spec)
+    missing_or_colliding = [
+        policy_saver._true_if_missing_or_collision(s, spec_names)
+        for s in flat_spec
+    ]
+
+    self.assertTrue(any(missing_or_colliding))
+
+  def testTrueIfCollision(self):
+    time_step_spec = self._time_step_spec._replace(
+        observation=tensor_spec.BoundedTensorSpec(
+            dtype=tf.float32,
+            shape=(4,),
+            name='st',
+            minimum=-10.0,
+            maximum=10.0))
+    spec_names = set()
+    flat_spec = tf.nest.flatten(time_step_spec)
+    missing_or_colliding = [
+        policy_saver._true_if_missing_or_collision(s, spec_names)
+        for s in flat_spec
+    ]
+
+    self.assertTrue(any(missing_or_colliding))
+
+  def testRenameSpecWithNestPaths(self):
+    time_step_spec = self._time_step_spec._replace(observation=[
+        tensor_spec.TensorSpec(
+            dtype=tf.float32,
+            shape=(4,),
+            name='obs1',
+        ),
+        tensor_spec.TensorSpec(
+            dtype=tf.float32,
+            shape=(4,),
+            name='obs1',
+        )
+    ])
+
+    renamed_spec = policy_saver._rename_spec_with_nest_paths(time_step_spec)
+
+    new_names = [s.name for s in tf.nest.flatten(renamed_spec)]
+    self.assertAllEqual(
+        ['step_type', 'reward', 'discount', 'observation/0', 'observation/1'],
+        new_names)
 
   def _compare_input_output_specs(self,
                                   function,
