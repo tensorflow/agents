@@ -203,9 +203,11 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       policy_saved.session = tf.compat.v1.Session(graph=policy_saved_graph)
       policy_saved.initialize(batch_size)
       policy_saved.save(policy_dir=policy_save_path, graph=policy_saved_graph)
-      self.assertEqual(
-          set(tf.io.gfile.listdir(policy_save_path)),
-          set(['checkpoint', 'ckpt-0.data-00000-of-00001', 'ckpt-0.index']))
+      # Verify that index files were written. There will also be some number of
+      # data files, but this depends on the number of devices.
+      self.assertContainsSubset(
+          set(['checkpoint', 'ckpt-0.index']),
+          set(tf.io.gfile.listdir(policy_save_path)))
 
     # Construct a policy to be restored under another tf.Graph instance.
     policy_restore_graph = tf.Graph()
