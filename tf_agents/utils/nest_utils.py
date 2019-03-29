@@ -83,11 +83,11 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
-                     tf.nest.pack_sequence_as(specs, spec_shapes))
+                     (tf.nest.pack_sequence_as(specs, spec_shapes),))
 
   if any(tensor_shape.ndims is None for tensor_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
-                     tf.nest.pack_sequence_as(tensors, tensor_shapes))
+                     (tf.nest.pack_sequence_as(tensors, tensor_shapes),))
 
   is_unbatched = [
       spec_shape.is_compatible_with(tensor_shape)
