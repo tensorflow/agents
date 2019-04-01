@@ -30,6 +30,7 @@ import numpy as np
 
 import tensorflow as tf
 from tf_agents.environments import py_environment
+from tf_agents.utils import nest_utils
 import gin.tf
 
 
@@ -104,8 +105,11 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     Returns:
       Time step with batch dimension.
     """
-    time_steps = self._pool.map(lambda env: env.reset(), self._envs)
-    return stack_time_steps(time_steps)
+    if self._num_envs == 1:
+      return nest_utils.batch_nested_array(self._envs[0].reset())
+    else:
+      time_steps = self._pool.map(lambda env: env.reset(), self._envs)
+      return stack_time_steps(time_steps)
 
   def _step(self, actions):
     """Forward a batch of actions to the wrapped environments.
@@ -119,15 +123,21 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     Returns:
       Batch of observations, rewards, and done flags.
     """
-    unstacked_actions = unstack_actions(actions)
-    if len(unstacked_actions) != self.batch_size:
-      raise ValueError(
-          "Primary dimension of action items does not match "
-          "batch size: %d vs. %d" % (len(unstacked_actions), self.batch_size))
-    time_steps = self._pool.map(
-        lambda env_action: env_action[0].step(env_action[1]),
-        zip(self._envs, unstacked_actions))
-    return stack_time_steps(time_steps)
+
+    if self._num_envs == 1:
+      actions = nest_utils.unbatch_nested_array(actions)
+      time_steps = self._envs[0].step(actions)
+      return nest_utils.batch_nested_array(time_steps)
+    else:
+      unstacked_actions = unstack_actions(actions)
+      if len(unstacked_actions) != self.batch_size:
+        raise ValueError(
+            "Primary dimension of action items does not match "
+            "batch size: %d vs. %d" % (len(unstacked_actions), self.batch_size))
+      time_steps = self._pool.map(
+          lambda env_action: env_action[0].step(env_action[1]),
+          zip(self._envs, unstacked_actions))
+      return stack_time_steps(time_steps)
 
   def close(self):
     """Send close messages to the external process and join them."""

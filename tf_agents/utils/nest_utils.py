@@ -432,7 +432,7 @@ def batch_nested_array(nested_array):
 
 
 def unbatch_nested_array(nested_array):
-  return tf.nest.map_structure(lambda x: x[0], nested_array)
+  return tf.nest.map_structure(lambda x: np.squeeze(x, 0), nested_array)
 
 
 def unstack_nested_arrays(nested_array):
