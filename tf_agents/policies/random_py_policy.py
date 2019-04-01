@@ -30,11 +30,21 @@ from tf_agents.utils import nest_utils
 class RandomPyPolicy(py_policy.Base):
   """Returns random samples of the given action_spec."""
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               seed=None,
-               outer_dims=None):
+  def __init__(self, time_step_spec, action_spec, seed=None, outer_dims=None):
+    """Initializes the RandomPyPolicy.
+
+    Args:
+      time_step_spec: Reference `time_step_spec`. If not None and outer_dims
+        is not provided this is used to infer the outer_dims required for the
+        given time_step when action is called.
+      action_spec: A nest of BoundedArraySpec representing the actions to sample
+        from.
+      seed: Optional seed used to instantiate a random number generator.
+      outer_dims: An optional list/tuple specifying outer dimensions to add to
+        the spec shape before sampling. If unspecified the outer_dims are
+        derived from the outer_dims in the given observation when `action` is
+        called.
+    """
 
     self._seed = seed
     self._outer_dims = outer_dims
@@ -50,8 +60,7 @@ class RandomPyPolicy(py_policy.Base):
     if outer_dims is None:
       if self.time_step_spec.observation:
         outer_dims = nest_utils.get_outer_array_shape(
-            time_step.observation,
-            self.time_step_spec.observation)
+            time_step.observation, self.time_step_spec.observation)
       else:
         outer_dims = ()
 
