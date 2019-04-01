@@ -57,6 +57,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     Raises:
       ValueError: If the action or observation specs don't match.
     """
+    super(ParallelPyEnvironment, self).__init__()
     self._envs = [ProcessPyEnvironment(ctor, flatten=flatten)
                   for ctor in env_constructors]
     self._num_envs = len(env_constructors)
