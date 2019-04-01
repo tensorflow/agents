@@ -57,13 +57,15 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
   def _make_parallel_py_environment(self,
                                     constructor=None,
                                     num_envs=2,
+                                    start_serially=True,
                                     blocking=True):
     self._set_default_specs()
     constructor = constructor or functools.partial(
         random_py_environment.RandomPyEnvironment, self.observation_spec,
         self.action_spec)
     return parallel_py_environment.ParallelPyEnvironment(
-        env_constructors=[constructor] * num_envs, blocking=blocking)
+        env_constructors=[constructor] * num_envs, blocking=blocking,
+        start_serially=start_serially)
 
   def test_close_no_hang_after_init(self):
     env = self._make_parallel_py_environment()
@@ -111,7 +113,8 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         time_sleep=1.0)
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=10, blocking=False)
+        constructor=constructor, num_envs=10, start_serially=False,
+        blocking=False)
     end_time = time.time()
     self.assertLessEqual(
         end_time - start_time,
@@ -129,7 +132,8 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         time_sleep=1.0)
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=10, blocking=True)
+        constructor=constructor, num_envs=10, start_serially=True,
+        blocking=True)
     end_time = time.time()
     self.assertGreater(
         end_time - start_time,

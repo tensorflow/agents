@@ -26,6 +26,7 @@ import traceback
 
 from absl import logging
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -33,6 +34,7 @@ from tf_agents.environments import py_environment
 from tf_agents.utils import nest_utils
 
 
+@gin.configurable
 class ParallelPyEnvironment(py_environment.PyEnvironment):
   """Batch together environments and simulate them in external processes.
 
@@ -42,7 +44,8 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
   access global variables.
   """
 
-  def __init__(self, env_constructors, blocking=False, flatten=False):
+  def __init__(self, env_constructors, start_serially=True, blocking=False,
+               flatten=False):
     """Batch together environments and simulate them in external processes.
 
     The environments can be different but must use the same action and
@@ -50,6 +53,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
 
     Args:
       env_constructors: List of callables that create environments.
+      start_serially: Whether to start environments serially or in parallel.
       blocking: Whether to step environments one after another.
       flatten: Boolean, whether to use flatten action and time_steps during
         communication to reduce overhead.
@@ -62,6 +66,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
                   for ctor in env_constructors]
     self._num_envs = len(env_constructors)
     self._blocking = blocking
+    self._start_serially = start_serially
     self.start()
     self._action_spec = self._envs[0].action_spec()
     self._observation_spec = self._envs[0].observation_spec()
@@ -75,8 +80,8 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
   def start(self):
     logging.info('Spawning all processes.')
     for env in self._envs:
-      env.start(wait_to_start=self._blocking)
-    if not self._blocking:
+      env.start(wait_to_start=self._start_serially)
+    if not self._start_serially:
       logging.info('Waiting for all processes to start.')
       for env in self._envs:
         env.wait_start()
