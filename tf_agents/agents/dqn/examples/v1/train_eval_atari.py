@@ -78,8 +78,21 @@ import gin.tf
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_string('game_name', 'Pong', 'Name of Atari game to run.')
-flags.DEFINE_multi_string('gin_file', None, 'Path to gin config files.')
-flags.DEFINE_multi_string('gin_param', None, 'Gin binding.')
+flags.DEFINE_integer('num_iterations', None,
+                     'Number of train/eval iterations to run.')
+flags.DEFINE_integer('initial_collect_steps', None,
+                     'Number of frames to ALE frames to process before '
+                     'beginning to train. Since this is in ALE frames, there '
+                     'will be initial_collect_steps/4 items in the replay '
+                     'buffer when training starts.')
+flags.DEFINE_integer('replay_buffer_capacity', None,
+                     'Maximum number of items to store in the replay buffer.')
+flags.DEFINE_integer('train_steps_per_iteration', None,
+                     'Number of ALE frames to run through for each iteration '
+                     'of training.')
+flags.DEFINE_integer('eval_steps_per_iteration', None,
+                     'Number of ALE frames to run through for each iteration '
+                     'of evaluation.')
 FLAGS = flags.FLAGS
 
 # AtariPreprocessing runs 4 frames at a time, max-pooling over the last 2
@@ -158,11 +171,12 @@ class TrainEval(object):
       fc_layer_params: Params for fully connected layers of QNetwork.
       initial_collect_steps: Number of frames to ALE frames to process before
         beginning to train. Since this is in ALE frames, there will be
-        initial_collect_steps/4 items in the RB when training starts.
+        initial_collect_steps/4 items in the replay buffer when training starts.
       epsilon_greedy: Final epsilon value to decay to for training.
       epsilon_decay_period: Period over which to decay epsilon, from 1.0 to
         epsilon_greedy (defined above).
-      replay_buffer_capacity: Maximum number of items to store in the RB.
+      replay_buffer_capacity: Maximum number of items to store in the replay
+        buffer.
       train_steps_per_iteration: Number of ALE frames to run through for each
         iteration of training.
       update_period: Run a train operation every update_period ALE frames.
@@ -177,7 +191,7 @@ class TrainEval(object):
       gradient_clipping: Norm length to clip gradients.
       do_eval: If True, run an eval every iteration. If False, skip eval.
       eval_steps_per_iteration: Number of ALE frames to run through for each
-        iteration of training.
+        iteration of evaluation.
       eval_epsilon_greedy: Epsilon value to use for the evaluation policy (0 ==
         totally greedy policy).
       log_interval: Log stats to the terminal every log_interval training
@@ -586,11 +600,33 @@ class TrainEval(object):
       self._observer_timer.reset()
 
 
+def get_run_args():
+  """Builds a dict of run arguments from flags."""
+  run_args = {}
+
+  if FLAGS.num_iterations:
+    run_args['num_iterations'] = FLAGS.num_iterations
+
+  if FLAGS.initial_collect_steps:
+    run_args['initial_collect_steps'] = FLAGS.initial_collect_steps
+
+  if FLAGS.replay_buffer_capacity:
+    run_args['replay_buffer_capacity'] = FLAGS.replay_buffer_capacity
+
+  if FLAGS.train_steps_per_iteration:
+    run_args['train_steps_per_iteration'] = FLAGS.train_steps_per_iteration
+
+  if FLAGS.eval_steps_per_iteration:
+    run_args['eval_steps_per_iteration'] = FLAGS.eval_steps_per_iteration
+
+  return run_args
+
+
 def main(_):
   logging.set_verbosity(logging.INFO)
   tf.enable_resource_variables()
-  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
-  TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name)).run()
+  TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name),
+            **get_run_args()).run()
 
 
 if __name__ == '__main__':
