@@ -57,7 +57,7 @@ def validate_py_environment(environment, episodes=5):
     if not array_spec.check_arrays_nest(time_step, time_step_spec):
       raise ValueError(
           'Given `time_step`: %r does not match expected `time_step_spec`: %r' %
-          (time_step, random_policy.time_step_spec))
+          (time_step, time_step_spec))
 
     action = random_policy.action(time_step).action
     time_step = environment.step(action)
