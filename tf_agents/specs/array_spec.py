@@ -141,7 +141,7 @@ class ArraySpec(object):
   returns, before that array exists.
   The equivalent version describing a `tf.Tensor` is `TensorSpec`.
   """
-  __slots__ = ('_shape', '_dtype', '_name')
+  __slots__ = ('_shape', '_static_shape', '_dtype', '_name')
 
   def __init__(self, shape, dtype, name=None):
     """Initializes a new `ArraySpec`.
@@ -157,6 +157,7 @@ class ArraySpec(object):
         numpy dtype.
     """
     self._shape = tuple(shape)
+    self._static_shape = np.array(self.shape) != None
     self._dtype = np.dtype(dtype)
     self._name = name
 
@@ -200,7 +201,9 @@ class ArraySpec(object):
       True if the array conforms to the spec, False otherwise.
     """
     if isinstance(array, np.ndarray):
-      return self.shape == array.shape and self.dtype == array.dtype
+      return (len(self.shape) == array.ndim
+              and np.array_equal(np.array(self.shape)[self._static_shape], np.array(array.shape)[self._static_shape])
+              and self.dtype == array.dtype)
     elif isinstance(array, numbers.Number):
       return self.shape == tuple() and self.dtype == np.dtype(type(array))
     else:
@@ -271,13 +274,13 @@ class BoundedArraySpec(ArraySpec):
     super(BoundedArraySpec, self).__init__(shape, dtype, name)
 
     try:
-      np.broadcast_to(minimum, shape=shape)
+      np.broadcast_to(minimum, shape=[d if d else 1 for d in shape])
     except ValueError as numpy_exception:
       raise ValueError('minimum is not compatible with shape. '
                        'Message: {!r}.'.format(numpy_exception))
 
     try:
-      np.broadcast_to(maximum, shape=shape)
+      np.broadcast_to(maximum, shape=[d if d else 1 for d in shape])
     except ValueError as numpy_exception:
       raise ValueError('maximum is not compatible with shape. '
                        'Message: {!r}.'.format(numpy_exception))

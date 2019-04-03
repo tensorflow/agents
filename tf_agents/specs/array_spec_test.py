@@ -226,6 +226,10 @@ class ArraySpecTest(parameterized.TestCase):
     spec = array_spec.ArraySpec([1, 2, 3], np.int32)
     self.assertEqual((1, 2, 3), spec.shape)
 
+  def testDynamicShape(self):
+    spec = array_spec.ArraySpec([1, None, 3], np.int32)
+    self.assertEqual((1, None, 3), spec.shape)
+
   def testEqual(self):
     spec_1 = array_spec.ArraySpec((1, 2, 3), np.int32)
     spec_2 = array_spec.ArraySpec((1, 2, 3), np.int32)
@@ -250,6 +254,11 @@ class ArraySpecTest(parameterized.TestCase):
     spec_2 = ()
     self.assertNotEqual(spec_1, spec_2)
     self.assertNotEqual(spec_2, spec_1)
+
+  def testEqualDynamicShape(self):
+    spec_1 = array_spec.ArraySpec([1, None, 3], np.int32)
+    spec_2 = array_spec.ArraySpec([1, None, 3], np.int32)
+    self.assertEqual(spec_1, spec_2)
 
   def testFromArray(self):
     spec = array_spec.ArraySpec.from_array(np.array([1, 2]), "test")
@@ -282,6 +291,17 @@ class ArraySpecTest(parameterized.TestCase):
   def testCheckArrayNoMatch(self, array):
     spec = array_spec.ArraySpec((2,), np.int64)
     self.assertFalse(spec.check_array(array))
+
+  def testCheckArrayDynamicShape(self):
+    spec = array_spec.ArraySpec([1, None, 3], np.int32)
+    a = np.zeros([1, 2, 3], dtype=np.int32)
+    self.assertTrue(spec.check_array(a))
+
+  def testConvertToTensor(self):
+    spec = array_spec.ArraySpec([1, None, 3], np.int32)
+    self.assertEqual(tensor_spec.TensorSpec(shape=(1, None, 3), dtype=tf.int32),
+                     tensor_spec.TensorSpec.from_spec(spec))
+    self.assertEqual(spec, tensor_spec.to_array_spec(tensor_spec.TensorSpec.from_spec(spec)))
 
 
 class BoundedArraySpecTest(parameterized.TestCase):
@@ -488,6 +508,46 @@ class BoundedArraySpecTest(parameterized.TestCase):
     hist, _ = np.histogram(sample, bins=100, range=(0, 100))
     self.assertTrue(np.all(hist > 0))
 
+  def testDynamicShapeScalarMin(self):
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=0)
+    self.assertEqual((1, None, 3), spec.shape)
+
+  def testDynamicShapePartialArrayMin(self):
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([3]))
+    self.assertEqual((1, None, 3), spec.shape)
+
+  def testDynamicShapeFullArrayMin(self):
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 3]))
+    self.assertEqual((1, None, 3), spec.shape)
+
+  def testDynamicShapeArrayMinWrongShape(self):
+    with self.assertRaises(ValueError):
+      # When using dynamic shape, minimum should be 0 or broadcastable among known dimensions.
+      array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 2, 3]))
+
+  def testEqualDynamicShape(self):
+    spec_1 = array_spec.BoundedArraySpec([1, None, 3], np.int32)
+    spec_2 = array_spec.BoundedArraySpec([1, None, 3], np.int32)
+    self.assertEqual(spec_1, spec_2)
+
+  def testCheckArrayDynamicShapeScalarMin(self):
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=0)
+    a = np.zeros([1, 2, 3], dtype=np.int32)
+    self.assertTrue(spec.check_array(a))
+
+  def testCheckArrayDynamicShapeArrayMin(self):
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 3]))
+    a = np.zeros([1, 2, 3], dtype=np.int32)
+    self.assertTrue(spec.check_array(a))
+
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 2, 3]))
+    self.assertTrue(spec.check_array(a))
+
+  def testConvertToTensor(self):
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=0, maximum=10)
+    self.assertEqual(tensor_spec.BoundedTensorSpec(shape=(1, None, 3), dtype=tf.int32, minimum=0, maximum=10),
+                     tensor_spec.BoundedTensorSpec.from_spec(spec))
+    self.assertEqual(spec, tensor_spec.to_array_spec(tensor_spec.BoundedTensorSpec.from_spec(spec)))
 
 @parameterized.named_parameters(*TYPE_PARAMETERS)
 class ArraySpecTypeTest(parameterized.TestCase):
