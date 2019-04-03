@@ -351,7 +351,7 @@ class BoundedArraySpec(ArraySpec):
       return False
     return (super(BoundedArraySpec, self).__eq__(other) and
             np.array_equal(self.minimum, other.minimum) and
-            np.array_equal(self.maximum == other.maximum))
+            np.array_equal(self.maximum, other.maximum))
 
   def check_array(self, array):
     """Return true if the given array conforms to the spec."""
