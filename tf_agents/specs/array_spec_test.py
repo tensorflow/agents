@@ -340,6 +340,16 @@ class BoundedArraySpecTest(parameterized.TestCase):
         (1, 2), np.int32, minimum=[0.0, 0.0], maximum=[1.0, 1.0])
     self.assertNotEqual(spec_1, spec_2)
 
+  def testNotEqualEmptyMinimum(self):
+      class MockBoundedArraySpec(array_spec.BoundedArraySpec):
+        @property
+        def minimum(self):
+          return np.array([])
+
+      spec_1 = array_spec.BoundedArraySpec( (1,), np.int32, minimum=[-1.6], maximum=[1.0])
+      spec_2 = MockBoundedArraySpec( (1,), np.int32, minimum=[0.0], maximum=[1.0])
+      self.assertNotEqual(spec_1, spec_2)
+
   def testReuseSpec(self):
     spec_1 = array_spec.BoundedArraySpec(
         (1, 2), np.int32, minimum=0.0, maximum=1.0)

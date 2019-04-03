@@ -350,8 +350,8 @@ class BoundedArraySpec(ArraySpec):
     if not isinstance(other, BoundedArraySpec):
       return False
     return (super(BoundedArraySpec, self).__eq__(other) and
-            (self.minimum == other.minimum).all() and
-            (self.maximum == other.maximum).all())
+            np.array_equal(self.minimum, other.minimum) and
+            np.array_equal(self.maximum == other.maximum))
 
   def check_array(self, array):
     """Return true if the given array conforms to the spec."""
