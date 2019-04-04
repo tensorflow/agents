@@ -157,7 +157,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
       ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
        2.5))
   def testBatchSizeProvided(self, metric_class, expected_result):
-    metric = py_metrics.AverageReturnMetric(batch_size=2)
+    metric = metric_class(batch_size=2)
 
     metric(nest_utils.stack_nested_arrays([
         trajectory.boundary((), (), (), 0., 1.),
@@ -174,7 +174,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
     metric(nest_utils.stack_nested_arrays([
         trajectory.boundary((), (), (), 0., 1.),
         trajectory.first((), (), (), 1., 1.)]))
-    self.assertEqual(metric.result(), 5.0)
+    self.assertEqual(metric.result(), expected_result)
 
   def testCounterMetricIncrements(self):
     counter = py_metrics.CounterMetric()
