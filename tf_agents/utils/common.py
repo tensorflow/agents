@@ -27,12 +27,17 @@ import tensorflow as tf
 from tf_agents.environments import time_step as ts
 from tf_agents.utils import nest_utils
 
-from tensorflow.python.ops import variable_scope  # pylint: disable=g-direct-tensorflow-import  # TF internal
+
+MISSING_RESOURCE_VARIABLES_ERROR = """
+Resource variables are not enabled.  Please enable them by adding the following
+code to your main() method:
+  tf.compat.v1.enable_resource_variables()
+For unit tests, subclass `tf_agents.utils.test_utils.TestCase`.
+"""
 
 
 def resource_variables_enabled():
-  # TODO(b/127641038): Need a public TF API here.
-  return variable_scope._DEFAULT_USE_RESOURCE  # pylint: disable=protected-access
+  return tf.compat.v1.resource_variables_enabled()
 
 
 def function(*args, **kwargs):
@@ -94,12 +99,7 @@ def function_in_tf1(*args, **kwargs):
       @functools.wraps(fn)
       def with_check_resource_vars(*fn_args, **fn_kwargs):
         if not resource_variables_enabled():
-          raise RuntimeError(
-              'tf.function wrapping is being requested, but resource variables '
-              'are not enabled.  Please enable them by adding the following '
-              'code to your main() method or to the setUp() method in your '
-              'unit test:\n'
-              '  tf.compat.v1.enable_resource_variables()')
+          raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
         return fn(*fn_args, **fn_kwargs)
       wrapped = function(*args, **kwargs)(with_check_resource_vars)
       return wrapped

@@ -58,6 +58,8 @@ import numpy as np
 import six
 import tensorflow as tf
 
+from tf_agents.utils import common
+
 from tensorflow.python.util import tf_decorator  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 _USE_GLOBAL_STEP = 0
@@ -293,12 +295,14 @@ def create_train_step(loss,
       loss values.
   Raises:
     ValueError: if loss is not callable.
+    RuntimeError: if resource variables are not enabled.
   """
   if total_loss_fn is None:
     total_loss_fn = lambda x: x
   if not callable(total_loss_fn):
     raise ValueError('`total_loss_fn` should be a function.')
-
+  if not common.resource_variables_enabled():
+    raise RuntimeError(common.MISSING_RESOURCE_VARIABLES_ERROR)
   if not tf.executing_eagerly():
     if callable(loss):
       loss = loss()
@@ -307,20 +311,23 @@ def create_train_step(loss,
     # Calculate loss first, then calculate train op, then return the original
     # loss conditioned on executing the train op.
     with tf.control_dependencies(tf.nest.flatten(loss)):
-      train_op = create_train_op(
-          total_loss_fn(loss),
-          optimizer,
-          global_step=global_step,
-          update_ops=update_ops,
-          variables_to_train=variables_to_train,
-          transform_grads_fn=transform_grads_fn,
-          summarize_gradients=summarize_gradients,
-          gate_gradients=gate_gradients,
-          aggregation_method=aggregation_method,
-          check_numerics=check_numerics)
+      loss = tf.nest.map_structure(
+          lambda t: tf.identity(t, 'loss_pre_train'), loss)
+    train_op = create_train_op(
+        total_loss_fn(loss),
+        optimizer,
+        global_step=global_step,
+        update_ops=update_ops,
+        variables_to_train=variables_to_train,
+        transform_grads_fn=transform_grads_fn,
+        summarize_gradients=summarize_gradients,
+        gate_gradients=gate_gradients,
+        aggregation_method=aggregation_method,
+        check_numerics=check_numerics)
 
     with tf.control_dependencies([train_op]):
-      return tf.nest.map_structure(lambda t: tf.identity(t, 'loss'), loss)
+      return tf.nest.map_structure(
+          lambda t: tf.identity(t, 'loss_post_train'), loss)
 
   if global_step is _USE_GLOBAL_STEP:
     global_step = tf.compat.v1.train.get_or_create_global_step()

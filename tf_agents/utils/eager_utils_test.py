@@ -27,6 +27,8 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.utils import eager_utils
+from tf_agents.utils import test_utils
+
 from tensorflow.python.eager import context  # TF internal
 from tensorflow.python.framework import test_util  # TF internal
 from tensorflow.python.keras.engine import network as keras_network  # TF internal
@@ -98,7 +100,7 @@ def aux_function(inputs, labels, param=0):
     ('.method_eager', Aux().method, context.eager_mode),
     ('.method_graph', Aux().method, context.graph_mode),
 )
-class FutureTest(tf.test.TestCase, parameterized.TestCase):
+class FutureTest(test_utils.TestCase, parameterized.TestCase):
 
   def testCreate(self, func_or_method, run_mode):
     with run_mode():
@@ -226,7 +228,7 @@ class FutureTest(tf.test.TestCase, parameterized.TestCase):
       self.assertEqual(self.evaluate(param), 0)
 
 
-class FutureInEagerModeTest(tf.test.TestCase):
+class FutureInEagerModeTest(test_utils.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testCreate(self):
@@ -275,7 +277,7 @@ class FutureInEagerModeTest(tf.test.TestCase):
     self.assertAllEqual(self.evaluate(labels), [[0], [1], [2]])
 
 
-class EagerUtilsTest(tf.test.TestCase):
+class EagerUtilsTest(test_utils.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testModel(self):
@@ -301,7 +303,7 @@ class EagerUtilsTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(loss), final_loss)
 
 
-class ClipGradsTest(tf.test.TestCase):
+class ClipGradsTest(test_utils.TestCase):
 
   def testClipGrads(self):
     xs = tf.Variable(0.0)
@@ -343,7 +345,7 @@ class ClipGradsTest(tf.test.TestCase):
                            self.evaluate(clipped_gradients_to_variables[0][0]))
 
 
-class CreateTrainOpTest(tf.test.TestCase):
+class CreateTrainOpTest(test_utils.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testLossDecreasesAfterTrainOp(self):
@@ -425,7 +427,7 @@ class CreateTrainOpTest(tf.test.TestCase):
     self.assertEqual(len(model.trainable_variables), 2)
 
 
-class HasSelfClsArgTest(tf.test.TestCase):
+class HasSelfClsArgTest(test_utils.TestCase):
 
   def testDirect(self):
 
@@ -513,7 +515,7 @@ def dictionary(x, y):
   return {'x': x, 'y': y}
 
 
-class NpFunctionTest(tf.test.TestCase):
+class NpFunctionTest(test_utils.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testMeshGrid(self):
@@ -592,7 +594,7 @@ def np_descent(x, d, mu, n_epochs):
   return w
 
 
-class NpDescentTest(tf.test.TestCase):
+class NpDescentTest(test_utils.TestCase):
 
   def setUp(self):
     np.random.seed(444)
@@ -610,7 +612,7 @@ class NpDescentTest(tf.test.TestCase):
 
 
 @test_util.run_all_in_graph_and_eager_modes
-class DatasetIteratorTest(tf.test.TestCase):
+class DatasetIteratorTest(test_utils.TestCase):
 
   def testIteration(self):
     data = np.arange(100)
