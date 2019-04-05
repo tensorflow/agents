@@ -125,7 +125,6 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=fc_layer_params)
 
-    # TODO(b/127301657): Decay epsilon based on global step, cf. cl/188907839
     tf_agent = agent_class(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
