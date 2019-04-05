@@ -69,7 +69,10 @@ def train_eval(
     # Params for collect
     initial_collect_steps=1000,
     collect_steps_per_iteration=1,
-    epsilon_greedy=0.1,
+    epsilon_greedy=1.0,
+    epsilon_decay=0.98,
+    epsilon_decay_period=50
+    min_epsilon=0.1,
     replay_buffer_capacity=100000,
     # Params for target update
     target_update_tau=0.05,
@@ -252,6 +255,9 @@ def train_eval(
         train_time += time.time() - start_time
 
         global_step_val = global_step_call()
+
+	if global_step_val % epsilon_decay_period == 0 and tf_agent.epsilon_greedy>min_epsilon:
+	  tf_agent.epsilon_greedy*=epsilon_decay
 
         if global_step_val % log_interval == 0:
           logging.info('step = %d, loss = %f', global_step_val,
