@@ -275,7 +275,7 @@ class TrainEval(object):
             action_spec,
             conv_layer_params=conv_layer_params,
             fc_layer_params=fc_layer_params)
-        tf_agent = dqn_agent.DqnAgent(
+        agent = dqn_agent.DqnAgent(
             time_step_spec,
             action_spec,
             q_network=q_net,
@@ -293,12 +293,12 @@ class TrainEval(object):
             train_step_counter=self._global_step)
 
         self._collect_policy = py_tf_policy.PyTFPolicy(
-            tf_agent.collect_policy)
+            agent.collect_policy)
 
         if self._do_eval:
           self._eval_policy = py_tf_policy.PyTFPolicy(
               epsilon_greedy_policy.EpsilonGreedyPolicy(
-                  policy=tf_agent.policy,
+                  policy=agent.policy,
                   epsilon=self._eval_epsilon_greedy))
 
         py_observation_spec = self._env.observation_spec()
@@ -318,7 +318,7 @@ class TrainEval(object):
       with tf.device('/gpu:0'):
         self._ds_itr = tf.compat.v1.data.make_one_shot_iterator(ds)
         experience = self._ds_itr.get_next()
-        self._train_op = tf_agent.train(experience)
+        self._train_op = agent.train(experience)
 
         self._env_steps_metric = py_metrics.EnvironmentSteps()
         self._step_metrics = [
@@ -367,7 +367,7 @@ class TrainEval(object):
 
         self._train_checkpointer = common.Checkpointer(
             ckpt_dir=train_dir,
-            agent=tf_agent,
+            agent=agent,
             global_step=self._global_step,
             optimizer=optimizer,
             metrics=metric_utils.MetricsGroup(
@@ -375,14 +375,14 @@ class TrainEval(object):
                 [self._iteration_metric], 'train_metrics'))
         self._policy_checkpointer = common.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'policy'),
-            policy=tf_agent.policy,
+            policy=agent.policy,
             global_step=self._global_step)
         self._rb_checkpointer = common.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
             max_to_keep=1,
             replay_buffer=self._replay_buffer)
 
-        self._init_agent_op = tf_agent.initialize()
+        self._init_agent_op = agent.initialize()
 
   def game_over(self):
     return self._env.envs[0].game_over
