@@ -21,12 +21,12 @@ from __future__ import print_function
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import bias_layer
 from tf_agents.networks import network
-from tf_agents.networks import utils
+from tf_agents.networks import utils as network_utils
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
-from tf_agents.utils import common
 
 import gin.tf
 
@@ -126,7 +126,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     def distribution_builder(*args, **kwargs):
       distribution = tfp.distributions.Normal(*args, **kwargs)
       if self._scale_distribution:
-        return common.scale_distribution_to_spec(distribution, sample_spec)
+        return distribution_utils.scale_distribution_to_spec(
+            distribution, sample_spec)
       return distribution
 
     return distribution_spec.DistributionSpec(
@@ -139,7 +140,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to
     # compare to.
-    batch_squash = utils.BatchSquash(outer_rank)
+    batch_squash = network_utils.BatchSquash(outer_rank)
     inputs = batch_squash.flatten(inputs)
 
     means = self._means_projection_layer(inputs)

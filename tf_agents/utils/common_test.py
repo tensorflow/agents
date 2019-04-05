@@ -790,24 +790,5 @@ class ReplicateTensorTest(tf.test.TestCase, parameterized.TestCase):
                        replicated_value.shape)
 
 
-class ScaleDistributionTest(tf.test.TestCase):
-
-  def testScaleDistribution(self):
-    action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -2, 4)
-    distribution = tfp.distributions.Normal(0, 4)
-    scaled_distribution = common.scale_distribution_to_spec(distribution,
-                                                            action_spec)
-    if tf.executing_eagerly():
-      sample = scaled_distribution.sample
-    else:
-      sample = scaled_distribution.sample()
-
-    for _ in range(1000):
-      sample_np = self.evaluate(sample)
-
-      self.assertGreater(sample_np, -2.00001)
-      self.assertLess(sample_np, 4.00001)
-
-
 if __name__ == '__main__':
   tf.test.main()

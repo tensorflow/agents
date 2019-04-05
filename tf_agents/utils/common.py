@@ -23,9 +23,7 @@ import functools
 from absl import logging
 
 import tensorflow as tf
-import tensorflow_probability as tfp
 
-from tf_agents.distributions import tanh_bijector_stable
 from tf_agents.environments import time_step as ts
 from tf_agents.utils import nest_utils
 
@@ -978,24 +976,3 @@ def transpose_batch_time(x):
           x_static_shape.dims[1].value, x_static_shape.dims[0].value
       ]).concatenate(x_static_shape[2:]))
   return x_t
-
-
-def scale_distribution_to_spec(distribution, spec):
-  """Scales the given distribution to the bounds of the given spec."""
-  bijectors = []
-
-  # Bijector to rescale actions to ranges in action spec.
-  action_means, action_magnitudes = spec_means_and_magnitudes(spec)
-  bijectors.append(
-      tfp.bijectors.AffineScalar(
-          shift=action_means, scale=action_magnitudes))
-
-  # Bijector to squash actions to range (-1.0, +1.0).
-  bijectors.append(tanh_bijector_stable.Tanh())
-
-  # Chain applies bijectors in reverse order, so squash will happen
-  # before rescaling to action spec.
-  bijector_chain = tfp.bijectors.Chain(bijectors)
-  distributions = tfp.distributions.TransformedDistribution(
-      distribution=distribution, bijector=bijector_chain)
-  return distributions
