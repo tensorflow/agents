@@ -519,10 +519,12 @@ class BoundedArraySpecTest(parameterized.TestCase):
   def testDynamicShapeFullArrayMin(self):
     spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 3]))
     self.assertEqual((1, None, 3), spec.shape)
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 1, 3]))
+    self.assertEqual((1, None, 3), spec.shape)
 
   def testDynamicShapeArrayMinWrongShape(self):
     with self.assertRaises(ValueError):
-      # When using dynamic shape, minimum should be 0 or broadcastable among known dimensions.
+      # When using dynamic shape, minimum should be scalar or broadcastable to full shape with dynamic dimensions set to 1.
       array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 2, 3]))
 
   def testEqualDynamicShape(self):
@@ -540,9 +542,8 @@ class BoundedArraySpecTest(parameterized.TestCase):
     a = np.zeros([1, 2, 3], dtype=np.int32)
     self.assertTrue(spec.check_array(a))
 
-    with self.assertRaises(ValueError):
-      # Minimum should be broadcastable from the static dimensions to full shape with dynamic dimensions set to 1.
-      array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 2, 3]))
+    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 1, 3]))
+    self.assertTrue(spec.check_array(a))
 
   def testConvertToTensor(self):
     spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=0, maximum=10)
