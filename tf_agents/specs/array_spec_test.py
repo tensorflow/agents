@@ -540,8 +540,9 @@ class BoundedArraySpecTest(parameterized.TestCase):
     a = np.zeros([1, 2, 3], dtype=np.int32)
     self.assertTrue(spec.check_array(a))
 
-    spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 2, 3]))
-    self.assertTrue(spec.check_array(a))
+    with self.assertRaises(ValueError):
+      # Minimum should be broadcastable from the static dimensions to full shape with dynamic dimensions set to 1.
+      array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=np.zeros([1, 2, 3]))
 
   def testConvertToTensor(self):
     spec = array_spec.BoundedArraySpec([1, None, 3], np.int32, minimum=0, maximum=10)
