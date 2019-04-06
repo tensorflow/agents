@@ -134,6 +134,23 @@ def add_outer_dims_nest(structure, outer_dims):
   return tf.nest.map_structure(add_outer_dims, structure)
 
 
+def set_dynamic_dims_nest(structure, dynamic_dims):
+  def set_dynamic_dims(spec):
+    name = spec.name
+    if len(dynamic_dims) != len([s for s in spec.shape if s is None]):
+      raise ValueError("Dynamic spec {d_s} not compatible with the dynamic_dims {d_d}".format(
+        d_s=spec, d_d=dynamic_dims
+      ))
+    dyn_dims = list(dynamic_dims)[::-1]
+    shape = tuple([s if s else dyn_dims.pop() for s in spec.shape])
+    if hasattr(spec, 'minimum') and hasattr(spec, 'maximum'):
+      return BoundedArraySpec(shape, spec.dtype, spec.minimum,
+                              spec.maximum, name)
+    return ArraySpec(shape, spec.dtype, name=name)
+
+  return tf.nest.map_structure(set_dynamic_dims, structure)
+
+
 class ArraySpec(object):
   """Describes a numpy array or scalar shape and dtype.
 
