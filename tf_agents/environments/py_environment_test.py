@@ -59,17 +59,19 @@ class PyEnvironmentTest(tf.test.TestCase):
         observation_spec=obs_spec, action_spec=action_spec)
 
     random_env.reset()
-    time_step = random_env.step(action=np.ones((1,)))
-    current_time_step = random_env.current_time_step()
-    tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
-    self.assertLess(time_step.observation.shape[0], 10)
-    self.assertGreaterEqual(time_step.observation.shape[0], 0)
-    self.assertEqual(1, time_step.observation.shape[1])
 
-    time_step = random_env.step(action=np.ones((1,)))
-    self.assertLess(time_step.observation.shape[0], 10)
-    self.assertGreaterEqual(time_step.observation.shape[0], 0)
-    self.assertEqual(time_step.observation.shape[1], 1)
+    def assert_observation_first_dim_is(dim):
+        time_step = random_env.step(action=np.ones((1,)))
+        current_time_step = random_env.current_time_step()
+        tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
+        self.assertEqual(dim, time_step.observation.shape[0])
+        self.assertEqual(1, time_step.observation.shape[1])
+
+    assert_observation_first_dim_is(1)
+    assert_observation_first_dim_is(0)
+    assert_observation_first_dim_is(1)
+    assert_observation_first_dim_is(2)
+    assert_observation_first_dim_is(3)
 
   def testStepWithStaticObservationShape(self):
     obs_spec = array_spec.BoundedArraySpec((2, 1,), np.int32)
