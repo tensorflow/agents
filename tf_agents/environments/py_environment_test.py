@@ -51,7 +51,7 @@ class PyEnvironmentTest(tf.test.TestCase):
     current_time_step = random_env.current_time_step()
     tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
 
-  def testStepSavesCurrentTimeStepDynamic(self):
+  def testStepWithDynamicObservationShape(self):
     obs_spec = array_spec.BoundedArraySpec((None, 1,), np.int32)
     action_spec = array_spec.BoundedArraySpec((1,), np.int32)
 
@@ -71,7 +71,7 @@ class PyEnvironmentTest(tf.test.TestCase):
     self.assertGreaterEqual(time_step.observation.shape[0], 0)
     self.assertEqual(1, time_step.observation.shape[1])
 
-  def testStepSavesCurrentTimeStepStatic(self):
+  def testStepWithStaticObservationShape(self):
     obs_spec = array_spec.BoundedArraySpec((2, 1,), np.int32)
     action_spec = array_spec.BoundedArraySpec((1,), np.int32)
 
@@ -82,8 +82,7 @@ class PyEnvironmentTest(tf.test.TestCase):
     time_step = random_env.step(action=np.ones((1,)))
     current_time_step = random_env.current_time_step()
     tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
-    self.assertLess(time_step.observation.shape[0], 10)
-    self.assertGreaterEqual(time_step.observation.shape[0], 0)
+    self.assertEqual(time_step.observation.shape[0], 2)
     self.assertEqual(1, time_step.observation.shape[1])
 
 
