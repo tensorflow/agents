@@ -31,11 +31,10 @@ import threading
 
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.replay_buffers import numpy_storage
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
+from tf_agents.utils import numpy_storage
 
 
 class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):

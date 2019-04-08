@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.replay_buffers.numpy_storage."""
+"""Tests for tf_agents.utils.numpy_storage."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -23,7 +23,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from tf_agents.replay_buffers import numpy_storage
+from tf_agents.utils import numpy_storage
 
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 

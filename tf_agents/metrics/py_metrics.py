@@ -25,8 +25,8 @@ import numpy as np
 import six
 
 from tf_agents.metrics import py_metric
-from tf_agents.replay_buffers import numpy_storage
 from tf_agents.utils import nest_utils
+from tf_agents.utils import numpy_storage
 
 
 class NumpyDeque(numpy_storage.NumpyState):
