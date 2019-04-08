@@ -36,6 +36,23 @@ from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
 
 
+class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
+
+  @parameterized.named_parameters({"testcase_name": "scalar", "batch_size": None},
+                                  {"testcase_name": "batched", "batch_size": 2}, )
+  def test_batch_properties(self, batch_size):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    nested_env = random_py_environment.RandomPyEnvironment(
+      obs_spec,
+      action_spec,
+      reward_fn=lambda *_: np.array([1.0]),
+      batch_size=batch_size)
+    env = wrappers.PyEnvironmentBaseWrapper(nested_env)
+    self.assertEqual(env.batched, nested_env.batched)
+    self.assertEqual(nested_env.batch_size, env.batch_size)
+
+
 class TimeLimitWrapperTest(absltest.TestCase):
 
   def test_limit_duration_wrapped_env_forwards_calls(self):
