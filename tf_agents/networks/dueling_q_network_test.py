@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.python.framework import test_util  # TF internal
 import gin.tf
+import numpy as np
 
 from tf_agents.networks import dueling_q_network
 from tf_agents.specs import tensor_spec
@@ -135,6 +136,42 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertTrue(network.built)
     self.assertGreater(len(variables), 0)
 
+  @test_util.run_in_graph_and_eager_modes()
+  def test_network_outputs_correct_values(self):
+    tf.random.set_random_seed(123)
+    batch_size = 1
+    num_state_dims = 5
+    states = tf.constant(np.random.uniform(
+        -1,
+        1,
+        (batch_size, num_state_dims)).astype(np.float32))
+    #define the network
+    network = dueling_q_network.DuelingQNetwork(
+        input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
+        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
+        fc_layer_params=(10,))
+    #get the q_values from network
+    q_values, _ = network(states)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    #get the values of the weights and biases
+    weights_fc = tf.identity(network.layers[0].get_weights()[0])
+    bias_fc = tf.identity(network.layers[0].get_weights()[1])
+    weights_values = tf.identity(network.layers[1].get_weights()[0])
+    bias_values = tf.identity(network.layers[1].get_weights()[1])
+    weights_adv = tf.identity(network.layers[2].get_weights()[0])
+    bias_adv = tf.identity(network.layers[2].get_weights()[1])
+
+    #compute the expected q_values manually
+    fc = tf.add(tf.matmul(states, weights_fc), bias_fc)
+    fc = tf.nn.relu(fc)
+    advantage = tf.add(tf.matmul(fc, weights_adv), bias_adv)
+    value = tf.add(tf.matmul(fc, weights_values), bias_values)
+    expected_q_values = tf.add(value, tf.subtract(
+        advantage, tf.reduce_mean(advantage, axis=1, keep_dims=True)))
+
+    #compare the q_values from network with the expected q_values
+    self.assertAllEqual(q_values, expected_q_values)
 
 if __name__ == '__main__':
   tf.test.main()
