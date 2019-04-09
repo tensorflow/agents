@@ -51,6 +51,12 @@ class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
     env = wrappers.PyEnvironmentBaseWrapper(nested_env)
     self.assertEqual(env.batched, nested_env.batched)
     self.assertEqual(nested_env.batch_size, env.batch_size)
+    
+  def test_default_batch_properties(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    self.assertFalse(env.batched)
+    self.assertEqual(env.batch_size, None)
 
 
 class TimeLimitWrapperTest(absltest.TestCase):
