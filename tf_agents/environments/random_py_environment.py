@@ -169,17 +169,3 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
           format(mode))
 
     return self._rng.randint(0, 256, size=self._render_size, dtype=np.uint8)
-
-
-class DynamicRandomPyEnvironment(RandomPyEnvironment):
-
-  def _get_observation(self):
-    # Observation has a dynamic shape sampled uniformly between 0 and 4.
-    num_dynamic_dims = len([d for d in self._observation_spec.shape if d is None])
-    observation_spec = self._observation_spec
-    if num_dynamic_dims > 0:
-        dynamic_dims = self._rng.randint(low=-1, high=5, size=num_dynamic_dims)
-        observation_spec = array_spec.set_dynamic_dims_nest(observation_spec, dynamic_dims)
-    batch_size = (self._batch_size,) if self._batch_size else ()
-    return array_spec.sample_spec_nest(observation_spec, self._rng, batch_size)
-

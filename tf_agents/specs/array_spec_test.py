@@ -569,6 +569,7 @@ class ArraySpecTypeTest(parameterized.TestCase):
     self.assertIs(
         tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True)
 
+
 class MethodsTest(tf.test.TestCase):
   def test_set_dynamic_dims_nest(self):
     dynamic_spec = array_spec.ArraySpec([None, 1], dtype=np.int32)

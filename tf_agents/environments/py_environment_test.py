@@ -26,6 +26,20 @@ from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
 
 
+class DynamicRandomPyEnvironment(random_py_environment.RandomPyEnvironment):
+  """Example of environment with a random observation dimension using a dynamic shape."""
+
+  def _get_observation(self):
+    # Observation has a dynamic shape sampled uniformly between 0 and 4.
+    num_dynamic_dims = len([d for d in self._observation_spec.shape if d is None])
+    observation_spec = self._observation_spec
+    if num_dynamic_dims > 0:
+        dynamic_dims = self._rng.randint(low=-1, high=5, size=num_dynamic_dims)
+        observation_spec = array_spec.set_dynamic_dims_nest(observation_spec, dynamic_dims)
+    batch_size = (self._batch_size,) if self._batch_size else ()
+    return array_spec.sample_spec_nest(observation_spec, self._rng, batch_size)
+
+
 class PyEnvironmentTest(tf.test.TestCase):
 
   def testResetSavesCurrentTimeStep(self):
@@ -55,7 +69,7 @@ class PyEnvironmentTest(tf.test.TestCase):
     obs_spec = array_spec.BoundedArraySpec((None, 1,), np.int32)
     action_spec = array_spec.BoundedArraySpec((1,), np.int32)
 
-    random_env = random_py_environment.DynamicRandomPyEnvironment(
+    random_env = DynamicRandomPyEnvironment(
         observation_spec=obs_spec, action_spec=action_spec)
 
     random_env.reset()
@@ -77,7 +91,7 @@ class PyEnvironmentTest(tf.test.TestCase):
     obs_spec = array_spec.BoundedArraySpec((2, 1,), np.int32)
     action_spec = array_spec.BoundedArraySpec((1,), np.int32)
 
-    random_env = random_py_environment.DynamicRandomPyEnvironment(
+    random_env = DynamicRandomPyEnvironment(
         observation_spec=obs_spec, action_spec=action_spec)
 
     random_env.reset()
