@@ -23,9 +23,8 @@ import os
 
 from absl.testing import parameterized
 import tensorflow as tf
-
-from tf_agents.agents.dqn import q_network
 from tf_agents.environments import time_step as ts
+from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
 from tf_agents.policies import policy_saver
 from tf_agents.policies import q_policy

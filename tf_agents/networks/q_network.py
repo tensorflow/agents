@@ -113,13 +113,11 @@ class QNetwork(network.Network):
         batch_squash=batch_squash,
         dtype=dtype)
 
-    # TODO(kewa): consider create custom layer flattens/restores nested actions.
     q_value_layer = tf.keras.layers.Dense(
         num_actions,
         activation=None,
         kernel_initializer=tf.compat.v1.initializers.random_uniform(
             minval=-0.03, maxval=0.03),
-        # TODO(kewa): double check if initialization is needed.
         bias_initializer=tf.compat.v1.initializers.constant(-0.2),
         dtype=dtype)
 

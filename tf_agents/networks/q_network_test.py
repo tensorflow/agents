@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from tf_agents.agents.dqn import q_network
+from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
 import gin.tf
