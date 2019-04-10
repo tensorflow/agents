@@ -255,8 +255,8 @@ def train_eval(
 
         global_step_val = global_step_call()
 
-	if global_step_val % epsilon_decay_period == 0 and tf_agent.epsilon_greedy>min_epsilon:
-	  tf_agent.epsilon_greedy*=epsilon_decay
+	if global_step_val % epsilon_decay_period == 0 and tf_agent.epsilon_greedy > min_epsilon:
+	  tf_agent.epsilon_greedy *= epsilon_decay
 
         if global_step_val % log_interval == 0:
           logging.info('step = %d, loss = %f', global_step_val,
