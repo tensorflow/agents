@@ -61,6 +61,7 @@ class Td3Agent(tf_agent.TFAgent):
                exploration_noise_std=0.1,
                target_update_tau=1.0,
                target_update_period=1,
+               actor_update_period=1,
                dqda_clipping=None,
                td_errors_loss_fn=None,
                gamma=1.0,
@@ -86,6 +87,7 @@ class Td3Agent(tf_agent.TFAgent):
       exploration_noise_std: Scale factor on exploration policy noise.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
+      actor_update_period: Period for the optimization step on actor network.
       dqda_clipping: A scalar or float clips the gradient dqda element-wise
         between [-dqda_clipping, dqda_clipping]. Default is None representing no
         clippiing.
@@ -123,6 +125,7 @@ class Td3Agent(tf_agent.TFAgent):
     self._exploration_noise_std = exploration_noise_std
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
+    self._actor_update_period = actor_update_period
     self._dqda_clipping = dqda_clipping
     self._td_errors_loss_fn = (
         td_errors_loss_fn or common.element_wise_huber_loss)
@@ -240,8 +243,15 @@ class Td3Agent(tf_agent.TFAgent):
       tape.watch(actor_variables)
       actor_loss = self.actor_loss(time_steps, weights=weights)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
-    actor_grads = tape.gradient(actor_loss, actor_variables)
-    self._apply_gradients(actor_grads, actor_variables, self._actor_optimizer)
+
+    # We only optimize the actor every actor_update_period training steps.
+    def optimize_actor():
+      actor_grads = tape.gradient(actor_loss, actor_variables)
+      return self._apply_gradients(
+          actor_grads, actor_variables, self._actor_optimizer)
+    remainder = tf.mod(self.train_step_counter, self._actor_update_period)
+    tf.cond(
+        pred=tf.equal(remainder, 0), true_fn=optimize_actor, false_fn=tf.no_op)
 
     self.train_step_counter.assign_add(1)
     self._update_target()
@@ -265,7 +275,7 @@ class Td3Agent(tf_agent.TFAgent):
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
 
-    optimizer.apply_gradients(grads_and_vars)
+    return optimizer.apply_gradients(grads_and_vars)
 
   @common.function
   def critic_loss(self, time_steps, actions, next_time_steps, weights=None):

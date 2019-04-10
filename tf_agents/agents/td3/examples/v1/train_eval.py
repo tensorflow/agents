@@ -81,6 +81,7 @@ def train_eval(
     # Params for train
     train_steps_per_iteration=1,
     batch_size=64,
+    actor_update_period=2,
     actor_learning_rate=1e-4,
     critic_learning_rate=1e-3,
     dqda_clipping=None,
@@ -152,6 +153,7 @@ def train_eval(
         exploration_noise_std=exploration_noise_std,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
+        actor_update_period=actor_update_period,
         dqda_clipping=dqda_clipping,
         td_errors_loss_fn=td_errors_loss_fn,
         gamma=gamma,
