@@ -36,6 +36,40 @@ from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
 
 
+class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      {
+          'testcase_name': 'scalar',
+          'batch_size': None
+      },
+      {
+          'testcase_name': 'batched',
+          'batch_size': 2
+      },
+  )
+  def test_batch_properties(self, batch_size):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((1,), np.int32, -10, 10)
+    env = random_py_environment.RandomPyEnvironment(
+        obs_spec,
+        action_spec,
+        reward_fn=lambda *_: np.array([1.0]),
+        batch_size=batch_size)
+    wrap_env = wrappers.PyEnvironmentBaseWrapper(env)
+    self.assertEqual(wrap_env.batched, env.batched)
+    self.assertEqual(wrap_env.batch_size, env.batch_size)
+
+  def test_default_batch_properties(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    self.assertFalse(env.batched)
+    self.assertEqual(env.batch_size, None)
+    wrap_env = wrappers.PyEnvironmentBaseWrapper(env)
+    self.assertEqual(wrap_env.batched, env.batched)
+    self.assertEqual(wrap_env.batch_size, env.batch_size)
+
+
 class TimeLimitWrapperTest(absltest.TestCase):
 
   def test_limit_duration_wrapped_env_forwards_calls(self):

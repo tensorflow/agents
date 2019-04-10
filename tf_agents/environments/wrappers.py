@@ -48,6 +48,14 @@ class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
     """Forward all other calls to the base environment."""
     return getattr(self._env, name)
 
+  @property
+  def batched(self):
+    return getattr(self._env, 'batched', False)
+
+  @property
+  def batch_size(self):
+    return getattr(self._env, 'batch_size', None)
+
   def _reset(self):
     return self._env.reset()
 
