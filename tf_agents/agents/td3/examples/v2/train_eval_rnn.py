@@ -81,8 +81,7 @@ def train_eval(
     initial_collect_episodes=1,
     collect_episodes_per_iteration=1,
     replay_buffer_capacity=100000,
-    ou_stddev=0.2,
-    ou_damping=0.15,
+    exploration_noise_std=0.1,
     # Params for target update
     target_update_tau=0.05,
     target_update_period=5,
@@ -170,8 +169,7 @@ def train_eval(
             learning_rate=actor_learning_rate),
         critic_optimizer=tf.compat.v1.train.AdamOptimizer(
             learning_rate=critic_learning_rate),
-        ou_stddev=ou_stddev,
-        ou_damping=ou_damping,
+        exploration_noise_std=exploration_noise_std,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
         dqda_clipping=dqda_clipping,

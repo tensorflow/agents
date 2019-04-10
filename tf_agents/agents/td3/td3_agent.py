@@ -35,7 +35,7 @@ import tensorflow_probability as tfp
 from tf_agents.agents import tf_agent
 from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
-from tf_agents.policies import ou_noise_policy
+from tf_agents.policies import gaussian_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
@@ -58,8 +58,7 @@ class Td3Agent(tf_agent.TFAgent):
                critic_network,
                actor_optimizer,
                critic_optimizer,
-               ou_stddev=1.0,
-               ou_damping=1.0,
+               exploration_noise_std=0.1,
                target_update_tau=1.0,
                target_update_period=1,
                dqda_clipping=None,
@@ -84,10 +83,7 @@ class Td3Agent(tf_agent.TFAgent):
         network will be called with call(observation, action, step_type).
       actor_optimizer: The default optimizer to use for the actor network.
       critic_optimizer: The default optimizer to use for the critic network.
-      ou_stddev: Standard deviation for the Ornstein-Uhlenbeck (OU) noise added
-        in the default collect policy.
-      ou_damping: Damping factor for the OU noise added in the default collect
-        policy.
+      exploration_noise_std: Scale factor on exploration policy noise.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       dqda_clipping: A scalar or float clips the gradient dqda element-wise
@@ -124,8 +120,7 @@ class Td3Agent(tf_agent.TFAgent):
     self._actor_optimizer = actor_optimizer
     self._critic_optimizer = critic_optimizer
 
-    self._ou_stddev = ou_stddev
-    self._ou_damping = ou_damping
+    self._exploration_noise_std = exploration_noise_std
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._dqda_clipping = dqda_clipping
@@ -146,10 +141,9 @@ class Td3Agent(tf_agent.TFAgent):
     collect_policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec, action_spec=action_spec,
         actor_network=self._actor_network, clip=False)
-    collect_policy = ou_noise_policy.OUNoisePolicy(
+    collect_policy = gaussian_policy.GaussianPolicy(
         collect_policy,
-        ou_stddev=self._ou_stddev,
-        ou_damping=self._ou_damping,
+        scale=self._exploration_noise_std,
         clip=True)
 
     super(Td3Agent, self).__init__(
