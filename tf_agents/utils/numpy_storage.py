@@ -110,8 +110,11 @@ class NumpyState(base.Trackable):
       except AttributeError:
         value = _NumpyWrapper(value)
         self._track_trackable(value, name=name, overwrite=True)
-    elif (name not in ('_setattr_tracking', '_update_uid') and
-          getattr(self, '_setattr_tracking', True)):
+    elif (name not in ('_self_setattr_tracking', '_self_update_uid',
+                       # TODO(b/130295584): Remove these non-_self aliases when
+                       # sync issues are resolved.
+                       '_setattr_tracking', '_update_uid')
+          and getattr(self, '_setattr_tracking', True)):
       # Mixing restore()-created attributes with user-added checkpointable
       # objects is tricky, since we can't use the `_lookup_dependency` trick to
       # re-create attributes (we might accidentally steal the restoration for
