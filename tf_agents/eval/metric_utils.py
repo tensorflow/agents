@@ -116,7 +116,7 @@ def compute_summaries(metrics,
   return results
 
 
-# TODO(sfishman): Match compute and compute_summaries signatures.
+# TODO(b/130250285): Match compute and compute_summaries signatures.
 def eager_compute(metrics,
                   environment,
                   policy,
@@ -162,5 +162,5 @@ def eager_compute(metrics,
       for m in metrics:
         tag = common.join_scope(summary_prefix, m.name)
         tf.compat.v2.summary.scalar(name=tag, data=m.result(), step=train_step)
-  # TODO(kbanoop): Add an option to log metrics.
+  # TODO(b/130249101): Add an option to log metrics.
   return collections.OrderedDict(results)

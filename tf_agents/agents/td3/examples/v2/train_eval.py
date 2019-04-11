@@ -45,7 +45,7 @@ from tf_agents.agents.td3 import td3_agent
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common

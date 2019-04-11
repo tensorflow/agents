@@ -43,8 +43,8 @@ from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import batched_py_metric
-from tf_agents.metrics import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.metrics.py_metrics import AverageEpisodeLengthMetric
 from tf_agents.metrics.py_metrics import AverageReturnMetric

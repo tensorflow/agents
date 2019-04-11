@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test for tf_agents.metrics.metric_utils."""
+"""Test for tf_agents.eval.metric_utils."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -23,13 +23,12 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.environments import random_py_environment
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.policies import random_py_policy
 from tf_agents.specs import array_spec
 
 
-# TODO(kbanoop): Remove this file after compute() is replaced by a driver.
 class MetricUtilsTest(tf.test.TestCase):
 
   def testMetricIsComputedCorrectly(self):

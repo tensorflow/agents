@@ -46,7 +46,7 @@ from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.environments import time_step as ts
 from tf_agents.environments import trajectory
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import q_network
 from tf_agents.policies import py_tf_policy
