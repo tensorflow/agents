@@ -50,9 +50,7 @@ class PyDriver(driver.Driver):
     Raises:
       ValueError: If both max_steps and max_episodes are None.
     """
-    max_steps = max_steps or 0
-    max_episodes = max_episodes or 0
-    if max_steps < 1 and max_episodes < 1:
+    if max_steps in (None, 0) and max_episodes in (None, 0):
       raise ValueError(
           'Either `max_steps` or `max_episodes` should be greater than 0.')
 
