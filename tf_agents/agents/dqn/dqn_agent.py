@@ -30,11 +30,11 @@ import collections
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
-from tf_agents.environments import trajectory
 from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils

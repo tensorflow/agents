@@ -22,10 +22,9 @@ from __future__ import print_function
 from absl.testing import absltest
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step
 from tf_agents.policies import random_py_policy
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import time_step
 
 
 class RandomPyPolicyTest(absltest.TestCase):

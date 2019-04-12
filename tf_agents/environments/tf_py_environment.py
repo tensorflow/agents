@@ -28,9 +28,8 @@ import tensorflow as tf
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
-from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
-
+from tf_agents.trajectories import time_step as ts
 # TODO(b/123022201): Use tf.autograph instead.
 from tensorflow.python.autograph.impl import api as autograph  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import tensor_shape  # pylint:disable=g-direct-tensorflow-import  # TF internal

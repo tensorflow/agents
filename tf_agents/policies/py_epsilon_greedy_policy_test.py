@@ -21,9 +21,8 @@ from __future__ import print_function
 
 from absl.testing import absltest
 from absl.testing.absltest import mock
-
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_epsilon_greedy_policy
+from tf_agents.trajectories import policy_step
 
 
 class EpsilonGreedyPolicyTest(absltest.TestCase):

@@ -23,7 +23,7 @@ import abc
 import collections
 import tensorflow as tf
 
-from tf_agents.environments import trajectory
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 

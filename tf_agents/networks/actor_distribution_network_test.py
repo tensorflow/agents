@@ -19,11 +19,9 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
 from tf_agents.networks import actor_distribution_network
 from tf_agents.specs import tensor_spec
-
+from tf_agents.trajectories import time_step as ts
 from tensorflow.python.framework import test_util  # TF internal
 
 

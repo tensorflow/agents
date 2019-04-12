@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for environments.trajectory."""
+"""Tests for trajectory."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -24,8 +24,8 @@ import tensorflow as tf
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import test_utils as drivers_test_utils
 from tf_agents.environments import tf_py_environment
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import test_utils
 
 

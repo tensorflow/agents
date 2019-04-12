@@ -37,14 +37,13 @@ from __future__ import print_function
 from absl.testing.absltest import mock
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.policies import tf_py_policy
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
 
 

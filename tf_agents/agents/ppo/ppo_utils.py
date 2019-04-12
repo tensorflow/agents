@@ -20,9 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-
-from tf_agents.environments import trajectory
-from tf_agents.policies import policy_step
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import trajectory
 
 
 def make_timestep_mask(batched_next_time_step):

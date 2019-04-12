@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import numpy as np
 from tf_agents.drivers import driver
-from tf_agents.environments import trajectory
+from tf_agents.trajectories import trajectory
 
 
 class PyDriver(driver.Driver):

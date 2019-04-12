@@ -59,18 +59,18 @@ import tensorflow as tf
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_atari
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import py_metric
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import q_network
 from tf_agents.policies import epsilon_greedy_policy
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import py_hashed_replay_buffer
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import timer
 import gin.tf

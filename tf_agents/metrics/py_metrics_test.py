@@ -23,10 +23,9 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
 from tf_agents.metrics import py_metrics
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import nest_utils
 
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal

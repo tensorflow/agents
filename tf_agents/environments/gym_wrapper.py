@@ -26,9 +26,8 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents import specs
-from tf_agents.environments import time_step as ts
 from tf_agents.environments import wrappers
-
+from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 

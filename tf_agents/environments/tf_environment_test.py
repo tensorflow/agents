@@ -23,7 +23,7 @@ import tensorflow as tf
 
 from tf_agents import specs
 from tf_agents.environments import tf_environment
-from tf_agents.environments import time_step as ts
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
 FIRST = ts.StepType.FIRST

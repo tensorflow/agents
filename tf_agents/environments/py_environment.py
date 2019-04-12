@@ -26,7 +26,7 @@ from __future__ import print_function
 import abc
 import six
 
-from tf_agents.environments import time_step as ts
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
 

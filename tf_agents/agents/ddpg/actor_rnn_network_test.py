@@ -23,9 +23,8 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.agents.ddpg import actor_rnn_network
-from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
-
+from tf_agents.trajectories import time_step as ts
 from tensorflow.python.framework import test_util  # TF internal
 
 

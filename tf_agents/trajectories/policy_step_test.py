@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.policies.policy_step."""
+"""Tests for tf_agents.trajectories.policy_step."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from tf_agents.policies import policy_step
+from tf_agents.trajectories import policy_step
 
 
 class PolicyStepTest(tf.test.TestCase):

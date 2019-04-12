@@ -22,9 +22,8 @@ import collections
 
 import gym
 import numpy as np
-
-from tf_agents.environments import time_step as ts
 from tf_agents.environments import wrappers
+from tf_agents.trajectories import time_step as ts
 
 
 class FrameStack4(gym.Wrapper):

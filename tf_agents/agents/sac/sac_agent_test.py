@@ -23,9 +23,9 @@ import copy
 import tensorflow as tf
 
 from tf_agents.agents.sac import sac_agent
-from tf_agents.environments import time_step as ts
-from tf_agents.policies.policy_step import PolicyStep
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories.policy_step import PolicyStep
 
 
 class _MockDistribution(object):

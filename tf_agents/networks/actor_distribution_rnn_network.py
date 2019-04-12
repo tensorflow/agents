@@ -22,14 +22,13 @@ from __future__ import print_function
 import functools
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step
 from tf_agents.networks import categorical_projection_network
 from tf_agents.networks import dynamic_unroll_layer
 from tf_agents.networks import network
 from tf_agents.networks import normal_projection_network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step
 from tf_agents.utils import nest_utils
 
 import gin.tf

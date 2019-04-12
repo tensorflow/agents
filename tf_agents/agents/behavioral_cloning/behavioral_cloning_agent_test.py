@@ -24,13 +24,13 @@ import tensorflow as tf
 
 from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
 from tf_agents.drivers import test_utils as driver_test_utils
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
 from tf_agents.environments import trajectory_replay
 from tf_agents.networks import network
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 
 # Number of times to train in test loops.

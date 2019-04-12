@@ -23,10 +23,8 @@ import abc
 import numpy as np
 import six
 import tensorflow as tf
-
-
-from tf_agents.environments import trajectory
-from tf_agents.policies import policy_step
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 
 

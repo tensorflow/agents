@@ -24,8 +24,9 @@ import six
 import tensorflow as tf
 
 from tensorflow.keras import layers  # pylint: disable=unused-import
-from tf_agents.environments import time_step
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step
+
 from tensorflow.python.keras.engine import network as keras_network  # TF internal
 from tensorflow.python.util import tf_decorator  # TF internal
 from tensorflow.python.util import tf_inspect  # TF internal

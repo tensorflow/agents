@@ -24,11 +24,11 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents.reinforce import reinforce_agent
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal

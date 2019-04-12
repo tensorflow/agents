@@ -24,9 +24,8 @@ import collections
 
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
-from tf_agents.policies import policy_step
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
 
@@ -467,7 +466,7 @@ def to_transition(trajectory, next_trajectory=None):
     trajectory = tf.nest.map_structure(lambda x: x[:, :-1], trajectory)
   policy_steps = policy_step.PolicyStep(
       action=trajectory.action, state=(), info=trajectory.policy_info)
-  # TODO(kbanoop): Consider replacing 0 rewards & discounts with ().
+  # TODO(b/130244652): Consider replacing 0 rewards & discounts with ().
   time_steps = ts.TimeStep(
       trajectory.step_type,
       reward=tf.nest.map_structure(tf.zeros_like, trajectory.reward),  # unknown

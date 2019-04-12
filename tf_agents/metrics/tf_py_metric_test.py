@@ -22,10 +22,10 @@ from __future__ import print_function
 from absl.testing import parameterized
 
 import tensorflow as tf
-from tf_agents.environments import trajectory
 from tf_agents.metrics import batched_py_metric
 from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_py_metric
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import nest_utils
 
 

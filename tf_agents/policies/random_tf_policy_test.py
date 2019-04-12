@@ -22,10 +22,9 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
 from tf_agents.policies import random_tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 from tf_agents.utils import test_utils
 from tensorflow.python.eager import context  # TF internal

@@ -23,13 +23,12 @@ import os
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
-from tf_agents.policies import policy_step
 from tf_agents.replay_buffers import py_hashed_replay_buffer
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import nest_utils
 
 

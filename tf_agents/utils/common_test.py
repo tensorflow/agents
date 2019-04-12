@@ -25,9 +25,8 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
-from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 

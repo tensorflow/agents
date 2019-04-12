@@ -31,9 +31,9 @@ import numpy as np
 
 from tf_agents.environments import gym_wrapper
 from tf_agents.environments import random_py_environment
-from tf_agents.environments import time_step as ts
 from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import time_step as ts
 
 
 class PyEnvironmentBaseWrapperTest(parameterized.TestCase):

@@ -69,8 +69,8 @@ class TimeStep(
     return np.equal(self.step_type, StepType.LAST)
 
   def __hash__(self):
-    # TODO(oars): Explore performance impact and consider converting dicts in
-    # the observation into ordered dicts in __new__ call.
+    # TODO(b/130243327): Explore performance impact and consider converting
+    # dicts in the observation into ordered dicts in __new__ call.
     return hash(tuple(tf.nest.flatten(self)))
 
 
@@ -121,7 +121,7 @@ def restart(observation, batch_size=None):
           observation,
       )
 
-  # TODO(sguada,kbanoop): Check leading dimension of first_observation
+  # TODO(b/130244501): Check leading dimension of first_observation
   # against batch_size if all are known statically.
   shape = (batch_size,) if batch_size is not None else ()
   step_type = tf.fill(shape, StepType.FIRST, name='step_type')
@@ -161,7 +161,7 @@ def transition(observation, reward, discount=1.0):
       step_type = StepType.MID
     return TimeStep(step_type, reward, discount, observation)
 
-  # TODO(sguada, kbanoop): If reward.shape.ndims == 2, and static
+  # TODO(b/130245199): If reward.shape.ndims == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
   reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
@@ -212,7 +212,7 @@ def termination(observation, reward):
       return TimeStep(StepType.LAST, reward, _as_float32_array(0.0),
                       observation)
 
-  # TODO(sguada, kbanoop): If reward.shape.ndims == 2, and static
+  # TODO(b/130245199): If reward.shape.ndims == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
   reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')

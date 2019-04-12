@@ -33,9 +33,9 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents import tf_agent
-from tf_agents.environments import trajectory
 from tf_agents.policies import actor_policy
 from tf_agents.policies import gaussian_policy
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils

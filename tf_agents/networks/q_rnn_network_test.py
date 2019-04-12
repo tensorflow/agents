@@ -23,10 +23,10 @@ import tensorflow as tf
 
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
-from tf_agents.environments import time_step
 from tf_agents.networks import expand_dims_layer
 from tf_agents.networks import q_rnn_network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step
 
 
 class QRnnNetworkTest(tf.test.TestCase):

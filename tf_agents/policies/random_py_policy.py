@@ -19,11 +19,10 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-
-from tf_agents.environments import time_step as ts
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
 

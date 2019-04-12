@@ -23,7 +23,7 @@ from absl.testing import absltest
 from absl.testing.absltest import mock
 
 from tf_agents.environments import atari_wrappers
-from tf_agents.environments import time_step as ts
+from tf_agents.trajectories import time_step as ts
 
 
 class AtariTimeLimitTest(absltest.TestCase):

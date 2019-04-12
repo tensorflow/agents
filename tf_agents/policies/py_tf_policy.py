@@ -21,11 +21,10 @@ from __future__ import print_function
 from absl import logging
 
 import tensorflow as tf
-
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import session_utils

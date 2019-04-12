@@ -21,10 +21,9 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.policies import random_py_policy
+from tf_agents.trajectories import policy_step
 
 
 class EpsilonGreedyPolicy(py_policy.Base):

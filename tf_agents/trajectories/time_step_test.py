@@ -13,17 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for environments.time_step."""
+"""Tests for trajectories.time_step."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
 

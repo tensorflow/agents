@@ -28,14 +28,14 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_agent
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.networks import value_network
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import test_utils

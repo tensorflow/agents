@@ -22,10 +22,9 @@ from __future__ import print_function
 from absl.testing import absltest
 from absl.testing.absltest import mock
 import numpy as np
-
-from tf_agents.environments import time_step as ts
 from tf_agents.environments import utils
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import time_step as ts
 
 
 def get_mock_env(action_spec, observation_spec, step_return):

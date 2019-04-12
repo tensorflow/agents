@@ -26,7 +26,7 @@ import tensorflow as tf
 from tf_agents.drivers import py_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import batched_py_environment
-from tf_agents.environments import trajectory
+from tf_agents.trajectories import trajectory
 
 
 class MockReplayBufferObserver(object):

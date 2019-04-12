@@ -26,9 +26,8 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.networks import network
-from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
-
+from tf_agents.trajectories import policy_step
 import gin.tf
 
 tfd = tfp.distributions
