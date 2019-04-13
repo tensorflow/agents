@@ -26,12 +26,14 @@ from __future__ import print_function
 import gin
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.agents import tf_agent
 from tf_agents.policies import actor_policy
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
+from tf_agents.utils import nest_utils
 
 
 @gin.configurable
@@ -141,12 +143,14 @@ class SacAgent(tf_agent.TFAgent):
     self._update_target = self._get_target_updater(
         tau=self._target_update_tau, period=self._target_update_period)
 
+    train_sequence_length = 2 if not critic_network.state_spec else None
+
     super(SacAgent, self).__init__(
         time_step_spec,
         action_spec,
         policy=policy,
         collect_policy=policy,
-        train_sequence_length=2,
+        train_sequence_length=train_sequence_length,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
@@ -169,9 +173,12 @@ class SacAgent(tf_agent.TFAgent):
     transitions = trajectory.to_transition(experience)
     time_steps, policy_steps, next_time_steps = transitions
     actions = policy_steps.action
-    # TODO(b/127584522): Figure out how to properly deal with time dimension.
-    time_steps, actions, next_time_steps = tf.nest.map_structure(
-        lambda t: tf.squeeze(t, axis=1), (time_steps, actions, next_time_steps))
+    if (self.train_sequence_length is not None and
+        self.train_sequence_length == 2):
+      # Sequence empty time dimension if critic network is stateless.
+      time_steps, actions, next_time_steps = tf.nest.map_structure(
+          lambda t: tf.squeeze(t, axis=1),
+          (time_steps, actions, next_time_steps))
     return time_steps, actions, next_time_steps
 
   def _train(self, experience, weights):
@@ -291,7 +298,10 @@ class SacAgent(tf_agent.TFAgent):
   def _actions_and_log_probs(self, time_steps):
     """Get actions and corresponding log probabilities from policy."""
     # Get raw action distribution from policy, and initialize bijectors list.
-    action_distribution = self.policy.distribution(time_steps).action
+    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
+    policy_state = self.policy.get_initial_state(batch_size)
+    action_distribution = self.policy.distribution(
+        time_steps, policy_state=policy_state).action
 
     # Sample actions and log_pis from transformed distribution.
     actions = tf.nest.map_structure(lambda d: d.sample(), action_distribution)
@@ -415,11 +425,19 @@ class SacAgent(tf_agent.TFAgent):
             step=self.train_step_counter)
         common.generate_tensor_summaries('target_q_values', target_q_values,
                                          self.train_step_counter)
-        action_distribution = self.policy.distribution(time_steps).action
-        common.generate_tensor_summaries('act_mean', action_distribution.loc,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries(
-            'act_stddev', action_distribution.scale, self.train_step_counter)
+        batch_size = nest_utils.get_outer_shape(
+            time_steps, self._time_step_spec)[0]
+        policy_state = self.policy.get_initial_state(batch_size)
+        action_distribution = self.policy.distribution(
+            time_steps, policy_state).action
+        if isinstance(action_distribution, tfp.distributions.Normal):
+          common.generate_tensor_summaries('act_mean', action_distribution.loc,
+                                           self.train_step_counter)
+          common.generate_tensor_summaries(
+              'act_stddev', action_distribution.scale, self.train_step_counter)
+        elif isinstance(action_distribution, tfp.distributions.Categorical):
+          common.generate_tensor_summaries(
+              'act_mode', action_distribution.mode(), self.train_step_counter)
         common.generate_tensor_summaries('entropy_raw_action',
                                          action_distribution.entropy(),
                                          self.train_step_counter)
