@@ -100,14 +100,48 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.Base):
 
 class TfPassThroughPolicy(tf_policy.Base):
 
-  def _variables(self):
-    return self._variables_list
-
   def _distribution(self, time_step, policy_state):
     action_distribution = tf.nest.map_structure(
         lambda loc: tfp.distributions.Deterministic(loc=loc),
         time_step.observation)
     return policy_step.PolicyStep(action_distribution, (), ())
+
+
+class TfEmitLogProbsPolicy(tf_policy.Base):
+  """Dummy policy with constant probability distribution."""
+
+  def __init__(self, info_spec=()):
+    observation_spec = tensor_spec.TensorSpec([2, 2], tf.float32)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 5)
+    super(TfEmitLogProbsPolicy, self).__init__(
+        time_step_spec,
+        action_spec,
+        info_spec=info_spec,
+        emit_log_probability=True)
+
+  def _distribution(self, time_step, policy_state):
+    probs = tf.constant(
+        0.2, shape=[self.action_spec.maximum - self.action_spec.minimum])
+    action_distribution = tf.nest.map_structure(
+        lambda obs: tfp.distributions.Categorical(probs=probs),
+        time_step.observation)
+    step = policy_step.PolicyStep(action_distribution)
+    return step
+
+
+class TfDictInfoAndLogProbs(TfEmitLogProbsPolicy):
+  """Same dummy policy as above except it stores more things in info."""
+
+  def __init__(self):
+    info_spec = {"test": tensor_spec.BoundedTensorSpec([1], tf.int64, 0, 1)}
+    super(TfDictInfoAndLogProbs, self).__init__(info_spec=info_spec)
+
+  def _distribution(self, time_step, policy_state):
+    distribution_step = super(TfDictInfoAndLogProbs, self)._distribution(
+        time_step=time_step, policy_state=policy_state)
+    return distribution_step._replace(
+        info={"test": tf.constant(1, dtype=tf.int64)})
 
 
 class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
@@ -189,6 +223,23 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observation)
     policy.action(time_step)
+
+  def testEmitLogProbability(self):
+    policy = TfEmitLogProbsPolicy()
+    observation = tf.constant(2., shape=(2, 2), dtype=tf.float32)
+    time_step = ts.restart(observation)
+
+    step = self.evaluate(policy.action(time_step))
+    self.assertAlmostEqual(step.info.log_probability, np.log(0.2))
+
+  def testKeepInfoAndEmitLogProbability(self):
+    policy = TfDictInfoAndLogProbs()
+    observation = tf.constant(2., shape=(2, 2), dtype=tf.float32)
+    time_step = ts.restart(observation)
+
+    step = self.evaluate(policy.action(time_step))
+    self.assertEqual(step.info.get("test", None), 1)
+    self.assertAlmostEqual(step.info["log_probability"], np.log(0.2))
 
 
 if __name__ == "__main__":

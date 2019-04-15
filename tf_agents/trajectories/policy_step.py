@@ -36,3 +36,42 @@ PolicyStep = collections.namedtuple('PolicyStep',
 
 # Set default empty tuple for PolicyStep.state and PolicyStep.info.
 PolicyStep.__new__.__defaults__ = ((),) * len(PolicyStep._fields)
+
+
+class CommonFields(object):
+  """Strings which can be used for querying returned PolicyStep.info field.
+
+  For example, use getattr(info, CommonFields.LOG_PROBABILITY, None) to check if
+  log probabilities are returned in the step or not.
+  """
+  LOG_PROBABILITY = 'log_probability'
+
+
+# Generic PolicyInfo object which is recommended to be subclassed when requiring
+# that log-probabilities are returned, but having a custom namedtuple instead.
+PolicyInfo = collections.namedtuple('PolicyInfo',
+                                    (CommonFields.LOG_PROBABILITY,))
+
+
+def set_log_probability(info, log_probability):
+  """Sets the CommonFields.LOG_PROBABILITY on info to be log_probability."""
+  if info in ((), None):
+    return PolicyInfo(log_probability=log_probability)
+  fields = getattr(info, '_fields', None)
+  if fields is not None and CommonFields.LOG_PROBABILITY in fields:
+    return info._replace(log_probability=log_probability)
+  try:
+    info[CommonFields.LOG_PROBABILITY] = log_probability
+  except TypeError:
+    pass
+  return info
+
+
+def get_log_probability(info, default_log_probability=None):
+  """Gets the CommonFields.LOG_PROBABILITY from info depending on type."""
+  if isinstance(info, PolicyInfo):
+    return getattr(info, CommonFields.LOG_PROBABILITY, default_log_probability)
+  if hasattr(info, 'update'):
+    return info.get(CommonFields.LOG_PROBABILITY, default_log_probability)
+
+  return default_log_probability

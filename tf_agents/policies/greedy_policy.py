@@ -36,11 +36,13 @@ class GreedyPolicy(tf_policy.Base):
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    super(GreedyPolicy, self).__init__(policy.time_step_spec,
-                                       policy.action_spec,
-                                       policy.policy_state_spec,
-                                       policy.info_spec,
-                                       name=name)
+    super(GreedyPolicy, self).__init__(
+        policy.time_step_spec,
+        policy.action_spec,
+        policy.policy_state_spec,
+        policy.info_spec,
+        emit_log_probability=policy.emit_log_probability,
+        name=name)
     self._wrapped_policy = policy
 
   def _variables(self):
@@ -52,7 +54,7 @@ class GreedyPolicy(tf_policy.Base):
       try:
         greedy_action = dist.mode()
       except NotImplementedError:
-        raise ValueError("Your network's distriution does not implement mode "
+        raise ValueError("Your network's distribution does not implement mode "
                          "making it incompatible with a greedy policy.")
 
       return tfp.distributions.Deterministic(loc=greedy_action)

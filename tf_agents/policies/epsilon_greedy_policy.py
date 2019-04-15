@@ -45,18 +45,23 @@ class EpsilonGreedyPolicy(tf_policy.Base):
       epsilon: A float scalar or a scalar Tensor of shape=(), corresponding to
         the probability of taking the random action.
       name: The name of this policy.
+
     Raises:
       ValueError: If epsilon is invalid.
     """
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
     self._random_policy = random_tf_policy.RandomTFPolicy(
-        policy.time_step_spec, policy.action_spec)
-    super(EpsilonGreedyPolicy, self).__init__(policy.time_step_spec,
-                                              policy.action_spec,
-                                              policy.policy_state_spec,
-                                              policy.info_spec,
-                                              name=name)
+        policy.time_step_spec,
+        policy.action_spec,
+        emit_log_probability=policy.emit_log_probability)
+    super(EpsilonGreedyPolicy, self).__init__(
+        policy.time_step_spec,
+        policy.action_spec,
+        policy.policy_state_spec,
+        policy.info_spec,
+        emit_log_probability=policy.emit_log_probability,
+        name=name)
 
   def _variables(self):
     return self._greedy_policy.variables()

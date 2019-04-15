@@ -46,12 +46,14 @@ class BoltzmannPolicy(tf_policy.Base):
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    super(BoltzmannPolicy, self).__init__(policy.time_step_spec,
-                                          policy.action_spec,
-                                          policy.policy_state_spec,
-                                          policy.info_spec,
-                                          clip=False,
-                                          name=name)
+    super(BoltzmannPolicy, self).__init__(
+        policy.time_step_spec,
+        policy.action_spec,
+        policy.policy_state_spec,
+        policy.info_spec,
+        emit_log_probability=policy.emit_log_probability,
+        clip=False,
+        name=name)
     self._temperature = temperature
     self._wrapped_policy = policy
 

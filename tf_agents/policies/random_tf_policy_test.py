@@ -120,6 +120,34 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       self.assertEqual((2, 2, 3), action_[0].shape)
       self.assertEqual((2, 1, 2), action_[1].shape)
 
+  def testEmitLogProbability(self, dtype, run_mode):
+    with run_mode():
+      action_spec = [
+          tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
+          tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
+      ]
+      time_step_spec, time_step = self.create_time_step()
+      policy = random_tf_policy.RandomTFPolicy(
+          time_step_spec=time_step_spec,
+          action_spec=action_spec,
+          emit_log_probability=True)
+
+      action_step = policy.action(time_step)
+      tf.nest.assert_same_structure(action_spec, action_step.action)
+
+      step = self.evaluate(action_step)
+      action_ = step.action
+      # For integer specs, boundaries are inclusive.
+      p = 1./21 if dtype.is_integer else 1./20
+      np.testing.assert_allclose(
+          np.array(step.info.log_probability, dtype=np.float32),
+          np.array(np.log([p, p], dtype=np.float32)),
+          rtol=1e-5)
+      self.assertTrue(np.all(action_[0] >= -10))
+      self.assertTrue(np.all(action_[0] <= 10))
+      self.assertTrue(np.all(action_[1] >= -10))
+      self.assertTrue(np.all(action_[1] <= 10))
+
 
 if __name__ == '__main__':
   tf.test.main()

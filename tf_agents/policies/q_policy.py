@@ -34,6 +34,7 @@ class QPolicy(tf_policy.Base):
                time_step_spec=None,
                action_spec=None,
                q_network=None,
+               emit_log_probability=False,
                name=None):
     """Builds a Q-Policy given a q_network.
 
@@ -42,6 +43,7 @@ class QPolicy(tf_policy.Base):
       action_spec: A nest of BoundedTensorSpec representing the actions.
       q_network: An instance of a `tf_agents.network.Network`,
         callable via `network(observation, step_type) -> (output, final_state)`.
+      emit_log_probability: Whether to emit log-probs in info of `PolicyStep`.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -59,9 +61,11 @@ class QPolicy(tf_policy.Base):
     self._action_shape = flat_action_spec[0].shape
     self._q_network = q_network
     super(QPolicy, self).__init__(
-        time_step_spec, action_spec,
+        time_step_spec,
+        action_spec,
         policy_state_spec=q_network.state_spec,
         clip=False,
+        emit_log_probability=emit_log_probability,
         name=name)
 
   def _variables(self):
