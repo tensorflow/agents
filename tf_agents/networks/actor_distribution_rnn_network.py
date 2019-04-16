@@ -42,12 +42,12 @@ def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):
 def _normal_projection_net(action_spec,
                            init_action_stddev=0.35,
                            init_means_output_factor=0.1):
-  std_initializer_value = np.log(np.exp(init_action_stddev) - 1)
+  std_bias_initializer_value = np.log(np.exp(init_action_stddev) - 1)
 
   return normal_projection_network.NormalProjectionNetwork(
       action_spec,
       init_means_output_factor=init_means_output_factor,
-      std_initializer_value=std_initializer_value)
+      std_bias_initializer_value=std_bias_initializer_value)
 
 
 @gin.configurable

@@ -49,7 +49,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
                sample_spec,
                activation_fn=None,
                init_means_output_factor=0.1,
-               std_initializer_value=0.0,
+               std_bias_initializer_value=0.0,
                mean_transform=tanh_squash_to_spec,
                std_transform=tf.nn.softplus,
                state_dependent_std=False,
@@ -64,7 +64,9 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       activation_fn: Activation function to use in dense layer.
       init_means_output_factor: Output factor for initializing action means
         weights.
-      std_initializer_value: Initial value for std variables.
+      std_bias_initializer_value: Initial value for the bias of the
+        stddev_projection_layer or the direct bias_layer depending on the
+        state_dependent_std flag.
       mean_transform: Transform to apply to the calculated means
       std_transform: Transform to apply to the stddevs.
       state_dependent_std: If true, stddevs will be produced by MLP from state.
@@ -107,12 +109,13 @@ class NormalProjectionNetwork(network.DistributionNetwork):
           activation=activation_fn,
           kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
               scale=init_means_output_factor),
-          bias_initializer=tf.keras.initializers.Zeros(),
+          bias_initializer=tf.keras.initializers.Constant(
+              value=std_bias_initializer_value),
           name='stddev_projection_layer')
-
-    self._bias = bias_layer.BiasLayer(
-        bias_initializer=tf.keras.initializers.Constant(
-            value=std_initializer_value))
+    else:
+      self._bias = bias_layer.BiasLayer(
+          bias_initializer=tf.keras.initializers.Constant(
+              value=std_bias_initializer_value))
 
   def _output_distribution_spec(self, sample_spec):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
