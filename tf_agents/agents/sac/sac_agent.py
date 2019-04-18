@@ -438,9 +438,12 @@ class SacAgent(tf_agent.TFAgent):
         elif isinstance(action_distribution, tfp.distributions.Categorical):
           common.generate_tensor_summaries(
               'act_mode', action_distribution.mode(), self.train_step_counter)
-        common.generate_tensor_summaries('entropy_raw_action',
-                                         action_distribution.entropy(),
-                                         self.train_step_counter)
+        try:
+          common.generate_tensor_summaries('entropy_action',
+                                           action_distribution.entropy(),
+                                           self.train_step_counter)
+        except NotImplementedError:
+          pass  # Some distributions do not have an analytic entropy.
 
       return actor_loss
 
