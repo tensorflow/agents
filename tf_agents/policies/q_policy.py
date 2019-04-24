@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import tensorflow_probability as tfp
+from tf_agents.distributions import shifted_categorical
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
 import gin.tf
@@ -55,10 +55,8 @@ class QPolicy(tf_policy.Base):
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
           'action_spec can only contain a single BoundedTensorSpec.')
-    # We need to extract the dtype shape and shape from the spec while
-    # maintaining the nest structure of the spec.
-    self._action_dtype = flat_action_spec[0].dtype
-    self._action_shape = flat_action_spec[0].shape
+    # We need to maintain the flat action spec for dtype, shape and range.
+    self._flat_action_spec = flat_action_spec[0]
     self._q_network = q_network
     super(QPolicy, self).__init__(
         time_step_spec,
@@ -89,11 +87,13 @@ class QPolicy(tf_policy.Base):
     # dimension so the final shape is (B, 1, A), where A is the number of
     # actions. This will make Categorical emit events shaped (B, 1) rather than
     # (B,). Using axis -2 to allow for (B, T, 1, A) shaped q_values.
-    if self._action_shape.ndims == 1:
+    if self._flat_action_spec.shape.ndims == 1:
       q_values = tf.expand_dims(q_values, -2)
 
     # TODO(kbanoop): Handle distributions over nests.
-    distribution = tfp.distributions.Categorical(
-        logits=q_values, dtype=self._action_dtype)
+    distribution = shifted_categorical.ShiftedCategorical(
+        logits=q_values,
+        dtype=self._flat_action_spec.dtype,
+        shift=self._flat_action_spec.minimum)
     distribution = tf.nest.pack_sequence_as(self._action_spec, [distribution])
     return policy_step.PolicyStep(distribution, policy_state)

@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 from tf_agents.networks import network
 from tf_agents.policies import q_policy
@@ -85,6 +86,25 @@ class QPolicyTest(test_utils.TestCase):
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testActionWithinBounds(self):
+    bounded_action_spec = tensor_spec.BoundedTensorSpec([1],
+                                                        tf.int32,
+                                                        minimum=-6,
+                                                        maximum=-5)
+    policy = q_policy.QPolicy(
+        self._time_step_spec, bounded_action_spec, q_network=DummyNet())
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step)
+    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    action = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action <= -5) and np.all(action >= -6))
 
   @test_util.run_in_graph_and_eager_modes()
   def testActionScalarSpec(self):
