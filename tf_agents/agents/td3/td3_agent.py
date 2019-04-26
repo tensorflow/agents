@@ -249,7 +249,7 @@ class Td3Agent(tf_agent.TFAgent):
       actor_grads = tape.gradient(actor_loss, actor_variables)
       return self._apply_gradients(
           actor_grads, actor_variables, self._actor_optimizer)
-    remainder = tf.mod(self.train_step_counter, self._actor_update_period)
+    remainder = tf.math.mod(self.train_step_counter, self._actor_update_period)
     tf.cond(
         pred=tf.equal(remainder, 0), true_fn=optimize_actor, false_fn=tf.no_op)
 

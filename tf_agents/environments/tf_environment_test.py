@@ -69,7 +69,7 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
       return (tf.constant(LAST, dtype=tf.int32),
               tf.constant(1.0, dtype=tf.float32),
               tf.constant(0.0, dtype=tf.float32))
-    state_value = tf.mod(self._state.value(), 3)
+    state_value = tf.math.mod(self._state.value(), 3)
     step_type, reward, discount = tf.case(
         {tf.equal(state_value, FIRST): first,
          tf.equal(state_value, MID): mid,
@@ -92,11 +92,11 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
     with tf.control_dependencies([state_assign]):
       state_value = self._state.value()
       increase_steps = tf.cond(
-          pred=tf.equal(tf.mod(state_value, 3), FIRST),
+          pred=tf.equal(tf.math.mod(state_value, 3), FIRST),
           true_fn=self.steps.value,
           false_fn=lambda: self.steps.assign_add(1))
       increase_episodes = tf.cond(
-          pred=tf.equal(tf.mod(state_value, 3), LAST),
+          pred=tf.equal(tf.math.mod(state_value, 3), LAST),
           true_fn=lambda: self.episodes.assign_add(1),
           false_fn=self.episodes.value)
     with tf.control_dependencies([increase_steps, increase_episodes]):

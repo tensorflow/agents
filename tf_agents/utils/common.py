@@ -335,7 +335,7 @@ class Periodically(tf.Module):
       if self._period == 1:
         return self._body()
       period = tf.cast(self._period, self._counter.dtype)
-      remainder = tf.mod(self._counter.assign_add(1), period)
+      remainder = tf.math.mod(self._counter.assign_add(1), period)
       return tf.cond(
           pred=tf.equal(remainder, 0), true_fn=self._body, false_fn=tf.no_op)
 

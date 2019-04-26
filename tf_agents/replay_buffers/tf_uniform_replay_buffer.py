@@ -189,7 +189,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         ids += batch_offsets
 
         if num_steps is None:
-          rows_to_get = tf.mod(ids, self._capacity)
+          rows_to_get = tf.math.mod(ids, self._capacity)
           data = self._data_table.read(rows_to_get)
           data_ids = self._id_table.read(rows_to_get)
         else:
@@ -202,14 +202,14 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
             else:
               step_range = tf.reshape(step_range, [num_steps])
 
-            rows_to_get = tf.mod(step_range + ids, self._capacity)
+            rows_to_get = tf.math.mod(step_range + ids, self._capacity)
             data = self._data_table.read(rows_to_get)
             data_ids = self._id_table.read(rows_to_get)
           else:
             data = []
             data_ids = []
             for step in range(num_steps):
-              steps_to_get = tf.mod(ids + step, self._capacity)
+              steps_to_get = tf.math.mod(ids + step, self._capacity)
               items = self._data_table.read(steps_to_get)
               data.append(items)
               data_ids.append(self._id_table.read(steps_to_get))
@@ -280,7 +280,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
                                                  self._max_length)
         ids = tf.range(min_val, max_val)
         ids = tf.stack([ids] * self._batch_size)
-        rows = tf.mod(ids, self._max_length)
+        rows = tf.math.mod(ids, self._max_length)
 
         # Make batch_offsets, shape [batch_size, 1], then add to rows.
         batch_offsets = tf.expand_dims(tf.range(
@@ -361,6 +361,6 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
   def _get_rows_for_id(self, id_):
     """Make a batch_size length list of tensors, with row ids for write."""
-    id_mod = tf.mod(id_, self._max_length)
+    id_mod = tf.math.mod(id_, self._max_length)
     rows = self._batch_offsets + id_mod
     return rows

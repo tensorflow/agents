@@ -128,7 +128,7 @@ class TFPolicyMock(tf_policy.Base):
                             policy_state)
 
     # Take actions 1 and 2 alternating.
-    action = tf.floormod(policy_state, 2) + 1
+    action = tf.math.floormod(policy_state, 2) + 1
     new_policy_state = policy_state + tf.constant(
         1, shape=self._batch_shape, dtype=tf.int32)
     policy_info = action * 2
