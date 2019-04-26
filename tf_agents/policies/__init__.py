@@ -13,3 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Policies Module."""
+
+from tf_agents.policies import actor_policy
+from tf_agents.policies import boltzmann_policy
+from tf_agents.policies import epsilon_greedy_policy
+from tf_agents.policies import fixed_policy
+from tf_agents.policies import gaussian_policy
+from tf_agents.policies import greedy_policy
+from tf_agents.policies import ou_noise_policy
+from tf_agents.policies import policy_saver
+from tf_agents.policies import py_policy
+from tf_agents.policies import py_tf_policy
+from tf_agents.policies import q_policy
+from tf_agents.policies import random_py_policy
+from tf_agents.policies import random_tf_policy
+from tf_agents.policies import scripted_py_policy
+from tf_agents.policies import tf_policy
+from tf_agents.policies import tf_py_policy
+

@@ -13,3 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Twin Delayed Deep Deterministic policy gradient (TD3) agent."""
+from tf_agents.agents.td3 import td3_agent
+

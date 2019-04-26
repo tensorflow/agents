@@ -13,3 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A Deep Deterministic Policy Gradient (DDPG) agent and its networks."""
+
+from tf_agents.agents.ddpg import actor_network
+from tf_agents.agents.ddpg import actor_rnn_network
+from tf_agents.agents.ddpg import critic_network
+from tf_agents.agents.ddpg import critic_rnn_network
+from tf_agents.agents.ddpg import ddpg_agent

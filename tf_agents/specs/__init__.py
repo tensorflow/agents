@@ -14,7 +14,9 @@
 # limitations under the License.
 
 """Module for numpy array and `tf.Tensor` shape and dtype specifications."""
+# TODO(b/130564501): Do not import classes directly, only expose modules.
 from tf_agents.specs.array_spec import ArraySpec
 from tf_agents.specs.array_spec import BoundedArraySpec
+from tf_agents.specs.distribution_spec import DistributionSpec
 from tf_agents.specs.tensor_spec import BoundedTensorSpec
 from tf_agents.specs.tensor_spec import TensorSpec

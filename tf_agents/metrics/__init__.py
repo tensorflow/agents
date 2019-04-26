@@ -13,3 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Metrics module."""
+
+from tf_agents.metrics import batched_py_metric
+from tf_agents.metrics import py_metric
+from tf_agents.metrics import py_metrics
+from tf_agents.metrics import tf_metric
+from tf_agents.metrics import tf_metrics
+from tf_agents.metrics import tf_py_metric

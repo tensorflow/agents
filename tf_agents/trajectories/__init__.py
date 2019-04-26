@@ -13,3 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Trajectories module."""
+
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step
+from tf_agents.trajectories import trajectory

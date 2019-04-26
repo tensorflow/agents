@@ -13,3 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A PPO Agent."""
+from tf_agents.agents.ppo import ppo_agent
+from tf_agents.agents.ppo import ppo_policy
+from tf_agents.agents.ppo import ppo_utils
+

@@ -13,3 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A DQN (Deep Q Network) agent."""
+from tf_agents.agents.dqn import dqn_agent

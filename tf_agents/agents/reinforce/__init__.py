@@ -13,3 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A REINFORCE agent."""
+from tf_agents.agents.reinforce import reinforce_agent
+

@@ -13,3 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A Soft Actor Critic agent."""
+from tf_agents.agents.sac import sac_agent

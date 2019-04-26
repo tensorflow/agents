@@ -13,3 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Distributions module."""
+from tf_agents.distributions import masked
+from tf_agents.distributions import shifted_categorical
+from tf_agents.distributions import tanh_bijector_stable
+from tf_agents.distributions import utils
