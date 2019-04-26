@@ -70,7 +70,30 @@ class TrajectoryTest(test_utils.TestCase):
         traj_val.step_type, [first, mid, mid, mid])
     self.assertAllEqual(
         traj_val.next_step_type, [mid, mid, mid, last])
-    self.assertAllEqual(traj_val.observation, obs_val)
+    self.assertAllClose(traj_val.observation, obs_val)
+    self.assertAllEqual(traj_val.reward, reward_val)
+    self.assertAllEqual(traj_val.discount, [1.0, 1.0, 1.0, 1.0])
+
+  def testFromEpisodeWithCompositeTensorOfTensors(self):
+    observation = tf.SparseTensor(
+        indices=tf.random.uniform((7, 2), maxval=9, dtype=tf.int64),
+        values=tf.random.uniform((7,)),
+        dense_shape=[4, 10])  # The 4 is important, it must match reward length.
+    action = ()
+    policy_info = ()
+    reward = tf.random.uniform((4,))
+    traj = trajectory.from_episode(
+        observation, action, policy_info, reward, discount=None)
+    self.assertTrue(tf.is_tensor(traj.step_type))
+    traj_val, obs_val, reward_val = self.evaluate((traj, observation, reward))
+    first = ts.StepType.FIRST
+    mid = ts.StepType.MID
+    last = ts.StepType.LAST
+    self.assertAllEqual(
+        traj_val.step_type, [first, mid, mid, mid])
+    self.assertAllEqual(
+        traj_val.next_step_type, [mid, mid, mid, last])
+    self.assertAllClose(traj_val.observation, obs_val)
     self.assertAllEqual(traj_val.reward, reward_val)
     self.assertAllEqual(traj_val.discount, [1.0, 1.0, 1.0, 1.0])
 

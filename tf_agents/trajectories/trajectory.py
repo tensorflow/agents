@@ -21,6 +21,7 @@ from __future__ import print_function
 
 
 import collections
+import functools
 
 import numpy as np
 import tensorflow as tf
@@ -297,6 +298,30 @@ def boundary(observation, action, policy_info, reward, discount):
                             next_step_type=ts.StepType.FIRST)
 
 
+def _maybe_static_outer_dim(t):
+  """Return the left-most dense shape dimension of `t`.
+
+  Args:
+    t: A `Tensor` or `CompositeTensor`.
+
+  Returns:
+    A python integer or `0-D` scalar tensor with type `int64`.
+  """
+  assert tf.is_tensor(t), t
+  if isinstance(t, tf.SparseTensor):
+    static_shape = tf.get_static_value(t.dense_shape)
+    if static_shape is not None:
+      return static_shape[0]
+    else:
+      return t.dense_shape[0]
+  elif isinstance(t, tf.RaggedTensor):
+    outer_dim = tf.compat.dimension_value(t.shape[0])
+    return outer_dim if outer_dim is not None else t.nrows()
+  else:
+    outer_dim = tf.compat.dimension_value(t.shape[0])
+    return outer_dim if outer_dim is not None else tf.shape(t)[0]
+
+
 def from_episode(observation, action, policy_info, reward, discount=None):
   """Create a Trajectory from tensors representing a single episode.
 
@@ -336,6 +361,8 @@ def from_episode(observation, action, policy_info, reward, discount=None):
   """
   use_tensors = nest_utils.has_tensors(
       observation, action, policy_info, reward, discount)
+  map_structure = functools.partial(
+      tf.nest.map_structure, expand_composites=True)
   if use_tensors:
     ones_fn = tf.ones
     float_dtype = tf.float32
@@ -343,7 +370,7 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     concat_fn = tf.concat
     maximum_fn = tf.maximum
     fill_fn = tf.fill
-    identity_map = lambda struct: tf.nest.map_structure(tf.identity, struct)
+    identity_map = lambda struct: map_structure(tf.identity, struct)
   else:
     ones_fn = np.ones
     float_dtype = np.float32
@@ -351,7 +378,7 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     concat_fn = np.concatenate
     maximum_fn = np.maximum
     fill_fn = np.full
-    identity_map = lambda struct: tf.nest.map_structure(np.asarray, struct)
+    identity_map = lambda struct: map_structure(np.asarray, struct)
 
   def _from_episode(observation, action, policy_info, reward, discount):
     """Implementation of from_episode."""
@@ -360,9 +387,7 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     else:
       time_source = tf.nest.flatten(reward)[0]
     if tf.is_tensor(time_source):
-      num_frames = (
-          tf.compat.dimension_value(time_source.shape[0]) or
-          tf.shape(input=time_source)[0])
+      num_frames = _maybe_static_outer_dim(time_source)
     else:
       num_frames = np.shape(time_source)[0]
     if discount is None:
@@ -371,13 +396,19 @@ def from_episode(observation, action, policy_info, reward, discount=None):
     if not tf.is_tensor(num_frames):
 
       def check_num_frames(t):
-        if t.shape[0] is not None and t.shape[0] != num_frames:
+        if tf.is_tensor(t):
+          outer_dim = _maybe_static_outer_dim(t)
+        else:
+          outer_dim = t.shape[0]
+        if not tf.is_tensor(outer_dim) and outer_dim != num_frames:
           raise ValueError('Expected first dimension to be {}, '
-                           'but saw value: {}'.format(num_frames, t))
+                           'but saw outer dim: {}'.format(num_frames,
+                                                          outer_dim))
 
       tf.nest.map_structure(
           check_num_frames,
-          (observation, action, policy_info, reward, discount))
+          (observation, action, policy_info, reward, discount),
+          expand_composites=False)
 
     ts_first = convert_fn(ts.StepType.FIRST)
     ts_last = convert_fn(ts.StepType.LAST)
