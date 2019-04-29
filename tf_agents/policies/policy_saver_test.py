@@ -29,6 +29,7 @@ from tf_agents.policies import policy_saver
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import common
 
 
 class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
@@ -346,6 +347,58 @@ class PolicySaverTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllEqual(
         ['step_type', 'reward', 'discount', 'observation/0', 'observation/1'],
         new_names)
+
+  def testTrainStepSaved(self):
+    if not tf.executing_eagerly():
+      self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
+    network = q_network.QNetwork(
+        input_tensor_spec=self._time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    train_step = common.create_variable('train_step', initial_value=7)
+    saver = policy_saver.PolicySaver(
+        policy, batch_size=None, train_step=train_step)
+    path = os.path.join(self.get_temp_dir(), 'save_model')
+    saver.save(path)
+    reloaded = tf.compat.v2.saved_model.load(path)
+
+    self.assertIn('get_train_step', reloaded.signatures)
+    train_step_value = self.evaluate(reloaded.train_step())
+    self.assertEqual(7, train_step_value)
+
+    train_step = train_step.assign_add(3)
+    saver.save(path)
+    reloaded = tf.compat.v2.saved_model.load(path)
+
+    train_step_value = self.evaluate(reloaded.train_step())
+    self.assertEqual(10, train_step_value)
+
+  def testTrainStepNotSaved(self):
+    if not tf.executing_eagerly():
+      self.skipTest('b/129079730: PolicySaver does not work in TF1.x yet')
+    network = q_network.QNetwork(
+        input_tensor_spec=self._time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    path = os.path.join(self.get_temp_dir(), 'save_model')
+
+    saver.save(path)
+    reloaded = tf.compat.v2.saved_model.load(path)
+
+    self.assertIn('get_train_step', reloaded.signatures)
+    train_step_value = self.evaluate(reloaded.train_step())
+    self.assertEqual(-1, train_step_value)
 
   def _compare_input_output_specs(self,
                                   function,
