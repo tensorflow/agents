@@ -42,8 +42,9 @@ class EpsilonGreedyPolicy(tf_policy.Base):
 
     Args:
       policy: A policy implementing the tf_policy.Base interface.
-      epsilon: A float scalar or a scalar Tensor of shape=(), corresponding to
-        the probability of taking the random action.
+      epsilon: The probability of taking the random action represented as a
+        float scalar, a scalar Tensor of shape=(), or a callable that returns a
+        float scalar or Tensor.
       name: The name of this policy.
 
     Raises:
@@ -66,6 +67,12 @@ class EpsilonGreedyPolicy(tf_policy.Base):
   def _variables(self):
     return self._greedy_policy.variables()
 
+  def _get_epsilon(self):
+    if callable(self._epsilon):
+      return self._epsilon()
+    else:
+      return self._epsilon
+
   def _action(self, time_step, policy_state, seed):
     seed_stream = tfd.SeedStream(seed=seed, salt='epsilon_greedy')
     greedy_action = self._greedy_policy.action(time_step, policy_state)
@@ -74,7 +81,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
     rng = tf.random.uniform(
         outer_shape, maxval=1.0, seed=seed_stream(), name='epsilon_rng')
-    cond = tf.greater(rng, self._epsilon)
+    cond = tf.greater(rng, self._get_epsilon())
 
     # Selects the action/info from the random policy with probability epsilon.
     # TODO(damienv):tf.where only supports a condition which is either a scalar
