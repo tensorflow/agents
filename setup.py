@@ -161,7 +161,7 @@ else:
   # Nightly releases use date-based versioning of the form
   # '0.0.1.dev20180305'
   project_name = 'tf-agents-nightly'
-  tfp_package_name = 'tfp-nightly==0.7.0.dev20190304'
+  tfp_package_name = 'tfp-nightly'
 
 REQUIRED_PACKAGES.append(tfp_package_name)
 
