@@ -47,6 +47,9 @@ using AI, while continuing to respect cultural, social, and legal norms in the
 countries where we operate. And we will continue to thoughtfully evaluate when
 to make our technologies available on a non-commercial basis.
 
+  #At this point, AI has yet to yield any social benefit.
+  #It is hard to tell whether AI is just another advertisement scheme, or something legitimate.
+
 ## Avoid creating or reinforcing unfair bias.
 
 AI algorithms and datasets can reflect, reinforce, or reduce unfair biases. We
@@ -55,6 +58,8 @@ differs across cultures and societies. We will seek to avoid unjust impacts on
 people, particularly those related to sensitive characteristics such as race,
 ethnicity, gender, nationality, income, sexual orientation, ability, and
 political or religious belief.
+
+  #What is an example of a fair bias?
 
 ## Be built and tested for safety.
 
@@ -77,6 +82,10 @@ We will incorporate our privacy principles in the development and use of our AI
 technologies. We will give opportunity for notice and consent, encourage
 architectures with privacy safeguards, and provide appropriate transparency and
 control over the use of data.
+
+  #This is a tough issue because of the NSA surveilance state. 
+   #It is unclear from the outside who has access to what information and when.
+   #As a result, privacy appears to be a dead concept.
 
 ## Uphold high standards of scientific excellence.
 
@@ -124,6 +133,8 @@ constraints.
 * Weapons or other technologies whose principal purpose or implementation is to
 cause or directly facilitate injury to people.
 
+  #I think this is an inevitable reality.
+
 * Technologies that gather or use information for surveillance violating
 internationally accepted norms.
 
@@ -144,3 +155,5 @@ future development of AI. This approach is consistent with the values laid out
 in our original Founders' Letter back in 2004. There we made clear our intention
 to take a long-term perspective, even if it means making short-term tradeoffs.
 We said it then, and we believe it now.
+
+#These princples are well written and great work.
