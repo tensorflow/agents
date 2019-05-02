@@ -96,7 +96,6 @@ class Network(keras_network.Network):
     super(Network, self).__init__(name=name)
     self._input_tensor_spec = input_tensor_spec
     self._state_spec = state_spec
-    self._name = name
 
   @property
   def state_spec(self):
