@@ -26,6 +26,7 @@ import tensorflow_probability as tfp
 from tf_agents.agents.reinforce import reinforce_agent
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
+from tf_agents.networks import utils as network_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -84,6 +85,27 @@ class DummyActorNet(network.Network):
     return distribution, network_state
 
 
+class DummyValueNet(network.Network):
+
+  def __init__(self, observation_spec, name=None, outer_rank=1):
+    super(DummyValueNet, self).__init__(observation_spec, (), 'DummyValueNet')
+    self._outer_rank = outer_rank
+    self._layers.append(
+        tf.keras.layers.Dense(
+            1,
+            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
+            bias_initializer=tf.compat.v1.initializers.constant([5])))
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
+    batch_squash = network_utils.BatchSquash(self._outer_rank)
+    hidden_state = batch_squash.flatten(hidden_state)
+    for layer in self.layers:
+      hidden_state = layer(hidden_state)
+    value_pred = tf.squeeze(batch_squash.unflatten(hidden_state), axis=-1)
+    return value_pred, network_state
+
+
 class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
@@ -99,6 +121,17 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._action_spec,
         actor_network=DummyActorNet(
             self._obs_spec, self._action_spec, unbounded_actions=False),
+        optimizer=None,
+    )
+
+  def testCreateAgentWithValueNet(self):
+    reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=False),
+        value_network=DummyValueNet(self._obs_spec),
+        value_estimation_loss_coef=0.5,
         optimizer=None,
     )
 
@@ -141,6 +174,30 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         distribution, action_spec, weights)
     self.assertAlmostEqual(self.evaluate(actual), self.evaluate(expected),
                            places=4)
+
+  def testValueEstimationLoss(self):
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=False),
+        value_network=DummyValueNet(self._obs_spec),
+        value_estimation_loss_coef=0.5,
+        optimizer=None,
+    )
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=2)
+    returns = tf.constant([1.9, 1.0], dtype=tf.float32)
+    value_preds, _ = agent._value_network(time_steps.observation,
+                                          time_steps.step_type)
+
+    expected_loss = 123.20500
+    loss = agent.value_estimation_loss(value_preds, returns)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
 
   def testPolicy(self):
     agent = reinforce_agent.ReinforceAgent(

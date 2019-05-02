@@ -18,8 +18,8 @@ r"""Train and Eval REINFORCE.
 To run:
 
 ```bash
-python tf_agents/agents/reinforce/examples/train_eval.py \
- --root_dir=$HOME/tmp/reinforce/gym/ \
+python tf_agents/agents/reinforce/examples/v1/train_eval.py \
+ --root_dir=$HOME/tmp/reinforce/gym/cart-pole/ \
  --alsologtostderr
 ```
 """
@@ -45,6 +45,7 @@ from tf_agents.eval import metric_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import value_network
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
@@ -52,7 +53,7 @@ from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_integer('num_iterations', 100000,
+flags.DEFINE_integer('num_iterations', 1000,
                      'Total number train/eval iterations to perform.')
 FLAGS = flags.FLAGS
 
@@ -63,13 +64,17 @@ def train_eval(
     num_iterations=1000,
     # TODO(b/127576522): rename to policy_fc_layers.
     actor_fc_layers=(100,),
+    value_net_fc_layers=(100,),
+    use_value_network=False,
     # Params for collect
     collect_episodes_per_iteration=2,
     replay_buffer_capacity=2000,
     # Params for train
     learning_rate=1e-3,
+    gamma=0.9,
     gradient_clipping=None,
     normalize_returns=True,
+    value_estimation_loss_coef=0.2,
     # Params for eval
     num_eval_episodes=10,
     eval_interval=100,
@@ -111,10 +116,18 @@ def train_eval(
         tf_env.action_spec(),
         fc_layer_params=actor_fc_layers)
 
+    if use_value_network:
+      value_net = value_network.ValueNetwork(
+          tf_env.time_step_spec().observation,
+          fc_layer_params=value_net_fc_layers)
+
     tf_agent = reinforce_agent.ReinforceAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         actor_network=actor_net,
+        value_network=value_net if use_value_network else None,
+        value_estimation_loss_coef=value_estimation_loss_coef,
+        gamma=gamma,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
         normalize_returns=normalize_returns,
         gradient_clipping=gradient_clipping,

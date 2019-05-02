@@ -87,6 +87,9 @@ class ReinforceAgent(tf_agent.TFAgent):
                action_spec,
                actor_network,
                optimizer,
+               value_network=None,
+               value_estimation_loss_coef=0.2,
+               gamma=1.0,
                normalize_returns=True,
                gradient_clipping=None,
                debug_summaries=False,
@@ -102,6 +105,12 @@ class ReinforceAgent(tf_agent.TFAgent):
       actor_network: A tf_agents.network.Network to be used by the agent. The
         network will be called with call(observation, step_type).
       optimizer: Optimizer for the actor network.
+      value_network: (Optional) A `tf_agents.network.Network` to be used by the
+        agent. The network will be called with call(observation, step_type) and
+        returns a floating point value tensor.
+      value_estimation_loss_coef: (Optional) Multiplier for value prediction
+        loss to balance with policy gradient loss.
+      gamma: A discount factor for future rewards.
       normalize_returns: Whether to normalize returns across episodes when
         computing the loss.
       gradient_clipping: Norm length to clip gradients.
@@ -117,6 +126,7 @@ class ReinforceAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
 
     self._actor_network = actor_network
+    self._value_network = value_network
 
     collect_policy = actor_policy.ActorPolicy(
         time_step_spec=time_step_spec,
@@ -127,9 +137,12 @@ class ReinforceAgent(tf_agent.TFAgent):
     policy = greedy_policy.GreedyPolicy(collect_policy)
 
     self._optimizer = optimizer
+    self._gamma = gamma
     self._normalize_returns = normalize_returns
     self._gradient_clipping = gradient_clipping
     self._entropy_regularization = entropy_regularization
+    self._value_estimation_loss_coef = value_estimation_loss_coef
+    self._baseline = self._value_network is not None
 
     super(ReinforceAgent, self).__init__(
         time_step_spec,
@@ -146,7 +159,7 @@ class ReinforceAgent(tf_agent.TFAgent):
 
   def _train(self, experience, weights=None):
     returns = value_ops.discounted_return(
-        experience.reward, experience.discount, time_major=False)
+        experience.reward, experience.discount*self._gamma, time_major=False)
 
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
@@ -158,27 +171,20 @@ class ReinforceAgent(tf_agent.TFAgent):
       tf.compat.v2.summary.histogram(
           name='returns', data=returns, step=self.train_step_counter)
 
-    # TODO(b/126592060): replace with tensor normalizer.
-    if self._normalize_returns:
-      returns = _standard_normalize(returns, axes=(0, 1))
-      if self._debug_summaries:
-        tf.compat.v2.summary.histogram(
-            name='normalized_returns',
-            data=returns,
-            step=self.train_step_counter)
-
     time_step = ts.TimeStep(experience.step_type,
                             tf.zeros_like(experience.reward),
                             tf.zeros_like(experience.discount),
                             experience.observation)
 
-    variables_to_train = self._actor_network.variables
     with tf.GradientTape() as tape:
       loss_info = self._loss(time_step,
                              experience.action,
                              tf.stop_gradient(returns),
                              weights=weights)
       tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
+    variables_to_train = self._actor_network.trainable_weights
+    if self._baseline:
+      variables_to_train += self._value_network.trainable_weights
     grads = tape.gradient(loss_info.loss, variables_to_train)
 
     grads_and_vars = zip(grads, variables_to_train)
@@ -198,17 +204,43 @@ class ReinforceAgent(tf_agent.TFAgent):
     return tf.nest.map_structure(tf.identity, loss_info)
 
   def _loss(self, time_steps, actions, returns, weights):
+    advantages = returns
+    if self._baseline:
+      value_preds, _ = self._value_network(
+          time_steps.observation, time_steps.step_type)
+      advantages = returns - value_preds
+      if self._debug_summaries:
+        tf.compat.v2.summary.histogram(
+            name='value_preds', data=value_preds, step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='advantages', data=advantages, step=self.train_step_counter)
+
+    # TODO(b/126592060): replace with tensor normalizer.
+    if self._normalize_returns:
+      advantages = _standard_normalize(advantages, axes=(0, 1))
+      if self._debug_summaries:
+        tf.compat.v2.summary.histogram(
+            name='normalized_%s'%'advantages' if self._baseline else 'returns',
+            data=advantages,
+            step=self.train_step_counter)
+
     tf.nest.assert_same_structure(time_steps, self.time_step_spec)
     policy_state = _get_initial_policy_state(self.collect_policy, time_steps)
     actions_distribution = self.collect_policy.distribution(
         time_steps, policy_state=policy_state).action
 
-    policy_gradient_loss = self.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, weights)
+    policy_gradient_loss = self.policy_gradient_loss(actions_distribution,
+                                                     actions,
+                                                     time_steps.is_last(),
+                                                     advantages, weights)
     entropy_regularization_loss = self.entropy_regularization_loss(
         actions_distribution, weights)
 
     total_loss = policy_gradient_loss + entropy_regularization_loss
+
+    if self._baseline:
+      value_estimation_loss = self.value_estimation_loss(value_preds, returns)
+      total_loss += value_estimation_loss
 
     with tf.name_scope('Losses/'):
       tf.compat.v2.summary.scalar(
@@ -219,6 +251,11 @@ class ReinforceAgent(tf_agent.TFAgent):
           name='entropy_regularization_loss',
           data=entropy_regularization_loss,
           step=self.train_step_counter)
+      if self._baseline:
+        tf.compat.v2.summary.scalar(
+            name='value_estimation_loss',
+            data=value_estimation_loss,
+            step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='total_loss', data=total_loss, step=self.train_step_counter)
 
@@ -299,3 +336,20 @@ class ReinforceAgent(tf_agent.TFAgent):
       loss = tf.constant(0.0, dtype=tf.float32)
 
     return loss
+
+  def value_estimation_loss(self, value_preds, returns):
+    """Computes the value estimation loss.
+
+    Args:
+      value_preds: Per-timestep estimated values.
+      returns: Per-timestep returns for value function to predict.
+    Returns:
+      value_estimation_loss: A scalar value_estimation_loss loss.
+    """
+    value_estimation_error = tf.math.squared_difference(returns, value_preds)
+
+    value_estimation_loss = (
+        tf.reduce_sum(input_tensor=value_estimation_error) *
+        self._value_estimation_loss_coef)
+
+    return value_estimation_loss
