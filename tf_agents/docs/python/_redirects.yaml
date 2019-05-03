@@ -1,0 +1,19 @@
+redirects:
+- from: /tf_agents/api_docs/python/tf_agents/agents/ddpg/ddpg_agent/DdpgAgent
+  to: /tf_agents/api_docs/python/tf_agents/agents/DdpgAgent
+- from: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent/DqnAgent
+  to: /tf_agents/api_docs/python/tf_agents/agents/DqnAgent
+- from: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_agent/PPOAgent
+  to: /tf_agents/api_docs/python/tf_agents/agents/PPOAgent
+- from: /tf_agents/api_docs/python/tf_agents/agents/reinforce/reinforce_agent/ReinforceAgent
+  to: /tf_agents/api_docs/python/tf_agents/agents/ReinforceAgent
+- from: /tf_agents/api_docs/python/tf_agents/agents/sac/sac_agent/SacAgent
+  to: /tf_agents/api_docs/python/tf_agents/agents/SacAgent
+- from: /tf_agents/api_docs/python/tf_agents/agents/td3/td3_agent/Td3Agent
+  to: /tf_agents/api_docs/python/tf_agents/agents/Td3Agent
+- from: /tf_agents/api_docs/python/tf_agents/specs/array_spec/ArraySpec
+  to: /tf_agents/api_docs/python/tf_agents/specs/ArraySpec
+- from: /tf_agents/api_docs/python/tf_agents/specs/array_spec/BoundedArraySpec
+  to: /tf_agents/api_docs/python/tf_agents/specs/BoundedArraySpec
+- from: /tf_agents/api_docs/python/tf_agents/specs/distribution_spec/DistributionSpec
+  to: /tf_agents/api_docs/python/tf_agents/specs/DistributionSpec

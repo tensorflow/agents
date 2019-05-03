@@ -1,0 +1,908 @@
+# Automatically generated file; please do not edit
+toc:
+  - title: tf_agents
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents
+  - title: tf_agents.agents
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/agents
+    - title: DdpgAgent
+      path: /tf_agents/api_docs/python/tf_agents/agents/DdpgAgent
+    - title: DqnAgent
+      path: /tf_agents/api_docs/python/tf_agents/agents/DqnAgent
+    - title: PPOAgent
+      path: /tf_agents/api_docs/python/tf_agents/agents/PPOAgent
+    - title: ReinforceAgent
+      path: /tf_agents/api_docs/python/tf_agents/agents/ReinforceAgent
+    - title: SacAgent
+      path: /tf_agents/api_docs/python/tf_agents/agents/SacAgent
+    - title: Td3Agent
+      path: /tf_agents/api_docs/python/tf_agents/agents/Td3Agent
+    - title: ddpg
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/ddpg
+      - title: actor_network
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/actor_network
+        - title: ActorNetwork
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/actor_network/ActorNetwork
+      - title: actor_rnn_network
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/actor_rnn_network
+        - title: ActorRnnNetwork
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/actor_rnn_network/ActorRnnNetwork
+      - title: critic_network
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/critic_network
+        - title: CriticNetwork
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/critic_network/CriticNetwork
+      - title: critic_rnn_network
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/critic_rnn_network
+        - title: CriticRnnNetwork
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/critic_rnn_network/CriticRnnNetwork
+      - title: ddpg_agent
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/ddpg_agent
+        - title: DdpgInfo
+          path: /tf_agents/api_docs/python/tf_agents/agents/ddpg/ddpg_agent/DdpgInfo
+    - title: dqn
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/dqn
+      - title: dqn_agent
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent
+        - title: compute_td_targets
+          path: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent/compute_td_targets
+        - title: DdqnAgent
+          path: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent/DdqnAgent
+        - title: DqnLossInfo
+          path: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent/DqnLossInfo
+        - title: element_wise_huber_loss
+          path: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent/element_wise_huber_loss
+        - title: element_wise_squared_loss
+          path: /tf_agents/api_docs/python/tf_agents/agents/dqn/dqn_agent/element_wise_squared_loss
+    - title: ppo
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/ppo
+      - title: ppo_agent
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_agent
+        - title: PPOLossInfo
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_agent/PPOLossInfo
+      - title: ppo_policy
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_policy
+        - title: PPOPolicy
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_policy/PPOPolicy
+      - title: ppo_utils
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_utils
+        - title: get_distribution_params
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_utils/get_distribution_params
+        - title: get_metric_observers
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_utils/get_metric_observers
+        - title: make_timestep_mask
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_utils/make_timestep_mask
+        - title: nested_kl_divergence
+          path: /tf_agents/api_docs/python/tf_agents/agents/ppo/ppo_utils/nested_kl_divergence
+    - title: reinforce
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/reinforce
+      - title: reinforce_agent
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/reinforce/reinforce_agent
+    - title: sac
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/sac
+      - title: sac_agent
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/sac/sac_agent
+        - title: std_clip_transform
+          path: /tf_agents/api_docs/python/tf_agents/agents/sac/sac_agent/std_clip_transform
+    - title: td3
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/td3
+      - title: td3_agent
+        section:
+        - title: Overview
+          path: /tf_agents/api_docs/python/tf_agents/agents/td3/td3_agent
+        - title: Td3Info
+          path: /tf_agents/api_docs/python/tf_agents/agents/td3/td3_agent/Td3Info
+    - title: tf_agent
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/agents/tf_agent
+      - title: LossInfo
+        path: /tf_agents/api_docs/python/tf_agents/agents/tf_agent/LossInfo
+      - title: TFAgent
+        path: /tf_agents/api_docs/python/tf_agents/agents/tf_agent/TFAgent
+  - title: tf_agents.distributions
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/distributions
+    - title: masked
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/distributions/masked
+      - title: MaskedCategorical
+        path: /tf_agents/api_docs/python/tf_agents/distributions/masked/MaskedCategorical
+    - title: shifted_categorical
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/distributions/shifted_categorical
+      - title: ShiftedCategorical
+        path: /tf_agents/api_docs/python/tf_agents/distributions/shifted_categorical/ShiftedCategorical
+    - title: tanh_bijector_stable
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/distributions/tanh_bijector_stable
+      - title: Tanh
+        path: /tf_agents/api_docs/python/tf_agents/distributions/tanh_bijector_stable/Tanh
+    - title: utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/distributions/utils
+      - title: scale_distribution_to_spec
+        path: /tf_agents/api_docs/python/tf_agents/distributions/utils/scale_distribution_to_spec
+  - title: tf_agents.drivers
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/drivers
+    - title: driver
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/drivers/driver
+      - title: Driver
+        path: /tf_agents/api_docs/python/tf_agents/drivers/driver/Driver
+    - title: dynamic_episode_driver
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver
+      - title: DynamicEpisodeDriver
+        path: /tf_agents/api_docs/python/tf_agents/drivers/dynamic_episode_driver/DynamicEpisodeDriver
+    - title: dynamic_step_driver
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/drivers/dynamic_step_driver
+      - title: DynamicStepDriver
+        path: /tf_agents/api_docs/python/tf_agents/drivers/dynamic_step_driver/DynamicStepDriver
+    - title: py_driver
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/drivers/py_driver
+      - title: PyDriver
+        path: /tf_agents/api_docs/python/tf_agents/drivers/py_driver/PyDriver
+  - title: tf_agents.environments
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/environments
+    - title: batched_py_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/batched_py_environment
+      - title: BatchedPyEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/batched_py_environment/BatchedPyEnvironment
+      - title: fast_map_structure
+        path: /tf_agents/api_docs/python/tf_agents/environments/batched_py_environment/fast_map_structure
+      - title: stack_time_steps
+        path: /tf_agents/api_docs/python/tf_agents/environments/batched_py_environment/stack_time_steps
+      - title: unstack_actions
+        path: /tf_agents/api_docs/python/tf_agents/environments/batched_py_environment/unstack_actions
+    - title: parallel_py_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/parallel_py_environment
+      - title: ParallelPyEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/parallel_py_environment/ParallelPyEnvironment
+      - title: ProcessPyEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/parallel_py_environment/ProcessPyEnvironment
+    - title: py_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/py_environment
+      - title: PyEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/py_environment/PyEnvironment
+    - title: random_py_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/random_py_environment
+      - title: RandomPyEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/random_py_environment/RandomPyEnvironment
+    - title: tf_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/tf_environment
+      - title: TFEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/tf_environment/TFEnvironment
+    - title: tf_py_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/tf_py_environment
+      - title: TFPyEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/tf_py_environment/TFPyEnvironment
+    - title: trajectory_replay
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/trajectory_replay
+      - title: TrajectoryReplay
+        path: /tf_agents/api_docs/python/tf_agents/environments/trajectory_replay/TrajectoryReplay
+    - title: utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/utils
+      - title: get_tf_env
+        path: /tf_agents/api_docs/python/tf_agents/environments/utils/get_tf_env
+      - title: validate_py_environment
+        path: /tf_agents/api_docs/python/tf_agents/environments/utils/validate_py_environment
+    - title: wrappers
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers
+      - title: ActionClipWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/ActionClipWrapper
+      - title: ActionDiscretizeWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/ActionDiscretizeWrapper
+      - title: ActionOffsetWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/ActionOffsetWrapper
+      - title: ActionRepeat
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/ActionRepeat
+      - title: FlattenObservationsWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/FlattenObservationsWrapper
+      - title: GoalReplayEnvWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/GoalReplayEnvWrapper
+      - title: PyEnvironmentBaseWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/PyEnvironmentBaseWrapper
+      - title: RunStats
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/RunStats
+      - title: TimeLimit
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/TimeLimit
+  - title: tf_agents.metrics
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/metrics
+    - title: batched_py_metric
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/metrics/batched_py_metric
+      - title: BatchedPyMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/batched_py_metric/BatchedPyMetric
+    - title: py_metric
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metric
+      - title: PyMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metric/PyMetric
+      - title: PyStepMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metric/PyStepMetric
+      - title: run_summaries
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metric/run_summaries
+    - title: py_metrics
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics
+      - title: AverageEpisodeLengthMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/AverageEpisodeLengthMetric
+      - title: AverageReturnMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/AverageReturnMetric
+      - title: CounterMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/CounterMetric
+      - title: EnvironmentSteps
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/EnvironmentSteps
+      - title: NumberOfEpisodes
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/NumberOfEpisodes
+      - title: NumpyDeque
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/NumpyDeque
+      - title: StreamingMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/py_metrics/StreamingMetric
+    - title: tf_metric
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metric
+      - title: TFStepMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metric/TFStepMetric
+    - title: tf_metrics
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics
+      - title: AverageEpisodeLengthMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/AverageEpisodeLengthMetric
+      - title: AverageReturnMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/AverageReturnMetric
+      - title: EnvironmentSteps
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/EnvironmentSteps
+      - title: log_metrics
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/log_metrics
+      - title: NumberOfEpisodes
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/NumberOfEpisodes
+    - title: tf_py_metric
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_py_metric
+      - title: TFPyMetric
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_py_metric/TFPyMetric
+  - title: tf_agents.networks
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/networks
+    - title: actor_distribution_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/actor_distribution_network
+      - title: ActorDistributionNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/actor_distribution_network/ActorDistributionNetwork
+    - title: actor_distribution_rnn_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/actor_distribution_rnn_network
+      - title: ActorDistributionRnnNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/actor_distribution_rnn_network/ActorDistributionRnnNetwork
+    - title: bias_layer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/bias_layer
+      - title: BiasLayer
+        path: /tf_agents/api_docs/python/tf_agents/networks/bias_layer/BiasLayer
+    - title: categorical_projection_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/categorical_projection_network
+      - title: CategoricalProjectionNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/categorical_projection_network/CategoricalProjectionNetwork
+    - title: dynamic_unroll_layer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/dynamic_unroll_layer
+      - title: DynamicUnroll
+        path: /tf_agents/api_docs/python/tf_agents/networks/dynamic_unroll_layer/DynamicUnroll
+    - title: encoding_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/encoding_network
+      - title: EncodingNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/encoding_network/EncodingNetwork
+    - title: expand_dims_layer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/expand_dims_layer
+      - title: ExpandDims
+        path: /tf_agents/api_docs/python/tf_agents/networks/expand_dims_layer/ExpandDims
+    - title: lstm_encoding_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/lstm_encoding_network
+      - title: LSTMEncodingNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/lstm_encoding_network/LSTMEncodingNetwork
+    - title: network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/network
+      - title: DistributionNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/network/DistributionNetwork
+      - title: Network
+        path: /tf_agents/api_docs/python/tf_agents/networks/network/Network
+    - title: normal_projection_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/normal_projection_network
+      - title: NormalProjectionNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/normal_projection_network/NormalProjectionNetwork
+      - title: tanh_squash_to_spec
+        path: /tf_agents/api_docs/python/tf_agents/networks/normal_projection_network/tanh_squash_to_spec
+    - title: q_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/q_network
+      - title: QNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/q_network/QNetwork
+      - title: validate_specs
+        path: /tf_agents/api_docs/python/tf_agents/networks/q_network/validate_specs
+    - title: q_rnn_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/q_rnn_network
+      - title: QRnnNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/q_rnn_network/QRnnNetwork
+    - title: utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/utils
+      - title: BatchSquash
+        path: /tf_agents/api_docs/python/tf_agents/networks/utils/BatchSquash
+      - title: maybe_permanent_dropout
+        path: /tf_agents/api_docs/python/tf_agents/networks/utils/maybe_permanent_dropout
+      - title: mlp_layers
+        path: /tf_agents/api_docs/python/tf_agents/networks/utils/mlp_layers
+    - title: value_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/value_network
+      - title: ValueNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/value_network/ValueNetwork
+    - title: value_rnn_network
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/value_rnn_network
+      - title: ValueRnnNetwork
+        path: /tf_agents/api_docs/python/tf_agents/networks/value_rnn_network/ValueRnnNetwork
+  - title: tf_agents.policies
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/policies
+    - title: actor_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/actor_policy
+      - title: ActorPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/actor_policy/ActorPolicy
+    - title: boltzmann_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/boltzmann_policy
+      - title: BoltzmannPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/boltzmann_policy/BoltzmannPolicy
+    - title: epsilon_greedy_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/epsilon_greedy_policy
+      - title: EpsilonGreedyPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/epsilon_greedy_policy/EpsilonGreedyPolicy
+    - title: fixed_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/fixed_policy
+      - title: FixedPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/fixed_policy/FixedPolicy
+    - title: gaussian_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/gaussian_policy
+      - title: GaussianPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/gaussian_policy/GaussianPolicy
+    - title: greedy_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/greedy_policy
+      - title: GreedyPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/greedy_policy/GreedyPolicy
+    - title: ou_noise_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/ou_noise_policy
+      - title: OUNoisePolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/ou_noise_policy/OUNoisePolicy
+    - title: policy_saver
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/policy_saver
+      - title: PolicySaver
+        path: /tf_agents/api_docs/python/tf_agents/policies/policy_saver/PolicySaver
+    - title: py_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/py_policy
+      - title: Base
+        path: /tf_agents/api_docs/python/tf_agents/policies/py_policy/Base
+    - title: py_tf_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/py_tf_policy
+      - title: PyTFPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/py_tf_policy/PyTFPolicy
+    - title: q_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/q_policy
+      - title: QPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/q_policy/QPolicy
+    - title: random_py_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/random_py_policy
+      - title: RandomPyPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/random_py_policy/RandomPyPolicy
+    - title: random_tf_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/random_tf_policy
+      - title: RandomTFPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/random_tf_policy/RandomTFPolicy
+    - title: scripted_py_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/scripted_py_policy
+      - title: ScriptedPyPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/scripted_py_policy/ScriptedPyPolicy
+    - title: tf_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/tf_policy
+      - title: Base
+        path: /tf_agents/api_docs/python/tf_agents/policies/tf_policy/Base
+    - title: tf_py_policy
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/policies/tf_py_policy
+      - title: map_tensor_spec_to_dtypes_list
+        path: /tf_agents/api_docs/python/tf_agents/policies/tf_py_policy/map_tensor_spec_to_dtypes_list
+      - title: TFPyPolicy
+        path: /tf_agents/api_docs/python/tf_agents/policies/tf_py_policy/TFPyPolicy
+  - title: tf_agents.replay_buffers
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/replay_buffers
+    - title: py_hashed_replay_buffer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/py_hashed_replay_buffer
+      - title: FrameBuffer
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/py_hashed_replay_buffer/FrameBuffer
+      - title: PyHashedReplayBuffer
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/py_hashed_replay_buffer/PyHashedReplayBuffer
+    - title: py_uniform_replay_buffer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/py_uniform_replay_buffer
+      - title: PyUniformReplayBuffer
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/py_uniform_replay_buffer/PyUniformReplayBuffer
+    - title: replay_buffer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/replay_buffer
+      - title: ReplayBuffer
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/replay_buffer/ReplayBuffer
+    - title: table
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/table
+      - title: Table
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/table/Table
+    - title: tf_uniform_replay_buffer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer
+      - title: BufferInfo
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer/BufferInfo
+      - title: TFUniformReplayBuffer
+        path: /tf_agents/api_docs/python/tf_agents/replay_buffers/tf_uniform_replay_buffer/TFUniformReplayBuffer
+  - title: tf_agents.specs
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/specs
+    - title: ArraySpec
+      path: /tf_agents/api_docs/python/tf_agents/specs/ArraySpec
+    - title: BoundedArraySpec
+      path: /tf_agents/api_docs/python/tf_agents/specs/BoundedArraySpec
+    - title: DistributionSpec
+      path: /tf_agents/api_docs/python/tf_agents/specs/DistributionSpec
+    - title: array_spec
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec
+      - title: add_outer_dims_nest
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/add_outer_dims_nest
+      - title: check_arrays_nest
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/check_arrays_nest
+      - title: is_bounded
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/is_bounded
+      - title: is_continuous
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/is_continuous
+      - title: is_discrete
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/is_discrete
+      - title: sample_bounded_spec
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/sample_bounded_spec
+      - title: sample_spec_nest
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/sample_spec_nest
+    - title: distribution_spec
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/specs/distribution_spec
+      - title: deterministic_distribution_from_spec
+        path: /tf_agents/api_docs/python/tf_agents/specs/distribution_spec/deterministic_distribution_from_spec
+      - title: nested_distributions_from_specs
+        path: /tf_agents/api_docs/python/tf_agents/specs/distribution_spec/nested_distributions_from_specs
+    - title: tensor_spec
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec
+      - title: from_spec
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/from_spec
+      - title: is_bounded
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/is_bounded
+      - title: is_continuous
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/is_continuous
+      - title: is_discrete
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/is_discrete
+      - title: sample_bounded_spec
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/sample_bounded_spec
+      - title: sample_spec_nest
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/sample_spec_nest
+      - title: to_array_spec
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/to_array_spec
+      - title: to_nest_array_spec
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/to_nest_array_spec
+      - title: to_nest_placeholder
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/to_nest_placeholder
+      - title: to_placeholder
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/to_placeholder
+      - title: to_placeholder_with_default
+        path: /tf_agents/api_docs/python/tf_agents/specs/tensor_spec/to_placeholder_with_default
+  - title: tf_agents.trajectories
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/trajectories
+    - title: policy_step
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/policy_step
+      - title: CommonFields
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/policy_step/CommonFields
+      - title: get_log_probability
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/policy_step/get_log_probability
+      - title: PolicyInfo
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/policy_step/PolicyInfo
+      - title: PolicyStep
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/policy_step/PolicyStep
+      - title: set_log_probability
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/policy_step/set_log_probability
+    - title: time_step
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step
+      - title: restart
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/restart
+      - title: StepType
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/StepType
+      - title: termination
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/termination
+      - title: TimeStep
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/TimeStep
+      - title: time_step_spec
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/time_step_spec
+      - title: transition
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/transition
+      - title: truncation
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/time_step/truncation
+    - title: trajectory
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory
+      - title: boundary
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/boundary
+      - title: first
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/first
+      - title: from_episode
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/from_episode
+      - title: from_transition
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/from_transition
+      - title: last
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/last
+      - title: mid
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/mid
+      - title: to_transition
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/to_transition
+      - title: Trajectory
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/Trajectory
+  - title: tf_agents.utils
+    section:
+    - title: Overview
+      path: /tf_agents/api_docs/python/tf_agents/utils
+    - title: common
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/common
+      - title: assert_members_are_not_overridden
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/assert_members_are_not_overridden
+      - title: Checkpointer
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/Checkpointer
+      - title: clip_to_spec
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/clip_to_spec
+      - title: compute_returns
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/compute_returns
+      - title: convert_q_logits_to_values
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/convert_q_logits_to_values
+      - title: create_variable
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/create_variable
+      - title: discounted_future_sum
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/discounted_future_sum
+      - title: discounted_future_sum_masked
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/discounted_future_sum_masked
+      - title: EagerPeriodically
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/EagerPeriodically
+      - title: element_wise_huber_loss
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/element_wise_huber_loss
+      - title: element_wise_squared_loss
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/element_wise_squared_loss
+      - title: entropy
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/entropy
+      - title: function
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/function
+      - title: function_in_tf1
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/function_in_tf1
+      - title: generate_tensor_summaries
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/generate_tensor_summaries
+      - title: get_contiguous_sub_episodes
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/get_contiguous_sub_episodes
+      - title: get_episode_mask
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/get_episode_mask
+      - title: has_eager_been_enabled
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/has_eager_been_enabled
+      - title: index_with_actions
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/index_with_actions
+      - title: initialize_uninitialized_variables
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/initialize_uninitialized_variables
+      - title: join_scope
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/join_scope
+      - title: log_probability
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/log_probability
+      - title: ornstein_uhlenbeck_process
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/ornstein_uhlenbeck_process
+      - title: OUProcess
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/OUProcess
+      - title: Periodically
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/Periodically
+      - title: periodically
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/periodically
+      - title: replicate
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/replicate
+      - title: resource_variables_enabled
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/resource_variables_enabled
+      - title: scale_to_spec
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/scale_to_spec
+      - title: shift_values
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/shift_values
+      - title: soft_variables_update
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/soft_variables_update
+      - title: spec_means_and_magnitudes
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/spec_means_and_magnitudes
+      - title: transpose_batch_time
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/transpose_batch_time
+    - title: eager_utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils
+      - title: add_gradients_summaries
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/add_gradients_summaries
+      - title: add_variables_summaries
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/add_variables_summaries
+      - title: clip_gradient_norms
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/clip_gradient_norms
+      - title: clip_gradient_norms_fn
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/clip_gradient_norms_fn
+      - title: create_train_op
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/create_train_op
+      - title: create_train_step
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/create_train_step
+      - title: dataset_iterator
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/dataset_iterator
+      - title: Future
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/Future
+      - title: future_in_eager_mode
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/future_in_eager_mode
+      - title: get_next
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/get_next
+      - title: has_self_cls_arg
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/has_self_cls_arg
+      - title: is_unbound
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/is_unbound
+      - title: np_function
+        path: /tf_agents/api_docs/python/tf_agents/utils/eager_utils/np_function
+    - title: example_encoding
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/example_encoding
+      - title: get_example_decoder
+        path: /tf_agents/api_docs/python/tf_agents/utils/example_encoding/get_example_decoder
+      - title: get_example_encoder
+        path: /tf_agents/api_docs/python/tf_agents/utils/example_encoding/get_example_encoder
+      - title: get_example_serializer
+        path: /tf_agents/api_docs/python/tf_agents/utils/example_encoding/get_example_serializer
+    - title: nest_utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils
+      - title: batch_nested_array
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/batch_nested_array
+      - title: batch_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/batch_nested_tensors
+      - title: fast_map_structure
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/fast_map_structure
+      - title: fast_map_structure_flatten
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/fast_map_structure_flatten
+      - title: flatten_multi_batched_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/flatten_multi_batched_nested_tensors
+      - title: flatten_with_joined_paths
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/flatten_with_joined_paths
+      - title: get_outer_array_shape
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/get_outer_array_shape
+      - title: get_outer_rank
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/get_outer_rank
+      - title: get_outer_shape
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/get_outer_shape
+      - title: has_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/has_tensors
+      - title: is_batched_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/is_batched_nested_tensors
+      - title: split_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/split_nested_tensors
+      - title: stack_nested_arrays
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/stack_nested_arrays
+      - title: stack_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/stack_nested_tensors
+      - title: unbatch_nested_array
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/unbatch_nested_array
+      - title: unbatch_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/unbatch_nested_tensors
+      - title: unstack_nested_arrays
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/unstack_nested_arrays
+      - title: unstack_nested_tensors
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/unstack_nested_tensors
+    - title: numpy_storage
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/numpy_storage
+      - title: NumpyState
+        path: /tf_agents/api_docs/python/tf_agents/utils/numpy_storage/NumpyState
+      - title: NumpyStorage
+        path: /tf_agents/api_docs/python/tf_agents/utils/numpy_storage/NumpyStorage
+    - title: session_utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/session_utils
+      - title: SessionUser
+        path: /tf_agents/api_docs/python/tf_agents/utils/session_utils/SessionUser
+    - title: tensor_normalizer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/tensor_normalizer
+      - title: EMATensorNormalizer
+        path: /tf_agents/api_docs/python/tf_agents/utils/tensor_normalizer/EMATensorNormalizer
+      - title: StreamingTensorNormalizer
+        path: /tf_agents/api_docs/python/tf_agents/utils/tensor_normalizer/StreamingTensorNormalizer
+      - title: TensorNormalizer
+        path: /tf_agents/api_docs/python/tf_agents/utils/tensor_normalizer/TensorNormalizer
+    - title: test_utils
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/test_utils
+      - title: contains
+        path: /tf_agents/api_docs/python/tf_agents/utils/test_utils/contains
+      - title: TestCase
+        path: /tf_agents/api_docs/python/tf_agents/utils/test_utils/TestCase
+      - title: TestCase.failureException
+        path: /tf_agents/api_docs/python/tf_agents/utils/test_utils/TestCase/failureException
+      - title: test_src_dir_path
+        path: /tf_agents/api_docs/python/tf_agents/utils/test_utils/test_src_dir_path
+    - title: timer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/timer
+      - title: Timer
+        path: /tf_agents/api_docs/python/tf_agents/utils/timer/Timer
+    - title: value_ops
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/utils/value_ops
+      - title: discounted_return
+        path: /tf_agents/api_docs/python/tf_agents/utils/value_ops/discounted_return
+      - title: generalized_advantage_estimation
+        path: /tf_agents/api_docs/python/tf_agents/utils/value_ops/generalized_advantage_estimation
