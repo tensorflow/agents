@@ -157,8 +157,8 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
     self._output_tensor_spec = output_tensor_spec
 
   @property
-  def action_spec(self):
-    return self._action_spec
+  def output_tensor_spec(self):
+    return self._output_tensor_spec
 
   def call(self, observation, step_type, network_state=None):
     num_outer_dims = nest_utils.get_outer_rank(observation,

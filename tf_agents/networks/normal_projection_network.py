@@ -149,7 +149,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     means = self._means_projection_layer(inputs)
     means = tf.reshape(means, [-1] + self._sample_spec.shape.as_list())
 
-    if self._mean_transform is not None:
+    # If scaling the distribution later, use a normalized mean.
+    if not self._scale_distribution and self._mean_transform is not None:
       means = self._mean_transform(means, self._sample_spec)
     means = tf.cast(means, self._sample_spec.dtype)
 
