@@ -441,6 +441,11 @@ def from_transition(time_step, action_step, next_time_step):
   `ppo_agent.PPOAgent`) converts it back to transitions by invoking
   `to_transition`.
 
+  Note that this method does not add a time dimension to the Tensors in the
+  resulting `Trajectory`. This means that if your transitions don't already
+  include a time dimension, the `Trajectory` cannot be passed to
+  `agent.train()`.
+
   Args:
     time_step: A `time_step.TimeStep` representing the first step in a
       transition.
