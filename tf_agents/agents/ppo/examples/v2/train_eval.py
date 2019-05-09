@@ -21,7 +21,7 @@ To run:
 tensorboard --logdir ~/tmp/ppo --port 2223 &
 
 tf_agents/agents/ppo/examples/train_eval.py -- \
-  --root_dir=~/tmp/ppo_example --logtostderr
+  --root_dir=~/tmp/ppo --logtostderr
 ```
 """
 
