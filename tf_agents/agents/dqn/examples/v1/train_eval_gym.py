@@ -18,7 +18,7 @@ r"""Train and Eval DQN.
 To run:
 
 ```bash
-tf_agents/agents/dqn/examples/train_eval_gym \
+python tf_agents/agents/dqn/examples/v1/train_eval_gym.py \
  --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
  --alsologtostderr
 ```

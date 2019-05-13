@@ -23,7 +23,7 @@ to easily feed in data to train on.
 To run:
 
 ```bash
-tf_agents/agents/dqn/examples/oog_train_eval \
+python tf_agents/agents/dqn/examples/v1/oog_train_eval.py \
   --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
   --alsologtostderr
 ```
