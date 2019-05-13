@@ -18,6 +18,8 @@ r"""Train and Eval TD3.
 To run:
 
 ```bash
+tensorboard --logdir $HOME/tmp/td3_rnn/dm/CartPole-Balance/ --port 2223 &
+
 python tf_agents/agents/td3/examples/v2/train_eval_rnn.py \
   --root_dir=$HOME/tmp/td3_rnn/dm/CartPole-Balance/ \
   --alsologtostderr

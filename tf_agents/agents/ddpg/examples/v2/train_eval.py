@@ -18,6 +18,8 @@ r"""Train and Eval DDPG.
 To run:
 
 ```bash
+tensorboard --logdir $HOME/tmp/ddpg/gym/HalfCheetah-v2/ --port 2223 &
+
 python tf_agents/agents/ddpg/examples/v2/train_eval.py \
   --root_dir=$HOME/tmp/ddpg/gym/HalfCheetah-v2/ \
   --num_iterations=2000000 \

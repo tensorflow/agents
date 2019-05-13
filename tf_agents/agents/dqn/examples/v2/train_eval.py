@@ -18,6 +18,8 @@ r"""Train and Eval DQN.
 To run DQN on CartPole:
 
 ```bash
+tensorboard --logdir $HOME/tmp/dqn/gym/CartPole-v0/ --port 2223 &
+
 python tf_agents/agents/dqn/examples/v2/train_eval.py \
  --root_dir=$HOME/tmp/dqn/gym/CartPole-v0/ \
  --alsologtostderr
