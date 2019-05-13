@@ -13,7 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Train and Eval SAC."""
+r"""Train and Eval REINFORCE.
+
+To run:
+
+```bash
+python tf_agents/agents/sac/examples/v1/train_eval.py \
+ --root_dir=$HOME/tmp/sac/gym/half-cheetah/ \
+ --alsologtostderr
+```
+"""
 
 from __future__ import absolute_import
 from __future__ import division
