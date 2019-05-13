@@ -18,7 +18,7 @@ r"""Train and Eval DDPG.
 To run:
 
 ```bash
-tf_agents/agents/ddpg/examples/v1/train_eval -- \
+python tf_agents/agents/ddpg/examples/v1/train_eval.py \
   --root_dir=$HOME/tmp/ddpg_v1/gym/HalfCheetah-v2/ \
   --num_iterations=2000000 \
   --alsologtostderr

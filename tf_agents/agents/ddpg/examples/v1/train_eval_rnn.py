@@ -18,8 +18,9 @@ r"""Train and Eval DDPG.
 To run:
 
 ```bash
-tf_agents/agents/ddpg/examples/v1/train_eval_rnn -- \
+python tf_agents/agents/ddpg/examples/v1/train_eval_rnn.py \
   --root_dir=$HOME/tmp/ddpg_rnn_v1/dm/CartPole-Balance/ \
+  --num_iterations=2000000 \
   --alsologtostderr
 ```
 """

@@ -19,7 +19,7 @@ To run DQN on CartPole:
 
 ```bash
 python tf_agents/agents/dqn/examples/v2/train_eval.py \
- --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
+ --root_dir=$HOME/tmp/dqn/gym/CartPole-v0/ \
  --alsologtostderr
 ```
 
@@ -27,7 +27,7 @@ To run DQN-RNNs on MaskedCartPole:
 
 ```bash
 python tf_agents/agents/dqn/examples/v2/train_eval.py \
- --root_dir=$HOME/tmp/dqn/gym/masked-cart-pole/ \
+ --root_dir=$HOME/tmp/dqn_rnn/gym/MaskedCartPole-v0/ \
  --gin_param='train_eval.env_name="MaskedCartPole-v0"' \
  --gin_param='train_eval.train_sequence_length=10' \
  --alsologtostderr

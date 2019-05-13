@@ -19,8 +19,8 @@ To run:
 
 ```bash
 python tf_agents/agents/reinforce/examples/v1/train_eval.py \
- --root_dir=$HOME/tmp/reinforce/gym/cart-pole/ \
- --alsologtostderr
+  --root_dir=$HOME/tmp/reinforce_v1/gym/CartPole-v0/ \
+  --alsologtostderr
 ```
 """
 

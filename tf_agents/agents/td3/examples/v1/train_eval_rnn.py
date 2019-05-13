@@ -18,11 +18,10 @@ r"""Train and Eval TD3.
 To run:
 
 ```bash
-tf_agents/agents/td3/examples/v1/train_eval_rnn -- \
+python tf_agents/agents/td3/examples/v1/train_eval_rnn.py \
   --root_dir=$HOME/tmp/td3_rnn_v1/dm/CartPole-Balance/ \
   --alsologtostderr
 ```
-
 """
 
 from __future__ import absolute_import

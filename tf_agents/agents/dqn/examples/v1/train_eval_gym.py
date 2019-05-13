@@ -19,8 +19,8 @@ To run:
 
 ```bash
 python tf_agents/agents/dqn/examples/v1/train_eval_gym.py \
- --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
- --alsologtostderr
+  --root_dir=$HOME/tmp/dqn/gym_v1/CartPole-v0/ \
+  --alsologtostderr
 ```
 """
 

@@ -24,7 +24,7 @@ To run:
 
 ```bash
 python tf_agents/agents/dqn/examples/v1/oog_train_eval.py \
-  --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
+  --root_dir=$HOME/tmp/dqn_v1/gym/CartPole-v0/ \
   --alsologtostderr
 ```
 """

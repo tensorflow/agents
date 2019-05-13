@@ -19,8 +19,8 @@ To run:
 
 ```bash
 python tf_agents/agents/sac/examples/v1/train_eval.py \
- --root_dir=$HOME/tmp/sac/gym/half-cheetah/ \
- --alsologtostderr
+  --root_dir=$HOME/tmp/sac_v1/gym/HalfCheetah-v2/ \
+  --alsologtostderr
 ```
 """
 

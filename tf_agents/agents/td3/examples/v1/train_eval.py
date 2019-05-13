@@ -18,12 +18,11 @@ r"""Train and Eval TD3.
 To run:
 
 ```bash
-tf_agents/agents/td3/examples/v1/train_eval -- \
+python tf_agents/agents/td3/examples/v1/train_eval.py \
   --root_dir=$HOME/tmp/td3_v1/gym/HalfCheetah-v2/ \
   --num_iterations=2000000 \
   --alsologtostderr
 ```
-
 """
 
 from __future__ import absolute_import
