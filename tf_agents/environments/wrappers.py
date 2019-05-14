@@ -24,6 +24,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+import collections
 import numpy as np
 import six
 import tensorflow as tf
@@ -206,6 +207,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
       num_actions: A np.array of the same shape as the environment's
         action_spec. Elements in the array specify the number of actions to
         discretize to for each dimension.
+
     Raises:
       ValueError: IF the action_spec shape and the limits shape are not equal.
     """
@@ -233,6 +235,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     Args:
       spec: An array_spec to discretize.
       limits: A np.array with limits for the given spec.
+
     Returns:
       Tuple with the discrete_spec along with a list of lists mapping actions.
     Raises:
@@ -269,6 +272,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     Args:
       action: Discrete action to map.
       action_map: Array with the continuous linspaces for the action.
+
     Returns:
       Numpy array with the mapped continuous actions.
     Raises:
@@ -289,6 +293,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
 
     Args:
       action: Action to take.
+
     Returns:
       The next time_step from the environment.
     """
@@ -310,6 +315,7 @@ class ActionClipWrapper(PyEnvironmentBaseWrapper):
 
     Args:
       action: Action to take.
+
     Returns:
       The next time_step from the environment.
     """
@@ -633,3 +639,83 @@ class GoalReplayEnvWrapper(PyEnvironmentBaseWrapper):
     """Execute a step in the environment, updating the trajectory with goal."""
     trajectory = self._env.step(*args, **kwargs)
     return self.get_trajectory_with_goal(trajectory, self._goal)
+
+
+@gin.configurable
+class HistoryWrapper(PyEnvironmentBaseWrapper):
+  """Adds observation and action history to the environment's observations."""
+
+  def __init__(self, env, history_length=3, include_actions=False):
+    """Initializes a HistoryWrapper.
+
+    Args:
+      env: Environment to wrap.
+      history_length: Length of the history to attach.
+      include_actions: Whether actions should be included in the history.
+    """
+    super(HistoryWrapper, self).__init__(env)
+    self._history_length = history_length
+    self._include_actions = include_actions
+
+    self._zero_observation = self._zeros_from_spec(env.observation_spec())
+    self._zero_action = self._zeros_from_spec(env.action_spec())
+
+    self._observation_history = collections.deque(maxlen=history_length)
+    self._action_history = collections.deque(maxlen=history_length)
+
+    self._observation_spec = self._get_observation_spec()
+
+  def _get_observation_spec(self):
+
+    def _update_shape(spec):
+      return array_spec.update_spec_shape(spec,
+                                          (self._history_length,) + spec.shape)
+
+    observation_spec = tf.nest.map_structure(_update_shape,
+                                             self._env.observation_spec())
+
+    if self._include_actions:
+      action_spec = tf.nest.map_structure(_update_shape,
+                                          self._env.action_spec())
+      return {'observation': observation_spec, 'action': action_spec}
+    else:
+      return observation_spec
+
+  def observation_spec(self):
+    return self._observation_spec
+
+  def _zeros_from_spec(self, spec):
+
+    def _zeros(spec):
+      return np.zeros(spec.shape, dtype=spec.dtype)
+
+    return tf.nest.map_structure(_zeros, spec)
+
+  def _add_history(self, time_step, action):
+    self._observation_history.append(time_step.observation)
+    self._action_history.append(action)
+
+    if self._include_actions:
+      observation = {
+          'observation': np.stack(self._observation_history),
+          'action': np.stack(self._action_history)
+      }
+    else:
+      observation = np.stack(self._observation_history)
+    return time_step._replace(observation=observation)
+
+  def _reset(self):
+    self._observation_history.extend([self._zero_observation] *
+                                     (self._history_length - 1))
+    self._action_history.extend([self._zero_action] *
+                                (self._history_length - 1))
+
+    time_step = self._env.reset()
+    return self._add_history(time_step, self._zero_action)
+
+  def _step(self, action):
+    if self.current_time_step() is None or self.current_time_step().is_last():
+      return self._reset()
+
+    time_step = self._env.step(action)
+    return self._add_history(time_step, action)

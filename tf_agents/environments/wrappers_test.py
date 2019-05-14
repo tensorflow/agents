@@ -30,6 +30,7 @@ import gym.spaces
 import numpy as np
 
 from tf_agents.environments import gym_wrapper
+from tf_agents.environments import py_environment
 from tf_agents.environments import random_py_environment
 from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
@@ -832,6 +833,85 @@ class GoalReplayEnvWrapperTest(parameterized.TestCase):
     self.assertIsInstance(time_step.observation, dict)
     self.assertEqual(time_step.observation.keys(),
                      env.observation_spec().keys())
+
+
+class CountingEnv(py_environment.PyEnvironment):
+
+  def __init__(self):
+    self._count = np.array(0, dtype=np.int32)
+
+  def _reset(self):
+    self._count = np.array(0, dtype=np.int32)
+    return ts.restart(self._count.copy())
+
+  def observation_spec(self):
+    return array_spec.ArraySpec((), np.int32)
+
+  def action_spec(self):
+    return array_spec.ArraySpec((), np.int32)
+
+  def _step(self, action):
+    self._count += 1
+    if self._count < 4:
+      return ts.transition(self._count.copy(), 1)
+    return ts.termination(self._count.copy(), 1)
+
+
+class HistoryWrapperTest(absltest.TestCase):
+
+  def test_observation_spec_changed(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    obs_shape = env.observation_spec().shape
+
+    history_env = wrappers.HistoryWrapper(env, 3)
+    self.assertEqual((3,) + obs_shape, history_env.observation_spec().shape)
+
+  def test_observation_spec_changed_with_action(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    obs_shape = env.observation_spec().shape
+    action_shape = env.action_spec().shape
+
+    history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
+    self.assertEqual((3,) + obs_shape,
+                     history_env.observation_spec()['observation'].shape)
+    self.assertEqual((3,) + action_shape,
+                     history_env.observation_spec()['action'].shape)
+
+  def test_observation_stacked(self):
+    env = CountingEnv()
+    history_env = wrappers.HistoryWrapper(env, 3)
+    time_step = history_env.reset()
+    self.assertEqual([0, 0, 0], time_step.observation.tolist())
+
+    time_step = history_env.step(0)
+    self.assertEqual([0, 0, 1], time_step.observation.tolist())
+
+    time_step = history_env.step(0)
+    self.assertEqual([0, 1, 2], time_step.observation.tolist())
+
+    time_step = history_env.step(0)
+    self.assertEqual([1, 2, 3], time_step.observation.tolist())
+
+  def test_observation_and_action_stacked(self):
+    env = CountingEnv()
+    history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
+    time_step = history_env.reset()
+    self.assertEqual([0, 0, 0], time_step.observation['observation'].tolist())
+    self.assertEqual([0, 0, 0], time_step.observation['action'].tolist())
+
+    time_step = history_env.step(5)
+    self.assertEqual([0, 0, 1], time_step.observation['observation'].tolist())
+    self.assertEqual([0, 0, 5], time_step.observation['action'].tolist())
+
+    time_step = history_env.step(6)
+    self.assertEqual([0, 1, 2], time_step.observation['observation'].tolist())
+    self.assertEqual([0, 5, 6], time_step.observation['action'].tolist())
+
+    time_step = history_env.step(7)
+    self.assertEqual([1, 2, 3], time_step.observation['observation'].tolist())
+    self.assertEqual([5, 6, 7], time_step.observation['action'].tolist())
 
 
 if __name__ == '__main__':

@@ -369,3 +369,15 @@ def is_discrete(spec):
 
 def is_continuous(spec):
   return np.issubdtype(spec.dtype, np.float)
+
+
+def update_spec_shape(spec, shape):
+  """Returns a copy of the given spec with the new shape."""
+  if is_bounded(spec):
+    return BoundedArraySpec(
+        shape=shape,
+        dtype=spec.dtype,
+        minimum=spec.minimum,
+        maximum=spec.maximum,
+        name=spec.name)
+  return ArraySpec(shape=shape, dtype=spec.dtype, name=spec.name)
