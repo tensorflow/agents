@@ -600,6 +600,19 @@ class NestedArraysTest(tf.test.TestCase):
     outer_dims = nest_utils.get_outer_array_shape(batch_time, spec)
     self.assertEqual((batch_size, 1), outer_dims)
 
+  def testWhere(self):
+    condition = tf.convert_to_tensor([True, False, False, True, False])
+    true_output = tf.nest.map_structure(tf.convert_to_tensor,
+                                        (np.array([0] * 5), np.arange(1, 6)))
+    false_output = tf.nest.map_structure(tf.convert_to_tensor,
+                                         (np.array([1] * 5), np.arange(6, 11)))
+
+    result = nest_utils.where(condition, true_output, false_output)
+    result = self.evaluate(result)
+
+    expected = (np.array([0, 1, 1, 0, 1]), np.array([1, 7, 8, 4, 10]))
+    self.assertAllEqual(expected, result)
+
 
 if __name__ == '__main__':
   tf.test.main()

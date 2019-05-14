@@ -371,8 +371,8 @@ def get_outer_rank(tensors, specs):
   spec_shapes = [s.shape for s in tf.nest.flatten(specs)]
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
-    raise ValueError(
-        'All specs should have ndims defined.  Saw shapes: %s' % spec_shapes)
+    raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
+                     spec_shapes)
 
   if any(tensor_shape.ndims is None for tensor_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
@@ -416,15 +416,15 @@ def get_outer_rank(tensors, specs):
       all(tensor_matches_spec))
 
   if incorrect_batch_dims:
-    raise ValueError(
-        'Received tensors with %d outer dimensions. '
-        'Expected %d.' % (tensor_ndims_discrepancy[0], num_outer_dims))
+    raise ValueError('Received tensors with %d outer dimensions. '
+                     'Expected %d.' %
+                     (tensor_ndims_discrepancy[0], num_outer_dims))
 
-  raise ValueError(
-      'Received a mix of batched and unbatched Tensors, or Tensors'
-      ' are not compatible with Specs.  num_outer_dims: %d.\n'
-      'Saw tensor_shapes:\n   %s\n'
-      'And spec_shapes:\n   %s' % (num_outer_dims, tensor_shapes, spec_shapes))
+  raise ValueError('Received a mix of batched and unbatched Tensors, or Tensors'
+                   ' are not compatible with Specs.  num_outer_dims: %d.\n'
+                   'Saw tensor_shapes:\n   %s\n'
+                   'And spec_shapes:\n   %s' %
+                   (num_outer_dims, tensor_shapes, spec_shapes))
 
 
 def batch_nested_array(nested_array):
@@ -486,3 +486,22 @@ def get_outer_array_shape(nested_array, spec):
   first_spec = tf.nest.flatten(spec)[0]
   num_outer_dims = len(first_array.shape) - len(first_spec.shape)
   return first_array.shape[:num_outer_dims]
+
+
+def where(condition, true_outputs, false_outputs):
+  """Generalization of tf.where supporting nests as the outputs.
+
+
+  Args:
+    condition: A boolean Tensor of shape [B,].
+    true_outputs: Tensor or nested tuple of Tensors of any dtype, each with
+      shape [B, ...], to be split based on `condition`.
+    false_outputs: Tensor or nested tuple of Tensors of any dtype, each with
+      shape [B, ...], to be split based on `condition`.
+
+  Returns:
+    Interleaved output from `true_outputs` and `false_outputs` based on
+    `condition`.
+  """
+  return tf.nest.map_structure(lambda t, f: tf.compat.v1.where(condition, t, f),
+                               true_outputs, false_outputs)

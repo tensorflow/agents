@@ -67,7 +67,8 @@ class TFPyPolicy(tf_policy.Base):
         policy_state_spec=policy_state_spec,
         info_spec=info_spec,
         clip=False,
-        name=name)
+        name=name,
+        automatic_state_reset=False)
 
     # Output types of py_funcs.
     self._policy_state_dtypes = map_tensor_spec_to_dtypes_list(
