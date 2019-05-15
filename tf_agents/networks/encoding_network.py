@@ -233,6 +233,10 @@ class EncodingNetwork(network.Network):
           nest.flatten_up_to(self.input_tensor_spec, observation),
           self._preprocessing_layers):
         processed.append(layer(obs))
+      if len(processed) == 1 and self._preprocessing_combiner is None:
+        # If only only one observation is passed and preprocessing_combiner
+        # is unspecified, use the preprocessed version of this observation.
+        processed = processed[0]
 
     states = processed
 
