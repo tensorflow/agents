@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Train and Eval REINFORCE.
+r"""Train and Eval SAC.
 
 To run:
 
