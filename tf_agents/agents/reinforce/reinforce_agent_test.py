@@ -153,7 +153,38 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     expected_loss = 10.983667373657227
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns)
+        actions_distribution, actions, time_steps.is_last(), returns, 1)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  def testPolicyGradientLossMultipleEpisodes(self):
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=None,
+    )
+
+    step_type = tf.constant(
+        [ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
+         ts.StepType.LAST])
+    reward = tf.constant([0, 0, 0, 0], dtype=tf.float32)
+    discount = tf.constant([1, 1, 1, 1], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+    time_steps = ts.TimeStep(step_type, reward, discount, observations)
+
+    actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
+    actions_distribution = agent.collect_policy.distribution(
+        time_steps).action
+    returns = tf.constant([1.9, 1.9, 1.0, 1.0], dtype=tf.float32)
+
+    expected_loss = 5.140229225158691
+    loss = agent.policy_gradient_loss(
+        actions_distribution, actions, time_steps.is_last(), returns, 2)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -193,7 +224,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
                                           time_steps.step_type)
 
     expected_loss = 123.20500
-    loss = agent.value_estimation_loss(value_preds, returns)
+    loss = agent.value_estimation_loss(
+        value_preds, returns, 1)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -263,7 +295,7 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
       observations = tf.constant(
           [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
       time_steps = ts.TimeStep(
-          step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
+          step_type=tf.constant([[1, 1, 2]] * batch_size, dtype=tf.int32),
           reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
           discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
           observation=observations)
