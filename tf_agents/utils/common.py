@@ -59,7 +59,12 @@ def function(*args, **kwargs):
     A tf.function wrapper.
   """
   autograph = kwargs.pop('autograph', False)
-  return tf.function(*args, autograph=autograph, **kwargs)  # allow-tf-function
+  experimental_relax_shapes = kwargs.pop('experimental_relax_shapes', True)
+  return tf.function(  # allow-tf-function
+      *args,
+      autograph=autograph,
+      experimental_relax_shapes=experimental_relax_shapes,
+      **kwargs)
 
 
 def has_eager_been_enabled():
