@@ -47,7 +47,7 @@ def _copy_layer(layer):
 
 @gin.configurable
 class EncodingNetwork(network.Network):
-  """Feed Forward network with CNN and FNN layers.."""
+  """Feed Forward network with CNN and FNN layers."""
 
   def __init__(self,
                input_tensor_spec,

@@ -32,6 +32,7 @@ import gin.tf
 
 
 def tanh_squash_to_spec(inputs, spec):
+  """Maps inputs with arbitrary range to range defined by spec using `tanh`."""
   means = (spec.maximum + spec.minimum) / 2.0
   magnitudes = (spec.maximum - spec.minimum) / 2.0
 
@@ -42,7 +43,11 @@ def tanh_squash_to_spec(inputs, spec):
 class NormalProjectionNetwork(network.DistributionNetwork):
   """Generates a tfp.distribution.Normal by predicting a mean and std.
 
-  Note: the standard deviations are independent of the input.
+  Note: By default this network uses `tanh_squash_to_spec` to normalize its
+  output. Due to the nature of the `tanh` function, values near the spec bounds
+  cannot be returned.
+
+  Note: The standard deviations are independent of the input.
   """
 
   def __init__(self,
@@ -67,7 +72,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       std_bias_initializer_value: Initial value for the bias of the
         stddev_projection_layer or the direct bias_layer depending on the
         state_dependent_std flag.
-      mean_transform: Transform to apply to the calculated means
+      mean_transform: Transform to apply to the calculated means. Uses
+        `tanh_squash_to_spec` by default.
       std_transform: Transform to apply to the stddevs.
       state_dependent_std: If true, stddevs will be produced by MLP from state.
         else, stddevs will be an independent variable.
