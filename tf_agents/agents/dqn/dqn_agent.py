@@ -38,6 +38,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
+from tf_agents.utils import value_ops
 
 import gin.tf
 
@@ -90,6 +91,10 @@ class DqnAgent(tf_agent.TFAgent):
   "Human level control through deep reinforcement learning"
     Mnih et al., 2015
     https://deepmind.com/research/dqn/
+
+  This agent also implements n-step updates. See "Rainbow: Combining
+  Improvements in Deep Reinforcement Learning" by Hessel et al., 2017, for a
+  discussion on its benefits: https://arxiv.org/abs/1710.02298
   """
 
   def __init__(
@@ -99,6 +104,7 @@ class DqnAgent(tf_agent.TFAgent):
       q_network,
       optimizer,
       epsilon_greedy=0.1,
+      n_step_update=1,
       boltzmann_temperature=None,
       # Params for target network updates
       target_update_tau=1.0,
@@ -124,6 +130,12 @@ class DqnAgent(tf_agent.TFAgent):
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method).
+      n_step_update: The number of steps to consider when computing TD error and
+        TD loss. Defaults to single-step updates. Note that this requires the
+        user to call train on Trajectory objects with a time dimension of
+        `n_step_update + 1`. However, note that we do not yet support
+        `n_step_update > 1` in the case of RNNs (i.e., non-empty
+        `q_network.state_spec`).
       boltzmann_temperature: Temperature value to use for Boltzmann sampling of
         the actions during data collection. The closer to 0.0, the higher the
         probability of choosing the best action.
@@ -147,6 +159,8 @@ class DqnAgent(tf_agent.TFAgent):
     Raises:
       ValueError: If the action spec contains more than one action or action
         spec minimum is not equal to 0.
+      NotImplementedError: If `q_network` has non-empty `state_spec` (i.e., an
+        RNN is provided) and `n_step_update > 1`.
     """
     tf.Module.__init__(self, name=name)
 
@@ -173,6 +187,7 @@ class DqnAgent(tf_agent.TFAgent):
     self._q_network = q_network
     self._target_q_network = self._q_network.copy(name='TargetQNetwork')
     self._epsilon_greedy = epsilon_greedy
+    self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature
     self._optimizer = optimizer
     self._td_errors_loss_fn = td_errors_loss_fn or element_wise_huber_loss
@@ -193,12 +208,20 @@ class DqnAgent(tf_agent.TFAgent):
           policy, epsilon=self._epsilon_greedy)
     policy = greedy_policy.GreedyPolicy(policy)
 
+    if q_network.state_spec and n_step_update != 1:
+      raise NotImplementedError(
+          'DqnAgent does not currently support n-step updates with stateful '
+          'networks (i.e., RNNs), but n_step_update = {}'.format(n_step_update))
+
+    train_sequence_length = (
+        n_step_update + 1 if not q_network.state_spec else None)
+
     super(DqnAgent, self).__init__(
         time_step_spec,
         action_spec,
         policy,
         collect_policy,
-        train_sequence_length=2 if not q_network.state_spec else None,
+        train_sequence_length=train_sequence_length,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
@@ -243,17 +266,13 @@ class DqnAgent(tf_agent.TFAgent):
 
   # Use @common.function in graph mode or for speeding up.
   def _train(self, experience, weights):
-    time_steps, actions, next_time_steps = self._experience_to_transitions(
-        experience)
-
     with tf.GradientTape() as tape:
-      loss_info = self.loss(time_steps,
-                            actions,
-                            next_time_steps,
-                            td_errors_loss_fn=self._td_errors_loss_fn,
-                            gamma=self._gamma,
-                            reward_scale_factor=self._reward_scale_factor,
-                            weights=weights)
+      loss_info = self._loss(
+          experience,
+          td_errors_loss_fn=self._td_errors_loss_fn,
+          gamma=self._gamma,
+          reward_scale_factor=self._reward_scale_factor,
+          weights=weights)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
     assert list(variables_to_train), "No variables in the agent's q_network."
@@ -277,20 +296,20 @@ class DqnAgent(tf_agent.TFAgent):
 
     return loss_info
 
-  def loss(self,
-           time_steps,
-           actions,
-           next_time_steps,
-           td_errors_loss_fn=element_wise_huber_loss,
-           gamma=1.0,
-           reward_scale_factor=1.0,
-           weights=None):
+  def _loss(self,
+            experience,
+            td_errors_loss_fn=element_wise_huber_loss,
+            gamma=1.0,
+            reward_scale_factor=1.0,
+            weights=None):
     """Computes loss for DQN training.
 
     Args:
-      time_steps: A batch of timesteps.
-      actions: A batch of actions.
-      next_time_steps: A batch of next timesteps.
+      experience: A batch of experience data in the form of a `Trajectory`. The
+        structure of `experience` must match that of `self.policy.step_spec`.
+        All tensors in `experience` must be shaped `[batch, time, ...]` where
+        `time` must be equal to `self.train_sequence_length` if that
+        property is not `None`.
       td_errors_loss_fn: A function(td_targets, predictions) to compute the
         element wise loss.
       gamma: Discount for future rewards.
@@ -305,6 +324,22 @@ class DqnAgent(tf_agent.TFAgent):
       ValueError:
         if the number of actions is greater than 1.
     """
+    # Check that `experience` includes two outer dimensions [B, T, ...]. This
+    # method requires `experience` to include the time dimension.
+    self._check_trajectory_dimensions(experience)
+
+    if self._n_step_update == 1:
+      time_steps, actions, next_time_steps = self._experience_to_transitions(
+          experience)
+    else:
+      # To compute n-step returns, we need the first time steps, the first
+      # actions, and the last time steps. Therefore we extract the first and
+      # last transitions from our Trajectory.
+      first_two_steps = tf.nest.map_structure(lambda x: x[:, :2], experience)
+      last_two_steps = tf.nest.map_structure(lambda x: x[:, -2:], experience)
+      time_steps, actions, _ = self._experience_to_transitions(first_two_steps)
+      _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
+
     with tf.name_scope('loss'):
       actions = tf.nest.flatten(actions)[0]
       q_values, _ = self._q_network(time_steps.observation,
@@ -319,10 +354,29 @@ class DqnAgent(tf_agent.TFAgent):
           multi_dim_actions=multi_dim_actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
-      td_targets = compute_td_targets(
-          next_q_values,
-          rewards=reward_scale_factor * next_time_steps.reward,
-          discounts=gamma * next_time_steps.discount)
+
+      if self._n_step_update == 1:
+        # Special case for n = 1 to avoid a loss of performance.
+        td_targets = compute_td_targets(
+            next_q_values,
+            rewards=reward_scale_factor * next_time_steps.reward,
+            discounts=gamma * next_time_steps.discount)
+      else:
+        # When computing discounted return, we need to throw out the last time
+        # index of both reward and discount, which are filled with dummy values
+        # to match the dimensions of the observation.
+        # TODO(b/131557265): Replace value_ops.discounted_return with a method
+        # that only computes the single value needed.
+        n_step_return = value_ops.discounted_return(
+            rewards=reward_scale_factor * experience.reward[:, :-1],
+            discounts=gamma * experience.discount[:, :-1],
+            final_value=next_q_values,
+            time_major=False)
+
+        # We only need the first value within the time dimension which
+        # corresponds to the full final return. The remaining values are only
+        # partial returns.
+        td_targets = n_step_return[:, 0]
 
       valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
       td_error = valid_mask * (td_targets - q_values)
