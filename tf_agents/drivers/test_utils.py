@@ -123,9 +123,8 @@ class TFPolicyMock(tf_policy.Base):
     del seed
 
     # Reset the policy for batch indices that have restarted episode.
-    policy_state = tf.where(time_step.is_first(),
-                            self._initial_policy_state,
-                            policy_state)
+    policy_state = tf.compat.v1.where(time_step.is_first(),
+                                      self._initial_policy_state, policy_state)
 
     # Take actions 1 and 2 alternating.
     action = tf.math.floormod(policy_state, 2) + 1

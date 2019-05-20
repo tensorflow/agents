@@ -78,7 +78,7 @@ class MaskedCategorical(tfp.distributions.Categorical):
     neg_inf = tf.cast(
         tf.fill(dims=tf.shape(input=logits), value=neg_inf), logits.dtype)
 
-    logits = tf.where(self._mask, logits, neg_inf)
+    logits = tf.compat.v1.where(self._mask, logits, neg_inf)
     super(MaskedCategorical, self).__init__(
         logits=logits,
         probs=None,
@@ -90,7 +90,7 @@ class MaskedCategorical(tfp.distributions.Categorical):
   def _entropy(self):
     entropy = tf.nn.log_softmax(self.logits) * self.probs
     # Replace the (potentially -inf) values with 0s before summing.
-    entropy = tf.where(self._mask, entropy, tf.zeros_like(entropy))
+    entropy = tf.compat.v1.where(self._mask, entropy, tf.zeros_like(entropy))
     return -tf.reduce_sum(input_tensor=entropy, axis=-1)
 
   @property

@@ -84,19 +84,21 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     cond = tf.greater(rng, self._get_epsilon())
 
     # Selects the action/info from the random policy with probability epsilon.
-    # TODO(damienv):tf.where only supports a condition which is either a scalar
-    # or a vector. Extends it so that it can support any condition whose leading
-    # dimensions are the same as the other operands of tf.where.
+    # TODO(b/133175894): tf.compat.v1.where only supports a condition which is
+    # either a scalar or a vector. Use tf.compat.v2 so that it can support any
+    # condition whose leading dimensions are the same as the other operands of
+    # tf.where.
     outer_ndims = int(outer_shape.shape[0])
     if outer_ndims >= 2:
       raise ValueError(
           'Only supports batched time steps with a single batch dimension')
-    action = tf.where(cond, greedy_action.action, random_action.action)
+    action = tf.compat.v1.where(cond, greedy_action.action,
+                                random_action.action)
 
     if greedy_action.info:
       if not random_action.info:
         raise ValueError('Incompatible info field')
-      info = tf.where(cond, greedy_action.info, random_action.info)
+      info = tf.compat.v1.where(cond, greedy_action.info, random_action.info)
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')

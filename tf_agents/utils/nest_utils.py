@@ -489,7 +489,7 @@ def get_outer_array_shape(nested_array, spec):
 
 
 def where(condition, true_outputs, false_outputs):
-  """Generalization of tf.where supporting nests as the outputs.
+  """Generalization of tf.compat.v1.where supporting nests as the outputs.
 
 
   Args:
