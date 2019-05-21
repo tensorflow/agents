@@ -64,12 +64,13 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
   * This class currently cast rewards and discount to float32.
   """
 
-  def __init__(self, environment):
+  def __init__(self, environment, check_dims=False):
     """Initializes a new `TFPyEnvironment`.
 
     Args:
       environment: Environment to interact with, implementing
         `py_environment.PyEnvironment`.
+      check_dims: Whether should check batch dimensions of actions in `step`.
 
     Raises:
       TypeError: If `environment` is not a subclass of
@@ -82,6 +83,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     if not environment.batched:
       environment = batched_py_environment.BatchedPyEnvironment([environment])
     self._env = environment
+    self._check_dims = check_dims
 
     observation_spec = tensor_spec.from_spec(self._env.observation_spec())
     action_spec = tensor_spec.from_spec(self._env.action_spec())
@@ -131,7 +133,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
         return tf.nest.flatten(self._time_step)
 
     with tf.name_scope('current_time_step'):
-      outputs = tf.py_function(
+      outputs = tf.numpy_function(
           _current_time_step_py,
           [],  # No inputs.
           self._time_step_dtypes,
@@ -162,7 +164,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
         self._time_step = self._env.reset()
 
     with tf.name_scope('reset'):
-      reset_op = tf.py_function(
+      reset_op = tf.numpy_function(
           _reset_py,
           [],  # No inputs.
           [],
@@ -196,7 +198,6 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
 
     def _step_py(*flattened_actions):
       with _check_not_called_concurrently(self._lock):
-        flattened_actions = [x.numpy() for x in flattened_actions]
         packed = tf.nest.pack_sequence_as(
             structure=self.action_spec(), flat_sequence=flattened_actions)
         self._time_step = self._env.step(packed)
@@ -204,19 +205,17 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
 
     with tf.name_scope('step'):
       flat_actions = [tf.identity(x) for x in tf.nest.flatten(actions)]
-      for action in flat_actions:
-        dim_value = tensor_shape.dimension_value(action.shape[0])
-        if (action.shape.ndims == 0 or
-            (dim_value is not None and dim_value != self.batch_size)):
-          raise ValueError(
-              'Expected actions whose major dimension is batch_size (%d), '
-              'but saw action with shape %s:\n   %s' % (self.batch_size,
-                                                        action.shape, action))
-      outputs = tf.py_function(
-          _step_py,
-          flat_actions,
-          self._time_step_dtypes,
-          name='step_py_func')
+      if self._check_dims:
+        for action in flat_actions:
+          dim_value = tensor_shape.dimension_value(action.shape[0])
+          if (action.shape.ndims == 0 or
+              (dim_value is not None and dim_value != self.batch_size)):
+            raise ValueError(
+                'Expected actions whose major dimension is batch_size (%d), '
+                'but saw action with shape %s:\n   %s' %
+                (self.batch_size, action.shape, action))
+      outputs = tf.numpy_function(
+          _step_py, flat_actions, self._time_step_dtypes, name='step_py_func')
       step_type, reward, discount = outputs[0:3]
       flat_observations = outputs[3:]
 
