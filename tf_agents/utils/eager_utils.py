@@ -619,7 +619,11 @@ def dataset_iterator(dataset):
   """
   if tf.executing_eagerly():
     return iter(dataset)
-  return tf.compat.v1.data.make_one_shot_iterator(dataset)
+  try:
+    iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
+  except ValueError:
+    iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
+  return iterator
 
 
 def get_next(iterator):
