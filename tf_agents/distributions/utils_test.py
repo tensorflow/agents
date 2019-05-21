@@ -25,7 +25,7 @@ from tf_agents.distributions import utils
 from tf_agents.specs import tensor_spec
 
 
-class ScaleDistributionTest(tf.test.TestCase):
+class UtilsTest(tf.test.TestCase):
 
   def testScaleDistribution(self):
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -2, 4)
@@ -42,3 +42,14 @@ class ScaleDistributionTest(tf.test.TestCase):
 
       self.assertGreater(sample_np, -2.00001)
       self.assertLess(sample_np, 4.00001)
+
+  def testSquashToSpecNormalModeMethod(self):
+    input_dist = tfp.distributions.Normal(loc=1.0, scale=3.0)
+    action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -2.0, 4.0)
+    squash_to_spec_normal = utils.SquashToSpecNormal(input_dist, action_spec)
+    self.assertAlmostEqual(
+        self.evaluate(squash_to_spec_normal.mode()), 3.28478247, places=5)
+
+
+if __name__ == '__main__':
+  tf.test.main()

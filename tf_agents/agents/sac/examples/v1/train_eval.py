@@ -40,6 +40,7 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.metrics import tf_py_metric
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import normal_projection_network
+from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
@@ -176,7 +177,8 @@ def train_eval(
         max_length=replay_buffer_capacity)
     replay_observer = [replay_buffer.add_batch]
 
-    eval_py_policy = py_tf_policy.PyTFPolicy(tf_agent.policy)
+    eval_py_policy = py_tf_policy.PyTFPolicy(
+        greedy_policy.GreedyPolicy(tf_agent.policy))
 
     train_metrics = [
         tf_metrics.NumberOfEpisodes(),

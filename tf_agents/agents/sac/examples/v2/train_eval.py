@@ -41,6 +41,7 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.metrics import tf_py_metric
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import normal_projection_network
+from tf_agents.policies import greedy_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
@@ -181,7 +182,7 @@ def train_eval(
         tf_py_metric.TFPyMetric(py_metrics.AverageEpisodeLengthMetric()),
     ]
 
-    eval_policy = tf_agent.policy
+    eval_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
     collect_policy = tf_agent.collect_policy
 
     train_checkpointer = common.Checkpointer(

@@ -128,3 +128,9 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
   def log_prob(self, value, name="log_prob"):
     """Computes log probability from the wrapped TransformedDistribution."""
     return self._squashed_distribution.log_prob(value, name)
+
+  def mode(self, name="mode"):
+    """Compute mean of the SquashToSpecNormal distribution."""
+    mean = self.action_magnitudes * tf.tanh(self.input_distribution.mode()) + \
+        self.action_means
+    return mean
