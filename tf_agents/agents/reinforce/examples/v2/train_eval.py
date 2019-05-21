@@ -200,6 +200,10 @@ def train_eval(
         timed_at_step = global_step_val
         time_acc = 0
 
+      for train_metric in train_metrics:
+        train_metric.tf_summaries(
+            train_step=global_step, step_metrics=train_metrics[:2])
+
       if global_step_val % eval_interval == 0:
         metrics = metric_utils.eager_compute(
             eval_metrics,

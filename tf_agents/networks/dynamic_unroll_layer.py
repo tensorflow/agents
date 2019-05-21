@@ -307,7 +307,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
 def _maybe_reset_state(reset, s_zero, s):
   if not isinstance(s, tf.TensorArray) and s.shape.ndims > 0:
-    return tf.where(reset, s_zero, s)
+    return tf.compat.v1.where(reset, s_zero, s)
   else:
     return s
 

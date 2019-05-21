@@ -13,7 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Sample Actor network to use with DDPG agents."""
+"""Sample Actor network to use with DDPG agents.
+
+Note: This network scales actions to fit the given spec by using `tanh`. Due to
+the nature of the `tanh` function, actions near the spec bounds cannot be
+returned.
+"""
 
 import gin
 import tensorflow as tf

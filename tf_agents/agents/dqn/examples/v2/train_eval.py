@@ -21,18 +21,18 @@ To run DQN on CartPole:
 tensorboard --logdir $HOME/tmp/dqn/gym/CartPole-v0/ --port 2223 &
 
 python tf_agents/agents/dqn/examples/v2/train_eval.py \
- --root_dir=$HOME/tmp/dqn/gym/CartPole-v0/ \
- --alsologtostderr
+  --root_dir=$HOME/tmp/dqn/gym/CartPole-v0/ \
+  --alsologtostderr
 ```
 
 To run DQN-RNNs on MaskedCartPole:
 
 ```bash
 python tf_agents/agents/dqn/examples/v2/train_eval.py \
- --root_dir=$HOME/tmp/dqn_rnn/gym/MaskedCartPole-v0/ \
- --gin_param='train_eval.env_name="MaskedCartPole-v0"' \
- --gin_param='train_eval.train_sequence_length=10' \
- --alsologtostderr
+  --root_dir=$HOME/tmp/dqn_rnn/gym/MaskedCartPole-v0/ \
+  --gin_param='train_eval.env_name="MaskedCartPole-v0"' \
+  --gin_param='train_eval.train_sequence_length=10' \
+  --alsologtostderr
 ```
 
 """
@@ -99,6 +99,7 @@ def train_eval(
     train_steps_per_iteration=1,
     batch_size=64,
     learning_rate=1e-3,
+    n_step_update=1,
     gamma=0.99,
     reward_scale_factor=1.0,
     gradient_clipping=None,
@@ -139,6 +140,11 @@ def train_eval(
     tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
     eval_tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
+    if train_sequence_length != 1 and n_step_update != 1:
+      raise NotImplementedError(
+          'train_eval does not currently support n-step updates with stateful '
+          'networks (i.e., RNNs)')
+
     if train_sequence_length > 1:
       q_net = q_rnn_network.QRnnNetwork(
           tf_env.observation_spec(),
@@ -151,6 +157,7 @@ def train_eval(
           tf_env.observation_spec(),
           tf_env.action_spec(),
           fc_layer_params=fc_layer_params)
+      train_sequence_length = n_step_update
 
     # TODO(b/127301657): Decay epsilon based on global step, cf. cl/188907839
     tf_agent = dqn_agent.DqnAgent(
@@ -158,6 +165,7 @@ def train_eval(
         tf_env.action_spec(),
         q_network=q_net,
         epsilon_greedy=epsilon_greedy,
+        n_step_update=n_step_update,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),

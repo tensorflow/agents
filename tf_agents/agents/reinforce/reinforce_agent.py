@@ -158,8 +158,15 @@ class ReinforceAgent(tf_agent.TFAgent):
     pass
 
   def _train(self, experience, weights=None):
+    # Add a mask to ensure we reset the return calculation at episode
+    # boundaries. This is needed in cases where episodes are truncated before
+    # reaching a terminal state.
+    non_last_mask = tf.cast(
+        tf.math.not_equal(experience.next_step_type, ts.StepType.LAST),
+        tf.float32)
+    discounts = non_last_mask * experience.discount * self._gamma
     returns = value_ops.discounted_return(
-        experience.reward, experience.discount*self._gamma, time_major=False)
+        experience.reward, discounts, time_major=False)
 
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
@@ -177,10 +184,10 @@ class ReinforceAgent(tf_agent.TFAgent):
                             experience.observation)
 
     with tf.GradientTape() as tape:
-      loss_info = self._loss(time_step,
-                             experience.action,
-                             tf.stop_gradient(returns),
-                             weights=weights)
+      loss_info = self.total_loss(time_step,
+                                  experience.action,
+                                  tf.stop_gradient(returns),
+                                  weights=weights)
       tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
     variables_to_train = self._actor_network.trainable_weights
     if self._baseline:
@@ -203,7 +210,24 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return tf.nest.map_structure(tf.identity, loss_info)
 
-  def _loss(self, time_steps, actions, returns, weights):
+  def total_loss(self, time_steps, actions, returns, weights):
+    # Ensure we see at least one full episode.
+    is_last = time_steps.is_last()
+    num_episodes = tf.reduce_sum(tf.cast(is_last, tf.float32))
+    tf.debugging.assert_greater(
+        num_episodes, 0.0,
+        message='No complete episode found. REINFORCE requires full episodes '
+        'to compute losses.')
+
+    # Mask out partial episodes at the end of each batch of time_steps.
+    valid_mask = tf.cast(is_last, dtype=tf.float32)
+    valid_mask = tf.math.cumsum(valid_mask, axis=1, reverse=True)
+    valid_mask = tf.cast(valid_mask > 0, dtype=tf.float32)
+    if weights is not None:
+      weights *= valid_mask
+    else:
+      weights = valid_mask
+
     advantages = returns
     if self._baseline:
       value_preds, _ = self._value_network(
@@ -231,15 +255,18 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     policy_gradient_loss = self.policy_gradient_loss(actions_distribution,
                                                      actions,
-                                                     time_steps.is_last(),
-                                                     advantages, weights)
+                                                     is_last,
+                                                     advantages,
+                                                     num_episodes,
+                                                     weights)
     entropy_regularization_loss = self.entropy_regularization_loss(
         actions_distribution, weights)
 
     total_loss = policy_gradient_loss + entropy_regularization_loss
 
     if self._baseline:
-      value_estimation_loss = self.value_estimation_loss(value_preds, returns)
+      value_estimation_loss = self.value_estimation_loss(
+          value_preds, returns, num_episodes, weights)
       total_loss += value_estimation_loss
 
     with tf.name_scope('Losses/'):
@@ -262,7 +289,7 @@ class ReinforceAgent(tf_agent.TFAgent):
     return tf_agent.LossInfo(total_loss, ())
 
   def policy_gradient_loss(self, actions_distribution, actions, is_last,
-                           returns, weights=None):
+                           returns, num_episodes, weights=None):
     """Computes the policy gradient loss.
 
     Args:
@@ -272,6 +299,7 @@ class ReinforceAgent(tf_agent.TFAgent):
         has been reached.
       returns: Tensor with a return from each timestep, aligned on index. Works
         better when returns are normalized.
+      num_episodes: Number of episodes contained in the training data.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.  May include a mask for invalid timesteps.
 
@@ -306,9 +334,12 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     # Policy gradient loss is defined as the sum, over timesteps, of action
     #   log-probability times the cumulative return from that timestep onward.
-    #   For more information, see (Williams, 1992)
+    #   For more information, see (Williams, 1992).
     policy_gradient_loss = -tf.reduce_sum(
         input_tensor=action_log_prob_times_return)
+
+    # We take the mean over episodes by dividing by num_episodes.
+    policy_gradient_loss = policy_gradient_loss / num_episodes
 
     return policy_gradient_loss
 
@@ -337,19 +368,29 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return loss
 
-  def value_estimation_loss(self, value_preds, returns):
+  def value_estimation_loss(
+      self, value_preds, returns, num_episodes, weights=None):
     """Computes the value estimation loss.
 
     Args:
       value_preds: Per-timestep estimated values.
       returns: Per-timestep returns for value function to predict.
+      num_episodes: Number of episodes contained in the training data.
+      weights: Optional scalar or element-wise (per-batch-entry) importance
+        weights.  May include a mask for invalid timesteps.
+
     Returns:
       value_estimation_loss: A scalar value_estimation_loss loss.
     """
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
+    if weights:
+      value_estimation_error *= weights
 
     value_estimation_loss = (
         tf.reduce_sum(input_tensor=value_estimation_error) *
         self._value_estimation_loss_coef)
+
+    # We take the mean over episodes by dividing by num_episodes.
+    value_estimation_loss = value_estimation_loss / num_episodes
 
     return value_estimation_loss

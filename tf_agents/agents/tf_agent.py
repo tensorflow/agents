@@ -108,6 +108,21 @@ class TFAgent(tf.Module):
     else:
       return self._initialize()
 
+  def _check_trajectory_dimensions(self, experience):
+    """Checks the given Trajectory for batch and time outer dimensions."""
+    if not nest_utils.is_batched_nested_tensors(
+        experience, self.collect_data_spec, num_outer_dims=2):
+      debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
+      debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
+                                          self.collect_data_spec)
+      raise ValueError(
+          "All of the Tensors in `experience` must have two outer dimensions: "
+          "batch size and time. Specifically, tensors should be shaped as "
+          "[B x T x ...].\n"
+          "Full shapes of experience tensors:\n%s.\n"
+          "Full expected shapes (minus outer dimensions):\n%s." %
+          (debug_str_1, debug_str_2))
+
   def train(self, experience, weights=None):
     """Trains the agent.
 
@@ -147,22 +162,9 @@ class TFAgent(tf.Module):
       raise ValueError(
           "experience must be type Trajectory, saw type: %s" % type(experience))
 
-    # Check experience matches collect data spec with batch & time dims.
-    if not nest_utils.is_batched_nested_tensors(
-        experience, self.collect_data_spec, num_outer_dims=2):
-      debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
-      debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
-                                          self.collect_data_spec)
-      raise ValueError(
-          "All of the Tensors in `experience` must have two outer dimensions: "
-          "batch size and time step. Specifically, tensors should be shaped as "
-          "B x T x [F ...].\n"
-          "Full shapes of experience tensors:\n%s.\n"
-          "Full expected shapes (minus outer dimensions):\n%s." %
-          (debug_str_1, debug_str_2))
+    self._check_trajectory_dimensions(experience)
 
     if self.train_sequence_length is not None:
-
       def check_shape(t):  # pylint: disable=invalid-name
         if t.shape[1] != self.train_sequence_length:
           debug_str = tf.nest.map_structure(lambda tp: tp.shape, experience)

@@ -87,8 +87,8 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.Base):
         tensor_spec.BoundedTensorSpec([1], tf.int64, 0, 1),
         tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
     ]
-    super(TFPolicyMismatchedDtypesListAction, self).__init__(
-        time_step_spec, action_spec)
+    super(TFPolicyMismatchedDtypesListAction,
+          self).__init__(time_step_spec, action_spec)
 
   def _action(self, time_step, policy_state, seed):
     # This time, the action is a list where only the second dtype doesn't match.
@@ -100,11 +100,16 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.Base):
 
 class TfPassThroughPolicy(tf_policy.Base):
 
+  def _action(self, time_step, policy_state, seed):
+    distributions = self._distribution(time_step, policy_state)
+    actions = tf.nest.map_structure(lambda d: d.sample(), distributions.action)
+    return policy_step.PolicyStep(actions, policy_state, ())
+
   def _distribution(self, time_step, policy_state):
     action_distribution = tf.nest.map_structure(
         lambda loc: tfp.distributions.Deterministic(loc=loc),
         time_step.observation)
-    return policy_step.PolicyStep(action_distribution, (), ())
+    return policy_step.PolicyStep(action_distribution, policy_state, ())
 
 
 class TfEmitLogProbsPolicy(tf_policy.Base):
@@ -240,6 +245,41 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     step = self.evaluate(policy.action(time_step))
     self.assertEqual(step.info.get("test", None), 1)
     self.assertAlmostEqual(step.info["log_probability"], np.log(0.2))
+
+  def test_automatic_reset(self):
+    observation_spec = tensor_spec.TensorSpec([1], tf.float32)
+    action_spec = tensor_spec.TensorSpec([1], tf.float32)
+    policy_state_spec = tensor_spec.TensorSpec([1], tf.float32)
+    time_step_spec = ts.time_step_spec(observation_spec)
+
+    policy = TfPassThroughPolicy(
+        time_step_spec,
+        action_spec,
+        policy_state_spec=policy_state_spec,
+        automatic_state_reset=True)
+
+    observation = tf.constant(1, dtype=tf.float32, shape=(1, 1))
+    reward = tf.constant(1, dtype=tf.float32, shape=(1,))
+    time_step = tf.nest.map_structure(lambda *t: tf.concat(t, axis=0),
+                                      ts.restart(observation, batch_size=1),
+                                      ts.transition(observation, reward),
+                                      ts.termination(observation, reward))
+
+    state = self.evaluate(
+        policy.action(time_step,
+                      policy_state=policy.get_initial_state(3) + 1).state)
+
+    self.assertEqual(0, state[0])
+    self.assertEqual(1, state[1])
+    self.assertEqual(1, state[2])
+
+    state = self.evaluate(
+        policy.distribution(
+            time_step, policy_state=policy.get_initial_state(3) + 1).state)
+
+    self.assertEqual(0, state[0])
+    self.assertEqual(1, state[1])
+    self.assertEqual(1, state[2])
 
 
 if __name__ == "__main__":

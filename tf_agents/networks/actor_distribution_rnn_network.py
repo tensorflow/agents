@@ -52,7 +52,13 @@ def _normal_projection_net(action_spec,
 
 @gin.configurable
 class ActorDistributionRnnNetwork(network.DistributionNetwork):
-  """Creates an actor producing either Normal or Categorical distribution."""
+  """Creates an actor producing either Normal or Categorical distribution.
+
+  Note: By default, this network uses `NormalProjectionNetwork` for continuous
+  projection which by default uses `tanh_squash_to_spec` to normalize its
+  output. Due to the nature of the `tanh` function, values near the spec bounds
+  cannot be returned.
+  """
 
   def __init__(self,
                input_tensor_spec,

@@ -91,6 +91,7 @@ def train_eval(
     train_steps_per_iteration=1,
     batch_size=64,
     learning_rate=1e-3,
+    n_step_update=1,
     gamma=0.99,
     reward_scale_factor=1.0,
     gradient_clipping=None,
@@ -142,6 +143,7 @@ def train_eval(
       action_spec,
       q_network=q_net,
       epsilon_greedy=epsilon_greedy,
+      n_step_update=n_step_update,
       target_update_tau=target_update_tau,
       target_update_period=target_update_period,
       optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
@@ -181,7 +183,8 @@ def train_eval(
       policy=agent.policy,
       global_step=global_step)
 
-  ds = replay_buffer.as_dataset(sample_batch_size=batch_size, num_steps=2)
+  ds = replay_buffer.as_dataset(
+      sample_batch_size=batch_size, num_steps=n_step_update + 1)
   ds = ds.prefetch(4)
   itr = tf.compat.v1.data.make_initializable_iterator(ds)
 
@@ -205,7 +208,7 @@ def train_eval(
     session.run(train_summary_writer.init())
     session.run(eval_summary_writer.init())
 
-    # Compute inital evaluation metrics.
+    # Compute initial evaluation metrics.
     global_step_val = global_step_call()
     metric_utils.compute_summaries(
         eval_metrics,

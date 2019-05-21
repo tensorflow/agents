@@ -77,6 +77,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
           [env.time_step_spec() for env in self._envs])
     # Create a multiprocessing threadpool for execution.
     self._pool = mp_threads.Pool(self._num_envs)
+    super(BatchedPyEnvironment, self).__init__()
 
   @property
   def batched(self):

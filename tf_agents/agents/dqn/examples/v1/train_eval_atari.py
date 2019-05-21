@@ -35,11 +35,14 @@ https://arxiv.org/pdf/1709.06009.pdf.
 To run:
 
 ```bash
-tf_agents/agents/dqn/examples/train_eval_atari \
- --root_dir=$HOME/atari/pong \
- --atari_roms_path=/tmp
- --alsologtostderr
+tf_agents/agents/dqn/examples/v1/train_eval_atari \
+  --root_dir=$HOME/atari/pong \
+  --atari_roms_path=/tmp
+  --alsologtostderr
 ```
+
+Additional flags are available such as `--replay_buffer_capacity` and
+`--n_step_update`.
 
 """
 
@@ -90,6 +93,8 @@ flags.DEFINE_integer('replay_buffer_capacity', None,
 flags.DEFINE_integer('train_steps_per_iteration', None,
                      'Number of ALE frames to run through for each iteration '
                      'of training.')
+flags.DEFINE_integer('n_step_update', None, 'The number of steps to consider '
+                     'when computing TD error and TD loss.')
 flags.DEFINE_integer('eval_steps_per_iteration', None,
                      'Number of ALE frames to run through for each iteration '
                      'of evaluation.')
@@ -129,8 +134,7 @@ class TrainEval(object):
       num_iterations=200,
       max_episode_frames=108000,  # ALE frames
       terminal_on_life_loss=False,
-      conv_layer_params=(
-          (32, (8, 8), 4), (64, (4, 4), 2), (64, (3, 3), 1)),
+      conv_layer_params=((32, (8, 8), 4), (64, (4, 4), 2), (64, (3, 3), 1)),
       fc_layer_params=(512,),
       # Params for collect
       initial_collect_steps=80000,  # ALE frames
@@ -144,6 +148,7 @@ class TrainEval(object):
       target_update_period=32000,  # ALE frames
       batch_size=32,
       learning_rate=2.5e-4,
+      n_step_update=1,
       gamma=0.99,
       reward_scale_factor=1.0,
       gradient_clipping=None,
@@ -186,6 +191,8 @@ class TrainEval(object):
         the target network.
       batch_size: Number of frames to include in each training batch.
       learning_rate: RMS optimizer learning rate.
+      n_step_update: The number of steps to consider when computing TD error and
+        TD loss. Applies standard single-step updates when set to 1.
       gamma: Discount for future rewards.
       reward_scale_factor: Scaling factor for rewards.
       gradient_clipping: Norm length to clip gradients.
@@ -281,6 +288,7 @@ class TrainEval(object):
             q_network=q_net,
             optimizer=optimizer,
             epsilon_greedy=epsilon,
+            n_step_update=n_step_update,
             target_update_tau=target_update_tau,
             target_update_period=(
                 target_update_period / ATARI_FRAME_SKIP / self._update_period),
@@ -312,7 +320,8 @@ class TrainEval(object):
 
       with tf.device('/cpu:0'):
         ds = self._replay_buffer.as_dataset(
-            sample_batch_size=batch_size, num_steps=2).prefetch(4)
+            sample_batch_size=batch_size, num_steps=n_step_update + 1)
+        ds = ds.prefetch(4)
         ds = ds.apply(tf.data.experimental.prefetch_to_device('/gpu:0'))
 
       with tf.device('/gpu:0'):
@@ -603,22 +612,18 @@ class TrainEval(object):
 def get_run_args():
   """Builds a dict of run arguments from flags."""
   run_args = {}
-
   if FLAGS.num_iterations:
     run_args['num_iterations'] = FLAGS.num_iterations
-
   if FLAGS.initial_collect_steps:
     run_args['initial_collect_steps'] = FLAGS.initial_collect_steps
-
   if FLAGS.replay_buffer_capacity:
     run_args['replay_buffer_capacity'] = FLAGS.replay_buffer_capacity
-
   if FLAGS.train_steps_per_iteration:
     run_args['train_steps_per_iteration'] = FLAGS.train_steps_per_iteration
-
+  if FLAGS.n_step_update:
+    run_args['n_step_update'] = FLAGS.n_step_update
   if FLAGS.eval_steps_per_iteration:
     run_args['eval_steps_per_iteration'] = FLAGS.eval_steps_per_iteration
-
   return run_args
 
 
