@@ -158,9 +158,15 @@ class ReinforceAgent(tf_agent.TFAgent):
     pass
 
   def _train(self, experience, weights=None):
-    # TODO(b/132914246): Use .is_last() to mask the end of each episode.
+    # Add a mask to ensure we reset the return calculation at episode
+    # boundaries. This is needed in cases where episodes are truncated before
+    # reaching a terminal state.
+    non_last_mask = tf.cast(
+        tf.math.not_equal(experience.next_step_type, ts.StepType.LAST),
+        tf.float32)
+    discounts = non_last_mask * experience.discount * self._gamma
     returns = value_ops.discounted_return(
-        experience.reward, experience.discount*self._gamma, time_major=False)
+        experience.reward, discounts, time_major=False)
 
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
