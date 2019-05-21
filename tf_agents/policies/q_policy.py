@@ -77,7 +77,6 @@ class QPolicy(tf_policy.Base):
     # action with the highest Q-value.
     q_values, policy_state = self._q_network(
         time_step.observation, time_step.step_type, policy_state)
-    q_values.shape.assert_has_rank(2)
 
     # TODO(b/122314058): Validate and enforce that sampling distributions
     # created with the q_network logits generate the right action shapes. This

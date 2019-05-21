@@ -25,6 +25,15 @@ from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
 
 
+# TODO(b/131405384): Remove this once Deterministic does casting internally.
+class DeterministicWithLogProb(tfp.distributions.Deterministic):
+  """Thin wrapper around Deterministic that supports taking log_prob."""
+
+  def _log_prob(self, x):
+    """Takes log-probs by casting to tf.float32 instead of self.dtype."""
+    return tf.log(tf.cast(self.prob(x), dtype=tf.float32))
+
+
 class GreedyPolicy(tf_policy.Base):
   """Returns greedy samples of a given policy."""
 
@@ -57,7 +66,7 @@ class GreedyPolicy(tf_policy.Base):
         raise ValueError("Your network's distribution does not implement mode "
                          "making it incompatible with a greedy policy.")
 
-      return tfp.distributions.Deterministic(loc=greedy_action)
+      return DeterministicWithLogProb(loc=greedy_action)
 
     distribution_step = self._wrapped_policy.distribution(
         time_step, policy_state)

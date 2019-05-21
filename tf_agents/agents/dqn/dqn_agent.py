@@ -106,6 +106,7 @@ class DqnAgent(tf_agent.TFAgent):
       epsilon_greedy=0.1,
       n_step_update=1,
       boltzmann_temperature=None,
+      emit_log_probability=False,
       # Params for target network updates
       target_update_tau=1.0,
       target_update_period=1,
@@ -139,6 +140,7 @@ class DqnAgent(tf_agent.TFAgent):
       boltzmann_temperature: Temperature value to use for Boltzmann sampling of
         the actions during data collection. The closer to 0.0, the higher the
         probability of choosing the best action.
+      emit_log_probability: Whether policies emit log probabilities or not.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -198,7 +200,10 @@ class DqnAgent(tf_agent.TFAgent):
         target_update_tau, target_update_period)
 
     policy = q_policy.QPolicy(
-        time_step_spec, action_spec, q_network=self._q_network)
+        time_step_spec,
+        action_spec,
+        q_network=self._q_network,
+        emit_log_probability=emit_log_probability)
 
     if boltzmann_temperature is not None:
       collect_policy = boltzmann_policy.BoltzmannPolicy(
