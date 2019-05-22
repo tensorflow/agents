@@ -181,5 +181,6 @@ class ValueRnnNetwork(network.Network):
 
     value = self._value_projection_layer(states)
     value = tf.reshape(value, [-1])
-    value = batch_squash.unflatten(value)
+    if has_time_dim:
+      value = batch_squash.unflatten(value)
     return value, network_state
