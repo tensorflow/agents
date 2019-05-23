@@ -168,7 +168,7 @@ class PyEnvironment(object):
         observation: A NumPy array, or a nested dict, list or tuple of arrays
           corresponding to `observation_spec()`.
     """
-    if self._current_time_step is None:
+    if self._current_time_step is None or self._current_time_step.is_last():
       return self.reset()
 
     self._current_time_step = self._step(action)
@@ -239,4 +239,3 @@ class PyEnvironment(object):
 
     See `reset(self)` docstring for more details
     """
-
