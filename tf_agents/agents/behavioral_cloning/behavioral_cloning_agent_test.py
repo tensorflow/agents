@@ -103,100 +103,97 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
 
   # TODO(kbanoop): Add a test where the target network has different values.
   def testLoss(self):
-    with tf.compat.v2.summary.record_if(False):
-      cloning_net = DummyNet(self._observation_spec, self._action_spec)
-      agent = behavioral_cloning_agent.BehavioralCloningAgent(
-          self._time_step_spec,
-          self._action_spec,
-          cloning_network=cloning_net,
-          optimizer=None)
+    cloning_net = DummyNet(self._observation_spec, self._action_spec)
+    agent = behavioral_cloning_agent.BehavioralCloningAgent(
+        self._time_step_spec,
+        self._action_spec,
+        cloning_network=cloning_net,
+        optimizer=None)
 
-      observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
-      actions = [tf.constant([0, 1], dtype=tf.int32)]
-      rewards = tf.constant([10, 20], dtype=tf.float32)
-      discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    actions = [tf.constant([0, 1], dtype=tf.int32)]
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
 
-      experience = trajectory.first(
-          observation=observations,
-          action=actions,
-          policy_info=(),
-          reward=rewards,
-          discount=discounts)
-      loss_info = agent._loss(experience)
+    experience = trajectory.first(
+        observation=observations,
+        action=actions,
+        policy_info=(),
+        reward=rewards,
+        discount=discounts)
+    loss_info = agent._loss(experience)
 
-      self.evaluate(tf.compat.v1.initialize_all_variables())
-      total_loss, _ = self.evaluate(loss_info)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    total_loss, _ = self.evaluate(loss_info)
 
-      expected_loss = tf.reduce_mean(
-          input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-              logits=cloning_net(observations)[0], labels=actions[0]))
+    expected_loss = tf.reduce_mean(
+        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=cloning_net(observations)[0], labels=actions[0]))
 
-      self.assertAllClose(total_loss, expected_loss)
+    self.assertAllClose(total_loss, expected_loss)
 
   def testTrain(self):
-    with tf.compat.v2.summary.record_if(False):
-      # Emits trajectories shaped (batch=1, time=6, ...)
-      traj, time_step_spec, action_spec = (
-          driver_test_utils.make_random_trajectory())
-      # Convert to shapes (batch=6, 1, ...) so this works with a non-RNN model.
-      traj = tf.nest.map_structure(common.transpose_batch_time, traj)
-      cloning_net = q_network.QNetwork(
-          time_step_spec.observation, action_spec)
-      agent = behavioral_cloning_agent.BehavioralCloningAgent(
-          time_step_spec,
-          action_spec,
-          cloning_network=cloning_net,
-          optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
-      # Disable clipping to make sure we can see the difference in behavior
-      agent.policy._clip = False
-      # Remove policy_info, as BehavioralCloningAgent expects none.
-      traj = traj.replace(policy_info=())
-      # TODO(b/123883319)
-      if tf.executing_eagerly():
-        train_and_loss = lambda: agent.train(traj)
-      else:
-        train_and_loss = agent.train(traj)
-      replay = trajectory_replay.TrajectoryReplay(agent.policy)
-      self.evaluate(tf.compat.v1.global_variables_initializer())
-      initial_actions = self.evaluate(replay.run(traj)[0])
-      for _ in range(TRAIN_ITERATIONS):
-        self.evaluate(train_and_loss)
-      post_training_actions = self.evaluate(replay.run(traj)[0])
-      # We don't necessarily converge to the same actions as in trajectory after
-      # 10 steps of an untuned optimizer, but the policy does change.
-      self.assertFalse(np.all(initial_actions == post_training_actions))
+    # Emits trajectories shaped (batch=1, time=6, ...)
+    traj, time_step_spec, action_spec = (
+        driver_test_utils.make_random_trajectory())
+    # Convert to shapes (batch=6, 1, ...) so this works with a non-RNN model.
+    traj = tf.nest.map_structure(common.transpose_batch_time, traj)
+    cloning_net = q_network.QNetwork(
+        time_step_spec.observation, action_spec)
+    agent = behavioral_cloning_agent.BehavioralCloningAgent(
+        time_step_spec,
+        action_spec,
+        cloning_network=cloning_net,
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
+    # Disable clipping to make sure we can see the difference in behavior
+    agent.policy._clip = False
+    # Remove policy_info, as BehavioralCloningAgent expects none.
+    traj = traj.replace(policy_info=())
+    # TODO(b/123883319)
+    if tf.executing_eagerly():
+      train_and_loss = lambda: agent.train(traj)
+    else:
+      train_and_loss = agent.train(traj)
+    replay = trajectory_replay.TrajectoryReplay(agent.policy)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    initial_actions = self.evaluate(replay.run(traj)[0])
+    for _ in range(TRAIN_ITERATIONS):
+      self.evaluate(train_and_loss)
+    post_training_actions = self.evaluate(replay.run(traj)[0])
+    # We don't necessarily converge to the same actions as in trajectory after
+    # 10 steps of an untuned optimizer, but the policy does change.
+    self.assertFalse(np.all(initial_actions == post_training_actions))
 
   def testTrainWithRNN(self):
-    with tf.compat.v2.summary.record_if(False):
-      # Emits trajectories shaped (batch=1, time=6, ...)
-      traj, time_step_spec, action_spec = (
-          driver_test_utils.make_random_trajectory())
-      cloning_net = q_rnn_network.QRnnNetwork(
-          time_step_spec.observation, action_spec)
-      agent = behavioral_cloning_agent.BehavioralCloningAgent(
-          time_step_spec,
-          action_spec,
-          cloning_network=cloning_net,
-          optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
-      # Disable clipping to make sure we can see the difference in behavior
-      agent.policy._clip = False
-      # Remove policy_info, as BehavioralCloningAgent expects none.
-      traj = traj.replace(policy_info=())
-      # TODO(b/123883319)
-      if tf.executing_eagerly():
-        train_and_loss = lambda: agent.train(traj)
-      else:
-        train_and_loss = agent.train(traj)
-      replay = trajectory_replay.TrajectoryReplay(agent.policy)
-      self.evaluate(tf.compat.v1.global_variables_initializer())
-      initial_actions = self.evaluate(replay.run(traj)[0])
+    # Emits trajectories shaped (batch=1, time=6, ...)
+    traj, time_step_spec, action_spec = (
+        driver_test_utils.make_random_trajectory())
+    cloning_net = q_rnn_network.QRnnNetwork(
+        time_step_spec.observation, action_spec)
+    agent = behavioral_cloning_agent.BehavioralCloningAgent(
+        time_step_spec,
+        action_spec,
+        cloning_network=cloning_net,
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
+    # Disable clipping to make sure we can see the difference in behavior
+    agent.policy._clip = False
+    # Remove policy_info, as BehavioralCloningAgent expects none.
+    traj = traj.replace(policy_info=())
+    # TODO(b/123883319)
+    if tf.executing_eagerly():
+      train_and_loss = lambda: agent.train(traj)
+    else:
+      train_and_loss = agent.train(traj)
+    replay = trajectory_replay.TrajectoryReplay(agent.policy)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    initial_actions = self.evaluate(replay.run(traj)[0])
 
-      for _ in range(TRAIN_ITERATIONS):
-        self.evaluate(train_and_loss)
-      post_training_actions = self.evaluate(replay.run(traj)[0])
-      # We don't necessarily converge to the same actions as in trajectory after
-      # 10 steps of an untuned optimizer, but the policy does change.
-      self.assertFalse(np.all(initial_actions == post_training_actions))
+    for _ in range(TRAIN_ITERATIONS):
+      self.evaluate(train_and_loss)
+    post_training_actions = self.evaluate(replay.run(traj)[0])
+    # We don't necessarily converge to the same actions as in trajectory after
+    # 10 steps of an untuned optimizer, but the policy does change.
+    self.assertFalse(np.all(initial_actions == post_training_actions))
 
   def testPolicy(self):
     cloning_net = DummyNet(self._observation_spec, self._action_spec)

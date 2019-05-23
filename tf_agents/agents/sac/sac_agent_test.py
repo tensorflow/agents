@@ -218,62 +218,61 @@ class SacAgentTest(tf.test.TestCase):
     self.assertGreaterEqual(action_, self._action_spec.minimum)
 
   def testTrainWithRnn(self):
-    with tf.compat.v2.summary.record_if(False):
-      actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
-          self._obs_spec,
-          self._action_spec,
-          input_fc_layer_params=None,
-          output_fc_layer_params=None,
-          conv_layer_params=None,
-          lstm_size=(40,),
-      )
+    actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+        self._obs_spec,
+        self._action_spec,
+        input_fc_layer_params=None,
+        output_fc_layer_params=None,
+        conv_layer_params=None,
+        lstm_size=(40,),
+    )
 
-      critic_net = critic_rnn_network.CriticRnnNetwork(
-          (self._obs_spec, self._action_spec),
-          observation_fc_layer_params=(16,),
-          action_fc_layer_params=(16,),
-          joint_fc_layer_params=(16,),
-          lstm_size=(16,),
-          output_fc_layer_params=None,
-      )
+    critic_net = critic_rnn_network.CriticRnnNetwork(
+        (self._obs_spec, self._action_spec),
+        observation_fc_layer_params=(16,),
+        action_fc_layer_params=(16,),
+        joint_fc_layer_params=(16,),
+        lstm_size=(16,),
+        output_fc_layer_params=None,
+    )
 
-      counter = common.create_variable('test_train_counter')
+    counter = common.create_variable('test_train_counter')
 
-      optimizer_fn = tf.compat.v1.train.AdamOptimizer
+    optimizer_fn = tf.compat.v1.train.AdamOptimizer
 
-      agent = sac_agent.SacAgent(
-          self._time_step_spec,
-          self._action_spec,
-          critic_network=critic_net,
-          actor_network=actor_net,
-          actor_optimizer=optimizer_fn(1e-3),
-          critic_optimizer=optimizer_fn(1e-3),
-          alpha_optimizer=optimizer_fn(1e-3),
-          train_step_counter=counter,
-      )
+    agent = sac_agent.SacAgent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=critic_net,
+        actor_network=actor_net,
+        actor_optimizer=optimizer_fn(1e-3),
+        critic_optimizer=optimizer_fn(1e-3),
+        alpha_optimizer=optimizer_fn(1e-3),
+        train_step_counter=counter,
+    )
 
-      batch_size = 5
-      observations = tf.constant(
-          [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
-      actions = tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32)
-      time_steps = ts.TimeStep(
-          step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
-          reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-          discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-          observation=[observations])
+    batch_size = 5
+    observations = tf.constant(
+        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
+    actions = tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32)
+    time_steps = ts.TimeStep(
+        step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
+        reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
+        discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
+        observation=[observations])
 
-      experience = trajectory.Trajectory(
-          time_steps.step_type, [observations], actions, (),
-          time_steps.step_type, time_steps.reward, time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type, [observations], actions, (),
+        time_steps.step_type, time_steps.reward, time_steps.discount)
 
-      # Force variable creation.
-      agent.policy.variables()
-      if tf.executing_eagerly():
-        loss = lambda: agent.train(experience)
-      else:
-        loss = agent.train(experience)
+    # Force variable creation.
+    agent.policy.variables()
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
 
-      self.evaluate(tf.compat.v1.initialize_all_variables())
-      self.assertEqual(self.evaluate(counter), 0)
-      self.evaluate(loss)
-      self.assertEqual(self.evaluate(counter), 1)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.assertEqual(self.evaluate(counter), 0)
+    self.evaluate(loss)
+    self.assertEqual(self.evaluate(counter), 1)

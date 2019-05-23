@@ -203,59 +203,58 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
       ('FiveEpochs', 5, False),
   ])
   def testTrain(self, num_epochs, use_td_lambda_return):
-    with tf.compat.v2.summary.record_if(False):
-      # Mock the build_train_op to return an op for incrementing this counter.
-      counter = common.create_variable('test_train_counter')
-      agent = ppo_agent.PPOAgent(
-          self._time_step_spec,
-          self._action_spec,
-          tf.compat.v1.train.AdamOptimizer(),
-          actor_net=DummyActorNet(self._obs_spec, self._action_spec,),
-          value_net=DummyValueNet(self._obs_spec),
-          normalize_observations=False,
-          num_epochs=num_epochs,
-          use_gae=use_td_lambda_return,
-          use_td_lambda_return=use_td_lambda_return,
-          train_step_counter=counter)
-      observations = tf.constant([
-          [[1, 2], [3, 4], [5, 6]],
-          [[1, 2], [3, 4], [5, 6]],
-      ],
-                                 dtype=tf.float32)
+    # Mock the build_train_op to return an op for incrementing this counter.
+    counter = common.create_variable('test_train_counter')
+    agent = ppo_agent.PPOAgent(
+        self._time_step_spec,
+        self._action_spec,
+        tf.compat.v1.train.AdamOptimizer(),
+        actor_net=DummyActorNet(self._obs_spec, self._action_spec,),
+        value_net=DummyValueNet(self._obs_spec),
+        normalize_observations=False,
+        num_epochs=num_epochs,
+        use_gae=use_td_lambda_return,
+        use_td_lambda_return=use_td_lambda_return,
+        train_step_counter=counter)
+    observations = tf.constant([
+        [[1, 2], [3, 4], [5, 6]],
+        [[1, 2], [3, 4], [5, 6]],
+    ],
+                               dtype=tf.float32)
 
-      time_steps = ts.TimeStep(
-          step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
-          reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-          discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-          observation=observations)
-      actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]],
-                            dtype=tf.float32)
+    time_steps = ts.TimeStep(
+        step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
+        reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+        discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+        observation=observations)
+    actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]],
+                          dtype=tf.float32)
 
-      action_distribution_parameters = {
-          'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
-          'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
-      }
+    action_distribution_parameters = {
+        'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
+        'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
+    }
 
-      policy_info = action_distribution_parameters
+    policy_info = action_distribution_parameters
 
-      experience = trajectory.Trajectory(
-          time_steps.step_type, observations, actions, policy_info,
-          time_steps.step_type, time_steps.reward, time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type, observations, actions, policy_info,
+        time_steps.step_type, time_steps.reward, time_steps.discount)
 
-      # Force variable creation.
-      agent.policy.variables()
+    # Force variable creation.
+    agent.policy.variables()
 
-      if tf.executing_eagerly():
-        loss = lambda: agent.train(experience)
-      else:
-        loss = agent.train(experience)
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
 
-      # Assert that counter starts out at zero.
-      self.evaluate(tf.compat.v1.initialize_all_variables())
-      self.assertEqual(0, self.evaluate(counter))
-      self.evaluate(loss)
-      # Assert that train_op ran increment_counter num_epochs times.
-      self.assertEqual(num_epochs, self.evaluate(counter))
+    # Assert that counter starts out at zero.
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.assertEqual(0, self.evaluate(counter))
+    self.evaluate(loss)
+    # Assert that train_op ran increment_counter num_epochs times.
+    self.assertEqual(num_epochs, self.evaluate(counter))
 
   def testGetEpochLoss(self):
     agent = ppo_agent.PPOAgent(
