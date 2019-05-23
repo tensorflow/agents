@@ -64,7 +64,6 @@ def _ensure_tf_install():  # pylint: disable=g-statement-before-imports
 
 _ensure_tf_install()
 
-from tf_agents.version import __version__
 
 # Cleanup symbols to avoid polluting namespace.
 import sys as _sys
