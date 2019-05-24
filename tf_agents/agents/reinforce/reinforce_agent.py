@@ -383,7 +383,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       value_estimation_loss: A scalar value_estimation_loss loss.
     """
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
-    if weights:
+    if weights is not None:
       value_estimation_error *= weights
 
     value_estimation_loss = (
