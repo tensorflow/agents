@@ -113,19 +113,15 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         dropout_layer_params=dropout_layer_params,
         name='input_mlp')
 
-    projection_networks = []
-    for single_output_spec in tf.nest.flatten(output_tensor_spec):
-      if tensor_spec.is_discrete(single_output_spec):
-        projection_networks.append(discrete_projection_net(single_output_spec))
+    def map_proj(spec):
+      if tensor_spec.is_discrete(spec):
+        return discrete_projection_net(spec)
       else:
-        projection_networks.append(
-            continuous_projection_net(single_output_spec))
+        return continuous_projection_net(spec)
 
-    projection_distribution_specs = [
-        proj_net.output_spec for proj_net in projection_networks
-    ]
-    output_spec = tf.nest.pack_sequence_as(output_tensor_spec,
-                                           projection_distribution_specs)
+    projection_networks = tf.nest.map_structure(map_proj, output_tensor_spec)
+    output_spec = tf.nest.map_structure(lambda proj_net: proj_net.output_spec,
+                                        projection_networks)
 
     super(ActorDistributionNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
@@ -156,10 +152,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
 
     # TODO(oars): Can we avoid unflattening to flatten again
     states = batch_squash.unflatten(states)
-    outputs = [
-        projection(states, outer_rank)
-        for projection in self._projection_networks
-    ]
-
-    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec, outputs)
+    output_actions = tf.nest.map_structure(
+        lambda proj_net: proj_net(states, outer_rank),
+        self._projection_networks)
     return output_actions, network_state
