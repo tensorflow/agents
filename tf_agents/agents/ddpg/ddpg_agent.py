@@ -242,7 +242,6 @@ class DdpgAgent(tf_agent.TFAgent):
 
     optimizer.apply_gradients(grads_and_vars)
 
-  @common.function
   def critic_loss(self,
                   time_steps,
                   actions,
@@ -298,7 +297,6 @@ class DdpgAgent(tf_agent.TFAgent):
 
       return critic_loss
 
-  @common.function
   def actor_loss(self, time_steps, weights=None):
     """Computes the actor_loss for DDPG training.
 
