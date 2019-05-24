@@ -18,10 +18,11 @@ r"""Train and Eval PPO.
 To run:
 
 ```bash
-tensorboard --logdir ~/tmp/ppo --port 2223 &
+tensorboard --logdir $HOME/tmp/ppo/gym/HalfCheetah-v2/ --port 2223 &
 
-tf_agents/agents/ppo/examples/train_eval.py -- \
-  --root_dir=~/tmp/ppo --logtostderr
+python tf_agents/agents/ppo/examples/v2/train_eval.py \
+  --root_dir=$HOME/tmp/ppo/gym/HalfCheetah-v2/ \
+  --logtostderr
 ```
 """
 
