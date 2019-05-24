@@ -223,7 +223,8 @@ class EncodingNetwork(network.Network):
     super(EncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec, state_spec=(), name=name)
 
-    self._preprocessing_layers = flat_preprocessing_layers
+    self._preprocessing_layers = preprocessing_layers
+    self._flat_preprocessing_layers = flat_preprocessing_layers
     self._preprocessing_combiner = preprocessing_combiner
     self._postprocessing_layers = layers
     self._batch_squash = batch_squash
@@ -241,13 +242,10 @@ class EncodingNetwork(network.Network):
       processed = observation
     else:
       processed = []
-      # We need to handle case where input_tensor_spec is not a sequence.
-      if not nest.is_sequence(observation):
-        observation = [observation]
       for obs, layer in zip(
           nest.flatten_up_to(
               self._preprocessing_layers, observation, check_types=False),
-          self._preprocessing_layers):
+          self._flat_preprocessing_layers):
         processed.append(layer(obs))
       if len(processed) == 1 and self._preprocessing_combiner is None:
         # If only only one observation is passed and preprocessing_combiner

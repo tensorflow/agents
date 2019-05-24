@@ -113,6 +113,27 @@ class EncodingNetworkTest(test_utils.TestCase):
           preprocessing_combiner=None,
           fc_layer_params=(2,))
 
+  def test_dict_spec_and_pre_processing(self):
+    input_spec = {
+        'a': tensor_spec.TensorSpec((32, 32, 3), tf.float32),
+        'b': tensor_spec.TensorSpec((32, 32, 3), tf.float32)
+    }
+    network = encoding_network.EncodingNetwork(
+        input_spec,
+        preprocessing_layers={
+            'a': tf.keras.layers.Flatten(),
+            'b': tf.keras.layers.Flatten()
+        },
+        fc_layer_params=(),
+        preprocessing_combiner=tf.keras.layers.Concatenate(axis=-1),
+        activation_fn=tf.keras.activations.tanh,
+    )
+
+    sample_input = tensor_spec.sample_spec_nest(input_spec)
+    output, _ = network(sample_input)
+    # 6144 is the shape from a concat of flat (32, 32, 3) x2.
+    self.assertEqual((6144,), output.shape)
+
 
 if __name__ == '__main__':
   tf.test.main()
