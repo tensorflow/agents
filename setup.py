@@ -186,6 +186,7 @@ setup(
     version=version,
     description='TF-Agents: A Reinforcement Learning Library for TensorFlow',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     author='Google LLC',
     author_email='no-reply@google.com',
     url='http://github.com/tensorflow/agents',
