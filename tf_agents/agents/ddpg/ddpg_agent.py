@@ -71,9 +71,11 @@ class DdpgAgent(tf_agent.TFAgent):
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
       actor_network: A tf_agents.network.Network to be used by the agent. The
-        network will be called with call(observation, step_type).
+        network will be called with call(observation, step_type[, policy_state])
+        and should return (action, new_state).
       critic_network: A tf_agents.network.Network to be used by the agent. The
-        network will be called with call(observation, action, step_type).
+        network will be called with call((observation, action), step_type[,
+        policy_state]) and should return (q_value, new_state).
       actor_optimizer: The optimizer to use for the actor network.
       critic_optimizer: The optimizer to use for the critic network.
       ou_stddev: Standard deviation for the Ornstein-Uhlenbeck (OU) noise added
@@ -86,7 +88,7 @@ class DdpgAgent(tf_agent.TFAgent):
         element-wise between [-dqda_clipping, dqda_clipping]. Does not perform
         clipping if dqda_clipping == 0.
       td_errors_loss_fn:  A function for computing the TD errors loss. If None,
-        a default value of  elementwise huber_loss is used.
+        a default value of elementwise huber_loss is used.
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       gradient_clipping: Norm length to clip gradients.
