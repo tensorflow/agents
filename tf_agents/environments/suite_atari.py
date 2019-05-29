@@ -29,8 +29,7 @@ import gin.tf
 
 
 # Typical Atari 2600 Gym environment with some basic preprocessing.
-DEFAULT_ATARI_GYM_WRAPPERS = (atari_preprocessing.AtariPreprocessing,
-                              atari_wrappers.FireOnReset)
+DEFAULT_ATARI_GYM_WRAPPERS = (atari_preprocessing.AtariPreprocessing,)
 # The following is just AtariPreprocessing with frame stacking. Performance wise
 # it's much better to have stacking implemented as part of replay-buffer/agent.
 # As soon as this functionality in TF-Agents is ready and verified, this set of
