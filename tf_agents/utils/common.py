@@ -140,6 +140,8 @@ def create_variable(name,
     collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
   if initializer is None:
     initializer = tf.compat.v1.initializers.constant(initial_value, dtype=dtype)
+    if shape is None:
+      shape = tf.convert_to_tensor(initial_value).shape
   if unique_name:
     name = tf.compat.v1.get_default_graph().unique_name(name)
   return tf.compat.v1.get_variable(

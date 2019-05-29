@@ -66,6 +66,12 @@ class CreateCounterTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(counter), [1, 1])
 
+  @test_util.run_in_graph_and_eager_modes()
+  def testNonScalarInitialValue(self):
+    var = common.create_variable('var', [1, 2], shape=None)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(var), [1, 2])
+
 
 class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
 
