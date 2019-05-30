@@ -37,7 +37,9 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import tensorflow as tf
+
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import parallel_py_environment
@@ -51,8 +53,6 @@ from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-
-import gin.tf
 
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),

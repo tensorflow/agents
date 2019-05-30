@@ -30,9 +30,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 from gym.spaces.box import Box
 import numpy as np
-import gin.tf
 import cv2
 
 

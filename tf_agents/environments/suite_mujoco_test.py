@@ -21,14 +21,13 @@ from __future__ import print_function
 
 from absl.testing import absltest
 
+import gin
 import numpy as np
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import wrappers
 from tf_agents.utils import test_utils
-
-import gin.tf
 
 
 class SuiteMujocoTest(absltest.TestCase):

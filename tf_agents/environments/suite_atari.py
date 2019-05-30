@@ -19,13 +19,13 @@ from __future__ import division
 from __future__ import print_function
 
 import atari_py  # pylint: disable=unused-import
+import gin
 import gym
 import numpy as np
 
 from tf_agents.environments import atari_preprocessing
 from tf_agents.environments import atari_wrappers
 from tf_agents.environments import suite_gym
-import gin.tf
 
 
 # Typical Atari 2600 Gym environment with some basic preprocessing.

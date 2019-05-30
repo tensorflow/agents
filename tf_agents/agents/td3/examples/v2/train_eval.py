@@ -39,6 +39,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import tensorflow as tf
 
 from tf_agents.agents.ddpg import actor_network
@@ -51,7 +52,6 @@ from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-import gin.tf
 
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),

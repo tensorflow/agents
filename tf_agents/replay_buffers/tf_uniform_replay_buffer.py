@@ -29,6 +29,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -37,7 +38,6 @@ from tf_agents.replay_buffers import table
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
-import gin.tf
 from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 

@@ -22,11 +22,11 @@ agent behaviour. This prevents us from setting the appropriate discount value
 for the final step of an episode. To prevent that we extract the step limit
 from the environment specs and utilize our TimeLimit wrapper.
 """
+import gin
 import gym
 
 from tf_agents.environments import gym_wrapper
 from tf_agents.environments import wrappers
-import gin.tf
 
 
 @gin.configurable

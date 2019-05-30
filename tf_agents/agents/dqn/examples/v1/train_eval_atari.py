@@ -56,6 +56,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -76,7 +77,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import timer
-import gin.tf
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

@@ -37,6 +37,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
@@ -51,7 +52,6 @@ from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-import gin.tf
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

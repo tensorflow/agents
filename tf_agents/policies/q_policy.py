@@ -19,11 +19,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
+
 from tf_agents.distributions import shifted_categorical
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
-import gin.tf
 
 
 @gin.configurable

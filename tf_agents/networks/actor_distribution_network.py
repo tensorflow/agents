@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -28,8 +29,6 @@ from tf_agents.networks import normal_projection_network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
-
-import gin.tf
 
 
 def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):

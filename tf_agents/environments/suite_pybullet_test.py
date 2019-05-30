@@ -20,13 +20,12 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import absltest
+import gin
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_pybullet
 from tf_agents.environments import wrappers
 from tf_agents.utils import test_utils
-
-import gin.tf
 
 
 class SuitePybulletTest(absltest.TestCase):

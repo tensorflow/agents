@@ -22,8 +22,8 @@ from __future__ import print_function
 import functools
 
 from absl.testing import absltest
+import gin
 
-import gin.tf
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.environments import wrappers

@@ -26,12 +26,12 @@ from __future__ import print_function
 from multiprocessing import dummy as mp_threads
 # pylint: enable=line-too-long
 
+import gin
 import numpy as np
-
 import tensorflow as tf
+
 from tf_agents.environments import py_environment
 from tf_agents.utils import nest_utils
-import gin.tf
 
 
 @gin.configurable

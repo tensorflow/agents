@@ -33,8 +33,8 @@ if _TRY_IMPORT:
 else:
   import mujoco_py  # pylint: disable=g-import-not-at-top
 
+import gin
 from tf_agents.environments import suite_gym
-import gin.tf
 
 
 def is_available():

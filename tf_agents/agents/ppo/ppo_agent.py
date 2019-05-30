@@ -60,6 +60,7 @@ import collections
 
 from absl import logging
 
+import gin
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
@@ -75,8 +76,6 @@ from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
 from tf_agents.utils import value_ops
-
-import gin.tf
 
 
 PPOLossInfo = collections.namedtuple('PPOLossInfo', (

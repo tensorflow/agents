@@ -25,6 +25,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import gin
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
@@ -34,8 +35,6 @@ from tf_agents.policies import q_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-
-import gin.tf
 
 
 class BehavioralCloningLossInfo(collections.namedtuple(
