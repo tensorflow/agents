@@ -151,7 +151,8 @@ class Base(tf.Module):
     self._emit_log_probability = emit_log_probability
     if emit_log_probability:
       log_probability_spec = tensor_spec.BoundedTensorSpec(
-          shape=(), dtype=tf.float32, maximum=0, minimum=-float('inf'))
+          shape=(), dtype=tf.float32, maximum=0, minimum=-float('inf'),
+          name='log_probability')
       log_probability_spec = tf.nest.map_structure(
           lambda _: log_probability_spec, action_spec)
       info_spec = policy_step.set_log_probability(info_spec,

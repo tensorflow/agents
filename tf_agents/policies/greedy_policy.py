@@ -31,7 +31,7 @@ class DeterministicWithLogProb(tfp.distributions.Deterministic):
 
   def _log_prob(self, x):
     """Takes log-probs by casting to tf.float32 instead of self.dtype."""
-    return tf.log(tf.cast(self.prob(x), dtype=tf.float32))
+    return tf.math.log(tf.cast(self.prob(x), dtype=tf.float32))
 
 
 class GreedyPolicy(tf_policy.Base):
