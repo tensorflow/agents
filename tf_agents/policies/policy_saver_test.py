@@ -375,6 +375,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
           time_step_spec=self._time_step_spec,
           action_spec=self._action_spec,
           q_network=network)
+      self.evaluate(tf.compat.v1.initializers.variables(policy.variables()))
 
       train_step = common.create_variable('train_step', initial_value=7)
       self.evaluate(tf.compat.v1.initializers.variables([train_step]))
