@@ -220,6 +220,15 @@ class PyEnvironment(object):
     del mode  # unused
     raise NotImplementedError('No rendering support.')
 
+  def seed(self, seed):
+    """Seeds the environment.
+
+    Args:
+      seed: Value to use as seed for the environment.
+    """
+    del seed  # unused
+    raise NotImplementedError('No seed support for this environment.')
+
   #  These methods are to be implemented by subclasses:
 
   @abc.abstractmethod

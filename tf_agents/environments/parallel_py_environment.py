@@ -163,6 +163,16 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
       ]
     return unstacked_actions
 
+  def seed(self, seeds):
+    """Seeds the parallel environments."""
+    if len(seeds) != len(self._envs):
+      raise ValueError(
+          'Number of seeds should match the number of parallel_envs.')
+
+    promises = [env.call('seed', seed) for seed, env in zip(seeds, self._envs)]
+    # Block until all envs are seeded.
+    return [promise() for promise in promises]
+
 
 class ProcessPyEnvironment(object):
   """Step a single env in a separate process for lock free paralellism."""
