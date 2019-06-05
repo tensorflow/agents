@@ -18,7 +18,9 @@ r"""Train and Eval TD3.
 To run:
 
 ```bash
-tf_agents/agents/td3/examples/v2/train_eval -- \
+tensorboard --logdir $HOME/tmp/td3/gym/HalfCheetah-v2/ --port 2223 &
+
+python tf_agents/agents/td3/examples/v2/train_eval.py \
   --root_dir=$HOME/tmp/td3/gym/HalfCheetah-v2/ \
   --num_iterations=2000000 \
   --alsologtostderr
@@ -37,6 +39,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import tensorflow as tf
 
 from tf_agents.agents.ddpg import actor_network
@@ -49,7 +52,6 @@ from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-import gin.tf
 
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),

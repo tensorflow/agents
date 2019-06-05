@@ -19,12 +19,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
+
 from tf_agents.drivers import driver
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
-import gin.tf
 
 
 @gin.configurable
@@ -93,8 +94,15 @@ class DynamicEpisodeDriver(driver.Driver):
         loop_vars for next iteration of tf.while_loop.
       """
       action_step = self.policy.action(time_step, policy_state)
+
+      # TODO(b/134487572): TF2 while_loop seems to either ignore
+      # parallel_iterations or doesn't properly propagate control dependencies
+      # from one step to the next. Without this dep, self.env.step() is called
+      # in parallel.
+      with tf.control_dependencies(tf.nest.flatten([time_step])):
+        next_time_step = self.env.step(action_step.action)
+
       policy_state = action_step.state
-      next_time_step = self.env.step(action_step.action)
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]

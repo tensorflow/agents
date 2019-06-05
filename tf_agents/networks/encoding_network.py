@@ -28,13 +28,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
 
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.utils import nest_utils
 
-import gin.tf
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
@@ -113,12 +113,12 @@ class EncodingNetwork(network.Network):
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
         input observations.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
         of tensors and combines them.  Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built.
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`. This
+        layer must not be already built.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -153,12 +153,26 @@ class EncodingNetwork(network.Network):
       flat_preprocessing_layers = [
           _copy_layer(layer) for layer in tf.nest.flatten(preprocessing_layers)
       ]
+      # Assert shallow structure is the same. This verifies preprocessing
+      # layers can be applied on expected input nests.
+      input_nest = input_tensor_spec
+      # Given the flatten on preprocessing_layers above we need to make sure
+      # input_tensor_spec is a sequence for the shallow_structure check below
+      # to work.
+      if not nest.is_sequence(input_tensor_spec):
+        input_nest = [input_tensor_spec]
+      nest.assert_shallow_structure(
+          preprocessing_layers, input_nest, check_types=False)
+      if len(flat_preprocessing_layers) > 1 and preprocessing_combiner is None:
+        raise ValueError(
+            'preprocessing_combiner layer is required when more than 1 '
+            'preprocessing_layer is provided.')
 
     if preprocessing_combiner is not None:
       preprocessing_combiner = _copy_layer(preprocessing_combiner)
 
-    if not (preprocessing_layers or preprocessing_combiner
-            or conv_layer_params or fc_layer_params):
+    if not (preprocessing_layers or preprocessing_combiner or
+            conv_layer_params or fc_layer_params):
       raise ValueError(
           'At least one: preprocessing_layers, preprocessing_combiner, '
           'conv_layer_params, or fc_layer_params should be provided.')
@@ -191,8 +205,8 @@ class EncodingNetwork(network.Network):
           raise ValueError('Dropout and fully connected layer parameter lists'
                            'have different lengths (%d vs. %d.)' %
                            (len(dropout_layer_params), len(fc_layer_params)))
-      for num_units, dropout_params in zip(
-          fc_layer_params, dropout_layer_params):
+      for num_units, dropout_params in zip(fc_layer_params,
+                                           dropout_layer_params):
         layers.append(
             tf.keras.layers.Dense(
                 num_units,
@@ -207,11 +221,10 @@ class EncodingNetwork(network.Network):
           layers.append(utils.maybe_permanent_dropout(**dropout_params))
 
     super(EncodingNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name)
 
-    self._preprocessing_layers = flat_preprocessing_layers
+    self._preprocessing_layers = preprocessing_layers
+    self._flat_preprocessing_layers = flat_preprocessing_layers
     self._preprocessing_combiner = preprocessing_combiner
     self._postprocessing_layers = layers
     self._batch_squash = batch_squash
@@ -220,8 +233,8 @@ class EncodingNetwork(network.Network):
     del step_type  # unused.
 
     if self._batch_squash:
-      outer_rank = nest_utils.get_outer_rank(
-          observation, self.input_tensor_spec)
+      outer_rank = nest_utils.get_outer_rank(observation,
+                                             self.input_tensor_spec)
       batch_squash = utils.BatchSquash(outer_rank)
       observation = tf.nest.map_structure(batch_squash.flatten, observation)
 
@@ -230,8 +243,9 @@ class EncodingNetwork(network.Network):
     else:
       processed = []
       for obs, layer in zip(
-          nest.flatten_up_to(self.input_tensor_spec, observation),
-          self._preprocessing_layers):
+          nest.flatten_up_to(
+              self._preprocessing_layers, observation, check_types=False),
+          self._flat_preprocessing_layers):
         processed.append(layer(obs))
       if len(processed) == 1 and self._preprocessing_combiner is None:
         # If only only one observation is passed and preprocessing_combiner

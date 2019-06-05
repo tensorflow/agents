@@ -18,8 +18,11 @@ r"""Train and Eval DDPG.
 To run:
 
 ```bash
-tf_agents/agents/ddpg/examples/v1/train_eval_rnn -- \
+tensorboard --logdir $HOME/tmp/ddpg_rnn_v1/dm/CartPole-Balance/ --port 2223 &
+
+python tf_agents/agents/ddpg/examples/v1/train_eval_rnn.py \
   --root_dir=$HOME/tmp/ddpg_rnn_v1/dm/CartPole-Balance/ \
+  --num_iterations=100000 \
   --alsologtostderr
 ```
 """

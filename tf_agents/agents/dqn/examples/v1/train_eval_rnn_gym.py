@@ -18,9 +18,11 @@ r"""Train and Eval DQN.
 To run:
 
 ```bash
-tf_agents/agents/dqn/examples/train_eval_rnn_gym \
- --root_dir=$HOME/tmp/rnn-dqn/gym/cart-pole/ \
- --alsologtostderr
+tensorboard --logdir $HOME/tmp/dqn_rnn_v1/gym/MaskedCartPole-v0/ --port 2223 &
+
+python tf_agents/agents/dqn/examples/v1/train_eval_rnn_gym.py \
+  --root_dir=$HOME/tmp/dqn_rnn_v1/gym/MaskedCartPole-v0/ \
+  --alsologtostderr
 ```
 """
 

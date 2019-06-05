@@ -116,7 +116,8 @@ class ReplayBuffer(tf.Module):
   def as_dataset(self,
                  sample_batch_size=None,
                  num_steps=None,
-                 num_parallel_calls=None):
+                 num_parallel_calls=None,
+                 single_deterministic_pass=False):
     """Creates and returns a dataset that returns entries from the buffer.
 
     A single entry from the dataset is equivalent to one output from
@@ -139,16 +140,36 @@ class ReplayBuffer(tf.Module):
       num_parallel_calls: (Optional.) A `tf.int32` scalar `tf.Tensor`,
         representing the number elements to process in parallel. If not
         specified, elements will be processed sequentially.
+      single_deterministic_pass: Python boolean.  If `True`, the dataset
+        will return a single deterministic pass through its underlying data.
+        **NOTE**: If the buffer is modified while a Dataset iterator is
+        iterating over this data, the iterator may miss any new data or
+        otherwise have subtly invalid data.
 
     Returns:
       A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
         - An item or sequence of items or batch thereof
         - Auxiliary info for the items (i.e. ids, probs).
+
+    Raises:
+      NotImplementedError: If a non-default argument value is not supported.
     """
-    return self._as_dataset(sample_batch_size, num_steps, num_parallel_calls)
+    if single_deterministic_pass:
+      return self._single_deterministic_pass_dataset(
+          sample_batch_size=sample_batch_size,
+          num_steps=num_steps,
+          num_parallel_calls=num_parallel_calls)
+    else:
+      return self._as_dataset(
+          sample_batch_size=sample_batch_size,
+          num_steps=num_steps,
+          num_parallel_calls=num_parallel_calls)
 
   def gather_all(self):
     """Returns all the items in buffer.
+
+    **NOTE** This method will soon be deprecated in favor of
+    `as_dataset(..., single_deterministic_pass=True)`.
 
     Returns:
       Returns all the items currently in the buffer. Returns a tensor
@@ -169,6 +190,7 @@ class ReplayBuffer(tf.Module):
   @abc.abstractmethod
   def _add_batch(self, items):
     """Adds a batch of items to the replay buffer."""
+    raise NotImplementedError
 
   @abc.abstractmethod
   def _get_next(self,
@@ -176,6 +198,7 @@ class ReplayBuffer(tf.Module):
                 num_steps=None,
                 time_stacked=True):
     """Returns an item or batch of items from the buffer."""
+    raise NotImplementedError
 
   @abc.abstractmethod
   def _as_dataset(self,
@@ -183,12 +206,22 @@ class ReplayBuffer(tf.Module):
                   num_steps=None,
                   num_parallel_calls=None):
     """Creates and returns a dataset that returns entries from the buffer."""
+    raise NotImplementedError
+
+  @abc.abstractmethod
+  def _single_deterministic_pass_dataset(self,
+                                         sample_batch_size=None,
+                                         num_steps=None,
+                                         num_parallel_calls=None):
+    """Creates and returns a dataset that returns entries from the buffer."""
+    raise NotImplementedError
 
   @abc.abstractmethod
   def _gather_all(self):
     """Returns all the items in buffer."""
+    raise NotImplementedError
 
   @abc.abstractmethod
   def _clear(self):
     """Clears the replay buffer."""
-
+    raise NotImplementedError

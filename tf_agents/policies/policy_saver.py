@@ -141,12 +141,7 @@ class PolicySaver(object):
         `policy.time_step_spec`, `policy.action_spec`,
         `policy.policy_state_spec`, `policy.info_spec`.
       ValueError: If `batch_size` is not either `None` or a python integer > 0.
-      NotImplementedError: If created from TF1 with eager mode disabled.
     """
-    if not tf.executing_eagerly():
-      # TODO(b/129079730): Add support for TF1 using SavedModelBuilder.
-      raise NotImplementedError(
-          'Cannot create a PolicySaver in TF1 without eager mode enabled.')
     if not isinstance(policy, tf_policy.Base):
       raise TypeError('policy is not a TFPolicy.  Saw: %s' % type(policy))
     if (batch_size is not None and

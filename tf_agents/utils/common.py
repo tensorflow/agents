@@ -95,19 +95,18 @@ def function_in_tf1(*args, **kwargs):
   """
   def maybe_wrap(fn):
     """Helper function."""
-    if has_eager_been_enabled():
-      # We're either in eager mode or in tf.function mode (no in-between); so
-      # autodep-like behavior is already expected of fn.
-      return fn
-    else:
-      # We're in TF1 mode and want to wrap in common.function to get autodeps.
-      @functools.wraps(fn)
-      def with_check_resource_vars(*fn_args, **fn_kwargs):
-        if not resource_variables_enabled():
-          raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
+    # We're in TF1 mode and want to wrap in common.function to get autodeps.
+    @functools.wraps(fn)
+    def with_check_resource_vars(*fn_args, **fn_kwargs):
+      if has_eager_been_enabled():
+        # We're either in eager mode or in tf.function mode (no in-between); so
+        # autodep-like behavior is already expected of fn.
         return fn(*fn_args, **fn_kwargs)
-      wrapped = function(*args, **kwargs)(with_check_resource_vars)
-      return wrapped
+      if not resource_variables_enabled():
+        raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
+      return fn(*fn_args, **fn_kwargs)
+    wrapped = function(*args, **kwargs)(with_check_resource_vars)
+    return wrapped
   return maybe_wrap
 
 
@@ -140,6 +139,8 @@ def create_variable(name,
     collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
   if initializer is None:
     initializer = tf.compat.v1.initializers.constant(initial_value, dtype=dtype)
+    if shape is None:
+      shape = tf.convert_to_tensor(initial_value).shape
   if unique_name:
     name = tf.compat.v1.get_default_graph().unique_name(name)
   return tf.compat.v1.get_variable(

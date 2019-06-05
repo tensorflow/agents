@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Simple Actor Policy based on an actor network.
+"""Actor Policy based on an actor network.
 
 This is used in e.g. actor-critic algorithms like DDPG.
 """
@@ -22,15 +22,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.networks import network
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
-import gin.tf
-
-tfd = tfp.distributions
 
 
 @gin.configurable
@@ -38,9 +36,9 @@ class ActorPolicy(tf_policy.Base):
   """Class to build Actor Policies."""
 
   def __init__(self,
-               time_step_spec=None,
-               action_spec=None,
-               actor_network=None,
+               time_step_spec,
+               action_spec,
+               actor_network,
                info_spec=(),
                observation_normalizer=None,
                clip=True,
@@ -50,10 +48,12 @@ class ActorPolicy(tf_policy.Base):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      actor_network: An instance of a tf_agents.networks.network.Network, with
-        call(observation, step_type).
+      actor_network: An instance of a `tf_agents.networks.network.Network` to be
+        used by the policy. The network will be called with call(observation,
+        step_type, policy_state) and should return (actions_or_distributions,
+        new_state).
       info_spec: A nest of TensorSpec representing the policy info.
-      observation_normalizer: An object to use for obervation normalization.
+      observation_normalizer: An object to use for observation normalization.
       clip: Whether to clip actions to spec before returning them.  Default
         True. Most policy-based algorithms (PCL, PPO, REINFORCE) use unclipped
         continuous actions for training.

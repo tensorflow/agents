@@ -121,53 +121,51 @@ class DdpgAgentTest(test_utils.TestCase):
     self.assertIsNotNone(agent.collect_policy)
 
   def testCriticLoss(self):
-    with tf.compat.v2.summary.record_if(False):
-      agent = ddpg_agent.DdpgAgent(
-          self._time_step_spec,
-          self._action_spec,
-          actor_network=self._unbounded_actor_net,
-          critic_network=self._critic_net,
-          actor_optimizer=None,
-          critic_optimizer=None,
-      )
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._unbounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=None,
+        critic_optimizer=None,
+    )
 
-      observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
-      time_steps = ts.restart(observations, batch_size=2)
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
 
-      actions = [tf.constant([[5], [6]], dtype=tf.float32)]
+    actions = [tf.constant([[5], [6]], dtype=tf.float32)]
 
-      rewards = tf.constant([10, 20], dtype=tf.float32)
-      discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-      next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
-      next_time_steps = ts.transition(next_observations, rewards, discounts)
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
 
-      expected_loss = 59.6
-      loss = agent.critic_loss(time_steps, actions, next_time_steps)
+    expected_loss = 59.6
+    loss = agent.critic_loss(time_steps, actions, next_time_steps)
 
-      self.evaluate(tf.compat.v1.global_variables_initializer())
-      loss_ = self.evaluate(loss)
-      self.assertAllClose(loss_, expected_loss)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
 
   def testActorLoss(self):
-    with tf.compat.v2.summary.record_if(False):
-      agent = ddpg_agent.DdpgAgent(
-          self._time_step_spec,
-          self._action_spec,
-          actor_network=self._unbounded_actor_net,
-          critic_network=self._critic_net,
-          actor_optimizer=None,
-          critic_optimizer=None,
-      )
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._unbounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=None,
+        critic_optimizer=None,
+    )
 
-      observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
-      time_steps = ts.restart(observations, batch_size=2)
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
 
-      expected_loss = 4.0
-      loss = agent.actor_loss(time_steps)
+    expected_loss = 4.0
+    loss = agent.actor_loss(time_steps)
 
-      self.evaluate(tf.compat.v1.global_variables_initializer())
-      loss_ = self.evaluate(loss)
-      self.assertAllClose(loss_, expected_loss)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
 
   def testPolicy(self):
     agent = ddpg_agent.DdpgAgent(

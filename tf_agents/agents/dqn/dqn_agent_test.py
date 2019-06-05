@@ -133,7 +133,7 @@ class AgentTest(tf.test.TestCase):
   def testLoss(self, agent_class, run_mode):
     if tf.executing_eagerly() and run_mode == context.graph_mode:
       self.skipTest('b/123778560')
-    with run_mode(), tf.compat.v2.summary.record_if(False):
+    with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(
           self._time_step_spec,
@@ -176,7 +176,7 @@ class AgentTest(tf.test.TestCase):
   def testLossNStep(self, agent_class, run_mode):
     if tf.executing_eagerly() and run_mode == context.graph_mode:
       self.skipTest('b/123778560')
-    with run_mode(), tf.compat.v2.summary.record_if(False):
+    with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(
           self._time_step_spec,
@@ -229,7 +229,7 @@ class AgentTest(tf.test.TestCase):
     """Tests that n-step loss handles LAST time steps properly."""
     if tf.executing_eagerly() and run_mode == context.graph_mode:
       self.skipTest('b/123778560')
-    with run_mode(), tf.compat.v2.summary.record_if(False):
+    with run_mode():
       q_net = DummyNet(self._observation_spec, self._action_spec)
       agent = agent_class(
           self._time_step_spec,

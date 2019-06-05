@@ -181,6 +181,19 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
       self.assertEqual(13.0, nested_action.other_var)
     env.close()
 
+  def test_seedable(self):
+    seeds = [0, 1]
+    env = self._make_parallel_py_environment()
+    env.seed(seeds)
+    self.assertEqual(
+        np.random.RandomState(0).get_state()[1][-1],
+        env._envs[0]._rng.get_state()[1][-1])
+
+    self.assertEqual(
+        np.random.RandomState(1).get_state()[1][-1],
+        env._envs[1]._rng.get_state()[1][-1])
+    env.close()
+
 
 class ProcessPyEnvironmentTest(tf.test.TestCase):
 

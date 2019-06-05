@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -32,7 +33,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import value_ops
-import gin.tf
 
 
 def _standard_normalize(values, axes=(0,)):
@@ -383,7 +383,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       value_estimation_loss: A scalar value_estimation_loss loss.
     """
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
-    if weights:
+    if weights is not None:
       value_estimation_error *= weights
 
     value_estimation_loss = (

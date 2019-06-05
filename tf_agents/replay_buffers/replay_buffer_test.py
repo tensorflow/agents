@@ -28,20 +28,7 @@ from tf_agents.replay_buffers import replay_buffer
 class ReplayBufferTestClass(replay_buffer.ReplayBuffer):
   """Basic test for ReplayBuffer subclass."""
 
-  def _add_batch(self, items):
-    pass
-
-  def _get_next(self, sample_batch_size, num_steps):
-    pass
-
-  def _as_dataset(self, sample_batch_size, num_steps, num_parallel_calls):
-    pass
-
-  def _gather_all(self):
-    pass
-
-  def _clear(self):
-    pass
+  pass
 
 
 class ReplayBufferInitTest(tf.test.TestCase):
@@ -61,6 +48,19 @@ class ReplayBufferInitTest(tf.test.TestCase):
     rb = ReplayBufferTestClass(spec, capacity)
     self.assertEqual(rb.data_spec, spec)
     self.assertEqual(rb.capacity, capacity)
+
+  def testMethods(self):
+    spec = self._data_spec()
+    capacity = 10
+    rb = ReplayBufferTestClass(spec, capacity)
+    with self.assertRaises(NotImplementedError):
+      rb.as_dataset()
+    with self.assertRaises(NotImplementedError):
+      rb.as_dataset(single_deterministic_pass=True)
+    with self.assertRaises(NotImplementedError):
+      rb.get_next()
+    with self.assertRaises(NotImplementedError):
+      rb.add_batch(items=None)
 
 
 if __name__ == '__main__':

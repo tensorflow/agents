@@ -18,9 +18,11 @@ r"""Train and Eval REINFORCE.
 To run:
 
 ```bash
+tensorboard --logdir $HOME/tmp/reinforce/gym/CartPole-v0/ --port 2223 &
+
 python tf_agents/agents/reinforce/examples/v2/train_eval.py \
- --root_dir=$HOME/tmp/reinforce/gym/cart-pole/ \
- --alsologtostderr
+  --root_dir=$HOME/tmp/reinforce/gym/CartPole-v0/ \
+  --alsologtostderr
 ```
 """
 

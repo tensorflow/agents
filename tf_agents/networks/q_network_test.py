@@ -19,12 +19,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
 
 from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
-import gin.tf
 from tensorflow.python.framework import test_util  # TF internal
 
 
@@ -142,7 +142,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     network = q_network.QNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
-        preprocessing_layers=[tf.keras.layers.Lambda(lambda x: x)],
+        preprocessing_layers=tf.keras.layers.Lambda(lambda x: x),
         preprocessing_combiner=None)
     q_logits, _ = network(tf.ones((3, num_state_dims)))
     self.assertAllEqual(q_logits.shape.as_list(), [3, 2])

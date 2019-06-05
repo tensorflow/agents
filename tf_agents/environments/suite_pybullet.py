@@ -28,10 +28,9 @@ example browser BEFORE you start the training.
 ExampleBrowser -- --start_demo_name="PhysicsServer"
 ```
 """
-
+import gin
 from tf_agents.environments import suite_gym
 
-import gin.tf
 # pylint: disable=unused-import
 import pybullet_envs
 # pylint: enable=unused-import

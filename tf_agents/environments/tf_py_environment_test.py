@@ -154,21 +154,18 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
   def testMultipleReset(self, batch_py_env):
-    if tf.executing_eagerly():
-      self.skipTest('b/123881757')
-
     py_env = PYEnvironmentMock()
     if batch_py_env:
       batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
       tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
     else:
       tf_env = tf_py_environment.TFPyEnvironment(py_env)
-    reset = tf_env.reset()
-    self.evaluate(reset)
+
+    self.evaluate(tf_env.reset())
     self.assertEqual(1, py_env.resets)
-    self.evaluate(reset)
+    self.evaluate(tf_env.reset())
     self.assertEqual(2, py_env.resets)
-    self.evaluate(reset)
+    self.evaluate(tf_env.reset())
     self.assertEqual(3, py_env.resets)
 
   @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})

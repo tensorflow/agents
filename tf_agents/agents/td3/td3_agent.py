@@ -29,6 +29,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -39,7 +40,6 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-import gin.tf
 
 
 class Td3Info(collections.namedtuple(

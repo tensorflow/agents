@@ -25,6 +25,7 @@ from __future__ import print_function
 
 import abc
 import collections
+import gin
 import numpy as np
 import six
 import tensorflow as tf
@@ -33,7 +34,6 @@ from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
-import gin.tf
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
