@@ -23,6 +23,7 @@ import abc
 import collections
 import tensorflow as tf
 
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
@@ -75,6 +76,10 @@ class TFAgent(tf.Module):
         op is run.  Defaults to the global_step.
     """
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
+    if not isinstance(time_step_spec, ts.TimeStep):
+      raise ValueError(
+          "The `time_step_spec` must be an instance of `TimeStep`, but is `{}`."
+          .format(type(time_step_spec)))
 
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec

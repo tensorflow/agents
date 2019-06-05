@@ -24,6 +24,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
@@ -144,6 +145,10 @@ class Base(tf.Module):
     """
     super(Base, self).__init__(name=name)
     common.assert_members_are_not_overridden(base_cls=Base, instance=self)
+    if not isinstance(time_step_spec, ts.TimeStep):
+      raise ValueError(
+          'The `time_step_spec` must be an instance of `TimeStep`, but is `{}`.'
+          .format(type(time_step_spec)))
 
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
