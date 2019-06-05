@@ -178,6 +178,18 @@ class TrajectoryTest(test_utils.TestCase):
     self.assertAllEqual(policy_step.action, trajectories.action[:, :-1])
     self.assertAllEqual(policy_step.info, trajectories.policy_info[:, :-1])
 
+  def testToTransitionSpec(self):
+    env = tf_py_environment.TFPyEnvironment(
+        drivers_test_utils.PyEnvironmentMock())
+    policy = drivers_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec())
+    trajectory_spec = policy.trajectory_spec
+    ts_spec, ps_spec, nts_spec = trajectory.to_transition_spec(trajectory_spec)
+
+    self.assertAllEqual(ts_spec, env.time_step_spec())
+    self.assertAllEqual(ps_spec.action, env.action_spec())
+    self.assertAllEqual(nts_spec, env.time_step_spec())
+
 
 if __name__ == '__main__':
   tf.test.main()

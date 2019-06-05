@@ -516,6 +516,25 @@ def to_transition(trajectory, next_trajectory=None):
   return [time_steps, policy_steps, next_time_steps]
 
 
+def to_transition_spec(trajectory_spec):
+  """Create a transition spec from a trajectory spec.
+
+  Args:
+    trajectory_spec: An instance of `Trajectory` representing trajectory specs.
+
+  Returns:
+    A tuple `(time_steps, policy_steps, next_time_steps)` specs.
+  """
+  policy_step_spec = policy_step.PolicyStep(
+      action=trajectory_spec.action, state=(), info=trajectory_spec.policy_info)
+  time_step_spec = ts.TimeStep(
+      trajectory_spec.step_type,
+      reward=trajectory_spec.reward,
+      discount=trajectory_spec.discount,
+      observation=trajectory_spec.observation)
+  return [time_step_spec, policy_step_spec, time_step_spec]
+
+
 def _validate_rank(variable, min_rank, max_rank=None):
   """Validates if a variable has the correct rank.
 
