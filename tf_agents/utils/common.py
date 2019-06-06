@@ -96,17 +96,20 @@ def function_in_tf1(*args, **kwargs):
   def maybe_wrap(fn):
     """Helper function."""
     # We're in TF1 mode and want to wrap in common.function to get autodeps.
+    wrapped = [None]
     @functools.wraps(fn)
     def with_check_resource_vars(*fn_args, **fn_kwargs):
+      """Helper function for calling common.function."""
       if has_eager_been_enabled():
         # We're either in eager mode or in tf.function mode (no in-between); so
         # autodep-like behavior is already expected of fn.
         return fn(*fn_args, **fn_kwargs)
       if not resource_variables_enabled():
         raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
-      return fn(*fn_args, **fn_kwargs)
-    wrapped = function(*args, **kwargs)(with_check_resource_vars)
-    return wrapped
+      if wrapped[0] is None:
+        wrapped[0] = function(*args, **kwargs)(fn)
+      return wrapped[0](*fn_args, **fn_kwargs)  # pylint: disable=not-callable
+    return with_check_resource_vars
   return maybe_wrap
 
 
