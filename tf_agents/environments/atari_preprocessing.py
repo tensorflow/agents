@@ -34,8 +34,7 @@ import gin
 from gym.core import Wrapper
 from gym.spaces.box import Box
 import numpy as np
-import tensorflow as tf
-
+import cv2
 
 @gin.configurable
 class AtariPreprocessing(Wrapper):
@@ -195,8 +194,8 @@ class AtariPreprocessing(Wrapper):
           self.screen_buffer[1],
           out=self.screen_buffer[0])
 
-    transformed_image = tf.image.resize(
-        images=self.screen_buffer[0][..., np.newaxis],
-        size=(self.screen_size, self.screen_size),
-        method=tf.image.ResizeMethod.AREA)
-    return transformed_image.numpy().astype(np.uint8)
+    transformed_image = cv2.resize(
+        self.screen_buffer[0], (self.screen_size, self.screen_size),
+        interpolation=cv2.INTER_AREA)
+    int_image = np.asarray(transformed_image, dtype=np.uint8)
+    return np.expand_dims(int_image, axis=2)
