@@ -19,8 +19,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import random
 
+from absl import flags
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -801,6 +803,50 @@ class FunctionTest(test_utils.TestCase):
     z = add(tf.constant(1.0), 2.0)
 
     self.assertAllClose(3.0, self.evaluate(z))
+
+
+class SpecSaveTest(tf.test.TestCase, parameterized.TestCase):
+
+  def test_save_and_load(self):
+    spec = {
+        'spec_1':
+            tensor_spec.TensorSpec((2, 3), tf.int32),
+        'bounded_spec_1':
+            tensor_spec.BoundedTensorSpec((2, 3), tf.float32, -10, 10),
+        'bounded_spec_2':
+            tensor_spec.BoundedTensorSpec((2, 3), tf.int8, -10, -10),
+        'bounded_array_spec_3':
+            tensor_spec.BoundedTensorSpec((2,), tf.int32, [-10, -10], [10, 10]),
+        'bounded_array_spec_4':
+            tensor_spec.BoundedTensorSpec((2,), tf.float16, [-10, -9], [10, 9]),
+        'dict_spec': {
+            'spec_2':
+                tensor_spec.TensorSpec((2, 3), tf.float32),
+            'bounded_spec_2':
+                tensor_spec.BoundedTensorSpec((2, 3), tf.int16, -10, 10)
+        },
+        'tuple_spec': (
+            tensor_spec.TensorSpec((2, 3), tf.int32),
+            tensor_spec.BoundedTensorSpec((2, 3), tf.float64, -10, 10),
+        ),
+        'list_spec': [
+            tensor_spec.TensorSpec((2, 3), tf.int64),
+            (tensor_spec.TensorSpec((2, 3), tf.float32),
+             tensor_spec.BoundedTensorSpec((2, 3), tf.float32, -10, 10)),
+        ],
+    }
+
+    spec_save_path = os.path.join(flags.FLAGS.test_tmpdir, 'spec.tfrecord')
+    common.save_spec(spec, spec_save_path)
+
+    loaded_spec_nest = common.load_spec(spec_save_path)
+
+    self.assertAllEqual(sorted(spec.keys()), sorted(loaded_spec_nest.keys()))
+
+    for expected_spec, loaded_spec in zip(
+        tf.nest.flatten(spec), tf.nest.flatten(loaded_spec_nest)):
+      self.assertAllEqual(expected_spec.shape, loaded_spec.shape)
+      self.assertEqual(expected_spec.dtype, loaded_spec.dtype)
 
 
 if __name__ == '__main__':
