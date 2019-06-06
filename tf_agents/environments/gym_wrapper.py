@@ -26,7 +26,7 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents import specs
-from tf_agents.environments import wrappers
+from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -95,7 +95,7 @@ def _spec_from_gym_space(space, dtype_map=None):
         'The gym space {} is currently not supported.'.format(space))
 
 
-class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
+class GymWrapper(py_environment.PyEnvironment):
   """Base wrapper implementing PyEnvironmentBaseWrapper interface for Gym envs.
 
   Action and observation specs are automatically generated from the action and
@@ -108,7 +108,7 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
                spec_dtype_map=None,
                match_obs_space_dtype=True,
                auto_reset=True):
-    super(GymWrapper, self).__init__(gym_env)
+    super(GymWrapper, self).__init__()
 
     self._gym_env = gym_env
     self._discount = discount
@@ -198,3 +198,6 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
 
   def close(self):
     return self._gym_env.close()
+
+  def render(self, mode='rgb_array'):
+    return self._gym_env.render(mode)
