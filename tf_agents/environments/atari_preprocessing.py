@@ -228,4 +228,4 @@ class AtariPreprocessing(object):
         images=tf.expand_axis(self.screen_buffer[0], axis=-1),
         size=(self.screen_size, self.screen_size),
         method=tf.image.ResizeMethod.AREA)
-    return tf.cast(transformed_image, tf.uint8)
+    return tf.cast(transformed_image, tf.uint8).numpy()
