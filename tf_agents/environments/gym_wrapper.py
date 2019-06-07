@@ -129,6 +129,10 @@ class GymWrapper(py_environment.PyEnvironment):
   def gym(self):
     return self._gym_env
 
+  def __getattr__(self, name):
+    """Forward all other calls to the base environment."""
+    return getattr(self._env, name)
+
   def get_info(self):
     """Returns the gym environment info returned on the last step."""
     return self._info
