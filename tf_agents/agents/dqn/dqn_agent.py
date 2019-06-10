@@ -330,7 +330,7 @@ class DqnAgent(tf_agent.TFAgent):
         if the number of actions is greater than 1.
     """
     # Check that `experience` includes two outer dimensions [B, T, ...]. This
-    # method requires `experience` to include the time dimension.
+    # method requires a time dimension to compute the loss properly.
     self._check_trajectory_dimensions(experience)
 
     if self._n_step_update == 1:
@@ -370,11 +370,17 @@ class DqnAgent(tf_agent.TFAgent):
         # When computing discounted return, we need to throw out the last time
         # index of both reward and discount, which are filled with dummy values
         # to match the dimensions of the observation.
+        rewards = reward_scale_factor * experience.reward[:, :-1]
+        discounts = gamma * experience.discount[:, :-1]
+
+        # TODO(b/134618876): Properly handle Trajectories that include episode
+        # boundaries with nonzero discount.
+
         # TODO(b/131557265): Replace value_ops.discounted_return with a method
         # that only computes the single value needed.
         n_step_return = value_ops.discounted_return(
-            rewards=reward_scale_factor * experience.reward[:, :-1],
-            discounts=gamma * experience.discount[:, :-1],
+            rewards=rewards,
+            discounts=discounts,
             final_value=next_q_values,
             time_major=False)
 

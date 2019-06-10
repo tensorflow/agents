@@ -43,7 +43,6 @@ tf_agents/agents/dqn/examples/v1/train_eval_atari \
 
 Additional flags are available such as `--replay_buffer_capacity` and
 `--n_step_update`.
-
 """
 
 from __future__ import absolute_import

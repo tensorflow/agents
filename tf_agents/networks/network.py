@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+import sys
 import six
 import tensorflow as tf
 
@@ -103,8 +104,8 @@ class Network(keras_network.Network):
 
   def _build(self):
     if not self.built and self.input_tensor_spec is not None:
-      random_input = tensor_spec.sample_spec_nest(self.input_tensor_spec,
-                                                  outer_dims=(1,))
+      random_input = tensor_spec.sample_spec_nest(
+          self.input_tensor_spec, outer_dims=(1,))
       step_type = tf.expand_dims(time_step.StepType.FIRST, 0)
       self.__call__(random_input, step_type, None)
 
@@ -126,8 +127,10 @@ class Network(keras_network.Network):
     try:
       self._build()
     except ValueError as e:
-      raise ValueError("""Failed to call build on the network when accessing
-                          variables. Message: {!r}.""".format(e))
+      traceback = sys.exc_info()[2]
+      six.reraise(
+          ValueError, "Failed to call build on the network when accessing "
+          "variables. Message: {!r}.".format(e), traceback)
     return self.weights
 
   def copy(self, **kwargs):
@@ -154,12 +157,9 @@ class Network(keras_network.Network):
 class DistributionNetwork(Network):
   """Base class for networks which generate Distributions as their output."""
 
-  def __init__(self, input_tensor_spec, state_spec, output_spec,
-               name):
+  def __init__(self, input_tensor_spec, state_spec, output_spec, name):
     super(DistributionNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=state_spec,
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=state_spec, name=name)
     self._output_spec = output_spec
 
   @property

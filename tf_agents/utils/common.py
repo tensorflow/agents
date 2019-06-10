@@ -20,13 +20,17 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+import os
 from absl import logging
 
 import tensorflow as tf
 
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
+from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 MISSING_RESOURCE_VARIABLES_ERROR = """
 Resource variables are not enabled.  Please enable them by adding the following
@@ -93,6 +97,7 @@ def function_in_tf1(*args, **kwargs):
   Returns:
     A callable that wraps a function.
   """
+
   def maybe_wrap(fn):
     """Helper function."""
     # We're in TF1 mode and want to wrap in common.function to get autodeps.
@@ -133,10 +138,8 @@ def create_variable(name,
         initial_value = lambda: initializer(shape)
       else:
         initial_value = initializer
-    return tf.compat.v2.Variable(initial_value,
-                                 trainable=trainable,
-                                 dtype=dtype,
-                                 name=name)
+    return tf.compat.v2.Variable(
+        initial_value, trainable=trainable, dtype=dtype, name=name)
   collections = [tf.compat.v1.GraphKeys.GLOBAL_VARIABLES]
   if use_local_variable:
     collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
@@ -156,7 +159,9 @@ def create_variable(name,
       trainable=trainable)
 
 
-def soft_variables_update(source_variables, target_variables, tau=1.0,
+def soft_variables_update(source_variables,
+                          target_variables,
+                          tau=1.0,
                           sort_variables_by_name=False):
   """Performs a soft/hard update of variables from the source to the target.
 
@@ -174,6 +179,7 @@ def soft_variables_update(source_variables, target_variables, tau=1.0,
       update.
     sort_variables_by_name: A bool, when True would sort the variables by name
       before doing the update.
+
   Returns:
     An operation that updates target variables from source variables.
   Raises:
@@ -205,6 +211,7 @@ def join_scope(parent_scope, child_scope):
   Args:
     parent_scope: (string) parent/prefix scope.
     child_scope: (string) child/suffix scope.
+
   Returns:
     joined scope: (string) parent and child scopes joined by /.
   """
@@ -221,16 +228,15 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
   Note: this supports multiple outer dimensions (e.g. time, batch etc).
 
   Args:
-    q_values: A float tensor of shape
-      [outer_dim1, ... outer_dimK, action_dim1, ..., action_dimJ].
-    actions: An int tensor of shape
-      [outer_dim1, ... outer_dimK]    if multi_dim_actions=False
-      [outer_dim1, ... outer_dimK, J] if multi_dim_actions=True
-      I.e. in the multidimensional case, actions[outer_dim1, ... outer_dimK]
-      is a vector [actions_1, ..., actions_J] where each element actions_j is an
-      action in the range [0, num_actions_j).
-      While in the single dimensional case, actions[outer_dim1, ... outer_dimK]
-      is a scalar.
+    q_values: A float tensor of shape [outer_dim1, ... outer_dimK, action_dim1,
+      ..., action_dimJ].
+    actions: An int tensor of shape [outer_dim1, ... outer_dimK]    if
+      multi_dim_actions=False [outer_dim1, ... outer_dimK, J] if
+      multi_dim_actions=True I.e. in the multidimensional case,
+      actions[outer_dim1, ... outer_dimK] is a vector [actions_1, ...,
+      actions_J] where each element actions_j is an action in the range [0,
+      num_actions_j). While in the single dimensional case, actions[outer_dim1,
+      ... outer_dimK] is a scalar.
     multi_dim_actions: whether the actions are multidimensional.
     # TODO(kbanoop): Add an optional action_spec for validation.
 
@@ -250,8 +256,7 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
 
   outer_shape = tf.shape(input=actions)
   batch_indices = tf.meshgrid(
-      *[tf.range(outer_shape[i]) for i in range(batch_dims)],
-      indexing='ij')
+      *[tf.range(outer_shape[i]) for i in range(batch_dims)], indexing='ij')
   batch_indices = [
       tf.expand_dims(batch_index, -1) for batch_index in batch_indices
   ]
@@ -277,9 +282,9 @@ def periodically(body, period, name='periodically'):
   or conditionals.
 
   Args:
-    body: callable that returns the tensorflow op to be performed every time
-      an internal counter is divisible by the period. The op must have no
-      output (for example, a tf.group()).
+    body: callable that returns the tensorflow op to be performed every time an
+      internal counter is divisible by the period. The op must have no output
+      (for example, a tf.group()).
     period: inverse frequency with which to perform the op.
     name: name of the variable_scope.
 
@@ -319,8 +324,8 @@ class Periodically(tf.Module):
       body: callable that returns the tensorflow op to be performed every time
         an internal counter is divisible by the period. The op must have no
         output (for example, a tf.group()).
-      period: inverse frequency with which to perform the op.
-        It can be a Tensor or a Variable.
+      period: inverse frequency with which to perform the op. It can be a Tensor
+        or a Variable.
       name: name of the object.
 
     Raises:
@@ -337,6 +342,7 @@ class Periodically(tf.Module):
     self._counter = create_variable(self.name + '/counter', 0)
 
   def __call__(self):
+
     def call(strategy=None):
       del strategy  # unused
       if self._period is None:
@@ -351,7 +357,7 @@ class Periodically(tf.Module):
     # TODO(b/129083817) add an explicit unit test to ensure correct behavior
     ctx = tf.distribute.get_replica_context()
     if ctx:
-      return  tf.distribute.get_replica_context().merge_call(call)
+      return tf.distribute.get_replica_context().merge_call(call)
     else:
       return call()
 
@@ -369,8 +375,8 @@ class EagerPeriodically(object):
       body: callable that returns the tensorflow op to be performed every time
         an internal counter is divisible by the period. The op must have no
         output (for example, a tf.group()).
-      period: inverse frequency with which to perform the op.
-        Must be a simple python int/long.
+      period: inverse frequency with which to perform the op. Must be a simple
+        python int/long.
 
     Raises:
       TypeError: if body is not a callable.
@@ -400,6 +406,7 @@ def clip_to_spec(value, spec):
   Args:
     value: (tensor) value to be clipped.
     spec: (BoundedTensorSpec) spec containing min. and max. values for clipping.
+
   Returns:
     clipped_value: (tensor) `value` clipped to be compatible with `spec`.
   """
@@ -423,6 +430,7 @@ def scale_to_spec(tensor, spec):
   Args:
     tensor: A [batch x n] tensor with values in the range of [-1, 1].
     spec: (BoundedTensorSpec) to use for scaling the action.
+
   Returns:
     A batch scaled the given spec bounds.
   """
@@ -456,8 +464,8 @@ def ornstein_uhlenbeck_process(initial_value,
     initial_value: Initial value of the process.
     damping: The rate at which the noise trajectory is damped towards the mean.
       We must have 0 <= damping <= 1, where a value of 0 gives an undamped
-      random walk and a value of 1 gives uncorrelated Gaussian noise. Hence
-      in most applications a small non-zero value is appropriate.
+      random walk and a value of 1 gives uncorrelated Gaussian noise. Hence in
+      most applications a small non-zero value is appropriate.
     stddev: Standard deviation of the Gaussian component.
     seed: Seed for random number generation.
     scope: Scope of the variables.
@@ -506,8 +514,8 @@ class OUProcess(tf.Module):
     self._stddev = stddev
     self._seed = seed
     with tf.name_scope(scope):
-      self._x = tf.compat.v2.Variable(initial_value=initial_value,
-                                      trainable=False)
+      self._x = tf.compat.v2.Variable(
+          initial_value=initial_value, trainable=False)
 
   def __call__(self):
     noise = tf.random.normal(
@@ -609,16 +617,15 @@ def discounted_future_sum(values, gamma, num_steps):
     ValueError: If values is not of rank 2.
   """
   if values.get_shape().ndims != 2:
-    raise ValueError(
-        'Input must be rank 2 tensor.  Got %d.' % values.get_shape().ndims)
+    raise ValueError('Input must be rank 2 tensor.  Got %d.' %
+                     values.get_shape().ndims)
 
   (batch_size, total_steps) = values.get_shape().as_list()
 
   num_steps = tf.minimum(num_steps, total_steps)
   discount_filter = tf.reshape(gamma**tf.cast(tf.range(num_steps), tf.float32),
                                [-1, 1, 1])
-  padded_values = tf.concat(
-      [values, tf.zeros([batch_size, num_steps - 1])], 1)
+  padded_values = tf.concat([values, tf.zeros([batch_size, num_steps - 1])], 1)
 
   convolved_values = tf.squeeze(
       tf.nn.conv1d(
@@ -648,8 +655,7 @@ def discounted_future_sum_masked(values, gamma, num_steps, episode_lengths):
     ValueError: If values is not of rank 2, or if total_steps is not defined.
   """
   if values.shape.ndims != 2:
-    raise ValueError(
-        'Input must be a rank 2 tensor.  Got %d.' % values.shape)
+    raise ValueError('Input must be a rank 2 tensor.  Got %d.' % values.shape)
 
   total_steps = tf.compat.dimension_value(values.shape[1])
   if total_steps is None:
@@ -681,8 +687,8 @@ def shift_values(values, gamma, num_steps, final_values=None):
     ValueError: If values is not of rank 2.
   """
   if values.get_shape().ndims != 2:
-    raise ValueError(
-        'Input must be rank 2 tensor.  Got %d.' % values.get_shape().ndims)
+    raise ValueError('Input must be rank 2 tensor.  Got %d.' %
+                     values.get_shape().ndims)
 
   (batch_size, total_steps) = values.get_shape().as_list()
   num_steps = tf.minimum(num_steps, total_steps)
@@ -692,7 +698,7 @@ def shift_values(values, gamma, num_steps, final_values=None):
 
   padding_exponent = tf.expand_dims(
       tf.cast(tf.range(num_steps, 0, -1), tf.float32), 0)
-  final_pad = tf.expand_dims(final_values, 1) * gamma ** padding_exponent
+  final_pad = tf.expand_dims(final_values, 1) * gamma**padding_exponent
   return tf.concat([
       gamma**tf.cast(num_steps, tf.float32) * values[:, num_steps:], final_pad
   ], 1)
@@ -717,8 +723,8 @@ def get_contiguous_sub_episodes(next_time_steps_discount):
 
   Args:
     next_time_steps_discount: Tensor of shape [batch_size, total_steps]
-      corresponding to environment discounts on next time steps
-      (i.e. next_time_steps.discount).
+      corresponding to environment discounts on next time steps (i.e.
+      next_time_steps.discount).
 
   Returns:
     A float Tensor of shape [batch_size, total_steps] specifying mask including
@@ -800,9 +806,9 @@ def compute_returns(rewards, discounts):
   #   R_t = r_t + discount * (r_t+1 + discount * (r_t+2 * discount( ...
   # As discount is 0 for terminal states, ends of episode will not include
   #   reward from subsequent timesteps.
-  returns = tf.scan(discounted_accumulate_rewards,
-                    [rewards, discounts],
-                    initializer=tf.constant(0, dtype=discounts.dtype))
+  returns = tf.scan(
+      discounted_accumulate_rewards, [rewards, discounts],
+      initializer=tf.constant(0, dtype=discounts.dtype))
   returns = tf.reverse(returns, [0])
   return returns
 
@@ -877,8 +883,8 @@ def replicate(tensor, outer_shape):
 
   Args:
     tensor: A tf.Tensor.
-    outer_shape: Outer shape given as a 1D tensor of type
-      list, numpy or tf.Tensor.
+    outer_shape: Outer shape given as a 1D tensor of type list, numpy or
+      tf.Tensor.
 
   Returns:
     The replicated tensor.
@@ -897,9 +903,8 @@ def replicate(tensor, outer_shape):
     return tensor
 
   # Replicate tensor "t" along the 1st dimension.
-  tiled_tensor = tf.tile(
-      tensor,
-      [tf.reduce_prod(input_tensor=outer_shape)] + [1] * (tensor_ndims - 1))
+  tiled_tensor = tf.tile(tensor, [tf.reduce_prod(input_tensor=outer_shape)] +
+                         [1] * (tensor_ndims - 1))
 
   # Reshape to match outer_shape.
   target_shape = tf.concat([outer_shape, tf.shape(input=tensor)], axis=0)
@@ -934,8 +939,8 @@ def assert_members_are_not_overridden(base_cls,
 
   instance_type = type(instance)
   subclass_members = set(instance_type.__dict__.keys())
-  public_members = set([
-      m for m in base_cls.__dict__.keys() if not m.startswith('_')])
+  public_members = set(
+      [m for m in base_cls.__dict__.keys() if not m.startswith('_')])
   common_members = public_members & subclass_members
 
   if white_list:
@@ -945,7 +950,8 @@ def assert_members_are_not_overridden(base_cls,
 
   overridden_members = [
       m for m in common_members
-      if base_cls.__dict__[m] != instance_type.__dict__[m]]
+      if base_cls.__dict__[m] != instance_type.__dict__[m]
+  ]
   if overridden_members:
     raise ValueError(
         'Subclasses of {} cannot override most of its base members, but '
@@ -981,7 +987,52 @@ def transpose_batch_time(x):
   x_rank = tf.rank(x)
   x_t = tf.transpose(a=x, perm=tf.concat(([1, 0], tf.range(2, x_rank)), axis=0))
   x_t.set_shape(
-      tf.TensorShape([
-          x_static_shape.dims[1].value, x_static_shape.dims[0].value
-      ]).concatenate(x_static_shape[2:]))
+      tf.TensorShape(
+          [x_static_shape.dims[1].value,
+           x_static_shape.dims[0].value]).concatenate(x_static_shape[2:]))
   return x_t
+
+
+def save_spec(spec, file_path):
+  """Saves the given spec nest as a StructProto.
+
+  **Note**: Currently this will convert BoundedTensorSpecs into regular
+    TensorSpecs.
+
+  Args:
+    spec: A nested structure of TensorSpecs.
+    file_path: Path to save the encoded spec to.
+  """
+  signature_encoder = nested_structure_coder.StructureCoder()
+  spec = tensor_spec.from_spec(spec)
+  spec_proto = signature_encoder.encode_structure(spec)
+
+  dir_path = os.path.dirname(file_path)
+  if not tf.io.gfile.exists(dir_path):
+    tf.io.gfile.makedirs(dir_path)
+
+  with tf.compat.v2.io.gfile.GFile(file_path, 'wb') as gfile:
+    gfile.write(spec_proto.SerializeToString())
+
+
+def load_spec(file_path):
+  """Loads a data spec from a file.
+
+  **Note**: Types for Named tuple classes will not match. Users need to convert
+    to these manually:
+
+    # Convert from:
+    # 'tensorflow.python.saved_model.nested_structure_coder.Trajectory'
+    # to proper TrajectorySpec.
+    # trajectory_spec = trajectory.Trajectory(*spec)
+
+  Args:
+    file_path: Path to the saved data spec.
+  Returns:
+    A nested structure of TensorSpecs.
+  """
+  with tf.compat.v2.io.gfile.GFile(file_path, 'rb') as gfile:
+    signature_proto = struct_pb2.StructuredValue.FromString(gfile.read())
+
+  signature_encoder = nested_structure_coder.StructureCoder()
+  return signature_encoder.decode_proto(signature_proto)
