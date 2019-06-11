@@ -34,8 +34,8 @@ DEFAULT_ATARI_GYM_WRAPPERS = (atari_preprocessing.AtariPreprocessing,)
 # it's much better to have stacking implemented as part of replay-buffer/agent.
 # As soon as this functionality in TF-Agents is ready and verified, this set of
 # wrappers will be removed.
-DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = (
-    atari_preprocessing.AtariPreprocessing, atari_wrappers.FrameStack4)
+DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = DEFAULT_ATARI_GYM_WRAPPERS + (
+    atari_wrappers.FrameStack4,)
 
 
 @gin.configurable
