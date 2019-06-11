@@ -231,7 +231,7 @@ class ProcessPyEnvironment(object):
       self._conn.close()
       self._process.join(5)
       raise result
-    assert result is self._READY, result
+    assert result == self._READY, result
 
   def observation_spec(self):
     if not self._observation_spec:
