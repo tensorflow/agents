@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import gin
 import gym
 import gym.spaces
 import numpy as np
@@ -41,7 +42,7 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def _reset(self):
     time_step = self._env.reset()
     # TODO Compute intrinsic reward
-    intrinsic_reward = _get_intrinsic_reward(self, time_step.observation)
+    intrinsic_reward = self._get_intrinsic_reward(time_step.observation)
     time_step._replace(reward=time_step.reward + intrinsic_reward)
 
     return time_step
@@ -49,7 +50,7 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def _step(self, action):
     time_step = self._env.step(action)
     # TODO Compute intrinsic reward
-    intrinsic_reward = _get_intrinsic_reward(self, time_step.observation)
+    intrinsic_reward = self._get_intrinsic_reward(time_step.observation)
     time_step._replace(reward=time_step.reward + intrinsic_reward)
 
     return time_step
