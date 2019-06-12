@@ -40,6 +40,8 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
     super(RNDWrapper, self).__init__(env)
 
     # TODO Freeze rnd_target_net
+    print('[rnd_wrapper.py] self.time_step_spec().observation: ', self.time_step_spec().observation)
+    print('[rnd_wrapper.py] type(self.time_step_spec().observation): ', type(self.time_step_spec().observation))
     self.rnd_target_net = rnd_network.RNDNetwork(
         self.time_step_spec().observation,
         self.action_spec(),
@@ -71,15 +73,21 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def _get_intrinsic_reward(self, time_step):
     # TODO Implement
     # TODO Check type / dtype / shape
-    print(time_step)
+    print('[rnd_wrapper.py] time_step: ', time_step)
+    print('[rnd_wrapper.py] time_step.observation: ', time_step.observation)
+    print('[rnd_wrapper.py] type(time_step.observation): ', type(time_step.observation))
+    print('[rnd_wrapper.py] time_step.step_type: ', time_step.step_type)
+    print('[rnd_wrapper.py] type(time_step.step_type): ', type(time_step.step_type))
     # print('Observation Type: ', type(tf.convert_to_tensor(time_step.observation)))
     # print('Step type Type: ', type(tf.convert_to_tensor(time_step.step_type)))
     observation = tf.convert_to_tensor(time_step.observation)
     step_type = tf.convert_to_tensor(time_step.step_type)
     target_value, _ = self.rnd_target_net(observation,
                                           step_type)
+    print('[rnd_wrapper.py] target_value: ', target_value)
     predictor_value, _ = self.rnd_predictor_net(observation,
                                                 step_type)
+    print('[rnd_wrapper.py] predictor_value: ', predictor_value)
     # print('Target Value: ', target_value)
     # print('Predictor Value: ', predictor_value)
     return np.ones((), dtype=np.float32)
