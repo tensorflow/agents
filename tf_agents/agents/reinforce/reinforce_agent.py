@@ -194,7 +194,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       variables_to_train += self._value_network.trainable_weights
     grads = tape.gradient(loss_info.loss, variables_to_train)
 
-    grads_and_vars = zip(grads, variables_to_train)
+    grads_and_vars = list(zip(grads, variables_to_train))
     if self._gradient_clipping:
       grads_and_vars = eager_utils.clip_gradient_norms(
           grads_and_vars, self._gradient_clipping)

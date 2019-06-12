@@ -254,7 +254,8 @@ class SacAgent(tf_agent.TFAgent):
     return tf_agent.LossInfo(loss=total_loss, extra=())
 
   def _apply_gradients(self, gradients, variables, optimizer):
-    grads_and_vars = zip(gradients, variables)
+    # list(...) is required for Python3.
+    grads_and_vars = list(zip(gradients, variables))
     if self._gradient_clipping is not None:
       grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
                                                        self._gradient_clipping)

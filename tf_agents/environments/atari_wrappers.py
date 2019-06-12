@@ -94,3 +94,22 @@ class AtariTimeLimit(wrappers.PyEnvironmentBaseWrapper):
   @property
   def game_over(self):
     return self._num_steps >= self._duration or self.gym.game_over
+
+
+class FireOnReset(gym.Wrapper):
+  """Start every episode with action 1 (FIRE) + another action (2).
+
+  In some environments (e.g., BeamRider, Breakout, Tennis) nothing
+  happens until the player presses the FIRE button. This wrapper can
+  be helpful in those environments, but it is not necessary.
+  """
+
+  def reset(self):
+    observation = self.env.reset()
+    # The following code is from https://github.com/openai/gym/...
+    # ...blob/master/gym/wrappers/atari_preprocessing.py
+    action_meanings = self.env.unwrapped.get_action_meanings()
+    if action_meanings[1] == 'FIRE' and len(action_meanings) >= 3:
+      self.env.step(1)
+      observation, _, _, _ = self.env.step(2)
+    return observation
