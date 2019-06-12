@@ -30,6 +30,7 @@ from tf_agents import specs
 from tf_agents.environments import wrappers
 from tf_agents.networks import rnd_network
 from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
@@ -39,13 +40,13 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
     super(RNDWrapper, self).__init__(env)
 
     # TODO Freeze rnd_target_net
-    rnd_target_net = rnd_network.RNDNetwork(
+    self.rnd_target_net = rnd_network.RNDNetwork(
         self.time_step_spec().observation,
         self.action_spec(),
         fc_layer_params=(100, ),
     )
 
-    rnd_predicctor_net = rnd_network.RNDNetwork(
+    self.rnd_predictor_net = rnd_network.RNDNetwork(
         self.time_step_spec().observation,
         self.action_spec(),
         fc_layer_params=(100, ),
@@ -54,7 +55,7 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def _reset(self):
     time_step = self._env.reset()
     # TODO Compute intrinsic reward
-    intrinsic_reward = self._get_intrinsic_reward(time_step.observation)
+    intrinsic_reward = self._get_intrinsic_reward(time_step)
     time_step = time_step._replace(reward=time_step.reward + intrinsic_reward)
 
     return time_step
@@ -62,12 +63,23 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def _step(self, action):
     time_step = self._env.step(action)
     # TODO Compute intrinsic reward
-    intrinsic_reward = self._get_intrinsic_reward(time_step.observation)
+    intrinsic_reward = self._get_intrinsic_reward(time_step)
     time_step = time_step._replace(reward=time_step.reward + intrinsic_reward)
 
     return time_step
   
-  def _get_intrinsic_reward(self, observation):
+  def _get_intrinsic_reward(self, time_step):
     # TODO Implement
     # TODO Check type / dtype / shape
+    print(time_step)
+    # print('Observation Type: ', type(tf.convert_to_tensor(time_step.observation)))
+    # print('Step type Type: ', type(tf.convert_to_tensor(time_step.step_type)))
+    observation = tf.convert_to_tensor(time_step.observation)
+    step_type = tf.convert_to_tensor(time_step.step_type)
+    target_value, _ = self.rnd_target_net(observation,
+                                          step_type)
+    predictor_value, _ = self.rnd_predictor_net(observation,
+                                                step_type)
+    # print('Target Value: ', target_value)
+    # print('Predictor Value: ', predictor_value)
     return np.ones((), dtype=np.float32)

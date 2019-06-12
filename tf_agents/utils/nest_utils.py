@@ -369,6 +369,16 @@ def get_outer_rank(tensors, specs):
   tf.nest.assert_same_structure(tensors, specs)
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [s.shape for s in tf.nest.flatten(specs)]
+  
+  print(specs)
+  print(specs.shape)
+  for spec in tf.nest.flatten(specs):
+    print(spec)
+    print(spec.shape)
+  for spec_shape in spec_shapes:
+    print(spec_shape)
+    print(type(spec_shape))
+  raise ValueError('What')
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
