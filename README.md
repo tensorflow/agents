@@ -3,7 +3,11 @@
 *NOTE:* Current TF-Agents pre-release is under active development and
 interfaces may change at any time. Feel free to provide feedback and comments.
 
-The documentation, examples and tutorials will grow over the next few weeks.
+To get started, we recommend checking out one of our Colab tutorials. If you
+need an intro to RL (or a quick recap),
+[start here](tf_agents/colabs/0_intro_rl.ipynb). Otherwise, check out our
+[DQN tutorial](tf_agents/colabs/1_dqn_tutorial.ipynb) to get an agent up and
+running in the Cartpole environment.
 
 ## Table of contents
 
@@ -39,8 +43,8 @@ Currently the following algorithms are available under TF-Agents:
 <a id='Tutorials'></a>
 ## Tutorials
 
-See [`tf_agents/colabs/`](https://github.com/tensorflow/agents/tree/master/tf_agents/colabs/)
-for tutorials on the major components provided.
+See [`tf_agents/colabs/`](tf_agents/colabs/) for tutorials on the major
+components provided.
 
 <a id='Examples'></a>
 ## Examples
