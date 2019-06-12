@@ -43,7 +43,7 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
     time_step = self._env.reset()
     # TODO Compute intrinsic reward
     intrinsic_reward = self._get_intrinsic_reward(time_step.observation)
-    time_step._replace(reward=time_step.reward + intrinsic_reward)
+    time_step = time_step._replace(reward=time_step.reward + intrinsic_reward)
 
     return time_step
 
@@ -51,7 +51,7 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
     time_step = self._env.step(action)
     # TODO Compute intrinsic reward
     intrinsic_reward = self._get_intrinsic_reward(time_step.observation)
-    time_step._replace(reward=time_step.reward + intrinsic_reward)
+    time_step = time_step._replace(reward=time_step.reward + intrinsic_reward)
 
     return time_step
   
