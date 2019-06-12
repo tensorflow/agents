@@ -58,4 +58,4 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def _get_intrinsic_reward(self, observation):
     # TODO Implement
     # TODO Check type / dtype / shape
-    return 0
+    return np.ones((), dtype=np.float32)
