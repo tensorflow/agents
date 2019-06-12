@@ -28,6 +28,7 @@ import tensorflow as tf
 
 from tf_agents import specs
 from tf_agents.environments import wrappers
+from tf_agents.networks import rnd_network
 from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -37,7 +38,18 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
   def __init__(self, env):
     super(RNDWrapper, self).__init__(env)
 
-    # TODO Initialize RND target network and RND predictor network
+    # TODO Freeze rnd_target_net
+    rnd_target_net = rnd_network.RNDNetwork(
+        self.time_step_spec().observation,
+        self.action_spec(),
+        fc_layer_params=(100, ),
+    )
+
+    rnd_predicctor_net = rnd_network.RNDNetwork(
+        self.time_step_spec().observation,
+        self.action_spec(),
+        fc_layer_params=(100, ),
+    )
 
   def _reset(self):
     time_step = self._env.reset()
