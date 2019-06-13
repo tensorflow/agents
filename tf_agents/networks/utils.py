@@ -37,8 +37,8 @@ def maybe_permanent_dropout(rate, noise_shape=None, seed=None, permanent=False):
   """
   if permanent:
     def _keras_dropout(x):
-      return tf.keras.dropout(
-          x, level=rate, noise_shape=noise_shape, seed=seed)
+      return tf.nn.dropout(
+          x, rate=rate, noise_shape=noise_shape, seed=seed)
     return tf.keras.layers.Lambda(_keras_dropout)
   return tf.keras.layers.Dropout(rate, noise_shape, seed)
 
