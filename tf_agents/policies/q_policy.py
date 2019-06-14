@@ -32,9 +32,9 @@ class QPolicy(tf_policy.Base):
   """Class to build Q-Policies."""
 
   def __init__(self,
-               time_step_spec=None,
-               action_spec=None,
-               q_network=None,
+               time_step_spec,
+               action_spec,
+               q_network,
                emit_log_probability=False,
                name=None):
     """Builds a Q-Policy given a q_network.
@@ -49,9 +49,20 @@ class QPolicy(tf_policy.Base):
         under that name. Defaults to the class name.
 
     Raises:
+      ValueError: If `q_network.action_spec` exists and is not compatible with
+        `action_spec`.
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec`.
     """
+    network_action_spec = getattr(q_network, 'action_spec', None)
+
+    if network_action_spec is not None:
+      if not action_spec.is_compatible_with(network_action_spec):
+        raise ValueError(
+            'action_spec must be compatible with q_network.action_spec; '
+            'instead got action_spec=%s, q_network.action_spec=%s' % (
+                action_spec, network_action_spec))
+
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
