@@ -42,15 +42,37 @@ class RNDWrapper(wrappers.PyEnvironmentBaseWrapper):
     # TODO Freeze rnd_target_net
     print('[rnd_wrapper.py] self.time_step_spec().observation: ', self.time_step_spec().observation)
     print('[rnd_wrapper.py] type(self.time_step_spec().observation): ', type(self.time_step_spec().observation))
+
+    observation_spec = self.time_step_spec().observation
+    observation_spec = specs.BoundedTensorSpec(
+      observation_spec.shape,
+      observation_spec.dtype,
+      observation_spec.minimum,
+      observation_spec.maximum,
+      observation_spec.name,
+    )
+
+    action_spec = self.action_spec()
+    action_spec = specs.BoundedTensorSpec(
+      action_spec.shape,
+      action_spec.dtype,
+      action_spec.minimum,
+      action_spec.maximum,
+      action_spec.name,
+    )
+
+    print('[rnd_wrapper.py] observation_spec: ', observation_spec)
+    print('[rnd_wrapper.py] type(observation_spec): ', type(observation_spec))
+
     self.rnd_target_net = rnd_network.RNDNetwork(
-        self.time_step_spec().observation,
-        self.action_spec(),
+        observation_spec,
+        action_spec,
         fc_layer_params=(100, ),
     )
 
     self.rnd_predictor_net = rnd_network.RNDNetwork(
-        self.time_step_spec().observation,
-        self.action_spec(),
+        observation_spec,
+        action_spec,
         fc_layer_params=(100, ),
     )
 

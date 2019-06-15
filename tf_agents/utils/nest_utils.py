@@ -370,14 +370,14 @@ def get_outer_rank(tensors, specs):
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [s.shape for s in tf.nest.flatten(specs)]
   
-  print('[nest_utils.py] specs: ', specs)
-  print('[nest_utils.py] specs.shape: ', specs.shape)
-  for spec in tf.nest.flatten(specs):
-    print('[nest_utils.py] spec: ', spec)
-    print('[nest_utils.py] spec.shape: ', spec.shape)
-  for spec_shape in spec_shapes:
-    print('[nest_utils.py] spec_shape: ', spec_shape)
-    print('[nest_utils.py] type(spec_shape): ', type(spec_shape))
+  # print('[nest_utils.py] specs: ', specs)
+  # print('[nest_utils.py] specs.shape: ', specs.shape)
+  # for spec in tf.nest.flatten(specs):
+  #   print('[nest_utils.py] spec: ', spec)
+  #   print('[nest_utils.py] spec.shape: ', spec.shape)
+  # for spec_shape in spec_shapes:
+  #   print('[nest_utils.py] spec_shape: ', spec_shape)
+  #   print('[nest_utils.py] type(spec_shape): ', type(spec_shape))
   # raise ValueError('What')
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
