@@ -914,5 +914,37 @@ class HistoryWrapperTest(absltest.TestCase):
     self.assertEqual([5, 6, 7], time_step.observation['action'].tolist())
 
 
+class StubMultiDiscreteEnv(py_environment.PyEnvironment):
+  def __init__(self):
+    self._position = np.array([0, 0], dtype=np.int32)
+
+  def _reset(self):
+    self._position = np.array([0, 0], dtype=np.int32)
+    return ts.restart(self._position.copy())
+
+  def observation_spec(self):
+    return array_spec.ArraySpec((2, ), np.int32)
+
+  def action_spec(self):
+    return array_spec.ArraySpec((2, ), np.int32)
+
+  def _step(self, action):
+    self._position += action
+    if self._position[0] + self._position[1] < 4:
+      return ts.transition(self._position.copy(), 1)
+    return ts.termination(self._position.copy(), 1)
+
+
+class MultiDiscreteToDiscreteWrapperTest(absltest.TestCase):
+
+  def test_action_spec_changed(self):
+    # TODO Write unit tests
+    pass
+
+  def test_action_changed(self):
+    # TODO Write unit tests
+    pass
+
+
 if __name__ == '__main__':
   absltest.main()
