@@ -136,9 +136,9 @@ REQUIRED_PACKAGES = [
 
 TEST_REQUIRED_PACKAGES = [
     'atari_py == 0.1.7',
-    'gym == 0.10.11',
+    'gym == 0.12.5',
     'opencv-python >= 3.4.1.15',
-    'pybullet == 2.4.2',
+    'pybullet',
     'scipy == 1.1.0',
 ]
 
