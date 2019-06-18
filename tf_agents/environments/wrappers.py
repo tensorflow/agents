@@ -720,29 +720,44 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
     time_step = self._env.step(action)
     return self._add_history(time_step, action)
 
+
 @gin.configurable
 class MultiDiscreteToDiscreteWrapper(PyEnvironmentBaseWrapper):
   """Converts an environment with Multidiscrete action space into a Discrete one."""
 
-  def __init__(self, env, times):
+  def __init__(self, env):
     """Creates an environment wrapper that converts the action space.
 
     Args:
       env: Environment to wrap.
-
-    Raises:
-      ValueError: If the environment does not have multidiscrete action space.
     """
-    super(MultiDiscreteToDiscrete, self).__init__(env)
+    super(MultiDiscreteToDiscreteWrapper, self).__init__(env)
 
-  def _multidiscrete_to_discrete(self, multidiscrete_action):
-    # TODO Implement
-    discrete_action = multidiscrete_action
-    return discrete_action
+    self._multidiscrete_spec = env.action_spec()
+    self._discrete_spec = array_spec.BoundedArraySpec(
+      shape=(np.prod(env.action_spec().shape),),
+      dtype=env.action_spec().dtype,
+      minimum=0,
+      maximum=np.prod(env.action_spec().shape),
+    )
+
+  def _discrete_to_multidiscrete(self, discrete_action):
+    """Convert discrete action to multidiscrete action from original env.
+
+    The conversion follows lexicographical order.
+
+    Args:
+      discrete_action: Discrete action given to the wrapped env.
+    """
+    reversed_action = []
+    for dim in reversed(self._multidiscrete_spec.shape):
+      reversed_action.append(discrete_action % dim)
+      discrete_action = (discrete_action - discrete_action % dim) // dim
+
+    return reversed_action[::-1]
 
   def _step(self, action):
-    return self._env_step(self._multidiscrete_to_discrete(action))
+    return self._env.step(self._discrete_to_multidiscrete(action))
 
   def action_spec(self):
-    # TODO Fix action spec
-    return self._env.action_spec()
+    return self._discrete_spec
