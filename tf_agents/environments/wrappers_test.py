@@ -914,9 +914,9 @@ class HistoryWrapperTest(absltest.TestCase):
     self.assertEqual([5, 6, 7], time_step.observation['action'].tolist())
 
 
-class StubMultiDiscreteEnv(py_environment.PyEnvironment):
+class CustomMultiDiscretePyEnv(py_environment.PyEnvironment):
   def __init__(self):
-    super(StubMultiDiscreteEnv, self).__init__()
+    super(CustomMultiDiscretePyEnv, self).__init__()
     self._position = np.array([0, 0], dtype=np.int32)
 
   def _reset(self):
@@ -939,26 +939,31 @@ class StubMultiDiscreteEnv(py_environment.PyEnvironment):
 class MultiDiscreteToDiscreteWrapperTest(absltest.TestCase):
 
   def test_new_action_spec_shape(self):
-    env = StubMultiDiscreteEnv()
+    env = CustomMultiDiscretePyEnv()
     wrapped_env = wrappers.MultiDiscreteToDiscreteWrapper(env)
     self.assertEqual((4, ), wrapped_env.action_spec().shape)
 
   def test_new_and_old_actions_have_one_to_one_correspondence(self):
-    env = StubMultiDiscreteEnv()
-    wrapped_env = wrappers.MultiDiscreteToDiscreteWrapper(StubMultiDiscreteEnv())
-
+    env = CustomMultiDiscretePyEnv()
+    wrapped_env = wrappers.MultiDiscreteToDiscreteWrapper(CustomMultiDiscretePyEnv())
     ts = env.step((0, 0))
     wrapped_ts = wrapped_env.step(0)
     self.assertEqual(ts.observation.tolist(), wrapped_ts.observation.tolist())
 
+    env = CustomMultiDiscretePyEnv()
+    wrapped_env = wrappers.MultiDiscreteToDiscreteWrapper(CustomMultiDiscretePyEnv())
     ts = env.step((0, 1))
     wrapped_ts = wrapped_env.step(1)
     self.assertEqual(ts.observation.tolist(), wrapped_ts.observation.tolist())
 
+    env = CustomMultiDiscretePyEnv()
+    wrapped_env = wrappers.MultiDiscreteToDiscreteWrapper(CustomMultiDiscretePyEnv())
     ts = env.step((1, 0))
     wrapped_ts = wrapped_env.step(2)
     self.assertEqual(ts.observation.tolist(), wrapped_ts.observation.tolist())
 
+    env = CustomMultiDiscretePyEnv()
+    wrapped_env = wrappers.MultiDiscreteToDiscreteWrapper(CustomMultiDiscretePyEnv())
     ts = env.step((1, 1))
     wrapped_ts = wrapped_env.step(3)
     self.assertEqual(ts.observation.tolist(), wrapped_ts.observation.tolist())
