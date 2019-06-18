@@ -47,13 +47,13 @@ class FrameStack4(gym.Wrapper):
   def _generate_observation(self):
     return np.concatenate(self._frames, axis=2)
 
-  def _reset(self):
+  def reset(self):
     observation = self._env.reset()
     for _ in range(FrameStack4.STACK_SIZE):
       self._frames.append(observation)
     return self._generate_observation()
 
-  def _step(self, action):
+  def step(self, action):
     observation, reward, done, info = self._env.step(action)
     self._frames.append(observation)
     return self._generate_observation(), reward, done, info
