@@ -923,14 +923,14 @@ class StubMultiDiscreteEnv(py_environment.PyEnvironment):
     return ts.restart(self._position.copy())
 
   def observation_spec(self):
-    return array_spec.ArraySpec((2, ), np.int32)
+    return specs.BoundedArraySpec(shape=(2, 2), dtype=np.int32, minimum=0, maximum=1)
 
   def action_spec(self):
-    return array_spec.ArraySpec((2, ), np.int32)
+    return specs.BoundedArraySpec(shape=(2, 2), dtype=np.int32, minimum=0, maximum=1)
 
   def _step(self, action):
     self._position += action
-    if self._position[0] + self._position[1] < 4:
+    if self._position[0] + self._position[1] < 2:
       return ts.transition(self._position.copy(), 1)
     return ts.termination(self._position.copy(), 1)
 
