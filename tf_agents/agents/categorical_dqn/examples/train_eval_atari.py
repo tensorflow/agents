@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Train and Eval DQN on Atari environments.
+r"""Train and Eval Categorical DQN on Atari environments.
 
 Training and evaluation proceeds alternately in iterations, where each
 iteration consists of a 1M frame training phase followed by a 500K frame
@@ -35,10 +35,10 @@ https://arxiv.org/pdf/1709.06009.pdf.
 To run:
 
 ```bash
-tf_agents/agents/dqn/examples/v1/train_eval_atari \
-  --root_dir=$HOME/atari/pong \
-  --atari_roms_path=/tmp
-  --alsologtostderr
+tf_agents/agents/categorical_dqn/examples/train_eval_atari \
+ --root_dir=$HOME/atari/pong \
+ --atari_roms_path=/tmp
+ --alsologtostderr
 ```
 
 Additional flags are available such as `--replay_buffer_capacity` and
@@ -59,13 +59,13 @@ import gin
 import numpy as np
 import tensorflow as tf
 
-from tf_agents.agents.dqn import dqn_agent
+from tf_agents.agents.categorical_dqn import categorical_dqn_agent
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_atari
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import py_metric
 from tf_agents.metrics import py_metrics
-from tf_agents.networks import q_network
+from tf_agents.networks import categorical_q_network
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_py_policy
@@ -105,15 +105,17 @@ FLAGS = flags.FLAGS
 ATARI_FRAME_SKIP = 4
 
 
-class AtariQNetwork(q_network.QNetwork):
-  """QNetwork subclass that divides observations by 255."""
+class AtariCategoricalQNetwork(categorical_q_network.CategoricalQNetwork):
+  """CategoricalQNetwork subclass that divides observations by 255."""
 
   def call(self, observation, step_type=None, network_state=None):
     state = tf.cast(observation, tf.float32)
     # We divide the grayscale pixel values by 255 here rather than storing
     # normalized values beause uint8s are 4x cheaper to store than float32s.
+    # TODO(b/129805821): handle the division by 255 for train_eval_atari.py in
+    # a preprocessing layer instead.
     state = state / 255
-    return super(AtariQNetwork, self).call(
+    return super(AtariCategoricalQNetwork, self).call(
         state, step_type=step_type, network_state=network_state)
 
 
@@ -147,7 +149,7 @@ class TrainEval(object):
       target_update_period=32000,  # ALE frames
       batch_size=32,
       learning_rate=2.5e-4,
-      n_step_update=1,
+      n_step_update=2,
       gamma=0.99,
       reward_scale_factor=1.0,
       gradient_clipping=None,
@@ -159,8 +161,8 @@ class TrainEval(object):
       log_interval=1000,
       summary_interval=1000,
       summaries_flush_secs=10,
-      debug_summaries=False,
-      summarize_grads_and_vars=False,
+      debug_summaries=True,
+      summarize_grads_and_vars=True,
       eval_metrics_callback=None):
     """A simple Atari train and eval for DQN.
 
@@ -226,7 +228,8 @@ class TrainEval(object):
     self._eval_metrics_callback = eval_metrics_callback
 
     with gin.unlock_config():
-      gin.bind_parameter('AtariPreprocessing.terminal_on_life_loss',
+      gin.bind_parameter(('tf_agents.environments.atari_preprocessing.'
+                          'AtariPreprocessing.terminal_on_life_loss'),
                          terminal_on_life_loss)
 
     root_dir = os.path.expanduser(root_dir)
@@ -276,22 +279,21 @@ class TrainEval(object):
             momentum=0.0,
             epsilon=0.00001,
             centered=True)
-        q_net = AtariQNetwork(
+        categorical_q_net = AtariCategoricalQNetwork(
             observation_spec,
             action_spec,
             conv_layer_params=conv_layer_params,
             fc_layer_params=fc_layer_params)
-        agent = dqn_agent.DqnAgent(
+        agent = categorical_dqn_agent.CategoricalDqnAgent(
             time_step_spec,
             action_spec,
-            q_network=q_net,
+            categorical_q_network=categorical_q_net,
             optimizer=optimizer,
             epsilon_greedy=epsilon,
             n_step_update=n_step_update,
             target_update_tau=target_update_tau,
             target_update_period=(
                 target_update_period / ATARI_FRAME_SKIP / self._update_period),
-            td_errors_loss_fn=dqn_agent.element_wise_huber_loss,
             gamma=gamma,
             reward_scale_factor=reward_scale_factor,
             gradient_clipping=gradient_clipping,
