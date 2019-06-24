@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import numbers
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -134,6 +135,7 @@ def add_outer_dims_nest(structure, outer_dims):
   return tf.nest.map_structure(add_outer_dims, structure)
 
 
+@gin.configurable
 class ArraySpec(object):
   """Describes a numpy array or scalar shape and dtype.
 
@@ -224,6 +226,7 @@ class ArraySpec(object):
     return ArraySpec(spec.shape, spec.dtype, spec.name)
 
 
+@gin.configurable
 class BoundedArraySpec(ArraySpec):
   """An `ArraySpec` that specifies minimum and maximum values.
 
