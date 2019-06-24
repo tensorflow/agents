@@ -113,6 +113,6 @@ class EpsilonGreedyPolicy(tf_policy.Base):
 
     return policy_step.PolicyStep(action, state, info)
 
-  def _distribution(self, time_step, policy_states):
+  def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
         'EpsilonGreedyPolicy does not support distributions yet.')
