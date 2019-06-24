@@ -141,6 +141,8 @@ class ArraySpec(object):
   returns, before that array exists.
   The equivalent version describing a `tf.Tensor` is `TensorSpec`.
   """
+
+  __hash__ = None
   __slots__ = ('_shape', '_dtype', '_name')
 
   def __init__(self, shape, dtype, name=None):
@@ -247,6 +249,7 @@ class BoundedArraySpec(ArraySpec):
   ```
   """
 
+  __hash__ = None
   __slots__ = ('_minimum', '_maximum')
 
   def __init__(self, shape, dtype, minimum=None, maximum=None, name=None):
