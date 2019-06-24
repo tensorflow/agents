@@ -232,10 +232,10 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
 
     loss_info = agent._loss(experience)
 
-    # discounted_rewards should evaluate to 10 + 0.9 * 10 = 19 and
+    # discounted_returns should evaluate to 10 + 0.9 * 10 = 19 and
     # 20 + 0.9 * 20 = 38.
-    evaluated_discounted_rewards = self.evaluate(agent._discounted_rewards)
-    self.assertAllClose(evaluated_discounted_rewards, [[19], [38]], atol=1e-3)
+    evaluated_discounted_returns = self.evaluate(agent._discounted_returns)
+    self.assertAllClose(evaluated_discounted_returns, [[19], [38]], atol=1e-3)
 
     # Both final_value_discount values should be 0.9 * 0.9 = 0.81.
     evaluated_final_value_discount = self.evaluate(agent._final_value_discount)

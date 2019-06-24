@@ -376,18 +376,12 @@ class DqnAgent(tf_agent.TFAgent):
         # TODO(b/134618876): Properly handle Trajectories that include episode
         # boundaries with nonzero discount.
 
-        # TODO(b/131557265): Replace value_ops.discounted_return with a method
-        # that only computes the single value needed.
-        n_step_return = value_ops.discounted_return(
+        td_targets = value_ops.discounted_return(
             rewards=rewards,
             discounts=discounts,
             final_value=next_q_values,
-            time_major=False)
-
-        # We only need the first value within the time dimension which
-        # corresponds to the full final return. The remaining values are only
-        # partial returns.
-        td_targets = n_step_return[:, 0]
+            time_major=False,
+            provide_all_returns=False)
 
       valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
       td_error = valid_mask * (td_targets - q_values)

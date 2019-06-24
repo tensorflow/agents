@@ -271,28 +271,25 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         # TODO(b/134618876): Properly handle Trajectories that include episode
         # boundaries with nonzero discount.
 
-        # TODO(b/131557265): Replace value_ops.discounted_return with a method
-        # that only computes the single value needed.
-        discounted_rewards = value_ops.discounted_return(
+        discounted_returns = value_ops.discounted_return(
             rewards=rewards,
             discounts=discounts,
             final_value=tf.zeros([batch_size], dtype=discounts.dtype),
-            time_major=False)
+            time_major=False,
+            provide_all_returns=False)
 
-        # We only need the first value within the time dimension which
-        # corresponds to the full final return. The remaining values are only
-        # partial returns.
-        discounted_rewards = discounted_rewards[:, :1]
+        # Convert discounted_returns from [batch_size] to [batch_size, 1]
+        discounted_returns = discounted_returns[:, None]
 
         final_value_discount = tf.reduce_prod(discounts, axis=1)
         final_value_discount = final_value_discount[:, None]
 
-        # Save the values of discounted_rewards and final_value_discount in
+        # Save the values of discounted_returns and final_value_discount in
         # order to check them in unit tests.
-        self._discounted_rewards = discounted_rewards
+        self._discounted_returns = discounted_returns
         self._final_value_discount = final_value_discount
 
-        target_support = tf.add(discounted_rewards,
+        target_support = tf.add(discounted_returns,
                                 final_value_discount * tiled_support,
                                 name='target_support')
 
