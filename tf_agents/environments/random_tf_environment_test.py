@@ -72,9 +72,16 @@ class RandomTFEnvironmentTest(test_utils.TestCase):
     random_action = self.evaluate(
         tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(1,)))
 
-    while not time_step.is_last():
-      time_step = self.evaluate(self.random_env.step(random_action))
+    attempts = 0
 
+    # With a 1/10 chance of resetting on each step, the probability of failure
+    # after 500 attempts should be 0.9^500, roughly 1e-23. If we miss more than
+    # 500 attempts, we can safely assume the test is broken.
+    while not time_step.is_last() and attempts < 500:
+      time_step = self.evaluate(self.random_env.step(random_action))
+      attempts += 1
+
+    self.assertLess(attempts, 500)
     self.assertTrue(time_step.is_last())
 
     current_time_step = self.evaluate(self.random_env.current_time_step())
