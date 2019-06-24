@@ -80,6 +80,9 @@ class Test(TestCommandBase):
       run_separately = [
           x.rstrip() for x in open('test_individually.txt', 'r').readlines()
           if x]
+      # Remove comments and blanks after comments are removed.
+      run_separately = [x.partition('#')[0].strip() for x in run_separately]
+      run_separately = [x for x in run_separately if x]
       test_loader = TestLoader(blacklist=run_separately)
       test_suite = test_loader.discover('tf_agents', pattern='*_test.py')
       stderr = StderrWrapper()
