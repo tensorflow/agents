@@ -23,8 +23,11 @@ import os
 
 from absl.testing import parameterized
 import tensorflow as tf
+
+from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
+from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_saver
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
@@ -103,27 +106,40 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     ]
     self.assertAllEqual(['batch_size'], initial_state_signature_names)
 
-  @parameterized.named_parameters(('NotSeededNoState', False, False),
-                                  ('NotSeededWithState', False, True),
-                                  ('SeededNoState', True, False),
-                                  ('SeededWithState', True, True))
-  def testSaveAction(self, seeded, has_state):
+  @parameterized.named_parameters(
+      ('NotSeededNoState', False, False, False),
+      ('NotSeededWithState', False, True, False),
+      ('NotSeededDistributionNetwork', False, False, True),
+      ('SeededNoState', True, False, False),
+      ('SeededWithState', True, True, False),
+      ('SeededDistributionNetwork', True, False, True),
+  )
+  def testSaveAction(self, seeded, has_state, distribution_net):
     with tf.compat.v1.Graph().as_default():
       tf.compat.v1.set_random_seed(self._global_seed)
       with tf.compat.v1.Session().as_default():
-        if has_state:
-          network = q_rnn_network.QRnnNetwork(
-              input_tensor_spec=self._time_step_spec.observation,
-              action_spec=self._action_spec)
+        if distribution_net:
+          network = actor_distribution_network.ActorDistributionNetwork(
+              self._time_step_spec.observation,
+              self._action_spec)
+          policy = actor_policy.ActorPolicy(
+              time_step_spec=self._time_step_spec,
+              action_spec=self._action_spec,
+              actor_network=network)
         else:
-          network = q_network.QNetwork(
-              input_tensor_spec=self._time_step_spec.observation,
-              action_spec=self._action_spec)
+          if has_state:
+            network = q_rnn_network.QRnnNetwork(
+                input_tensor_spec=self._time_step_spec.observation,
+                action_spec=self._action_spec)
+          else:
+            network = q_network.QNetwork(
+                input_tensor_spec=self._time_step_spec.observation,
+                action_spec=self._action_spec)
 
-        policy = q_policy.QPolicy(
-            time_step_spec=self._time_step_spec,
-            action_spec=self._action_spec,
-            q_network=network)
+          policy = q_policy.QPolicy(
+              time_step_spec=self._time_step_spec,
+              action_spec=self._action_spec,
+              q_network=network)
 
         action_seed = 98723
 
