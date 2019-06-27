@@ -22,6 +22,8 @@ from __future__ import print_function
 import abc
 import tensorflow as tf
 
+from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
 
 class ReplayBuffer(tf.Module):
   """Abstract base class for TF-Agents replay buffer.
@@ -153,7 +155,18 @@ class ReplayBuffer(tf.Module):
 
     Raises:
       NotImplementedError: If a non-default argument value is not supported.
+      ValueError: If the data spec contains lists that must be converted to
+        tuples.
     """
+    # data_tf.nest.flatten does not flatten python lists, nest.flatten does.
+    if tf.nest.flatten(self._data_spec) != data_nest.flatten(self._data_spec):
+      raise ValueError(
+          'Cannot perform gather; data spec contains lists and this conflicts '
+          'with gathering operator.  Convert any lists to tuples.  '
+          'For example, if your spec looks like [a, b, c], '
+          'change it to (a, b, c).  Spec structure is:\n  {}'.format(
+              tf.nest.map_structure(lambda spec: spec.dtype, self._data_spec)))
+
     if single_deterministic_pass:
       return self._single_deterministic_pass_dataset(
           sample_batch_size=sample_batch_size,
