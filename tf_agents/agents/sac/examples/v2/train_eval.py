@@ -53,6 +53,7 @@ from tf_agents.metrics import tf_py_metric
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import normal_projection_network
 from tf_agents.policies import greedy_policy
+from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
@@ -194,6 +195,8 @@ def train_eval(
     ]
 
     eval_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
+    initial_collect_policy = random_tf_policy.RandomTFPolicy(
+        tf_env.time_step_spec(), tf_env.action_spec())
     collect_policy = tf_agent.collect_policy
 
     train_checkpointer = common.Checkpointer(
@@ -215,7 +218,7 @@ def train_eval(
 
     initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
-        collect_policy,
+        initial_collect_policy,
         observers=replay_observer,
         num_steps=initial_collect_steps)
 
