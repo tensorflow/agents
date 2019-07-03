@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
+import mock
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -316,6 +317,40 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(self.evaluate(counter), 0)
     self.evaluate(loss)
     self.assertEqual(self.evaluate(counter), 1)
+
+  @parameterized.parameters(
+      (False,), (True,)
+  )
+  def testWithAdvantageFn(self, with_value_network):
+    advantage_fn = mock.Mock(
+        side_effect=lambda returns, _: returns)
+
+    value_network = (DummyValueNet(self._obs_spec) if with_value_network
+                     else None)
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=False),
+        value_network=value_network,
+        advantage_fn=advantage_fn,
+        optimizer=None,
+    )
+
+    step_type = tf.constant(
+        [[ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
+          ts.StepType.LAST]])
+    reward = tf.constant([[0, 0, 0, 0]], dtype=tf.float32)
+    discount = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
+    observations = tf.constant(
+        [[[1, 2], [1, 2], [1, 2], [1, 2]]], dtype=tf.float32)
+    time_steps = ts.TimeStep(step_type, reward, discount, observations)
+
+    actions = tf.constant([[[0], [1], [2], [3]]], dtype=tf.float32)
+
+    agent.total_loss(time_steps, actions, time_steps.reward, None)
+
+    advantage_fn.assert_called_once()
 
 
 if __name__ == '__main__':

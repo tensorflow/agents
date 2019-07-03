@@ -89,6 +89,8 @@ class ReinforceAgent(tf_agent.TFAgent):
                optimizer,
                value_network=None,
                value_estimation_loss_coef=0.2,
+               advantage_fn=None,
+               use_advantage_loss=True,
                gamma=1.0,
                normalize_returns=True,
                gradient_clipping=None,
@@ -110,6 +112,14 @@ class ReinforceAgent(tf_agent.TFAgent):
         returns a floating point value tensor.
       value_estimation_loss_coef: (Optional) Multiplier for value prediction
         loss to balance with policy gradient loss.
+      advantage_fn: A function `A(returns, value_preds)` that takes returns
+        and value function predictions as input and returns advantages. The
+        default is `A(returns, value_preds) = returns - value_preds` if a
+        value network is specified and `use_advantage_loss=True`, otherwise
+        `A(returns, value_preds) = returns`.
+      use_advantage_loss: Whether to use value function predictions for
+        computing returns. `use_advantage_loss=False` is equivalent to setting
+        `advantage_fn=lambda returns, value_preds: returns`.
       gamma: A discount factor for future rewards.
       normalize_returns: Whether to normalize returns across episodes when
         computing the loss.
@@ -143,6 +153,12 @@ class ReinforceAgent(tf_agent.TFAgent):
     self._entropy_regularization = entropy_regularization
     self._value_estimation_loss_coef = value_estimation_loss_coef
     self._baseline = self._value_network is not None
+    self._advantage_fn = advantage_fn
+    if self._advantage_fn is None:
+      if use_advantage_loss and self._baseline:
+        self._advantage_fn = lambda returns, value_preds: returns - value_preds
+      else:
+        self._advantage_fn = lambda returns, _: returns
 
     super(ReinforceAgent, self).__init__(
         time_step_spec,
@@ -229,22 +245,27 @@ class ReinforceAgent(tf_agent.TFAgent):
       weights = valid_mask
 
     advantages = returns
+    value_preds = None
+
     if self._baseline:
       value_preds, _ = self._value_network(
           time_steps.observation, time_steps.step_type)
-      advantages = returns - value_preds
       if self._debug_summaries:
         tf.compat.v2.summary.histogram(
             name='value_preds', data=value_preds, step=self.train_step_counter)
-        tf.compat.v2.summary.histogram(
-            name='advantages', data=advantages, step=self.train_step_counter)
+
+    advantages = self._advantage_fn(returns, value_preds)
+    if self._debug_summaries:
+      tf.compat.v2.summary.histogram(
+          name='advantages', data=advantages, step=self.train_step_counter)
 
     # TODO(b/126592060): replace with tensor normalizer.
     if self._normalize_returns:
       advantages = _standard_normalize(advantages, axes=(0, 1))
       if self._debug_summaries:
         tf.compat.v2.summary.histogram(
-            name='normalized_%s'%'advantages' if self._baseline else 'returns',
+            name='normalized_%s' % (
+                'advantages' if self._baseline else 'returns'),
             data=advantages,
             step=self.train_step_counter)
 
@@ -264,6 +285,7 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     total_loss = policy_gradient_loss + entropy_regularization_loss
 
+    value_estimation_loss = None
     if self._baseline:
       value_estimation_loss = self.value_estimation_loss(
           value_preds, returns, num_episodes, weights)
