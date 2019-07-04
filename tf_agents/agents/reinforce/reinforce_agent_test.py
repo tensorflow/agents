@@ -20,7 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-import mock
+from absl.testing.absltest import mock
+
 import tensorflow as tf
 import tensorflow_probability as tfp
 
