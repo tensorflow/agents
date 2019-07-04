@@ -100,6 +100,23 @@ class UtilsTest(absltest.TestCase):
     with self.assertRaisesRegexp(ValueError, "does not match expected"):
       utils.validate_py_environment(env, episodes=1)
 
+  def testValidateBoundedSpecDistinctBounds(self):
+    observation_spec = array_spec.BoundedArraySpec((3,), np.int32,
+                                                   [-10, -5, -2], [10, 5, 2])
+    env = get_mock_env(self._action_spec, observation_spec, None)
+    rng = np.random.RandomState()
+    sample_fn = lambda: array_spec.sample_spec_nest(env.observation_spec(), rng)
+
+    def step(unused_time_step):
+      if rng.rand() < 0.10:
+        return ts.termination(sample_fn(), 0.0)
+      else:
+        return ts.transition(sample_fn(), 1.0)
+
+    env.step = step
+    env.reset = lambda: ts.restart(sample_fn())
+    utils.validate_py_environment(env, episodes=1)
+
 
 if __name__ == "__main__":
   absltest.main()

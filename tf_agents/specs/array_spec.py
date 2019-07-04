@@ -59,18 +59,25 @@ def sample_bounded_spec(spec, rng):
       low = low / 2  # pylint: disable=g-no-augmented-assignment
       high = high / 2  # pylint: disable=g-no-augmented-assignment
 
-    if high < tf_dtype.max:
-      high = high + 1  # pylint: disable=g-no-augmented-assignment
+    if np.any(high < tf_dtype.max):
+      high = np.where(high < tf_dtype.max, high + 1, high)  # pylint: disable=g-no-augmented-assignment
     elif spec.dtype != np.int64 or spec.dtype != np.uint64:
       # We can still +1 the high if we cast it to the larger dtype.
       high = high.astype(np.int64) + 1
 
-    return rng.randint(
-        low,
-        high,
-        size=spec.shape,
-        dtype=spec.dtype,
-    )
+    if low.size == 1 and high.size == 1:
+      return rng.randint(
+          low,
+          high,
+          size=spec.shape,
+          dtype=spec.dtype,
+      )
+    else:
+      return np.reshape(
+          np.array([
+              rng.randint(low, high, size=1, dtype=spec.dtype)
+              for low, high in zip(low.flatten(), high.flatten())
+          ]), spec.shape)
 
 
 def sample_spec_nest(structure, rng, outer_dims=()):
