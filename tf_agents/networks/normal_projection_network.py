@@ -62,9 +62,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     """Creates an instance of NormalProjectionNetwork.
 
     Args:
-      sample_spec: A spec (either BoundedArraySpec or BoundedTensorSpec)
-        detailing the shape and dtypes of samples pulled from the output
-        distribution.
+      sample_spec: A `tensor_spec.BoundedTensorSpec` detailing the shape and
+        dtypes of samples pulled from the output distribution.
       activation_fn: Activation function to use in dense layer.
       init_means_output_factor: Output factor for initializing action means
         weights.

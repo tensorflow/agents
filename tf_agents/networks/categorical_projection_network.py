@@ -40,9 +40,8 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
     """Creates an instance of CategoricalProjectionNetwork.
 
     Args:
-      sample_spec: An spec (either BoundedArraySpec or BoundedTensorSpec)
-        detailing the shape and dtypes of samples pulled from the output
-        distribution.
+      sample_spec: A `tensor_spec.BoundedTensorSpec` detailing the shape and
+        dtypes of samples pulled from the output distribution.
       logits_init_output_factor: Output factor for initializing kernel logits
         weights.
       name: A string representing name of the network.
@@ -73,7 +72,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
     if len(unique_num_actions) > 1:
       raise ValueError(
           'Projection Network requires num_actions to be equal '
-          'across action dimentions. Implement a more general categorical '
+          'across action dimensions. Implement a more general categorical '
           'projection if you need more flexibility.')
 
     self._sample_spec = sample_spec
