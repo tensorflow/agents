@@ -80,7 +80,40 @@ def _get_initial_policy_state(policy, time_steps):
 
 @gin.configurable
 class ReinforceAgent(tf_agent.TFAgent):
-  """A REINFORCE Agent."""
+  """A REINFORCE Agent.
+
+  Implements:
+
+  REINFORCE algorithm from
+
+  "Simple statistical gradient-following algorithms for connectionist
+  reinforcement learning"
+  Williams, R.J., 1992.
+  http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
+
+  REINFORCE with state-value baseline, where state-values are estimated with
+  function approximation, from
+
+  "Reinforcement learning: An introduction" (Sec. 13.4)
+  Sutton, R.S. and Barto, A.G., 2018.
+  http://incompleteideas.net/book/the-book-2nd.html
+
+  The REINFORCE agent can be optionally provided with:
+  - value_network: A `tf_agents.network.Network` which parameterizes state-value
+    estimation as a neural network. The network will be called with
+    call(observation, step_type) and returns a floating point state-values
+    tensor.
+  - value_estimation_loss_coef: Weight on the value prediction loss.
+
+  If value_network and value_estimation_loss_coef are provided, advantages are
+  computed as
+    `advantages = (discounted accumulated rewards) - (estimated state-values)`
+  and the overall learning objective becomes:
+    `(total loss) =
+      (policy gradient loss) +
+      value_estimation_loss_coef * (squared error of estimated state-values)`
+
+  """
 
   def __init__(self,
                time_step_spec,
@@ -129,7 +162,7 @@ class ReinforceAgent(tf_agent.TFAgent):
         will be written during training.
       entropy_regularization: Coefficient for entropy regularization loss term.
       train_step_counter: An optional counter to increment every time the train
-        op is run.  Defaults to the global_step.
+        op is run. Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
     """
