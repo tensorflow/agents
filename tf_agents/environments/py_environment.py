@@ -145,11 +145,11 @@ class PyEnvironment(object):
     """Updates the environment according to the action and returns a `TimeStep`.
 
     If the environment returned a `TimeStep` with `StepType.LAST` at the
-    previous step, this call to `step` will reset the environment,
-    start a new sequence and `action` will be ignored.
+    previous step the implementation of `_step` in the environment should call
+    `reset` to start a new sequence and ignore `action`.
 
-    This method will also start a new sequence if called after the environment
-    has been constructed and `reset` has not been called. Again, in this case
+    This method will start a new sequence if called after the environment
+    has been constructed and `reset` has not been called. In this case
     `action` will be ignored.
 
     Note: Subclasses cannot override this directly. Subclasses implement
@@ -210,6 +210,7 @@ class PyEnvironment(object):
     Args:
       mode: One of ['rgb_array', 'human']. Renders to an numpy array, or brings
         up a window where the environment can be visualized.
+
     Returns:
       An ndarray of shape [width, height, 3] denoting an RGB image if mode is
       `rgb_array`. Otherwise return nothing and render directly to a display
@@ -248,4 +249,3 @@ class PyEnvironment(object):
 
     See `reset(self)` docstring for more details
     """
-
