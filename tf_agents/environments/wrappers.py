@@ -103,6 +103,10 @@ class TimeLimit(PyEnvironmentBaseWrapper):
 
     return time_step
 
+  @property
+  def duration(self):
+    return self._duration
+
 
 @gin.configurable
 class ActionRepeat(PyEnvironmentBaseWrapper):
