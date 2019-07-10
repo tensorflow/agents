@@ -128,7 +128,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         under that name. Defaults to the class name.
 
     Raises:
-      NotImplementedError: If the action spec contains more than one action.
+      ValueError: If the action spec contains more than one action, but a custom
+        loss_fn is not provided.
     """
     tf.Module.__init__(self, name=name)
 
@@ -137,11 +138,11 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         spec.maximum - spec.minimum + 1 for spec in flat_action_spec
     ]
 
-    # TODO(oars): Get behavioral cloning working with more than one dim in
-    # the actions.
-    if len(flat_action_spec) > 1:
-      raise NotImplementedError(
-          'Multi-arity actions are not currently supported.')
+    if len(flat_action_spec) > 1 and not loss_fn:
+      raise ValueError('When using multi-dimensional actions, a custom loss_fn '
+                       'must be provided.')
+
+    self._multi_dimensional_actions = len(flat_action_spec) > 1
 
     if loss_fn is None:
       loss_fn = self._get_default_loss_fn(flat_action_spec[0])
@@ -231,13 +232,19 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         If the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      actions = tf.nest.flatten(experience.action)[0]
+      if self._multi_dimensional_actions:
+        actions = experience.action
+      else:
+        actions = tf.nest.flatten(experience.action)[0]
+
       logits, _ = self._cloning_network(
           experience.observation,
           experience.step_type)
 
-      boundary_weights = tf.cast(~experience.is_boundary(), logits.dtype)
-      error = boundary_weights * self._loss_fn(logits, actions)
+      error = self._loss_fn(logits, actions)
+      error_dtype = tf.nest.flatten(error)[0].dtype
+      boundary_weights = tf.cast(~experience.is_boundary(), error_dtype)
+      error *= boundary_weights
 
       if nest_utils.is_batched_nested_tensors(
           experience.action, self.action_spec, num_outer_dims=2):

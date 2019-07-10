@@ -28,6 +28,7 @@ from tf_agents.environments import trajectory_replay
 from tf_agents.networks import network
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
+from tf_agents.policies import actor_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -59,6 +60,19 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
+class ActorBCAgent(behavioral_cloning_agent.BehavioralCloningAgent):
+  """BehavioralCloningAgent for Actor policies/networks."""
+
+  def _get_policies(self, time_step_spec, action_spec, cloning_network):
+    policy = actor_policy.ActorPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        actor_network=cloning_network,
+        clip=True)
+
+    return policy, policy
+
+
 class BehavioralCloningAgentTest(tf.test.TestCase):
 
   def setUp(self):
@@ -85,12 +99,29 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     ]
 
     cloning_net = DummyNet(self._observation_spec, action_spec)
-    with self.assertRaisesRegexp(NotImplementedError, '.*Multi-arity.*'):
+    with self.assertRaisesRegexp(ValueError, '.*multi-dimensional.*'):
       behavioral_cloning_agent.BehavioralCloningAgent(
           self._time_step_spec,
           action_spec,
           cloning_network=cloning_net,
           optimizer=None)
+
+  def testCreateAgentWithMultipleActionsAndCustomLossFn(self):
+    action_spec = [
+        tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
+        tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
+    ]
+
+    cloning_net = DummyNet(self._observation_spec, action_spec)
+
+    # We create an ActorBCAgent here instead of a BehavioralCloningAgent since
+    # QPolicy currently doesn't accept action_specs with multiple actions.
+    ActorBCAgent(
+        self._time_step_spec,
+        action_spec,
+        cloning_network=cloning_net,
+        optimizer=None,
+        loss_fn=lambda logits, actions: 0)
 
   def testCreateAgentDimChecks(self):
     action_spec = [tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)]
