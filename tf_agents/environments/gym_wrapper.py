@@ -31,7 +31,7 @@ from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-def _spec_from_gym_space(space, dtype_map=None):
+def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
   """Converts gym spaces into array specs.
 
   Gym does not properly define dtypes for spaces. By default all spaces set
@@ -48,6 +48,8 @@ def _spec_from_gym_space(space, dtype_map=None):
   Args:
     space: gym.Space to turn into a spec.
     dtype_map: A dict from specs to dtypes to use as the default dtype.
+    simplify_box_bounds: Whether to replace bounds of Box space that are arrays
+      with identical values with one number and rely on broadcasting.
 
   Returns:
     A BoundedArraySpec nest mirroring the given space structure.
@@ -56,6 +58,16 @@ def _spec_from_gym_space(space, dtype_map=None):
   """
   if dtype_map is None:
     dtype_map = {}
+
+  # We try to simplify redundant arrays to make logging and debugging less
+  # verbose and easier to read since the printed spec bounds may be large.
+  def try_simplify_array_to_value(np_array):
+    """If given numpy array has all the same values, returns that value."""
+    first_value = np_array.item(0)
+    if np.all(np_array == first_value):
+      return np.array(first_value, dtype=np_array.dtype)
+    else:
+      return np_array
 
   if isinstance(space, gym.spaces.Discrete):
     # Discrete spaces span the set {0, 1, ... , n-1} while Bounded Array specs
@@ -67,22 +79,23 @@ def _spec_from_gym_space(space, dtype_map=None):
         shape=(), dtype=dtype, minimum=0, maximum=maximum)
   elif isinstance(space, gym.spaces.MultiDiscrete):
     dtype = dtype_map.get(gym.spaces.MultiDiscrete, np.int32)
-    minimum = np.zeros_like(space.nvec, dtype=dtype)
-    maximum = np.asarray(space.nvec - 1, dtype=dtype)
+    maximum = try_simplify_array_to_value(
+        np.asarray(space.nvec - 1, dtype=dtype))
     return specs.BoundedArraySpec(
-        shape=space.shape, dtype=dtype, minimum=minimum, maximum=maximum)
+        shape=space.shape, dtype=dtype, minimum=0, maximum=maximum)
   elif isinstance(space, gym.spaces.MultiBinary):
     dtype = dtype_map.get(gym.spaces.MultiBinary, np.int8)
     shape = (space.n,)
-    minimum = np.zeros(shape, dtype=dtype)
-    maximum = np.ones(shape, dtype=dtype)
     return specs.BoundedArraySpec(
-        shape=shape, dtype=dtype, minimum=minimum, maximum=maximum)
+        shape=shape, dtype=dtype, minimum=0, maximum=1)
   elif isinstance(space, gym.spaces.Box):
     # TODO(oars): change to use dtype in space once Gym is updated.
     dtype = dtype_map.get(gym.spaces.Box, np.float32)
     minimum = np.asarray(space.low, dtype=dtype)
     maximum = np.asarray(space.high, dtype=dtype)
+    if simplify_box_bounds:
+      minimum = try_simplify_array_to_value(minimum)
+      maximum = try_simplify_array_to_value(maximum)
     return specs.BoundedArraySpec(
         shape=space.shape, dtype=dtype, minimum=minimum, maximum=maximum)
   elif isinstance(space, gym.spaces.Tuple):
@@ -107,7 +120,8 @@ class GymWrapper(py_environment.PyEnvironment):
                discount=1.0,
                spec_dtype_map=None,
                match_obs_space_dtype=True,
-               auto_reset=True):
+               auto_reset=True,
+               simplify_box_bounds=True):
     super(GymWrapper, self).__init__()
 
     self._gym_env = gym_env
@@ -118,9 +132,10 @@ class GymWrapper(py_environment.PyEnvironment):
     # TODO(sfishman): Add test for auto_reset param.
     self._auto_reset = auto_reset
     self._observation_spec = _spec_from_gym_space(
-        self._gym_env.observation_space, spec_dtype_map)
+        self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds)
     self._action_spec = _spec_from_gym_space(self._gym_env.action_space,
-                                             spec_dtype_map)
+                                             spec_dtype_map,
+                                             simplify_box_bounds)
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._info = None
     self._done = True

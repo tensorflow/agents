@@ -47,8 +47,7 @@ class GymWrapperSpecTest(absltest.TestCase):
 
     self.assertEqual((4,), spec.shape)
     self.assertEqual(np.int32, spec.dtype)
-    np.testing.assert_array_equal(
-        np.array([0, 0, 0, 0], dtype=np.int), spec.minimum)
+    np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
     np.testing.assert_array_equal(
         np.array([0, 1, 2, 3], dtype=np.int), spec.maximum)
 
@@ -58,10 +57,8 @@ class GymWrapperSpecTest(absltest.TestCase):
 
     self.assertEqual((4,), spec.shape)
     self.assertEqual(np.int8, spec.dtype)
-    np.testing.assert_array_equal(
-        np.array([0, 0, 0, 0], dtype=np.int), spec.minimum)
-    np.testing.assert_array_equal(
-        np.array([1, 1, 1, 1], dtype=np.int), spec.maximum)
+    np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
+    np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
 
   def test_spec_from_gym_space_box_scalars(self):
     box_space = gym.spaces.Box(-1.0, 1.0, (3, 4))
@@ -69,8 +66,17 @@ class GymWrapperSpecTest(absltest.TestCase):
 
     self.assertEqual((3, 4), spec.shape)
     self.assertEqual(np.float32, spec.dtype)
-    np.testing.assert_array_almost_equal(-np.ones((3, 4)), spec.minimum)
-    np.testing.assert_array_almost_equal(np.ones((3, 4)), spec.maximum)
+    np.testing.assert_array_equal(-np.ones((3, 4)), spec.minimum)
+    np.testing.assert_array_equal(np.ones((3, 4)), spec.maximum)
+
+  def test_spec_from_gym_space_box_scalars_simplify_bounds(self):
+    box_space = gym.spaces.Box(-1.0, 1.0, (3, 4))
+    spec = gym_wrapper._spec_from_gym_space(box_space, simplify_box_bounds=True)
+
+    self.assertEqual((3, 4), spec.shape)
+    self.assertEqual(np.float32, spec.dtype)
+    np.testing.assert_array_equal(np.array([-1], dtype=np.int), spec.minimum)
+    np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
 
   def test_spec_from_gym_space_box_array(self):
     box_space = gym.spaces.Box(np.array([-1.0, -2.0]), np.array([2.0, 4.0]))
@@ -78,8 +84,8 @@ class GymWrapperSpecTest(absltest.TestCase):
 
     self.assertEqual((2,), spec.shape)
     self.assertEqual(np.float32, spec.dtype)
-    np.testing.assert_array_almost_equal(np.array([-1.0, -2.0]), spec.minimum)
-    np.testing.assert_array_almost_equal(np.array([2.0, 4.0]), spec.maximum)
+    np.testing.assert_array_equal(np.array([-1.0, -2.0]), spec.minimum)
+    np.testing.assert_array_equal(np.array([2.0, 4.0]), spec.maximum)
 
   def test_spec_from_gym_space_tuple(self):
     tuple_space = gym.spaces.Tuple((gym.spaces.Discrete(2),
