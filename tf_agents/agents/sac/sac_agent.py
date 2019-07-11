@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import gin
 import numpy as np
 import tensorflow as tf
@@ -34,6 +35,10 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
+
+
+SacLossInfo = collections.namedtuple(
+    'SacLossInfo', ('critic_loss', 'actor_loss', 'alpha_loss'))
 
 
 @gin.configurable
@@ -251,7 +256,11 @@ class SacAgent(tf_agent.TFAgent):
 
     total_loss = critic_loss + actor_loss + alpha_loss
 
-    return tf_agent.LossInfo(loss=total_loss, extra=())
+    extra = SacLossInfo(critic_loss=critic_loss,
+                        actor_loss=actor_loss,
+                        alpha_loss=alpha_loss)
+
+    return tf_agent.LossInfo(loss=total_loss, extra=extra)
 
   def _apply_gradients(self, gradients, variables, optimizer):
     # list(...) is required for Python3.
