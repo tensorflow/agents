@@ -72,11 +72,12 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       action_spec,
       cloning_network,
       optimizer,
-      epsilon_greedy=0.1,
+      num_outer_dims=1,
       # Params for training.
+      epsilon_greedy=0.1,
       loss_fn=None,
       gradient_clipping=None,
-      # Params for debugging
+      # Params for debugging.
       debug_summaries=False,
       summarize_grads_and_vars=False,
       train_step_counter=None,
@@ -100,6 +101,10 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         `cloning_network` has an empty network state, then for training
         `time` will always be `1` (individual examples).
       optimizer: The optimizer to use for training.
+      num_outer_dims: The number of outer dimensions for the agent. Must be
+        either 1 or 2. If 2, training will require both a batch_size and time
+        dimension on every Tensor; if 1, training will require only a batch_size
+        outer dimension.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method).
@@ -128,8 +133,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         under that name. Defaults to the class name.
 
     Raises:
-      ValueError: If the action spec contains more than one action, but a custom
-        loss_fn is not provided.
+      ValueError: If `action_spec` contains more than one action, but a custom
+        `loss_fn` is not provided.
     """
     tf.Module.__init__(self, name=name)
 
@@ -162,6 +167,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         policy,
         collect_policy,
         train_sequence_length=1 if not cloning_network.state_spec else None,
+        num_outer_dims=num_outer_dims,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)

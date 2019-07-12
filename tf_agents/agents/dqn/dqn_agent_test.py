@@ -236,7 +236,7 @@ class AgentTest(tf.test.TestCase):
           self._action_spec,
           q_network=q_net,
           optimizer=None,
-          n_step_update=2)
+          n_step_update=3)
 
       observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
       rewards = tf.constant([10, 20], dtype=tf.float32)

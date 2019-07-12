@@ -29,7 +29,7 @@ class LossInfoTest(tf.test.TestCase):
   def testBaseLossInfo(self):
     loss_info = tf_agent.LossInfo(0.0, ())
     self.assertEqual(loss_info.loss, 0.0)
-    self.assertTrue(isinstance(loss_info, tf_agent.LossInfo))
+    self.assertIsInstance(loss_info, tf_agent.LossInfo)
 
 
 if __name__ == '__main__':
