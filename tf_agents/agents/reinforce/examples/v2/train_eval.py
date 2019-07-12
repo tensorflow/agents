@@ -153,11 +153,16 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=collect_episodes_per_iteration)
 
+    def train_step():
+      experience = replay_buffer.gather_all()
+      return tf_agent.train(experience)
+
     if use_tf_functions:
       # To speed up collect use TF function.
       collect_driver.run = common.function(collect_driver.run)
       # To speed up train use TF function.
       tf_agent.train = common.function(tf_agent.train)
+      train_step = common.function(train_step)
 
     # Compute evaluation metrics.
     metrics = metric_utils.eager_compute(
@@ -185,8 +190,7 @@ def train_eval(
           time_step=time_step,
           policy_state=policy_state,
       )
-      experience = replay_buffer.gather_all()
-      total_loss = tf_agent.train(experience)
+      total_loss = train_step()
       replay_buffer.clear()
       time_acc += time.time() - start_time
 

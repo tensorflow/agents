@@ -190,10 +190,15 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=collect_episodes_per_iteration)
 
+    def train_step():
+      trajectories = replay_buffer.gather_all()
+      return tf_agent.train(experience=trajectories)
+
     if use_tf_functions:
       # TODO(b/123828980): Enable once the cause for slowdown was identified.
       collect_driver.run = common.function(collect_driver.run, autograph=False)
       tf_agent.train = common.function(tf_agent.train, autograph=False)
+      train_step = common.function(train_step)
 
     collect_time = 0
     train_time = 0
@@ -217,8 +222,7 @@ def train_eval(
       collect_time += time.time() - start_time
 
       start_time = time.time()
-      trajectories = replay_buffer.gather_all()
-      total_loss, _ = tf_agent.train(experience=trajectories)
+      total_loss, _ = train_step()
       replay_buffer.clear()
       train_time += time.time() - start_time
 
