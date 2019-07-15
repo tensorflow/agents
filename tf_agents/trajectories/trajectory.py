@@ -112,9 +112,9 @@ def _create_trajectory(
     policy_info,
     reward,
     discount,
-    name_scope,
     step_type,
-    next_step_type):
+    next_step_type,
+    name_scope):
   """Create a Trajectory composed of either Tensors or numpy arrays.
 
   The input `discount` is used to infer the outer shape of the inputs,
@@ -122,18 +122,20 @@ def _create_trajectory(
 
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[T]` (optional).
-    name_scope: Python string.
-    step_type: `Tensor` or `np.ndarray` of `ts.StepType` shaped `[T]`.
-    next_step_type: `Tensor` or `np.ndarray` of `ts.StepType` shaped `[T]`.
+      shaped `[B]`, `[T]`, or `[B, T]` (optional).
+    step_type: `Tensor` or `np.ndarray` of `ts.StepType`,
+      shaped `[B]`, `[T]`, or `[B, T]`.
+    next_step_type: `Tensor` or `np.ndarray` of `ts.StepType`,
+      shaped `[B]`, `[T]`, or `[B, T]`.
+    name_scope: Python string, name to use when creating tensors.
 
   Returns:
     A `Trajectory` instance.
@@ -176,15 +178,15 @@ def first(observation, action, policy_info, reward, discount):
 
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[T]` (optional).
+      shaped `[B]`, `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
@@ -209,15 +211,15 @@ def mid(observation, action, policy_info, reward, discount):
 
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[T]` (optional).
+      shaped `[B]`, `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
@@ -242,15 +244,15 @@ def last(observation, action, policy_info, reward, discount):
 
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[T]` (optional).
+      shaped `[B]`, `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
@@ -275,15 +277,15 @@ def boundary(observation, action, policy_info, reward, discount):
 
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     action: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     reward: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-      all shaped `[T, ...]`.
+      all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     discount: A floating point vector `Tensor` or `np.ndarray`;
-      shaped `[T]` (optional).
+      shaped `[B]`, `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
@@ -337,22 +339,22 @@ def from_episode(observation, action, policy_info, reward, discount=None):
 
   In this case, a `discount` of all ones having dtype `float32` is generated.
 
-  Notice: all tensors/numpy arrays passed to this function has the same time
-  dimension T. When the generated trajectory passes through `to_transition`, it
-  will only return (time_steps, next_time_steps) pair with T-1 in time
-  dimension, which means the reward at step T is dropped. So if the reward at
-  step T is important, please make sure the episode passed to this function
+  **NOTE**: all tensors/numpy arrays passed to this function have the same time
+  dimension `T`. When the generated trajectory passes through `to_transition`,
+  it will only return a `(time_steps, next_time_steps)` pair with `T - 1` in the
+  time dimension, which means the reward at step T is dropped. So if the reward
+  at step `T` is important, please make sure the episode passed to this function
   contains an additional step.
 
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[T,
-      ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[T,
-      ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[T, ...]`.
     discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[T]`
       (optional).
 
