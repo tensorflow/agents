@@ -50,16 +50,17 @@ def _ensure_tf_install():  # pylint: disable=g-statement-before-imports
   #
   # Update this whenever we need to depend on a newer TensorFlow release.
   #
-  required_tensorflow_version = "1.11.0"
+  required_tensorflow_version = "1.14"
 
-  if (distutils.version.LooseVersion(tf.__version__) <
+  version = tf.version.VERSION
+  if (distutils.version.LooseVersion(version) <
       distutils.version.LooseVersion(required_tensorflow_version)):
     raise ImportError(
         "This version of TF Agents requires TensorFlow "
         "version >= {required}; Detected an installation of version {present}. "
         "Please upgrade TensorFlow to proceed.".format(
             required=required_tensorflow_version,
-            present=tf.__version__))
+            present=version))
 
 
 _ensure_tf_install()
