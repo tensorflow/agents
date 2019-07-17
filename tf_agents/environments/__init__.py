@@ -19,6 +19,7 @@ from tf_agents.environments import batched_py_environment
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import py_environment
 from tf_agents.environments import random_py_environment
+from tf_agents.environments import random_tf_environment
 from tf_agents.environments import tf_environment
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments import trajectory_replay
