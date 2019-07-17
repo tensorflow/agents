@@ -92,6 +92,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         result = metric.result()
       result_ = self.evaluate(result)
       self.assertEqual(result_, expected_result)
+      self.evaluate(metric.reset())
+      self.assertEqual(0.0, self.evaluate(metric.result()))
 
 if __name__ == '__main__':
   tf.test.main()

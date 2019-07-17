@@ -50,6 +50,10 @@ class TFStepMetric(tf.Module):
     """
     raise NotImplementedError('Metrics must define a call() member function')
 
+  def reset(self):
+    """Resets the values being tracked by the metric."""
+    raise NotImplementedError('Metrics must define a reset() member function')
+
   def result(self):
     """Computes and returns a final value for the metric."""
     raise NotImplementedError('Metrics must define a result() member function')

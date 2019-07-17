@@ -29,9 +29,6 @@ from tf_agents.metrics import tf_py_metric
 from tf_agents.utils import common
 
 
-# TODO(kbanoop): Add reset to TF metrics for eval in eager mode.
-
-
 class EnvironmentSteps(tf_metric.TFStepMetric):
   """Counts the number of steps taken in the environment."""
 
@@ -63,6 +60,10 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
     return tf.identity(
         self.environment_steps, name=self.name)
 
+  @common.function
+  def reset(self):
+    self.environment_steps.assign(0)
+
 
 class NumberOfEpisodes(tf_metric.TFStepMetric):
   """Counts the number of episodes in the environment."""
@@ -93,6 +94,10 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
   def result(self):
     return tf.identity(
         self.number_episodes, name=self.name)
+
+  @common.function
+  def reset(self):
+    self.number_episodes.assign(0)
 
 
 class AverageReturnMetric(tf_py_metric.TFPyMetric):
