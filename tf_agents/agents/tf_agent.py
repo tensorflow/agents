@@ -144,9 +144,11 @@ class TFAgent(tf.Module):
             "Full expected shapes (minus outer dimensions):\n%s." %
             (debug_str_1, debug_str_2))
       else:
+        # self._num_outer_dims must be 1.
         raise ValueError(
-            "All of the Tensors in `experience` must have an outer batch_size "
-            "dimension.\n"
+            "All of the Tensors in `experience` must have a single outer "
+            "batch_size dimension. If you also want to include an outer time "
+            "dimension, set num_outer_dims=2 when initializing your agent.\n"
             "Full shapes of experience tensors:\n%s.\n"
             "Full expected shapes (minus batch_size dimension):\n%s." %
             (debug_str_1, debug_str_2))
