@@ -853,13 +853,17 @@ class Checkpointer(object):
         self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
 
     if self._manager.latest_checkpoint is not None:
-      logging.info(
-          '%s',
-          'Checkpoint available: {}'.format(self._manager.latest_checkpoint))
+      logging.info('Checkpoint available: %s', self._manager.latest_checkpoint)
+      self._checkpoint_exists = True
     else:
-      logging.info('%s', 'No checkpoint available at {}'.format(ckpt_dir))
+      logging.info('No checkpoint available at %s', ckpt_dir)
+      self._checkpoint_exists = False
     self._load_status = self._checkpoint.restore(
         self._manager.latest_checkpoint)
+
+  @property
+  def checkpoint_exists(self):
+    return self._checkpoint_exists
 
   def initialize_or_restore(self, session=None):
     """Initialize or restore graph (based on checkpoint if exists)."""
@@ -869,6 +873,7 @@ class Checkpointer(object):
   def save(self, global_step):
     """Save state to checkpoint."""
     saved_checkpoint = self._manager.save(checkpoint_number=global_step)
+    self._checkpoint_exists = True
     logging.info('%s', 'Saved checkpoint: {}'.format(saved_checkpoint))
 
 
