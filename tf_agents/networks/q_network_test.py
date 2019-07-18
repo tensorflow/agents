@@ -126,6 +126,45 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(q_values, next_q_values)
 
+  def testNumericFeatureColumnInput(self):
+    key = 'feature_key'
+    batch_size = 3
+    state_dims = 5
+    column = tf.feature_column.numeric_column(key, [state_dims])
+    state = {key: tf.ones([batch_size, state_dims], tf.int32)}
+    state_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
+
+    online_network = q_network.QNetwork(
+        input_tensor_spec=state_spec,
+        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
+        preprocessing_combiner=tf.keras.layers.DenseFeatures([column]))
+    target_network = online_network.copy(name='TargetNetwork')
+    q_online, _ = online_network(state)
+    q_target, _ = target_network(state)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
+
+  def testIndicatorFeatureColumnInput(self):
+    key = 'feature_key'
+    vocab_list = [2, 3, 4]
+    column = tf.feature_column.categorical_column_with_vocabulary_list(
+        key, vocab_list)
+    column = tf.feature_column.indicator_column(column)
+    feature_tensor = tf.convert_to_tensor([3, 2, 2, 4, 3])
+    state = {key: tf.expand_dims(feature_tensor, -1)}
+    state_spec = {key: tensor_spec.TensorSpec([1], tf.int32)}
+
+    online_network = q_network.QNetwork(
+        input_tensor_spec=state_spec,
+        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
+        preprocessing_combiner=tf.keras.layers.DenseFeatures([column]))
+    target_network = online_network.copy(name='TargetNetwork')
+    q_online, _ = online_network(state)
+    q_target, _ = target_network(state)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.initializers.tables_initializer())
+    self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
+
   def testVariablesBuild(self):
     num_state_dims = 5
     network = q_network.QNetwork(
