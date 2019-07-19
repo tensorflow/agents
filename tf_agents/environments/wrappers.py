@@ -68,8 +68,14 @@ class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
   def action_spec(self):
     return self._env.action_spec()
 
+  def close(self):
+    return self._env.close()
+
   def render(self, mode='rgb_array'):
     return self._env.render(mode)
+
+  def seed(self, seed):
+    return self._env.seed(seed)
 
   def wrapped_env(self):
     return self._env

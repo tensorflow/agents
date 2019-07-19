@@ -70,6 +70,22 @@ class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
     self.assertEqual(wrap_env.batched, env.batched)
     self.assertEqual(wrap_env.batch_size, env.batch_size)
 
+  def test_wrapped_method_propagation(self):
+    mock_env = mock.MagicMock()
+    env = wrappers.PyEnvironmentBaseWrapper(mock_env)
+    env.reset()
+    self.assertEqual(1, mock_env.reset.call_count)
+    env.step(0)
+    self.assertEqual(1, mock_env.step.call_count)
+    mock_env.step.assert_called_with(0)
+    env.seed(0)
+    self.assertEqual(1, mock_env.seed.call_count)
+    mock_env.seed.assert_called_with(0)
+    env.render()
+    self.assertEqual(1, mock_env.render.call_count)
+    env.close()
+    self.assertEqual(1, mock_env.close.call_count)
+
 
 class TimeLimitWrapperTest(absltest.TestCase):
 

@@ -316,12 +316,18 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
     first_time_step = env.step(0)
     self.assertTrue(first_time_step.is_first())
 
-  def test_render(self):
+  def test_method_propagation(self):
     cartpole_env = gym.spec('CartPole-v1').make()
-    cartpole_env.render = mock.MagicMock()
+    for method_name in ('render', 'seed', 'close'):
+      setattr(cartpole_env, method_name, mock.MagicMock())
     env = gym_wrapper.GymWrapper(cartpole_env)
     env.render()
     self.assertEqual(1, cartpole_env.render.call_count)
+    env.seed(0)
+    self.assertEqual(1, cartpole_env.seed.call_count)
+    cartpole_env.seed.assert_called_with(0)
+    env.close()
+    self.assertEqual(1, cartpole_env.close.call_count)
 
   def test_obs_dtype(self):
     cartpole_env = gym.spec('CartPole-v1').make()
