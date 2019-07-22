@@ -29,6 +29,50 @@ from tf_agents.metrics import tf_py_metric
 from tf_agents.utils import common
 
 
+class TFDeque(object):
+  """Deque backed by tf.Variable storage."""
+
+  def __init__(self, max_len, dtype, name='TFDeque'):
+    shape = (max_len,)
+    self._dtype = dtype
+    self._max_len = tf.convert_to_tensor(max_len, dtype=tf.int32)
+    self._buffer = common.create_variable(
+        initial_value=0, dtype=dtype, shape=shape, name=name + 'Vars')
+
+    self._head = common.create_variable(
+        initial_value=0, dtype=tf.int32, shape=(), name=name + 'Head')
+
+  @property
+  def data(self):
+    return self._buffer
+
+  @common.function(autograph=True)
+  def extend(self, value):
+    for v in value:
+      self.add(v)
+
+  @common.function(autograph=True)
+  def add(self, value):
+    position = tf.math.mod(self._head, self._max_len)
+    self._buffer.scatter_update(tf.IndexedSlices(value, position))
+    self._head.assign_add(1)
+
+  @property
+  def length(self):
+    return tf.minimum(self._head, self._max_len)
+
+  @common.function
+  def clear(self):
+    self._head.assign(0)
+    self._buffer.assign(tf.zeros_like(self._buffer))
+
+  @common.function(autograph=True)
+  def mean(self):
+    if tf.equal(self._head, 0):
+      return tf.zeros((), dtype=self._dtype)
+    return tf.math.reduce_mean(self._buffer[:self.length])
+
+
 class EnvironmentSteps(tf_metric.TFStepMetric):
   """Counts the number of steps taken in the environment."""
 
