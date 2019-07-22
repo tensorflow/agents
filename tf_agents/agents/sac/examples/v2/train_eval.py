@@ -85,6 +85,7 @@ def normal_projection_net(action_spec,
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
+    eval_env_name=None,
     env_load_fn=suite_mujoco.load,
     num_iterations=1000000,
     actor_fc_layers=(256, 256),
@@ -142,7 +143,8 @@ def train_eval(
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
     tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
-    eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
+    eval_env_name = eval_env_name or env_name
+    eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(eval_env_name))
 
     time_step_spec = tf_env.time_step_spec()
     observation_spec = time_step_spec.observation

@@ -67,6 +67,7 @@ FLAGS = flags.FLAGS
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
+    eval_env_name=None,
     env_load_fn=suite_mujoco.load,
     num_iterations=2000000,
     actor_fc_layers=(400, 300),
@@ -132,7 +133,8 @@ def train_eval(
               [lambda: env_load_fn(env_name)] * num_parallel_environments))
     else:
       tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
-    eval_py_env = env_load_fn(env_name)
+    eval_env_name = eval_env_name or env_name
+    eval_py_env = env_load_fn(eval_env_name)
 
     actor_net = actor_network.ActorNetwork(
         tf_env.time_step_spec().observation,
