@@ -19,8 +19,8 @@ run_tests() {
 
   # Install necessary python version
   pyenv install --list
-  pyenv install -s ${FLAGS_python_version}
-  pyenv global ${FLAGS_python_version}
+  pyenv install -s $1
+  pyenv global $1
 
   TMP=$(mktemp -d)
   # Create and activate a virtualenv to specify python version and test in
