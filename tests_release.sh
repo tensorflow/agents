@@ -76,7 +76,7 @@ if ! which cmake > /dev/null; then
 fi
 
 # Test on Python2.7
-run_tests "python2.7" $1
+run_tests "2.7" $1
 # Test on Python3.6.1
-run_tests "python3.6.1" $1
+run_tests "3.6.1" $1
 
