@@ -28,6 +28,21 @@ from tf_agents.utils import test_utils
 
 class EncodingNetworkTest(test_utils.TestCase):
 
+  def test_empty_layers(self):
+    input_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
+    network = encoding_network.EncodingNetwork(input_spec,)
+
+    variables = network.variables
+    self.assertEqual(0, len(variables))
+
+    # Only one layer to flatten input.
+    self.assertEqual(1, len(network.layers))
+    config = network.layers[0].get_config()
+    self.assertEqual('flatten', config['name'])
+
+    out, _ = network(tf.ones((1, 2, 3)))
+    self.assertAllEqual(out, [[1, 1, 1, 1, 1, 1]])
+
   def test_non_preprocessing_layers(self):
     input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
     network = encoding_network.EncodingNetwork(

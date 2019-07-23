@@ -163,19 +163,15 @@ class EncodingNetwork(network.Network):
         input_nest = [input_tensor_spec]
       nest.assert_shallow_structure(
           preprocessing_layers, input_nest, check_types=False)
-      if len(flat_preprocessing_layers) > 1 and preprocessing_combiner is None:
-        raise ValueError(
-            'preprocessing_combiner layer is required when more than 1 '
-            'preprocessing_layer is provided.')
+
+    if (len(tf.nest.flatten(input_tensor_spec)) > 1 and
+        preprocessing_combiner is None):
+      raise ValueError(
+          'preprocessing_combiner layer is required when more than 1 '
+          'input_tensor_spec is provided.')
 
     if preprocessing_combiner is not None:
       preprocessing_combiner = _copy_layer(preprocessing_combiner)
-
-    if not (preprocessing_layers or preprocessing_combiner or
-            conv_layer_params or fc_layer_params):
-      raise ValueError(
-          'At least one: preprocessing_layers, preprocessing_combiner, '
-          'conv_layer_params, or fc_layer_params should be provided.')
 
     if not kernel_initializer:
       kernel_initializer = tf.compat.v1.variance_scaling_initializer(
