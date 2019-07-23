@@ -25,6 +25,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from gym import core as gym_core
 import numpy as np
 import tensorflow as tf
 from tf_agents.environments import atari_preprocessing as preprocessing
@@ -43,7 +44,7 @@ class MockALE(object):
     screen.fill(self.screen_value)
 
 
-class MockEnvironment(object):
+class MockEnvironment(gym_core.Env):
   """Mock environment for testing."""
 
   def __init__(self, screen_size=10, max_steps=10):
@@ -51,6 +52,7 @@ class MockEnvironment(object):
     self.screen_size = screen_size
     self.ale = MockALE()
     self.observation_space = np.empty((screen_size, screen_size))
+    self.action_space = np.empty((5,))
     self.game_over = False
 
   def reset(self):
