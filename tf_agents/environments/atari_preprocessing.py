@@ -72,6 +72,7 @@ class AtariPreprocessing(gym_core.Wrapper):
       ValueError: if frame_skip or screen_size are not strictly positive.
     """
     super(AtariPreprocessing, self).__init__(env)
+    self._env = env
 
     # Return the observation space adjusted to match the shape of the processed
     # observations.
@@ -110,7 +111,7 @@ class AtariPreprocessing(gym_core.Wrapper):
       observation: numpy array, the initial observation emitted by the
         environment.
     """
-    super(AtariPreprocessing, self).reset()
+    self._env.reset()
     self.lives = self.env.ale.lives()
     self.game_over = False
     self._fetch_grayscale_observation(self.screen_buffer[0])
@@ -143,7 +144,7 @@ class AtariPreprocessing(gym_core.Wrapper):
     for time_step in range(self.frame_skip):
       # We bypass the Gym observation altogether and directly fetch the
       # grayscale image from the ALE. This is a little faster.
-      _, reward, game_over, info = super(AtariPreprocessing, self).step(action)
+      _, reward, game_over, info = self._env.step(action)
       accumulated_reward += reward
 
       if self.terminal_on_life_loss:
