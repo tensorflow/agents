@@ -27,7 +27,7 @@ import tensorflow as tf
 class SequentialLayer(tf.keras.layers.Layer):
   """The SequentialLayer represents a sequence of Keras layers.
 
-  It is a Keras Layer that can be used instead of tf.keras.layers.Sequential,,
+  It is a Keras Layer that can be used instead of tf.keras.layers.Sequential,
   which is actually a Keras Model.  In contrast to keras Sequential, this
   layer can be used as a pure Layer in tf.functions and when exporting
   SavedModels, without having to pre-declare input and output shapes.  In turn,
