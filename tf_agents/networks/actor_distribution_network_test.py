@@ -78,6 +78,37 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
     self.assertEqual([3, 2, 2, 3],
                      action_distributions[1].mode().shape.as_list())
 
+  @test_util.run_in_graph_and_eager_modes()
+  def testHandlePreprocessingLayers(self):
+    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
+                        tensor_spec.TensorSpec([], tf.float32))
+    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(3,))
+
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
+        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3)
+    ]
+
+    preprocessing_layers = (tf.keras.layers.Dense(4),
+                            tf.keras.Sequential([
+                                tf.keras.layers.Reshape((1,)),
+                                tf.keras.layers.Dense(4)
+                            ]))
+
+    net = actor_distribution_network.ActorDistributionNetwork(
+        observation_spec,
+        action_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=tf.keras.layers.Add())
+
+    action_distributions, _ = net(time_step.observation, time_step.step_type,
+                                  ())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertEqual([3, 2], action_distributions[0].mode().shape.as_list())
+    self.assertEqual([3, 3], action_distributions[1].mode().shape.as_list())
+    self.assertGreater(len(net.trainable_variables), 4)
+
 
 if __name__ == '__main__':
   tf.test.main()

@@ -24,9 +24,9 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.networks import categorical_projection_network
+from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 from tf_agents.networks import normal_projection_network
-from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
@@ -61,10 +61,15 @@ class ActorDistributionNetwork(network.DistributionNetwork):
   def __init__(self,
                input_tensor_spec,
                output_tensor_spec,
+               preprocessing_layers=None,
+               preprocessing_combiner=None,
+               conv_layer_params=None,
                fc_layer_params=(200, 100),
                dropout_layer_params=None,
-               conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
+               kernel_initializer=None,
+               batch_squash=True,
+               dtype=tf.float32,
                discrete_projection_net=_categorical_projection_net,
                continuous_projection_net=_normal_projection_net,
                name='ActorDistributionNetwork'):
@@ -75,6 +80,18 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         input.
       output_tensor_spec: A nest of `tensor_spec.BoundedTensorSpec` representing
         the output.
+      preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
+        representing preprocessing for the different observations.
+        All of these layers must not be already built. For more details see
+        the documentation of `networks.EncodingNetwork`.
+      preprocessing_combiner: (Optional.) A keras layer that takes a flat list
+        of tensors and combines them. Good options include
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
+        This layer must not be already built. For more details see
+        the documentation of `networks.EncodingNetwork`.
+      conv_layer_params: Optional list of convolution layers parameters, where
+        each item is a length-three tuple indicating (filters, kernel_size,
+        stride).
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
       dropout_layer_params: Optional list of dropout layer parameters, each item
@@ -85,10 +102,13 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         the fully connected layers; there is a dropout layer after each fully
         connected layer, except if the entry in the list is None. This list must
         have the same length of fc_layer_params, or be None.
-      conv_layer_params: Optional list of convolution layers parameters, where
-        each item is a length-three tuple indicating (filters, kernel_size,
-        stride).
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
+      kernel_initializer: Initializer to use for the kernels of the conv and
+        dense layers. If none is provided a default glorot_uniform
+      batch_squash: If True the outer_ranks of the observation are squashed into
+        the batch dimension. This allow encoding networks to be used with
+        observations with shape [BxTx...].
+      dtype: The dtype to use by the convolution and fully connected layers.
       discrete_projection_net: Callable that generates a discrete projection
         network to be called with some hidden state and the outer_rank of the
         state.
@@ -101,16 +121,20 @@ class ActorDistributionNetwork(network.DistributionNetwork):
       ValueError: If `input_tensor_spec` contains more than one observation.
     """
 
-    if len(tf.nest.flatten(input_tensor_spec)) > 1:
-      raise ValueError('Only a single observation is supported by this network')
+    if not kernel_initializer:
+      kernel_initializer = tf.compat.v1.keras.initializers.glorot_uniform()
 
-    mlp_layers = utils.mlp_layers(
-        conv_layer_params,
-        fc_layer_params,
-        activation_fn=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
+    encoder = encoding_network.EncodingNetwork(
+        input_tensor_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=preprocessing_combiner,
+        conv_layer_params=conv_layer_params,
+        fc_layer_params=fc_layer_params,
         dropout_layer_params=dropout_layer_params,
-        name='input_mlp')
+        activation_fn=activation_fn,
+        kernel_initializer=kernel_initializer,
+        batch_squash=batch_squash,
+        dtype=dtype)
 
     def map_proj(spec):
       if tensor_spec.is_discrete(spec):
@@ -128,7 +152,7 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         output_spec=output_spec,
         name=name)
 
-    self._mlp_layers = mlp_layers
+    self._encoder = encoder
     self._projection_networks = projection_networks
     self._output_tensor_spec = output_tensor_spec
 
@@ -137,21 +161,9 @@ class ActorDistributionNetwork(network.DistributionNetwork):
     return self._output_tensor_spec
 
   def call(self, observations, step_type, network_state):
-    del step_type  # unused.
+    state, network_state = self._encoder(
+        observations, step_type=step_type, network_state=network_state)
     outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
-    observations = tf.nest.flatten(observations)
-    states = tf.cast(observations[0], tf.float32)
-
-    # Reshape to only a single batch dimension for neural network functions.
-    batch_squash = utils.BatchSquash(outer_rank)
-    states = batch_squash.flatten(states)
-
-    for layer in self._mlp_layers:
-      states = layer(states)
-
-    # TODO(oars): Can we avoid unflattening to flatten again
-    states = batch_squash.unflatten(states)
     output_actions = tf.nest.map_structure(
-        lambda proj_net: proj_net(states, outer_rank),
-        self._projection_networks)
+        lambda proj_net: proj_net(state, outer_rank), self._projection_networks)
     return output_actions, network_state
