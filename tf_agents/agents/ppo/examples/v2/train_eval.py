@@ -172,8 +172,10 @@ def train_eval(
     ]
 
     train_metrics = step_metrics + [
-        tf_metrics.AverageReturnMetric(),
-        tf_metrics.AverageEpisodeLengthMetric(),
+        tf_metrics.AverageReturnMetric(
+            batch_size=num_parallel_environments),
+        tf_metrics.AverageEpisodeLengthMetric(
+            batch_size=num_parallel_environments),
     ]
 
     eval_policy = tf_agent.policy

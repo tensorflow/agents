@@ -23,9 +23,7 @@ from absl import logging
 
 import tensorflow as tf
 
-from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metric
-from tf_agents.metrics import tf_py_metric
 from tf_agents.utils import common
 
 
@@ -101,8 +99,7 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
     return trajectory
 
   def result(self):
-    return tf.identity(
-        self.environment_steps, name=self.name)
+    return tf.identity(self.environment_steps, name=self.name)
 
   @common.function
   def reset(self):
@@ -136,37 +133,97 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
     return trajectory
 
   def result(self):
-    return tf.identity(
-        self.number_episodes, name=self.name)
+    return tf.identity(self.number_episodes, name=self.name)
 
   @common.function
   def reset(self):
     self.number_episodes.assign(0)
 
 
-class AverageReturnMetric(tf_py_metric.TFPyMetric):
+class AverageReturnMetric(tf_metric.TFStepMetric):
   """Metric to compute the average return."""
 
-  def __init__(self, name='AverageReturn', dtype=tf.float32, buffer_size=10):
-    py_metric = py_metrics.AverageReturnMetric(buffer_size=buffer_size)
+  def __init__(self,
+               name='AverageReturn',
+               dtype=tf.float32,
+               batch_size=1,
+               buffer_size=10):
+    super(AverageReturnMetric, self).__init__(name=name)
+    self._buffer = TFDeque(buffer_size, dtype)
+    self._dtype = dtype
+    self._return_accumulator = common.create_variable(
+        initial_value=0, dtype=dtype, shape=(batch_size,), name='Accumulator')
 
-    super(AverageReturnMetric, self).__init__(
-        py_metric=py_metric, name=name, dtype=dtype)
+  @common.function(autograph=True)
+  def call(self, trajectory):
+    # Zero out batch indices where a new episode is starting.
+    self._return_accumulator.assign(
+        tf.where(trajectory.is_first(), tf.zeros_like(self._return_accumulator),
+                 self._return_accumulator))
+
+    # Update accumulator with received rewards.
+    self._return_accumulator.assign_add(trajectory.reward)
+
+    # Add final returns to buffer.
+    last_episode_indices = tf.squeeze(tf.where(trajectory.is_last()), axis=-1)
+    for indx in last_episode_indices:
+      self._buffer.add(self._return_accumulator[indx])
+
+    return trajectory
+
+  def result(self):
+    return self._buffer.mean()
+
+  @common.function
+  def reset(self):
+    self._buffer.clear()
+    self._return_accumulator.assign(tf.zeros_like(self._return_accumulator))
 
 
-class AverageEpisodeLengthMetric(tf_py_metric.TFPyMetric):
+class AverageEpisodeLengthMetric(tf_metric.TFStepMetric):
   """Metric to compute the average episode length."""
 
   def __init__(self,
                name='AverageEpisodeLength',
                dtype=tf.float32,
+               batch_size=1,
                buffer_size=10):
+    super(AverageEpisodeLengthMetric, self).__init__(name=name)
+    self._buffer = TFDeque(buffer_size, dtype)
+    self._dtype = dtype
+    self._length_accumulator = common.create_variable(
+        initial_value=0, dtype=dtype, shape=(batch_size,), name='Accumulator')
 
-    py_metric = py_metrics.AverageEpisodeLengthMetric(
-        buffer_size=buffer_size)
+  @common.function(autograph=True)
+  def call(self, trajectory):
+    # Each non-boundary trajectory (first, mid or last) represents a step.
+    non_boundary_indices = tf.squeeze(
+        tf.where(tf.logical_not(trajectory.is_boundary())), axis=-1)
+    self._length_accumulator.scatter_add(
+        tf.IndexedSlices(
+            tf.ones_like(
+                non_boundary_indices, dtype=self._length_accumulator.dtype),
+            non_boundary_indices))
 
-    super(AverageEpisodeLengthMetric, self).__init__(
-        py_metric=py_metric, name=name, dtype=dtype)
+    # Add lengths to buffer when we hit end of episode
+    last_indices = tf.squeeze(tf.where(trajectory.is_last()), axis=-1)
+    for indx in last_indices:
+      self._buffer.add(self._length_accumulator[indx])
+
+    # Clear length accumulator at the end of episodes.
+    self._length_accumulator.scatter_update(
+        tf.IndexedSlices(
+            tf.zeros_like(last_indices, dtype=self._dtype), last_indices))
+
+    return trajectory
+
+  def result(self):
+    return self._buffer.mean()
+
+  @common.function
+  def reset(self):
+    self._buffer.clear()
+    self._length_accumulator.assign(tf.zeros_like(self._length_accumulator))
 
 
 def log_metrics(metrics, prefix=''):

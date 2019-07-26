@@ -195,8 +195,10 @@ def train_eval(
         environment_steps_metric,
     ]
     train_metrics = step_metrics + [
-        tf_metrics.AverageReturnMetric(),
-        tf_metrics.AverageEpisodeLengthMetric(),
+        tf_metrics.AverageReturnMetric(
+            batch_size=num_parallel_environments),
+        tf_metrics.AverageEpisodeLengthMetric(
+            batch_size=num_parallel_environments),
     ]
 
     # Add to replay buffer and other agent specific observers.

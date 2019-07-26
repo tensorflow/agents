@@ -117,7 +117,8 @@ class TFStepMetric(tf.Module):
       if self.name == step_metric.name:
         continue
       step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
-      step = step_metric.result()
+      # Summaries expect the step value to be an int64.
+      step = tf.cast(step_metric.result(), tf.int64)
       summaries.append(tf.compat.v2.summary.scalar(
           name=step_tag,
           data=result,

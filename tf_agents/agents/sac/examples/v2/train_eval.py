@@ -26,7 +26,6 @@ python tf_agents/agents/sac/examples/v2/train_eval.py \
 ```
 """
 
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -47,9 +46,7 @@ from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
 from tf_agents.eval import metric_utils
-from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metrics
-from tf_agents.metrics import tf_py_metric
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import normal_projection_network
 from tf_agents.policies import greedy_policy
@@ -60,8 +57,7 @@ from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_multi_string('gin_file', None,
-                          'Path to the trainer config files.')
+flags.DEFINE_multi_string('gin_file', None, 'Path to the trainer config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding to pass through.')
 
 FLAGS = flags.FLAGS
@@ -193,8 +189,10 @@ def train_eval(
     train_metrics = [
         tf_metrics.NumberOfEpisodes(),
         tf_metrics.EnvironmentSteps(),
-        tf_py_metric.TFPyMetric(py_metrics.AverageReturnMetric()),
-        tf_py_metric.TFPyMetric(py_metrics.AverageEpisodeLengthMetric()),
+        tf_metrics.AverageReturnMetric(
+            buffer_size=num_eval_episodes, batch_size=tf_env.batch_size),
+        tf_metrics.AverageEpisodeLengthMetric(
+            buffer_size=num_eval_episodes, batch_size=tf_env.batch_size),
     ]
 
     eval_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
