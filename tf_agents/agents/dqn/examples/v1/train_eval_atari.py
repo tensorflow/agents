@@ -291,7 +291,7 @@ class TrainEval(object):
             target_update_tau=target_update_tau,
             target_update_period=(
                 target_update_period / ATARI_FRAME_SKIP / self._update_period),
-            td_errors_loss_fn=dqn_agent.element_wise_huber_loss,
+            td_errors_loss_fn=common.element_wise_huber_loss,
             gamma=gamma,
             reward_scale_factor=reward_scale_factor,
             gradient_clipping=gradient_clipping,
