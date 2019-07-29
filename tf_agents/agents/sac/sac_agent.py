@@ -236,7 +236,7 @@ class SacAgent(tf_agent.TFAgent):
 
     alpha_variable = [self._log_alpha]
     with tf.GradientTape(watch_accessed_variables=False) as tape:
-      assert actor_variables, 'No actor variables to optimize.'
+      assert alpha_variable, 'No alpha variable to optimize.'
       tape.watch(alpha_variable)
       alpha_loss = self.alpha_loss(time_steps, weights=weights)
     tf.debugging.check_numerics(alpha_loss, 'Alpha loss is inf or nan.')
