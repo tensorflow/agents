@@ -16,6 +16,8 @@
 """Module importing all agents."""
 from tf_agents.agents import tf_agent
 # TODO(b/130564501): Do not import classes directly, only expose modules.
+from tf_agents.agents.behavioral_cloning.behavioral_cloning_agent import BehavioralCloningAgent
+from tf_agents.agents.categorical_dqn.categorical_dqn_agent import CategoricalDqnAgent
 from tf_agents.agents.ddpg.ddpg_agent import DdpgAgent
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
 from tf_agents.agents.ppo.ppo_agent import PPOAgent

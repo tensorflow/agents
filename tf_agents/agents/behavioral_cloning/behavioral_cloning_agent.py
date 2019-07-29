@@ -115,7 +115,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
         ```python
         def loss_fn(logits, action):
-          return tf.nn.sparse_softmax_cross_entropy_with_logits(
+          return tf.compat.v1.nn.sparse_softmax_cross_entropy_with_logits(
             labels=action - action_spec.minimum, logits=logits)
         ```
 
@@ -183,7 +183,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     def xent_loss_fn(logits, actions):
       # Subtract the minimum so that we get a proper cross entropy loss on
       # [0, maximum - minimum).
-      return tf.nn.sparse_softmax_cross_entropy_with_logits(
+      return tf.compat.v1.nn.sparse_softmax_cross_entropy_with_logits(
           logits=logits, labels=actions - spec.minimum)
 
     return xent_loss_fn

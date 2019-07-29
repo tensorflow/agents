@@ -158,7 +158,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     total_loss, _ = self.evaluate(loss_info)
 
     expected_loss = tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+        input_tensor=tf.compat.v1.nn.sparse_softmax_cross_entropy_with_logits(
             logits=cloning_net(observations)[0], labels=actions[0]))
 
     self.assertAllClose(total_loss, expected_loss)

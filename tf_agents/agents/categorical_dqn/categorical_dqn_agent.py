@@ -95,9 +95,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
-        default value of element_wise_huber_loss is used. This function takes as
-        input the target and the estimated Q values and returns the loss for
-        each element of the batch.
+        default value of huber_loss is used. This function takes as input the
+        target and the estimated Q values and returns the loss for each element
+        of the batch.
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       gradient_clipping: Norm length to clip gradients.
@@ -158,7 +158,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
   def _loss(self,
             experience,
-            td_errors_loss_fn=tf.losses.huber_loss,
+            td_errors_loss_fn=tf.compat.v1.losses.huber_loss,
             gamma=1.0,
             reward_scale_factor=1.0,
             weights=None):
@@ -232,7 +232,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
       actions = tf.nest.flatten(actions)[0]
       if actions.shape.ndims > 1:
-        actions = tf.squeeze(actions, range(1, actions.shape.ndims))
+        actions = tf.squeeze(actions, list(range(1, actions.shape.ndims)))
 
       # Project the sample Bellman update \hat{T}Z_{\theta} onto the original
       # support of Z_{\theta} (see Figure 1 in paper).
@@ -310,13 +310,13 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         chosen_action_logits = batch_squash.unflatten(chosen_action_logits)
         critic_loss = tf.reduce_mean(
             tf.reduce_sum(
-                tf.nn.softmax_cross_entropy_with_logits_v2(
+                tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
                     labels=target_distribution,
                     logits=chosen_action_logits),
                 axis=1))
       else:
         critic_loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits_v2(
+            tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
                 labels=target_distribution,
                 logits=chosen_action_logits))
 
@@ -375,7 +375,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         self._support * next_target_probabilities, axis=-1)
     next_qt_argmax = tf.argmax(next_target_q_values, axis=-1)[:, None]
     batch_indices = tf.range(
-        tf.to_int64(tf.shape(next_target_q_values)[0]))[:, None]
+        tf.cast(tf.shape(next_target_q_values)[0], tf.int64))[:, None]
     next_qt_argmax = tf.concat([batch_indices, next_qt_argmax], axis=-1)
     return tf.gather_nd(next_target_probabilities, next_qt_argmax)
 
