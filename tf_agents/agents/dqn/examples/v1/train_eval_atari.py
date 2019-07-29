@@ -79,7 +79,10 @@ from tf_agents.utils import timer
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string('environment_name', None,
+                    'Full name of Atari game to run, ex. PongNoFrameskip-v4.')
 flags.DEFINE_string('game_name', 'Pong', 'Name of Atari game to run.')
+
 flags.DEFINE_integer('num_iterations', None,
                      'Number of train/eval iterations to run.')
 flags.DEFINE_integer('initial_collect_steps', None,
@@ -627,8 +630,10 @@ def get_run_args():
 def main(_):
   logging.set_verbosity(logging.INFO)
   tf.enable_resource_variables()
-  TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name),
-            **get_run_args()).run()
+  environment_name = FLAGS.environment_name
+  if environment_name is None:
+    environment_name = suite_atari.game(name=FLAGS.game_name)
+  TrainEval(FLAGS.root_dir, environment_name, **get_run_args()).run()
 
 
 if __name__ == '__main__':
