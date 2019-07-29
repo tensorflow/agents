@@ -100,7 +100,7 @@ class SacAgentTest(tf.test.TestCase):
   def setUp(self):
     super(SacAgentTest, self).setUp()
     tf.compat.v1.enable_resource_variables()
-    self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
+    self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
 
@@ -126,13 +126,13 @@ class SacAgentTest(tf.test.TestCase):
         alpha_optimizer=None,
         actor_policy_ctor=DummyActorPolicy)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations)
     actions = tf.constant([[5], [6]], dtype=tf.float32)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     td_targets = [7.3, 19.1]
@@ -165,7 +165,7 @@ class SacAgentTest(tf.test.TestCase):
         alpha_optimizer=None,
         actor_policy_ctor=DummyActorPolicy)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     expected_loss = (2 * 10 - (2 + 1) - (4 + 1)) / 2
@@ -187,7 +187,7 @@ class SacAgentTest(tf.test.TestCase):
         target_entropy=3.0,
         initial_log_alpha=4.0,
         actor_policy_ctor=DummyActorPolicy)
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     expected_loss = 4.0 * (-10 - 3)
@@ -208,7 +208,7 @@ class SacAgentTest(tf.test.TestCase):
         alpha_optimizer=None,
         actor_policy_ctor=DummyActorPolicy)
 
-    observations = [tf.constant([1, 2], dtype=tf.float32)]
+    observations = tf.constant([1, 2], dtype=tf.float32)
     time_steps = ts.restart(observations)
     action_step = agent.policy.action(time_steps)
 
@@ -259,10 +259,10 @@ class SacAgentTest(tf.test.TestCase):
         step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-        observation=[observations])
+        observation=observations)
 
     experience = trajectory.Trajectory(
-        time_steps.step_type, [observations], actions, (),
+        time_steps.step_type, observations, actions, (),
         time_steps.step_type, time_steps.reward, time_steps.discount)
 
     # Force variable creation.
@@ -276,3 +276,7 @@ class SacAgentTest(tf.test.TestCase):
     self.assertEqual(self.evaluate(counter), 0)
     self.evaluate(loss)
     self.assertEqual(self.evaluate(counter), 1)
+
+
+if __name__ == '__main__':
+  tf.test.main()

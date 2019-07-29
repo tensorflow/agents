@@ -20,15 +20,14 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tf_agents.networks import actor_distribution_rnn_network
+from tf_agents.networks import sequential_layer
 from tf_agents.policies import actor_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
-from tensorflow.python.framework import test_util  # TF internal
 
 
 class ActorDistributionNetworkTest(tf.test.TestCase):
 
-  @test_util.run_in_graph_and_eager_modes()
   def testBuilds(self):
     observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
                                                      1)
@@ -88,7 +87,6 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
     self.assertEqual((1, 3), network_state[0].shape)
     self.assertEqual((1, 3), network_state[1].shape)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testRunsWithLstmStack(self):
     observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
                                                      1)
@@ -116,6 +114,40 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.nest.map_structure(lambda d: d.sample(), net_call[0]))
+
+  def testHandlePreprocessingLayers(self):
+    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
+                        tensor_spec.TensorSpec([], tf.float32))
+    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(3, 4))
+
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
+        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3)
+    ]
+
+    preprocessing_layers = (tf.keras.layers.Dense(4),
+                            sequential_layer.SequentialLayer([
+                                tf.keras.layers.Reshape((1,)),
+                                tf.keras.layers.Dense(4)
+                            ]))
+
+    net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+        observation_spec,
+        action_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=tf.keras.layers.Add())
+
+    initial_state = actor_policy.ActorPolicy(time_step_spec, action_spec,
+                                             net).get_initial_state(3)
+
+    action_distributions, _ = net(time_step.observation, time_step.step_type,
+                                  initial_state)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertEqual([3, 4, 2], action_distributions[0].mode().shape.as_list())
+    self.assertEqual([3, 4, 3], action_distributions[1].mode().shape.as_list())
+    self.assertGreater(len(net.trainable_variables), 4)
 
 
 if __name__ == '__main__':
