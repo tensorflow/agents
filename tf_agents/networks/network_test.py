@@ -23,6 +23,7 @@ import tensorflow as tf
 
 from tf_agents import specs
 from tf_agents.networks import network
+from tf_agents.utils import common
 
 
 class BaseNetwork(network.Network):
@@ -36,20 +37,18 @@ class BaseNetwork(network.Network):
 class MockNetwork(BaseNetwork):
 
   def __init__(self, param1, param2, kwarg1=2, kwarg2=3):
-    super(MockNetwork, self).__init__(param1,
-                                      state_spec=(),
-                                      name='mock')
+    self.var1 = common.create_variable('variable', trainable=False)
+    self.var2 = common.create_variable('trainable_variable', trainable=True)
     self.param1 = param1
     self.param2 = param2
     self.kwarg1 = kwarg1
     self.kwarg2 = kwarg2
+    super(MockNetwork, self).__init__(param1,
+                                      state_spec=(),
+                                      name='mock')
 
   def call(self, param1, param2, kwarg1=2, kwarg2=3):
     return []
-
-  @property
-  def weights(self):
-    return [1]
 
 
 class NoInitNetwork(MockNetwork):
@@ -96,7 +95,18 @@ class NetworkTest(tf.test.TestCase):
     self.assertFalse(net.built)
     variables = net.variables
     self.assertTrue(net.built)
-    self.assertAllEqual(variables, [1])
+    self.assertLen(variables, 2)
+
+  def test_trainable_variables_calls_build(self):
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    action_spec = specs.TensorSpec([2], tf.float32, 'action')
+    net = MockNetwork(observation_spec, action_spec)
+    self.assertFalse(net.built)
+    variables = net.trainable_variables
+    self.assertTrue(net.built)
+    # Only net.var2 variable is trainable.
+    self.assertLen(variables, 1)
+
 
 if __name__ == '__main__':
   tf.test.main()

@@ -140,6 +140,25 @@ class Network(keras_network.Network):
           "variables. Message: {!r}.".format(e), traceback)
     return self.weights
 
+  @property
+  def trainable_variables(self):
+    """Return the trainable variables for all the network layers.
+
+    If the network hasn't been built, builds it on random input (generated
+    using self._input_tensor_spec) to build all the layers and their variables.
+
+    Raises:
+      ValueError:  If the network fails to build.
+    """
+    try:
+      self._build()
+    except ValueError as e:
+      traceback = sys.exc_info()[2]
+      six.reraise(
+          ValueError, "Failed to call build on the network when accessing "
+          "trainable_variables. Message: {!r}.".format(e), traceback)
+    return self.trainable_weights
+
   def copy(self, **kwargs):
     """Create a shallow copy of this network.
 
