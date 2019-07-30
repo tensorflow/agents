@@ -10,8 +10,6 @@ TF Agents.
 
 
 
-Defined in [`__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/__init__.py).
-
 <!-- Placeholder for "Used in" -->
 
 
