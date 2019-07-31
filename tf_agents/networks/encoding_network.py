@@ -171,6 +171,11 @@ class EncodingNetwork(network.Network):
           'input_tensor_spec is provided.')
 
     if preprocessing_combiner is not None:
+      # pylint:disable=unidiomatic-typecheck
+      if (type(preprocessing_combiner) ==
+          tf.compat.v1.keras.layers.DenseFeatures):
+        raise ValueError('DenseFeatures V1 is not supported. '
+                         'Use tf.compat.v2.keras.layers.DenseFeatures instead.')
       preprocessing_combiner = _copy_layer(preprocessing_combiner)
 
     if not kernel_initializer:

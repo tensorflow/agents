@@ -178,6 +178,16 @@ class EncodingNetworkTest(test_utils.TestCase):
 
     self.assertNotEmpty(network.variables)
 
+  def testDenseFeaturesV1RaisesError(self):
+    key = 'feature_key'
+    state_dims = 5
+    column = tf.feature_column.numeric_column(key, [state_dims])
+    input_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
+    dense_features = tf.compat.v1.keras.layers.DenseFeatures([column])
+    with self.assertRaisesRegexp(ValueError, 'DenseFeatures'):
+      encoding_network.EncodingNetwork(
+          input_spec, preprocessing_combiner=dense_features)
+
   def testNumericFeatureColumnInput(self):
     key = 'feature_key'
     batch_size = 3
@@ -187,9 +197,9 @@ class EncodingNetworkTest(test_utils.TestCase):
     state = {key: tf.ones(input_shape, tf.int32)}
     input_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
 
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
     network = encoding_network.EncodingNetwork(
-        input_spec,
-        preprocessing_combiner=tf.keras.layers.DenseFeatures([column]))
+        input_spec, preprocessing_combiner=dense_features)
 
     output, _ = network(state)
     self.assertEqual(input_shape, output.shape)
@@ -205,9 +215,9 @@ class EncodingNetworkTest(test_utils.TestCase):
     state = {key: tf.expand_dims(state_input, -1)}
     input_spec = {key: tensor_spec.TensorSpec([1], tf.int32)}
 
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
     network = encoding_network.EncodingNetwork(
-        input_spec,
-        preprocessing_combiner=tf.keras.layers.DenseFeatures([column]))
+        input_spec, preprocessing_combiner=dense_features)
 
     output, _ = network(state)
     expected_shape = (len(state_input), len(vocab_list))
@@ -253,9 +263,9 @@ class EncodingNetworkTest(test_utils.TestCase):
     specs[numeric_key] = tensor_spec.TensorSpec([state_dims], tf.int32)
     expected_dim += state_dims
 
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures(columns.values())
     network = encoding_network.EncodingNetwork(
-        specs,
-        preprocessing_combiner=tf.keras.layers.DenseFeatures(columns.values()))
+        specs, preprocessing_combiner=dense_features)
 
     output, _ = network(tensors)
     expected_shape = (batch_size, expected_dim)
