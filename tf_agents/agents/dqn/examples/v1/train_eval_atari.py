@@ -67,6 +67,7 @@ from tf_agents.metrics import py_metric
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import q_network
 from tf_agents.policies import epsilon_greedy_policy
+from tf_agents.policies import policy_saver
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import py_hashed_replay_buffer
@@ -374,6 +375,9 @@ class TrainEval(object):
                     train_step=self._global_step,
                     step_metrics=(self._iteration_metric,))
 
+        self._train_dir = train_dir
+        self._policy_exporter = policy_saver.PolicySaver(
+            agent.policy, train_step=self._global_step)
         self._train_checkpointer = common.Checkpointer(
             ckpt_dir=train_dir,
             agent=agent,
@@ -443,6 +447,12 @@ class TrainEval(object):
         self._train_checkpointer.save(global_step=global_step_val)
         self._policy_checkpointer.save(global_step=global_step_val)
         self._rb_checkpointer.save(global_step=global_step_val)
+
+        export_dir = os.path.join(self._train_dir, 'saved_policy',
+                                  'step_' + ('%d' % global_step_val).zfill(8))
+        self._policy_exporter.save(export_dir)
+        common.save_spec(self._collect_policy.trajectory_spec,
+                         os.path.join(export_dir, 'trajectory_spec'))
 
   def _initialize_graph(self, sess):
     """Initialize the graph for sess."""
