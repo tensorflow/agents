@@ -169,7 +169,7 @@ def train_eval(
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
-        td_errors_loss_fn=dqn_agent.element_wise_squared_loss,
+        td_errors_loss_fn=common.element_wise_squared_loss,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,

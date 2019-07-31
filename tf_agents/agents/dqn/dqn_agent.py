@@ -66,18 +66,6 @@ class DqnLossInfo(collections.namedtuple('DqnLossInfo',
   pass
 
 
-# TODO(damienv): Definition of those element wise losses should not belong to
-# this file. Move them to utils/common or utils/losses.
-def element_wise_squared_loss(x, y):
-  return tf.compat.v1.losses.mean_squared_error(
-      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
-
-
-def element_wise_huber_loss(x, y):
-  return tf.compat.v1.losses.huber_loss(
-      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
-
-
 def compute_td_targets(next_q_values, rewards, discounts):
   return tf.stop_gradient(rewards + discounts * next_q_values)
 
@@ -192,7 +180,7 @@ class DqnAgent(tf_agent.TFAgent):
     self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature
     self._optimizer = optimizer
-    self._td_errors_loss_fn = td_errors_loss_fn or element_wise_huber_loss
+    self._td_errors_loss_fn = td_errors_loss_fn or common.element_wise_huber_loss
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
@@ -303,7 +291,7 @@ class DqnAgent(tf_agent.TFAgent):
 
   def _loss(self,
             experience,
-            td_errors_loss_fn=element_wise_huber_loss,
+            td_errors_loss_fn=common.element_wise_huber_loss,
             gamma=1.0,
             reward_scale_factor=1.0,
             weights=None):
