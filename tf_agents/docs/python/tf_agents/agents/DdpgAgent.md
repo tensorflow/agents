@@ -15,9 +15,7 @@
 <meta itemprop="property" content="train_step_counter"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="variables"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
 <meta itemprop="property" content="actor_loss"/>
 <meta itemprop="property" content="critic_loss"/>
 <meta itemprop="property" content="initialize"/>
@@ -26,6 +24,12 @@
 </div>
 
 # tf_agents.agents.DdpgAgent
+
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/ddpg_agent.py">View
+source</a>
 
 ## Class `DdpgAgent`
 
@@ -38,9 +42,6 @@ Inherits From: [`TFAgent`](../../tf_agents/agents/tf_agent/TFAgent.md)
 * Class `tf_agents.agents.DdpgAgent`
 * Class `tf_agents.agents.ddpg.ddpg_agent.DdpgAgent`
 
-
-
-Defined in [`agents/ddpg/ddpg_agent.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/ddpg_agent.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -58,37 +59,38 @@ Creates a DDPG Agent.
 
 #### Args:
 
-* <b>`time_step_spec`</b>: A `TimeStep` spec of the expected time_steps.
-* <b>`action_spec`</b>: A nest of BoundedTensorSpec representing the actions.
-* <b>`actor_network`</b>: A tf_agents.network.Network to be used by the agent. The
-    network will be called with call(observation, step_type).
-* <b>`critic_network`</b>: A tf_agents.network.Network to be used by the agent. The
-    network will be called with call(observation, action, step_type).
-* <b>`actor_optimizer`</b>: The optimizer to use for the actor network.
-* <b>`critic_optimizer`</b>: The optimizer to use for the critic network.
-* <b>`ou_stddev`</b>: Standard deviation for the Ornstein-Uhlenbeck (OU) noise added
-    in the default collect policy.
-* <b>`ou_damping`</b>: Damping factor for the OU noise added in the default collect
-    policy.
-* <b>`target_update_tau`</b>: Factor for soft update of the target networks.
-* <b>`target_update_period`</b>: Period for soft update of the target networks.
-* <b>`dqda_clipping`</b>: when computing the actor loss, clips the gradient dqda
-    element-wise between [-dqda_clipping, dqda_clipping]. Does not perform
+*   <b>`time_step_spec`</b>: A `TimeStep` spec of the expected time_steps.
+*   <b>`action_spec`</b>: A nest of BoundedTensorSpec representing the actions.
+*   <b>`actor_network`</b>: A tf_agents.network.Network to be used by the agent.
+    The network will be called with call(observation, step_type[, policy_state])
+    and should return (action, new_state).
+*   <b>`critic_network`</b>: A tf_agents.network.Network to be used by the
+    agent. The network will be called with call((observation, action),
+    step_type[, policy_state]) and should return (q_value, new_state).
+*   <b>`actor_optimizer`</b>: The optimizer to use for the actor network.
+*   <b>`critic_optimizer`</b>: The optimizer to use for the critic network.
+*   <b>`ou_stddev`</b>: Standard deviation for the Ornstein-Uhlenbeck (OU) noise
+    added in the default collect policy.
+*   <b>`ou_damping`</b>: Damping factor for the OU noise added in the default
+    collect policy.
+*   <b>`target_update_tau`</b>: Factor for soft update of the target networks.
+*   <b>`target_update_period`</b>: Period for soft update of the target
+    networks.
+*   <b>`dqda_clipping`</b>: when computing the actor loss, clips the gradient
+    dqda element-wise between [-dqda_clipping, dqda_clipping]. Does not perform
     clipping if dqda_clipping == 0.
-* <b>`td_errors_loss_fn`</b>:  A function for computing the TD errors loss. If None,
-    a default value of  elementwise huber_loss is used.
-* <b>`gamma`</b>: A discount factor for future rewards.
-* <b>`reward_scale_factor`</b>: Multiplicative scale for the reward.
-* <b>`gradient_clipping`</b>: Norm length to clip gradients.
-* <b>`debug_summaries`</b>: A bool to gather debug summaries.
-* <b>`summarize_grads_and_vars`</b>: If True, gradient and network variable summaries
-    will be written during training.
-* <b>`train_step_counter`</b>: An optional counter to increment every time the train
-    op is run.  Defaults to the global_step.
-* <b>`name`</b>: The name of this agent. All variables in this module will fall
-    under that name. Defaults to the class name.
-
-
+*   <b>`td_errors_loss_fn`</b>: A function for computing the TD errors loss. If
+    None, a default value of elementwise huber_loss is used.
+*   <b>`gamma`</b>: A discount factor for future rewards.
+*   <b>`reward_scale_factor`</b>: Multiplicative scale for the reward.
+*   <b>`gradient_clipping`</b>: Norm length to clip gradients.
+*   <b>`debug_summaries`</b>: A bool to gather debug summaries.
+*   <b>`summarize_grads_and_vars`</b>: If True, gradient and network variable
+    summaries will be written during training.
+*   <b>`train_step_counter`</b>: An optional counter to increment every time the
+    train op is run. Defaults to the global_step.
+*   <b>`name`</b>: The name of this agent. All variables in this module will
+    fall under that name. Defaults to the class name.
 
 ## Properties
 
@@ -116,11 +118,11 @@ Return a policy that can be used to collect data from the environment.
 
 #### Returns:
 
-A `tf_policy.Base` object.
+A
+<a href="../../tf_agents/policies/tf_policy/Base.md"><code>tf_policy.Base</code></a>
+object.
 
 <h3 id="debug_summaries"><code>debug_summaries</code></h3>
-
-
 
 <h3 id="name"><code>name</code></h3>
 
@@ -139,7 +141,9 @@ Return the current policy held by the agent.
 
 #### Returns:
 
-A `tf_policy.Base` object.
+A
+<a href="../../tf_agents/policies/tf_policy/Base.md"><code>tf_policy.Base</code></a>
+object.
 
 <h3 id="submodules"><code>submodules</code></h3>
 
@@ -148,22 +152,22 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
 A sequence of all submodules.
 
 <h3 id="summarize_grads_and_vars"><code>summarize_grads_and_vars</code></h3>
-
-
 
 <h3 id="time_step_spec"><code>time_step_spec</code></h3>
 
@@ -195,8 +199,6 @@ May be `None` to mean no constraint.
 
 <h3 id="train_step_counter"><code>train_step_counter</code></h3>
 
-
-
 <h3 id="trainable_variables"><code>trainable_variables</code></h3>
 
 Sequence of variables owned by this module and it's submodules.
@@ -225,52 +227,64 @@ A sequence of variables for the current module (sorted by attribute
 name) followed by variables from all submodules recursively (breadth
 first).
 
-
-
 ## Methods
-
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Support self.foo = trackable syntax.
 
 <h3 id="actor_loss"><code>actor_loss</code></h3>
 
-``` python
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/ddpg_agent.py">View
+source</a>
+
+```python
 actor_loss(
-    *args,
-    **kwds
+    time_steps,
+    weights=None
 )
 ```
 
+Computes the actor_loss for DDPG training.
 
+#### Args:
+
+*   <b>`time_steps`</b>: A batch of timesteps.
+*   <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry)
+    importance weights. # TODO(b/124383618): Add an action norm regularizer.
+
+#### Returns:
+
+*   <b>`actor_loss`</b>: A scalar actor loss.
 
 <h3 id="critic_loss"><code>critic_loss</code></h3>
 
-``` python
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/ddpg_agent.py">View
+source</a>
+
+```python
 critic_loss(
-    *args,
-    **kwds
+    time_steps,
+    actions,
+    next_time_steps,
+    weights=None
 )
 ```
 
+Computes the critic loss for DDPG training.
 
+#### Args:
+
+*   <b>`time_steps`</b>: A batch of timesteps.
+*   <b>`actions`</b>: A batch of actions.
+*   <b>`next_time_steps`</b>: A batch of next timesteps.
+*   <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry)
+    importance weights.
+
+#### Returns:
+
+*   <b>`critic_loss`</b>: A scalar critic loss.
 
 <h3 id="initialize"><code>initialize</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/tf_agent.py">View
+source</a>
 
 ``` python
 initialize()
@@ -282,13 +296,15 @@ Initializes the agent.
 
 An operation that can be used to initialize the agent.
 
-
 #### Raises:
 
-* <b>`RuntimeError`</b>: If the class was not initialized properly (`super.__init__`
-    was not called).
+*   <b>`RuntimeError`</b>: If the class was not initialized properly
+    (`super.__init__` was not called).
 
 <h3 id="train"><code>train</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/tf_agent.py">View
+source</a>
 
 ``` python
 train(
@@ -301,16 +317,15 @@ Trains the agent.
 
 #### Args:
 
-* <b>`experience`</b>: A batch of experience data in the form of a `Trajectory`. The
-    structure of `experience` must match that of `self.policy.step_spec`.
-    All tensors in `experience` must be shaped `[batch, time, ...]` where
-    `time` must be equal to `self.required_experience_time_steps` if that
-    property is not `None`.
-* <b>`weights`</b>: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
-    containing weights to be used when calculating the total train loss.
-    Weights are typically multiplied elementwise against the per-batch loss,
-    but the implementation is up to the Agent.
-
+*   <b>`experience`</b>: A batch of experience data in the form of a
+    `Trajectory`. The structure of `experience` must match that of
+    `self.policy.step_spec`. All tensors in `experience` must be shaped `[batch,
+    time, ...]` where `time` must be equal to
+    `self.required_experience_time_steps` if that property is not `None`.
+*   <b>`weights`</b>: (optional). A `Tensor`, either `0-D` or shaped `[batch]`,
+    containing weights to be used when calculating the total train loss. Weights
+    are typically multiplied elementwise against the per-batch loss, but the
+    implementation is up to the Agent.
 
 #### Returns:
 
@@ -321,16 +336,15 @@ A `LossInfo` loss tuple containing loss and info tensors.
   will first calculate the loss value(s), then perform a train step,
   and return the pre-train-step `LossInfo`.
 
-
 #### Raises:
 
-* <b>`TypeError`</b>: If experience is not type `Trajectory`.  Or if experience
+*   <b>`TypeError`</b>: If experience is not type `Trajectory`. Or if experience
     does not match `self.collect_data_spec` structure types.
-* <b>`ValueError`</b>: If experience tensors' time axes are not compatible with
-    `self.train_sequene_length`.  Or if experience does not match
+*   <b>`ValueError`</b>: If experience tensors' time axes are not compatible
+    with `self.train_sequene_length`. Or if experience does not match
     `self.collect_data_spec` structure.
-* <b>`RuntimeError`</b>: If the class was not initialized properly (`super.__init__`
-    was not called).
+*   <b>`RuntimeError`</b>: If the class was not initialized properly
+    (`super.__init__` was not called).
 
 <h3 id="with_name_scope"><code>with_name_scope</code></h3>
 
@@ -343,21 +357,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -367,6 +385,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

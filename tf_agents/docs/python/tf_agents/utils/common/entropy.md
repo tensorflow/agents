@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.entropy
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Computes total entropy of distribution.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.utils.common.entropy(
 
 
 
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
-
 <!-- Placeholder for "Used in" -->
 
 #### Args:
@@ -28,6 +32,6 @@ Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/
 
 #### Returns:
 
-A Tensor representing the entropy of each distribution in the batch.
-Assumes actions are independent, so that marginal entropies of each action
-may be summed.
+A Tensor representing the entropy of each distribution in the batch. Assumes
+actions are independent, so that marginal entropies of each action may be
+summed.

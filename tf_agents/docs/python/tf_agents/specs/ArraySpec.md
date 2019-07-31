@@ -14,6 +14,12 @@
 
 # tf_agents.specs.ArraySpec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 ## Class `ArraySpec`
 
 Describes a numpy array or scalar shape and dtype.
@@ -26,9 +32,6 @@ Describes a numpy array or scalar shape and dtype.
 * Class `tf_agents.specs.array_spec.ArraySpec`
 
 
-
-Defined in [`specs/array_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py).
-
 <!-- Placeholder for "Used in" -->
 
 An `ArraySpec` allows an API to describe the arrays that it accepts or
@@ -37,11 +40,10 @@ The equivalent version describing a `tf.Tensor` is `TensorSpec`.
 
 <h2 id="__init__"><code>__init__</code></h2>
 
-``` python
+```python
 __init__(
-    shape,
-    dtype,
-    name=None
+    *args,
+    **kwargs
 )
 ```
 
@@ -49,18 +51,15 @@ Initializes a new `ArraySpec`.
 
 #### Args:
 
-* <b>`shape`</b>: An iterable specifying the array shape.
-* <b>`dtype`</b>: numpy dtype or string specifying the array dtype.
-* <b>`name`</b>: Optional string containing a semantic name for the corresponding
-    array. Defaults to `None`.
-
+*   <b>`shape`</b>: An iterable specifying the array shape.
+*   <b>`dtype`</b>: numpy dtype or string specifying the array dtype.
+*   <b>`name`</b>: Optional string containing a semantic name for the
+    corresponding array. Defaults to `None`.
 
 #### Raises:
 
-* <b>`TypeError`</b>: If the shape is not an iterable or if the `dtype` is an invalid
-    numpy dtype.
-
-
+*   <b>`TypeError`</b>: If the shape is not an iterable or if the `dtype` is an
+    invalid numpy dtype.
 
 ## Properties
 
@@ -76,11 +75,12 @@ Returns the name of the ArraySpec.
 
 Returns a `tuple` specifying the array shape.
 
-
-
 ## Methods
 
 <h3 id="__eq__"><code>__eq__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 __eq__(other)
@@ -90,13 +90,17 @@ Checks if the shape and dtype of two specs are equal.
 
 <h3 id="__ne__"><code>__ne__</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 ``` python
 __ne__(other)
 ```
 
-
-
 <h3 id="check_array"><code>check_array</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 check_array(array)
@@ -106,16 +110,18 @@ Return whether the given NumPy array conforms to the spec.
 
 #### Args:
 
-* <b>`array`</b>: A NumPy array or a scalar. Tuples and lists will not be converted
-    to a NumPy array automatically; they will cause this function to return
-    false, even if a conversion to a conforming array is trivial.
-
+*   <b>`array`</b>: A NumPy array or a scalar. Tuples and lists will not be
+    converted to a NumPy array automatically; they will cause this function to
+    return false, even if a conversion to a conforming array is trivial.
 
 #### Returns:
 
 True if the array conforms to the spec, False otherwise.
 
 <h3 id="from_array"><code>from_array</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 @staticmethod
@@ -129,12 +135,12 @@ Construct a spec from the given array or number.
 
 <h3 id="from_spec"><code>from_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 ``` python
 @staticmethod
 from_spec(spec)
 ```
 
 Construct a spec from the given spec.
-
-
-

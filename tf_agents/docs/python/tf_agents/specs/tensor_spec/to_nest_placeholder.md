@@ -5,6 +5,12 @@
 
 # tf_agents.specs.tensor_spec.to_nest_placeholder
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py">View
+source</a>
+
 Converts a nest of TensorSpecs to a nest of matching placeholders.
 
 ``` python
@@ -17,8 +23,6 @@ tf_agents.specs.tensor_spec.to_nest_placeholder(
 ```
 
 
-
-Defined in [`specs/tensor_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -34,8 +38,7 @@ Defined in [`specs/tensor_spec.py`](https://github.com/tensorflow/agents/tree/ma
 
 A nest of placeholders matching the given tensor spec.
 
-
 #### Raises:
 
-* <b>`ValueError`</b>: If a default is provided outside of the allowed types, or if
-    default is a np.array that does not match the spec shape.
+*   <b>`ValueError`</b>: If a default is provided outside of the allowed types,
+    or if default is a np.array that does not match the spec shape.

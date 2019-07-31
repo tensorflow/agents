@@ -10,9 +10,7 @@
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="variables"/>
 <meta itemprop="property" content="__call__"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
 <meta itemprop="property" content="aggregate"/>
 <meta itemprop="property" content="log"/>
 <meta itemprop="property" content="reset"/>
@@ -23,20 +21,25 @@
 
 # tf_agents.metrics.py_metric.PyMetric
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
+
 ## Class `PyMetric`
 
 Defines the interface for metrics.
 
 
 
-
-
-Defined in [`metrics/py_metric.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
 
 ``` python
 __init__(
@@ -46,8 +49,6 @@ __init__(
 ```
 
 Creates a metric.
-
-
 
 ## Properties
 
@@ -73,14 +74,16 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
@@ -122,11 +125,12 @@ A sequence of variables for the current module (sorted by attribute
 name) followed by variables from all submodules recursively (breadth
 first).
 
-
-
 ## Methods
 
 <h3 id="__call__"><code>__call__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
 
 ``` python
 __call__(*args)
@@ -144,26 +148,10 @@ parameters.
 
 * <b>`*args`</b>: See call method of subclass for specific arguments.
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Support self.foo = trackable syntax.
-
 <h3 id="aggregate"><code>aggregate</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
 
 ``` python
 @staticmethod
@@ -184,13 +172,17 @@ The result of aggregating this metric.
 
 <h3 id="log"><code>log</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
+
 ``` python
 log()
 ```
 
-
-
 <h3 id="reset"><code>reset</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
 
 ``` python
 reset()
@@ -200,6 +192,9 @@ Resets internal stat gathering variables used to compute the metric.
 
 <h3 id="result"><code>result</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
+
 ``` python
 result()
 ```
@@ -207,6 +202,9 @@ result()
 Evaluates the current value of the metric.
 
 <h3 id="tf_summaries"><code>tf_summaries</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
 
 ``` python
 tf_summaries(
@@ -221,21 +219,20 @@ To execute the op, call py_metric.run_summaries.
 
 #### Args:
 
-* <b>`train_step`</b>: Step counter for training iterations. If None, no metric is
-    generated against the global step.
-* <b>`step_metrics`</b>: Step values to plot as X axis in addition to global_step.
-
+*   <b>`train_step`</b>: Step counter for training iterations. If None, no
+    metric is generated against the global step.
+*   <b>`step_metrics`</b>: Step values to plot as X axis in addition to
+    global_step.
 
 #### Returns:
 
 The summary op.
 
-
 #### Raises:
 
-* <b>`RuntimeError`</b>: If this method has already been called (it can only be
-    called once).
-* <b>`ValueError`</b>: If any item in step_metrics is not of type PyMetric or
+*   <b>`RuntimeError`</b>: If this method has already been called (it can only
+    be called once).
+*   <b>`ValueError`</b>: If any item in step_metrics is not of type PyMetric or
     tf_metric.TFStepMetric.
 
 <h3 id="with_name_scope"><code>with_name_scope</code></h3>
@@ -249,21 +246,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -273,6 +274,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

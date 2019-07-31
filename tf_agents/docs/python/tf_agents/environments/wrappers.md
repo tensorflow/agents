@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.environments.wrappers" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.environments.wrappers
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
+
 Environment wrappers.
-
-
-
-Defined in [`environments/wrappers.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -33,17 +32,12 @@ environment in common ways.
 
 [`class GoalReplayEnvWrapper`](../../tf_agents/environments/wrappers/GoalReplayEnvWrapper.md): Adds a goal to the observation, used for HER (Hindsight Experience Replay).
 
+[`class HistoryWrapper`](../../tf_agents/environments/wrappers/HistoryWrapper.md):
+Adds observation and action history to the environment's observations.
+
 [`class PyEnvironmentBaseWrapper`](../../tf_agents/environments/wrappers/PyEnvironmentBaseWrapper.md): PyEnvironment wrapper forwards calls to the given environment.
 
 [`class RunStats`](../../tf_agents/environments/wrappers/RunStats.md): Wrapper that accumulates run statistics as the environment iterates.
 
 [`class TimeLimit`](../../tf_agents/environments/wrappers/TimeLimit.md): End episodes after specified number of steps.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

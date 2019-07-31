@@ -5,6 +5,12 @@
 
 # tf_agents.utils.test_utils.contains
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/test_utils.py">View
+source</a>
+
 Check if all items in list2 are in list1.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.utils.test_utils.contains(
 ```
 
 
-
-Defined in [`utils/test_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/test_utils.py).
 
 <!-- Placeholder for "Used in" -->
 

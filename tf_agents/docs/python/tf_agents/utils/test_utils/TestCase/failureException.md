@@ -5,6 +5,9 @@
 
 # tf_agents.utils.test_utils.TestCase.failureException
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
 ## Class `failureException`
 
 Assertion failed.

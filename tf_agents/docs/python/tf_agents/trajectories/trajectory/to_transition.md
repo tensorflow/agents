@@ -5,6 +5,12 @@
 
 # tf_agents.trajectories.trajectory.to_transition
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/trajectory.py">View
+source</a>
+
 Create a transition from a trajectory or two adjacent trajectories.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.trajectories.trajectory.to_transition(
 ```
 
 
-
-Defined in [`trajectories/trajectory.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/trajectory.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -37,13 +41,12 @@ with zero.
 
 #### Args:
 
-* <b>`trajectory`</b>: An instance of `Trajectory`. The tensors in Trajectory must have
-    shape `[ B, T, ...]` when next_trajectory is None.
-* <b>`next_trajectory`</b>: (optional) An instance of `Trajectory`.
-
+*   <b>`trajectory`</b>: An instance of `Trajectory`. The tensors in Trajectory
+    must have shape `[ B, T, ...]` when next_trajectory is None.
+*   <b>`next_trajectory`</b>: (optional) An instance of `Trajectory`.
 
 #### Returns:
 
-A tuple `(time_steps, policy_steps, next_time_steps)`.  The `reward` and
-`discount` fields of `time_steps` are filled with zeros because these
-cannot be deduced (please do not use them).
+A tuple `(time_steps, policy_steps, next_time_steps)`. The `reward` and
+`discount` fields of `time_steps` are filled with zeros because these cannot be
+deduced (please do not use them).

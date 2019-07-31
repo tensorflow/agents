@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.function
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Wrapper for tf.function with TF Agents-specific customizations.
 
 ``` python
@@ -16,11 +22,9 @@ tf_agents.utils.common.function(
 
 
 
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
-
 <!-- Placeholder for "Used in" -->
 
-Example:
+#### Example:
 
 ```python
 @common.function()

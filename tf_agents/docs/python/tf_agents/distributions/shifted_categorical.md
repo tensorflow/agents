@@ -5,11 +5,13 @@
 
 # Module: tf_agents.distributions.shifted_categorical
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/distributions/shifted_categorical.py">View
+source</a>
+
 Categorical distribution where values are shifted to honor a range.
-
-
-
-Defined in [`distributions/shifted_categorical.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/distributions/shifted_categorical.py).
 
 <!-- Placeholder for "Used in" -->
 

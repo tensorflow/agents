@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.generate_tensor_summaries
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Generates various summaries of `tensor` such as histogram, max, min, etc.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.utils.common.generate_tensor_summaries(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 

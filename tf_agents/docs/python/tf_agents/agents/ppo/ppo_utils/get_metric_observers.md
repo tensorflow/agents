@@ -5,6 +5,12 @@
 
 # tf_agents.agents.ppo.ppo_utils.get_metric_observers
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_utils.py">View
+source</a>
+
 Returns a list of observers, one for each metric.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.agents.ppo.ppo_utils.get_metric_observers(metrics)
 ```
 
 
-
-Defined in [`agents/ppo/ppo_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_utils.py).
 
 <!-- Placeholder for "Used in" -->

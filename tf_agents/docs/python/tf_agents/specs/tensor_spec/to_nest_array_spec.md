@@ -5,6 +5,12 @@
 
 # tf_agents.specs.tensor_spec.to_nest_array_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py">View
+source</a>
+
 Converted a nest of TensorSpecs to a nest of matching ArraySpecs.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.specs.tensor_spec.to_nest_array_spec(nest_array_spec)
 ```
 
 
-
-Defined in [`specs/tensor_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py).
 
 <!-- Placeholder for "Used in" -->

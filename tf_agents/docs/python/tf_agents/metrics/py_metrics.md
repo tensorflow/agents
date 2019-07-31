@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.metrics.py_metrics" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.metrics.py_metrics
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metrics.py">View
+source</a>
+
 Implementation of various python metrics.
-
-
-
-Defined in [`metrics/py_metrics.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metrics.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -32,12 +31,4 @@ Defined in [`metrics/py_metrics.py`](https://github.com/tensorflow/agents/tree/m
 [`class NumpyDeque`](../../tf_agents/metrics/py_metrics/NumpyDeque.md): Deque implementation using a numpy array as a circular buffer.
 
 [`class StreamingMetric`](../../tf_agents/metrics/py_metrics/StreamingMetric.md): Abstract base class for streaming metrics.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

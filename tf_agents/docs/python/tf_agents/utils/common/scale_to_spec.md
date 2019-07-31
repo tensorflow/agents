@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.scale_to_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Shapes and scales a batch into the given spec bounds.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.utils.common.scale_to_spec(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 

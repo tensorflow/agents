@@ -5,6 +5,12 @@
 
 # tf_agents.trajectories.trajectory.boundary
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/trajectory.py">View
+source</a>
+
 Create a Trajectory transitioning between StepTypes `LAST` and `FIRST`.
 
 ``` python
@@ -19,8 +25,6 @@ tf_agents.trajectories.trajectory.boundary(
 
 
 
-Defined in [`trajectories/trajectory.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/trajectory.py).
-
 <!-- Placeholder for "Used in" -->
 
 All inputs may be batched.
@@ -30,17 +34,16 @@ as it is always expected to be a singleton array with scalar inner shape.
 
 #### Args:
 
-* <b>`observation`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-    all shaped `[T, ...]`.
-* <b>`action`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-    all shaped `[T, ...]`.
-* <b>`policy_info`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-    all shaped `[T, ...]`.
-* <b>`reward`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`;
-    all shaped `[T, ...]`.
-* <b>`discount`</b>: A floating point vector `Tensor` or `np.ndarray`;
-    shaped `[T]` (optional).
-
+*   <b>`observation`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`;
+    all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+*   <b>`action`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`; all
+    shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+*   <b>`policy_info`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`;
+    all shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+*   <b>`reward`</b>: (possibly nested tuple of) `Tensor` or `np.ndarray`; all
+    shaped `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+*   <b>`discount`</b>: A floating point vector `Tensor` or `np.ndarray`; shaped
+    `[B]`, `[T]`, or `[B, T]` (optional).
 
 #### Returns:
 

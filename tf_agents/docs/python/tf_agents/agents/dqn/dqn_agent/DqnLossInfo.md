@@ -3,20 +3,21 @@
 <meta itemprop="path" content="Stable" />
 <meta itemprop="property" content="td_loss"/>
 <meta itemprop="property" content="td_error"/>
-<meta itemprop="property" content="__new__"/>
 </div>
 
 # tf_agents.agents.dqn.dqn_agent.DqnLossInfo
+
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/dqn_agent.py">View
+source</a>
 
 ## Class `DqnLossInfo`
 
 DqnLossInfo is stored in the `extras` field of the LossInfo instance.
 
 
-
-
-
-Defined in [`agents/dqn/dqn_agent.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/dqn_agent.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -36,29 +37,8 @@ td_error: The **unweighted** TD errors, which are just calculated as:
   Note that, unlike `td_loss`, `td_error` may contain a time dimension when
   training with RNN mode.  For `td_loss`, this axis is averaged out.
 
-<h2 id="__new__"><code>__new__</code></h2>
-
-``` python
-__new__(
-    _cls,
-    td_loss,
-    td_error
-)
-```
-
-Create new instance of DqnLossInfo(td_loss, td_error)
-
-
-
 ## Properties
 
 <h3 id="td_loss"><code>td_loss</code></h3>
 
-
-
 <h3 id="td_error"><code>td_error</code></h3>
-
-
-
-
-

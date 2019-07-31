@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.policies.tf_policy" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.policies.tf_policy
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
+
 TensorFlow Policies API.
-
-
-
-Defined in [`policies/tf_policy.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -20,12 +19,4 @@ Defined in [`policies/tf_policy.py`](https://github.com/tensorflow/agents/tree/m
 ## Classes
 
 [`class Base`](../../tf_agents/policies/tf_policy/Base.md): Abstract base class for TF Policies.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

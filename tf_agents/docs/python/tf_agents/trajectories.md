@@ -5,11 +5,13 @@
 
 # Module: tf_agents.trajectories
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/__init__.py">View
+source</a>
+
 Trajectories module.
-
-
-
-Defined in [`trajectories/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

@@ -5,6 +5,12 @@
 
 # tf_agents.specs.distribution_spec.nested_distributions_from_specs
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/distribution_spec.py">View
+source</a>
+
 Builds a nest of distributions from a nest of specs.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.specs.distribution_spec.nested_distributions_from_specs(
 ```
 
 
-
-Defined in [`specs/distribution_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/distribution_spec.py).
 
 <!-- Placeholder for "Used in" -->
 

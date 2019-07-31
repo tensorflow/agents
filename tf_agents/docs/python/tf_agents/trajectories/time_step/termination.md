@@ -5,7 +5,14 @@
 
 # tf_agents.trajectories.time_step.termination
 
-Returns a `TimeStep` with `step_type` set to `StepType.LAST`.
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/time_step.py">View
+source</a>
+
+Returns a `TimeStep` with `step_type` set to
+<a href="../../../tf_agents/trajectories/time_step/StepType.md#LAST"><code>StepType.LAST</code></a>.
 
 ``` python
 tf_agents.trajectories.time_step.termination(
@@ -14,25 +21,19 @@ tf_agents.trajectories.time_step.termination(
 )
 ```
 
-
-
-Defined in [`trajectories/time_step.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/time_step.py).
-
 <!-- Placeholder for "Used in" -->
 
 #### Args:
 
-* <b>`observation`</b>: A NumPy array, tensor, or a nested dict, list or tuple of
-    arrays or tensors.
-* <b>`reward`</b>: A scalar, or 1D NumPy array, or tensor.
-
+*   <b>`observation`</b>: A NumPy array, tensor, or a nested dict, list or tuple
+    of arrays or tensors.
+*   <b>`reward`</b>: A scalar, or 1D NumPy array, or tensor.
 
 #### Returns:
 
 A `TimeStep`.
 
-
 #### Raises:
 
-* <b>`ValueError`</b>: If observations are tensors but reward's statically known rank
-    is not `0` or `1`.
+*   <b>`ValueError`</b>: If observations are tensors but reward's statically
+    known rank is not `0` or `1`.

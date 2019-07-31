@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.trajectories.policy_step" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.trajectories.policy_step
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/policy_step.py">View
+source</a>
+
 Policy Step.
-
-
-
-Defined in [`trajectories/policy_step.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/policy_step.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -30,12 +29,4 @@ Defined in [`trajectories/policy_step.py`](https://github.com/tensorflow/agents/
 [`get_log_probability(...)`](../../tf_agents/trajectories/policy_step/get_log_probability.md): Gets the CommonFields.LOG_PROBABILITY from info depending on type.
 
 [`set_log_probability(...)`](../../tf_agents/trajectories/policy_step/set_log_probability.md): Sets the CommonFields.LOG_PROBABILITY on info to be log_probability.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

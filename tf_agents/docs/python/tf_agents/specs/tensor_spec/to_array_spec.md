@@ -5,6 +5,12 @@
 
 # tf_agents.specs.tensor_spec.to_array_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py">View
+source</a>
+
 Converts TensorSpec into ArraySpec.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.specs.tensor_spec.to_array_spec(tensor_spec)
 ```
 
 
-
-Defined in [`specs/tensor_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py).
 
 <!-- Placeholder for "Used in" -->

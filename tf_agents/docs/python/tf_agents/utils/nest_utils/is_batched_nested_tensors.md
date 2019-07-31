@@ -5,6 +5,12 @@
 
 # tf_agents.utils.nest_utils.is_batched_nested_tensors
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Compares tensors to specs to determine if all tensors are batched or not.
 
 ``` python
@@ -17,8 +23,6 @@ tf_agents.utils.nest_utils.is_batched_nested_tensors(
 
 
 
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
-
 <!-- Placeholder for "Used in" -->
 
 For each tensor, it checks the dimensions with respect to specs and returns
@@ -28,12 +32,11 @@ unbatched tensors are provided.
 
 #### Args:
 
-* <b>`tensors`</b>: Nested list/tuple/dict of Tensors.
-* <b>`specs`</b>: Nested list/tuple/dict of Tensors describing the shape of unbatched
-    tensors.
-* <b>`num_outer_dims`</b>: The integer number of dimensions that are considered batch
-    dimensions.  Default 1.
-
+*   <b>`tensors`</b>: Nested list/tuple/dict of Tensors.
+*   <b>`specs`</b>: Nested list/tuple/dict of Tensors describing the shape of
+    unbatched tensors.
+*   <b>`num_outer_dims`</b>: The integer number of dimensions that are
+    considered batch dimensions. Default 1.
 
 #### Returns:
 
@@ -41,8 +44,8 @@ True if all Tensors are batched and False if all Tensors are unbatched.
 
 #### Raises:
 
-* <b>`ValueError`</b>: If
-    1. Any of the tensors or specs have shapes with ndims == None, or
-    2. The shape of Tensors are not compatible with specs, or
-    3. A mix of batched and unbatched tensors are provided.
-    4. The tensors are batched but have an incorrect number of outer dims.
+*   <b>`ValueError`</b>: If
+    1.  Any of the tensors or specs have shapes with ndims == None, or
+    2.  The shape of Tensors are not compatible with specs, or
+    3.  A mix of batched and unbatched tensors are provided.
+    4.  The tensors are batched but have an incorrect number of outer dims.

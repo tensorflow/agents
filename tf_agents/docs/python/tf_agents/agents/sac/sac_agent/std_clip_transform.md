@@ -5,7 +5,8 @@
 
 # tf_agents.agents.sac.sac_agent.std_clip_transform
 
-
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
 ``` python
 tf_agents.agents.sac.sac_agent.std_clip_transform(

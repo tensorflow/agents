@@ -5,6 +5,12 @@
 
 # tf_agents.utils.nest_utils.get_outer_array_shape
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Batch dims of array's batch dimension `dim`.
 
 ``` python
@@ -15,7 +21,5 @@ tf_agents.utils.nest_utils.get_outer_array_shape(
 ```
 
 
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
 
 <!-- Placeholder for "Used in" -->

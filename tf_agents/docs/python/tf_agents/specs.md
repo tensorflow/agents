@@ -5,11 +5,13 @@
 
 # Module: tf_agents.specs
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/__init__.py">View
+source</a>
+
 Module for numpy array and `tf.Tensor` shape and dtype specifications.
-
-
-
-Defined in [`specs/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

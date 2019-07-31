@@ -5,6 +5,12 @@
 
 # tf_agents.utils.eager_utils.dataset_iterator
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py">View
+source</a>
+
 Constructs a `Dataset` iterator.
 
 ``` python
@@ -12,8 +18,6 @@ tf_agents.utils.eager_utils.dataset_iterator(dataset)
 ```
 
 
-
-Defined in [`utils/eager_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -27,5 +31,5 @@ construct an iterator and iterate through it inside a `tensorflow.function`.
 
 #### Returns:
 
-A `tf.data.Iterator` if Graph mode is enabled; a tf.data.EagerIterator if
-in eager mode.
+A `tf.data.Iterator` if Graph mode is enabled; a tf.data.EagerIterator if in
+eager mode.

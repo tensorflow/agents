@@ -5,6 +5,12 @@
 
 # tf_agents.environments.batched_py_environment.fast_map_structure
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/batched_py_environment.py">View
+source</a>
+
 List tf.nest.map_structure, but skipping the slow assert_same_structure.
 
 ``` python
@@ -15,7 +21,5 @@ tf_agents.environments.batched_py_environment.fast_map_structure(
 ```
 
 
-
-Defined in [`environments/batched_py_environment.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/batched_py_environment.py).
 
 <!-- Placeholder for "Used in" -->

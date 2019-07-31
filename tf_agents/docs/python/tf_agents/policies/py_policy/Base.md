@@ -14,15 +14,17 @@
 
 # tf_agents.policies.py_policy.Base
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
+
 ## Class `Base`
 
 Abstract base class for Python Policies.
 
 
-
-
-
-Defined in [`policies/py_policy.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -53,6 +55,9 @@ Example of simple use in Python:
 
 <h2 id="__init__"><code>__init__</code></h2>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
+
 ``` python
 __init__(
     time_step_spec,
@@ -66,16 +71,14 @@ Initialization of Base class.
 
 #### Args:
 
-* <b>`time_step_spec`</b>: A `TimeStep` ArraySpec of the expected time_steps.
+*   <b>`time_step_spec`</b>: A `TimeStep` ArraySpec of the expected time_steps.
     Usually provided by the user to the subclass.
-* <b>`action_spec`</b>: A nest of BoundedArraySpec representing the actions.
+*   <b>`action_spec`</b>: A nest of BoundedArraySpec representing the actions.
     Usually provided by the user to the subclass.
-* <b>`policy_state_spec`</b>: A nest of ArraySpec representing the policy state.
+*   <b>`policy_state_spec`</b>: A nest of ArraySpec representing the policy
+    state. Provided by the subclass, not directly by the user.
+*   <b>`info_spec`</b>: A nest of ArraySpec representing the policy info.
     Provided by the subclass, not directly by the user.
-* <b>`info_spec`</b>: A nest of ArraySpec representing the policy info.
-    Provided by the subclass, not directly by the user.
-
-
 
 ## Properties
 
@@ -139,11 +142,12 @@ Describes the data collected when using this policy with an environment.
 A `Trajectory` containing all array specs associated with the
 time_step_spec and policy_step_spec of this policy.
 
-
-
 ## Methods
 
 <h3 id="action"><code>action</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
 
 ``` python
 action(
@@ -170,6 +174,9 @@ A PolicyStep named tuple containing:
 
 <h3 id="get_initial_state"><code>get_initial_state</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
+
 ``` python
 get_initial_state(batch_size=None)
 ```
@@ -184,6 +191,3 @@ Returns an initial state usable by the policy.
 #### Returns:
 
 An initial policy state.
-
-
-

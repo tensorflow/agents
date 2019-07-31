@@ -5,11 +5,13 @@
 
 # Module: tf_agents.agents.sac
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/sac/__init__.py">View
+source</a>
+
 A Soft Actor Critic agent.
-
-
-
-Defined in [`agents/sac/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/sac/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

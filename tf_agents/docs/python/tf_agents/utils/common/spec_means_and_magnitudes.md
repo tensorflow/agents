@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.spec_means_and_magnitudes
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Get the center and magnitude of the ranges in action spec.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.utils.common.spec_means_and_magnitudes(action_spec)
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->

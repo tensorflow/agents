@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.create_variable
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Create a variable.
 
 ``` python
@@ -21,7 +27,5 @@ tf_agents.utils.common.create_variable(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->

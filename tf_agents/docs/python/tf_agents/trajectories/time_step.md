@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.trajectories.time_step" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.trajectories.time_step
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/time_step.py">View
+source</a>
+
 TimeStep representing a step in the environment.
-
-
-
-Defined in [`trajectories/time_step.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/time_step.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -25,21 +24,20 @@ Defined in [`trajectories/time_step.py`](https://github.com/tensorflow/agents/tr
 
 ## Functions
 
-[`restart(...)`](../../tf_agents/trajectories/time_step/restart.md): Returns a `TimeStep` with `step_type` set equal to `StepType.FIRST`.
+[`restart(...)`](../../tf_agents/trajectories/time_step/restart.md): Returns a
+`TimeStep` with `step_type` set equal to
+<a href="../../tf_agents/trajectories/time_step/StepType.md#FIRST"><code>StepType.FIRST</code></a>.
 
-[`termination(...)`](../../tf_agents/trajectories/time_step/termination.md): Returns a `TimeStep` with `step_type` set to `StepType.LAST`.
+[`termination(...)`](../../tf_agents/trajectories/time_step/termination.md):
+Returns a `TimeStep` with `step_type` set to
+<a href="../../tf_agents/trajectories/time_step/StepType.md#LAST"><code>StepType.LAST</code></a>.
 
 [`time_step_spec(...)`](../../tf_agents/trajectories/time_step/time_step_spec.md): Returns a `TimeStep` spec given the observation_spec.
 
-[`transition(...)`](../../tf_agents/trajectories/time_step/transition.md): Returns a `TimeStep` with `step_type` set equal to `StepType.MID`.
+[`transition(...)`](../../tf_agents/trajectories/time_step/transition.md):
+Returns a `TimeStep` with `step_type` set equal to
+<a href="../../tf_agents/trajectories/time_step/StepType.md#MID"><code>StepType.MID</code></a>.
 
-[`truncation(...)`](../../tf_agents/trajectories/time_step/truncation.md): Returns a `TimeStep` with `step_type` set to `StepType.LAST`.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
-
+[`truncation(...)`](../../tf_agents/trajectories/time_step/truncation.md):
+Returns a `TimeStep` with `step_type` set to
+<a href="../../tf_agents/trajectories/time_step/StepType.md#LAST"><code>StepType.LAST</code></a>.

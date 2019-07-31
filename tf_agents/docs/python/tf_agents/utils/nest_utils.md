@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.utils.nest_utils" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.utils.nest_utils
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Utilities for handling nested tensors.
-
-
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -55,11 +54,5 @@ Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/mas
 
 [`unstack_nested_tensors(...)`](../../tf_agents/utils/nest_utils/unstack_nested_tensors.md): Make list of unstacked nested tensors.
 
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
-
+[`where(...)`](../../tf_agents/utils/nest_utils/where.md): Generalization of
+tf.compat.v1.where supporting nests as the outputs.

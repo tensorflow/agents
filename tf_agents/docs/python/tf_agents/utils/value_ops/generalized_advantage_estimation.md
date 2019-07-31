@@ -5,6 +5,12 @@
 
 # tf_agents.utils.value_ops.generalized_advantage_estimation
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/value_ops.py">View
+source</a>
+
 Computes generalized advantage estimation (GAE).
 
 ``` python
@@ -20,8 +26,6 @@ tf_agents.utils.value_ops.generalized_advantage_estimation(
 
 
 
-Defined in [`utils/value_ops.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/value_ops.py).
-
 <!-- Placeholder for "Used in" -->
 
 For theory, see
@@ -29,23 +33,24 @@ For theory, see
 by John Schulman, Philipp Moritz et al.
 See https://arxiv.org/abs/1506.02438 for full paper.
 
-Define abbreviations:
-  (B) batch size representing number of trajectories
-  (T) number of steps per trajectory
+#### Define abbreviations:
+
+(B) batch size representing number of trajectories (T) number of steps per
+trajectory
 
 #### Args:
 
-* <b>`values`</b>: Tensor with shape [T, B] representing value estimates.
-* <b>`final_value`</b>: Tensor with shape [B] representing value estimate at t=T.
-* <b>`discounts`</b>: Tensor with shape [T, B] representing discounts received by
+*   <b>`values`</b>: Tensor with shape [T, B] representing value estimates.
+*   <b>`final_value`</b>: Tensor with shape [B] representing value estimate at
+    t=T.
+*   <b>`discounts`</b>: Tensor with shape [T, B] representing discounts received
+    by following the behavior policy.
+*   <b>`rewards`</b>: Tensor with shape [T, B] representing rewards received by
     following the behavior policy.
-* <b>`rewards`</b>: Tensor with shape [T, B] representing rewards received by following
-    the behavior policy.
-* <b>`td_lambda`</b>: A float32 scalar between [0, 1]. It's used for variance reduction
-    in temporal difference.
-* <b>`time_major`</b>: A boolean indicating whether input tensors are time major.
-    False means input tensors have shape [B, T].
-
+*   <b>`td_lambda`</b>: A float32 scalar between [0, 1]. It's used for variance
+    reduction in temporal difference.
+*   <b>`time_major`</b>: A boolean indicating whether input tensors are time
+    major. False means input tensors have shape [B, T].
 
 #### Returns:
 

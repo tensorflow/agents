@@ -5,7 +5,13 @@
 
 # tf_agents.networks.normal_projection_network.tanh_squash_to_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/normal_projection_network.py">View
+source</a>
+
+Maps inputs with arbitrary range to range defined by spec using `tanh`.
 
 ``` python
 tf_agents.networks.normal_projection_network.tanh_squash_to_spec(
@@ -15,7 +21,5 @@ tf_agents.networks.normal_projection_network.tanh_squash_to_spec(
 ```
 
 
-
-Defined in [`networks/normal_projection_network.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/normal_projection_network.py).
 
 <!-- Placeholder for "Used in" -->

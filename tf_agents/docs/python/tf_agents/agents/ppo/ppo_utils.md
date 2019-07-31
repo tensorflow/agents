@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.agents.ppo.ppo_utils" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.agents.ppo.ppo_utils
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_utils.py">View
+source</a>
+
 Utils functions for ppo_agent.py.
-
-
-
-Defined in [`agents/ppo/ppo_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -26,12 +25,4 @@ Defined in [`agents/ppo/ppo_utils.py`](https://github.com/tensorflow/agents/tree
 [`make_timestep_mask(...)`](../../../tf_agents/agents/ppo/ppo_utils/make_timestep_mask.md): Create a mask for final incomplete episodes and episode transitions.
 
 [`nested_kl_divergence(...)`](../../../tf_agents/agents/ppo/ppo_utils/nested_kl_divergence.md): Given two nested distributions, sum the KL divergences of the leaves.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

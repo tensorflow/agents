@@ -5,6 +5,12 @@
 
 # tf_agents.networks.utils.maybe_permanent_dropout
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py">View
+source</a>
+
 Adds a Keras dropout layer with the option of applying it at inference.
 
 ``` python
@@ -16,22 +22,18 @@ tf_agents.networks.utils.maybe_permanent_dropout(
 )
 ```
 
-
-
-Defined in [`networks/utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py).
-
 <!-- Placeholder for "Used in" -->
 
 #### Args:
 
-* <b>`rate`</b>: the probability of dropping an input.
-* <b>`noise_shape`</b>: 1D integer tensor representing the dropout mask multiplied to
-    the input.
-* <b>`seed`</b>: A Python integer to use as random seed.
-* <b>`permanent`</b>: If set, applies dropout during inference and not only during
-    training. This flag is used for approximated Bayesian inference.
+*   <b>`rate`</b>: the probability of dropping an input.
+*   <b>`noise_shape`</b>: 1D integer tensor representing the dropout mask
+    multiplied to the input.
+*   <b>`seed`</b>: A Python integer to use as random seed.
+*   <b>`permanent`</b>: If set, applies dropout during inference and not only
+    during training. This flag is used for approximated Bayesian inference.
 
 #### Returns:
 
 A function adding a dropout layer according to the parameters for the given
-  input.
+input.

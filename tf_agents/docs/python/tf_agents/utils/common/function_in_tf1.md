@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.function_in_tf1
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Wrapper that returns common.function if using TF1.
 
 ``` python
@@ -16,14 +22,12 @@ tf_agents.utils.common.function_in_tf1(
 
 
 
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
-
 <!-- Placeholder for "Used in" -->
 
 This allows for code that assumes autodeps is available to be written once,
 in the same way, for both TF1 and TF2.
 
-Usage:
+#### Usage:
 
 ```python
 train = function_in_tf1()(agent.train)

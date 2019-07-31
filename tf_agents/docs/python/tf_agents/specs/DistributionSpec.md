@@ -11,6 +11,12 @@
 
 # tf_agents.specs.DistributionSpec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/distribution_spec.py">View
+source</a>
+
 ## Class `DistributionSpec`
 
 Describes a tfp.distribution.Distribution.
@@ -23,13 +29,13 @@ Describes a tfp.distribution.Distribution.
 * Class `tf_agents.specs.distribution_spec.DistributionSpec`
 
 
-
-Defined in [`specs/distribution_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/distribution_spec.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/distribution_spec.py">View
+source</a>
 
 ``` python
 __init__(
@@ -44,15 +50,14 @@ Creates a DistributionSpec.
 
 #### Args:
 
-* <b>`builder`</b>: Callable function(**params) which returns a Distribution
+*   <b>`builder`</b>: Callable function(**params) which returns a Distribution
     following the spec.
-* <b>`input_params_spec`</b>: Nest of tensor_specs describing the tensor parameters
-    required for building the described distribution.
-* <b>`sample_spec`</b>: Data type of the output samples of the described
+*   <b>`input_params_spec`</b>: Nest of tensor_specs describing the tensor
+    parameters required for building the described distribution.
+*   <b>`sample_spec`</b>: Data type of the output samples of the described
     distribution.
-* <b>`**distribution_parameters`</b>: Extra parameters for building the distribution.
-
-
+*   <b>`**distribution_parameters`</b>: Extra parameters for building the
+    distribution.
 
 ## Properties
 
@@ -72,11 +77,12 @@ Returns the `input_params_spec` of the spec.
 
 Returns the `sample_spec` of the spec.
 
-
-
 ## Methods
 
 <h3 id="build_distribution"><code>build_distribution</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/distribution_spec.py">View
+source</a>
 
 ``` python
 build_distribution(**distribution_parameters)
@@ -84,16 +90,9 @@ build_distribution(**distribution_parameters)
 
 Creates an instance of the described distribution.
 
-The spec's paramers are updated with the given ones.
-#### Args:
-
-* <b>`**distribution_parameters`</b>: Kwargs update the spec's distribution
-    parameters.
-
+The spec's paramers are updated with the given ones. Args:
+**distribution_parameters: Kwargs update the spec's distribution parameters.
 
 #### Returns:
 
 Distribution instance.
-
-
-

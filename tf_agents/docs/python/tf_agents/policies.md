@@ -5,18 +5,21 @@
 
 # Module: tf_agents.policies
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/__init__.py">View
+source</a>
+
 Policies Module.
-
-
-
-Defined in [`policies/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 
 
 ## Modules
 
-[`actor_policy`](../tf_agents/policies/actor_policy.md) module: Simple Actor Policy based on an actor network.
+[`actor_policy`](../tf_agents/policies/actor_policy.md) module: Actor Policy
+based on an actor network.
 
 [`boltzmann_policy`](../tf_agents/policies/boltzmann_policy.md) module: Policy implementation that applies temperature to a distribution.
 

@@ -5,6 +5,12 @@
 
 # tf_agents.utils.nest_utils.split_nested_tensors
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Split batched nested tensors, on batch dim (outer dim), into a list.
 
 ``` python
@@ -15,23 +21,18 @@ tf_agents.utils.nest_utils.split_nested_tensors(
 )
 ```
 
-
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
-
 <!-- Placeholder for "Used in" -->
 
 #### Args:
 
-* <b>`tensors`</b>: Nested list/tuple or dict of batched Tensors.
-* <b>`specs`</b>: Nested list/tuple or dict of TensorSpecs, describing the shape of the
-    non-batched Tensors.
-* <b>`num_or_size_splits`</b>: Same as argument for tf.split. Either a 0-D integer
-    Tensor indicating the number of splits along batch_dim or a 1-D integer
-    Tensor containing the sizes of each output tensor along batch_dim. If a
-    scalar then it must evenly divide value.shape[axis]; otherwise the sum of
-    sizes along the split dimension must match that of the value.
-
+*   <b>`tensors`</b>: Nested list/tuple or dict of batched Tensors.
+*   <b>`specs`</b>: Nested list/tuple or dict of TensorSpecs, describing the
+    shape of the non-batched Tensors.
+*   <b>`num_or_size_splits`</b>: Same as argument for tf.split. Either a 0-D
+    integer Tensor indicating the number of splits along batch_dim or a 1-D
+    integer Tensor containing the sizes of each output tensor along batch_dim.
+    If a scalar then it must evenly divide value.shape[axis]; otherwise the sum
+    of sizes along the split dimension must match that of the value.
 
 #### Returns:
 

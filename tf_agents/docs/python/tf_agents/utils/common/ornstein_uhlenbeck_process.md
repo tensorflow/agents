@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.ornstein_uhlenbeck_process
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 An op for generating noise from a zero-mean Ornstein-Uhlenbeck process.
 
 ``` python
@@ -19,8 +25,6 @@ tf_agents.utils.common.ornstein_uhlenbeck_process(
 
 
 
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
-
 <!-- Placeholder for "Used in" -->
 
 The Ornstein-Uhlenbeck process is a process that generates temporally
@@ -34,15 +38,14 @@ The temporal update equation is:
 
 #### Args:
 
-* <b>`initial_value`</b>: Initial value of the process.
-* <b>`damping`</b>: The rate at which the noise trajectory is damped towards the mean.
-    We must have 0 <= damping <= 1, where a value of 0 gives an undamped
-    random walk and a value of 1 gives uncorrelated Gaussian noise. Hence
-    in most applications a small non-zero value is appropriate.
-* <b>`stddev`</b>: Standard deviation of the Gaussian component.
-* <b>`seed`</b>: Seed for random number generation.
-* <b>`scope`</b>: Scope of the variables.
-
+*   <b>`initial_value`</b>: Initial value of the process.
+*   <b>`damping`</b>: The rate at which the noise trajectory is damped towards
+    the mean. We must have 0 <= damping <= 1, where a value of 0 gives an
+    undamped random walk and a value of 1 gives uncorrelated Gaussian noise.
+    Hence in most applications a small non-zero value is appropriate.
+*   <b>`stddev`</b>: Standard deviation of the Gaussian component.
+*   <b>`seed`</b>: Seed for random number generation.
+*   <b>`scope`</b>: Scope of the variables.
 
 #### Returns:
 

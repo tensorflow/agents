@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.agents.ppo.ppo_agent" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.agents.ppo.ppo_agent
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_agent.py">View
+source</a>
+
 A PPO Agent.
-
-
-
-Defined in [`agents/ppo/ppo_agent.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_agent.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -58,12 +57,4 @@ https://arxiv.org/abs/1506.02438
 [`class PPOAgent`](../../../tf_agents/agents/PPOAgent.md): A PPO Agent.
 
 [`class PPOLossInfo`](../../../tf_agents/agents/ppo/ppo_agent/PPOLossInfo.md): PPOLossInfo(policy_gradient_loss, value_estimation_loss, l2_regularization_loss, entropy_regularization_loss, kl_penalty_loss)
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

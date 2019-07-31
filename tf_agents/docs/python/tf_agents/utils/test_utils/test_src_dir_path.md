@@ -5,23 +5,24 @@
 
 # tf_agents.utils.test_utils.test_src_dir_path
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/test_utils.py">View
+source</a>
+
 Returns an absolute test srcdir path given a relative path.
 
 ``` python
 tf_agents.utils.test_utils.test_src_dir_path(relative_path)
 ```
 
-
-
-Defined in [`utils/test_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/test_utils.py).
-
 <!-- Placeholder for "Used in" -->
 
 #### Args:
 
-* <b>`relative_path`</b>: a path relative to tf_agents root.
-    e.g. "environments/config".
-
+*   <b>`relative_path`</b>: a path relative to tf_agents root. e.g.
+    "environments/config".
 
 #### Returns:
 

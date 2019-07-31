@@ -7,15 +7,17 @@
 
 # tf_agents.policies.policy_saver.PolicySaver
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/policy_saver.py">View
+source</a>
+
 ## Class `PolicySaver`
 
 A `PolicySaver` allows you to save a `tf_policy.Policy` to `SavedModel`.
 
 
-
-
-
-Defined in [`policies/policy_saver.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/policy_saver.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -25,7 +27,8 @@ The SavedModel that is exported can be loaded via
 will have available signatures (concrete functions): `action` and
 `get_initial_state`.
 
-Usage:
+#### Usage:
+
 ```python
 
 my_policy = agent.collect_policy
@@ -72,12 +75,16 @@ while True:
 
 <h2 id="__init__"><code>__init__</code></h2>
 
-``` python
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/policy_saver.py">View
+source</a>
+
+```python
 __init__(
     policy,
     batch_size=None,
     use_nest_path_signatures=True,
-    seed=None
+    seed=None,
+    train_step=None
 )
 ```
 
@@ -85,37 +92,37 @@ Initialize PolicySaver for  TF policy `policy`.
 
 #### Args:
 
-* <b>`policy`</b>: A TF Policy.
-* <b>`batch_size`</b>: The number of batch entries the policy will process at a time.
-    This must be either `None` (unknown batch size) or a python integer.
-* <b>`use_nest_path_signatures`</b>: SavedModel spec signatures will be created based
-    on the sructure of the specs. Otherwise all specs must have unique
-    names.
-* <b>`seed`</b>: Random seed for the `policy.action` call, if any (this should
+*   <b>`policy`</b>: A TF Policy.
+*   <b>`batch_size`</b>: The number of batch entries the policy will process at
+    a time. This must be either `None` (unknown batch size) or a python integer.
+*   <b>`use_nest_path_signatures`</b>: SavedModel spec signatures will be
+    created based on the sructure of the specs. Otherwise all specs must have
+    unique names.
+*   <b>`seed`</b>: Random seed for the `policy.action` call, if any (this should
     usually be `None`, except for testing).
-
+*   <b>`train_step`</b>: Variable holding the train step for the policy. The
+    value saved will be set at the time `saver.save` is called. If not provided,
+    train_step defaults to -1.
 
 #### Raises:
 
-* <b>`TypeError`</b>: If `policy` is not an instance of TFPolicy.
-* <b>`ValueError`</b>: If use_nest_path_signatures is not used and any of the
+*   <b>`TypeError`</b>: If `policy` is not an instance of TFPolicy.
+*   <b>`ValueError`</b>: If use_nest_path_signatures is not used and any of the
     following `policy` specs are missing names, or the names collide:
-    `policy.time_step_spec`, `policy.action_spec`,
-    `policy.policy_state_spec`, `policy.info_spec`.
-* <b>`ValueError`</b>: If `batch_size` is not either `None` or a python integer > 0.
-* <b>`NotImplementedError`</b>: If created from TF1 with eager mode disabled.
-
-
+    `policy.time_step_spec`, `policy.action_spec`, `policy.policy_state_spec`,
+    `policy.info_spec`.
+*   <b>`ValueError`</b>: If `batch_size` is not either `None` or a python
+    integer > 0.
 
 ## Methods
 
 <h3 id="save"><code>save</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/policy_saver.py">View
+source</a>
 
 ``` python
 save(export_dir)
 ```
 
 Save the policy to the given `export_dir`.
-
-
-

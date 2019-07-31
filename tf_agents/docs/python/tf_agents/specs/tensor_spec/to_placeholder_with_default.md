@@ -5,6 +5,12 @@
 
 # tf_agents.specs.tensor_spec.to_placeholder_with_default
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py">View
+source</a>
+
 Creates a placeholder from TensorSpec.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.specs.tensor_spec.to_placeholder_with_default(
 ```
 
 
-
-Defined in [`specs/tensor_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/tensor_spec.py).
 
 <!-- Placeholder for "Used in" -->
 

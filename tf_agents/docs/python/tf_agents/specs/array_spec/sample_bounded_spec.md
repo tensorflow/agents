@@ -5,6 +5,12 @@
 
 # tf_agents.specs.array_spec.sample_bounded_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 Samples the given bounded spec.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.specs.array_spec.sample_bounded_spec(
 ```
 
 
-
-Defined in [`specs/array_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py).
 
 <!-- Placeholder for "Used in" -->
 

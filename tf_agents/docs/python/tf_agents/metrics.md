@@ -5,11 +5,13 @@
 
 # Module: tf_agents.metrics
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/__init__.py">View
+source</a>
+
 Metrics module.
-
-
-
-Defined in [`metrics/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

@@ -5,11 +5,13 @@
 
 # Module: tf_agents.distributions.tanh_bijector_stable
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/distributions/tanh_bijector_stable.py">View
+source</a>
+
 Tanh bijector.
-
-
-
-Defined in [`distributions/tanh_bijector_stable.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/distributions/tanh_bijector_stable.py).
 
 <!-- Placeholder for "Used in" -->
 

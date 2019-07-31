@@ -6,15 +6,17 @@
 
 # tf_agents.trajectories.policy_step.CommonFields
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/policy_step.py">View
+source</a>
+
 ## Class `CommonFields`
 
 Strings which can be used for querying returned PolicyStep.info field.
 
 
-
-
-
-Defined in [`trajectories/policy_step.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/policy_step.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -23,5 +25,4 @@ log probabilities are returned in the step or not.
 
 ## Class Members
 
-<h3 id="LOG_PROBABILITY"><code>LOG_PROBABILITY</code></h3>
-
+*   `LOG_PROBABILITY = 'log_probability'` <a id="LOG_PROBABILITY"></a>

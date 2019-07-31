@@ -222,6 +222,7 @@ def join_scope(parent_scope, child_scope):
   return '/'.join([parent_scope, child_scope])
 
 
+# TODO(b/138322868): Add an optional action_spec for validation.
 def index_with_actions(q_values, actions, multi_dim_actions=False):
   """Index into q_values using actions.
 
@@ -238,7 +239,6 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
       num_actions_j). While in the single dimensional case, actions[outer_dim1,
       ... outer_dimK] is a scalar.
     multi_dim_actions: whether the actions are multidimensional.
-    # TODO(kbanoop): Add an optional action_spec for validation.
 
   Returns:
     A [outer_dim1, ... outer_dimK] tensor of q_values for the given actions.

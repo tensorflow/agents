@@ -5,6 +5,12 @@
 
 # tf_agents.utils.eager_utils.np_function
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py">View
+source</a>
+
 Decorator that allow a numpy function to be used in Eager and Graph modes.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.utils.eager_utils.np_function(
 ```
 
 
-
-Defined in [`utils/eager_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -44,7 +48,9 @@ outputs = tf.py_function(sum, inputs, Tout=[tf.int64])
 inputs = tf.constant([3., 4.])
 outputs = tf.py_function(sum, inputs, Tout=[tf.float32])
 
-Do:
+#### Do:
+
+
 @eager_utils.np_function
 def sum(x):
   return np.sum(x)
@@ -77,16 +83,10 @@ with context.eager_mode():
   outputs = sum(tf.constant([3., 4.])) # tf.Tensor([7.])
 
 ```
-#### Args:
 
-* <b>`func`</b>: A numpy function, that takes numpy arrays as inputs and return numpy
-    arrays as outputs.
-* <b>`output_dtypes`</b>: Optional list of dtypes or a function that maps input dtypes
-    to output dtypes. Examples: output_dtypes=[tf.float32],
-    output_dtypes=lambda x: x (outputs have the same dtype as inputs).
-    If it is not provided in Graph mode the `func` would be called to infer
-    the output dtypes.
-
-#### Returns:
-
-A wrapped function that can be used with TF code.
+Args: func: A numpy function, that takes numpy arrays as inputs and return numpy
+arrays as outputs. output_dtypes: Optional list of dtypes or a function that
+maps input dtypes to output dtypes. Examples: output_dtypes=[tf.float32],
+output_dtypes=lambda x: x (outputs have the same dtype as inputs). If it is not
+provided in Graph mode the `func` would be called to infer the output dtypes.
+Returns: A wrapped function that can be used with TF code.

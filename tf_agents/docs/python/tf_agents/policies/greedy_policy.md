@@ -1,31 +1,25 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.policies.greedy_policy" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.policies.greedy_policy
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/greedy_policy.py">View
+source</a>
+
 Policy implementation that generates greedy actions from another policy.
-
-
-
-Defined in [`policies/greedy_policy.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/greedy_policy.py).
 
 <!-- Placeholder for "Used in" -->
 
 
 ## Classes
 
+[`class DeterministicWithLogProb`](../../tf_agents/policies/greedy_policy/DeterministicWithLogProb.md):
+Thin wrapper around Deterministic that supports taking log_prob.
+
 [`class GreedyPolicy`](../../tf_agents/policies/greedy_policy/GreedyPolicy.md): Returns greedy samples of a given policy.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

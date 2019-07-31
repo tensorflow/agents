@@ -14,20 +14,25 @@
 
 # tf_agents.policies.scripted_py_policy.ScriptedPyPolicy
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/scripted_py_policy.py">View
+source</a>
+
 ## Class `ScriptedPyPolicy`
 
 Returns actions from the given configuration.
 
 Inherits From: [`Base`](../../../tf_agents/policies/py_policy/Base.md)
 
-
-
-Defined in [`policies/scripted_py_policy.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/scripted_py_policy.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/scripted_py_policy.py">View
+source</a>
 
 ``` python
 __init__(
@@ -56,15 +61,12 @@ steps.
 
 #### Args:
 
-* <b>`time_step_spec`</b>: A time_step_spec for the policy will interact
-    with.
-* <b>`action_spec`</b>: An action_spec for the environment the policy will interact
-    with.
-* <b>`action_script`</b>: A list of 2-tuples of the form (n, nest) where the nest of
-    actions follow the action_spec. Each action will be executed for n
+*   <b>`time_step_spec`</b>: A time_step_spec for the policy will interact with.
+*   <b>`action_spec`</b>: An action_spec for the environment the policy will
+    interact with.
+*   <b>`action_script`</b>: A list of 2-tuples of the form (n, nest) where the
+    nest of actions follow the action_spec. Each action will be executed for n
     steps.
-
-
 
 ## Properties
 
@@ -128,11 +130,12 @@ Describes the data collected when using this policy with an environment.
 A `Trajectory` containing all array specs associated with the
 time_step_spec and policy_step_spec of this policy.
 
-
-
 ## Methods
 
 <h3 id="action"><code>action</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
 
 ``` python
 action(
@@ -159,6 +162,9 @@ A PolicyStep named tuple containing:
 
 <h3 id="get_initial_state"><code>get_initial_state</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
+
 ``` python
 get_initial_state(batch_size=None)
 ```
@@ -173,6 +179,3 @@ Returns an initial state usable by the policy.
 #### Returns:
 
 An initial policy state.
-
-
-

@@ -5,6 +5,12 @@
 
 # tf_agents.utils.nest_utils.batch_nested_tensors
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Add batch dimension if needed to nested tensors while checking their specs.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.utils.nest_utils.batch_nested_tensors(
 ```
 
 
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -29,10 +33,9 @@ extra batch dimension if it doesn't already have it.
 
 #### Args:
 
-* <b>`tensors`</b>: Nested list/tuple or dict of Tensors.
-* <b>`specs`</b>: Nested list/tuple or dict of TensorSpecs, describing the shape of the
-    non-batched Tensors.
-
+*   <b>`tensors`</b>: Nested list/tuple or dict of Tensors.
+*   <b>`specs`</b>: Nested list/tuple or dict of TensorSpecs, describing the
+    shape of the non-batched Tensors.
 
 #### Returns:
 

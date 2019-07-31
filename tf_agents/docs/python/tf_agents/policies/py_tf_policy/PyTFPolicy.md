@@ -18,20 +18,25 @@
 
 # tf_agents.policies.py_tf_policy.PyTFPolicy
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_tf_policy.py">View
+source</a>
+
 ## Class `PyTFPolicy`
 
 Exposes a Python policy as wrapper over a TF Policy.
 
 Inherits From: [`Base`](../../../tf_agents/policies/py_policy/Base.md), [`SessionUser`](../../../tf_agents/utils/session_utils/SessionUser.md)
 
-
-
-Defined in [`policies/py_tf_policy.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_tf_policy.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_tf_policy.py">View
+source</a>
 
 ``` python
 __init__(
@@ -45,11 +50,10 @@ Initializes a new `PyTFPolicy`.
 
 #### Args:
 
-* <b>`policy`</b>: A TF Policy implementing `tf_policy.Base`.
-* <b>`batch_size`</b>: (deprecated)
-* <b>`seed`</b>: Seed to use if policy performs random actions (optional).
-
-
+*   <b>`policy`</b>: A TF Policy implementing
+    <a href="../../../tf_agents/policies/tf_policy/Base.md"><code>tf_policy.Base</code></a>.
+*   <b>`batch_size`</b>: (deprecated)
+*   <b>`seed`</b>: Seed to use if policy performs random actions (optional).
 
 ## Properties
 
@@ -103,10 +107,9 @@ Returns the TensorFlow session-like object used by this object.
 The internal TensorFlow session-like object. If it is `None`, it will
 return the current TensorFlow session context manager.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: When no session-like object has been set, and no
+*   <b>`AttributeError`</b>: When no session-like object has been set, and no
     session context manager has been entered.
 
 <h3 id="time_step_spec"><code>time_step_spec</code></h3>
@@ -128,11 +131,12 @@ Describes the data collected when using this policy with an environment.
 A `Trajectory` containing all array specs associated with the
 time_step_spec and policy_step_spec of this policy.
 
-
-
 ## Methods
 
 <h3 id="action"><code>action</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
 
 ``` python
 action(
@@ -159,6 +163,9 @@ A PolicyStep named tuple containing:
 
 <h3 id="get_initial_state"><code>get_initial_state</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_policy.py">View
+source</a>
+
 ``` python
 get_initial_state(batch_size=None)
 ```
@@ -176,6 +183,9 @@ An initial policy state.
 
 <h3 id="initialize"><code>initialize</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_tf_policy.py">View
+source</a>
+
 ``` python
 initialize(
     batch_size,
@@ -183,9 +193,10 @@ initialize(
 )
 ```
 
-
-
 <h3 id="restore"><code>restore</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_tf_policy.py">View
+source</a>
 
 ``` python
 restore(
@@ -199,11 +210,10 @@ Restores the policy from the checkpoint.
 
 #### Args:
 
-* <b>`policy_dir`</b>: Directory with the checkpoint.
-* <b>`graph`</b>: A graph, inside which policy the is restored (optional).
-* <b>`assert_consumed`</b>: If true, contents of the checkpoint will be checked
-    for a match against graph variables.
-
+*   <b>`policy_dir`</b>: Directory with the checkpoint.
+*   <b>`graph`</b>: A graph, inside which policy the is restored (optional).
+*   <b>`assert_consumed`</b>: If true, contents of the checkpoint will be
+    checked for a match against graph variables.
 
 #### Returns:
 
@@ -212,11 +222,14 @@ Restores the policy from the checkpoint.
 
 #### Raises:
 
-* <b>`RuntimeError`</b>: if the policy is not initialized.
-* <b>`AssertionError`</b>: if the checkpoint contains variables which do not have
-    matching names in the graph, and assert_consumed is set to True.
+*   <b>`RuntimeError`</b>: if the policy is not initialized.
+*   <b>`AssertionError`</b>: if the checkpoint contains variables which do not
+    have matching names in the graph, and assert_consumed is set to True.
 
 <h3 id="save"><code>save</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/py_tf_policy.py">View
+source</a>
 
 ``` python
 save(
@@ -224,8 +237,3 @@ save(
     graph=None
 )
 ```
-
-
-
-
-

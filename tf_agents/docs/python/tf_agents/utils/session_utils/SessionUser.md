@@ -6,15 +6,17 @@
 
 # tf_agents.utils.session_utils.SessionUser
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/session_utils.py">View
+source</a>
+
 ## Class `SessionUser`
 
 A class which needs a TensorFlow session for some of its operations.
 
 
-
-
-
-Defined in [`utils/session_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/session_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -70,7 +72,7 @@ with tf.train.SingularMonitoredSession(...) as mon_sess:
        my_session_owner.run_some_op()
 ```
 
-Advanced usage:
+#### Advanced usage:
 
 One can override the session setter by using the following code.
 ```python
@@ -98,11 +100,7 @@ Returns the TensorFlow session-like object used by this object.
 The internal TensorFlow session-like object. If it is `None`, it will
 return the current TensorFlow session context manager.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: When no session-like object has been set, and no
+*   <b>`AttributeError`</b>: When no session-like object has been set, and no
     session context manager has been entered.
-
-
-

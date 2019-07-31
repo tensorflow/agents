@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.transpose_batch_time
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Transposes the batch and time dimensions of a Tensor.
 
 ``` python
@@ -12,8 +18,6 @@ tf_agents.utils.common.transpose_batch_time(x)
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 

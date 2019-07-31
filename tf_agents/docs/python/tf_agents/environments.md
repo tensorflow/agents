@@ -5,11 +5,13 @@
 
 # Module: tf_agents.environments
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/__init__.py">View
+source</a>
+
 Environments module.
-
-
-
-Defined in [`environments/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -23,6 +25,9 @@ Defined in [`environments/__init__.py`](https://github.com/tensorflow/agents/tre
 [`py_environment`](../tf_agents/environments/py_environment.md) module: Python RL Environment API.
 
 [`random_py_environment`](../tf_agents/environments/random_py_environment.md) module: Environment implementation that generates random observations.
+
+[`random_tf_environment`](../tf_agents/environments/random_tf_environment.md)
+module: Utility environment that creates random observations.
 
 [`tf_environment`](../tf_agents/environments/tf_environment.md) module: TensorFlow RL Environment API.
 

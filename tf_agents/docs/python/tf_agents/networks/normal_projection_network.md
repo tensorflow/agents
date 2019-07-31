@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.networks.normal_projection_network" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.networks.normal_projection_network
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/normal_projection_network.py">View
+source</a>
+
 Project inputs to a normal distribution object.
-
-
-
-Defined in [`networks/normal_projection_network.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/normal_projection_network.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -23,13 +22,5 @@ Defined in [`networks/normal_projection_network.py`](https://github.com/tensorfl
 
 ## Functions
 
-[`tanh_squash_to_spec(...)`](../../tf_agents/networks/normal_projection_network/tanh_squash_to_spec.md)
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
-
+[`tanh_squash_to_spec(...)`](../../tf_agents/networks/normal_projection_network/tanh_squash_to_spec.md):
+Maps inputs with arbitrary range to range defined by spec using `tanh`.

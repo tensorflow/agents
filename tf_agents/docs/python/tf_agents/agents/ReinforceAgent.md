@@ -15,17 +15,23 @@
 <meta itemprop="property" content="train_step_counter"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="variables"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
 <meta itemprop="property" content="entropy_regularization_loss"/>
 <meta itemprop="property" content="initialize"/>
 <meta itemprop="property" content="policy_gradient_loss"/>
+<meta itemprop="property" content="total_loss"/>
 <meta itemprop="property" content="train"/>
+<meta itemprop="property" content="value_estimation_loss"/>
 <meta itemprop="property" content="with_name_scope"/>
 </div>
 
 # tf_agents.agents.ReinforceAgent
+
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/reinforce/reinforce_agent.py">View
+source</a>
 
 ## Class `ReinforceAgent`
 
@@ -39,11 +45,33 @@ Inherits From: [`TFAgent`](../../tf_agents/agents/tf_agent/TFAgent.md)
 * Class `tf_agents.agents.reinforce.reinforce_agent.ReinforceAgent`
 
 
-
-Defined in [`agents/reinforce/reinforce_agent.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/reinforce/reinforce_agent.py).
-
 <!-- Placeholder for "Used in" -->
 
+#### Implements:
+
+REINFORCE algorithm from
+
+"Simple statistical gradient-following algorithms for connectionist
+reinforcement learning" Williams, R.J., 1992.
+http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
+
+REINFORCE with state-value baseline, where state-values are estimated with
+function approximation, from
+
+"Reinforcement learning: An introduction" (Sec. 13.4) Sutton, R.S. and Barto,
+A.G., 2018. http://incompleteideas.net/book/the-book-2nd.html
+
+The REINFORCE agent can be optionally provided with: - value_network: A
+`tf_agents.network.Network` which parameterizes state-value estimation as a
+neural network. The network will be called with call(observation, step_type) and
+returns a floating point state-values tensor. - value_estimation_loss_coef:
+Weight on the value prediction loss.
+
+If value_network and value_estimation_loss_coef are provided, advantages are
+computed as `advantages = (discounted accumulated rewards) - (estimated
+state-values)` and the overall learning objective becomes: `(total loss) =
+(policy gradient loss) + value_estimation_loss_coef * (squared error of
+estimated state-values)`
 
 <h2 id="__init__"><code>__init__</code></h2>
 
@@ -58,24 +86,37 @@ Creates a REINFORCE Agent.
 
 #### Args:
 
-* <b>`time_step_spec`</b>: A `TimeStep` spec of the expected time_steps.
-* <b>`action_spec`</b>: A nest of BoundedTensorSpec representing the actions.
-* <b>`actor_network`</b>: A tf_agents.network.Network to be used by the agent. The
-    network will be called with call(observation, step_type).
-* <b>`optimizer`</b>: Optimizer for the actor network.
-* <b>`normalize_returns`</b>: Whether to normalize returns across episodes when
-    computing the loss.
-* <b>`gradient_clipping`</b>: Norm length to clip gradients.
-* <b>`debug_summaries`</b>: A bool to gather debug summaries.
-* <b>`summarize_grads_and_vars`</b>: If True, gradient and network variable summaries
-    will be written during training.
-* <b>`entropy_regularization`</b>: Coefficient for entropy regularization loss term.
-* <b>`train_step_counter`</b>: An optional counter to increment every time the train
-    op is run.  Defaults to the global_step.
-* <b>`name`</b>: The name of this agent. All variables in this module will fall
-    under that name. Defaults to the class name.
-
-
+*   <b>`time_step_spec`</b>: A `TimeStep` spec of the expected time_steps.
+*   <b>`action_spec`</b>: A nest of BoundedTensorSpec representing the actions.
+*   <b>`actor_network`</b>: A tf_agents.network.Network to be used by the agent.
+    The network will be called with call(observation, step_type).
+*   <b>`optimizer`</b>: Optimizer for the actor network.
+*   <b>`value_network`</b>: (Optional) A `tf_agents.network.Network` to be used
+    by the agent. The network will be called with call(observation, step_type)
+    and returns a floating point value tensor.
+*   <b>`value_estimation_loss_coef`</b>: (Optional) Multiplier for value
+    prediction loss to balance with policy gradient loss.
+*   <b>`advantage_fn`</b>: A function `A(returns, value_preds)` that takes
+    returns and value function predictions as input and returns advantages. The
+    default is `A(returns, value_preds) = returns - value_preds` if a value
+    network is specified and `use_advantage_loss=True`, otherwise `A(returns,
+    value_preds) = returns`.
+*   <b>`use_advantage_loss`</b>: Whether to use value function predictions for
+    computing returns. `use_advantage_loss=False` is equivalent to setting
+    `advantage_fn=lambda returns, value_preds: returns`.
+*   <b>`gamma`</b>: A discount factor for future rewards.
+*   <b>`normalize_returns`</b>: Whether to normalize returns across episodes
+    when computing the loss.
+*   <b>`gradient_clipping`</b>: Norm length to clip gradients.
+*   <b>`debug_summaries`</b>: A bool to gather debug summaries.
+*   <b>`summarize_grads_and_vars`</b>: If True, gradient and network variable
+    summaries will be written during training.
+*   <b>`entropy_regularization`</b>: Coefficient for entropy regularization loss
+    term.
+*   <b>`train_step_counter`</b>: An optional counter to increment every time the
+    train op is run. Defaults to the global_step.
+*   <b>`name`</b>: The name of this agent. All variables in this module will
+    fall under that name. Defaults to the class name.
 
 ## Properties
 
@@ -103,11 +144,11 @@ Return a policy that can be used to collect data from the environment.
 
 #### Returns:
 
-A `tf_policy.Base` object.
+A
+<a href="../../tf_agents/policies/tf_policy/Base.md"><code>tf_policy.Base</code></a>
+object.
 
 <h3 id="debug_summaries"><code>debug_summaries</code></h3>
-
-
 
 <h3 id="name"><code>name</code></h3>
 
@@ -126,7 +167,9 @@ Return the current policy held by the agent.
 
 #### Returns:
 
-A `tf_policy.Base` object.
+A
+<a href="../../tf_agents/policies/tf_policy/Base.md"><code>tf_policy.Base</code></a>
+object.
 
 <h3 id="submodules"><code>submodules</code></h3>
 
@@ -135,22 +178,22 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
 A sequence of all submodules.
 
 <h3 id="summarize_grads_and_vars"><code>summarize_grads_and_vars</code></h3>
-
-
 
 <h3 id="time_step_spec"><code>time_step_spec</code></h3>
 
@@ -182,8 +225,6 @@ May be `None` to mean no constraint.
 
 <h3 id="train_step_counter"><code>train_step_counter</code></h3>
 
-
-
 <h3 id="trainable_variables"><code>trainable_variables</code></h3>
 
 Sequence of variables owned by this module and it's submodules.
@@ -212,30 +253,12 @@ A sequence of variables for the current module (sorted by attribute
 name) followed by variables from all submodules recursively (breadth
 first).
 
-
-
 ## Methods
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Support self.foo = trackable syntax.
-
 <h3 id="entropy_regularization_loss"><code>entropy_regularization_loss</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/reinforce/reinforce_agent.py">View
+source</a>
 
 ``` python
 entropy_regularization_loss(
@@ -252,17 +275,20 @@ algorithms." (Williams and Peng, 1991).
 
 #### Args:
 
-* <b>`actions_distribution`</b>: A possibly batched tuple of action distributions.
-* <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry) importance
-    weights.  May include a mask for invalid timesteps.
-
+*   <b>`actions_distribution`</b>: A possibly batched tuple of action
+    distributions.
+*   <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry)
+    importance weights. May include a mask for invalid timesteps.
 
 #### Returns:
 
-* <b>`entropy_regularization_loss`</b>: A tensor with the entropy regularization
-  loss.
+*   <b>`entropy_regularization_loss`</b>: A tensor with the entropy
+    regularization loss.
 
 <h3 id="initialize"><code>initialize</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/tf_agent.py">View
+source</a>
 
 ``` python
 initialize()
@@ -274,20 +300,23 @@ Initializes the agent.
 
 An operation that can be used to initialize the agent.
 
-
 #### Raises:
 
-* <b>`RuntimeError`</b>: If the class was not initialized properly (`super.__init__`
-    was not called).
+*   <b>`RuntimeError`</b>: If the class was not initialized properly
+    (`super.__init__` was not called).
 
 <h3 id="policy_gradient_loss"><code>policy_gradient_loss</code></h3>
 
-``` python
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/reinforce/reinforce_agent.py">View
+source</a>
+
+```python
 policy_gradient_loss(
     actions_distribution,
     actions,
     is_last,
     returns,
+    num_episodes,
     weights=None
 )
 ```
@@ -296,22 +325,40 @@ Computes the policy gradient loss.
 
 #### Args:
 
-* <b>`actions_distribution`</b>: A possibly batched tuple of action distributions.
-* <b>`actions`</b>: Tensor with a batch of actions.
-* <b>`is_last`</b>: Tensor of booleans that indicate if the end of the trajectory
-    has been reached.
-* <b>`returns`</b>: Tensor with a return from each timestep, aligned on index. Works
-    better when returns are normalized.
-* <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry) importance
-    weights.  May include a mask for invalid timesteps.
-
+*   <b>`actions_distribution`</b>: A possibly batched tuple of action
+    distributions.
+*   <b>`actions`</b>: Tensor with a batch of actions.
+*   <b>`is_last`</b>: Tensor of booleans that indicate if the end of the
+    trajectory has been reached.
+*   <b>`returns`</b>: Tensor with a return from each timestep, aligned on index.
+    Works better when returns are normalized.
+*   <b>`num_episodes`</b>: Number of episodes contained in the training data.
+*   <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry)
+    importance weights. May include a mask for invalid timesteps.
 
 #### Returns:
 
-* <b>`policy_gradient_loss`</b>: A tensor that will contain policy gradient loss for
-    the on-policy experience.
+*   <b>`policy_gradient_loss`</b>: A tensor that will contain policy gradient
+    loss for the on-policy experience.
+
+<h3 id="total_loss"><code>total_loss</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/reinforce/reinforce_agent.py">View
+source</a>
+
+```python
+total_loss(
+    time_steps,
+    actions,
+    returns,
+    weights
+)
+```
 
 <h3 id="train"><code>train</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/tf_agent.py">View
+source</a>
 
 ``` python
 train(
@@ -324,16 +371,15 @@ Trains the agent.
 
 #### Args:
 
-* <b>`experience`</b>: A batch of experience data in the form of a `Trajectory`. The
-    structure of `experience` must match that of `self.policy.step_spec`.
-    All tensors in `experience` must be shaped `[batch, time, ...]` where
-    `time` must be equal to `self.required_experience_time_steps` if that
-    property is not `None`.
-* <b>`weights`</b>: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
-    containing weights to be used when calculating the total train loss.
-    Weights are typically multiplied elementwise against the per-batch loss,
-    but the implementation is up to the Agent.
-
+*   <b>`experience`</b>: A batch of experience data in the form of a
+    `Trajectory`. The structure of `experience` must match that of
+    `self.policy.step_spec`. All tensors in `experience` must be shaped `[batch,
+    time, ...]` where `time` must be equal to
+    `self.required_experience_time_steps` if that property is not `None`.
+*   <b>`weights`</b>: (optional). A `Tensor`, either `0-D` or shaped `[batch]`,
+    containing weights to be used when calculating the total train loss. Weights
+    are typically multiplied elementwise against the per-batch loss, but the
+    implementation is up to the Agent.
 
 #### Returns:
 
@@ -344,16 +390,43 @@ A `LossInfo` loss tuple containing loss and info tensors.
   will first calculate the loss value(s), then perform a train step,
   and return the pre-train-step `LossInfo`.
 
-
 #### Raises:
 
-* <b>`TypeError`</b>: If experience is not type `Trajectory`.  Or if experience
+*   <b>`TypeError`</b>: If experience is not type `Trajectory`. Or if experience
     does not match `self.collect_data_spec` structure types.
-* <b>`ValueError`</b>: If experience tensors' time axes are not compatible with
-    `self.train_sequene_length`.  Or if experience does not match
+*   <b>`ValueError`</b>: If experience tensors' time axes are not compatible
+    with `self.train_sequene_length`. Or if experience does not match
     `self.collect_data_spec` structure.
-* <b>`RuntimeError`</b>: If the class was not initialized properly (`super.__init__`
-    was not called).
+*   <b>`RuntimeError`</b>: If the class was not initialized properly
+    (`super.__init__` was not called).
+
+<h3 id="value_estimation_loss"><code>value_estimation_loss</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/reinforce/reinforce_agent.py">View
+source</a>
+
+```python
+value_estimation_loss(
+    value_preds,
+    returns,
+    num_episodes,
+    weights=None
+)
+```
+
+Computes the value estimation loss.
+
+#### Args:
+
+*   <b>`value_preds`</b>: Per-timestep estimated values.
+*   <b>`returns`</b>: Per-timestep returns for value function to predict.
+*   <b>`num_episodes`</b>: Number of episodes contained in the training data.
+*   <b>`weights`</b>: Optional scalar or element-wise (per-batch-entry)
+    importance weights. May include a mask for invalid timesteps.
+
+#### Returns:
+
+*   <b>`value_estimation_loss`</b>: A scalar value_estimation_loss loss.
 
 <h3 id="with_name_scope"><code>with_name_scope</code></h3>
 
@@ -366,21 +439,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -390,6 +467,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

@@ -5,14 +5,16 @@
 
 # tf_agents.specs.array_spec.is_bounded
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 tf_agents.specs.array_spec.is_bounded(spec)
 ```
 
 
-
-Defined in [`specs/array_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py).
 
 <!-- Placeholder for "Used in" -->

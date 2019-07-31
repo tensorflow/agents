@@ -5,11 +5,13 @@
 
 # Module: tf_agents.networks
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/__init__.py">View
+source</a>
+
 Networks Module.
-
-
-
-Defined in [`networks/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -39,6 +41,9 @@ Defined in [`networks/__init__.py`](https://github.com/tensorflow/agents/tree/ma
 [`q_network`](../tf_agents/networks/q_network.md) module: Sample Keras networks for DQN.
 
 [`q_rnn_network`](../tf_agents/networks/q_rnn_network.md) module: Sample recurrent Keras network for DQN.
+
+[`sequential_layer`](../tf_agents/networks/sequential_layer.md) module: Keras
+layer to replace the Sequential Model object.
 
 [`utils`](../tf_agents/networks/utils.md) module: Network utilities.
 

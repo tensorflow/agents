@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.periodically
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Periodically performs the tensorflow op in `body`.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.utils.common.periodically(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -35,12 +39,11 @@ or conditionals.
 
 #### Args:
 
-* <b>`body`</b>: callable that returns the tensorflow op to be performed every time
-    an internal counter is divisible by the period. The op must have no
+*   <b>`body`</b>: callable that returns the tensorflow op to be performed every
+    time an internal counter is divisible by the period. The op must have no
     output (for example, a tf.group()).
-* <b>`period`</b>: inverse frequency with which to perform the op.
-* <b>`name`</b>: name of the variable_scope.
-
+*   <b>`period`</b>: inverse frequency with which to perform the op.
+*   <b>`name`</b>: name of the variable_scope.
 
 #### Raises:
 

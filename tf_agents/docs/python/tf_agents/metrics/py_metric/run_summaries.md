@@ -5,6 +5,12 @@
 
 # tf_agents.metrics.py_metric.run_summaries
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py">View
+source</a>
+
 Execute summary ops for py_metrics.
 
 ``` python
@@ -14,22 +20,17 @@ tf_agents.metrics.py_metric.run_summaries(
 )
 ```
 
-
-
-Defined in [`metrics/py_metric.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/py_metric.py).
-
 <!-- Placeholder for "Used in" -->
 
 #### Args:
 
-* <b>`metrics`</b>: A list of py_metric.Base objects.
-* <b>`session`</b>: A TensorFlow session-like object. If it is not provided, it will
-    use the current TensorFlow session context manager.
-
+*   <b>`metrics`</b>: A list of py_metric.Base objects.
+*   <b>`session`</b>: A TensorFlow session-like object. If it is not provided,
+    it will use the current TensorFlow session context manager.
 
 #### Raises:
 
-* <b>`RuntimeError`</b>: If .tf_summaries() was not previously called on any of the
-    `metrics`.
-* <b>`AttributeError`</b>: If session is not provided and there is no default session
-    provided by a context manager.
+*   <b>`RuntimeError`</b>: If .tf_summaries() was not previously called on any
+    of the `metrics`.
+*   <b>`AttributeError`</b>: If session is not provided and there is no default
+    session provided by a context manager.

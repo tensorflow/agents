@@ -5,6 +5,12 @@
 
 # tf_agents.agents.ppo.ppo_utils.nested_kl_divergence
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_utils.py">View
+source</a>
+
 Given two nested distributions, sum the KL divergences of the leaves.
 
 ``` python
@@ -16,7 +22,5 @@ tf_agents.agents.ppo.ppo_utils.nested_kl_divergence(
 ```
 
 
-
-Defined in [`agents/ppo/ppo_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/ppo_utils.py).
 
 <!-- Placeholder for "Used in" -->

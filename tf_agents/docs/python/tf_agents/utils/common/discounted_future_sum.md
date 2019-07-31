@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.discounted_future_sum
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Discounted future sum of batch-major values.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.utils.common.discounted_future_sum(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -40,7 +44,6 @@ A Tensor of shape [batch_size, total_steps], where each entry `(i, j)` is
   ```python
   [(5 * 0.9^0 + 6 * 0.9^1 + 7 * 0.9^2), (6 * 0.9^0 + 7 * 0.9^1), 7 * 0.9^0]
   ```
-
 
 #### Raises:
 
