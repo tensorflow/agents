@@ -1021,10 +1021,10 @@ class PPOAgent(tf_agent.TFAgent):
     mean_kl_above_bound = (
         mean_kl >
         self._adaptive_kl_target * (1.0 + self._adaptive_kl_tolerance))
-    adaptive_kl_update_factor = tf.case({
-        mean_kl_below_bound: lambda: tf.constant(1.0 / 1.5, dtype=tf.float32),
-        mean_kl_above_bound: lambda: tf.constant(1.5, dtype=tf.float32),
-    }, default=lambda: tf.constant(1.0, dtype=tf.float32), exclusive=True)
+    adaptive_kl_update_factor = tf.case([
+        (mean_kl_below_bound, lambda: tf.constant(1.0 / 1.5, dtype=tf.float32)),
+        (mean_kl_above_bound, lambda: tf.constant(1.5, dtype=tf.float32)),
+    ], default=lambda: tf.constant(1.0, dtype=tf.float32), exclusive=True)
 
     new_adaptive_kl_beta = tf.maximum(
         self._adaptive_kl_beta * adaptive_kl_update_factor, 10e-16)
