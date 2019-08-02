@@ -465,12 +465,6 @@ def create_train_op(total_loss,
     with tf.control_dependencies([grad_updates]):
       train_op = tf.identity(total_loss, name='train_op')
 
-  # Add the operation used for training to the 'train_op' collection
-  # TODO(b/123908876) Remove use of collections.
-  train_ops = tf.compat.v1.get_collection_ref(tf.compat.v1.GraphKeys.TRAIN_OP)
-  if train_op not in train_ops:
-    train_ops.append(train_op)
-
   return train_op
 
 
