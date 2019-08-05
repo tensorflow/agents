@@ -168,10 +168,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
 
   def testEmbeddingFeatureColumnInput(self):
-    # TODO(b/134950354): Test embedding column for non-eager mode only for now.
-    if tf.executing_eagerly():
-      self.skipTest('b/134950354')
-
     key = 'feature_key'
     vocab_list = ['a', 'b']
     column = tf.feature_column.categorical_column_with_vocabulary_list(
@@ -208,18 +204,16 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     state_specs[indicator_key] = tensor_spec.TensorSpec([1], tf.int32)
     expected_dim += len(vocab_list)
 
-    # TODO(b/134950354): Test embedding column for non-eager mode only for now.
-    if not tf.executing_eagerly():
-      embedding_key = 'embedding_key'
-      embedding_dim = 3
-      vocab_list = [2, 3, 4]
-      column2 = tf.feature_column.categorical_column_with_vocabulary_list(
-          embedding_key, vocab_list)
-      columns[embedding_key] = tf.feature_column.embedding_column(
-          column2, embedding_dim)
-      state_tensors[embedding_key] = tf.expand_dims([3, 2, 2, 4, 3], -1)
-      state_specs[embedding_key] = tensor_spec.TensorSpec([1], tf.int32)
-      expected_dim += embedding_dim
+    embedding_key = 'embedding_key'
+    embedding_dim = 3
+    vocab_list = [2, 3, 4]
+    column2 = tf.feature_column.categorical_column_with_vocabulary_list(
+        embedding_key, vocab_list)
+    columns[embedding_key] = tf.feature_column.embedding_column(
+        column2, embedding_dim)
+    state_tensors[embedding_key] = tf.expand_dims([3, 2, 2, 4, 3], -1)
+    state_specs[embedding_key] = tensor_spec.TensorSpec([1], tf.int32)
+    expected_dim += embedding_dim
 
     numeric_key = 'numeric_key'
     batch_size = 5
