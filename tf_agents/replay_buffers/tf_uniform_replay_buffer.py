@@ -102,20 +102,20 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         can read/write nested tensors.
       dataset_drop_remainder: If `True`, then when calling
         `as_dataset` with arguments `single_deterministic_pass=True` and
-        `sample_batch_size != None`, the final batch will be dropped if it does
-        not contain exactly `sample_batch_size` items.  This is helpful for
+        `sample_batch_size is not None`, the final batch will be dropped if it
+        does not contain exactly `sample_batch_size` items.  This is helpful for
         static shape inference as the resulting tensors will always have
         leading dimension `sample_batch_size` instead of `None`.
       dataset_window_shift: Window shift used when calling
         `as_dataset` with arguments `single_deterministic_pass=True` and
-        `num_steps != None`.  This determines how the resulting frames are
+        `num_steps is not None`.  This determines how the resulting frames are
         windowed.  If `None`, then there is no overlap created between frames
         and each frame is seen exactly once.  For example, if `max_length=5`,
         `num_steps=2`, `sample_batch_size=None`, and
         `dataset_window_shift=None`, then the datasets returned will have
         frames `{[0, 1], [2, 3], [4]}`.
 
-        If `num_steps != None`, then windows are created
+        If `num_steps is not None`, then windows are created
         with a window overlap of `dataset_window_shift` and you will see each
         frame up to `num_steps` times.  For example, if `max_length=5`,
         `num_steps=2`, `sample_batch_size=None`, and `dataset_window_shift=1`,
