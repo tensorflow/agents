@@ -172,7 +172,7 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.policy.step_spec`.
+        structure of `experience` must match that of `self.collect_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.required_experience_time_steps` if that
         property is not `None`.
@@ -312,7 +312,7 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.policy.step_spec`.
+        structure of `experience` must match that of `self.collect_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.required_experience_time_steps` if that
         property is not `None`.
