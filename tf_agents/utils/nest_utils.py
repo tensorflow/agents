@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numbers
+
 import numpy as np
 import tensorflow as tf
 
@@ -28,8 +30,9 @@ from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-im
 flatten_with_tuple_paths = nest.flatten_with_tuple_paths
 
 
-def flatten_with_joined_paths(structure):
-  flattened = flatten_with_tuple_paths(structure)
+def flatten_with_joined_paths(structure, expand_composites=False):
+  flattened = flatten_with_tuple_paths(
+      structure, expand_composites=expand_composites)
 
   def stringify_and_join(path_elements):
     return '/'.join(str(path_element) for path_element in path_elements)
@@ -37,20 +40,29 @@ def flatten_with_joined_paths(structure):
   return [(stringify_and_join(path), value) for (path, value) in flattened]
 
 
-def fast_map_structure_flatten(func, structure, *flat_structure):
+def fast_map_structure_flatten(func, structure, *flat_structure, **kwargs):
+  expand_composites = kwargs.get('expand_composites', False)
   entries = zip(*flat_structure)
-  return tf.nest.pack_sequence_as(structure, [func(*x) for x in entries])
+  return tf.nest.pack_sequence_as(
+      structure, [func(*x) for x in entries],
+      expand_composites=expand_composites)
 
 
-def fast_map_structure(func, *structure):
-  flat_structure = [tf.nest.flatten(s) for s in structure]
+def fast_map_structure(func, *structure, **kwargs):
+  expand_composites = kwargs.get('expand_composites', False)
+  flat_structure = [
+      tf.nest.flatten(s, expand_composites=expand_composites)
+      for s in structure]
   entries = zip(*flat_structure)
 
-  return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
+  return tf.nest.pack_sequence_as(
+      structure[0], [func(*x) for x in entries],
+      expand_composites=expand_composites)
 
 
 def has_tensors(*x):
-  return np.any([tf.is_tensor(t) for t in tf.nest.flatten(x)])
+  return np.any([
+      tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)])
 
 
 def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
@@ -63,8 +75,8 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
 
   Args:
     tensors: Nested list/tuple/dict of Tensors.
-    specs: Nested list/tuple/dict of Tensors describing the shape of unbatched
-      tensors.
+    specs: Nested list/tuple/dict of Tensors or CompositeTensors describing the
+      shape of unbatched tensors.
     num_outer_dims: The integer number of dimensions that are considered batch
       dimensions.  Default 1.
 
@@ -79,7 +91,7 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
   """
   tf.nest.assert_same_structure(tensors, specs)
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
-  spec_shapes = [s.shape for s in tf.nest.flatten(specs)]
+  spec_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
@@ -131,6 +143,46 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
        tf.nest.pack_sequence_as(specs, spec_shapes)))
 
 
+def _spec_shape(t):
+  if isinstance(t, tf.SparseTensor):
+    rank = tf.dimension_value(t.dense_shape.shape[0])
+    return tf.TensorShape([None] * rank)
+  else:
+    return t.shape
+
+
+def _expand_dims(t, axis):
+  """Add a new dimension to tensor `t` along `axis`.
+
+  Args:
+    t: A `tf.Tensor` or `tf.SparseTensor`.
+    axis: A `0D` integer scalar.
+
+  Returns:
+    An expanded tensor.
+
+  Raises:
+    NotImplementedError: If `t` is a `SparseTensor` and `axis != 0`.
+  """
+  if isinstance(t, tf.SparseTensor):
+    if tf.is_tensor(axis) or axis != 0:
+      raise NotImplementedError(
+          'Can only expand_dims on SparseTensor {} on static axis 0, '
+          'but received axis {}'.format(t, axis))
+    n_elem = (
+        t.indices.shape[0] or tf.get_static_shape(t.dense_shape)[0]
+        or tf.shape(t.indices)[0])
+    shape = tf.cast(t.shape, tf.int64)
+    return tf.SparseTensor(
+        indices=tf.concat((tf.ones([n_elem, 1], dtype=tf.int64),
+                           t.indices),
+                          axis=1),
+        values=t.values,
+        dense_shape=tf.concat(([1], shape), axis=0))
+  else:
+    return tf.expand_dims(t, axis)
+
+
 def batch_nested_tensors(tensors, specs=None):
   """Add batch dimension if needed to nested tensors while checking their specs.
 
@@ -152,20 +204,20 @@ def batch_nested_tensors(tensors, specs=None):
     ValueError: if the tensors and specs have incompatible dimensions or shapes.
   """
   if specs is None:
-    return tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), tensors)
+    return tf.nest.map_structure(lambda x: _expand_dims(x, 0), tensors)
 
   tf.nest.assert_same_structure(tensors, specs)
 
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [s.shape for s in tf.nest.flatten(specs)]
+  flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
   batched_tensors = []
 
-  tensor_shape_fn = lambda tensor: tensor.shape.ndims
+  tensor_rank = lambda tensor: tensor.shape.ndims
   for tensor, shape in zip(flat_tensors, flat_shapes):
-    if tensor_shape_fn(tensor) == shape.ndims:
+    if tensor_rank(tensor) == shape.ndims:
       tensor.shape.assert_is_compatible_with(shape)
-      tensor = tf.expand_dims(tensor, tf.constant(0))
-    elif tensor_shape_fn(tensor) == shape.ndims + 1:
+      tensor = _expand_dims(tensor, 0)
+    elif tensor_rank(tensor) == shape.ndims + 1:
       tensor.shape[1:].assert_is_compatible_with(shape)
     else:
       raise ValueError('Tensor does not have the correct dimensions. '
@@ -179,7 +231,7 @@ def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   """Flatten nested tensors and check their shape for use in other functions."""
   tf.nest.assert_same_structure(tensors, specs)
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [s.shape for s in tf.nest.flatten(specs)]
+  flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor.shape.ndims == shape.ndims:
       tensor.shape.assert_is_compatible_with(shape)
@@ -229,17 +281,21 @@ def split_nested_tensors(tensors, specs, num_or_size_splits):
     tensors: Nested list/tuple or dict of batched Tensors.
     specs: Nested list/tuple or dict of TensorSpecs, describing the shape of the
       non-batched Tensors.
-    num_or_size_splits: Same as argument for tf.split. Either a 0-D integer
-      Tensor indicating the number of splits along batch_dim or a 1-D integer
-      Tensor containing the sizes of each output tensor along batch_dim. If a
+    num_or_size_splits: Same as argument for tf.split. Either a python integer
+      indicating the number of splits along batch_dim or a list of integer
+      Tensors containing the sizes of each output tensor along batch_dim. If a
       scalar then it must evenly divide value.shape[axis]; otherwise the sum of
       sizes along the split dimension must match that of the value.
+      For `SparseTensor` inputs, `num_or_size_splits` must be the scalar
+      `num_split` (see documentation of `tf.sparse.split` for more details).
 
   Returns:
     A list of nested non-batched version of each tensor, where each list item
       corresponds to one batch item.
   Raises:
     ValueError: if the tensors and specs have incompatible dimensions or shapes.
+    ValueError: if a non-scalar is passed and there are SparseTensors in the
+      structure.
   """
   split_tensor_lists = []
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
@@ -248,7 +304,15 @@ def split_nested_tensors(tensors, specs, num_or_size_splits):
     if tensor.shape.ndims == shape.ndims:
       raise ValueError('Can only split tensors with a batch dimension.')
     if tensor.shape.ndims == shape.ndims + 1:
-      split_tensors = tf.split(tensor, num_or_size_splits)
+      if isinstance(tensor, tf.SparseTensor):
+        if not isinstance(num_or_size_splits, numbers.Number):
+          raise ValueError(
+              'Saw a SparseTensor, for which num_or_size_splits must be a '
+              'scalar.  But it is not: {}'.format(num_or_size_splits))
+        split_tensors = tf.sparse.split(
+            sp_input=tensor, num_split=num_or_size_splits, axis=0)
+      else:
+        split_tensors = tf.split(tensor, num_or_size_splits)
     split_tensor_lists.append(split_tensors)
   split_tensors_zipped = zip(*split_tensor_lists)
   return [
@@ -297,6 +361,11 @@ def stack_nested_tensors(tensors):
   return tf.nest.map_structure(lambda *tensors: tf.stack(tensors), *tensors)
 
 
+def _reshape(t, shape):
+  return (tf.sparse.reshape(t, shape) if isinstance(t, tf.SparseTensor)
+          else tf.reshape(t, shape))
+
+
 def flatten_multi_batched_nested_tensors(tensors, specs):
   """Reshape tensors to contain only one batch dimension.
 
@@ -305,7 +374,7 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   NOTE: Each tensor's batch dimensions must be the same.
 
   Args:
-    tensors: Nested list/tuple or dict of batched Tensors.
+    tensors: Nested list/tuple or dict of batched Tensors or SparseTensors.
     specs: Nested list/tuple or dict of TensorSpecs, describing the shape of the
       non-batched Tensors.
 
@@ -317,15 +386,21 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   """
   tf.nest.assert_same_structure(tensors, specs)
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [s.shape for s in tf.nest.flatten(specs)]
+  flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
   out_tensors = []
   batch_dims = []
   for i, (tensor, shape) in enumerate(zip(flat_tensors, flat_shapes)):
     if i == 0:  # Set batch_dims based on first tensor.
-      tensor_shape = tf.shape(input=tensor)
-      batch_dims = tensor_shape[:tensor.shape.ndims - shape.ndims]
-    reshaped_dims = [tf.reduce_prod(input_tensor=batch_dims)] + shape.as_list()
-    out_tensors.append(tf.reshape(tensor, reshaped_dims))
+      batch_dims = tensor.shape[:tensor.shape.ndims - shape.ndims]
+      if batch_dims.is_fully_defined():
+        batch_dims = batch_dims.as_list()
+        batch_prod = np.prod(batch_dims)
+        batch_dims = tf.constant(batch_dims, dtype=tf.int64)
+      else:
+        batch_prod = tf.reduce_prod(batch_dims)
+        batch_dims = tf.shape(tensor)[:tensor.shape.ndims - shape.ndims]
+    reshaped_dims = [batch_prod] + shape.as_list()
+    out_tensors.append(_reshape(tensor, reshaped_dims))
   return tf.nest.pack_sequence_as(tensors, out_tensors), batch_dims
 
 
@@ -352,7 +427,7 @@ def get_outer_rank(tensors, specs):
   specs agree with each other.
 
   Args:
-    tensors: Nested list/tuple/dict of Tensors.
+    tensors: Nested list/tuple/dict of Tensors or SparseTensors.
     specs: Nested list/tuple/dict of TensorSpecs, describing the shape of
       unbatched tensors.
 
@@ -368,7 +443,7 @@ def get_outer_rank(tensors, specs):
   """
   tf.nest.assert_same_structure(tensors, specs)
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
-  spec_shapes = [s.shape for s in tf.nest.flatten(specs)]
+  spec_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
 
   if any(spec_shape.ndims is None for spec_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
