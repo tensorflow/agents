@@ -96,6 +96,7 @@ class DqnAgent(tf_agent.TFAgent):
       boltzmann_temperature=None,
       emit_log_probability=False,
       # Params for target network updates
+      target_q_network=None,
       target_update_tau=1.0,
       target_update_period=1,
       # Params for training.
@@ -113,8 +114,9 @@ class DqnAgent(tf_agent.TFAgent):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      q_network: A tf_agents.network.Network to be used by the agent. The
-        network will be called with call(observation, step_type).
+      q_network: A `tf_agents.network.Network` to be used by the agent. The
+        network will be called with `call(observation, step_type)` and should
+        emit logits over the action space.
       optimizer: The optimizer to use for training.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
@@ -129,6 +131,23 @@ class DqnAgent(tf_agent.TFAgent):
         the actions during data collection. The closer to 0.0, the higher the
         probability of choosing the best action.
       emit_log_probability: Whether policies emit log probabilities or not.
+      target_q_network: (Optional.)  A `tf_agents.network.Network` to be used
+        as the target network during Q learning.  Every `target_udpate_period`
+        train steps, the weights from `q_network` are copied (possibly with
+        smoothing via `target_update_tau`) to `target_q_network`.
+
+        If `target_q_network` is not provided, it is created by making a
+        copy of `q_network`, which initializes a new network with the same
+        structure and its own layers and weights.
+
+        Performing a `Network.copy` does not work when the network instance
+        already has trainable parameters (e.g., has already been built, or
+        when the network is sharing layers with another).  In these cases, it is
+        up to you to build a copy having weights that are not
+        shared with the original `q_network`, so that this can be used as a
+        target network.  If you provide a `target_q_network` that shares any
+        weights with `q_network`, a warning will be logged but no exception
+        is thrown.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -175,7 +194,15 @@ class DqnAgent(tf_agent.TFAgent):
               epsilon_greedy, boltzmann_temperature))
 
     self._q_network = q_network
-    self._target_q_network = self._q_network.copy(name='TargetQNetwork')
+    if target_q_network is None:
+      self._target_q_network = self._q_network.copy(name='TargetQNetwork')
+      # Copy may have been shallow, and variable may inadvertently be shared
+      # between the target and original network.
+      _check_no_shared_variables(self._q_network, self._target_q_network)
+    else:
+      self._target_q_network = target_q_network
+    _check_matching_networks(
+        self._q_network, self._target_q_network)
     self._epsilon_greedy = epsilon_greedy
     self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature
@@ -470,3 +497,39 @@ class DdqnAgent(DqnAgent):
         next_target_q_values,
         best_next_actions,
         multi_dim_actions=multi_dim_actions)
+
+
+def _check_no_shared_variables(network_1, network_2):
+  variables_1 = set(network_1.trainable_variables)
+  variables_2 = set(network_2.trainable_variables)
+  shared = variables_1 & variables_2
+  if shared:
+    raise ValueError(
+        'After making a copy of network \'{}\' to create a target '
+        'network \'{}\', the target network shares weights with '
+        'the original network.  This is not allowed.  If '
+        'you want explicitly share weights with the target network, or '
+        'if your input network shares weights with others, please '
+        'provide a target network which explicitly, selectively, shares '
+        'layers/weights with the input network.  Shared variables found: '
+        '\'{}\'.'.format(network_1.name, network_2.name,
+                         shared))
+
+
+def _check_matching_networks(network_1, network_2):
+  """Check that two networks have matching input specs and variables."""
+  if network_1.input_tensor_spec != network_2.input_tensor_spec:
+    raise ValueError(
+        'Input tensor specs of network and target network '
+        'do not match: {} vs. {}.'.format(
+            network_1.input_tensor_spec, network_2.input_tensor_spec))
+  variables_1 = sorted(network_1.variables, key=lambda v: v.name)
+  variables_2 = sorted(network_2.variables, key=lambda v: v.name)
+  if len(variables_1) != len(variables_2):
+    raise ValueError(
+        'Variables lengths do not match between Q network and target network: '
+        '{} vs. {}'.format(variables_1, variables_2))
+  for v1, v2 in zip(variables_1, variables_2):
+    if v1.dtype != v2.dtype or v1.shape != v2.shape:
+      raise ValueError(
+          'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2))

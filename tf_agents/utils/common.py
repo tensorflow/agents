@@ -183,7 +183,8 @@ def soft_variables_update(source_variables,
   Returns:
     An operation that updates target variables from source variables.
   Raises:
-    ValueError: if tau is not in [0, 1].
+    ValueError: if `tau not in [0, 1]`.
+    ValueError: if `len(source_variables) != len(target_variables)`.
   """
   if tau < 0 or tau > 1:
     raise ValueError('Input `tau` should be in [0, 1].')
@@ -192,6 +193,10 @@ def soft_variables_update(source_variables,
   op_name = 'soft_variables_update'
   if tau == 0.0 or not source_variables or not target_variables:
     return tf.no_op(name=op_name)
+  if len(source_variables) != len(target_variables):
+    raise ValueError(
+        'Source and target variable lists have different lengths: '
+        '{} vs. {}'.format(len(source_variables), len(target_variables)))
   if sort_variables_by_name:
     source_variables = sorted(source_variables, key=lambda x: x.name)
     target_variables = sorted(target_variables, key=lambda x: x.name)

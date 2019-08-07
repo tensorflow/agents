@@ -28,6 +28,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl import logging
 import gin
 import tensorflow as tf
 
@@ -39,9 +40,34 @@ from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-im
 
 
 def _copy_layer(layer):
+  """Create a copy of a Keras layer with identical parameters.
+
+  The new layer will not share weights with the old one.
+
+  Args:
+    layer: An instance of `tf.keras.layers.Layer`.
+
+  Returns:
+    A new keras layer.
+
+  Raises:
+    TypeError: If `layer` is not a keras layer.
+    ValueError: If `layer` cannot be correctly cloned.
+  """
   if not isinstance(layer, tf.keras.layers.Layer):
     raise TypeError('layer is not a keras layer: %s' % str(layer))
-  # Get a fresh copy so we don't modify an incoming layer in place.
+
+  # pylint:disable=unidiomatic-typecheck
+  if type(layer) == tf.compat.v1.keras.layers.DenseFeatures:
+    raise ValueError('DenseFeatures V1 is not supported. '
+                     'Use tf.compat.v2.keras.layers.DenseFeatures instead.')
+  if layer.built:
+    logging.warn(
+        'Beware: Copying a layer that has already been built: \'%s\'.  '
+        'This can lead to subtle bugs because the original layer\'s weights '
+        'will not be used in the copy.', layer.name)
+  # Get a fresh copy so we don't modify an incoming layer in place.  Weights
+  # will not be shared.
   return type(layer).from_config(layer.get_config())
 
 
@@ -171,11 +197,6 @@ class EncodingNetwork(network.Network):
           'input_tensor_spec is provided.')
 
     if preprocessing_combiner is not None:
-      # pylint:disable=unidiomatic-typecheck
-      if (type(preprocessing_combiner) ==
-          tf.compat.v1.keras.layers.DenseFeatures):
-        raise ValueError('DenseFeatures V1 is not supported. '
-                         'Use tf.compat.v2.keras.layers.DenseFeatures instead.')
       preprocessing_combiner = _copy_layer(preprocessing_combiner)
 
     if not kernel_initializer:

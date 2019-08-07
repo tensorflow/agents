@@ -35,9 +35,9 @@ from tf_agents.utils import test_utils
 
 class DummyNet(network.Network):
 
-  def __init__(self, unused_observation_spec, action_spec, name=None):
+  def __init__(self, observation_spec, action_spec, name=None):
     super(DummyNet, self).__init__(
-        unused_observation_spec, state_spec=(), name=name)
+        observation_spec, state_spec=(), name=name)
     action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
@@ -52,6 +52,17 @@ class DummyNet(network.Network):
     for layer in self.layers:
       inputs = layer(inputs)
     return inputs, network_state
+
+
+class KerasLayersNet(network.Network):
+
+  def __init__(self, observation_spec, action_spec, layer, name=None):
+    super(KerasLayersNet, self).__init__(observation_spec, state_spec=(),
+                                         name=name)
+    self._layer = layer
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    return self._layer(inputs), network_state
 
 
 class ComputeTDTargetsTest(test_utils.TestCase):
@@ -85,6 +96,28 @@ class DqnAgentTest(test_utils.TestCase):
         q_network=q_net,
         optimizer=None)
     self.assertIsNotNone(agent.policy)
+
+  def testCreateAgentWithPrebuiltPreprocessingLayers(self, agent_class):
+    dense_layer = tf.keras.layers.Dense(3)
+    q_net = KerasLayersNet(
+        self._observation_spec[0], self._action_spec, dense_layer)
+    with self.assertRaisesRegexp(
+        ValueError, 'shares weights with the original network'):
+      agent_class(
+          self._time_step_spec,
+          self._action_spec,
+          q_network=q_net,
+          optimizer=None)
+
+    # Explicitly share weights between q and target networks; this is ok.
+    q_target_net = KerasLayersNet(
+        self._observation_spec[0], self._action_spec, dense_layer)
+    agent_class(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        optimizer=None,
+        target_q_network=q_target_net)
 
   def testInitializeAgent(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)
