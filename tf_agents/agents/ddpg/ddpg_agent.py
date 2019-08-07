@@ -201,25 +201,28 @@ class DdpgAgent(tf_agent.TFAgent):
         experience)
 
     # TODO(b/124382524): Apply a loss mask or filter boundary transitions.
-    critic_variables = self._critic_network.variables
+    trainable_critic_variables = self._critic_network.trainable_variables
     with tf.GradientTape(watch_accessed_variables=False) as tape:
-      assert critic_variables, 'No critic variables to optimize.'
-      tape.watch(critic_variables)
+      assert trainable_critic_variables, ('No trainable critic variables to '
+                                          'optimize.')
+      tape.watch(trainable_critic_variables)
       critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
                                      weights=weights)
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
-    critic_grads = tape.gradient(critic_loss, critic_variables)
-    self._apply_gradients(critic_grads, critic_variables,
+    critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
+    self._apply_gradients(critic_grads, trainable_critic_variables,
                           self._critic_optimizer)
 
-    actor_variables = self._actor_network.variables
+    trainable_actor_variables = self._actor_network.trainable_variables
     with tf.GradientTape(watch_accessed_variables=False) as tape:
-      assert actor_variables, 'No actor variables to optimize.'
-      tape.watch(actor_variables)
+      assert trainable_actor_variables, ('No trainable actor variables to '
+                                         'optimize.')
+      tape.watch(trainable_actor_variables)
       actor_loss = self.actor_loss(time_steps, weights=weights)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
-    actor_grads = tape.gradient(actor_loss, actor_variables)
-    self._apply_gradients(actor_grads, actor_variables, self._actor_optimizer)
+    actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
+    self._apply_gradients(actor_grads, trainable_actor_variables,
+                          self._actor_optimizer)
 
     self.train_step_counter.assign_add(1)
     self._update_target()
