@@ -250,7 +250,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
       loss = agent.train(experience)
 
     # Assert that counter starts out at zero.
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(0, self.evaluate(counter))
     self.evaluate(loss)
     # Assert that train_op ran increment_counter num_epochs times.
@@ -297,7 +297,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         train_step,
         debug_summaries=False)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     total_loss, extra_loss_info = self.evaluate(loss_info)
     (policy_gradient_loss, value_estimation_loss, l2_regularization_loss,
      entropy_reg_loss, kl_penalty_loss) = extra_loss_info
@@ -365,7 +365,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
     loss = agent.l2_regularization_loss()
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -408,7 +408,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     loss = agent.entropy_regularization_loss(
         time_steps, current_policy_distribution, weights)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -431,7 +431,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_loss = 123.205
     loss = agent.value_estimation_loss(time_steps, returns, weights)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -462,7 +462,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
                                       sample_action_log_probs, advantages,
                                       current_policy_distribution, weights)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
@@ -505,7 +505,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     kl_penalty_loss = agent.kl_penalty_loss(
         time_steps, action_distribution_parameters, current_policy_distribution,
         weights)
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     kl_penalty_loss_ = self.evaluate(kl_penalty_loss)
     self.assertEqual(expected_kl_penalty_loss, kl_penalty_loss_)
 
@@ -536,7 +536,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_kl_cutoff_loss = kl_cutoff_coef * (.24**2)  # (0.74 - 0.5) ^ 2
 
     loss = agent.kl_cutoff_loss(kl_divergence)
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose([loss_], [expected_kl_cutoff_loss])
 
@@ -560,7 +560,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
     # Force variable creation
     agent.policy.variables()
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Loss should not change if data kl is target kl.
     loss_1 = agent.adaptive_kl_loss([10.0])
@@ -598,7 +598,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         adaptive_kl_tolerance=0.5,
     )
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # When KL is target kl, beta should not change.
     update_adaptive_kl_beta_fn = common.function(agent.update_adaptive_kl_beta)
@@ -630,7 +630,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     action_step = agent.policy.action(time_steps)
     actions = action_step.action
     self.assertEqual(actions.shape.as_list(), [1, 1])
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     _ = self.evaluate(actions)
 
   def testNormalizeAdvantages(self):

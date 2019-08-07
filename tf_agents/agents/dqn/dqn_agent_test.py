@@ -155,7 +155,7 @@ class DqnAgentTest(test_utils.TestCase):
     expected_loss = 26.0
     loss, _ = agent._loss(experience)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testLossNStep(self, agent_class):
@@ -204,7 +204,7 @@ class DqnAgentTest(test_utils.TestCase):
     expected_loss = 47.42
     loss, _ = agent._loss(experience)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testLossNStepMidMidLastFirst(self, agent_class):
@@ -263,7 +263,7 @@ class DqnAgentTest(test_utils.TestCase):
     expected_loss = 21.5
     loss, _ = agent._loss(experience)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testPolicy(self, agent_class):
@@ -282,7 +282,7 @@ class DqnAgentTest(test_utils.TestCase):
         [2] + self._action_spec[0].shape.as_list(),
         action_step.action[0].shape,
     )
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
@@ -298,7 +298,7 @@ class DqnAgentTest(test_utils.TestCase):
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
     action_step = policy.action(time_steps)
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     checkpoint = tf.train.Checkpoint(agent=agent)
 

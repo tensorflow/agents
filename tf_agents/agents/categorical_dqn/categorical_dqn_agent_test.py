@@ -399,7 +399,7 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     else:
       loss = agent.train(experience)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 0)
     self.evaluate(loss)
 

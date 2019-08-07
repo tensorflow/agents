@@ -31,7 +31,7 @@ Example of usage:
     train_step_op = eager_utils.create_train_step(loss_op, optimizer)
     # Compute the loss and apply gradients to the variables using the optimizer.
     with tf.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       for _ in range(num_train_steps):
         loss_value = sess.run(train_step_op)
 
