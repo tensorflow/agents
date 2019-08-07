@@ -81,7 +81,6 @@ class QPolicyTest(test_utils.TestCase):
           self._time_step_spec, action_spec, q_network=DummyNet())
 
   def testAction(self):
-    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
@@ -92,7 +91,8 @@ class QPolicyTest(test_utils.TestCase):
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
+    action = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionWithinBounds(self):
     bounded_action_spec = tensor_spec.BoundedTensorSpec([1],
@@ -113,20 +113,19 @@ class QPolicyTest(test_utils.TestCase):
     self.assertTrue(np.all(action <= -5) and np.all(action >= -6))
 
   def testActionScalarSpec(self):
-    tf.compat.v1.set_random_seed(1)
-
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
     policy = q_policy.QPolicy(
         self._time_step_spec, action_spec, q_network=DummyNet())
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
-    aaction_step = policy.action(time_step, seed=1)
-    self.assertEqual(aaction_step.action.shape.as_list(), [2])
-    self.assertEqual(aaction_step.action.dtype, tf.int32)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(aaction_step.action), [1, 1])
+    action = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionList(self):
     action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
@@ -135,12 +134,15 @@ class QPolicyTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
-    self.assertTrue(isinstance(action_step.action, list))
+    self.assertIsInstance(action_step.action, list)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action), [[[1], [1]]])
+    action = self.evaluate(action_step.action)
+    self.assertLen(action, 1)
+    # Extract contents from the outer list.
+    action = action[0]
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testDistribution(self):
-    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
@@ -154,7 +156,6 @@ class QPolicyTest(test_utils.TestCase):
     self.assertAllEqual([[1]], self.evaluate(mode))
 
   def testUpdate(self):
-    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     new_policy = q_policy.QPolicy(
@@ -177,21 +178,24 @@ class QPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(new_policy.update(policy)), None)
 
-    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
-    self.assertAllEqual(self.evaluate(new_action_step.action), [[1], [1]])
+    action = self.evaluate(action_step.action)
+    new_action = self.evaluate(new_action_step.action)
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
+    self.assertTrue(np.all(new_action >= 0) and np.all(new_action <= 1))
+    self.assertAllEqual(action, new_action)
 
   def testActionSpecsCompatible(self):
-    q_network = DummyNetWithActionSpec(self._action_spec)
-    q_policy.QPolicy(self._time_step_spec, self._action_spec, q_network)
+    q_net = DummyNetWithActionSpec(self._action_spec)
+    q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)
 
   def testActionSpecsIncompatible(self):
     network_action_spec = tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1)
-    q_network = DummyNetWithActionSpec(network_action_spec)
+    q_net = DummyNetWithActionSpec(network_action_spec)
 
     with self.assertRaisesRegexp(
         ValueError,
         'action_spec must be compatible with q_network.action_spec'):
-      q_policy.QPolicy(self._time_step_spec, self._action_spec, q_network)
+      q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)
 
 
 if __name__ == '__main__':
