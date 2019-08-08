@@ -160,7 +160,7 @@ class PPOAgent(tf_agent.TFAgent):
         value_predictions)
       normalize_rewards: If true, keeps moving variance of rewards and
         normalizes incoming rewards.
-      reward_norm_clipping: Value above an below to clip normalized reward.
+      reward_norm_clipping: Value above and below to clip normalized reward.
       normalize_observations: If true, keeps moving mean and variance of
         observations and normalizes incoming observations.
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
@@ -394,8 +394,8 @@ class PPOAgent(tf_agent.TFAgent):
 
     Args:
       next_time_steps: batched tensor of TimeStep tuples after action is taken.
-      value_preds: Batched value predction tensor. Should have one more entry in
-        time index than time_steps, with the final value corresponding to the
+      value_preds: Batched value prediction tensor. Should have one more entry
+        in time index than time_steps, with the final value corresponding to the
         value prediction of the final state.
 
     Returns:
