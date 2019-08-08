@@ -173,19 +173,7 @@ class DqnAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
 
-    flat_action_spec = tf.nest.flatten(action_spec)
-    self._num_actions = [
-        spec.maximum - spec.minimum + 1 for spec in flat_action_spec
-    ]
-
-    # TODO(oars): Get DQN working with more than one dim in the actions.
-    if len(flat_action_spec) > 1 or flat_action_spec[0].shape.ndims > 1:
-      raise ValueError('Only one dimensional actions are supported now.')
-
-    if not all(spec.minimum == 0 for spec in flat_action_spec):
-      raise ValueError(
-          'Action specs should have minimum of 0, but saw: {0}'.format(
-              [spec.minimum for spec in flat_action_spec]))
+    self._check_action_spec(action_spec)
 
     if epsilon_greedy is not None and boltzmann_temperature is not None:
       raise ValueError(
@@ -214,19 +202,9 @@ class DqnAgent(tf_agent.TFAgent):
     self._update_target = self._get_target_updater(
         target_update_tau, target_update_period)
 
-    policy = q_policy.QPolicy(
-        time_step_spec,
-        action_spec,
-        q_network=self._q_network,
-        emit_log_probability=emit_log_probability)
-
-    if boltzmann_temperature is not None:
-      collect_policy = boltzmann_policy.BoltzmannPolicy(
-          policy, temperature=self._boltzmann_temperature)
-    else:
-      collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-          policy, epsilon=self._epsilon_greedy)
-    policy = greedy_policy.GreedyPolicy(policy)
+    policy, collect_policy = self._setup_policy(time_step_spec, action_spec,
+                                                boltzmann_temperature,
+                                                emit_log_probability)
 
     if q_network.state_spec and n_step_update != 1:
       raise NotImplementedError(
@@ -245,6 +223,40 @@ class DqnAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
+
+  def _check_action_spec(self, action_spec):
+    flat_action_spec = tf.nest.flatten(action_spec)
+    self._num_actions = [
+        spec.maximum - spec.minimum + 1 for spec in flat_action_spec
+    ]
+
+    # TODO(oars): Get DQN working with more than one dim in the actions.
+    if len(flat_action_spec) > 1 or flat_action_spec[0].shape.ndims > 1:
+      raise ValueError('Only one dimensional actions are supported now.')
+
+    if not all(spec.minimum == 0 for spec in flat_action_spec):
+      raise ValueError(
+          'Action specs should have minimum of 0, but saw: {0}'.format(
+              [spec.minimum for spec in flat_action_spec]))
+
+  def _setup_policy(self, time_step_spec, action_spec,
+                    boltzmann_temperature, emit_log_probability):
+
+    policy = q_policy.QPolicy(
+        time_step_spec,
+        action_spec,
+        q_network=self._q_network,
+        emit_log_probability=emit_log_probability)
+
+    if boltzmann_temperature is not None:
+      collect_policy = boltzmann_policy.BoltzmannPolicy(
+          policy, temperature=self._boltzmann_temperature)
+    else:
+      collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+          policy, epsilon=self._epsilon_greedy)
+    policy = greedy_policy.GreedyPolicy(policy)
+
+    return policy, collect_policy
 
   def _initialize(self):
     common.soft_variables_update(
@@ -362,16 +374,7 @@ class DqnAgent(tf_agent.TFAgent):
 
     with tf.name_scope('loss'):
       actions = tf.nest.flatten(actions)[0]
-      q_values, _ = self._q_network(time_steps.observation,
-                                    time_steps.step_type)
-
-      # Handle action_spec.shape=(), and shape=(1,) by using the
-      # multi_dim_actions param.
-      multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
-      q_values = common.index_with_actions(
-          q_values,
-          tf.cast(actions, dtype=tf.int32),
-          multi_dim_actions=multi_dim_actions)
+      q_values = self._compute_q_values(time_steps, actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
 
@@ -420,6 +423,10 @@ class DqnAgent(tf_agent.TFAgent):
       #   the number of boundary samples increases.
       loss = tf.reduce_mean(input_tensor=td_loss)
 
+      # Add network loss (such as regularization loss)
+      if self._q_network.losses:
+        loss = loss + tf.reduce_mean(self._q_network.losses)
+
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(
             name='loss', data=loss, step=self.train_step_counter)
@@ -447,6 +454,19 @@ class DqnAgent(tf_agent.TFAgent):
 
       return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss,
                                                  td_error=td_error))
+
+  def _compute_q_values(self, time_steps, actions):
+    q_values, _ = self._q_network(time_steps.observation,
+                                  time_steps.step_type)
+    # Handle action_spec.shape=(), and shape=(1,) by using the
+    # multi_dim_actions param.
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
+    q_values = common.index_with_actions(
+        q_values,
+        tf.cast(actions, dtype=tf.int32),
+        multi_dim_actions=multi_dim_actions)
+
+    return q_values
 
   def _compute_next_q_values(self, next_time_steps):
     """Compute the q value of the next state for TD error computation.

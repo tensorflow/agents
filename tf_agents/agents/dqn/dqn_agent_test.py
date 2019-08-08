@@ -35,7 +35,8 @@ from tf_agents.utils import test_utils
 
 class DummyNet(network.Network):
 
-  def __init__(self, observation_spec, action_spec, name=None):
+  def __init__(self, observation_spec, action_spec, name=None,
+               l2_regularization_weight=0.0):
     super(DummyNet, self).__init__(
         observation_spec, state_spec=(), name=name)
     action_spec = tf.nest.flatten(action_spec)[0]
@@ -43,6 +44,8 @@ class DummyNet(network.Network):
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
+            kernel_regularizer=tf.keras.regularizers.l2(
+                l2_regularization_weight),
             kernel_initializer=tf.compat.v1.initializers.constant([[2, 1],
                                                                    [1, 1]]),
             bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
@@ -189,6 +192,48 @@ class DqnAgentTest(test_utils.TestCase):
     loss, _ = agent._loss(experience)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(self.evaluate(loss), expected_loss)
+
+  def testLossWithL2Regularization(self, agent_class):
+    q_net = DummyNet(self._observation_spec, self._action_spec,
+                     l2_regularization_weight=1.0)
+    agent = agent_class(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        optimizer=None)
+
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
+
+    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
+    action_steps = policy_step.PolicyStep(actions)
+
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
+
+    experience = trajectories_test_utils.stacked_trajectory_from_transition(
+        time_steps, action_steps, next_time_steps)
+
+    # Using the kernel initializer [[2, 1], [1, 1]] and bias initializer
+    # [[1], [1]] from DummyNet above, we can calculate the following values:
+    # Q-value for first observation/action pair: 2 * 1 + 1 * 2 + 1 = 5
+    # Q-value for second observation/action pair: 1 * 3 + 1 * 4 + 1 = 8
+    # (Here we use the second row of the kernel initializer above, since the
+    # chosen action is now 1 instead of 0.)
+    # Q-value for first next_observation: 2 * 5 + 1 * 6 + 1 = 17
+    # Q-value for second next_observation: 2 * 7 + 1 * 8 + 1 = 23
+    # TD targets: 10 + 0.9 * 17 = 25.3 and 20 + 0.9 * 23 = 40.7
+    # TD errors: 25.3 - 5 = 20.3 and 40.7 - 8 = 32.7
+    # TD loss: 19.8 and 32.2 (Huber loss subtracts 0.5)
+    # L2_regularization_loss: 2^2 + 1^2 + 1^2 + 1^2 = 7.0
+    # Overall loss: (19.8 + 32.2) / 2 + 7.0 = 33.0
+    expected_loss = 33.0
+    loss, _ = agent._loss(experience)
+
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testLossNStep(self, agent_class):
