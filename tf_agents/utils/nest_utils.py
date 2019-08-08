@@ -397,8 +397,8 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
         batch_prod = np.prod(batch_dims)
         batch_dims = tf.constant(batch_dims, dtype=tf.int64)
       else:
-        batch_prod = tf.reduce_prod(batch_dims)
         batch_dims = tf.shape(tensor)[:tensor.shape.ndims - shape.ndims]
+        batch_prod = tf.reduce_prod(batch_dims)
     reshaped_dims = [batch_prod] + shape.as_list()
     out_tensors.append(_reshape(tensor, reshaped_dims))
   return tf.nest.pack_sequence_as(tensors, out_tensors), batch_dims
