@@ -3,3 +3,7 @@ environments.parallel_py_environment_test
 # TestSuite.
 environments.random_py_environment_test
 environments.random_tf_environment_test
+
+# TODO(b/139088071): determine the cause of the conv_layer shape errors for the
+# following tests.
+agents.categorical_dqn.categorical_dqn_agent_test
