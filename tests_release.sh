@@ -28,7 +28,7 @@ run_tests() {
   # virtualenv directory to use it; we just need to source bin/activate into the
   # current shell.
   VENV_PATH=${TMP}/virtualenv/$1
-  virtualenv -p "$1" "${VENV_PATH}"
+  virtualenv "${VENV_PATH}"
   source ${VENV_PATH}/bin/activate
 
 
