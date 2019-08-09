@@ -520,10 +520,11 @@ class DdqnAgent(DqnAgent):
 
 
 def _check_no_shared_variables(network_1, network_2):
-  variables_1 = set(network_1.trainable_variables)
-  variables_2 = set(network_2.trainable_variables)
-  shared = variables_1 & variables_2
+  variables_1 = {id(v): v for v in network_1.trainable_variables}
+  variables_2 = {id(v): v for v in network_2.trainable_variables}
+  shared = set(variables_1.keys()) & set(variables_2.keys())
   if shared:
+    shared_variables = [variables_1[v] for v in shared]
     raise ValueError(
         'After making a copy of network \'{}\' to create a target '
         'network \'{}\', the target network shares weights with '
@@ -533,7 +534,7 @@ def _check_no_shared_variables(network_1, network_2):
         'provide a target network which explicitly, selectively, shares '
         'layers/weights with the input network.  Shared variables found: '
         '\'{}\'.'.format(network_1.name, network_2.name,
-                         shared))
+                         shared_variables))
 
 
 def _check_matching_networks(network_1, network_2):
