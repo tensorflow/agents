@@ -244,6 +244,18 @@ def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   return flat_tensors, flat_shapes
 
 
+def flatten_and_check_shape_nested_specs(specs, reference_specs):
+  """Flatten nested specs and check their shape for use in other functions."""
+  try:
+    flat_specs, flat_shapes = _flatten_and_check_shape_nested_tensors(
+        specs, reference_specs, num_outer_dims=0)
+  except ValueError:
+    raise ValueError('specs must be compatible with reference_specs'
+                     '; instead got specs=%s, reference_specs=%s'
+                     % (specs, reference_specs))
+  return flat_specs, flat_shapes
+
+
 def unbatch_nested_tensors(tensors, specs=None):
   """Remove the batch dimension if needed from nested tensors using their specs.
 
