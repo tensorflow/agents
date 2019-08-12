@@ -35,7 +35,8 @@ def load(environment_name,
          max_episode_steps=None,
          gym_env_wrappers=(),
          env_wrappers=(),
-         spec_dtype_map=None):
+         spec_dtype_map=None,
+         batched_environment=False):
   """Loads the selected environment and wraps it with the specified wrappers.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -72,7 +73,8 @@ def load(environment_name,
       max_episode_steps=max_episode_steps,
       gym_env_wrappers=gym_env_wrappers,
       env_wrappers=env_wrappers,
-      spec_dtype_map=spec_dtype_map)
+      spec_dtype_map=spec_dtype_map,
+      batched_environment=batched_environment)
 
 
 @gin.configurable
@@ -83,7 +85,8 @@ def wrap_env(gym_env,
              time_limit_wrapper=wrappers.TimeLimit,
              env_wrappers=(),
              spec_dtype_map=None,
-             auto_reset=True):
+             auto_reset=True,
+             batched_environment=False):
   """Wraps given gym environment with TF Agent's GymWrapper.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -120,6 +123,7 @@ def wrap_env(gym_env,
       discount=discount,
       spec_dtype_map=spec_dtype_map,
       auto_reset=auto_reset,
+      batched_environment=batched_environment
   )
 
   if max_episode_steps > 0:
