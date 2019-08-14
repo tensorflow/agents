@@ -71,9 +71,9 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
               tf.constant(0.0, dtype=tf.float32))
     state_value = tf.math.mod(self._state.value(), 3)
     step_type, reward, discount = tf.case(
-        {tf.equal(state_value, FIRST): first,
-         tf.equal(state_value, MID): mid,
-         tf.equal(state_value, LAST): last},
+        [(tf.equal(state_value, FIRST), first),
+         (tf.equal(state_value, MID), mid),
+         (tf.equal(state_value, LAST), last)],
         exclusive=True, strict=True)
     return ts.TimeStep(step_type, reward, discount, state_value)
 
