@@ -57,17 +57,6 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
-class KerasLayersNet(network.Network):
-
-  def __init__(self, observation_spec, action_spec, layer, name=None):
-    super(KerasLayersNet, self).__init__(observation_spec, state_spec=(),
-                                         name=name)
-    self._layer = layer
-
-  def call(self, inputs, unused_step_type=None, network_state=()):
-    return self._layer(inputs), network_state
-
-
 class ComputeTDTargetsTest(test_utils.TestCase):
 
   def testComputeTDTargets(self):
@@ -102,8 +91,9 @@ class DqnAgentTest(test_utils.TestCase):
 
   def testCreateAgentWithPrebuiltPreprocessingLayers(self, agent_class):
     dense_layer = tf.keras.layers.Dense(3)
-    q_net = KerasLayersNet(
-        self._observation_spec[0], self._action_spec, dense_layer)
+    q_net = test_utils.KerasLayersNet(self._observation_spec[0],
+                                      self._action_spec,
+                                      dense_layer)
     with self.assertRaisesRegexp(
         ValueError, 'shares weights with the original network'):
       agent_class(
@@ -113,8 +103,8 @@ class DqnAgentTest(test_utils.TestCase):
           optimizer=None)
 
     # Explicitly share weights between q and target networks; this is ok.
-    q_target_net = KerasLayersNet(
-        self._observation_spec[0], self._action_spec, dense_layer)
+    q_target_net = test_utils.KerasLayersNet(self._observation_spec[0],
+                                             self._action_spec, dense_layer)
     agent_class(
         self._time_step_spec,
         self._action_spec,

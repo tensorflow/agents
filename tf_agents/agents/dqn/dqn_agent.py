@@ -186,11 +186,10 @@ class DqnAgent(tf_agent.TFAgent):
       self._target_q_network = self._q_network.copy(name='TargetQNetwork')
       # Copy may have been shallow, and variable may inadvertently be shared
       # between the target and original network.
-      _check_no_shared_variables(self._q_network, self._target_q_network)
+      common.check_no_shared_variables(self._q_network, self._target_q_network)
     else:
       self._target_q_network = target_q_network
-    _check_matching_networks(
-        self._q_network, self._target_q_network)
+    common.check_matching_networks(self._q_network, self._target_q_network)
     self._epsilon_greedy = epsilon_greedy
     self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature
@@ -517,40 +516,3 @@ class DdqnAgent(DqnAgent):
         next_target_q_values,
         best_next_actions,
         multi_dim_actions=multi_dim_actions)
-
-
-def _check_no_shared_variables(network_1, network_2):
-  variables_1 = {id(v): v for v in network_1.trainable_variables}
-  variables_2 = {id(v): v for v in network_2.trainable_variables}
-  shared = set(variables_1.keys()) & set(variables_2.keys())
-  if shared:
-    shared_variables = [variables_1[v] for v in shared]
-    raise ValueError(
-        'After making a copy of network \'{}\' to create a target '
-        'network \'{}\', the target network shares weights with '
-        'the original network.  This is not allowed.  If '
-        'you want explicitly share weights with the target network, or '
-        'if your input network shares weights with others, please '
-        'provide a target network which explicitly, selectively, shares '
-        'layers/weights with the input network.  Shared variables found: '
-        '\'{}\'.'.format(network_1.name, network_2.name,
-                         shared_variables))
-
-
-def _check_matching_networks(network_1, network_2):
-  """Check that two networks have matching input specs and variables."""
-  if network_1.input_tensor_spec != network_2.input_tensor_spec:
-    raise ValueError(
-        'Input tensor specs of network and target network '
-        'do not match: {} vs. {}.'.format(
-            network_1.input_tensor_spec, network_2.input_tensor_spec))
-  variables_1 = sorted(network_1.variables, key=lambda v: v.name)
-  variables_2 = sorted(network_2.variables, key=lambda v: v.name)
-  if len(variables_1) != len(variables_2):
-    raise ValueError(
-        'Variables lengths do not match between Q network and target network: '
-        '{} vs. {}'.format(variables_1, variables_2))
-  for v1, v2 in zip(variables_1, variables_2):
-    if v1.dtype != v2.dtype or v1.shape != v2.shape:
-      raise ValueError(
-          'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2))

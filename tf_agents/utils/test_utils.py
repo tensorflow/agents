@@ -25,6 +25,7 @@ from absl import flags
 
 import numpy as np
 import tensorflow as tf
+from tf_agents.networks import network
 
 
 FLAGS = flags.FLAGS
@@ -71,3 +72,14 @@ class TestCase(tf.test.TestCase):
   def setUp(self):
     super(TestCase, self).setUp()
     tf.compat.v1.enable_resource_variables()
+
+
+class KerasLayersNet(network.Network):
+
+  def __init__(self, observation_spec, action_spec, layer, name=None):
+    super(KerasLayersNet, self).__init__(
+        observation_spec, state_spec=(), name=name)
+    self._layer = layer
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    return self._layer(inputs), network_state
