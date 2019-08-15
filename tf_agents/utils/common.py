@@ -262,11 +262,12 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
   outer_shape = tf.shape(input=actions)
   batch_indices = tf.meshgrid(
       *[tf.range(outer_shape[i]) for i in range(batch_dims)], indexing='ij')
-  batch_indices = [
-      tf.expand_dims(batch_index, -1) for batch_index in batch_indices
-  ]
+  batch_indices = [tf.cast(tf.expand_dims(batch_index, -1), dtype=tf.int32)
+                   for batch_index in batch_indices]
   if not multi_dim_actions:
     actions = tf.expand_dims(actions, -1)
+  # Cast actions to tf.int32 in order to avoid a TypeError in tf.concat.
+  actions = tf.cast(actions, dtype=tf.int32)
   action_indices = tf.concat(batch_indices + [actions], -1)
   return tf.gather_nd(q_values, action_indices)
 
