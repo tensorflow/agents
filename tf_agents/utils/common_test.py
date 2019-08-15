@@ -27,6 +27,7 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tf_agents.networks import test_utils as networks_test_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
@@ -859,36 +860,36 @@ class NetworkVariableChecks(tf.test.TestCase):
   def test_check_no_shared_variables(self):
     layer_1 = tf.keras.layers.Dense(3)
     layer_2 = tf.keras.layers.Dense(3)
-    q_net_1 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_1)
-    q_net_2 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_2)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
     common.check_no_shared_variables(q_net_1, q_net_2)
 
   def test_check_no_shared_variables_expect_fail(self):
     dense_layer = tf.keras.layers.Dense(3)
-    q_net_1 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, dense_layer)
-    q_net_2 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, dense_layer)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, dense_layer)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, dense_layer)
     with self.assertRaises(ValueError):
       common.check_no_shared_variables(q_net_1, q_net_2)
 
   def test_check_matching_networks(self):
     layer_1 = tf.keras.layers.Dense(3)
     layer_2 = tf.keras.layers.Dense(3)
-    q_net_1 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_1)
-    q_net_2 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_2)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
     common.check_matching_networks(q_net_1, q_net_2)
 
   def test_check_matching_networks_different_input_spec(self):
     layer_1 = tf.keras.layers.Dense(3)
     layer_2 = tf.keras.layers.Dense(3)
-    q_net_1 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_1)
-    q_net_2 = test_utils.KerasLayersNet(
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(
         tensor_spec.TensorSpec([3], tf.float32), self._action_spec, layer_2)
     with self.assertRaisesRegexp(
         ValueError, 'Input tensor specs of network and target network '
@@ -898,20 +899,20 @@ class NetworkVariableChecks(tf.test.TestCase):
   def test_check_matching_networks_different_vars(self):
     layer_1 = tf.keras.layers.Dense(3)
     layer_2 = tf.keras.layers.GRU(3)
-    q_net_1 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_1)
-    q_net_2 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_2)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
     with self.assertRaisesRegexp(ValueError, 'Variables lengths do not match'):
       common.check_matching_networks(q_net_1, q_net_2)
 
   def test_check_matching_networks_different_shape(self):
     layer_1 = tf.keras.layers.Dense(3)
     layer_2 = tf.keras.layers.Dense(4)
-    q_net_1 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_1)
-    q_net_2 = test_utils.KerasLayersNet(self._observation_spec,
-                                        self._action_spec, layer_2)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
     with self.assertRaisesRegexp(ValueError,
                                  'Variable dtypes or shapes do not match'):
       common.check_matching_networks(q_net_1, q_net_2)
