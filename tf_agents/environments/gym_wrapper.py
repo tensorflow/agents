@@ -138,9 +138,14 @@ class GymWrapper(py_environment.PyEnvironment):
                                              spec_dtype_map,
                                              simplify_box_bounds)
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
-    self._batched_environment = batched_environment
     self._info = None
     self._done = True
+
+    self._batch_size = None
+    self._batched_environment = batched_environment
+    if self._batched_environment:
+      time_step = self.reset()
+      self._batch_size = time_step.observation.shape[0]
 
   @property
   def gym(self):
@@ -152,9 +157,7 @@ class GymWrapper(py_environment.PyEnvironment):
 
   @property
   def batch_size(self):
-    if self.batched:
-      return self._observation_spec.shape[0]
-    return None
+    return self._batch_size
 
   def __getattr__(self, name):
     """Forward all other calls to the base environment."""
