@@ -38,6 +38,7 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import value_ops
@@ -288,7 +289,7 @@ class DqnAgent(tf_agent.TFAgent):
 
     # Remove time dim if we are not using a recurrent network.
     if not self._q_network.state_spec:
-      transitions = tf.nest.map_structure(lambda x: tf.squeeze(x, [1]),
+      transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
                                           transitions)
 
     time_steps, policy_steps, next_time_steps = transitions

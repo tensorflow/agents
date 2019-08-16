@@ -24,6 +24,7 @@ import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.networks import network
+from tf_agents.networks import q_network
 from tf_agents.networks import test_utils as networks_test_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -382,6 +383,66 @@ class DqnAgentTest(test_utils.TestCase):
       with self.cached_session() as sess:
         checkpoint_load_status.initialize_or_restore(sess)
         self.assertAllEqual(sess.run(action_step.action), [[[0], [0]]])
+
+  def testTrainWithSparseTensorAndDenseFeaturesLayer(self, agent_class):
+    obs_spec = {
+        'dense': tensor_spec.BoundedTensorSpec(
+            dtype=tf.float32, shape=[3], minimum=-10.0, maximum=10.0),
+        'sparse_terms': tf.SparseTensorSpec(dtype=tf.string, shape=[4]),
+        'sparse_frequencies': tf.SparseTensorSpec(dtype=tf.float32, shape=[4]),
+    }
+    cat_column = (
+        tf.compat.v2.feature_column.categorical_column_with_hash_bucket(
+            'sparse_terms', hash_bucket_size=5))
+    weighted_cat_column = (
+        tf.compat.v2.feature_column.weighted_categorical_column(
+            cat_column, weight_feature_key='sparse_frequencies'))
+    feature_columns = [
+        tf.compat.v2.feature_column.numeric_column('dense', [3]),
+        tf.compat.v2.feature_column.embedding_column(weighted_cat_column, 3),
+    ]
+    dense_features_layer = tf.compat.v2.keras.layers.DenseFeatures(
+        feature_columns)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    q_net = q_network.QNetwork(
+        time_step_spec.observation,
+        self._action_spec,
+        preprocessing_combiner=dense_features_layer)
+    agent = agent_class(
+        time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        optimizer=tf.compat.v1.train.AdamOptimizer())
+
+    observations = tensor_spec.sample_spec_nest(obs_spec, outer_dims=[5, 2])
+    # sparse_terms and sparse_frequencies must be defined on matching indices.
+    observations['sparse_terms'] = tf.SparseTensor(
+        indices=observations['sparse_frequencies'].indices,
+        values=tf.as_string(
+            tf.math.round(observations['sparse_frequencies'].values)),
+        dense_shape=observations['sparse_frequencies'].dense_shape)
+    if not tf.executing_eagerly():
+      # Mimic unknown inner dims on the SparseTensor
+      def _unknown_inner_shape(t):
+        if not isinstance(t, tf.SparseTensor):
+          return t
+        return tf.SparseTensor(
+            indices=t.indices, values=t.values,
+            dense_shape=tf.compat.v1.placeholder_with_default(
+                t.dense_shape, shape=t.dense_shape.shape))
+      observations = tf.nest.map_structure(_unknown_inner_shape, observations)
+      self.assertIsNone(tf.get_static_value(
+          observations['sparse_terms'].dense_shape))
+
+    time_step = ts.restart(observations, batch_size=[5, 2])
+    action_step = tensor_spec.sample_spec_nest(
+        self._action_spec, outer_dims=[5, 2])
+    p_step = policy_step.PolicyStep(action=action_step, state=(), info=())
+    traj = trajectory.from_transition(time_step, p_step, time_step)
+    loss_info = agent.train(traj)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss_info)
+    self.assertGreater(loss_info.loss, 0)
 
 
 if __name__ == '__main__':

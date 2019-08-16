@@ -16,6 +16,7 @@
 """Utils module."""
 
 from tf_agents.utils import common
+from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import example_encoding
 from tf_agents.utils import nest_utils

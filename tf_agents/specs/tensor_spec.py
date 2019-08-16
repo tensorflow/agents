@@ -286,13 +286,54 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
 
   Returns:
     A nest of sampled values following the ArraySpec definition.
-  """
 
+  Raises:
+    TypeError: If `spec` is an unknown type.
+    NotImplementedError: If `outer_dims` is not statically known but nest
+      contains a `SparseTensorSpec`.
+  """
   seed_stream = tfd.SeedStream(seed=seed, salt="sample_spec_nest")
 
   def sample_fn(spec):
-    spec = BoundedTensorSpec.from_spec(spec)
-    return sample_bounded_spec(spec, outer_dims=outer_dims, seed=seed_stream())
+    """Return a composite tensor sample given `spec`.
+
+    Args:
+      spec: A TensorSpec, SparseTensorSpec, etc.
+
+    Returns:
+      A tensor or SparseTensor.
+
+    Raises:
+      NotImplementedError: If `outer_dims` is not statically known and a
+        SparseTensor is requested.
+    """
+    if isinstance(spec, tf.SparseTensorSpec):
+      outer_shape = tf.get_static_value(outer_dims)
+      if outer_dims is not None and outer_shape is None:
+        raise NotImplementedError("outer_dims must be statically known, got: {}"
+                                  .format(outer_dims))
+      shape = tf.TensorShape(outer_shape or []).concatenate(spec.shape)
+      indices_spec = BoundedTensorSpec(
+          dtype=tf.int64, shape=[7, shape.ndims],
+          minimum=[0] * shape.ndims, maximum=[x - 1 for x in shape.as_list()])
+      values_dtype = tf.int32 if spec.dtype == tf.string else spec.dtype
+      values_spec = BoundedTensorSpec(
+          dtype=values_dtype, shape=[7],
+          minimum=0, maximum=shape.as_list()[-1] - 1)
+      values_sample = sample_bounded_spec(values_spec, seed=seed_stream())
+      if spec.dtype == tf.string:
+        values_sample = tf.as_string(values_sample)
+      return tf.sparse.reorder(
+          tf.SparseTensor(
+              indices=sample_bounded_spec(indices_spec, seed=seed_stream()),
+              values=values_sample,
+              dense_shape=shape))
+    elif isinstance(spec, (TensorSpec, BoundedTensorSpec)):
+      spec = BoundedTensorSpec.from_spec(spec)
+      return sample_bounded_spec(
+          spec, outer_dims=outer_dims, seed=seed_stream())
+    else:
+      raise TypeError("Spec type not supported: '{}'".format(spec))
 
   return tf.nest.map_structure(sample_fn, structure)
 

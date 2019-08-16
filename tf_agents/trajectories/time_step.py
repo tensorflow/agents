@@ -123,11 +123,23 @@ def restart(observation, batch_size=None):
 
   # TODO(b/130244501): Check leading dimension of first_observation
   # against batch_size if all are known statically.
-  shape = (batch_size,) if batch_size is not None else ()
+  shape = _as_multi_dim(batch_size)
   step_type = tf.fill(shape, StepType.FIRST, name='step_type')
   reward = tf.fill(shape, _as_float32_array(0.0), name='reward')
   discount = tf.fill(shape, _as_float32_array(1.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
+
+
+def _as_multi_dim(maybe_scalar):
+  if maybe_scalar is None:
+    shape = ()
+  elif tf.is_tensor(maybe_scalar) and maybe_scalar.shape.ndims > 0:
+    shape = maybe_scalar
+  elif np.asarray(maybe_scalar).ndim > 0:
+    shape = maybe_scalar
+  else:
+    shape = (maybe_scalar,)
+  return shape
 
 
 def transition(observation, reward, discount=1.0):
@@ -288,7 +300,8 @@ def time_step_spec(observation_spec=None):
 
   first_observation_spec = tf.nest.flatten(observation_spec)[0]
   if isinstance(first_observation_spec,
-                (tensor_spec.TensorSpec, tensor_spec.BoundedTensorSpec)):
+                (tf.TypeSpec, tensor_spec.TensorSpec,
+                 tensor_spec.BoundedTensorSpec)):
     return TimeStep(
         step_type=tensor_spec.TensorSpec([], tf.int32, name='step_type'),
         reward=tensor_spec.TensorSpec([], tf.float32, name='reward'),

@@ -27,6 +27,7 @@ import numpy as np
 import tensorflow as tf
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import composite
 from tf_agents.utils import nest_utils
 
 
@@ -500,8 +501,10 @@ def to_transition(trajectory, next_trajectory=None):
     _validate_rank(next_trajectory.discount, min_rank=1, max_rank=2)
 
   if next_trajectory is None:
-    next_trajectory = tf.nest.map_structure(lambda x: x[:, 1:], trajectory)
-    trajectory = tf.nest.map_structure(lambda x: x[:, :-1], trajectory)
+    next_trajectory = tf.nest.map_structure(
+        lambda t: composite.slice_from(t, axis=1, start=1), trajectory)
+    trajectory = tf.nest.map_structure(
+        lambda t: composite.slice_to(t, axis=1, end=-1), trajectory)
   policy_steps = policy_step.PolicyStep(
       action=trajectory.action, state=(), info=trajectory.policy_info)
   # TODO(b/130244652): Consider replacing 0 rewards & discounts with ().

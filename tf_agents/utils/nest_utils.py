@@ -24,9 +24,10 @@ import numbers
 import numpy as np
 import tensorflow as tf
 
+from tf_agents.utils import composite
+
 # TODO(b/128613858): Update to a public facing API.
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
-
 flatten_with_tuple_paths = nest.flatten_with_tuple_paths
 
 
@@ -151,38 +152,6 @@ def _spec_shape(t):
     return t.shape
 
 
-def _expand_dims(t, axis):
-  """Add a new dimension to tensor `t` along `axis`.
-
-  Args:
-    t: A `tf.Tensor` or `tf.SparseTensor`.
-    axis: A `0D` integer scalar.
-
-  Returns:
-    An expanded tensor.
-
-  Raises:
-    NotImplementedError: If `t` is a `SparseTensor` and `axis != 0`.
-  """
-  if isinstance(t, tf.SparseTensor):
-    if tf.is_tensor(axis) or axis != 0:
-      raise NotImplementedError(
-          'Can only expand_dims on SparseTensor {} on static axis 0, '
-          'but received axis {}'.format(t, axis))
-    n_elem = (
-        t.indices.shape[0] or tf.get_static_shape(t.dense_shape)[0]
-        or tf.shape(t.indices)[0])
-    shape = tf.cast(t.shape, tf.int64)
-    return tf.SparseTensor(
-        indices=tf.concat((tf.ones([n_elem, 1], dtype=tf.int64),
-                           t.indices),
-                          axis=1),
-        values=t.values,
-        dense_shape=tf.concat(([1], shape), axis=0))
-  else:
-    return tf.expand_dims(t, axis)
-
-
 def batch_nested_tensors(tensors, specs=None):
   """Add batch dimension if needed to nested tensors while checking their specs.
 
@@ -204,7 +173,7 @@ def batch_nested_tensors(tensors, specs=None):
     ValueError: if the tensors and specs have incompatible dimensions or shapes.
   """
   if specs is None:
-    return tf.nest.map_structure(lambda x: _expand_dims(x, 0), tensors)
+    return tf.nest.map_structure(lambda x: composite.expand_dims(x, 0), tensors)
 
   tf.nest.assert_same_structure(tensors, specs)
 
@@ -216,7 +185,7 @@ def batch_nested_tensors(tensors, specs=None):
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor_rank(tensor) == shape.ndims:
       tensor.shape.assert_is_compatible_with(shape)
-      tensor = _expand_dims(tensor, 0)
+      tensor = composite.expand_dims(tensor, 0)
     elif tensor_rank(tensor) == shape.ndims + 1:
       tensor.shape[1:].assert_is_compatible_with(shape)
     else:
@@ -274,14 +243,14 @@ def unbatch_nested_tensors(tensors, specs=None):
     ValueError: if the tensors and specs have incompatible dimensions or shapes.
   """
   if specs is None:
-    return tf.nest.map_structure(lambda x: tf.squeeze(x, [0]), tensors)
+    return tf.nest.map_structure(lambda x: composite.squeeze(x, 0), tensors)
 
   unbatched_tensors = []
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
       tensors, specs)
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor.shape.ndims == shape.ndims + 1:
-      tensor = tf.squeeze(tensor, [0])
+      tensor = composite.squeeze(tensor, 0)
     unbatched_tensors.append(tensor)
   return tf.nest.pack_sequence_as(tensors, unbatched_tensors)
 
@@ -373,11 +342,6 @@ def stack_nested_tensors(tensors):
   return tf.nest.map_structure(lambda *tensors: tf.stack(tensors), *tensors)
 
 
-def _reshape(t, shape):
-  return (tf.sparse.reshape(t, shape) if isinstance(t, tf.SparseTensor)
-          else tf.reshape(t, shape))
-
-
 def flatten_multi_batched_nested_tensors(tensors, specs):
   """Reshape tensors to contain only one batch dimension.
 
@@ -412,7 +376,7 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
         batch_dims = tf.shape(tensor)[:tensor.shape.ndims - shape.ndims]
         batch_prod = tf.reduce_prod(batch_dims)
     reshaped_dims = [batch_prod] + shape.as_list()
-    out_tensors.append(_reshape(tensor, reshaped_dims))
+    out_tensors.append(composite.reshape(tensor, reshaped_dims))
   return tf.nest.pack_sequence_as(tensors, out_tensors), batch_dims
 
 

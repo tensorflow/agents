@@ -259,8 +259,8 @@ class EncodingNetwork(network.Network):
     del step_type  # unused.
 
     if self._batch_squash:
-      outer_rank = nest_utils.get_outer_rank(observation,
-                                             self.input_tensor_spec)
+      outer_rank = nest_utils.get_outer_rank(
+          observation, self.input_tensor_spec)
       batch_squash = utils.BatchSquash(outer_rank)
       observation = tf.nest.map_structure(batch_squash.flatten, observation)
 
