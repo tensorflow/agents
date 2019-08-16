@@ -37,10 +37,14 @@ from tf_agents.utils import test_utils
 
 class DummyNet(network.Network):
 
-  def __init__(self, observation_spec, action_spec, name=None,
-               l2_regularization_weight=0.0):
+  def __init__(self,
+               observation_spec,
+               action_spec,
+               mask_split_fn=None,
+               l2_regularization_weight=0.0,
+               name=None):
     super(DummyNet, self).__init__(
-        observation_spec, state_spec=(), name=name)
+        observation_spec, state_spec=(), name=name, mask_split_fn=mask_split_fn)
     action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
@@ -53,6 +57,12 @@ class DummyNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
 
   def call(self, inputs, unused_step_type=None, network_state=()):
+    mask_split_fn = self.mask_split_fn
+
+    if mask_split_fn:
+      # Extract the network-specific portion of the observation.
+      inputs = self._mask_split_fn(inputs)[0]
+
     inputs = tf.cast(inputs[0], tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
@@ -80,7 +90,7 @@ class DqnAgentTest(test_utils.TestCase):
     super(DqnAgentTest, self).setUp()
     self._observation_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._observation_spec)
-    self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
+    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
 
   def testCreateAgent(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)
@@ -158,7 +168,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
+    actions = tf.constant([[0], [1]], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -175,13 +185,62 @@ class DqnAgentTest(test_utils.TestCase):
     # Q-value for second observation/action pair: 1 * 3 + 1 * 4 + 1 = 8
     # (Here we use the second row of the kernel initializer above, since the
     # chosen action is now 1 instead of 0.)
-    # Q-value for first next_observation: 2 * 5 + 1 * 6 + 1 = 17
-    # Q-value for second next_observation: 2 * 7 + 1 * 8 + 1 = 23
+    #
+    # For target Q-values, action 0 produces a greater Q-value with a kernel of
+    # [2, 1] instead of [1, 1] for action 1.
+    # Target Q-value for first next_observation: 2 * 5 + 1 * 6 + 1 = 17
+    # Target Q-value for second next_observation: 2 * 7 + 1 * 8 + 1 = 23
     # TD targets: 10 + 0.9 * 17 = 25.3 and 20 + 0.9 * 23 = 40.7
     # TD errors: 25.3 - 5 = 20.3 and 40.7 - 8 = 32.7
     # TD loss: 19.8 and 32.2 (Huber loss subtracts 0.5)
     # Overall loss: (19.8 + 32.2) / 2 = 26
     expected_loss = 26.0
+    loss, _ = agent._loss(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(self.evaluate(loss), expected_loss)
+
+  def testLossWithChangedOptimalActions(self, agent_class):
+    q_net = DummyNet(self._observation_spec, self._action_spec)
+    agent = agent_class(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        optimizer=None)
+
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
+
+    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    action_steps = policy_step.PolicyStep(actions)
+
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+
+    # Note that instead of [[5, 6], [7, 8]] as before, we now have -5 and -7.
+    next_observations = [tf.constant([[-5, 6], [-7, 8]], dtype=tf.float32)]
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
+
+    experience = trajectories_test_utils.stacked_trajectory_from_transition(
+        time_steps, action_steps, next_time_steps)
+
+    # Using the kernel initializer [[2, 1], [1, 1]] and bias initializer
+    # [[1], [1]] from DummyNet above, we can calculate the following values:
+    # Q-value for first observation/action pair: 2 * 1 + 1 * 2 + 1 = 5
+    # Q-value for second observation/action pair: 1 * 3 + 1 * 4 + 1 = 8
+    # (Here we use the second row of the kernel initializer above, since the
+    # chosen action is now 1 instead of 0.)
+    #
+    # For the target Q-values here, note that since we've replaced 5 and 7 with
+    # -5 and -7, it is better to use action 1 with a kernel of [1, 1] instead of
+    # action 0 with a kernel of [2, 1].
+    # Target Q-value for first next_observation: 1 * -5 + 1 * 6 + 1 = 2
+    # Target Q-value for second next_observation: 1 * -7 + 1 * 8 + 1 = 2
+    # TD targets: 10 + 0.9 * 2 = 11.8 and 20 + 0.9 * 2 = 21.8
+    # TD errors: 11.8 - 5 = 6.8 and 21.8 - 8 = 13.8
+    # TD loss: 6.3 and 13.3 (Huber loss subtracts 0.5)
+    # Overall loss: (6.3 + 13.3) / 2 = 9.8
+    expected_loss = 9.8
     loss, _ = agent._loss(experience)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -199,7 +258,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
+    actions = tf.constant([[0], [1]], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -210,19 +269,9 @@ class DqnAgentTest(test_utils.TestCase):
     experience = trajectories_test_utils.stacked_trajectory_from_transition(
         time_steps, action_steps, next_time_steps)
 
-    # Using the kernel initializer [[2, 1], [1, 1]] and bias initializer
-    # [[1], [1]] from DummyNet above, we can calculate the following values:
-    # Q-value for first observation/action pair: 2 * 1 + 1 * 2 + 1 = 5
-    # Q-value for second observation/action pair: 1 * 3 + 1 * 4 + 1 = 8
-    # (Here we use the second row of the kernel initializer above, since the
-    # chosen action is now 1 instead of 0.)
-    # Q-value for first next_observation: 2 * 5 + 1 * 6 + 1 = 17
-    # Q-value for second next_observation: 2 * 7 + 1 * 8 + 1 = 23
-    # TD targets: 10 + 0.9 * 17 = 25.3 and 20 + 0.9 * 23 = 40.7
-    # TD errors: 25.3 - 5 = 20.3 and 40.7 - 8 = 32.7
-    # TD loss: 19.8 and 32.2 (Huber loss subtracts 0.5)
+    # See the loss explanation in testLoss above.
     # L2_regularization_loss: 2^2 + 1^2 + 1^2 + 1^2 = 7.0
-    # Overall loss: (19.8 + 32.2) / 2 + 7.0 = 33.0
+    # Overall loss: 26.0 (from testLoss) + 7.0 = 33.0
     expected_loss = 33.0
     loss, _ = agent._loss(experience)
 
@@ -241,7 +290,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
+    actions = tf.constant([[0], [1]], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -294,7 +343,7 @@ class DqnAgentTest(test_utils.TestCase):
     # MID: use ts.transition
     time_steps = ts.transition(observations, rewards, discounts)
 
-    actions = [tf.constant([[0], [1]], dtype=tf.int32)]
+    actions = tf.constant([[0], [1]], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     second_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
@@ -337,6 +386,63 @@ class DqnAgentTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
+  def testLossWithMaskedActions(self, agent_class):
+    # Observations are now a tuple of the usual observation and an action mask.
+    observation_spec_with_mask = (
+        self._observation_spec,
+        tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1))
+    time_step_spec = ts.time_step_spec(observation_spec_with_mask)
+    q_net = DummyNet(observation_spec_with_mask, self._action_spec,
+                     mask_split_fn=lambda x: (x[0], x[1]))
+    agent = agent_class(
+        time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        optimizer=None)
+
+    # For observations, the masks are set up so that all actions are valid.
+    observations = ([tf.constant([[1, 2], [3, 4]], dtype=tf.float32)],
+                    tf.constant([[1, 1], [1, 1]], dtype=tf.int32))
+    time_steps = ts.restart(observations, batch_size=2)
+
+    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    action_steps = policy_step.PolicyStep(actions)
+
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+
+    # For next_observations, the masks are set up so that only one action is
+    # valid for each element in the batch.
+    next_observations = ([tf.constant([[5, 6], [7, 8]], dtype=tf.float32)],
+                         tf.constant([[0, 1], [1, 0]], dtype=tf.int32))
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
+
+    experience = trajectories_test_utils.stacked_trajectory_from_transition(
+        time_steps, action_steps, next_time_steps)
+
+    # Using the kernel initializer [[2, 1], [1, 1]] and bias initializer
+    # [[1], [1]] from DummyNet above, we can calculate the following values:
+    # Q-value for first observation/action pair: 2 * 1 + 1 * 2 + 1 = 5
+    # Q-value for second observation/action pair: 1 * 3 + 1 * 4 + 1 = 8
+    # (Here we use the second row of the kernel initializer above, since the
+    # chosen action is now 1 instead of 0.)
+    #
+    # For target Q-values, because of the masks we only have one valid choice of
+    # action for each next_observation:
+    # Target Q-value for first next_observation (only action 1 is valid):
+    # 1 * 5 + 1 * 6 + 1 = 12
+    # Target Q-value for second next_observation (only action 0 is valid):
+    # 2 * 7 + 1 * 8 + 1 = 23
+    # TD targets: 10 + 0.9 * 12 = 20.8 and 20 + 0.9 * 23 = 40.7
+    # TD errors: 20.8 - 5 = 15.8 and 40.7 - 8 = 32.7
+    # TD loss: 15.3 and 32.2 (Huber loss subtracts 0.5)
+    # Overall loss: (15.3 + 32.2) / 2 = 23.75
+    expected_loss = 23.75
+    loss, _ = agent._loss(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(self.evaluate(loss), expected_loss)
+
   def testPolicy(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
@@ -349,14 +455,12 @@ class DqnAgentTest(test_utils.TestCase):
     policy = agent.policy
     action_step = policy.action(time_steps)
     # Batch size 2.
-    self.assertAllEqual(
-        [2] + self._action_spec[0].shape.as_list(),
-        action_step.action[0].shape,
-    )
+    self.assertAllEqual(action_step.action.shape,
+                        [2] + self._action_spec.shape.as_list())
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
-    self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
-    self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
+    self.assertTrue(all(actions_[0] <= self._action_spec.maximum))
+    self.assertTrue(all(actions_[0] >= self._action_spec.minimum))
 
   def testInitializeRestoreAgent(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)
@@ -378,11 +482,11 @@ class DqnAgentTest(test_utils.TestCase):
 
     if tf.executing_eagerly():
       self.evaluate(checkpoint_load_status.initialize_or_restore())
-      self.assertAllEqual(self.evaluate(action_step.action), [[[0], [0]]])
+      self.assertAllEqual(self.evaluate(action_step.action), [[0], [0]])
     else:
       with self.cached_session() as sess:
         checkpoint_load_status.initialize_or_restore(sess)
-        self.assertAllEqual(sess.run(action_step.action), [[[0], [0]]])
+        self.assertAllEqual(sess.run(action_step.action), [[0], [0]])
 
   def testTrainWithSparseTensorAndDenseFeaturesLayer(self, agent_class):
     obs_spec = {

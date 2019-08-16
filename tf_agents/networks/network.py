@@ -100,10 +100,30 @@ class _NetworkMeta(abc.ABCMeta):
 class Network(keras_network.Network):
   """Base extension to Keras network to simplify copy operations."""
 
-  def __init__(self, input_tensor_spec, state_spec, name):
+  def __init__(self, input_tensor_spec, state_spec, name, mask_split_fn=None):
+    """Creates an instance of `Network`.
+
+    Args:
+      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+        input observations.
+      state_spec: A nest of `tensor_spec.TensorSpec` representing the state
+        needed by the network. Use () if none.
+      name: A string representing the name of the network.
+      mask_split_fn: A function used for masking valid/invalid actions with each
+        state of the environment. The function takes in a full observation and
+        returns a tuple consisting of 1) the part of the observation intended as
+        input to the network and 2) the mask. An example mask_split_fn could be
+        as simple as:
+        ```
+        def mask_split_fn(observation):
+          return observation['network_input'], observation['mask']
+        ```
+        If None, masking is not applied.
+    """
     super(Network, self).__init__(name=name)
     self._input_tensor_spec = input_tensor_spec
     self._state_spec = state_spec
+    self._mask_split_fn = mask_split_fn
 
   @property
   def state_spec(self):
@@ -120,6 +140,11 @@ class Network(keras_network.Network):
   def input_tensor_spec(self):
     """Returns the spec of the input to the network of type InputSpec."""
     return self._input_tensor_spec
+
+  @property
+  def mask_split_fn(self):
+    """Returns the mask_split_fn of the network for handling masked actions."""
+    return self._mask_split_fn
 
   @property
   def variables(self):

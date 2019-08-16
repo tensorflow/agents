@@ -58,7 +58,6 @@ class GreedyPolicy(tf_policy.Base):
     return self._wrapped_policy.variables()
 
   def _distribution(self, time_step, policy_state):
-
     def dist_fn(dist):
       try:
         greedy_action = dist.mode()

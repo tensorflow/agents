@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
+import numpy as np
 import tensorflow as tf
 
 from tf_agents.distributions import shifted_categorical
@@ -101,9 +102,22 @@ class QPolicy(tf_policy.Base):
     if self._flat_action_spec.shape.ndims == 1:
       q_values = tf.expand_dims(q_values, -2)
 
+    logits = q_values
+    mask_split_fn = self._q_network.mask_split_fn
+
+    if mask_split_fn:
+      _, mask = mask_split_fn(time_step.observation)
+
+      # Expand the mask as needed in the same way as q_values above.
+      if self._flat_action_spec.shape.ndims == 1:
+        mask = tf.expand_dims(mask, -2)
+
+      neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
+      logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
+
     # TODO(kbanoop): Handle distributions over nests.
     distribution = shifted_categorical.ShiftedCategorical(
-        logits=q_values,
+        logits=logits,
         dtype=self._flat_action_spec.dtype,
         shift=self._flat_action_spec.minimum)
     distribution = tf.nest.pack_sequence_as(self._action_spec, [distribution])

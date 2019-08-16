@@ -183,6 +183,7 @@ class DqnAgent(tf_agent.TFAgent):
               epsilon_greedy, boltzmann_temperature))
 
     self._q_network = q_network
+
     if target_q_network is None:
       self._target_q_network = self._q_network.copy(name='TargetQNetwork')
       # Copy may have been shallow, and variable may inadvertently be shared
@@ -190,6 +191,7 @@ class DqnAgent(tf_agent.TFAgent):
       common.check_no_shared_variables(self._q_network, self._target_q_network)
     else:
       self._target_q_network = target_q_network
+
     common.check_matching_networks(self._q_network, self._target_q_network)
     self._epsilon_greedy = epsilon_greedy
     self._n_step_update = n_step_update
@@ -205,6 +207,13 @@ class DqnAgent(tf_agent.TFAgent):
     policy, collect_policy = self._setup_policy(time_step_spec, action_spec,
                                                 boltzmann_temperature,
                                                 emit_log_probability)
+
+    self._greedy_policy = policy
+    self._target_policy = q_policy.QPolicy(
+        time_step_spec,
+        action_spec,
+        q_network=self._target_q_network)
+    self._target_greedy_policy = greedy_policy.GreedyPolicy(self._target_policy)
 
     if q_network.state_spec and n_step_update != 1:
       raise NotImplementedError(
@@ -458,15 +467,13 @@ class DqnAgent(tf_agent.TFAgent):
   def _compute_q_values(self, time_steps, actions):
     q_values, _ = self._q_network(time_steps.observation,
                                   time_steps.step_type)
-    # Handle action_spec.shape=(), and shape=(1,) by using the
-    # multi_dim_actions param.
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
-    q_values = common.index_with_actions(
+    return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),
         multi_dim_actions=multi_dim_actions)
-
-    return q_values
 
   def _compute_next_q_values(self, next_time_steps):
     """Compute the q value of the next state for TD error computation.
@@ -479,9 +486,21 @@ class DqnAgent(tf_agent.TFAgent):
     """
     next_target_q_values, _ = self._target_q_network(
         next_time_steps.observation, next_time_steps.step_type)
-    # Reduce_max below assumes q_values are [BxF] or [BxTxF]
-    assert next_target_q_values.shape.ndims in [2, 3]
-    return tf.reduce_max(input_tensor=next_target_q_values, axis=-1)
+    batch_size = (
+        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
+    dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
+    # Find the greedy actions using our target greedy policy. This ensures that
+    # masked actions (and other logic) are respected.
+    greedy_actions = self._target_greedy_policy.action(
+        next_time_steps, dummy_state).action
+
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
+    return common.index_with_actions(
+        next_target_q_values,
+        greedy_actions,
+        multi_dim_actions=multi_dim_actions)
 
 
 @gin.configurable
@@ -506,13 +525,19 @@ class DdqnAgent(DqnAgent):
       A tensor of Q values for the given next state.
     """
     # TODO(b/117175589): Add binary tests for DDQN.
-    next_q_values, _ = self._q_network(next_time_steps.observation,
-                                       next_time_steps.step_type)
-    best_next_actions = tf.cast(
-        tf.argmax(input=next_q_values, axis=-1), dtype=tf.int32)
     next_target_q_values, _ = self._target_q_network(
         next_time_steps.observation, next_time_steps.step_type)
-    multi_dim_actions = best_next_actions.shape.ndims > 1
+    batch_size = (
+        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
+    dummy_state = self._greedy_policy.get_initial_state(batch_size)
+    # Find the greedy actions using our greedy policy. This ensures that masked
+    # actions (and other logic) are respected.
+    best_next_actions = self._greedy_policy.action(
+        next_time_steps, dummy_state).action
+
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
     return common.index_with_actions(
         next_target_q_values,
         best_next_actions,
