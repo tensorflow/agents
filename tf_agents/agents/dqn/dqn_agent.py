@@ -133,7 +133,7 @@ class DqnAgent(tf_agent.TFAgent):
         probability of choosing the best action.
       emit_log_probability: Whether policies emit log probabilities or not.
       target_q_network: (Optional.)  A `tf_agents.network.Network` to be used
-        as the target network during Q learning.  Every `target_udpate_period`
+        as the target network during Q learning.  Every `target_update_period`
         train steps, the weights from `q_network` are copied (possibly with
         smoothing via `target_update_tau`) to `target_q_network`.
 
@@ -183,16 +183,9 @@ class DqnAgent(tf_agent.TFAgent):
               epsilon_greedy, boltzmann_temperature))
 
     self._q_network = q_network
+    self._target_q_network = common.maybe_copy_target_network_with_checks(
+        self._q_network, target_q_network, 'TargetQNetwork')
 
-    if target_q_network is None:
-      self._target_q_network = self._q_network.copy(name='TargetQNetwork')
-      # Copy may have been shallow, and variable may inadvertently be shared
-      # between the target and original network.
-      common.check_no_shared_variables(self._q_network, self._target_q_network)
-    else:
-      self._target_q_network = target_q_network
-
-    common.check_matching_networks(self._q_network, self._target_q_network)
     self._epsilon_greedy = epsilon_greedy
     self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature

@@ -1091,13 +1091,22 @@ def check_matching_networks(network_1, network_2):
                      'do not match: {} vs. {}.'.format(
                          network_1.input_tensor_spec,
                          network_2.input_tensor_spec))
-  variables_1 = sorted(network_1.variables, key=lambda v: v.name)
-  variables_2 = sorted(network_2.variables, key=lambda v: v.name)
-  if len(variables_1) != len(variables_2):
+  if len(network_1.variables) != len(network_2.variables):
     raise ValueError(
         'Variables lengths do not match between Q network and target network: '
-        '{} vs. {}'.format(variables_1, variables_2))
-  for v1, v2 in zip(variables_1, variables_2):
+        '{} vs. {}'.format(network_1.variables, network_2.variables))
+  for v1, v2 in zip(network_1.variables, network_2.variables):
     if v1.dtype != v2.dtype or v1.shape != v2.shape:
       raise ValueError(
           'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2))
+
+
+def maybe_copy_target_network_with_checks(network, target_network=None,
+                                          name='TargetNetwork'):
+  if target_network is None:
+    target_network = network.copy(name=name)
+    # Copy may have been shallow, and variable may inadvertently be shared
+    # between the target and original network.
+    check_no_shared_variables(network, target_network)
+  check_matching_networks(network, target_network)
+  return target_network
