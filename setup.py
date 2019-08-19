@@ -27,6 +27,7 @@ import subprocess
 import sys
 import unittest
 
+import concurrent.futures
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.test import test as TestCommandBase
@@ -76,6 +77,16 @@ class Test(TestCommandBase):
       # Reimport multiprocessing to avoid spurious error printouts. See
       # https://bugs.python.org/issue15881.
       import multiprocessing as _  # pylint: disable=g-import-not-at-top
+      integration_tests = [
+          x.rstrip()
+          for x in open('integration_tests.txt', 'r').readlines()
+          if x
+      ]
+      # Remove comments and blanks after comments are removed.
+      integration_tests = [
+          x.partition('#')[0].strip() for x in integration_tests
+      ]
+      integration_tests = [x.split(' ') for x in integration_tests if x]
 
       run_separately = [
           x.rstrip() for x in open('test_individually.txt', 'r').readlines()
@@ -88,28 +99,43 @@ class Test(TestCommandBase):
       stderr = StderrWrapper()
       result = unittest.TextTestResult(stderr, descriptions=True, verbosity=2)
       test_suite.run(result)
-
       external_test_failures = []
-
-      for test in run_separately:
-        filename = 'tf_agents/%s.py' % test.replace('.', '/')
+      def _exec(args):
         try:
-          subprocess.check_call([sys.executable, filename])
+          return subprocess.check_output(args, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
+          stderr.writeln(str(e.output))
           external_test_failures.append(e)
 
-      result.printErrors()
+      external_tests = []
+      for test in run_separately:
+        external_tests.append('tf_agents/{}.py'.format(test.replace('.', '/')))
+      external_tests = external_tests + integration_tests
+
+      # Integration tests require a unique --root_dir argument set.
+      temp_dir_index = 0
+      with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        for filename in external_tests:
+          if isinstance(filename, list):  # Integration test.
+            args = [sys.executable] + filename + [
+                '--root_dir=/tmp/test{}'.format(temp_dir_index)
+            ]
+            temp_dir_index += 1
+          else:
+            args = [sys.executable, filename]
+          futures.append(executor.submit(_exec, args))
+        for future in concurrent.futures.as_completed(futures):
+          print(future.result())
 
       for failure in external_test_failures:
         stderr.writeln(str(failure))
 
-      final_output = (
-          'Tests run: {} grouped and {} external.  '.format(
-              result.testsRun, len(run_separately)) +
-          'Errors: {}  Failures: {}  External failures: {}.'.format(
-              len(result.errors),
-              len(result.failures),
-              len(external_test_failures)))
+      final_output = ('Tests run: {} grouped and {} external.  '.format(
+          result.testsRun, len(external_tests)) +
+                      'Errors: {}  Failures: {}  External failures: {}.'.format(
+                          len(result.errors), len(result.failures),
+                          len(external_test_failures)))
 
       header = '=' * len(final_output)
       stderr.writeln(header)

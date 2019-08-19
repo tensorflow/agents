@@ -1,0 +1,11 @@
+# This is the set of integration tests to run upon release.
+# setup.py automatically applies a unique root_dir to these binaries.
+
+# agents/dqn/examples/v1
+tf_agents/agents/dqn/examples/v1/train_eval_atari.py --game_name=Pong --num_iterations=1 --initial_collect_steps=4 --replay_buffer_capacity=10000 --train_steps_per_iteration=2000 --eval_steps_per_iteration=2000 -logtostderr
+tf_agents/agents/dqn/examples/v1/oog_train_eval.py --num_iterations=5 --logtostderr
+tf_agents/agents/dqn/examples/v1/train_eval_gym.py --num_iterations=2500 --logtostderr
+tf_agents/agents/dqn/examples/v1/train_eval_gym.py --num_iterations=2500 --logtostderr --use_ddqn
+
+# agents/categorical_dqn/examples
+tf_agents/agents/categorical_dqn/examples/train_eval_atari.py --game_name=Pong --num_iterations=1 --initial_collect_steps=4 --replay_buffer_capacity=10000 --train_steps_per_iteration=2000 --eval_steps_per_iteration=2000 -logtostderr
