@@ -251,12 +251,14 @@ class DqnAgent(tf_agent.TFAgent):
           policy, epsilon=self._epsilon_greedy)
     policy = greedy_policy.GreedyPolicy(policy)
 
+    # Create self._greedy_policy and self._target_greedy_policy in order to
+    # compute target Q-values.
     self._greedy_policy = policy
-    self._target_policy = q_policy.QPolicy(
+    target_policy = q_policy.QPolicy(
         time_step_spec,
         action_spec,
         q_network=self._target_q_network)
-    self._target_greedy_policy = greedy_policy.GreedyPolicy(self._target_policy)
+    self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
     return policy, collect_policy
 
