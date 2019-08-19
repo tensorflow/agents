@@ -201,13 +201,6 @@ class DqnAgent(tf_agent.TFAgent):
                                                 boltzmann_temperature,
                                                 emit_log_probability)
 
-    self._greedy_policy = policy
-    self._target_policy = q_policy.QPolicy(
-        time_step_spec,
-        action_spec,
-        q_network=self._target_q_network)
-    self._target_greedy_policy = greedy_policy.GreedyPolicy(self._target_policy)
-
     if q_network.state_spec and n_step_update != 1:
       raise NotImplementedError(
           'DqnAgent does not currently support n-step updates with stateful '
@@ -257,6 +250,13 @@ class DqnAgent(tf_agent.TFAgent):
       collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
           policy, epsilon=self._epsilon_greedy)
     policy = greedy_policy.GreedyPolicy(policy)
+
+    self._greedy_policy = policy
+    self._target_policy = q_policy.QPolicy(
+        time_step_spec,
+        action_spec,
+        q_network=self._target_q_network)
+    self._target_greedy_policy = greedy_policy.GreedyPolicy(self._target_policy)
 
     return policy, collect_policy
 
