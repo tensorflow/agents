@@ -71,7 +71,7 @@ class PolicySaver(object):
   ```python
 
   my_policy = agent.collect_policy
-  saver = PolicySaver(policy, batch_size=None)
+  saver = PolicySaver(my_policy, batch_size=None)
 
   for i in range(...):
     agent.train(...)

@@ -85,7 +85,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
       raise ValueError('Normal Projection network only supports single spec '
                        'samples.')
     self._scale_distribution = scale_distribution
-    output_spec = self._output_distribution_spec(sample_spec)
+    output_spec = self._output_distribution_spec(sample_spec, name)
     super(NormalProjectionNetwork, self).__init__(
         # We don't need these, but base class requires them.
         input_tensor_spec=None,
@@ -121,14 +121,17 @@ class NormalProjectionNetwork(network.DistributionNetwork):
           bias_initializer=tf.keras.initializers.Constant(
               value=std_bias_initializer_value))
 
-  def _output_distribution_spec(self, sample_spec):
+  def _output_distribution_spec(self, sample_spec, network_name):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
         sample_spec.shape)
-    input_param_spec = tf.nest.map_structure(
-        lambda tensor_shape: tensor_spec.TensorSpec(  # pylint: disable=g-long-lambda
-            shape=tensor_shape,
-            dtype=sample_spec.dtype),
-        input_param_shapes)
+
+    input_param_spec = {
+        name: tensor_spec.TensorSpec(  # pylint: disable=g-complex-comprehension
+            shape=shape,
+            dtype=sample_spec.dtype,
+            name=network_name + '_' + name)
+        for name, shape in input_param_shapes.items()
+    }
 
     def distribution_builder(*args, **kwargs):
       distribution = tfp.distributions.Normal(*args, **kwargs)

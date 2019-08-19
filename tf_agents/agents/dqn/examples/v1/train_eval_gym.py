@@ -292,6 +292,8 @@ def train_eval(
 
 def main(_):
   logging.set_verbosity(logging.INFO)
+  if common.has_eager_been_enabled():
+    return 0
   tf.enable_resource_variables()
   agent_class = dqn_agent.DdqnAgent if FLAGS.use_ddqn else dqn_agent.DqnAgent
   train_eval(

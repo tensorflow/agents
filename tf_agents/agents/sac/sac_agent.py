@@ -93,7 +93,8 @@ class SacAgent(tf_agent.TFAgent):
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       initial_log_alpha: Initial value for log_alpha.
-      target_entropy: The target average policy entropy, for updating alpha.
+      target_entropy: The target average policy entropy, for updating alpha. The
+        default value is negative of the total number of actions.
       gradient_clipping: Norm length to clip gradients.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries

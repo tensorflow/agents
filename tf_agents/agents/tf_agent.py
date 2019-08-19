@@ -140,18 +140,18 @@ class TFAgent(tf.Module):
             "All of the Tensors in `experience` must have two outer "
             "dimensions: batch size and time. Specifically, tensors should be "
             "shaped as [B x T x ...].\n"
-            "Full shapes of experience tensors:\n%s.\n"
-            "Full expected shapes (minus outer dimensions):\n%s." %
-            (debug_str_1, debug_str_2))
+            "Full shapes of experience tensors:\n{}.\n"
+            "Full expected shapes (minus outer dimensions):\n{}.".format(
+                debug_str_1, debug_str_2))
       else:
         # self._num_outer_dims must be 1.
         raise ValueError(
             "All of the Tensors in `experience` must have a single outer "
             "batch_size dimension. If you also want to include an outer time "
             "dimension, set num_outer_dims=2 when initializing your agent.\n"
-            "Full shapes of experience tensors:\n%s.\n"
-            "Full expected shapes (minus batch_size dimension):\n%s." %
-            (debug_str_1, debug_str_2))
+            "Full shapes of experience tensors:\n{}.\n"
+            "Full expected shapes (minus batch_size dimension):\n{}.".format(
+                debug_str_1, debug_str_2))
 
     # If we have a time dimension and a train_sequence_length, make sure they
     # match.
@@ -172,7 +172,7 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.policy.step_spec`.
+        structure of `experience` must match that of `self.collect_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.required_experience_time_steps` if that
         property is not `None`.
@@ -312,7 +312,7 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.policy.step_spec`.
+        structure of `experience` must match that of `self.collect_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.required_experience_time_steps` if that
         property is not `None`.

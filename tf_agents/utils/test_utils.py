@@ -71,3 +71,5 @@ class TestCase(tf.test.TestCase):
   def setUp(self):
     super(TestCase, self).setUp()
     tf.compat.v1.enable_resource_variables()
+
+

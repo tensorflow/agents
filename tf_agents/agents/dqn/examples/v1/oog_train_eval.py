@@ -275,6 +275,8 @@ def train_eval(
 
 
 def main(_):
+  if common.has_eager_been_enabled():
+    return 0
   tf.compat.v1.enable_resource_variables()
   logging.set_verbosity(logging.INFO)
   tf.enable_resource_variables()

@@ -154,7 +154,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         discount=discounts)
     loss_info = agent._loss(experience)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     total_loss, _ = self.evaluate(loss_info)
 
     expected_loss = tf.reduce_mean(
@@ -273,7 +273,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         [2] + self._action_spec[0].shape.as_list(),
         action_step.action[0].shape,
     )
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
@@ -289,7 +289,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
     action_step = policy.action(time_steps)
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
 
     checkpoint = tf.train.Checkpoint(agent=agent)
 

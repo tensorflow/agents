@@ -21,6 +21,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 from tf_agents.networks import network
+from tf_agents.networks import q_network
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -81,7 +82,6 @@ class QPolicyTest(test_utils.TestCase):
           self._time_step_spec, action_spec, q_network=DummyNet())
 
   def testAction(self):
-    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
@@ -92,7 +92,8 @@ class QPolicyTest(test_utils.TestCase):
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
+    action = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionWithinBounds(self):
     bounded_action_spec = tensor_spec.BoundedTensorSpec([1],
@@ -113,20 +114,19 @@ class QPolicyTest(test_utils.TestCase):
     self.assertTrue(np.all(action <= -5) and np.all(action >= -6))
 
   def testActionScalarSpec(self):
-    tf.compat.v1.set_random_seed(1)
-
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
     policy = q_policy.QPolicy(
         self._time_step_spec, action_spec, q_network=DummyNet())
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
-    aaction_step = policy.action(time_step, seed=1)
-    self.assertEqual(aaction_step.action.shape.as_list(), [2])
-    self.assertEqual(aaction_step.action.dtype, tf.int32)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(aaction_step.action), [1, 1])
+    action = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionList(self):
     action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
@@ -135,12 +135,15 @@ class QPolicyTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
-    self.assertTrue(isinstance(action_step.action, list))
+    self.assertIsInstance(action_step.action, list)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action), [[[1], [1]]])
+    action = self.evaluate(action_step.action)
+    self.assertLen(action, 1)
+    # Extract contents from the outer list.
+    action = action[0]
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testDistribution(self):
-    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
 
@@ -154,7 +157,6 @@ class QPolicyTest(test_utils.TestCase):
     self.assertAllEqual([[1]], self.evaluate(mode))
 
   def testUpdate(self):
-    tf.compat.v1.set_random_seed(1)
     policy = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
     new_policy = q_policy.QPolicy(
@@ -177,21 +179,54 @@ class QPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(new_policy.update(policy)), None)
 
-    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
-    self.assertAllEqual(self.evaluate(new_action_step.action), [[1], [1]])
+    action = self.evaluate(action_step.action)
+    new_action = self.evaluate(new_action_step.action)
+    self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
+    self.assertTrue(np.all(new_action >= 0) and np.all(new_action <= 1))
+    self.assertAllEqual(action, new_action)
 
   def testActionSpecsCompatible(self):
-    q_network = DummyNetWithActionSpec(self._action_spec)
-    q_policy.QPolicy(self._time_step_spec, self._action_spec, q_network)
+    q_net = DummyNetWithActionSpec(self._action_spec)
+    q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)
 
   def testActionSpecsIncompatible(self):
     network_action_spec = tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1)
-    q_network = DummyNetWithActionSpec(network_action_spec)
+    q_net = DummyNetWithActionSpec(network_action_spec)
 
     with self.assertRaisesRegexp(
         ValueError,
         'action_spec must be compatible with q_network.action_spec'):
-      q_policy.QPolicy(self._time_step_spec, self._action_spec, q_network)
+      q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)
+
+  def testMasking(self):
+    batch_size = 1000
+    num_state_dims = 5
+    num_actions = 8
+    observations = tf.random.uniform([batch_size, num_state_dims])
+    time_step = ts.restart(observations, batch_size=batch_size)
+    input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.int32, 0, num_actions - 1)
+
+    mask = [0, 1, 0, 1, 0, 0, 1, 0]
+    np_mask = np.array(mask)
+    tf_mask = tf.constant([mask for _ in range(batch_size)])
+    q_net = q_network.QNetwork(
+        input_tensor_spec, action_spec,
+        mask_split_fn=lambda observation: (observation, tf_mask))
+    policy = q_policy.QPolicy(
+        ts.time_step_spec(input_tensor_spec), action_spec, q_net)
+
+    # Force creation of variables before global_variables_initializer.
+    policy.variables()
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Sample from the policy 1000 times and ensure that invalid actions are
+    # never chosen.
+    action_step = policy.action(time_step)
+    action = self.evaluate(action_step.action)
+    self.assertEqual(action.shape, (batch_size, 1))
+    self.assertAllEqual(np_mask[action], np.ones([batch_size, 1]))
 
 
 if __name__ == '__main__':

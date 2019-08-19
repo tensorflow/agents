@@ -83,17 +83,19 @@ class SequentialLayer(tf.keras.layers.Layer):
   def trainable_weights(self):
     if not self.trainable:
       return []
-    weights = set()
+    weights = {}
     for l in self.layers:
-      weights.update(l.trainable_weights)
-    return list(weights)
+      for v in l.trainable_weights:
+        weights[id(v)] = v
+    return list(weights.values())
 
   @property
   def non_trainable_weights(self):
-    weights = set()
+    weights = {}
     for l in self.layers:
-      weights.update(l.non_trainable_weights)
-    return list(weights)
+      for v in l.non_trainable_weights:
+        weights[id(v)] = v
+    return list(weights.values())
 
   @property
   def trainable(self):

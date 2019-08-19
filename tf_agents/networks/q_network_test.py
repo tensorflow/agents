@@ -25,8 +25,6 @@ import tensorflow as tf
 from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
-from tensorflow.python.framework import test_util  # TF internal
-
 
 class SingleObservationSingleActionTest(tf.test.TestCase):
 
@@ -34,7 +32,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     super(SingleObservationSingleActionTest, self).setUp()
     gin.clear_config()
 
-  @test_util.run_in_graph_and_eager_modes()
   def testBuild(self):
     batch_size = 3
     num_state_dims = 5
@@ -47,7 +44,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
     self.assertEqual(len(network.trainable_weights), 6)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testChangeHiddenLayers(self):
     batch_size = 3
     num_state_dims = 5
@@ -61,7 +57,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
     self.assertEqual(len(network.trainable_variables), 4)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddConvLayers(self):
     batch_size = 3
     num_state_dims = 5
@@ -76,7 +71,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
     self.assertEqual(len(network.trainable_variables), 8)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddPreprocessingLayers(self):
     batch_size = 3
     num_actions = 2
@@ -100,7 +94,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     # At least 2 variables each for the preprocessing layers.
     self.assertGreater(len(network.trainable_variables), 4)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testCorrectOutputShape(self):
     batch_size = 3
     num_state_dims = 5
@@ -112,7 +105,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     q_values, _ = network(states)
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
 
-  @test_util.run_in_graph_and_eager_modes()
   def testNetworkVariablesAreReused(self):
     batch_size = 3
     num_state_dims = 5
@@ -134,10 +126,11 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     state = {key: tf.ones([batch_size, state_dims], tf.int32)}
     state_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
 
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
     online_network = q_network.QNetwork(
         input_tensor_spec=state_spec,
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
-        preprocessing_combiner=tf.keras.layers.DenseFeatures([column]))
+        preprocessing_combiner=dense_features)
     target_network = online_network.copy(name='TargetNetwork')
     q_online, _ = online_network(state)
     q_target, _ = target_network(state)
@@ -154,15 +147,91 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     state = {key: tf.expand_dims(feature_tensor, -1)}
     state_spec = {key: tensor_spec.TensorSpec([1], tf.int32)}
 
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
     online_network = q_network.QNetwork(
         input_tensor_spec=state_spec,
         action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
-        preprocessing_combiner=tf.keras.layers.DenseFeatures([column]))
+        preprocessing_combiner=dense_features)
     target_network = online_network.copy(name='TargetNetwork')
     q_online, _ = online_network(state)
     q_target, _ = target_network(state)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.initializers.tables_initializer())
+    self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
+
+  def testEmbeddingFeatureColumnInput(self):
+    key = 'feature_key'
+    vocab_list = ['a', 'b']
+    column = tf.feature_column.categorical_column_with_vocabulary_list(
+        key, vocab_list)
+    column = tf.feature_column.embedding_column(column, 3)
+    feature_tensor = tf.convert_to_tensor(['a', 'b', 'c', 'a', 'c'])
+    state = {key: tf.expand_dims(feature_tensor, -1)}
+    state_spec = {key: tensor_spec.TensorSpec([1], tf.string)}
+
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
+    online_network = q_network.QNetwork(
+        input_tensor_spec=state_spec,
+        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
+        preprocessing_combiner=dense_features)
+    target_network = online_network.copy(name='TargetNetwork')
+    q_online, _ = online_network(state)
+    q_target, _ = target_network(state)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.initializers.tables_initializer())
+    self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
+
+  def testCombinedFeatureColumnInput(self):
+    columns = {}
+    state_tensors = {}
+    state_specs = {}
+    expected_dim = 0
+
+    indicator_key = 'indicator_key'
+    vocab_list = [2, 3, 4]
+    column1 = tf.feature_column.categorical_column_with_vocabulary_list(
+        indicator_key, vocab_list)
+    columns[indicator_key] = tf.feature_column.indicator_column(column1)
+    state_tensors[indicator_key] = tf.expand_dims([3, 2, 2, 4, 3], -1)
+    state_specs[indicator_key] = tensor_spec.TensorSpec([1], tf.int32)
+    expected_dim += len(vocab_list)
+
+    embedding_key = 'embedding_key'
+    embedding_dim = 3
+    vocab_list = [2, 3, 4]
+    column2 = tf.feature_column.categorical_column_with_vocabulary_list(
+        embedding_key, vocab_list)
+    columns[embedding_key] = tf.feature_column.embedding_column(
+        column2, embedding_dim)
+    state_tensors[embedding_key] = tf.expand_dims([3, 2, 2, 4, 3], -1)
+    state_specs[embedding_key] = tensor_spec.TensorSpec([1], tf.int32)
+    expected_dim += embedding_dim
+
+    numeric_key = 'numeric_key'
+    batch_size = 5
+    state_dims = 3
+    input_shape = (batch_size, state_dims)
+    columns[numeric_key] = tf.feature_column.numeric_column(
+        numeric_key, [state_dims])
+    state_tensors[numeric_key] = tf.ones(input_shape, tf.int32)
+    state_specs[numeric_key] = tensor_spec.TensorSpec([state_dims], tf.int32)
+    expected_dim += state_dims
+
+    num_actions = 4
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.int32, 0, num_actions - 1)
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures(columns.values())
+    online_network = q_network.QNetwork(
+        state_specs, action_spec, preprocessing_combiner=dense_features)
+    target_network = online_network.copy(name='TargetNetwork')
+    q_online, _ = online_network(state_tensors)
+    q_target, _ = target_network(state_tensors)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.initializers.tables_initializer())
+
+    expected_shape = (batch_size, num_actions)
+    self.assertEqual(expected_shape, q_online.shape)
+    self.assertEqual(expected_shape, q_target.shape)
     self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
 
   def testVariablesBuild(self):
@@ -175,7 +244,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertTrue(network.built)
     self.assertGreater(len(variables), 0)
 
-  def testPreprocessingLayersSingleObsevations(self):
+  def testPreprocessingLayersSingleObservations(self):
     """Tests using preprocessing_layers without preprocessing_combiner."""
     num_state_dims = 5
     network = q_network.QNetwork(
@@ -185,6 +254,23 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
         preprocessing_combiner=None)
     q_logits, _ = network(tf.ones((3, num_state_dims)))
     self.assertAllEqual(q_logits.shape.as_list(), [3, 2])
+
+  def testMasking(self):
+    batch_size = 3
+    num_state_dims = 5
+    num_actions = 6
+    states = tf.random.uniform([batch_size, num_state_dims])
+    input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.int32, 0, num_actions - 1)
+    mask = tf.constant([[1, 0, 1, 0, 0, 1] for _ in range(batch_size)])
+    network = q_network.QNetwork(
+        input_tensor_spec, action_spec,
+        mask_split_fn=lambda observation: (observation, mask))
+    self.assertIsNotNone(network.mask_split_fn)
+
+    # Run a pass through the network to catch any shape errors.
+    network(states)
 
 
 if __name__ == '__main__':

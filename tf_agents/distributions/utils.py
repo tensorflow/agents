@@ -72,7 +72,9 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
       name: Python `str` name prefixed to Ops created by this class.
     """
 
-    if not isinstance(distribution, tfp.distributions.Normal):
+    if not isinstance(
+        distribution,
+        (tfp.distributions.Normal, tfp.distributions.MultivariateNormalDiag)):
       raise ValueError("Input distribution must be a normal distribution, "
                        "got {} instead".format(distribution))
     self.action_means, self.action_magnitudes = common.spec_means_and_magnitudes(
@@ -134,3 +136,15 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
     mean = self.action_magnitudes * tf.tanh(self.input_distribution.mode()) + \
         self.action_means
     return mean
+
+  def mean(self, name="mean", **kwargs):
+    """Compute mean of the SquashToSpecNormal distribution."""
+    return self.mode(name)
+
+  def event_shape_tensor(self, name="event_shape_tensor"):
+    """Compute event shape tensor of the SquashToSpecNormal distribution."""
+    return self._squashed_distribution.event_shape_tensor(name)
+
+  def batch_shape_tensor(self, name="batch_shape_tensor"):
+    """Compute event shape tensor of the SquashToSpecNormal distribution."""
+    return self._squashed_distribution.batch_shape_tensor(name)
