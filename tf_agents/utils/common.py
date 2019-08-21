@@ -1071,7 +1071,10 @@ def check_no_shared_variables(network_1, network_2):
         'you want explicitly share weights with the target network, or '
         'if your input network shares weights with others, please '
         'provide a target network which explicitly, selectively, shares '
-        'layers/weights with the input network.  Shared variables found: '
+        'layers/weights with the input network.  If you are not intending to '
+        'share weights make sure all the weights are created inside the Network'
+        ' since a copy will be created by creating a new Network with the same '
+        'args but a new name. Shared variables found: '
         '\'{}\'.'.format(network_1.name, network_2.name, shared_variables))
 
 

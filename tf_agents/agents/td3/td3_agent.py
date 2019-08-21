@@ -59,6 +59,10 @@ class Td3Agent(tf_agent.TFAgent):
                actor_optimizer,
                critic_optimizer,
                exploration_noise_std=0.1,
+               critic_network_2=None,
+               target_actor_network=None,
+               target_critic_network=None,
+               target_critic_network_2=None,
                target_update_tau=1.0,
                target_update_period=1,
                actor_update_period=1,
@@ -85,6 +89,29 @@ class Td3Agent(tf_agent.TFAgent):
       actor_optimizer: The default optimizer to use for the actor network.
       critic_optimizer: The default optimizer to use for the critic network.
       exploration_noise_std: Scale factor on exploration policy noise.
+      critic_network_2: (Optional.)  A `tf_agents.network.Network` to be used as
+        the second critic network during Q learning.  The weights from
+        `critic_network` are copied if this is not provided.
+      target_actor_network: (Optional.)  A `tf_agents.network.Network` to be
+        used as the target actor network during Q learning. Every
+        `target_update_period` train steps, the weights from `actor_network` are
+        copied (possibly withsmoothing via `target_update_tau`) to `
+        target_actor_network`.  If `target_actor_network` is not provided, it is
+        created by making a copy of `actor_network`, which initializes a new
+        network with the same structure and its own layers and weights.
+        Performing a `Network.copy` does not work when the network instance
+        already has trainable parameters (e.g., has already been built, or when
+        the network is sharing layers with another).  In these cases, it is up
+        to you to build a copy having weights that are not shared with the
+        original `actor_network`, so that this can be used as a target network.
+        If you provide a `target_actor_network` that shares any weights with
+        `actor_network`, a warning will be logged but no exception is thrown.
+      target_critic_network: (Optional.) Similar network as target_actor_network
+        but for the critic_network. See documentation for target_actor_network.
+      target_critic_network_2: (Optional.) Similar network as
+        target_actor_network but for the critic_network_2. See documentation for
+        target_actor_network. Will only be used if 'critic_network_2' is also
+        specified.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       actor_update_period: Period for the optimization step on actor network.
@@ -108,16 +135,25 @@ class Td3Agent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
     self._actor_network = actor_network
-    self._target_actor_network = actor_network.copy(
-        name='TargetActorNetwork')
+    self._target_actor_network = common.maybe_copy_target_network_with_checks(
+        self._actor_network, target_actor_network, 'TargetActorNetwork')
 
     self._critic_network_1 = critic_network
-    self._target_critic_network_1 = critic_network.copy(
-        name='TargetCriticNetwork1')
+    self._target_critic_network_1 = (
+        common.maybe_copy_target_network_with_checks(self._critic_network_1,
+                                                     target_critic_network,
+                                                     'TargetCriticNetwork1'))
 
-    self._critic_network_2 = critic_network.copy(name='CriticNetwork2')
-    self._target_critic_network_2 = critic_network.copy(
-        name='TargetCriticNetwork2')
+    if critic_network_2 is not None:
+      self._critic_network_2 = critic_network_2
+    else:
+      self._critic_network_2 = critic_network.copy(name='CriticNetwork2')
+      # Do not use target_critic_network_2 if critic_network_2 is None.
+      target_critic_network_2 = None
+    self._target_critic_network_2 = (
+        common.maybe_copy_target_network_with_checks(self._critic_network_2,
+                                                     target_critic_network_2,
+                                                     'TargetCriticNetwork2'))
 
     self._actor_optimizer = actor_optimizer
     self._critic_optimizer = critic_optimizer
@@ -249,8 +285,9 @@ class Td3Agent(tf_agent.TFAgent):
     # We only optimize the actor every actor_update_period training steps.
     def optimize_actor():
       actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
-      return self._apply_gradients(
-          actor_grads, trainable_actor_variables, self._actor_optimizer)
+      return self._apply_gradients(actor_grads, trainable_actor_variables,
+                                   self._actor_optimizer)
+
     remainder = tf.math.mod(self.train_step_counter, self._actor_update_period)
     tf.cond(
         pred=tf.equal(remainder, 0), true_fn=optimize_actor, false_fn=tf.no_op)
