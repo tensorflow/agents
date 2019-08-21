@@ -119,7 +119,7 @@ class Test(TestCommandBase):
         for filename in external_tests:
           if isinstance(filename, list):  # Integration test.
             args = [sys.executable] + filename + [
-                '--root_dir=/tmp/test{}'.format(temp_dir_index)
+                '--root_dir=/tmp/test_{}_{}'.format(os.getpid(), temp_dir_index)
             ]
             temp_dir_index += 1
           else:
