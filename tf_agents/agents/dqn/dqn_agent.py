@@ -132,23 +132,34 @@ class DqnAgent(tf_agent.TFAgent):
         the actions during data collection. The closer to 0.0, the higher the
         probability of choosing the best action.
       emit_log_probability: Whether policies emit log probabilities or not.
-      target_q_network: (Optional.)  A `tf_agents.network.Network` to be used
-        as the target network during Q learning.  Every `target_update_period`
-        train steps, the weights from `q_network` are copied (possibly with
-        smoothing via `target_update_tau`) to `target_q_network`.
+      target_q_network: (Optional.)  A `tf_agents.network.Network`
+        to be used as the target network during Q learning.  Every
+        `target_update_period` train steps, the weights from
+        `q_network` are copied (possibly with smoothing via
+        `target_update_tau`) to `target_q_network`.
 
-        If `target_q_network` is not provided, it is created by making a
-        copy of `q_network`, which initializes a new network with the same
-        structure and its own layers and weights.
+        If `target_q_network` is not provided, it is created by
+        making a copy of `q_network`, which initializes a new
+        network with the same structure and its own layers and weights.
 
-        Performing a `Network.copy` does not work when the network instance
-        already has trainable parameters (e.g., has already been built, or
-        when the network is sharing layers with another).  In these cases, it is
-        up to you to build a copy having weights that are not
-        shared with the original `q_network`, so that this can be used as a
-        target network.  If you provide a `target_q_network` that shares any
-        weights with `q_network`, a warning will be logged but no exception
-        is thrown.
+        Network copying is performed via the `Network.copy` superclass method,
+        and may inadvertently lead to the resulting network to share weights
+        with the original.  This can happen if, for example, the original
+        network accepted a pre-built Keras layer in its `__init__`, or
+        accepted a Keras layer that wasn't built, but neglected to create
+        a new copy.
+
+        In these cases, it is up to you to provide a target Network having
+        weights that are not shared with the original `q_network`.
+        If you provide a `target_q_network` that shares any
+        weights with `q_network`, a warning will be logged but
+        no exception is thrown.
+
+        Note; shallow copies of Keras layers may be built via the code:
+
+        ```python
+        new_layer = type(layer).from_config(layer.get_config())
+        ```
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -377,7 +388,6 @@ class DqnAgent(tf_agent.TFAgent):
       _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
 
     with tf.name_scope('loss'):
-      actions = tf.nest.flatten(actions)[0]
       q_values = self._compute_q_values(time_steps, actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
@@ -464,7 +474,7 @@ class DqnAgent(tf_agent.TFAgent):
                                   time_steps.step_type)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
+    multi_dim_actions = self._action_spec.shape.ndims > 0
     return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),

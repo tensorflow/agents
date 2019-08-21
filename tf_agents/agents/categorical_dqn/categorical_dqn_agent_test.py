@@ -84,6 +84,19 @@ class DummyCategoricalNet(network.Network):
     return logits, network_state
 
 
+class KerasLayersNet(network.Network):
+
+  def __init__(self, observation_spec, action_spec, layer, num_atoms=5,
+               name=None):
+    super(KerasLayersNet, self).__init__(observation_spec, state_spec=(),
+                                         name=name)
+    self._layer = layer
+    self.num_atoms = num_atoms  # Dummy, this doesn't match the layer output.
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    return self._layer(inputs), network_state
+
+
 class DummyCategoricalQRnnNetwork(q_rnn_network.QRnnNetwork):
 
   def __init__(self,
@@ -166,6 +179,40 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._action_spec,
         self._categorical_net,
         self._optimizer)
+
+  def testCreateAgentWithPrebuiltPreprocessingLayers(self):
+    dense_layer = tf.keras.layers.Dense(3)
+    q_net = KerasLayersNet(
+        self._time_step_spec.observation, self._action_spec, dense_layer)
+    with self.assertRaisesRegexp(
+        ValueError, 'shares weights with the original network'):
+      categorical_dqn_agent.CategoricalDqnAgent(
+          self._time_step_spec,
+          self._action_spec,
+          categorical_q_network=q_net,
+          optimizer=None)
+
+    # Explicitly share weights between q and target networks; this is ok.
+    q_target_net = KerasLayersNet(
+        self._time_step_spec.observation, self._action_spec, dense_layer)
+    categorical_dqn_agent.CategoricalDqnAgent(
+        self._time_step_spec,
+        self._action_spec,
+        categorical_q_network=q_net,
+        optimizer=None,
+        target_categorical_q_network=q_target_net)
+
+    q_bad_target_net = KerasLayersNet(
+        self._time_step_spec.observation, self._action_spec, dense_layer,
+        num_atoms=3)
+
+    with self.assertRaisesRegexp(ValueError, 'have different numbers of atoms'):
+      categorical_dqn_agent.CategoricalDqnAgent(
+          self._time_step_spec,
+          self._action_spec,
+          categorical_q_network=q_net,
+          optimizer=None,
+          target_categorical_q_network=q_bad_target_net)
 
   def testCriticLoss(self):
     agent = categorical_dqn_agent.CategoricalDqnAgent(

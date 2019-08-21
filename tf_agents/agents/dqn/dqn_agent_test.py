@@ -45,7 +45,6 @@ class DummyNet(network.Network):
                name=None):
     super(DummyNet, self).__init__(
         observation_spec, state_spec=(), name=name, mask_split_fn=mask_split_fn)
-    action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
         tf.keras.layers.Dense(
@@ -138,19 +137,8 @@ class DqnAgentTest(test_utils.TestCase):
         common.initialize_uninitialized_variables(sess)
         self.assertIsNone(sess.run(init_op))
 
-  def testCreateAgentNestSizeChecks(self, agent_class):
-    action_spec = [
-        tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
-        tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
-    ]
-
-    q_net = DummyNet(self._observation_spec, action_spec)
-    with self.assertRaisesRegexp(ValueError, '.*one dimensional.*'):
-      agent_class(
-          self._time_step_spec, action_spec, q_network=q_net, optimizer=None)
-
   def testCreateAgentDimChecks(self, agent_class):
-    action_spec = [tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)]
+    action_spec = tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)
     q_net = DummyNet(self._observation_spec, action_spec)
     with self.assertRaisesRegexp(ValueError, '.*one dimensional.*'):
       agent_class(
@@ -459,8 +447,8 @@ class DqnAgentTest(test_utils.TestCase):
                         [2] + self._action_spec.shape.as_list())
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
-    self.assertTrue(all(actions_[0] <= self._action_spec.maximum))
-    self.assertTrue(all(actions_[0] >= self._action_spec.minimum))
+    self.assertTrue(all(actions_ <= self._action_spec.maximum))
+    self.assertTrue(all(actions_ >= self._action_spec.minimum))
 
   def testInitializeRestoreAgent(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)
