@@ -82,6 +82,54 @@ class EncodingNetworkTest(test_utils.TestCase):
     self.assertEqual(5, network.layers[4].get_config()['units'])
     self.assertEqual(2, network.layers[5].get_config()['units'])
 
+  def test_conv_dilation_params(self):
+    with self.subTest(name='no dilations'):
+      input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
+      network = encoding_network.EncodingNetwork(
+          input_spec,
+          conv_layer_params=((16, 2, 1), (15, 2, 1)),
+      )
+
+      variables = network.variables
+      self.assertEqual(4, len(variables))
+      self.assertEqual(3, len(network.layers))
+
+      # Validate dilation rates
+      config = network.layers[0].get_config()
+      self.assertEqual((1, 1), config['dilation_rate'])
+      config = network.layers[1].get_config()
+      self.assertEqual((1, 1), config['dilation_rate'])
+
+    with self.subTest(name='dilations'):
+      input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
+      network = encoding_network.EncodingNetwork(
+          input_spec,
+          conv_layer_params=((16, 2, 1, 2), (15, 2, 1, (2, 4))),
+      )
+
+      variables = network.variables
+      self.assertEqual(4, len(variables))
+      self.assertEqual(3, len(network.layers))
+
+      # Validate dilation rates
+      config = network.layers[0].get_config()
+      self.assertEqual((2, 2), config['dilation_rate'])
+      config = network.layers[1].get_config()
+      self.assertEqual((2, 4), config['dilation_rate'])
+
+    with self.subTest(name='failing conv spec'):
+      input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
+      with self.assertRaises(ValueError):
+        network = encoding_network.EncodingNetwork(
+            input_spec,
+            conv_layer_params=((16, 2, 1, 2, 4), (15, 2, 1)),
+            )
+      with self.assertRaises(ValueError):
+        network = encoding_network.EncodingNetwork(
+            input_spec,
+            conv_layer_params=((16, 2, 1), (15, 2)),
+            )
+
   def test_preprocessing_layer_no_combiner(self):
     network = encoding_network.EncodingNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([5], tf.float32),

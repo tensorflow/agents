@@ -146,8 +146,9 @@ class EncodingNetwork(network.Network):
         `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`. This
         layer must not be already built.
       conv_layer_params: Optional list of convolution layers parameters, where
-        each item is a length-three tuple indicating (filters, kernel_size,
-        stride).
+        each item is either a length-three tuple indicating
+        `(filters, kernel_size, stride)` or a length-four tuple indicating
+        `(filters, kernel_size, stride, dilation_rate)`.
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
       dropout_layer_params: Optional list of dropout layer parameters, each item
@@ -172,6 +173,7 @@ class EncodingNetwork(network.Network):
       ValueError: If `preprocessing_combiner` is already built.
       ValueError: If the number of dropout layer parameters does not match the
         number of fully connected layer parameters.
+      ValueError: If conv_layer_params tuples do not have 3 or 4 elements each.
     """
     if preprocessing_layers is None:
       flat_preprocessing_layers = None
@@ -206,12 +208,21 @@ class EncodingNetwork(network.Network):
     layers = []
 
     if conv_layer_params:
-      for (filters, kernel_size, strides) in conv_layer_params:
+      for config in conv_layer_params:
+        if len(config) == 4:
+          (filters, kernel_size, strides, dilation_rate) = config
+        elif len(config) == 3:
+          (filters, kernel_size, strides) = config
+          dilation_rate = (1, 1)
+        else:
+          raise ValueError(
+              'only 3 or 4 elements permitted in conv_layer_params tuples')
         layers.append(
             tf.keras.layers.Conv2D(
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
+                dilation_rate=dilation_rate,
                 activation=activation_fn,
                 kernel_initializer=kernel_initializer,
                 dtype=dtype,
@@ -274,7 +285,7 @@ class EncodingNetwork(network.Network):
           self._flat_preprocessing_layers):
         processed.append(layer(obs))
       if len(processed) == 1 and self._preprocessing_combiner is None:
-        # If only only one observation is passed and preprocessing_combiner
+        # If only one observation is passed and the preprocessing_combiner
         # is unspecified, use the preprocessed version of this observation.
         processed = processed[0]
 
