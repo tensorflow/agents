@@ -24,9 +24,14 @@ import tensorflow as tf
 from tf_agents.networks import categorical_q_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
-class CategoricalQNetworkTest(tf.test.TestCase):
+class CategoricalQNetworkTest(test_utils.TestCase):
+
+  def tearDown(self):
+    gin.clear_config()
+    super(CategoricalQNetworkTest, self).tearDown()
 
   def testBuild(self):
     batch_size = 3
@@ -141,6 +146,7 @@ class CategoricalQNetworkTest(tf.test.TestCase):
     time_steps = ts.restart(observations, batch_size)
     next_time_steps = ts.restart(next_observations, batch_size)
 
+    # Note: this is cleared in tearDown().
     gin.parse_config("""
         CategoricalQNetwork.conv_layer_params = [(16, 2, 1), (15, 2, 1)]
         CategoricalQNetwork.fc_layer_params = [4, 3, 5]
