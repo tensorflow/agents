@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import functools
 
-from absl.testing import absltest
 import gin
 
 from tf_agents.environments import py_environment
@@ -30,11 +29,11 @@ from tf_agents.environments import wrappers
 from tf_agents.utils import test_utils
 
 
-class SuiteGymTest(absltest.TestCase):
+class SuiteGymTest(test_utils.TestCase):
 
-  def setUp(self):
-    super(SuiteGymTest, self).setUp()
+  def tearDown(self):
     gin.clear_config()
+    super(SuiteGymTest, self).tearDown()
 
   def test_load_adds_time_limit_steps(self):
     env = suite_gym.load('CartPole-v1')
@@ -69,4 +68,4 @@ class SuiteGymTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

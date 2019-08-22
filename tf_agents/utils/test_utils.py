@@ -81,3 +81,9 @@ class TestCase(tf.test.TestCase):
   def tearDown(self):
     gin.clear_config()
     super(TestCase, self).tearDown()
+
+
+# Main function so that users of `test_utils.TestCase` can also call
+# `test_utils.main()`.
+def main():
+  tf.test.main()

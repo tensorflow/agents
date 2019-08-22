@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from absl.testing import absltest
 import gin
 
 from tf_agents.environments import py_environment
@@ -28,11 +27,11 @@ from tf_agents.environments import wrappers
 from tf_agents.utils import test_utils
 
 
-class SuitePybulletTest(absltest.TestCase):
+class SuitePybulletTest(test_utils.TestCase):
 
-  def setUp(self):
-    super(SuitePybulletTest, self).setUp()
+  def tearDown(self):
     gin.clear_config()
+    super(SuitePybulletTest, self).tearDown()
 
   def testPybulletEnvRegistered(self):
     env = suite_pybullet.load('InvertedPendulumBulletEnv-v0')
@@ -49,4 +48,4 @@ class SuitePybulletTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()
