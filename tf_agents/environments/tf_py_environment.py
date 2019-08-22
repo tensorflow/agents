@@ -20,7 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import contextlib
+from multiprocessing import pool
 import threading
+
+from absl import logging
 
 import gin
 import tensorflow as tf
@@ -64,31 +67,87 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
   * This class currently cast rewards and discount to float32.
   """
 
-  def __init__(self, environment, check_dims=False):
+  def __init__(self, environment, check_dims=False, isolation=False):
     """Initializes a new `TFPyEnvironment`.
 
     Args:
       environment: Environment to interact with, implementing
-        `py_environment.PyEnvironment`.
+        `py_environment.PyEnvironment`.  Or a `callable` that returns
+        an environment of this form.  If a `callable` is provided and
+        `thread_isolation` is provided, the callable is executed in the
+        dedicated thread.
       check_dims: Whether should check batch dimensions of actions in `step`.
+      isolation: If this value is `False` (default), interactions with
+        the environment will occur within whatever thread the methods of the
+        `TFPyEnvironment` are run from.  For example, in TF graph mode, methods
+        like `step` are called from multiple threads created by the TensorFlow
+        engine; calls to step the environment are guaranteed to be sequential,
+        but not from the same thread.  This creates problems for environments
+        that are not thread-safe.
+
+        Using isolation ensures not only that a dedicated thread (or
+        thread-pool) is used to interact with the environment, but also that
+        interaction with the environment happens in a serialized manner.
+
+        If `isolation == True`, a dedicated thread is created for
+        interactions with the environment.
+
+        If `isolation` is an instance of `multiprocessing.pool.Pool` (this
+        includes instances of `multiprocessing.pool.ThreadPool`, nee
+        `multiprocessing.dummy.Pool` and `multiprocessing.Pool`, then this
+        pool is used to interact with the environment.
+
+        **NOTE** If using `isolation` with a `BatchedPyEnvironment`, ensure
+        you create the `BatchedPyEnvironment` with `multithreading=False`, since
+        otherwise the multithreading in that wrapper reverses the effects of
+        this one.
 
     Raises:
-      TypeError: If `environment` is not a subclass of
-      `py_environment.PyEnvironment`.
+      TypeError: If `environment` is not an instance of
+        `py_environment.PyEnvironment` or subclasses, or is a callable that does
+        not return an instance of `PyEnvironment`.
+      TypeError: If `isolation` is not `True`, `False`, or an instance of
+        `multiprocessing.pool.Pool`.
     """
+    if not isolation:
+      self._pool = None
+    elif isinstance(isolation, pool.Pool):
+      self._pool = isolation
+    elif isolation:
+      self._pool = pool.ThreadPool(1)
+    else:
+      raise TypeError(
+          'isolation should be True, False, or an instance of '
+          'a multiprocessing Pool or ThreadPool.  Saw: {}'.format(isolation))
+
+    if callable(environment):
+      environment = self._execute(environment)
     if not isinstance(environment, py_environment.PyEnvironment):
       raise TypeError(
           'Environment should implement py_environment.PyEnvironment')
 
     if not environment.batched:
-      environment = batched_py_environment.BatchedPyEnvironment([environment])
+      # If executing in an isolated thread, do not enable multiprocessing for
+      # this environment.
+      environment = batched_py_environment.BatchedPyEnvironment(
+          [environment], multithreading=not self._pool)
     self._env = environment
     self._check_dims = check_dims
+
+    if isolation and getattr(self._env, '_parallel_execution', None):
+      logging.warn(
+          'Wrapped environment is executing in parallel.  '
+          'Perhaps it is a BatchedPyEnvironment with multithreading=True, '
+          'or it is a ParallelPyEnvironment.  This conflicts with the '
+          '`isolation` arg passed to TFPyEnvironment: interactions with the '
+          'wrapped environment are no longer guaranteed to happen in a common '
+          'thread.  Environment: %s', (self._env,))
 
     observation_spec = tensor_spec.from_spec(self._env.observation_spec())
     action_spec = tensor_spec.from_spec(self._env.action_spec())
     time_step_spec = ts.time_step_spec(observation_spec)
     batch_size = self._env.batch_size if self._env.batch_size else 1
+
     super(TFPyEnvironment, self).__init__(time_step_spec,
                                           action_spec,
                                           batch_size)
@@ -101,10 +160,25 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     self._time_step = None
     self._lock = threading.Lock()
 
+  def close(self):
+    """Send close messages to the isolation pool and join it.
+
+    Only has an effect when `isolation` was provided at init time.
+    """
+    if self._pool:
+      self._pool.join()
+      self._pool.close()
+      self._pool = None
+
   @property
   def pyenv(self):
     """Returns the underlying Python environment."""
     return self._env
+
+  def _execute(self, fn, *args, **kwargs):
+    if not self._pool:
+      return fn(*args, **kwargs)
+    return self._pool.apply(fn, args=args, kwds=kwargs)
 
   # TODO(b/123585179): Simplify this using py_environment.current_time_step().
   # There currently is a bug causing py_function to resolve variables
@@ -132,9 +206,12 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
           self._time_step = self._env.reset()
         return tf.nest.flatten(self._time_step)
 
+    def _isolated_current_time_step_py():
+      return self._execute(_current_time_step_py)
+
     with tf.name_scope('current_time_step'):
       outputs = tf.numpy_function(
-          _current_time_step_py,
+          _isolated_current_time_step_py,
           [],  # No inputs.
           self._time_step_dtypes,
           name='current_time_step_py_func')
@@ -163,9 +240,12 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
       with _check_not_called_concurrently(self._lock):
         self._time_step = self._env.reset()
 
+    def _isolated_reset_py():
+      return self._execute(_reset_py)
+
     with tf.name_scope('reset'):
       reset_op = tf.numpy_function(
-          _reset_py,
+          _isolated_reset_py,
           [],  # No inputs.
           [],
           name='reset_py_func')
@@ -203,6 +283,9 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
         self._time_step = self._env.step(packed)
         return tf.nest.flatten(self._time_step)
 
+    def _isolated_step_py(*flattened_actions):
+      return self._execute(_step_py, *flattened_actions)
+
     with tf.name_scope('step'):
       flat_actions = [tf.identity(x) for x in tf.nest.flatten(actions)]
       if self._check_dims:
@@ -215,7 +298,10 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
                 'but saw action with shape %s:\n   %s' %
                 (self.batch_size, action.shape, action))
       outputs = tf.numpy_function(
-          _step_py, flat_actions, self._time_step_dtypes, name='step_py_func')
+          _isolated_step_py,
+          flat_actions,
+          self._time_step_dtypes,
+          name='step_py_func')
       step_type, reward, discount = outputs[0:3]
       flat_observations = outputs[3:]
 

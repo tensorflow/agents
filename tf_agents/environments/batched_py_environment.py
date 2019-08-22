@@ -42,7 +42,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
   shared mutex locks (from the threading module).
   """
 
-  def __init__(self, envs):
+  def __init__(self, envs, multithreading=True):
     """Batch together multiple (non-batched) py environments.
 
     The environments can be different but must use the same action and
@@ -50,6 +50,12 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
 
     Args:
       envs: List python environments (must be non-batched).
+      multithreading: Python bool describing whether interactions with the
+        given environments should happen in their own threadpool.  If `False`,
+        then all interaction is performed serially in the current thread.
+
+        This may be combined with wrapper `TFPyEnvironment(..., isolation=True)`
+        to ensure that multiple environments are all run in the same thread.
 
     Raises:
       ValueError: If envs is not a list or tuple, or is zero length, or if
@@ -62,6 +68,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     if batched_envs:
       raise ValueError(
           "Some of the envs are already batched: %s" % batched_envs)
+    self._parallel_execution = multithreading
     self._envs = envs
     self._num_envs = len(envs)
     self._action_spec = self._envs[0].action_spec()
@@ -76,8 +83,15 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
           "All environments must have the same time_step_spec.  Saw: %s" %
           [env.time_step_spec() for env in self._envs])
     # Create a multiprocessing threadpool for execution.
-    self._pool = mp_threads.Pool(self._num_envs)
+    if multithreading:
+      self._pool = mp_threads.Pool(self._num_envs)
     super(BatchedPyEnvironment, self).__init__()
+
+  def _execute(self, fn, iterable):
+    if self._parallel_execution:
+      return self._pool.map(fn, iterable)
+    else:
+      return [fn(x) for x in iterable]
 
   @property
   def batched(self):
@@ -109,7 +123,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     if self._num_envs == 1:
       return nest_utils.batch_nested_array(self._envs[0].reset())
     else:
-      time_steps = self._pool.map(lambda env: env.reset(), self._envs)
+      time_steps = self._execute(lambda env: env.reset(), self._envs)
       return stack_time_steps(time_steps)
 
   def _step(self, actions):
@@ -135,16 +149,17 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
         raise ValueError(
             "Primary dimension of action items does not match "
             "batch size: %d vs. %d" % (len(unstacked_actions), self.batch_size))
-      time_steps = self._pool.map(
+      time_steps = self._execute(
           lambda env_action: env_action[0].step(env_action[1]),
           zip(self._envs, unstacked_actions))
       return stack_time_steps(time_steps)
 
   def close(self):
     """Send close messages to the external process and join them."""
-    self._pool.map(lambda env: env.close(), self._envs)
-    self._pool.close()
-    self._pool.join()
+    self._execute(lambda env: env.close(), self._envs)
+    if self._parallel_execution:
+      self._pool.close()
+      self._pool.join()
 
 
 # TODO(b/124447001): Factor these helper functions out into common utils.

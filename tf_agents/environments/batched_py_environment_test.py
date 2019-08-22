@@ -22,6 +22,7 @@ from __future__ import print_function
 import collections
 import functools
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 
@@ -30,8 +31,10 @@ from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
 
+COMMON_PARAMETERS = (dict(multithreading=False), dict(multithreading=True))
 
-class BatchedPyEnvironmentTest(tf.test.TestCase):
+
+class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @property
   def action_spec(self):
@@ -42,28 +45,32 @@ class BatchedPyEnvironmentTest(tf.test.TestCase):
   def observation_spec(self):
     return array_spec.ArraySpec((3, 3), np.float32)
 
-  def _make_batched_py_environment(self, num_envs=3):
+  def _make_batched_py_environment(self, multithreading, num_envs=3):
     self.time_step_spec = ts.time_step_spec(self.observation_spec)
     constructor = functools.partial(random_py_environment.RandomPyEnvironment,
                                     self.observation_spec, self.action_spec)
     return batched_py_environment.BatchedPyEnvironment(
-        envs=[constructor() for _ in range(num_envs)])
+        envs=[constructor() for _ in range(num_envs)],
+        multithreading=multithreading)
 
-  def test_close_no_hang_after_init(self):
-    env = self._make_batched_py_environment()
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def test_close_no_hang_after_init(self, multithreading):
+    env = self._make_batched_py_environment(multithreading)
     env.close()
 
-  def test_get_specs(self):
-    env = self._make_batched_py_environment()
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def test_get_specs(self, multithreading):
+    env = self._make_batched_py_environment(multithreading)
     self.assertEqual(self.observation_spec, env.observation_spec())
     self.assertEqual(self.time_step_spec, env.time_step_spec())
     self.assertEqual(self.action_spec, env.action_spec())
 
     env.close()
 
-  def test_step(self):
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def test_step(self, multithreading):
     num_envs = 5
-    env = self._make_batched_py_environment(num_envs=num_envs)
+    env = self._make_batched_py_environment(multithreading, num_envs=num_envs)
     action_spec = env.action_spec()
     observation_spec = env.observation_spec()
     rng = np.random.RandomState()
