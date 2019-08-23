@@ -28,7 +28,7 @@ from tensorflow.python.eager import context  # TF internal
 
 class TFDequeTest(tf.test.TestCase):
 
-  def testDataIsZero(self):
+  def test_data_is_zero(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual([0, 0, 0], self.evaluate(d.data))
@@ -165,6 +165,7 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       self.assertEqual(expected_result, self.evaluate(metric.result()))
       self.evaluate(metric.reset())
       self.assertEqual(0.0, self.evaluate(metric.result()))
+
 
 if __name__ == '__main__':
   tf.test.main()
