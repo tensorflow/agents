@@ -18,8 +18,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import tensorflow as tf
 from tf_agents.networks import network
 from tf_agents.policies import boltzmann_policy
@@ -27,7 +25,6 @@ from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
-from tensorflow.python.framework import test_util  # TF internal
 
 
 class DummyNet(network.Network):
@@ -48,7 +45,7 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
-class BoltzmannPolicyTest(test_utils.TestCase, absltest.TestCase):
+class BoltzmannPolicyTest(test_utils.TestCase):
 
   def setUp(self):
     super(BoltzmannPolicyTest, self).setUp()
@@ -56,7 +53,6 @@ class BoltzmannPolicyTest(test_utils.TestCase, absltest.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testBuild(self):
     wrapped = q_policy.QPolicy(
         self._time_step_spec, self._action_spec, q_network=DummyNet())
@@ -66,7 +62,6 @@ class BoltzmannPolicyTest(test_utils.TestCase, absltest.TestCase):
     self.assertEqual(policy.action_spec, self._action_spec)
     self.assertEmpty(policy.variables())
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAction(self):
     tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
@@ -82,7 +77,6 @@ class BoltzmannPolicyTest(test_utils.TestCase, absltest.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
 
-  @test_util.run_in_graph_and_eager_modes()
   def testDistribution(self):
     tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(
@@ -98,7 +92,6 @@ class BoltzmannPolicyTest(test_utils.TestCase, absltest.TestCase):
     # so the Q values of index 1 will be higher.
     self.assertAllEqual([[1]], self.evaluate(mode))
 
-  @test_util.run_in_graph_and_eager_modes()
   def testLogits(self):
     tf.compat.v1.set_random_seed(1)
     wrapped = q_policy.QPolicy(

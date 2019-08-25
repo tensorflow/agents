@@ -18,14 +18,13 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import numpy as np
 
 from tf_agents import specs
+from tf_agents.utils import test_utils
 
 
-class SpecWithTensorflowTest(absltest.TestCase):
+class SpecWithTensorflowTest(test_utils.TestCase):
 
   def testLoad(self):
     specs.ArraySpec([1, 2, 3], np.int32)
@@ -62,4 +61,4 @@ class SpecWithTensorflowTest(absltest.TestCase):
     self.assertEqual(type(tensor_spec), specs.tensor_spec.BoundedTensorSpec)
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

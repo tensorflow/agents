@@ -20,20 +20,19 @@ from __future__ import division
 from __future__ import print_function
 
 from absl import flags
-from absl.testing import absltest
-
 import numpy as np
 
 from tf_agents.environments import atari_wrappers
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_atari
+from tf_agents.utils import test_utils
 
 FLAGS = flags.FLAGS
 
 # Atari ROMs are placed in atari_py.get_game_path('.')
 
 
-class SuiteAtariTest(absltest.TestCase):
+class SuiteAtariTest(test_utils.TestCase):
 
   def testGameName(self):
     name = suite_atari.game('Pong')
@@ -74,4 +73,4 @@ class SuiteAtariTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

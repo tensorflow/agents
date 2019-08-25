@@ -18,16 +18,16 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import numpy as np
 
 from tf_agents.environments import suite_dm_control
+from tf_agents.utils import test_utils
 
 
-class DmControlWrapperTest(absltest.TestCase):
+class DmControlWrapperTest(test_utils.TestCase):
 
   def setUp(self):
+    super(DmControlWrapperTest, self).setUp()
     if not suite_dm_control.is_available():
       self.skipTest('dm_control is not available.')
 
@@ -103,4 +103,4 @@ class DmControlWrapperTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

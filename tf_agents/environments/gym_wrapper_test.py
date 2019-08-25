@@ -20,17 +20,16 @@ from __future__ import division
 from __future__ import print_function
 
 import math
-
-from absl.testing import absltest
 from absl.testing.absltest import mock
 import gym
 import gym.spaces
 import numpy as np
 
 from tf_agents.environments import gym_wrapper
+from tf_agents.utils import test_utils
 
 
-class GymWrapperSpecTest(absltest.TestCase):
+class GymWrapperSpecTest(test_utils.TestCase):
 
   def test_spec_from_gym_space_discrete(self):
     discrete_space = gym.spaces.Discrete(3)
@@ -217,7 +216,7 @@ class GymWrapperSpecTest(absltest.TestCase):
     self.assertEqual(np.uint16, spec[3]['spec_2'][1].dtype)
 
 
-class GymWrapperOnCartpoleTest(absltest.TestCase):
+class GymWrapperOnCartpoleTest(test_utils.TestCase):
 
   def test_wrapped_cartpole_specs(self):
     # Note we use spec.make on gym envs to avoid getting a TimeLimit wrapper on
@@ -337,4 +336,4 @@ class GymWrapperOnCartpoleTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

@@ -18,15 +18,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 from absl.testing.absltest import mock
 
 from tf_agents.environments import atari_wrappers
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
-class AtariTimeLimitTest(absltest.TestCase):
+class AtariTimeLimitTest(test_utils.TestCase):
 
   def test_game_over_after_limit(self):
     max_steps = 5
@@ -71,4 +70,4 @@ class AtariTimeLimitTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()
