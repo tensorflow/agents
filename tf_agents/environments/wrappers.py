@@ -537,9 +537,9 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
 
     # Flatten the individual observations if they are multi-dimensional and then
     # flatten the nested structure.
-    observations = tf.nest.map_structure(np_flatten, observations)
+    flat_observations = [np_flatten(x) for x in tf.nest.flatten(observations)]
     axis = 1 if is_batched else 0
-    return np.concatenate(tf.nest.flatten(observations), axis=axis)
+    return np.concatenate(flat_observations, axis=axis)
 
   def _step(self, action):
     """Steps the environment while packing the observations returned.
