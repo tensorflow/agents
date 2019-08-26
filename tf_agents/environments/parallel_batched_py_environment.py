@@ -7,9 +7,17 @@ from tf_agents.environments.parallel_py_environment import ParallelPyEnvironment
 
 
 class ParallelBatchedPyEnvironment(ParallelPyEnvironment):
+    def __init__(self, env_constructors, *args, **kwargs):
+        super().__init__(env_constructors, *args, **kwargs)
+
+        assert np.all(np.array([e.batch_size for e in self._envs]) == self._envs[0].batch_size)
+
+        self._env_batch_size = self._envs[0].batch_size
+        self._batch_size = len(self._envs) * self._env_batch_size
+
     @property
     def batch_size(self):
-        return sum(e.batch_size for e in self._envs)
+        return self._batch_size
 
     def _stack_time_steps(self, time_steps):
         """Given a list of TimeStep, combine to one with a batch dimension."""
@@ -23,12 +31,7 @@ class ParallelBatchedPyEnvironment(ParallelPyEnvironment):
 
     def _unstack_actions(self, batched_actions):
         """Returns a list of actions from potentially nested batch of actions."""
-        flattened_actions = tf.nest.flatten(batched_actions)
-        if self._flatten:
-            unstacked_actions = zip(*flattened_actions)
-        else:
-            unstacked_actions = [
-                tf.nest.pack_sequence_as(batched_actions, actions)
-                for actions in zip(*flattened_actions)
-            ]
+        reshaped_actions = np.reshape(batched_actions, (-1, self._env_batch_size, *self.action_spec().shape))
+        unstacked_actions = [a for a in reshaped_actions]
+
         return unstacked_actions

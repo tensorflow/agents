@@ -102,9 +102,13 @@ class TimeLimit(PyEnvironmentBaseWrapper):
 
     self._num_steps += 1
     if self._num_steps >= self._duration:
-      time_step = time_step._replace(step_type=ts.StepType.LAST)
+      if self.batched:
+        step_type = np.tile(ts.StepType.LAST, self.batch_size)
+      else:
+        step_type = ts.StepType.LAST
+      time_step = time_step._replace(step_type=step_type)
 
-    if time_step.is_last():
+    if np.any(time_step.is_last()):
       self._num_steps = None
 
     return time_step

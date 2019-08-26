@@ -31,7 +31,7 @@ from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
+def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True, batched_space=False):
   """Converts gym spaces into array specs.
 
   Gym does not properly define dtypes for spaces. By default all spaces set
@@ -91,13 +91,19 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
   elif isinstance(space, gym.spaces.Box):
     # TODO(oars): change to use dtype in space once Gym is updated.
     dtype = dtype_map.get(gym.spaces.Box, np.float32)
-    minimum = np.asarray(space.low, dtype=dtype)
-    maximum = np.asarray(space.high, dtype=dtype)
+    if batched_space:
+      minimum = np.asarray(space.low[0], dtype=dtype)
+      maximum = np.asarray(space.high[0], dtype=dtype)
+      shape = space.shape[1:]
+    else:
+      minimum = np.asarray(space.low, dtype=dtype)
+      maximum = np.asarray(space.high, dtype=dtype)
+      shape = space.shape
     if simplify_box_bounds:
       minimum = try_simplify_array_to_value(minimum)
       maximum = try_simplify_array_to_value(maximum)
     return specs.BoundedArraySpec(
-        shape=space.shape, dtype=dtype, minimum=minimum, maximum=maximum)
+        shape=shape, dtype=dtype, minimum=minimum, maximum=maximum)
   elif isinstance(space, gym.spaces.Tuple):
     return tuple([_spec_from_gym_space(s, dtype_map) for s in space.spaces])
   elif isinstance(space, gym.spaces.Dict):
@@ -133,10 +139,11 @@ class GymWrapper(py_environment.PyEnvironment):
     # TODO(sfishman): Add test for auto_reset param.
     self._auto_reset = auto_reset
     self._observation_spec = _spec_from_gym_space(
-        self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds)
+        self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds, batched_environment)
     self._action_spec = _spec_from_gym_space(self._gym_env.action_space,
                                              spec_dtype_map,
-                                             simplify_box_bounds)
+                                             simplify_box_bounds,
+                                             batched_environment)
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._info = None
     self._done = True
@@ -146,6 +153,8 @@ class GymWrapper(py_environment.PyEnvironment):
     if self._batched_environment:
       time_step = self.reset()
       self._batch_size = time_step.observation.shape[0]
+      if np.isscalar(self._discount):
+        self._discount = np.ones(self._batch_size) * discount
 
   @property
   def gym(self):
@@ -176,7 +185,7 @@ class GymWrapper(py_environment.PyEnvironment):
 
     if self._match_obs_space_dtype:
       observation = self._to_obs_space_dtype(observation)
-    return ts.restart(observation)
+    return ts.restart(observation, batch_size=self.batch_size)
 
   @property
   def done(self):
