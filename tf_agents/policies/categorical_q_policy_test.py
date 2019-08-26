@@ -153,7 +153,7 @@ class CategoricalQPolicyTest(test_utils.TestCase):
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
-    actions, _ = policy.step(time_step)
+    actions = policy.action(time_step).action
     self.assertEqual(actions.shape.as_list(), [2])
     self.assertEqual(actions.dtype, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -165,30 +165,6 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     for action in actions:
       self.assertGreaterEqual(action, self._action_spec.minimum)
       self.assertLessEqual(action, self._action_spec.maximum)
-
-  def testMultiSample(self):
-    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                     self._max_q_value,
-                                                     self._q_network,
-                                                     self._action_spec)
-
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observations)
-    actions, _ = policy.step(time_step, num_samples=2)
-    self.assertEqual(actions.shape.as_list(), [2, 2])
-    self.assertEqual(actions.dtype, tf.int32)
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    actions = self.evaluate(actions)
-
-    # actions should be a nested list of the form [[0, 1], [1, 0]]
-    self.assertLen(actions, 2)
-
-    for inner_list in actions:
-      self.assertLen(inner_list, 2)
-
-      for action in inner_list:
-        self.assertGreaterEqual(action, self._action_spec.minimum)
-        self.assertLessEqual(action, self._action_spec.maximum)
 
   def testUpdate(self):
     policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
