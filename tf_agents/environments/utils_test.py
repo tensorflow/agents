@@ -18,13 +18,12 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 from absl.testing.absltest import mock
 import numpy as np
 from tf_agents.environments import utils
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
 def get_mock_env(action_spec, observation_spec, step_return):
@@ -39,9 +38,10 @@ def get_mock_env(action_spec, observation_spec, step_return):
   return env
 
 
-class UtilsTest(absltest.TestCase):
+class UtilsTest(test_utils.TestCase):
 
   def setUp(self):
+    super(UtilsTest, self).setUp()
     self._action_spec = [
         array_spec.BoundedArraySpec((1,), np.int32, -10, 10),
     ]
@@ -119,4 +119,4 @@ class UtilsTest(absltest.TestCase):
 
 
 if __name__ == "__main__":
-  absltest.main()
+  test_utils.main()

@@ -394,3 +394,15 @@ def update_spec_shape(spec, shape):
         maximum=spec.maximum,
         name=spec.name)
   return ArraySpec(shape=shape, dtype=spec.dtype, name=spec.name)
+
+
+def update_spec_dtype(spec, dtype):
+  """Returns a copy of the given spec with the new dtype."""
+  if is_bounded(spec):
+    return BoundedArraySpec(
+        shape=spec.shape,
+        dtype=dtype,
+        minimum=spec.minimum,
+        maximum=spec.maximum,
+        name=spec.name)
+  return ArraySpec(shape=spec.shape, dtype=dtype, name=spec.name)

@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from tf_agents.utils import composite
 
 
 def maybe_permanent_dropout(rate, noise_shape=None, seed=None, permanent=False):
@@ -72,15 +73,15 @@ class BatchSquash(object):
       if self._batch_dims == 1:
         return tensor
 
-      self._original_tensor_shape = tf.shape(input=tensor)
+      self._original_tensor_shape = composite.shape(tensor)
 
       if tensor.shape[self._batch_dims:].is_fully_defined():
-        return tf.reshape(tensor,
-                          [-1] + tensor.shape[self._batch_dims:].as_list())
+        return composite.reshape(
+            tensor, [-1] + tensor.shape[self._batch_dims:].as_list())
 
       return tf.reshape(
           tensor,
-          tf.concat([[-1], tf.shape(input=tensor)[self._batch_dims:]], axis=0),
+          tf.concat([[-1], composite.shape(tensor)[self._batch_dims:]], axis=0),
       )
 
   def unflatten(self, tensor):
@@ -93,11 +94,11 @@ class BatchSquash(object):
         raise ValueError('Please call flatten before unflatten.')
 
       # pyformat: disable
-      return tf.reshape(
+      return composite.reshape(
           tensor,
           tf.concat([
               self._original_tensor_shape[:self._batch_dims],
-              tf.shape(input=tensor)[1:]], axis=0)
+              composite.shape(tensor)[1:]], axis=0)
       )
       # pyformat: enable
 

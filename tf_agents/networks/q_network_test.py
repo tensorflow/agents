@@ -25,8 +25,6 @@ import tensorflow as tf
 from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
-from tensorflow.python.framework import test_util  # TF internal
-
 
 class SingleObservationSingleActionTest(tf.test.TestCase):
 
@@ -34,7 +32,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     super(SingleObservationSingleActionTest, self).setUp()
     gin.clear_config()
 
-  @test_util.run_in_graph_and_eager_modes()
   def testBuild(self):
     batch_size = 3
     num_state_dims = 5
@@ -47,7 +44,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
     self.assertEqual(len(network.trainable_weights), 6)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testChangeHiddenLayers(self):
     batch_size = 3
     num_state_dims = 5
@@ -61,7 +57,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
     self.assertEqual(len(network.trainable_variables), 4)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddConvLayers(self):
     batch_size = 3
     num_state_dims = 5
@@ -76,7 +71,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
     self.assertEqual(len(network.trainable_variables), 8)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddPreprocessingLayers(self):
     batch_size = 3
     num_actions = 2
@@ -100,7 +94,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     # At least 2 variables each for the preprocessing layers.
     self.assertGreater(len(network.trainable_variables), 4)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testCorrectOutputShape(self):
     batch_size = 3
     num_state_dims = 5
@@ -112,7 +105,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     q_values, _ = network(states)
     self.assertAllEqual(q_values.shape.as_list(), [batch_size, num_actions])
 
-  @test_util.run_in_graph_and_eager_modes()
   def testNetworkVariablesAreReused(self):
     batch_size = 3
     num_state_dims = 5
@@ -252,7 +244,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertTrue(network.built)
     self.assertGreater(len(variables), 0)
 
-  def testPreprocessingLayersSingleObsevations(self):
+  def testPreprocessingLayersSingleObservations(self):
     """Tests using preprocessing_layers without preprocessing_combiner."""
     num_state_dims = 5
     network = q_network.QNetwork(
@@ -262,6 +254,23 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
         preprocessing_combiner=None)
     q_logits, _ = network(tf.ones((3, num_state_dims)))
     self.assertAllEqual(q_logits.shape.as_list(), [3, 2])
+
+  def testMasking(self):
+    batch_size = 3
+    num_state_dims = 5
+    num_actions = 6
+    states = tf.random.uniform([batch_size, num_state_dims])
+    input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.int32, 0, num_actions - 1)
+    mask = tf.constant([[1, 0, 1, 0, 0, 1] for _ in range(batch_size)])
+    network = q_network.QNetwork(
+        input_tensor_spec, action_spec,
+        mask_split_fn=lambda observation: (observation, mask))
+    self.assertIsNotNone(network.mask_split_fn)
+
+    # Run a pass through the network to catch any shape errors.
+    network(states)
 
 
 if __name__ == '__main__':

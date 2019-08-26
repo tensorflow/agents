@@ -46,14 +46,18 @@ class DynamicEpisodeDriver(driver.Driver):
                env,
                policy,
                observers=None,
+               transition_observers=None,
                num_episodes=1):
     """Creates a DynamicEpisodeDriver.
 
     Args:
       env: A tf_environment.Base environment.
       policy: A tf_policy.Base policy.
-      observers: A list of observers that are updated after every step in
-        the environment. Each observer is a callable(Trajectory).
+      observers: A list of observers that are updated after every step in the
+        environment. Each observer is a callable(Trajectory).
+      transition_observers: A list of observers that are updated after every
+        step in the environment. Each observer is a callable((TimeStep,
+        PolicyStep, NextTimeStep)).
       num_episodes: The number of episodes to take in the environment.
 
     Raises:
@@ -61,18 +65,21 @@ class DynamicEpisodeDriver(driver.Driver):
         If env is not a tf_environment.Base or policy is not an instance of
         tf_policy.Base.
     """
-    super(DynamicEpisodeDriver, self).__init__(env, policy, observers)
+    super(DynamicEpisodeDriver, self).__init__(env, policy, observers,
+                                               transition_observers)
     self._num_episodes = num_episodes
     self._run_fn = common.function_in_tf1()(self._run)
 
   def _loop_condition_fn(self, num_episodes):
     """Returns a function with the condition needed for tf.while_loop."""
+
     def loop_cond(counter, *_):
       """Determines when to stop the loop, based on episode counter.
 
       Args:
         counter: Episode counters per batch index. Shape [batch_size] when
           batch_size > 1, else shape [].
+
       Returns:
         tf.bool tensor, shape (), indicating whether while loop should continue.
       """
@@ -82,14 +89,18 @@ class DynamicEpisodeDriver(driver.Driver):
 
   def _loop_body_fn(self):
     """Returns a function with the driver's loop body ops."""
+
     def loop_body(counter, time_step, policy_state):
-      """Runs a step in environment. While loop will call multiple times.
+      """Runs a step in environment.
+
+      While loop will call multiple times.
 
       Args:
         counter: Episode counters per batch index. Shape [batch_size].
         time_step: TimeStep tuple with elements shape [batch_size, ...].
         policy_state: Poicy state tensor shape [batch_size, policy_state_dim].
           Pass empty tuple for non-recurrent policies.
+
       Returns:
         loop_vars for next iteration of tf.while_loop.
       """
@@ -106,7 +117,12 @@ class DynamicEpisodeDriver(driver.Driver):
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]
-      with tf.control_dependencies([tf.group(observer_ops)]):
+      transition_observer_ops = [
+          observer((time_step, action_step, next_time_step))
+          for observer in self._transition_observers
+      ]
+      with tf.control_dependencies(
+          [tf.group(observer_ops + transition_observer_ops)]):
         time_step, next_time_step, policy_state = tf.nest.map_structure(
             tf.identity, (time_step, next_time_step, policy_state))
 
@@ -143,10 +159,11 @@ class DynamicEpisodeDriver(driver.Driver):
       time_step: TimeStep named tuple with final observation, reward, etc.
       policy_state: Tensor with final step policy state.
     """
-    return self._run_fn(time_step=time_step,
-                        policy_state=policy_state,
-                        num_episodes=num_episodes,
-                        maximum_iterations=maximum_iterations)
+    return self._run_fn(
+        time_step=time_step,
+        policy_state=policy_state,
+        num_episodes=num_episodes,
+        maximum_iterations=maximum_iterations)
 
   def _run(self,
            time_step=None,
@@ -162,21 +179,17 @@ class DynamicEpisodeDriver(driver.Driver):
 
     # Batch dim should be first index of tensors during data
     # collection.
-    batch_dims = nest_utils.get_outer_shape(
-        time_step, self.env.time_step_spec())
+    batch_dims = nest_utils.get_outer_shape(time_step,
+                                            self.env.time_step_spec())
     counter = tf.zeros(batch_dims, tf.int32)
 
     num_episodes = num_episodes or self._num_episodes
     [_, time_step, policy_state] = tf.while_loop(
         cond=self._loop_condition_fn(num_episodes),
         body=self._loop_body_fn(),
-        loop_vars=[
-            counter,
-            time_step,
-            policy_state],
+        loop_vars=[counter, time_step, policy_state],
         back_prop=False,
         parallel_iterations=1,
         maximum_iterations=maximum_iterations,
-        name='driver_loop'
-    )
+        name='driver_loop')
     return time_step, policy_state

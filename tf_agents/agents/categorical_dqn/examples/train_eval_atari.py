@@ -628,6 +628,8 @@ def get_run_args():
 
 def main(_):
   logging.set_verbosity(logging.INFO)
+  if common.has_eager_been_enabled():
+    return 0
   tf.enable_resource_variables()
   TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name),
             **get_run_args()).run()

@@ -94,6 +94,18 @@ class DummyCriticNet(object):
   def state_spec(self):
     return ()
 
+  @property
+  def trainable_variables(self):
+    return []
+
+  @property
+  def variables(self):
+    return []
+
+  @property
+  def input_tensor_spec(self):
+    return None
+
 
 class SacAgentTest(tf.test.TestCase):
 

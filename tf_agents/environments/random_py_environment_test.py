@@ -18,16 +18,15 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
+from tf_agents.utils import test_utils
 
 
-class RandomPyEnvironmentTest(parameterized.TestCase, absltest.TestCase):
+class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
 
   def testEnvResetAutomatically(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
@@ -176,4 +175,4 @@ class RandomPyEnvironmentTest(parameterized.TestCase, absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

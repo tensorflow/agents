@@ -18,16 +18,16 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import numpy as np
 
 from tf_agents.environments import suite_dm_control
+from tf_agents.utils import test_utils
 
 
-class DmControlWrapperTest(absltest.TestCase):
+class DmControlWrapperTest(test_utils.TestCase):
 
   def setUp(self):
+    super(DmControlWrapperTest, self).setUp()
     if not suite_dm_control.is_available():
       self.skipTest('dm_control is not available.')
 
@@ -54,7 +54,7 @@ class DmControlWrapperTest(absltest.TestCase):
   def test_transition(self):
     env = suite_dm_control.load('ball_in_cup', 'catch')
     env.reset()
-    transition_time_step = env.step([0, 0])
+    transition_time_step = env.step(np.array([0, 0]))
 
     self.assertTrue(transition_time_step.is_mid())
     self.assertNotEqual(None, transition_time_step.reward)
@@ -65,7 +65,7 @@ class DmControlWrapperTest(absltest.TestCase):
     time_step = env.reset()
 
     while not time_step.is_last():
-      time_step = env.step([1, 1])
+      time_step = env.step(np.array([1, 1]))
 
     self.assertTrue(time_step.is_last())
     self.assertNotEqual(None, time_step.reward)
@@ -76,7 +76,7 @@ class DmControlWrapperTest(absltest.TestCase):
   def test_automatic_reset_after_create(self):
     env = suite_dm_control.load('ball_in_cup', 'catch')
 
-    first_time_step = env.step([0, 0])
+    first_time_step = env.step(np.array([0, 0]))
     self.assertTrue(first_time_step.is_first())
 
   def test_automatic_reset_after_done(self):
@@ -84,23 +84,23 @@ class DmControlWrapperTest(absltest.TestCase):
     time_step = env.reset()
 
     while not time_step.is_last():
-      time_step = env.step([0, 0])
+      time_step = env.step(np.array([0, 0]))
 
     self.assertTrue(time_step.is_last())
-    first_time_step = env.step([0, 0])
+    first_time_step = env.step(np.array([0, 0]))
     self.assertTrue(first_time_step.is_first())
 
   def test_automatic_reset_after_done_not_using_reset_directly(self):
     env = suite_dm_control.load('ball_in_cup', 'catch')
-    time_step = env.step([0, 0])
+    time_step = env.step(np.array([0, 0]))
 
     while not time_step.is_last():
-      time_step = env.step([0, 0])
+      time_step = env.step(np.array([0, 0]))
 
     self.assertTrue(time_step.is_last())
-    first_time_step = env.step([0, 0])
+    first_time_step = env.step(np.array([0, 0]))
     self.assertTrue(first_time_step.is_first())
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

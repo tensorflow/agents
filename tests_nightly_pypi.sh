@@ -40,7 +40,7 @@ run_tests() {
     # Install pypi package
     pip install tf-agents-nightly
   else
-    echo "Error unknow option only [test|official]"
+    echo "Error unknown option only [test|official]"
     exit
   fi
 

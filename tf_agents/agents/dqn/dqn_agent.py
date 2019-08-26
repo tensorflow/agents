@@ -38,6 +38,7 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import value_ops
@@ -131,23 +132,34 @@ class DqnAgent(tf_agent.TFAgent):
         the actions during data collection. The closer to 0.0, the higher the
         probability of choosing the best action.
       emit_log_probability: Whether policies emit log probabilities or not.
-      target_q_network: (Optional.)  A `tf_agents.network.Network` to be used
-        as the target network during Q learning.  Every `target_udpate_period`
-        train steps, the weights from `q_network` are copied (possibly with
-        smoothing via `target_update_tau`) to `target_q_network`.
+      target_q_network: (Optional.)  A `tf_agents.network.Network`
+        to be used as the target network during Q learning.  Every
+        `target_update_period` train steps, the weights from
+        `q_network` are copied (possibly with smoothing via
+        `target_update_tau`) to `target_q_network`.
 
-        If `target_q_network` is not provided, it is created by making a
-        copy of `q_network`, which initializes a new network with the same
-        structure and its own layers and weights.
+        If `target_q_network` is not provided, it is created by
+        making a copy of `q_network`, which initializes a new
+        network with the same structure and its own layers and weights.
 
-        Performing a `Network.copy` does not work when the network instance
-        already has trainable parameters (e.g., has already been built, or
-        when the network is sharing layers with another).  In these cases, it is
-        up to you to build a copy having weights that are not
-        shared with the original `q_network`, so that this can be used as a
-        target network.  If you provide a `target_q_network` that shares any
-        weights with `q_network`, a warning will be logged but no exception
-        is thrown.
+        Network copying is performed via the `Network.copy` superclass method,
+        and may inadvertently lead to the resulting network to share weights
+        with the original.  This can happen if, for example, the original
+        network accepted a pre-built Keras layer in its `__init__`, or
+        accepted a Keras layer that wasn't built, but neglected to create
+        a new copy.
+
+        In these cases, it is up to you to provide a target Network having
+        weights that are not shared with the original `q_network`.
+        If you provide a `target_q_network` that shares any
+        weights with `q_network`, a warning will be logged but
+        no exception is thrown.
+
+        Note; shallow copies of Keras layers may be built via the code:
+
+        ```python
+        new_layer = type(layer).from_config(layer.get_config())
+        ```
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -182,15 +194,9 @@ class DqnAgent(tf_agent.TFAgent):
               epsilon_greedy, boltzmann_temperature))
 
     self._q_network = q_network
-    if target_q_network is None:
-      self._target_q_network = self._q_network.copy(name='TargetQNetwork')
-      # Copy may have been shallow, and variable may inadvertently be shared
-      # between the target and original network.
-      _check_no_shared_variables(self._q_network, self._target_q_network)
-    else:
-      self._target_q_network = target_q_network
-    _check_matching_networks(
-        self._q_network, self._target_q_network)
+    self._target_q_network = common.maybe_copy_target_network_with_checks(
+        self._q_network, target_q_network, 'TargetQNetwork')
+
     self._epsilon_greedy = epsilon_greedy
     self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature
@@ -256,6 +262,13 @@ class DqnAgent(tf_agent.TFAgent):
           policy, epsilon=self._epsilon_greedy)
     policy = greedy_policy.GreedyPolicy(policy)
 
+    # Create self._target_greedy_policy in order to compute target Q-values.
+    target_policy = q_policy.QPolicy(
+        time_step_spec,
+        action_spec,
+        q_network=self._target_q_network)
+    self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
+
     return policy, collect_policy
 
   def _initialize(self):
@@ -289,7 +302,7 @@ class DqnAgent(tf_agent.TFAgent):
 
     # Remove time dim if we are not using a recurrent network.
     if not self._q_network.state_spec:
-      transitions = tf.nest.map_structure(lambda x: tf.squeeze(x, [1]),
+      transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
                                           transitions)
 
     time_steps, policy_steps, next_time_steps = transitions
@@ -373,7 +386,6 @@ class DqnAgent(tf_agent.TFAgent):
       _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
 
     with tf.name_scope('loss'):
-      actions = tf.nest.flatten(actions)[0]
       q_values = self._compute_q_values(time_steps, actions)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
@@ -458,15 +470,13 @@ class DqnAgent(tf_agent.TFAgent):
   def _compute_q_values(self, time_steps, actions):
     q_values, _ = self._q_network(time_steps.observation,
                                   time_steps.step_type)
-    # Handle action_spec.shape=(), and shape=(1,) by using the
-    # multi_dim_actions param.
-    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
-    q_values = common.index_with_actions(
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
+    multi_dim_actions = self._action_spec.shape.ndims > 0
+    return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),
         multi_dim_actions=multi_dim_actions)
-
-    return q_values
 
   def _compute_next_q_values(self, next_time_steps):
     """Compute the q value of the next state for TD error computation.
@@ -479,9 +489,21 @@ class DqnAgent(tf_agent.TFAgent):
     """
     next_target_q_values, _ = self._target_q_network(
         next_time_steps.observation, next_time_steps.step_type)
-    # Reduce_max below assumes q_values are [BxF] or [BxTxF]
-    assert next_target_q_values.shape.ndims in [2, 3]
-    return tf.reduce_max(input_tensor=next_target_q_values, axis=-1)
+    batch_size = (
+        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
+    dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
+    # Find the greedy actions using our target greedy policy. This ensures that
+    # masked actions are respected and helps centralize the greedy logic.
+    greedy_actions = self._target_greedy_policy.action(
+        next_time_steps, dummy_state).action
+
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
+    return common.index_with_actions(
+        next_target_q_values,
+        greedy_actions,
+        multi_dim_actions=multi_dim_actions)
 
 
 @gin.configurable
@@ -506,50 +528,19 @@ class DdqnAgent(DqnAgent):
       A tensor of Q values for the given next state.
     """
     # TODO(b/117175589): Add binary tests for DDQN.
-    next_q_values, _ = self._q_network(next_time_steps.observation,
-                                       next_time_steps.step_type)
-    best_next_actions = tf.cast(
-        tf.argmax(input=next_q_values, axis=-1), dtype=tf.int32)
     next_target_q_values, _ = self._target_q_network(
         next_time_steps.observation, next_time_steps.step_type)
-    multi_dim_actions = best_next_actions.shape.ndims > 1
+    batch_size = (
+        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
+    dummy_state = self._policy.get_initial_state(batch_size)
+    # Find the greedy actions using our greedy policy. This ensures that masked
+    # actions are respected and helps centralize the greedy logic.
+    best_next_actions = self._policy.action(next_time_steps, dummy_state).action
+
+    # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
+    # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
     return common.index_with_actions(
         next_target_q_values,
         best_next_actions,
         multi_dim_actions=multi_dim_actions)
-
-
-def _check_no_shared_variables(network_1, network_2):
-  variables_1 = set(network_1.trainable_variables)
-  variables_2 = set(network_2.trainable_variables)
-  shared = variables_1 & variables_2
-  if shared:
-    raise ValueError(
-        'After making a copy of network \'{}\' to create a target '
-        'network \'{}\', the target network shares weights with '
-        'the original network.  This is not allowed.  If '
-        'you want explicitly share weights with the target network, or '
-        'if your input network shares weights with others, please '
-        'provide a target network which explicitly, selectively, shares '
-        'layers/weights with the input network.  Shared variables found: '
-        '\'{}\'.'.format(network_1.name, network_2.name,
-                         shared))
-
-
-def _check_matching_networks(network_1, network_2):
-  """Check that two networks have matching input specs and variables."""
-  if network_1.input_tensor_spec != network_2.input_tensor_spec:
-    raise ValueError(
-        'Input tensor specs of network and target network '
-        'do not match: {} vs. {}.'.format(
-            network_1.input_tensor_spec, network_2.input_tensor_spec))
-  variables_1 = sorted(network_1.variables, key=lambda v: v.name)
-  variables_2 = sorted(network_2.variables, key=lambda v: v.name)
-  if len(variables_1) != len(variables_2):
-    raise ValueError(
-        'Variables lengths do not match between Q network and target network: '
-        '{} vs. {}'.format(variables_1, variables_2))
-  for v1, v2 in zip(variables_1, variables_2):
-    if v1.dtype != v2.dtype or v1.shape != v2.shape:
-      raise ValueError(
-          'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2))

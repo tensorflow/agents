@@ -21,6 +21,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 from tf_agents.networks import network
+from tf_agents.networks import q_network
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -196,6 +197,36 @@ class QPolicyTest(test_utils.TestCase):
         ValueError,
         'action_spec must be compatible with q_network.action_spec'):
       q_policy.QPolicy(self._time_step_spec, self._action_spec, q_net)
+
+  def testMasking(self):
+    batch_size = 1000
+    num_state_dims = 5
+    num_actions = 8
+    observations = tf.random.uniform([batch_size, num_state_dims])
+    time_step = ts.restart(observations, batch_size=batch_size)
+    input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.int32, 0, num_actions - 1)
+
+    mask = [0, 1, 0, 1, 0, 0, 1, 0]
+    np_mask = np.array(mask)
+    tf_mask = tf.constant([mask for _ in range(batch_size)])
+    q_net = q_network.QNetwork(
+        input_tensor_spec, action_spec,
+        mask_split_fn=lambda observation: (observation, tf_mask))
+    policy = q_policy.QPolicy(
+        ts.time_step_spec(input_tensor_spec), action_spec, q_net)
+
+    # Force creation of variables before global_variables_initializer.
+    policy.variables()
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Sample from the policy 1000 times and ensure that invalid actions are
+    # never chosen.
+    action_step = policy.action(time_step)
+    action = self.evaluate(action_step.action)
+    self.assertEqual(action.shape, (batch_size, 1))
+    self.assertAllEqual(np_mask[action], np.ones([batch_size, 1]))
 
 
 if __name__ == '__main__':

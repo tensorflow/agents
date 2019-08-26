@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import threading
+
 from absl.testing import parameterized
 import numpy as np
 
@@ -29,6 +31,20 @@ from tf_agents.environments import batched_py_environment
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_py_environment
 from tf_agents.trajectories import time_step as ts
+
+COMMON_PARAMETERS = (
+    dict(batch_py_env=True, isolation=True),
+    dict(batch_py_env=False, isolation=True),
+    dict(batch_py_env=True, isolation=False),
+    dict(batch_py_env=False, isolation=False),
+)
+
+
+def get(env, property_name):
+  if isinstance(env, batched_py_environment.BatchedPyEnvironment):
+    assert env.batch_size == 1
+    return getattr(env.envs[0], property_name)
+  return getattr(env, property_name)
 
 
 class PYEnvironmentMock(py_environment.PyEnvironment):
@@ -49,16 +65,19 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
     self.steps = 0
     self.episodes = 0
     self.resets = 0
+    self.last_call_thread_id = threading.current_thread().ident
     self._state = 0
 
   def _reset(self):
     self._state = 0
     self.resets += 1
+    self.last_call_thread_id = threading.current_thread().ident
     return ts.restart([self._state])
 
   def _step(self, action):
     self._state = (self._state + 1) % 3
     self.steps += 1
+    self.last_call_thread_id = threading.current_thread().ident
     self.actions_taken.append(action)
 
     observation = [self._state]
@@ -85,12 +104,23 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertIsInstance(tf_env.pyenv,
                           batched_py_environment.BatchedPyEnvironment)
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testActionSpec(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-    tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  def _get_py_env(self, batch_py_env, isolation, batch_size=None):
+    def _create_env():
+      if batch_size is None:
+        py_env = PYEnvironmentMock()
+      else:
+        py_env = [PYEnvironmentMock() for _ in range(batch_size)]
+      if batch_py_env:
+        py_env = batched_py_environment.BatchedPyEnvironment(
+            py_env if isinstance(py_env, list) else [py_env])
+      return py_env
+    # If using isolation, we'll pass a callable
+    return _create_env if isolation else _create_env()
+
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testActionSpec(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     self.assertTrue(tf_env.batched)
     self.assertEqual(tf_env.batch_size, 1)
     spec = tf_env.action_spec()
@@ -108,14 +138,10 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(spec.shape, tf.TensorShape([]))
     self.assertEqual(spec.name, 'observation')
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testTimeStepSpec(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testTimeStepSpec(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     spec = tf_env.time_step_spec()
 
     # step_type
@@ -138,63 +164,48 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     # observation
     self.assertEqual(type(spec.observation), specs.TensorSpec)
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testResetOp(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(
+      *COMMON_PARAMETERS)
+  def testResetOp(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     reset = tf_env.reset()
     self.evaluate(reset)
-    self.assertEqual(1, py_env.resets)
-    self.assertEqual(0, py_env.steps)
-    self.assertEqual(0, py_env.episodes)
+    self.assertEqual(1, get(tf_env.pyenv, 'resets'))
+    self.assertEqual(0, get(tf_env.pyenv, 'steps'))
+    self.assertEqual(0, get(tf_env.pyenv, 'episodes'))
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testMultipleReset(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testMultipleReset(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
 
     self.evaluate(tf_env.reset())
-    self.assertEqual(1, py_env.resets)
+    self.assertEqual(1, get(tf_env.pyenv, 'resets'))
     self.evaluate(tf_env.reset())
-    self.assertEqual(2, py_env.resets)
+    self.assertEqual(2, get(tf_env.pyenv, 'resets'))
     self.evaluate(tf_env.reset())
-    self.assertEqual(3, py_env.resets)
+    self.assertEqual(3, get(tf_env.pyenv, 'resets'))
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testFirstTimeStep(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testFirstTimeStep(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     time_step = tf_env.current_time_step()
     time_step = self.evaluate(time_step)
     self.assertAllEqual([ts.StepType.FIRST], time_step.step_type)
     self.assertAllEqual([0.0], time_step.reward)
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([0], time_step.observation)
-    self.assertAllEqual([], py_env.actions_taken)
-    self.assertEqual(1, py_env.resets)
-    self.assertEqual(0, py_env.steps)
-    self.assertEqual(0, py_env.episodes)
+    self.assertAllEqual([], get(tf_env.pyenv, 'actions_taken'))
+    self.assertEqual(1, get(tf_env.pyenv, 'resets'))
+    self.assertEqual(0, get(tf_env.pyenv, 'steps'))
+    self.assertEqual(0, get(tf_env.pyenv, 'episodes'))
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testOneStep(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testOneStep(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     time_step = tf_env.current_time_step()
     with tf.control_dependencies([time_step.step_type]):
       action = tf.constant([1])
@@ -204,15 +215,16 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllEqual([0.], time_step.reward)
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([1], time_step.observation)
-    self.assertAllEqual([1], py_env.actions_taken)
-    self.assertEqual(1, py_env.resets)
-    self.assertEqual(1, py_env.steps)
-    self.assertEqual(0, py_env.episodes)
+    self.assertAllEqual([1], get(tf_env.pyenv, 'actions_taken'))
+    self.assertEqual(1, get(tf_env.pyenv, 'resets'))
+    self.assertEqual(1, get(tf_env.pyenv, 'steps'))
+    self.assertEqual(0, get(tf_env.pyenv, 'episodes'))
 
-  def testBatchedFirstTimeStepAndOneStep(self):
-    py_envs = [PYEnvironmentMock() for _ in range(3)]
-    batched_py_env = batched_py_environment.BatchedPyEnvironment(py_envs)
-    tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
+  @parameterized.parameters(dict(isolation=False), dict(isolation=True))
+  def testBatchedFirstTimeStepAndOneStep(self, isolation):
+    py_env = self._get_py_env(
+        batch_py_env=True, isolation=isolation, batch_size=3)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     self.assertEqual(tf_env.batch_size, 3)
     time_step_0 = tf_env.current_time_step()
     time_step_0_val = self.evaluate(time_step_0)
@@ -221,7 +233,7 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllEqual([0.0] * 3, time_step_0_val.reward)
     self.assertAllEqual([1.0] * 3, time_step_0_val.discount)
     self.assertAllEqual(np.array([0, 0, 0]), time_step_0_val.observation)
-    for py_env in py_envs:
+    for py_env in tf_env.pyenv.envs:
       self.assertEqual([], py_env.actions_taken)
       self.assertEqual(1, py_env.resets)
       self.assertEqual(0, py_env.steps)
@@ -235,20 +247,16 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllEqual([0.] * 3, time_step_1_val.reward)
     self.assertAllEqual([1.0] * 3, time_step_1_val.discount)
     self.assertAllEqual(np.array([1, 1, 1]), time_step_1_val.observation)
-    for py_env in py_envs:
+    for py_env in tf_env.pyenv.envs:
       self.assertEqual([1], py_env.actions_taken)
       self.assertEqual(1, py_env.resets)
       self.assertEqual(1, py_env.steps)
       self.assertEqual(0, py_env.episodes)
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testTwoStepsDependenceOnTheFirst(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testTwoStepsDependenceOnTheFirst(self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     time_step = tf_env.current_time_step()
     with tf.control_dependencies([time_step.step_type]):
       action = tf.constant([1])
@@ -261,16 +269,13 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual([2], time_step.observation)
     self.assertEqual(1., time_step.reward)
     self.assertEqual(0., time_step.discount)
-    self.assertEqual([1, 2], py_env.actions_taken)
+    self.assertEqual([1, 2], get(tf_env.pyenv, 'actions_taken'))
 
-  @parameterized.parameters({'batch_py_env': True}, {'batch_py_env': False})
-  def testFirstObservationIsPreservedAfterTwoSteps(self, batch_py_env):
-    py_env = PYEnvironmentMock()
-    if batch_py_env:
-      batched_py_env = batched_py_environment.BatchedPyEnvironment([py_env])
-      tf_env = tf_py_environment.TFPyEnvironment(batched_py_env)
-    else:
-      tf_env = tf_py_environment.TFPyEnvironment(py_env)
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def testFirstObservationIsPreservedAfterTwoSteps(
+      self, batch_py_env, isolation):
+    py_env = self._get_py_env(batch_py_env, isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
     time_step = tf_env.current_time_step()
     with tf.control_dependencies([time_step.step_type]):
       action = tf.constant([1])
@@ -281,6 +286,32 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
     self.assertEqual(np.array([0]), observation)
 
+  @parameterized.parameters(dict(isolation=False), dict(isolation=True))
+  def testIsolation(self, isolation):
+    py_env = self._get_py_env(batch_py_env=False, isolation=isolation)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env, isolation=isolation)
+    last_env_thread = lambda: get(tf_env.pyenv, 'last_call_thread_id')
+    local_thread = threading.current_thread().ident
+    if isolation:
+      self.assertNotEqual(local_thread, last_env_thread())
+    else:
+      self.assertEqual(local_thread, last_env_thread())
+
+    # The remaining tests apply only to isolation == True
+    if not isolation:
+      return
+
+    init_env_thread = last_env_thread()
+    # Ensure that parallel computation does run in a thread different from the
+    # one the pyenv was initialized in: that isolation forced execution on a
+    # single dedicated threadpool.
+    for _ in range(30):
+      self.evaluate([tf_env.reset() for _ in range(16)])
+      self.assertEqual(init_env_thread, last_env_thread())
+      self.evaluate([tf_env.current_time_step() for _ in range(16)])
+      self.assertEqual(init_env_thread, last_env_thread())
+      self.evaluate([tf_env.step(tf.constant([1])) for _ in range(16)])
+      self.assertEqual(init_env_thread, last_env_thread())
 
 if __name__ == '__main__':
   tf.test.main()

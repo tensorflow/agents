@@ -18,14 +18,11 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import numpy as np
-
 from tf_agents.utils import test_utils
 
 
-class TestUtilsTest(absltest.TestCase):
+class TestUtilsTest(test_utils.TestCase):
 
   def testBatchContainsSample(self):
     batch = np.array([[1, 2], [3, 4]])
@@ -49,4 +46,4 @@ class TestUtilsTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

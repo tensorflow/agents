@@ -13,16 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils module."""
+"""Common utility functions for testing."""
 
-from tf_agents.utils import common
-from tf_agents.utils import composite
-from tf_agents.utils import eager_utils
-from tf_agents.utils import example_encoding
-from tf_agents.utils import nest_utils
-from tf_agents.utils import numpy_storage
-from tf_agents.utils import session_utils
-from tf_agents.utils import tensor_normalizer
-from tf_agents.utils import test_utils
-from tf_agents.utils import timer
-from tf_agents.utils import value_ops
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from tf_agents.networks import network
+
+
+class KerasLayersNet(network.Network):
+
+  def __init__(self, observation_spec, action_spec, layer, name=None):
+    super(KerasLayersNet, self).__init__(
+        observation_spec, state_spec=(), name=name)
+    self._layer = layer
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    return self._layer(inputs), network_state

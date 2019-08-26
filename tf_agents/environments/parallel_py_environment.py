@@ -71,6 +71,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     self._action_spec = self._envs[0].action_spec()
     self._observation_spec = self._envs[0].observation_spec()
     self._time_step_spec = self._envs[0].time_step_spec()
+    self._parallel_execution = True
     if any(env.action_spec() != self._action_spec for env in self._envs):
       raise ValueError('All environments must have the same action spec.')
     if any(env.time_step_spec() != self._time_step_spec for env in self._envs):

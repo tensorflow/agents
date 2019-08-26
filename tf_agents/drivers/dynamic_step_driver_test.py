@@ -83,18 +83,23 @@ class DynamicStepDriverTest(test_utils.TestCase):
         variable_scope='observer0')
     num_episodes_observer1 = driver_test_utils.NumEpisodesObserver(
         variable_scope='observer1')
+    num_steps_transition_observer = (
+        driver_test_utils.NumStepsTransitionObserver())
 
     driver = dynamic_step_driver.DynamicStepDriver(
         env,
         policy,
         num_steps=5,
-        observers=[num_episodes_observer0, num_episodes_observer1])
+        observers=[num_episodes_observer0, num_episodes_observer1],
+        transition_observers=[num_steps_transition_observer],
+    )
     run_driver = driver.run(policy_state=policy_state)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(run_driver)
     self.assertEqual(self.evaluate(num_episodes_observer0.num_episodes), 2)
     self.assertEqual(self.evaluate(num_episodes_observer1.num_episodes), 2)
+    self.assertEqual(self.evaluate(num_steps_transition_observer.num_steps), 5)
 
   def testOneStepReplayBufferObservers(self):
     if tf.executing_eagerly():

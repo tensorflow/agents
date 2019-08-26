@@ -27,7 +27,7 @@ import six
 class Driver(object):
   """A driver that takes steps in an environment using a policy."""
 
-  def __init__(self, env, policy, observers=None):
+  def __init__(self, env, policy, observers=None, transition_observers=None):
     """Creates a Driver.
 
     Args:
@@ -38,11 +38,16 @@ class Driver(object):
         Trajectory.time_step is a stacked batch [N+1, batch_size, ...] of
         timesteps and Trajectory.action is a stacked batch
         [N, batch_size, ...] of actions in time major form.
+      transition_observers: A list of observers that are updated after every
+        step in the environment. Each observer is a callable((TimeStep,
+        PolicyStep, NextTimeStep)). The transition is shaped in a just as
+        trajectories are for regular observers.
     """
 
     self._env = env
     self._policy = policy
     self._observers = observers or []
+    self._transition_observers = transition_observers or []
 
   @property
   def env(self):
@@ -51,6 +56,10 @@ class Driver(object):
   @property
   def policy(self):
     return self._policy
+
+  @property
+  def transition_observers(self):
+    return self._transition_observers
 
   @property
   def observers(self):

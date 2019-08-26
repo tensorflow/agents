@@ -20,8 +20,6 @@ from __future__ import print_function
 
 import collections
 import math
-
-from absl.testing import absltest
 from absl.testing import parameterized
 from absl.testing.absltest import mock
 
@@ -35,6 +33,7 @@ from tf_agents.environments import random_py_environment
 from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
 class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
@@ -87,7 +86,7 @@ class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
     self.assertEqual(1, mock_env.close.call_count)
 
 
-class TimeLimitWrapperTest(absltest.TestCase):
+class TimeLimitWrapperTest(test_utils.TestCase):
 
   def test_limit_duration_wrapped_env_forwards_calls(self):
     cartpole_env = gym.spec('CartPole-v1').make()
@@ -175,7 +174,7 @@ class TimeLimitWrapperTest(absltest.TestCase):
     self.assertTrue(last_time_step.is_last())
 
 
-class ActionRepeatWrapperTest(absltest.TestCase):
+class ActionRepeatWrapperTest(test_utils.TestCase):
 
   def _get_mock_env_episode(self):
     mock_env = mock.MagicMock()
@@ -224,7 +223,7 @@ class ActionRepeatWrapperTest(absltest.TestCase):
     self.assertEqual([2], time_step.observation)
 
 
-class RunStatsWrapperTest(absltest.TestCase):
+class RunStatsWrapperTest(test_utils.TestCase):
 
   def test_episode_count(self):
     cartpole_env = gym.make('CartPole-v1')
@@ -291,7 +290,7 @@ class RunStatsWrapperTest(absltest.TestCase):
       resets += 1
 
 
-class ActionDiscretizeWrapper(absltest.TestCase):
+class ActionDiscretizeWrapper(test_utils.TestCase):
 
   def test_discrete_spec_scalar_limit(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
@@ -475,7 +474,7 @@ class ActionDiscretizeWrapper(absltest.TestCase):
                                            action['action1'])
 
 
-class ActionClipWrapper(absltest.TestCase):
+class ActionClipWrapper(test_utils.TestCase):
 
   def test_clip(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
@@ -550,7 +549,7 @@ class ActionClipWrapper(absltest.TestCase):
       np.testing.assert_array_almost_equal([3, -3], action[1][1])
 
 
-class ActionOffsetWrapperTest(absltest.TestCase):
+class ActionOffsetWrapperTest(test_utils.TestCase):
 
   def test_nested(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
@@ -873,7 +872,7 @@ class CountingEnv(py_environment.PyEnvironment):
     return ts.termination(self._count.copy(), 1)
 
 
-class HistoryWrapperTest(absltest.TestCase):
+class HistoryWrapperTest(test_utils.TestCase):
 
   def test_observation_spec_changed(self):
     cartpole_env = gym.spec('CartPole-v1').make()
@@ -931,4 +930,4 @@ class HistoryWrapperTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

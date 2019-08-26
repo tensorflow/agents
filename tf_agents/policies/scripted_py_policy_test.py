@@ -18,15 +18,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import numpy as np
 
 from tf_agents.policies import scripted_py_policy
 from tf_agents.specs import array_spec
+from tf_agents.utils import test_utils
 
 
-class ScriptedPyPolicyTest(absltest.TestCase):
+class ScriptedPyPolicyTest(test_utils.TestCase):
 
   def testFollowsScript(self):
     action_spec = [
@@ -190,4 +189,4 @@ class ScriptedPyPolicyTest(absltest.TestCase):
     self.assertEqual(policy.policy_state_spec, ())
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

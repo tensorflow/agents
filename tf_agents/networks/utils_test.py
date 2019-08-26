@@ -24,37 +24,49 @@ import tensorflow as tf
 from tf_agents.networks import utils
 
 
+def _to_dense(st):
+  return tf.scatter_nd(st.indices, st.values, st.dense_shape)
+
+
 class NetworkUtilsTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(NetworkUtilsTest, self).setUp()
+    self._tensors = [
+        tf.constant(0, shape=(5, 4, 3, 2, 1)),
+        tf.SparseTensor(
+            indices=tf.zeros((0, 5), dtype=tf.int64),
+            values=tf.zeros((0,), dtype=tf.float32),
+            dense_shape=tf.constant([5, 4, 3, 2, 1], dtype=tf.int64))
+    ]
 
   def test_flatten_and_unflatten_ops(self):
     batch_squash = utils.BatchSquash(2)
-
-    tensor = tf.constant(0, shape=(5, 4, 3, 2, 1))
-    flat = batch_squash.flatten(tensor)
-    unflat = batch_squash.unflatten(flat)
-
-    self.assertAllEqual((20, 3, 2, 1), flat.shape)
-    self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
+    for tensor in self._tensors:
+      flat = batch_squash.flatten(tensor)
+      unflat = batch_squash.unflatten(flat)
+      self.assertAllEqual((20, 3, 2, 1), flat.shape)
+      self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
 
   def test_flatten_and_unflatten_ops_no_batch_dims(self):
     batch_squash = utils.BatchSquash(0)
 
-    tensor = tf.constant(0, shape=(5, 4, 3, 2, 1))
-    flat = batch_squash.flatten(tensor)
-    unflat = batch_squash.unflatten(flat)
+    for tensor in self._tensors:
+      flat = batch_squash.flatten(tensor)
+      unflat = batch_squash.unflatten(flat)
 
-    self.assertAllEqual((1, 5, 4, 3, 2, 1), flat.shape)
-    self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
+      self.assertAllEqual((1, 5, 4, 3, 2, 1), flat.shape)
+      self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
 
   def test_flatten_and_unflatten_ops_one_batch_dims(self):
     batch_squash = utils.BatchSquash(1)
 
-    tensor = tf.constant(0, shape=(5, 4, 3, 2, 1))
-    flat = batch_squash.flatten(tensor)
-    unflat = batch_squash.unflatten(flat)
+    for tensor in self._tensors:
+      flat = batch_squash.flatten(tensor)
+      unflat = batch_squash.unflatten(flat)
 
-    self.assertAllEqual((5, 4, 3, 2, 1), flat.shape)
-    self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
+      self.assertAllEqual((5, 4, 3, 2, 1), flat.shape)
+      self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
 
   def test_mlp_layers(self):
     layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
