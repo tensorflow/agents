@@ -262,9 +262,7 @@ class DqnAgent(tf_agent.TFAgent):
           policy, epsilon=self._epsilon_greedy)
     policy = greedy_policy.GreedyPolicy(policy)
 
-    # Create self._greedy_policy and self._target_greedy_policy in order to
-    # compute target Q-values.
-    self._greedy_policy = policy
+    # Create self._target_greedy_policy in order to compute target Q-values.
     target_policy = q_policy.QPolicy(
         time_step_spec,
         action_spec,
@@ -495,7 +493,7 @@ class DqnAgent(tf_agent.TFAgent):
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
     # Find the greedy actions using our target greedy policy. This ensures that
-    # masked actions (and other logic) are respected.
+    # masked actions are respected and helps centralize the greedy logic.
     greedy_actions = self._target_greedy_policy.action(
         next_time_steps, dummy_state).action
 
@@ -534,11 +532,10 @@ class DdqnAgent(DqnAgent):
         next_time_steps.observation, next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
-    dummy_state = self._greedy_policy.get_initial_state(batch_size)
+    dummy_state = self._policy.get_initial_state(batch_size)
     # Find the greedy actions using our greedy policy. This ensures that masked
-    # actions (and other logic) are respected.
-    best_next_actions = self._greedy_policy.action(
-        next_time_steps, dummy_state).action
+    # actions are respected and helps centralize the greedy logic.
+    best_next_actions = self._policy.action(next_time_steps, dummy_state).action
 
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
