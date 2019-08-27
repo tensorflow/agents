@@ -51,8 +51,8 @@ class SuiteMujocoTest(test_utils.TestCase):
 
   def testActionSpec(self):
     env = suite_mujoco.load('HalfCheetah-v2')
-    self.assertEqual(np.float32, env.observation_spec().dtype)
-    self.assertEqual((17,), env.observation_spec().shape)
+    self.assertEqual(np.float32, env.action_spec().dtype)
+    self.assertEqual((6,), env.action_spec().shape)
 
   def testGinConfig(self):
     gin.parse_config_file(
