@@ -60,7 +60,7 @@ class DummyNet(network.Network):
 
     if mask_split_fn:
       # Extract the network-specific portion of the observation.
-      inputs = self._mask_split_fn(inputs)[0]
+      inputs, _ = self._mask_split_fn(inputs)
 
     inputs = tf.cast(inputs[0], tf.float32)
     for layer in self.layers:
@@ -388,7 +388,7 @@ class DqnAgentTest(test_utils.TestCase):
         q_network=q_net,
         optimizer=None)
 
-    # For observations, the masks are set up so that all actions are valid.
+    # For `observations`, the masks are set up so that all actions are valid.
     observations = ([tf.constant([[1, 2], [3, 4]], dtype=tf.float32)],
                     tf.constant([[1, 1], [1, 1]], dtype=tf.int32))
     time_steps = ts.restart(observations, batch_size=2)
@@ -399,7 +399,7 @@ class DqnAgentTest(test_utils.TestCase):
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
 
-    # For next_observations, the masks are set up so that only one action is
+    # For `next_observations`, the masks are set up so that only one action is
     # valid for each element in the batch.
     next_observations = ([tf.constant([[5, 6], [7, 8]], dtype=tf.float32)],
                          tf.constant([[0, 1], [1, 0]], dtype=tf.int32))

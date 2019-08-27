@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -98,7 +99,16 @@ class CategoricalQPolicy(tf_policy.Base):
                                              policy_state)
     q_logits.shape.assert_has_rank(3)
     q_values = common.convert_q_logits_to_values(q_logits, self._support)
-    return policy_step.PolicyStep(
-        tfp.distributions.Categorical(logits=q_values,
-                                      dtype=self.action_spec.dtype),
-        policy_state)
+
+    logits = q_values
+    mask_split_fn = self._q_network.mask_split_fn
+
+    if mask_split_fn:
+      _, mask = mask_split_fn(time_step.observation)
+      # Overwrite the logits for invalid actions to -inf.
+      neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
+      logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
+
+    dist = tfp.distributions.Categorical(
+        logits=logits, dtype=self.action_spec.dtype)
+    return policy_step.PolicyStep(dist, policy_state)

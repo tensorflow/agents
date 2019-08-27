@@ -49,6 +49,7 @@ class CategoricalQNetwork(network.Network):
                input_tensor_spec,
                action_spec,
                num_atoms=51,
+               mask_split_fn=None,
                preprocessing_layers=None,
                preprocessing_combiner=None,
                conv_layer_params=None,
@@ -72,6 +73,16 @@ class CategoricalQNetwork(network.Network):
       action_spec: A `tensor_spec.BoundedTensorSpec` representing the actions.
       num_atoms: The number of atoms to use in our approximate probability
         distributions. Defaults to 51 to produce C51.
+      mask_split_fn: A function used for masking valid/invalid actions with each
+        state of the environment. The function takes in a full observation and
+        returns a tuple consisting of 1) the part of the observation intended as
+        input to the network and 2) the mask. An example mask_split_fn could be
+        as simple as:
+        ```
+        def mask_split_fn(observation):
+          return observation['network_input'], observation['mask']
+        ```
+        If None, masking is not applied.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
         representing preprocessing for the different observations.
         All of these layers must not be already built. For more details see
@@ -95,7 +106,8 @@ class CategoricalQNetwork(network.Network):
     super(CategoricalQNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
-        name=name)
+        name=name,
+        mask_split_fn=mask_split_fn)
 
     if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
       raise TypeError('action_spec must be a BoundedTensorSpec. Got: %s' % (
@@ -110,6 +122,7 @@ class CategoricalQNetwork(network.Network):
     self._q_network = q_network.QNetwork(
         input_tensor_spec=input_tensor_spec,
         action_spec=q_network_action_spec,
+        mask_split_fn=mask_split_fn,
         preprocessing_layers=preprocessing_layers,
         preprocessing_combiner=preprocessing_combiner,
         conv_layer_params=conv_layer_params,

@@ -196,6 +196,13 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
           policy, epsilon=self._epsilon_greedy)
     self._policy = greedy_policy.GreedyPolicy(policy)
 
+    target_policy = categorical_q_policy.CategoricalQPolicy(
+        min_q_value,
+        max_q_value,
+        self._target_q_network,
+        self._action_spec)
+    self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
+
   def _loss(self,
             experience,
             td_errors_loss_fn=tf.compat.v1.losses.huber_loss,
@@ -258,8 +265,6 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       # q_logits contains the Q-value logits for all actions.
       q_logits, _ = self._q_network(time_steps.observation,
                                     time_steps.step_type)
-      next_q_distribution = self._next_q_distribution(next_time_steps,
-                                                      batch_squash)
 
       if batch_squash is not None:
         # Squash outer dimensions to a single dimensions for facilitation
@@ -269,6 +274,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         actions = batch_squash.flatten(actions)
         next_time_steps = tf.nest.map_structure(batch_squash.flatten,
                                                 next_time_steps)
+
+      next_q_distribution = self._next_q_distribution(next_time_steps)
 
       if actions.shape.ndims > 1:
         actions = tf.squeeze(actions, list(range(1, actions.shape.ndims)))
@@ -391,14 +398,11 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       return tf_agent.LossInfo(critic_loss, dqn_agent.DqnLossInfo(td_loss=(),
                                                                   td_error=()))
 
-  def _next_q_distribution(self, next_time_steps, batch_squash=None):
+  def _next_q_distribution(self, next_time_steps):
     """Compute the q distribution of the next state for TD error computation.
 
     Args:
       next_time_steps: A batch of next timesteps
-      batch_squash: An optional BatchSquash for squashing outer dimensions
-        of a Q network, e.g. the time dimension of a recurrent categorical
-        policy network.
 
     Returns:
       A [batch_size, num_atoms] tensor representing the Q-distribution for the
@@ -406,15 +410,18 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     """
     next_target_logits, _ = self._target_q_network(next_time_steps.observation,
                                                    next_time_steps.step_type)
-    if batch_squash is not None:
-      next_target_logits = batch_squash.flatten(next_target_logits)
-
+    batch_size = next_target_logits.shape[0] or tf.shape(next_target_logits)[0]
     next_target_probabilities = tf.nn.softmax(next_target_logits)
     next_target_q_values = tf.reduce_sum(
         self._support * next_target_probabilities, axis=-1)
-    next_qt_argmax = tf.argmax(next_target_q_values, axis=-1)[:, None]
+    dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
+    # Find the greedy actions using our target greedy policy. This ensures that
+    # masked actions are respected and helps centralize the greedy logic.
+    greedy_actions = self._target_greedy_policy.action(
+        next_time_steps, dummy_state).action
+    next_qt_argmax = tf.cast(greedy_actions, tf.int32)[:, None]
     batch_indices = tf.range(
-        tf.cast(tf.shape(next_target_q_values)[0], tf.int64))[:, None]
+        tf.cast(tf.shape(next_target_q_values)[0], tf.int32))[:, None]
     next_qt_argmax = tf.concat([batch_indices, next_qt_argmax], axis=-1)
     return tf.gather_nd(next_target_probabilities, next_qt_argmax)
 

@@ -112,6 +112,7 @@ class QPolicy(tf_policy.Base):
       if self._flat_action_spec.shape.ndims == 1:
         mask = tf.expand_dims(mask, -2)
 
+      # Overwrite the logits for invalid actions to -inf.
       neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
       logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
 

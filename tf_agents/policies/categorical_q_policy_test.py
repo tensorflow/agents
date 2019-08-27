@@ -211,6 +211,41 @@ class CategoricalQPolicyTest(test_utils.TestCase):
       self.assertGreaterEqual(action, self._action_spec.minimum)
       self.assertLessEqual(action, self._action_spec.maximum)
 
+  def testMasking(self):
+    batch_size = 1000
+    num_state_dims = 5
+    num_actions = 8
+    observations = tf.random.uniform([batch_size, num_state_dims])
+    time_step = ts.restart(observations, batch_size=batch_size)
+    input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        [1], tf.int32, 0, num_actions - 1)
+
+    mask = [0, 1, 0, 1, 0, 0, 1, 0]
+    np_mask = np.array(mask)
+    tf_mask = tf.constant([mask for _ in range(batch_size)])
+    q_network = categorical_q_network.CategoricalQNetwork(
+        input_tensor_spec=input_tensor_spec,
+        action_spec=action_spec,
+        num_atoms=3,
+        mask_split_fn=lambda observation: (observation, tf_mask),
+        fc_layer_params=[4])
+    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
+                                                     self._max_q_value,
+                                                     q_network,
+                                                     action_spec)
+
+    # Force creation of variables before global_variables_initializer.
+    policy.variables()
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Sample from the policy 1000 times and ensure that invalid actions are
+    # never chosen.
+    action_step = policy.action(time_step)
+    action = self.evaluate(action_step.action)
+    self.assertEqual(action.shape, (batch_size,))
+    self.assertAllEqual(np_mask[action], np.ones([batch_size]))
+
 
 if __name__ == '__main__':
   tf.test.main()
