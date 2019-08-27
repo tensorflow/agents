@@ -311,9 +311,13 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     def get_next(_):
       return self.get_next(sample_batch_size, num_steps, time_stacked=True)
 
-    return tf.data.experimental.Counter().map(
-        get_next,
-        num_parallel_calls=num_parallel_calls)
+    dataset = tf.data.experimental.Counter().map(
+        get_next, num_parallel_calls=num_parallel_calls)
+    options = tf.data.Options()
+    if hasattr(options, 'experimental_allow_stateful'):
+      options.experimental_allow_stateful = True
+      dataset = dataset.with_options(options)
+    return dataset
 
   def _single_deterministic_pass_dataset(self,
                                          sample_batch_size=None,
