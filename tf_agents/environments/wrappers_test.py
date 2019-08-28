@@ -19,7 +19,10 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import cProfile
 import math
+import pstats
+
 from absl.testing import parameterized
 from absl.testing.absltest import mock
 
@@ -927,6 +930,43 @@ class HistoryWrapperTest(test_utils.TestCase):
     time_step = history_env.step(7)
     self.assertEqual([1, 2, 3], time_step.observation['observation'].tolist())
     self.assertEqual([5, 6, 7], time_step.observation['action'].tolist())
+
+
+class PerformanceProfilerWrapperTest(test_utils.TestCase):
+
+  def test_profiling(self):
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    profile = [None]
+    def profile_fn(p):
+      self.assertIsInstance(p, cProfile.Profile)
+      profile[0] = p
+
+    env = wrappers.PerformanceProfiler(
+        env, process_profile_fn=profile_fn,
+        process_steps=2)
+
+    env.reset()
+
+    # Resets are also profiled.
+    s = pstats.Stats(env._profile)
+    self.assertGreater(s.total_calls, 0)
+
+    for _ in range(2):
+      env.step(1)
+
+    self.assertIsNotNone(profile[0])
+    previous_profile = profile[0]
+
+    updated_s = pstats.Stats(profile[0])
+    self.assertGreater(updated_s.total_calls, s.total_calls)
+
+    for _ in range(2):
+      env.step(1)
+
+    self.assertIsNotNone(profile[0])
+    # We saw a new profile.
+    self.assertNotEqual(profile[0], previous_profile)
 
 
 if __name__ == '__main__':
