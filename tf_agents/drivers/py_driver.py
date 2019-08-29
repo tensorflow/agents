@@ -22,6 +22,7 @@ from __future__ import print_function
 import numpy as np
 from tf_agents.drivers import driver
 from tf_agents.trajectories import trajectory
+from tf_agents.utils import nest_utils
 
 
 class PyDriver(driver.Driver):
@@ -77,6 +78,7 @@ class PyDriver(driver.Driver):
       next_time_step = self.env.step(action_step.action)
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
+      traj = nest_utils.batch_nested_array(traj)
       for observer in self.observers:
         observer(traj)
 

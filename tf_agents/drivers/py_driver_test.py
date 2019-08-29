@@ -164,29 +164,29 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
 
     expected_trajectories = [
         trajectory.Trajectory(
-            step_type=np.array([0, 0]),
-            observation=np.array([0, 0]),
-            action=np.array([2, 1]),
-            policy_info=np.array([4, 2]),
-            next_step_type=np.array([1, 1]),
-            reward=np.array([1., 1.]),
-            discount=np.array([1., 1.])),
+            step_type=np.array([[0, 0]]),
+            observation=np.array([[0, 0]]),
+            action=np.array([[2, 1]]),
+            policy_info=np.array([[4, 2]]),
+            next_step_type=np.array([[1, 1]]),
+            reward=np.array([[1., 1.]]),
+            discount=np.array([[1., 1.]])),
         trajectory.Trajectory(
-            step_type=np.array([1, 1]),
-            observation=np.array([2, 1]),
-            action=np.array([1, 2]),
-            policy_info=np.array([2, 4]),
-            next_step_type=np.array([2, 1]),
-            reward=np.array([1., 1.]),
-            discount=np.array([0., 1.])),
+            step_type=np.array([[1, 1]]),
+            observation=np.array([[2, 1]]),
+            action=np.array([[1, 2]]),
+            policy_info=np.array([[2, 4]]),
+            next_step_type=np.array([[2, 1]]),
+            reward=np.array([[1., 1.]]),
+            discount=np.array([[0., 1.]])),
         trajectory.Trajectory(
-            step_type=np.array([2, 1]),
-            observation=np.array([3, 3]),
-            action=np.array([2, 1]),
-            policy_info=np.array([4, 2]),
-            next_step_type=np.array([0, 2]),
-            reward=np.array([0., 1.]),
-            discount=np.array([1., 0.]))
+            step_type=np.array([[2, 1]]),
+            observation=np.array([[3, 3]]),
+            action=np.array([[2, 1]]),
+            policy_info=np.array([[4, 2]]),
+            next_step_type=np.array([[0, 2]]),
+            reward=np.array([[0., 1.]]),
+            discount=np.array([[1., 0.]]))
     ]
 
     env1 = driver_test_utils.PyEnvironmentMock(final_state=3)
