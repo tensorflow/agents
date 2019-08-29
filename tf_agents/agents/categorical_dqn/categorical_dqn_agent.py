@@ -179,8 +179,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
           'different numbers of atoms: {} vs. {}'.format(
               num_atoms, target_num_atoms))
     self._num_atoms = num_atoms
-    self._min_q_value = min_q_value
-    self._max_q_value = max_q_value
+    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
+    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
     self._support = tf.linspace(min_q_value, max_q_value, num_atoms)
 
     policy = categorical_q_policy.CategoricalQPolicy(

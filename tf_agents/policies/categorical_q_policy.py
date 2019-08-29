@@ -70,10 +70,10 @@ class CategoricalQPolicy(tf_policy.Base):
           action_spec,))
 
     self._temperature = tf.convert_to_tensor(temperature, dtype=tf.float32)
-    self._min_q_value = min_q_value
-    self._max_q_value = max_q_value
     self._num_atoms = q_network.num_atoms
     self._q_network = q_network
+    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
+    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
     self._support = tf.linspace(min_q_value, max_q_value, self._num_atoms)
     self._action_dtype = action_spec.dtype
 
