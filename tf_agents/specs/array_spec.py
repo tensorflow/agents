@@ -167,7 +167,7 @@ class ArraySpec(object):
       TypeError: If the shape is not an iterable or if the `dtype` is an invalid
         numpy dtype.
     """
-    self._shape = tuple(shape)
+    self._shape = tf.TensorShape(list(shape))
     self._dtype = np.dtype(dtype)
     self._name = name
 

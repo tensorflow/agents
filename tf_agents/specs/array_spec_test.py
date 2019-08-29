@@ -262,13 +262,13 @@ class ArraySpecTest(parameterized.TestCase):
   def testFromArray(self):
     spec = array_spec.ArraySpec.from_array(np.array([1, 2]), "test")
     self.assertEqual(spec.shape, (2,))
-    self.assertEqual(spec.dtype, np.int64)
+    self.assertEqual(spec.dtype, np.int32)
     self.assertEqual(spec.name, "test")
 
   def testFromArrayWithScalar(self):
     spec = array_spec.ArraySpec.from_array(5, "test")
     self.assertEqual(spec.shape, tuple())
-    self.assertEqual(spec.dtype, np.int64)
+    self.assertEqual(spec.dtype, np.int32)
     self.assertEqual(spec.name, "test")
 
   def testFromArrayWithNonNumeric(self):
@@ -515,6 +515,15 @@ class ArraySpecTypeTest(parameterized.TestCase):
     self.assertIs(
         tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True)
 
+class ShapeArraySpecTest(parameterized.TestCase):
+
+  def testShapeHasNumElements(self):
+      spec = array_spec.ArraySpec((2, 3), dtype=np.int32)
+      self.assertEqual(6, spec.shape.num_elements())
+
+  def testShapeHasAsList(self):
+      spec = array_spec.ArraySpec((2, 3), dtype=np.int32)
+      self.assertEqual([2, 3], spec.shape.as_list())
 
 if __name__ == "__main__":
   tf.test.main()
