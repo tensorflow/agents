@@ -21,7 +21,9 @@ from __future__ import print_function
 
 import functools
 import os
+
 from absl import logging
+import distutils.version
 
 import tensorflow as tf
 
@@ -42,6 +44,17 @@ For unit tests, subclass `tf_agents.utils.test_utils.TestCase`.
 
 def resource_variables_enabled():
   return tf.compat.v1.resource_variables_enabled()
+
+
+_IN_LEGACY_TF1 = (
+    tf.__git_version__ != 'unknown'
+    and tf.__version__ != '1.15.0'
+    and (distutils.version.LooseVersion(tf.__version__) <=
+         distutils.version.LooseVersion('1.15.0.dev20190821')))
+
+
+def in_legacy_tf1():
+  return _IN_LEGACY_TF1
 
 
 def function(*args, **kwargs):

@@ -918,5 +918,11 @@ class NetworkVariableChecks(tf.test.TestCase):
       common.check_matching_networks(q_net_1, q_net_2)
 
 
+class LegacyTF1Test(test_utils.TestCase):
+
+  def test_in_legacy_tf1(self):
+    self.assertIsInstance(common.in_legacy_tf1(), bool)
+
+
 if __name__ == '__main__':
   tf.test.main()
