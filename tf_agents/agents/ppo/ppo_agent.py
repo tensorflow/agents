@@ -596,11 +596,10 @@ class PPOAgent(tf_agent.TFAgent):
           name='l2_regularization_loss',
           data=total_l2_regularization_loss,
           step=self.train_step_counter)
-      if self._entropy_regularization:
-        tf.compat.v2.summary.scalar(
-            name='entropy_regularization_loss',
-            data=total_entropy_regularization_loss,
-            step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='entropy_regularization_loss',
+          data=total_entropy_regularization_loss,
+          step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='kl_penalty_loss',
           data=total_kl_penalty_loss,
