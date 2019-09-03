@@ -161,8 +161,10 @@ class Network(keras_network.Network):
     except ValueError as e:
       traceback = sys.exc_info()[2]
       six.reraise(
-          ValueError, "Failed to call build on the network when accessing "
-          "variables. Message: {!r}.".format(e), traceback)
+          ValueError,
+          ValueError("Failed to call build on the network when "
+                     "accessing variables. Message: {!r}.".format(e)),
+          traceback)
     return self.weights
 
   @property
@@ -180,8 +182,10 @@ class Network(keras_network.Network):
     except ValueError as e:
       traceback = sys.exc_info()[2]
       six.reraise(
-          ValueError, "Failed to call build on the network when accessing "
-          "trainable_variables. Message: {!r}.".format(e), traceback)
+          ValueError,
+          ValueError("Failed to call build on the network when "
+                     "accessing trainable_variables. Message: {!r}.".format(e)),
+          traceback)
     return self.trainable_weights
 
   def copy(self, **kwargs):
