@@ -54,6 +54,10 @@ class ReplayBuffer(tf.Module):
     """Returns the capacity of the replay buffer."""
     return self._capacity
 
+  def num_frames(self):
+    """Returns the number of frames in the replay buffer."""
+    return self._num_frames()
+
   def add_batch(self, items):
     """Adds a batch of items to the replay buffer.
 
@@ -200,6 +204,11 @@ class ReplayBuffer(tf.Module):
     return self._clear()
 
   # Subclasses must implement these methods.
+  @abc.abstractmethod
+  def _num_frames(self):
+    """Returns the number of frames in the replay buffer."""
+    raise NotImplementedError
+
   @abc.abstractmethod
   def _add_batch(self, items):
     """Adds a batch of items to the replay buffer."""

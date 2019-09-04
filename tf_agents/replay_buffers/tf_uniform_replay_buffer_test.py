@@ -593,6 +593,34 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       replay_buffer.as_dataset(
           single_deterministic_pass=True, num_steps=4)
 
+  @parameterized.named_parameters(
+      ('BatchSizeOne', 1),
+      ('BatchSizeFive', 5),
+  )
+  def testNumFrames(self, batch_size):
+    spec = specs.TensorSpec([], tf.int64, 'action')
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+        spec, batch_size=batch_size, max_length=12)
+
+    @common.function(autograph=True)
+    def add_data():
+      for i in tf.range(10, dtype=tf.int64):
+        batch = tf.range(i, i + batch_size, 1, dtype=tf.int64)
+        replay_buffer.add_batch(batch)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(add_data())
+
+    num_frames = replay_buffer.num_frames()
+    num_frames_value = self.evaluate(num_frames)
+    expected = 10 * batch_size
+    self.assertEqual(expected, num_frames_value)
+
+    self.evaluate(add_data())
+    num_frames = replay_buffer.num_frames()
+    num_frames_value = self.evaluate(num_frames)
+    capacity = self.evaluate(replay_buffer._capacity)
+    self.assertEqual(capacity, num_frames_value)
 
 if __name__ == '__main__':
   tf.test.main()

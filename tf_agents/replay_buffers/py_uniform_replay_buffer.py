@@ -91,6 +91,10 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
   def size(self):
     return self._np_state.size
 
+  def _num_frames(self):
+    raise NotImplementedError(
+        'num_frames is not yet implemented in PyUniformReplayBuffer')
+
   def _add_batch(self, items):
     outer_shape = nest_utils.get_outer_array_shape(items, self._data_spec)
     if outer_shape[0] != 1:

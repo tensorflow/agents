@@ -278,6 +278,10 @@ class TFRecordReplayBuffer(replay_buffer.ReplayBuffer):
     self.flush()
     return False
 
+  def _num_frames(self):
+    raise NotImplementedError(
+        'num_frames is not yet implemented in TFRecordReplayBuffer')
+
   def _add_batch(self, items):
     """Adds a batch of single steps for the corresponding episodes IDs.
 

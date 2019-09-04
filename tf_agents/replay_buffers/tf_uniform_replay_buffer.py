@@ -170,6 +170,11 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
   # Methods defined in ReplayBuffer base class
 
+  def _num_frames(self):
+    num_items_single_batch_segment = self._get_last_id() + 1
+    total_frames = num_items_single_batch_segment * self._batch_size
+    return tf.minimum(total_frames, self._capacity)
+
   def _add_batch(self, items):
     """Adds a batch of items to the replay buffer.
 
