@@ -25,11 +25,13 @@ import tensorflow as tf
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.agents.sac import sac_agent
 from tf_agents.networks import actor_distribution_rnn_network
+from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.trajectories.policy_step import PolicyStep
 from tf_agents.utils import common
+from tf_agents.utils import test_utils
 
 
 class _MockDistribution(object):
@@ -69,15 +71,22 @@ class DummyActorPolicy(object):
     return ()
 
 
-class DummyCriticNet(object):
+class DummyCriticNet(network.Network):
+
+  def __init__(self):
+    super(DummyCriticNet, self).__init__(
+        input_tensor_spec=(tensor_spec.TensorSpec([], tf.float32),
+                           tensor_spec.TensorSpec([], tf.float32)),
+        state_spec=(), name=None)
 
   def copy(self, name=''):
     del name
     return copy.copy(self)
 
-  def __call__(self, inputs, step_type):
-    observation, actions = inputs
+  def call(self, inputs, step_type, network_state=()):
     del step_type
+    del network_state
+    observation, actions = inputs
     actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
 
     states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
@@ -91,27 +100,11 @@ class DummyCriticNet(object):
     # Biggest state is best state.
     return value + q_value, ()
 
-  def state_spec(self):
-    return ()
 
-  @property
-  def trainable_variables(self):
-    return []
-
-  @property
-  def variables(self):
-    return []
-
-  @property
-  def input_tensor_spec(self):
-    return None
-
-
-class SacAgentTest(tf.test.TestCase):
+class SacAgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(SacAgentTest, self).setUp()
-    tf.compat.v1.enable_resource_variables()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)

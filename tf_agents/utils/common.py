@@ -1070,7 +1070,9 @@ def check_no_shared_variables(network_1, network_2):
     network_2: A network.Network.
 
   Raises:
-    ValueError if there are any common trainable variables.
+    ValueError: if there are any common trainable variables.
+    ValueError: if one of the networks has not yet been built
+      (e.g. user must call `create_variables`).
   """
   variables_1 = {id(v): v for v in network_1.trainable_variables}
   variables_2 = {id(v): v for v in network_2.trainable_variables}
@@ -1099,8 +1101,10 @@ def check_matching_networks(network_1, network_2):
     network_2: A network.Network.
 
   Raises:
-    ValueError if the networks differ in input_spec, variables (number, dtype or
-      shape).
+    ValueError: if the networks differ in input_spec, variables (number, dtype,
+      or shape).
+    ValueError: if either of the networks has not been built yet
+      (e.g. user must call `create_variables`).
   """
   if network_1.input_tensor_spec != network_2.input_tensor_spec:
     raise ValueError('Input tensor specs of network and target network '
@@ -1121,6 +1125,7 @@ def maybe_copy_target_network_with_checks(network, target_network=None,
                                           name='TargetNetwork'):
   if target_network is None:
     target_network = network.copy(name=name)
+    target_network.create_variables()
     # Copy may have been shallow, and variable may inadvertently be shared
     # between the target and original network.
     check_no_shared_variables(network, target_network)

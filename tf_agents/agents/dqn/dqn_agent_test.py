@@ -55,7 +55,8 @@ class DummyNet(network.Network):
                                                                    [1, 1]]),
             bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     mask_split_fn = self.mask_split_fn
 
     if mask_split_fn:

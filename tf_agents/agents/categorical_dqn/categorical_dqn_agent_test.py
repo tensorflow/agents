@@ -78,7 +78,8 @@ class DummyCategoricalNet(network.Network):
   def num_atoms(self):
     return self._num_atoms
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     mask_split_fn = self.mask_split_fn
 
     if mask_split_fn:
@@ -101,7 +102,8 @@ class KerasLayersNet(network.Network):
     self._layer = layer
     self.num_atoms = num_atoms  # Dummy, this doesn't match the layer output.
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     return self._layer(inputs), network_state
 
 

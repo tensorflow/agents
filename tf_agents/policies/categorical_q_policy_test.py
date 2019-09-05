@@ -73,7 +73,8 @@ class DummyCategoricalNet(network.Network):
   def num_atoms(self):
     return self._num_atoms
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self._dummy_layers:
       inputs = layer(inputs)

@@ -29,5 +29,6 @@ class KerasLayersNet(network.Network):
         observation_spec, state_spec=(), name=name)
     self._layer = layer
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     return self._layer(inputs), network_state

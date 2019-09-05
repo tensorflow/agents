@@ -30,7 +30,8 @@ from tf_agents.utils import test_utils
 class DummyNet(network.Network):
 
   def __init__(self, name=None, num_actions=2):
-    super(DummyNet, self).__init__(name, (), 'DummyNet')
+    super(DummyNet, self).__init__(
+        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyNet')
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
@@ -38,7 +39,8 @@ class DummyNet(network.Network):
                                                                    [1, 1.5]]),
             bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
@@ -60,7 +62,6 @@ class BoltzmannPolicyTest(test_utils.TestCase):
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
-    self.assertEmpty(policy.variables())
 
   def testAction(self):
     tf.compat.v1.set_random_seed(1)

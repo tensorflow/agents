@@ -124,9 +124,15 @@ class DdpgAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
     self._actor_network = actor_network
+    actor_network.create_variables()
+    if target_actor_network:
+      target_actor_network.create_variables()
     self._target_actor_network = common.maybe_copy_target_network_with_checks(
         self._actor_network, target_actor_network, 'TargetActorNetwork')
     self._critic_network = critic_network
+    critic_network.create_variables()
+    if target_critic_network:
+      target_critic_network.create_variables()
     self._target_critic_network = common.maybe_copy_target_network_with_checks(
         self._critic_network, target_critic_network, 'TargetCriticNetwork')
 

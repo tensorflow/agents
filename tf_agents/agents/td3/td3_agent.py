@@ -135,10 +135,16 @@ class Td3Agent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
     self._actor_network = actor_network
+    actor_network.create_variables()
+    if target_actor_network:
+      target_actor_network.create_variables()
     self._target_actor_network = common.maybe_copy_target_network_with_checks(
         self._actor_network, target_actor_network, 'TargetActorNetwork')
 
     self._critic_network_1 = critic_network
+    critic_network.create_variables()
+    if target_critic_network:
+      target_critic_network.create_variables()
     self._target_critic_network_1 = (
         common.maybe_copy_target_network_with_checks(self._critic_network_1,
                                                      target_critic_network,
@@ -150,6 +156,9 @@ class Td3Agent(tf_agent.TFAgent):
       self._critic_network_2 = critic_network.copy(name='CriticNetwork2')
       # Do not use target_critic_network_2 if critic_network_2 is None.
       target_critic_network_2 = None
+    self._critic_network_2.create_variables()
+    if target_critic_network_2:
+      target_critic_network_2.create_variables()
     self._target_critic_network_2 = (
         common.maybe_copy_target_network_with_checks(self._critic_network_2,
                                                      target_critic_network_2,

@@ -71,6 +71,7 @@ class CategoricalQPolicy(tf_policy.Base):
 
     self._temperature = tf.convert_to_tensor(temperature, dtype=tf.float32)
     self._num_atoms = q_network.num_atoms
+    q_network.create_variables()
     self._q_network = q_network
     min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
     max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)

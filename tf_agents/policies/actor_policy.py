@@ -66,6 +66,7 @@ class ActorPolicy(tf_policy.Base):
     if not isinstance(actor_network, network.Network):
       raise ValueError('actor_network must be a network.Network. Found '
                        '{}.'.format(type(actor_network)))
+    actor_network.create_variables()
     self._actor_network = actor_network
     self._observation_normalizer = observation_normalizer
 

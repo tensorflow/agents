@@ -168,7 +168,10 @@ class ReinforceAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
 
+    actor_network.create_variables()
     self._actor_network = actor_network
+    if value_network:
+      value_network.create_variables()
     self._value_network = value_network
 
     collect_policy = actor_policy.ActorPolicy(

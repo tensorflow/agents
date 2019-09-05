@@ -313,6 +313,13 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
         raise NotImplementedError("outer_dims must be statically known, got: {}"
                                   .format(outer_dims))
       shape = tf.TensorShape(outer_shape or []).concatenate(spec.shape)
+
+      if shape.num_elements() == 0 or tf.compat.dimension_value(shape[0]) == 0:
+        return tf.SparseTensor(
+            indices=tf.zeros([0, shape.ndims], dtype=tf.int64),
+            values=tf.zeros([0], dtype=spec.dtype),
+            dense_shape=shape)
+
       indices_spec = BoundedTensorSpec(
           dtype=tf.int64, shape=[7, shape.ndims],
           minimum=[0] * shape.ndims, maximum=[x - 1 for x in shape.as_list()])

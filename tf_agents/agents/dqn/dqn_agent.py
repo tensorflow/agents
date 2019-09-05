@@ -194,6 +194,9 @@ class DqnAgent(tf_agent.TFAgent):
               epsilon_greedy, boltzmann_temperature))
 
     self._q_network = q_network
+    q_network.create_variables()
+    if target_q_network:
+      target_q_network.create_variables()
     self._target_q_network = common.maybe_copy_target_network_with_checks(
         self._q_network, target_q_network, 'TargetQNetwork')
 

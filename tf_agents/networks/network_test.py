@@ -37,8 +37,6 @@ class BaseNetwork(network.Network):
 class MockNetwork(BaseNetwork):
 
   def __init__(self, param1, param2, kwarg1=2, kwarg2=3):
-    self.var1 = common.create_variable('variable', trainable=False)
-    self.var2 = common.create_variable('trainable_variable', trainable=True)
     self.param1 = param1
     self.param2 = param2
     self.kwarg1 = kwarg1
@@ -47,8 +45,12 @@ class MockNetwork(BaseNetwork):
                                       state_spec=(),
                                       name='mock')
 
-  def call(self, param1, param2, kwarg1=2, kwarg2=3):
-    return []
+  def build(self, *args, **kwargs):
+    self.var1 = common.create_variable('variable', trainable=False)
+    self.var2 = common.create_variable('trainable_variable', trainable=True)
+
+  def call(self, observations, step_type, network_state=None):
+    return self.var1 + self.var2
 
 
 class NoInitNetwork(MockNetwork):
@@ -88,24 +90,17 @@ class NetworkTest(tf.test.TestCase):
     with self.assertRaises(ValueError):
       net((1, 2), 2)
 
-  def test_variables_calls_build(self):
+  def test_create_variables(self):
     observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
     action_spec = specs.TensorSpec([2], tf.float32, 'action')
     net = MockNetwork(observation_spec, action_spec)
     self.assertFalse(net.built)
-    variables = net.variables
+    with self.assertRaises(ValueError):
+      net.variables  # pylint: disable=pointless-statement
+    net.create_variables()
     self.assertTrue(net.built)
-    self.assertLen(variables, 2)
-
-  def test_trainable_variables_calls_build(self):
-    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
-    action_spec = specs.TensorSpec([2], tf.float32, 'action')
-    net = MockNetwork(observation_spec, action_spec)
-    self.assertFalse(net.built)
-    variables = net.trainable_variables
-    self.assertTrue(net.built)
-    # Only net.var2 variable is trainable.
-    self.assertLen(variables, 1)
+    self.assertLen(net.variables, 2)
+    self.assertLen(net.trainable_variables, 1)
 
 
 if __name__ == '__main__':

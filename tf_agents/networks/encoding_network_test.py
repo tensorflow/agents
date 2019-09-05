@@ -33,16 +33,17 @@ class EncodingNetworkTest(test_utils.TestCase):
     input_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
     network = encoding_network.EncodingNetwork(input_spec,)
 
-    variables = network.variables
-    self.assertEqual(0, len(variables))
+    with self.assertRaises(ValueError):
+      network.variables  # pylint: disable=pointless-statement
 
     # Only one layer to flatten input.
-    self.assertEqual(1, len(network.layers))
+    self.assertLen(network.layers, 1)
     config = network.layers[0].get_config()
     self.assertEqual('flatten', config['name'])
 
     out, _ = network(tf.ones((1, 2, 3)))
     self.assertAllEqual(out, [[1, 1, 1, 1, 1, 1]])
+    self.assertLen(network.variables, 0)
 
   def test_non_preprocessing_layers(self):
     input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
@@ -52,6 +53,8 @@ class EncodingNetworkTest(test_utils.TestCase):
         fc_layer_params=(10, 5, 2),
         activation_fn=tf.keras.activations.tanh,
     )
+
+    network.create_variables()
 
     variables = network.variables
     self.assertEqual(10, len(variables))
@@ -90,7 +93,9 @@ class EncodingNetworkTest(test_utils.TestCase):
           conv_layer_params=((16, 2, 1), (15, 2, 1)),
       )
 
+      network.create_variables()
       variables = network.variables
+
       self.assertEqual(4, len(variables))
       self.assertEqual(3, len(network.layers))
 
@@ -107,7 +112,9 @@ class EncodingNetworkTest(test_utils.TestCase):
           conv_layer_params=((16, 2, 1, 2), (15, 2, 1, (2, 4))),
       )
 
+      network.create_variables()
       variables = network.variables
+
       self.assertEqual(4, len(variables))
       self.assertEqual(3, len(network.layers))
 
@@ -223,7 +230,7 @@ class EncodingNetworkTest(test_utils.TestCase):
         preprocessing_combiner=tf.keras.layers.Concatenate(axis=-1),
         activation_fn=tf.keras.activations.tanh,
     )
-
+    network.create_variables()
     self.assertNotEmpty(network.variables)
 
   def testDenseFeaturesV1RaisesError(self):

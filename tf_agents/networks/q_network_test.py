@@ -234,16 +234,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     self.assertEqual(expected_shape, q_target.shape)
     self.assertAllClose(q_online, q_target, rtol=1.0, atol=1.0)
 
-  def testVariablesBuild(self):
-    num_state_dims = 5
-    network = q_network.QNetwork(
-        input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
-        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1))
-    self.assertFalse(network.built)
-    variables = network.variables
-    self.assertTrue(network.built)
-    self.assertGreater(len(variables), 0)
-
   def testPreprocessingLayersSingleObservations(self):
     """Tests using preprocessing_layers without preprocessing_combiner."""
     num_state_dims = 5
