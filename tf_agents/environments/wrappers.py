@@ -202,6 +202,8 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
       if time_step.is_last():
         break
 
+    total_reward = np.asarray(total_reward,
+                              dtype=np.asarray(time_step.reward).dtype)
     return ts.TimeStep(time_step.step_type, total_reward, time_step.discount,
                        time_step.observation)
 
