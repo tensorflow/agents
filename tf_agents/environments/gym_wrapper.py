@@ -99,10 +99,12 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
     return specs.BoundedArraySpec(
         shape=space.shape, dtype=dtype, minimum=minimum, maximum=maximum)
   elif isinstance(space, gym.spaces.Tuple):
-    return tuple([_spec_from_gym_space(s, dtype_map) for s in space.spaces])
+    return tuple([_spec_from_gym_space(s, dtype_map, simplify_box_bounds)
+                  for s in space.spaces])
   elif isinstance(space, gym.spaces.Dict):
-    return collections.OrderedDict([(key, _spec_from_gym_space(s, dtype_map))
-                                    for key, s in space.spaces.items()])
+    return collections.OrderedDict(
+        [(key, _spec_from_gym_space(s, dtype_map, simplify_box_bounds))
+         for key, s in space.spaces.items()])
   else:
     raise ValueError(
         'The gym space {} is currently not supported.'.format(space))
