@@ -199,7 +199,7 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
     for _ in range(self._times):
       time_step = self._env.step(action)
       total_reward += time_step.reward
-      if time_step.is_last():
+      if time_step.is_first() or time_step.is_last():
         break
 
     total_reward = np.asarray(total_reward,
