@@ -77,6 +77,27 @@ class GymWrapperSpecTest(test_utils.TestCase):
     np.testing.assert_array_equal(np.array([-1], dtype=np.int), spec.minimum)
     np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
 
+  def test_spec_from_gym_space_when_simplify_box_bounds_false(self):
+    # testing on gym.spaces.Dict which makes recursive calls to
+    # _spec_from_gym_space
+    box_space = gym.spaces.Box(-1.0, 1.0, (2,))
+    dict_space = gym.spaces.Dict({'box1': box_space, 'box2': box_space})
+    spec = gym_wrapper._spec_from_gym_space(dict_space,
+                                            simplify_box_bounds=False)
+
+    self.assertEqual((2,), spec['box1'].shape)
+    self.assertEqual((2,), spec['box2'].shape)
+    self.assertEqual(np.float32, spec['box1'].dtype)
+    self.assertEqual(np.float32, spec['box2'].dtype)
+    np.testing.assert_array_equal(np.array([-1, -1], dtype=np.int),
+                                  spec['box1'].minimum)
+    np.testing.assert_array_equal(np.array([1, 1], dtype=np.int),
+                                  spec['box1'].maximum)
+    np.testing.assert_array_equal(np.array([-1, -1], dtype=np.int),
+                                  spec['box2'].minimum)
+    np.testing.assert_array_equal(np.array([1, 1], dtype=np.int),
+                                  spec['box2'].maximum)
+
   def test_spec_from_gym_space_box_array(self):
     box_space = gym.spaces.Box(np.array([-1.0, -2.0]), np.array([2.0, 4.0]))
     spec = gym_wrapper._spec_from_gym_space(box_space)
