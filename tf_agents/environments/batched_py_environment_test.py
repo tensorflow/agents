@@ -34,6 +34,20 @@ from tf_agents.trajectories import time_step as ts
 COMMON_PARAMETERS = (dict(multithreading=False), dict(multithreading=True))
 
 
+class GymWrapperEnvironmentMock(random_py_environment.RandomPyEnvironment):
+
+  def __init__(self, *args, **kwargs):
+    super(GymWrapperEnvironmentMock, self).__init__(*args, **kwargs)
+    self._info = {}
+
+  def get_info(self):
+    return self._info
+
+  def _step(self, action):
+    self._info['last_action'] = action
+    return super(GymWrapperEnvironmentMock, self)._step(action)
+
+
 class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @property
@@ -53,6 +67,14 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
         envs=[constructor() for _ in range(num_envs)],
         multithreading=multithreading)
 
+  def _make_batched_mock_gym_py_environment(self, multithreading, num_envs=3):
+    self.time_step_spec = ts.time_step_spec(self.observation_spec)
+    constructor = functools.partial(GymWrapperEnvironmentMock,
+                                    self.observation_spec, self.action_spec)
+    return batched_py_environment.BatchedPyEnvironment(
+        envs=[constructor() for _ in range(num_envs)],
+        multithreading=multithreading)
+
   @parameterized.parameters(*COMMON_PARAMETERS)
   def test_close_no_hang_after_init(self, multithreading):
     env = self._make_batched_py_environment(multithreading)
@@ -66,6 +88,24 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(self.action_spec, env.action_spec())
 
     env.close()
+
+  @parameterized.parameters(*COMMON_PARAMETERS)
+  def test_get_info_gym_env(self, multithreading):
+    num_envs = 5
+    rng = np.random.RandomState()
+    gym_env = self._make_batched_mock_gym_py_environment(
+        multithreading, num_envs=num_envs)
+    gym_env.reset()
+    info = gym_env.get_info()
+    self.assertEqual(info, {})
+    action = np.stack([
+        array_spec.sample_bounded_spec(self.action_spec, rng)
+        for _ in range(num_envs)
+    ])
+    gym_env.step(action)
+    info = gym_env.get_info()
+    self.assertAllEqual(info['last_action'], action)
+    gym_env.close()
 
   @parameterized.parameters(*COMMON_PARAMETERS)
   def test_step(self, multithreading):

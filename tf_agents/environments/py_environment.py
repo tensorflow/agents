@@ -230,6 +230,17 @@ class PyEnvironment(object):
     del seed  # unused
     raise NotImplementedError('No seed support for this environment.')
 
+  def get_info(self):
+    """Returns the environment info returned on the last step.
+
+    Returns:
+      Info returned by last call to step(). None by default.
+
+    Raises:
+      NotImplementedError: If the environment does not use info.
+    """
+    raise NotImplementedError('No support of get_info for this environment.')
+
   #  These methods are to be implemented by subclasses:
 
   @abc.abstractmethod

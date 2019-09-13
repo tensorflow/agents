@@ -63,6 +63,9 @@ class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
   def _step(self, action):
     return self._env.step(action)
 
+  def get_info(self):
+    return self._env.get_info()
+
   def observation_spec(self):
     return self._env.observation_spec()
 

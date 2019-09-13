@@ -27,7 +27,6 @@ from multiprocessing import dummy as mp_threads
 # pylint: enable=line-too-long
 
 import gin
-import numpy as np
 import tensorflow as tf
 
 from tf_agents.environments import py_environment
@@ -114,6 +113,13 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
   def time_step_spec(self):
     return self._time_step_spec
 
+  def get_info(self):
+    if self._num_envs == 1:
+      return nest_utils.batch_nested_array(self._envs[0].get_info())
+    else:
+      infos = self._execute(lambda env: env.get_info(), self._envs)
+      return nest_utils.stack_nested_arrays(infos)
+
   def _reset(self):
     """Reset all environments and combine the resulting observation.
 
@@ -124,7 +130,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       return nest_utils.batch_nested_array(self._envs[0].reset())
     else:
       time_steps = self._execute(lambda env: env.reset(), self._envs)
-      return stack_time_steps(time_steps)
+      return nest_utils.stack_nested_arrays(time_steps)
 
   def _step(self, actions):
     """Forward a batch of actions to the wrapped environments.
@@ -152,7 +158,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       time_steps = self._execute(
           lambda env_action: env_action[0].step(env_action[1]),
           zip(self._envs, unstacked_actions))
-      return stack_time_steps(time_steps)
+      return nest_utils.stack_nested_arrays(time_steps)
 
   def close(self):
     """Send close messages to the external process and join them."""
@@ -160,12 +166,6 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
     if self._parallel_execution:
       self._pool.close()
       self._pool.join()
-
-
-# TODO(b/124447001): Factor these helper functions out into common utils.
-def stack_time_steps(time_steps):
-  """Given a list of TimeStep, combine to one with a batch dimension."""
-  return fast_map_structure(lambda *arrays: np.stack(arrays), *time_steps)
 
 
 def unstack_actions(batched_actions):
@@ -176,10 +176,3 @@ def unstack_actions(batched_actions):
       for actions in zip(*flattened_actions)
   ]
   return unstacked_actions
-
-
-def fast_map_structure(func, *structure):
-  """List tf.nest.map_structure, but skipping the slow assert_same_structure."""
-  flat_structure = [tf.nest.flatten(s) for s in structure]
-  entries = zip(*flat_structure)
-  return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
