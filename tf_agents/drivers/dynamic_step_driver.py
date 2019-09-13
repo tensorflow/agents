@@ -22,10 +22,24 @@ from __future__ import print_function
 import gin
 import tensorflow as tf
 
+from tf_agents.bandits.environments import bandit_py_environment
+from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.drivers import driver
+from tf_agents.environments import tf_py_environment
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
+
+
+def is_bandit_env(env):
+  actual_env = env
+  if isinstance(env, tf_py_environment.TFPyEnvironment):
+    actual_env = env.pyenv
+  is_bandit = (
+      isinstance(actual_env, bandit_py_environment.BanditPyEnvironment) or
+      isinstance(actual_env, bandit_tf_environment.BanditTFEnvironment))
+  return is_bandit
 
 
 @gin.configurable
@@ -76,6 +90,7 @@ class DynamicStepDriver(driver.Driver):
                                             transition_observers)
     self._num_steps = num_steps
     self._run_fn = common.function_in_tf1()(self._run)
+    self._is_bandit_env = is_bandit_env(env)
 
   def _loop_condition_fn(self):
     """Returns a function with the condition needed for tf.while_loop."""
@@ -114,6 +129,14 @@ class DynamicStepDriver(driver.Driver):
       action_step = self.policy.action(time_step, policy_state)
       policy_state = action_step.state
       next_time_step = self.env.step(action_step.action)
+
+      if self._is_bandit_env:
+        # For Bandits we create episodes of length 1.
+        # Since the `next_time_step` is always of type LAST we need to replace
+        # the step type of the current `time_step` to FIRST.
+        batch_size = tf.shape(input=time_step.discount)
+        time_step = time_step._replace(
+            step_type=tf.fill(batch_size, ts.StepType.FIRST))
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]

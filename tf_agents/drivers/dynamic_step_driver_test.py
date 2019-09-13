@@ -19,11 +19,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 
+from tf_agents.bandits.environments import environment_utilities
+from tf_agents.bandits.environments import stationary_stochastic_py_environment as sspe
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import tf_py_environment
+from tf_agents.policies import random_tf_policy
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
 
@@ -164,6 +169,45 @@ class DynamicStepDriverTest(test_utils.TestCase):
     self.assertAllEqual(trajectories.next_step_type, [[1, 2, 0, 1, 2, 0, 1, 2]])
     self.assertAllEqual(trajectories.reward, [[1., 1., 0., 1., 1., 0., 1., 1.]])
     self.assertAllEqual(trajectories.discount, [[1., 0., 1, 1, 0, 1., 1., 0.]])
+
+  def testBanditEnvironment(self):
+
+    def _context_sampling_fn():
+      return np.array([[5, -5], [2, -2]])
+
+    reward_fns = [
+        environment_utilities.LinearNormalReward(theta, sigma=0.0)
+        for theta in ([1, 0], [0, 1])
+    ]
+    batch_size = 2
+    py_env = sspe.StationaryStochasticPyEnvironment(
+        _context_sampling_fn, reward_fns, batch_size=batch_size)
+    env = tf_py_environment.TFPyEnvironment(py_env)
+    policy = random_tf_policy.RandomTFPolicy(env.time_step_spec(),
+                                             env.action_spec())
+
+    steps_per_loop = 4
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+        data_spec=policy.trajectory_spec,
+        batch_size=batch_size,
+        max_length=steps_per_loop)
+
+    driver = dynamic_step_driver.DynamicStepDriver(
+        env,
+        policy,
+        num_steps=steps_per_loop * batch_size,
+        observers=[replay_buffer.add_batch])
+
+    run_driver = driver.run()
+    rb_gather_all = replay_buffer.gather_all()
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(run_driver)
+    trajectories = self.evaluate(rb_gather_all)
+
+    self.assertAllEqual(trajectories.step_type, [[0, 0, 0, 0], [0, 0, 0, 0]])
+    self.assertAllEqual(trajectories.next_step_type,
+                        [[2, 2, 2, 2], [2, 2, 2, 2]])
 
 
 if __name__ == '__main__':
