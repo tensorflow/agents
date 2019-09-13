@@ -113,6 +113,19 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         dtype=dtype)
     self.evaluate(agent.initialize())
 
+  def testInitializeAgentEmptyObservationSpec(self):
+    dtype = tf.float32
+    num_actions = 5
+    observation_spec = tensor_spec.TensorSpec((), tf.float32)
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    agent = lin_ucb_agent.LinearUCBAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        dtype=dtype)
+    self.evaluate(agent.initialize())
+
   @test_cases()
   def testLinearUCBUpdate(
       self, batch_size, context_dim, dtype, use_eigendecomp=False):

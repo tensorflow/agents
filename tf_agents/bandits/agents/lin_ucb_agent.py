@@ -110,7 +110,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
-    self._context_dim = int(time_step_spec.observation.shape[0])
+    observation_shape = time_step_spec.observation.shape.as_list()
+    self._context_dim = int(observation_shape[0]) if observation_shape else 1
     self._alpha = alpha
     self._cov_matrix_list = []
     self._data_vector_list = []
@@ -241,6 +242,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
 
+    observation = tf.reshape(observation, [-1, self._context_dim])
     observation = tf.cast(observation, self._dtype)
     reward = tf.cast(reward, self._dtype)
 

@@ -117,8 +117,9 @@ class LinearUCBPolicy(tf_policy.Base):
           'The number of elements in `cov_matrix` ({}) must match '
           'the number of actions derived from `action_spec` ({}).'.format(
               len(cov_matrix), self._num_actions))
-    self._observation_dim = tf.compat.dimension_value(
-        time_step_spec.observation.shape[0])
+    observation_shape = time_step_spec.observation.shape.as_list()
+    self._observation_dim = (tf.compat.dimension_value(observation_shape[0])
+                             if observation_shape else 1)
     cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
     if self._observation_dim != cov_matrix_dim:
       raise ValueError('The dimension of matrix `cov_matrix` must match '
@@ -149,7 +150,7 @@ class LinearUCBPolicy(tf_policy.Base):
     if not observation.shape.is_compatible_with([None, self._observation_dim]):
       raise ValueError('Observation shape is expected to be {}. Got {}.'.format(
           [None, self._observation_dim], observation.shape.as_list()))
-
+    observation = tf.reshape(observation, [-1, self._observation_dim])
     observation = tf.cast(observation, dtype=self._data_vector[0].dtype)
 
     p_values = []
