@@ -27,7 +27,6 @@ import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
-from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
 
@@ -36,38 +35,49 @@ class CategoricalQPolicy(tf_policy.Base):
   """Class to build categorical Q-policies."""
 
   def __init__(self,
+               time_step_spec,
+               action_spec,
+               q_network,
                min_q_value,
                max_q_value,
-               q_network,
-               action_spec,
                temperature=1.0):
     """Builds a categorical Q-policy given a categorical Q-network.
 
     Args:
+      time_step_spec: A `TimeStep` spec of the expected time_steps.
+      action_spec: A `BoundedTensorSpec` representing the actions.
+      q_network: A network.Network to use for our policy.
       min_q_value: A float specifying the minimum Q-value, used for setting up
         the support.
       max_q_value: A float specifying the maximum Q-value, used for setting up
         the support.
-      q_network: A network.Network to use for our policy.
-      action_spec: A `BoundedTensorSpec` representing the actions.
       temperature: temperature for sampling, when close to 0.0 is arg_max.
 
     Raises:
       ValueError: if `q_network` does not have property `num_atoms`.
       TypeError: if `action_spec` is not a `BoundedTensorSpec`.
     """
-    num_atoms = getattr(q_network, 'num_atoms', None)
-    if num_atoms is None:
-      raise ValueError('Expected q_network to have property `num_atoms`, but '
-                       'it doesn\'t. Network is: %s' % q_network)
+    network_action_spec = getattr(q_network, 'action_spec', None)
 
-    time_step_spec = ts.time_step_spec(q_network.input_tensor_spec)
-    super(CategoricalQPolicy, self).__init__(
-        time_step_spec, action_spec, q_network.state_spec)
+    if network_action_spec is not None:
+      if not action_spec.is_compatible_with(network_action_spec):
+        raise ValueError(
+            'action_spec must be compatible with q_network.action_spec; '
+            'instead got action_spec=%s, q_network.action_spec=%s' % (
+                action_spec, network_action_spec))
 
     if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
       raise TypeError('action_spec must be a BoundedTensorSpec. Got: %s' % (
           action_spec,))
+
+    num_atoms = getattr(q_network, 'num_atoms', None)
+    if num_atoms is None:
+      raise ValueError('Expected q_network to have property `num_atoms`, but '
+                       'it doesn\'t. (Note: you likely want to use a '
+                       'CategoricalQNetwork.) Network is: %s' % q_network)
+
+    super(CategoricalQPolicy, self).__init__(
+        time_step_spec, action_spec, policy_state_spec=q_network.state_spec)
 
     self._temperature = tf.convert_to_tensor(temperature, dtype=tf.float32)
     self._num_atoms = q_network.num_atoms
@@ -95,9 +105,8 @@ class CategoricalQPolicy(tf_policy.Base):
       A policy_state Tensor, or a nested dict, list or tuple of Tensors,
         representing the new policy state.
     """
-    q_logits, policy_state = self._q_network(time_step.observation,
-                                             time_step.step_type,
-                                             policy_state)
+    q_logits, policy_state = self._q_network(
+        time_step.observation, time_step.step_type, policy_state)
     q_logits.shape.assert_has_rank(3)
     q_values = common.convert_q_logits_to_values(q_logits, self._support)
 

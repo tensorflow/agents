@@ -165,8 +165,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       num_atoms = getattr(net, 'num_atoms', None)
       if num_atoms is None:
         raise TypeError('Expected {} to have property `num_atoms`, but it '
-                        'doesn\'t (note: you likely want to use a '
-                        'CategoricalQNetwork). Network is: {}'.format(
+                        'doesn\'t. (Note: you likely want to use a '
+                        'CategoricalQNetwork.) Network is: {}'.format(
                             label, net))
       return num_atoms
 
@@ -184,10 +184,11 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     self._support = tf.linspace(min_q_value, max_q_value, num_atoms)
 
     policy = categorical_q_policy.CategoricalQPolicy(
-        min_q_value,
-        max_q_value,
+        time_step_spec,
+        self._action_spec,
         self._q_network,
-        self._action_spec)
+        min_q_value,
+        max_q_value)
     if boltzmann_temperature is not None:
       self._collect_policy = boltzmann_policy.BoltzmannPolicy(
           policy, temperature=self._boltzmann_temperature)
@@ -197,10 +198,11 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     self._policy = greedy_policy.GreedyPolicy(policy)
 
     target_policy = categorical_q_policy.CategoricalQPolicy(
-        min_q_value,
-        max_q_value,
+        time_step_spec,
+        self._action_spec,
         self._target_q_network,
-        self._action_spec)
+        min_q_value,
+        max_q_value)
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
   def _loss(self,

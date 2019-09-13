@@ -97,10 +97,9 @@ class CategoricalQPolicyTest(test_utils.TestCase):
         num_actions=2)
 
   def testBuild(self):
-    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                     self._max_q_value,
-                                                     self._q_network,
-                                                     self._action_spec)
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, self._action_spec, self._q_network,
+        self._min_q_value, self._max_q_value)
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
@@ -119,16 +118,14 @@ class CategoricalQPolicyTest(test_utils.TestCase):
           action_spec=action_spec,
           num_atoms=3,
           fc_layer_params=[4])
-      categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                              self._max_q_value,
-                                              q_network,
-                                              action_spec)
+      categorical_q_policy.CategoricalQPolicy(
+          self._time_step_spec, action_spec, q_network,
+          self._min_q_value, self._max_q_value)
 
   def testAction(self):
-    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                     self._max_q_value,
-                                                     self._q_network,
-                                                     self._action_spec)
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, self._action_spec, self._q_network,
+        self._min_q_value, self._max_q_value)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
@@ -147,10 +144,9 @@ class CategoricalQPolicyTest(test_utils.TestCase):
       self.assertLessEqual(action, self._action_spec.maximum)
 
   def testSample(self):
-    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                     self._max_q_value,
-                                                     self._q_network,
-                                                     self._action_spec)
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, self._action_spec, self._q_network,
+        self._min_q_value, self._max_q_value)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
@@ -168,15 +164,13 @@ class CategoricalQPolicyTest(test_utils.TestCase):
       self.assertLessEqual(action, self._action_spec.maximum)
 
   def testUpdate(self):
-    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                     self._max_q_value,
-                                                     self._q_network,
-                                                     self._action_spec)
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, self._action_spec, self._q_network,
+        self._min_q_value, self._max_q_value)
 
-    new_policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                         self._max_q_value,
-                                                         self._q_network,
-                                                         self._action_spec)
+    new_policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, self._action_spec, self._q_network,
+        self._min_q_value, self._max_q_value)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
@@ -222,6 +216,8 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         [1], tf.int32, 0, num_actions - 1)
 
+    # We create a fixed mask here for testing purposes. Normally the mask would
+    # be part of the observation.
     mask = [0, 1, 0, 1, 0, 0, 1, 0]
     np_mask = np.array(mask)
     tf_mask = tf.constant([mask for _ in range(batch_size)])
@@ -229,12 +225,11 @@ class CategoricalQPolicyTest(test_utils.TestCase):
         input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         num_atoms=3,
-        mask_split_fn=lambda observation: (observation, tf_mask),
-        fc_layer_params=[4])
-    policy = categorical_q_policy.CategoricalQPolicy(self._min_q_value,
-                                                     self._max_q_value,
-                                                     q_network,
-                                                     action_spec)
+        fc_layer_params=[4],
+        mask_split_fn=lambda observation: (observation, tf_mask))
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, action_spec, q_network,
+        self._min_q_value, self._max_q_value)
 
     # Force creation of variables before global_variables_initializer.
     policy.variables()
