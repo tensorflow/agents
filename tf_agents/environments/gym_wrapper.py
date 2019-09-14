@@ -89,8 +89,10 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
     return specs.BoundedArraySpec(
         shape=shape, dtype=dtype, minimum=0, maximum=1)
   elif isinstance(space, gym.spaces.Box):
-    # TODO(oars): change to use dtype in space once Gym is updated.
-    dtype = dtype_map.get(gym.spaces.Box, np.float32)
+    if hasattr(space, 'dtype'):
+      dtype = space.dtype
+    else:
+      dtype = dtype_map.get(gym.spaces.Box, np.float32)
     minimum = np.asarray(space.low, dtype=dtype)
     maximum = np.asarray(space.high, dtype=dtype)
     if simplify_box_bounds:
