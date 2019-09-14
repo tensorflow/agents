@@ -182,12 +182,25 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
   def _get_mock_env_episode(self):
     mock_env = mock.MagicMock()
     mock_env.step.side_effect = [
-        ts.TimeStep(ts.StepType.FIRST, 2, 1, [0]),
-        ts.TimeStep(ts.StepType.MID, 3, 1, [1]),
-        ts.TimeStep(ts.StepType.MID, 5, 1, [2]),
-        ts.TimeStep(ts.StepType.LAST, 7, 1, [3]),
+        # In practice, the first reward would be 0, but test with a reward of 1.
+        ts.TimeStep(ts.StepType.FIRST, 1, 1, [0]),
+        ts.TimeStep(ts.StepType.MID, 2, 1, [1]),
+        ts.TimeStep(ts.StepType.MID, 3, 1, [2]),
+        ts.TimeStep(ts.StepType.MID, 5, 1, [3]),
+        ts.TimeStep(ts.StepType.LAST, 7, 1, [4]),
     ]
     return mock_env
+
+  def test_action_stops_on_first(self):
+    mock_env = self._get_mock_env_episode()
+    env = wrappers.ActionRepeat(mock_env, 3)
+    env.reset()
+
+    time_step = env.step([2])
+    mock_env.step.assert_has_calls([mock.call([2])])
+
+    self.assertEqual(1, time_step.reward)
+    self.assertEqual([0], time_step.observation)
 
   def test_action_repeated(self):
     mock_env = self._get_mock_env_episode()
@@ -195,7 +208,9 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
     env.reset()
 
     env.step([2])
-    mock_env.step.assert_has_calls([mock.call([2])] * 3)
+    env.step([3])
+    mock_env.step.assert_has_calls([mock.call([2])] +
+                                   [mock.call([3])] * 3)
 
   def test_action_stops_on_last(self):
     mock_env = self._get_mock_env_episode()
@@ -203,12 +218,14 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
     env.reset()
 
     env.step([2])
-    time_step = env.step([3])
-    mock_env.step.assert_has_calls([mock.call([2])] * 3 +
-                                   [mock.call([3])])
+    env.step([3])
+    time_step = env.step([4])
+    mock_env.step.assert_has_calls([mock.call([2])] +
+                                   [mock.call([3])] * 3 +
+                                   [mock.call([4])])
 
     self.assertEqual(7, time_step.reward)
-    self.assertEqual([3], time_step.observation)
+    self.assertEqual([4], time_step.observation)
 
   def test_checks_times_param(self):
     mock_env = mock.MagicMock()
@@ -219,11 +236,13 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
     mock_env = self._get_mock_env_episode()
     env = wrappers.ActionRepeat(mock_env, 3)
     env.reset()
+
+    env.step(0)
     time_step = env.step(0)
 
     mock_env.step.assert_called_with(0)
     self.assertEqual(10, time_step.reward)
-    self.assertEqual([2], time_step.observation)
+    self.assertEqual([3], time_step.observation)
 
 
 class RunStatsWrapperTest(test_utils.TestCase):
