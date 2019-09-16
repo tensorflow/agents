@@ -45,7 +45,7 @@ class EncodingNetworkTest(test_utils.TestCase):
     self.assertAllEqual(out, [[1, 1, 1, 1, 1, 1]])
     self.assertLen(network.variables, 0)
 
-  def test_non_preprocessing_layers(self):
+  def test_non_preprocessing_layers_2d(self):
     input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
     network = encoding_network.EncodingNetwork(
         input_spec,
@@ -84,6 +84,48 @@ class EncodingNetworkTest(test_utils.TestCase):
     self.assertEqual(10, network.layers[3].get_config()['units'])
     self.assertEqual(5, network.layers[4].get_config()['units'])
     self.assertEqual(2, network.layers[5].get_config()['units'])
+
+  def test_non_preprocessing_layers_1d(self):
+    input_spec = tensor_spec.TensorSpec((32, 3), tf.float32)
+    network = encoding_network.EncodingNetwork(
+        input_spec,
+        conv_layer_params=((16, 2, 1), (15, 2, 1)),
+        fc_layer_params=(10, 5, 2),
+        activation_fn=tf.keras.activations.tanh,
+        conv_type='1d',
+    )
+
+    network.create_variables()
+
+    variables = network.variables
+    self.assertEqual(10, len(variables))
+    self.assertEqual(6, len(network.layers))
+
+    # Validate first conv layer.
+    config = network.layers[0].get_config()
+    self.assertEqual('tanh', config['activation'])
+    self.assertEqual((2,), config['kernel_size'])
+    self.assertEqual(16, config['filters'])
+    self.assertEqual((1,), config['strides'])
+    self.assertTrue(config['trainable'])
+
+    # Validate second conv layer.
+    config = network.layers[1].get_config()
+    self.assertEqual('tanh', config['activation'])
+    self.assertEqual((2,), config['kernel_size'])
+    self.assertEqual(15, config['filters'])
+    self.assertEqual((1,), config['strides'])
+    self.assertTrue(config['trainable'])
+
+  def test_conv_raise_error(self):
+    input_spec = tensor_spec.TensorSpec((32, 3), tf.float32)
+    with self.assertRaises(ValueError):
+      _ = encoding_network.EncodingNetwork(
+          input_spec,
+          conv_layer_params=((16, 2, 1), (15, 2, 1)),
+          fc_layer_params=(10, 5, 2),
+          activation_fn=tf.keras.activations.tanh,
+          conv_type='3d')
 
   def test_conv_dilation_params(self):
     with self.subTest(name='no dilations'):

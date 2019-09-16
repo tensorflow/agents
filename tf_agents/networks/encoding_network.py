@@ -38,6 +38,9 @@ from tf_agents.utils import nest_utils
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
+CONV_TYPE_2D = '2d'
+CONV_TYPE_1D = '1d'
+
 
 def _copy_layer(layer):
   """Create a copy of a Keras layer with identical parameters.
@@ -86,7 +89,8 @@ class EncodingNetwork(network.Network):
                kernel_initializer=None,
                batch_squash=True,
                dtype=tf.float32,
-               name='EncodingNetwork'):
+               name='EncodingNetwork',
+               conv_type=CONV_TYPE_2D):
     """Creates an instance of `EncodingNetwork`.
 
     Network supports calls with shape outer_rank + input_tensor_spec.shape. Note
@@ -167,6 +171,8 @@ class EncodingNetwork(network.Network):
         observations with shape [BxTx...].
       dtype: The dtype to use by the convolution and fully connected layers.
       name: A string representing name of the network.
+      conv_type: string, '1d' or '2d'. Convolution layers will be 1d or 2D
+        respectively
 
     Raises:
       ValueError: If any of `preprocessing_layers` is already built.
@@ -208,17 +214,25 @@ class EncodingNetwork(network.Network):
     layers = []
 
     if conv_layer_params:
+      if conv_type == '2d':
+        conv_layer_type = tf.keras.layers.Conv2D
+      elif conv_type == '1d':
+        conv_layer_type = tf.keras.layers.Conv1D
+      else:
+        raise ValueError('unsupported conv type of %s. Use 1d or 2d' % (
+            conv_type))
+
       for config in conv_layer_params:
         if len(config) == 4:
           (filters, kernel_size, strides, dilation_rate) = config
         elif len(config) == 3:
           (filters, kernel_size, strides) = config
-          dilation_rate = (1, 1)
+          dilation_rate = (1, 1) if conv_type == '2d' else (1,)
         else:
           raise ValueError(
               'only 3 or 4 elements permitted in conv_layer_params tuples')
         layers.append(
-            tf.keras.layers.Conv2D(
+            conv_layer_type(
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
@@ -226,7 +240,7 @@ class EncodingNetwork(network.Network):
                 activation=activation_fn,
                 kernel_initializer=kernel_initializer,
                 dtype=dtype,
-                name='%s/conv2d' % name))
+                name='%s/conv%s' % (name, conv_type)))
 
     layers.append(tf.keras.layers.Flatten())
 
