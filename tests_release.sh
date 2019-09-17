@@ -35,7 +35,7 @@ run_tests() {
   # TensorFlow isn't a regular dependency because there are many different pip
   # packages a user might have installed.
   if [[ $2 == "nightly" ]] ; then
-    pip install tf-nightly
+    pip install tf-nightly==1.15.0.dev20190821
 
     # Run the tests
     python setup.py test
@@ -52,6 +52,15 @@ run_tests() {
     # Install tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/ --release
+  elif [[ $2 == "preview" ]] ; then
+    pip install tf-nightly-2.0-preview
+
+    # Run the tests
+    python setup.py test
+
+    # Install tf_agents package.
+    WHEEL_PATH=${TMP}/wheel/$1
+    ./pip_pkg.sh ${WHEEL_PATH}/
   else
     echo "Error unknow option only [nightly|stable]"
     exit
