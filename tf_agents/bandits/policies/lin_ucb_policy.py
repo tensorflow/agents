@@ -23,6 +23,7 @@ from __future__ import print_function
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
 
@@ -49,6 +50,7 @@ class LinearUCBPolicy(tf_policy.Base):
                eig_matrix=(),
                tikhonov_weight=1.0,
                emit_log_probability=False,
+               observation_and_action_constraint_splitter=None,
                name=None):
     """Initializes `LinUCBPolicy`.
 
@@ -70,6 +72,14 @@ class LinearUCBPolicy(tf_policy.Base):
       eig_matrix: list of eigenvectors for each covariance matrix (one per arm).
       tikhonov_weight: (float) tikhonov regularization term.
       emit_log_probability: Whether to emit log probabilities.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit policy and 2)
+        the mask. The mask should be a 0-1 `Tensor` of shape
+        `[batch_size, num_actions]`. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       name: The name of this policy.
     """
     if not isinstance(cov_matrix, (list, tuple)):
@@ -117,21 +127,28 @@ class LinearUCBPolicy(tf_policy.Base):
           'The number of elements in `cov_matrix` ({}) must match '
           'the number of actions derived from `action_spec` ({}).'.format(
               len(cov_matrix), self._num_actions))
-    observation_shape = time_step_spec.observation.shape.as_list()
-    self._observation_dim = (tf.compat.dimension_value(observation_shape[0])
-                             if observation_shape else 1)
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter:
+      context_shape = observation_and_action_constraint_splitter(
+          time_step_spec.observation)[0].shape.as_list()
+    else:
+      context_shape = time_step_spec.observation.shape.as_list()
+    self._context_dim = (
+        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
-    if self._observation_dim != cov_matrix_dim:
+    if self._context_dim != cov_matrix_dim:
       raise ValueError('The dimension of matrix `cov_matrix` must match '
-                       'observation dimension {}.'
+                       'context dimension {}.'
                        'Got {} for `cov_matrix`.'.format(
-                           self._observation_dim, cov_matrix_dim))
+                           self._context_dim, cov_matrix_dim))
+
     data_vector_dim = tf.compat.dimension_value(data_vector[0].shape[0])
-    if self._observation_dim != data_vector_dim:
+    if self._context_dim != data_vector_dim:
       raise ValueError('The dimension of vector `data_vector` must match '
-                       'observation  dimension {}. '
+                       'context  dimension {}. '
                        'Got {} for `data_vector`.'.format(
-                           self._observation_dim, data_vector_dim))
+                           self._context_dim, data_vector_dim))
     super(LinearUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
@@ -145,12 +162,15 @@ class LinearUCBPolicy(tf_policy.Base):
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
+    if self._observation_and_action_constraint_splitter:
+      observation, mask = self._observation_and_action_constraint_splitter(
+          observation)
     # Check the shape of the observation matrix. The observations can be
     # batched.
-    if not observation.shape.is_compatible_with([None, self._observation_dim]):
+    if not observation.shape.is_compatible_with([None, self._context_dim]):
       raise ValueError('Observation shape is expected to be {}. Got {}.'.format(
-          [None, self._observation_dim], observation.shape.as_list()))
-    observation = tf.reshape(observation, [-1, self._observation_dim])
+          [None, self._context_dim], observation.shape.as_list()))
+    observation = tf.reshape(observation, [-1, self._context_dim])
     observation = tf.cast(observation, dtype=self._data_vector[0].dtype)
 
     p_values = []
@@ -168,7 +188,7 @@ class LinearUCBPolicy(tf_policy.Base):
       else:
         a_inv_x = linalg.conjugate_gradient_solve(
             self._cov_matrix[k] +
-            self._tikhonov_weight * tf.eye(self._observation_dim),
+            self._tikhonov_weight * tf.eye(self._context_dim),
             tf.linalg.matrix_transpose(observation))
       est_mean_reward = tf.einsum('j,jk->k', self._data_vector[k], a_inv_x)
 
@@ -179,10 +199,18 @@ class LinearUCBPolicy(tf_policy.Base):
           tf.reshape(est_mean_reward, [-1, 1]) + self._alpha * tf.sqrt(ci))
 
     # Keeping the batch dimension during the squeeze, even if batch_size == 1.
-    chosen_actions = tf.argmax(
-        tf.squeeze(tf.stack(p_values, axis=-1), axis=[1]),
-        axis=-1,
-        output_type=self._action_spec.dtype)
+    optimistic_reward_estimates = tf.squeeze(
+        tf.stack(p_values, axis=-1), axis=[1])
+    if self._observation_and_action_constraint_splitter:
+      chosen_actions = policy_utilities.masked_argmax(
+          optimistic_reward_estimates,
+          mask,
+          output_type=self._action_spec.dtype)
+    else:
+      chosen_actions = tf.argmax(
+          optimistic_reward_estimates,
+          axis=-1,
+          output_type=self._action_spec.dtype)
     action_distributions = tfp.distributions.Deterministic(loc=chosen_actions)
 
     return policy_step.PolicyStep(action_distributions, policy_state)

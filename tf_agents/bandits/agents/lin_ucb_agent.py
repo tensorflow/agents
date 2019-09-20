@@ -83,6 +83,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
                use_eigendecomp=False,
                tikhonov_weight=1.0,
                emit_log_probability=False,
+               observation_and_action_constraint_splitter=None,
                dtype=tf.float32,
                name=None):
     """Initialize an instance of `LinearUCBAgent`.
@@ -100,6 +101,13 @@ class LinearUCBAgent(tf_agent.TFAgent):
       tikhonov_weight: (float) tikhonov regularization term.
       emit_log_probability: Whether the LinearUCBPolicy emits log-probabilities
         or not. Since the policy is deterministic, the probability is just 1.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit agent and
+        policy, and 2) the boolean mask. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       dtype: The type of the parameters stored and updated by the agent. Should
         be one of `tf.float32` and `tf.float64`. Defaults to `tf.float32`.
       name: a name for this instance of `LinearUCBAgent`.
@@ -110,8 +118,13 @@ class LinearUCBAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
-    observation_shape = time_step_spec.observation.shape.as_list()
-    self._context_dim = int(observation_shape[0]) if observation_shape else 1
+    if observation_and_action_constraint_splitter:
+      context_shape = observation_and_action_constraint_splitter(
+          time_step_spec.observation)[0].shape.as_list()
+    else:
+      context_shape = time_step_spec.observation.shape.as_list()
+    self._context_dim = (
+        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     self._alpha = alpha
     self._cov_matrix_list = []
     self._data_vector_list = []
@@ -128,6 +141,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
           'Agent dtype should be either `tf.float32 or `tf.float64`.')
     self._use_eigendecomp = use_eigendecomp
     self._tikhonov_weight = tikhonov_weight
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
 
     for k in range(self._num_actions):
       self._cov_matrix_list.append(
@@ -168,7 +183,9 @@ class LinearUCBAgent(tf_agent.TFAgent):
         eig_vals=self._eig_vals_list if self._use_eigendecomp else (),
         eig_matrix=self._eig_matrix_list if self._use_eigendecomp else (),
         tikhonov_weight=self._tikhonov_weight,
-        emit_log_probability=emit_log_probability)
+        emit_log_probability=emit_log_probability,
+        observation_and_action_constraint_splitter=observation_and_action_constraint_splitter
+    )
     super(LinearUCBAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
@@ -242,6 +259,9 @@ class LinearUCBAgent(tf_agent.TFAgent):
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
 
+    if self._observation_and_action_constraint_splitter:
+      observation, _ = self._observation_and_action_constraint_splitter(
+          observation)
     observation = tf.reshape(observation, [-1, self._context_dim])
     observation = tf.cast(observation, self._dtype)
     reward = tf.cast(reward, self._dtype)

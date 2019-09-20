@@ -60,9 +60,14 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
   def setUp(self):
     super(LinUCBPolicyTest, self).setUp()
     self._obs_dim = 2
-    self._obs_spec = tensor_spec.TensorSpec([self._obs_dim], tf.float32)
-    self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._num_actions = 5
+    self._obs_spec = tensor_spec.TensorSpec([self._obs_dim], tf.float32)
+    self._obs_spec_with_mask = (tensor_spec.TensorSpec([self._obs_dim],
+                                                       tf.float32),
+                                tensor_spec.TensorSpec([self._num_actions],
+                                                       tf.int32))
+    self._time_step_spec = ts.time_step_spec(self._obs_spec)
+    self._time_step_spec_with_mask = ts.time_step_spec(self._obs_spec_with_mask)
     self._alpha = 1.0
     self._action_spec = tensor_spec.BoundedTensorSpec(
         shape=(),
@@ -111,6 +116,23 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
                     dtype=tf.float32, shape=[batch_size, self._obs_dim],
                     name='observation'))
 
+  def _time_step_batch_with_mask(self, batch_size):
+    no_mask_observation = tf.constant(
+        np.array(range(batch_size * self._obs_dim)),
+        dtype=tf.float32,
+        shape=[batch_size, self._obs_dim])
+    mask = tf.eye(batch_size, num_columns=self._num_actions, dtype=tf.int32)
+    observation = (no_mask_observation, mask)
+    return ts.TimeStep(
+        tf.constant(
+            ts.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[batch_size],
+            name='step_type'),
+        tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+        tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+        observation)
+
   def testBuild(self):
     policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, self._a, self._b,
                                             self._num_samples_per_arm,
@@ -150,6 +172,27 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     actions_ = self.evaluate(action_step.action)
     self.assertAllGreaterEqual(actions_, self._action_spec.minimum)
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
+
+  @test_cases()
+  def testActionBatchWithMask(self, batch_size):
+
+    def split_fn(obs):
+      return obs[0], obs[1]
+
+    policy = lin_ucb_policy.LinearUCBPolicy(
+        self._action_spec,
+        self._a,
+        self._b,
+        self._num_samples_per_arm,
+        self._time_step_spec_with_mask,
+        observation_and_action_constraint_splitter=split_fn)
+
+    action_step = policy.action(
+        self._time_step_batch_with_mask(batch_size=batch_size))
+    self.assertEqual(action_step.action.shape.as_list(), [batch_size])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    actions_ = self.evaluate(action_step.action)
+    self.assertAllEqual(actions_, range(batch_size))
 
   @test_cases()
   def testActionBatchWithVariablesAndPolicyUpdate(self, batch_size):
