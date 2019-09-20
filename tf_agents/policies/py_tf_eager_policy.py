@@ -80,3 +80,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     super(SavedModelPyTFEagerPolicy,
           self).__init__(policy, time_step_spec, action_spec, policy_state_spec,
                          info_spec)
+
+  def get_train_step(self):
+    """Returns the training global step of the saved model."""
+    return self._policy.train_step().numpy()
