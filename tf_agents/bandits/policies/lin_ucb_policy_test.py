@@ -290,6 +290,43 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         [batch_size])
     self.assertAllEqual(actions_.reshape([batch_size]), actions_numpy)
 
+  @test_cases()
+  def testPredictedRewards(self, batch_size):
+    policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, self._a, self._b,
+                                            self._num_samples_per_arm,
+                                            self._time_step_spec,
+                                            expose_predicted_rewards=True)
+
+    action_step = policy.action(self._time_step_batch(batch_size=batch_size))
+    self.assertEqual(action_step.action.shape.as_list(), [batch_size])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+
+    observation_numpy = np.array(
+        range(batch_size * self._obs_dim), dtype=np.float32).reshape(
+            [batch_size, self._obs_dim])
+
+    p_values = []
+    predicted_rewards_expected = []
+    for k in range(self._num_actions):
+      a_inv = np.linalg.inv(self._a_numpy[k] + np.eye(self._obs_dim))
+      theta = np.matmul(
+          a_inv, self._b_numpy[k].reshape([self._obs_dim, 1]))
+      confidence_intervals = np.sqrt(np.diag(
+          np.matmul(observation_numpy,
+                    np.matmul(a_inv, np.transpose(observation_numpy)))))
+      est_mean_reward = np.matmul(observation_numpy, theta)
+      predicted_rewards_expected.append(est_mean_reward)
+      p_value = (est_mean_reward +
+                 self._alpha * confidence_intervals.reshape([-1, 1]))
+      p_values.append(p_value)
+
+    predicted_rewards_expected_array = np.stack(
+        predicted_rewards_expected, axis=-1).reshape(
+            batch_size, self._num_actions)
+    p_info = self.evaluate(action_step.info)
+    self.assertAllClose(p_info.predicted_rewards,
+                        predicted_rewards_expected_array)
+
 
 if __name__ == '__main__':
   tf.test.main()

@@ -82,6 +82,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
                gamma=1.0,
                use_eigendecomp=False,
                tikhonov_weight=1.0,
+               expose_predicted_rewards=False,
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
                dtype=tf.float32,
@@ -99,6 +100,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
       use_eigendecomp: whether to use eigen-decomposition or not. The default
         solver is Conjugate Gradient.
       tikhonov_weight: (float) tikhonov regularization term.
+      expose_predicted_rewards: (bool) Whether to expose the predicted rewards
+        in the policy info field under the name 'predicted_rewards'.
       emit_log_probability: Whether the LinearUCBPolicy emits log-probabilities
         or not. Since the policy is deterministic, the probability is just 1.
       observation_and_action_constraint_splitter: A function used for masking
@@ -183,6 +186,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
         eig_vals=self._eig_vals_list if self._use_eigendecomp else (),
         eig_matrix=self._eig_matrix_list if self._use_eigendecomp else (),
         tikhonov_weight=self._tikhonov_weight,
+        expose_predicted_rewards=expose_predicted_rewards,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=observation_and_action_constraint_splitter
     )
