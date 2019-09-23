@@ -36,7 +36,8 @@ run_tests() {
   # packages a user might have installed.
   if [[ $2 == "nightly" ]] ; then
     pip install tf-nightly==1.15.0.dev20190821 \
-      tf-estimator-nightly==1.14.0.dev2019091701
+      tf-estimator-nightly==1.14.0.dev2019091701 \
+      gast==0.2.2
 
     # Run the tests
     python setup.py test
