@@ -49,19 +49,17 @@ from tf_agents.utils import common
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
-
 create_variable = common.create_variable
 
 
 class TensorNormalizer(tf.Module):
   """Encapsulates tensor normalization and owns normalization variables."""
 
-  def __init__(self,
-               tensor_spec,
-               scope='normalize_tensor'):
+  def __init__(self, tensor_spec, scope='normalize_tensor'):
     super(TensorNormalizer, self).__init__(name=scope)
     self._scope = scope
     self._tensor_spec = tensor_spec
+    self._flat_tensor_spec = tf.nest.flatten(tensor_spec)
     self._create_variables()
 
   @property
@@ -98,9 +96,7 @@ class TensorNormalizer(tf.Module):
 
   def update(self, tensor, outer_dims=(0,)):
     """Updates tensor normalizer variables."""
-    tensor = tf.nest.map_structure(
-        lambda t: tf.cast(t, tf.float32),
-        tensor)
+    tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
     return tf.group(self._update_ops(tensor, outer_dims))
 
   def normalize(self,
@@ -121,6 +117,7 @@ class TensorNormalizer(tf.Module):
       normalized_tensor: Tensor after applying normalization.
     """
     tf.nest.assert_same_structure(tensor, self._tensor_spec)
+    tensor = tf.nest.flatten(tensor)
     tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
 
     with tf.name_scope(self._scope + '/normalize'):
@@ -131,31 +128,43 @@ class TensorNormalizer(tf.Module):
 
       def _normalize_single_tensor(single_tensor, single_mean, single_var):
         return tf.nn.batch_normalization(
-            single_tensor, single_mean, single_var,
-            offset=None, scale=None, variance_epsilon=variance_epsilon,
+            single_tensor,
+            single_mean,
+            single_var,
+            offset=None,
+            scale=None,
+            variance_epsilon=variance_epsilon,
             name='normalized_tensor')
 
-      normalized_tensor = nest.map_structure_up_to(self._tensor_spec,
-                                                   _normalize_single_tensor,
-                                                   tensor, mean, var_estimate)
+      normalized_tensor = nest.map_structure_up_to(
+          self._flat_tensor_spec,
+          _normalize_single_tensor,
+          tensor,
+          mean,
+          var_estimate,
+          check_types=False)
 
       if clip_value > 0:
+
         def _clip(t):
-          return tf.clip_by_value(t, -clip_value, clip_value,
-                                  name='clipped_normalized_tensor')
+          return tf.clip_by_value(
+              t, -clip_value, clip_value, name='clipped_normalized_tensor')
 
         normalized_tensor = tf.nest.map_structure(_clip, normalized_tensor)
 
+    normalized_tensor = tf.nest.pack_sequence_as(self._tensor_spec,
+                                                 normalized_tensor)
     return normalized_tensor
 
 
 class EMATensorNormalizer(TensorNormalizer):
   """TensorNormalizer with exponential moving avg. mean and var estimates."""
 
-  def __init__(self,
-               tensor_spec,
-               scope='normalize_tensor',
-               norm_update_rate=0.001,):
+  def __init__(
+      self,
+      tensor_spec,
+      scope='normalize_tensor',
+      norm_update_rate=0.001):
     super(EMATensorNormalizer, self).__init__(tensor_spec, scope)
     self._norm_update_rate = norm_update_rate
 
@@ -169,15 +178,16 @@ class EMATensorNormalizer(TensorNormalizer):
     """Creates the variables needed for EMATensorNormalizer."""
     self._mean_moving_avg = tf.nest.map_structure(
         lambda spec: create_variable('mean', 0, spec.shape, tf.float32),
-        self._tensor_spec)
+        self._flat_tensor_spec)
     self._var_moving_avg = tf.nest.map_structure(
         lambda spec: create_variable('var', 1, spec.shape, tf.float32),
-        self._tensor_spec)
+        self._flat_tensor_spec)
 
   @property
   def variables(self):
     """Returns a tuple of tf variables owned by this EMATensorNormalizer."""
-    return self._mean_moving_avg, self._var_moving_avg
+    return (tf.nest.pack_sequence_as(self._tensor_spec, self._mean_moving_avg),
+            tf.nest.pack_sequence_as(self._tensor_spec, self._var_moving_avg))
 
   def _update_ops(self, tensor, outer_dims):
     """Returns a list of update obs for EMATensorNormalizer mean and var.
@@ -193,18 +203,19 @@ class EMATensorNormalizer(TensorNormalizer):
       tensor: The tensor of values to be normalized.
       outer_dims: The batch dimensions over which to compute normalization
         statistics.
+
     Returns:
       A list of ops, which when run will update all necessary normaliztion
       variables.
     """
+
     def _tensor_update_ops(single_tensor, mean_var, var_var):
       """Make update ops for a single non-nested tensor."""
       # Take the moments across batch dimension. Calculate variance with
       #   moving avg mean, so that this works even with batch size 1.
       mean = tf.reduce_mean(input_tensor=single_tensor, axis=outer_dims)
       var = tf.reduce_mean(
-          input_tensor=tf.square(single_tensor - mean_var),
-          axis=outer_dims)
+          input_tensor=tf.square(single_tensor - mean_var), axis=outer_dims)
 
       # Ops to update moving average. Make sure that all stats are computed
       #   before updates are performed.
@@ -216,8 +227,9 @@ class EMATensorNormalizer(TensorNormalizer):
       return update_ops
 
     # Aggregate update ops for all parts of potentially nested tensor.
-    updates = tf.nest.map_structure(
-        _tensor_update_ops, tensor, self._mean_moving_avg, self._var_moving_avg)
+    tensor = tf.nest.flatten(tensor)
+    updates = tf.nest.map_structure(_tensor_update_ops, tensor,
+                                    self._mean_moving_avg, self._var_moving_avg)
     all_update_ops = tf.nest.flatten(updates)
 
     return all_update_ops
@@ -234,13 +246,13 @@ class StreamingTensorNormalizer(TensorNormalizer):
     """Uses self._scope and creates all variables needed for the normalizer."""
     self._count = tf.nest.map_structure(
         lambda spec: create_variable('count', 1e-8, spec.shape, tf.float32),
-        self._tensor_spec)
+        self._flat_tensor_spec)
     self._mean_sum = tf.nest.map_structure(
         lambda spec: create_variable('mean_sum', 0, spec.shape, tf.float32),
-        self._tensor_spec)
+        self._flat_tensor_spec)
     self._var_sum = tf.nest.map_structure(
         lambda spec: create_variable('var_sum', 0, spec.shape, tf.float32),
-        self._tensor_spec)
+        self._flat_tensor_spec)
 
   def copy(self, scope=None):
     """Copy constructor for StreamingTensorNormalizer."""
@@ -250,7 +262,9 @@ class StreamingTensorNormalizer(TensorNormalizer):
   @property
   def variables(self):
     """Returns a tuple of tf variables owned by this normalizer."""
-    return self._count, self._mean_sum, self._var_sum
+    return (tf.nest.pack_sequence_as(self._tensor_spec, self._count),
+            tf.nest.pack_sequence_as(self._tensor_spec, self._mean_sum),
+            tf.nest.pack_sequence_as(self._tensor_spec, self._var_sum))
 
   def _update_ops(self, tensor, outer_dims):
     """Returns a list of ops which update normalizer variables for tensor.
@@ -263,23 +277,24 @@ class StreamingTensorNormalizer(TensorNormalizer):
       tensor: The tensor of values to be normalized.
       outer_dims: The batch dimensions over which to compute normalization
         statistics.
+
     Returns:
       A list of ops, which when run will update all necessary normaliztion
       variables.
     """
+
     def _tensor_update_ops(single_tensor, single_mean_est, count_var, mean_var,
                            var_var):
       """Make update ops for a single non-nested tensor."""
       # Num samples in batch is the product of batch dimensions.
       num_samples = tf.cast(
           tf.reduce_prod(
-              input_tensor=tf.gather(
-                  tf.shape(input=single_tensor), outer_dims)),
-          tf.float32)
+              input_tensor=tf.gather(tf.shape(
+                  input=single_tensor), outer_dims)), tf.float32)
       mean_sum = tf.reduce_sum(input_tensor=single_tensor, axis=outer_dims)
       var_sum = tf.reduce_sum(
-          input_tensor=tf.square(
-              single_tensor - single_mean_est), axis=outer_dims)
+          input_tensor=tf.square(single_tensor - single_mean_est),
+          axis=outer_dims)
 
       # Ops to update streaming norm. Make sure that all stats are computed
       #   before updates are performed.
@@ -289,27 +304,27 @@ class StreamingTensorNormalizer(TensorNormalizer):
                 count_var,
                 tf.ones_like(count_var) * num_samples,
                 name='update_count'),
-            tf.compat.v1.assign_add(
-                mean_var, mean_sum, name='update_mean_sum'),
-            tf.compat.v1.assign_add(
-                var_var, var_sum, name='update_var_sum'),
+            tf.compat.v1.assign_add(mean_var, mean_sum, name='update_mean_sum'),
+            tf.compat.v1.assign_add(var_var, var_sum, name='update_var_sum'),
         ]
       return update_ops
 
     mean_estimate, _ = self._get_mean_var_estimates()
 
+    tensor = tf.nest.flatten(tensor)
     # Aggregate update ops for all parts of potentially nested tensor.
-    updates = tf.nest.map_structure(
-        _tensor_update_ops, tensor, mean_estimate, self._count, self._mean_sum,
-        self._var_sum)
+    updates = tf.nest.map_structure(_tensor_update_ops, tensor, mean_estimate,
+                                    self._count, self._mean_sum, self._var_sum)
     all_update_ops = tf.nest.flatten(updates)
 
     return all_update_ops
 
   def _get_mean_var_estimates(self):
     """Returns this normalizer's current estimates for mean & variance."""
-    mean_estimate = nest.map_structure_up_to(
-        self._tensor_spec, lambda a, b: a / b, self._mean_sum, self._count)
-    var_estimate = nest.map_structure_up_to(
-        self._tensor_spec, lambda a, b: a / b, self._var_sum, self._count)
+    mean_estimate = nest.map_structure_up_to(self._flat_tensor_spec,
+                                             lambda a, b: a / b, self._mean_sum,
+                                             self._count)
+    var_estimate = nest.map_structure_up_to(self._flat_tensor_spec,
+                                            lambda a, b: a / b, self._var_sum,
+                                            self._count)
     return mean_estimate, var_estimate
