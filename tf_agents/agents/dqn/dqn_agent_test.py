@@ -40,11 +40,10 @@ class DummyNet(network.Network):
   def __init__(self,
                observation_spec,
                action_spec,
-               mask_split_fn=None,
                l2_regularization_weight=0.0,
                name=None):
     super(DummyNet, self).__init__(
-        observation_spec, state_spec=(), name=name, mask_split_fn=mask_split_fn)
+        observation_spec, state_spec=(), name=name)
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
         tf.keras.layers.Dense(
@@ -57,13 +56,7 @@ class DummyNet(network.Network):
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
-    mask_split_fn = self.mask_split_fn
-
-    if mask_split_fn:
-      # Extract the network-specific portion of the observation.
-      inputs, _ = self._mask_split_fn(inputs)
-
-    inputs = tf.cast(inputs[0], tf.float32)
+    inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
     return inputs, network_state
@@ -88,7 +81,7 @@ class DqnAgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(DqnAgentTest, self).setUp()
-    self._observation_spec = [tensor_spec.TensorSpec([2], tf.float32)]
+    self._observation_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._observation_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
 
@@ -103,7 +96,7 @@ class DqnAgentTest(test_utils.TestCase):
 
   def testCreateAgentWithPrebuiltPreprocessingLayers(self, agent_class):
     dense_layer = tf.keras.layers.Dense(3)
-    q_net = networks_test_utils.KerasLayersNet(self._observation_spec[0],
+    q_net = networks_test_utils.KerasLayersNet(self._observation_spec,
                                                self._action_spec,
                                                dense_layer)
     with self.assertRaisesRegexp(
@@ -115,7 +108,7 @@ class DqnAgentTest(test_utils.TestCase):
           optimizer=None)
 
     # Explicitly share weights between q and target networks; this is ok.
-    q_target_net = networks_test_utils.KerasLayersNet(self._observation_spec[0],
+    q_target_net = networks_test_utils.KerasLayersNet(self._observation_spec,
                                                       self._action_spec,
                                                       dense_layer)
     agent_class(
@@ -154,7 +147,7 @@ class DqnAgentTest(test_utils.TestCase):
         q_network=q_net,
         optimizer=None)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = tf.constant([[0], [1]], dtype=tf.int32)
@@ -162,7 +155,7 @@ class DqnAgentTest(test_utils.TestCase):
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = trajectories_test_utils.stacked_trajectory_from_transition(
@@ -197,7 +190,7 @@ class DqnAgentTest(test_utils.TestCase):
         q_network=q_net,
         optimizer=None)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = tf.constant([[0], [1]], dtype=tf.int32)
@@ -207,7 +200,7 @@ class DqnAgentTest(test_utils.TestCase):
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
 
     # Note that instead of [[5, 6], [7, 8]] as before, we now have -5 and -7.
-    next_observations = [tf.constant([[-5, 6], [-7, 8]], dtype=tf.float32)]
+    next_observations = tf.constant([[-5, 6], [-7, 8]], dtype=tf.float32)
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = trajectories_test_utils.stacked_trajectory_from_transition(
@@ -244,7 +237,7 @@ class DqnAgentTest(test_utils.TestCase):
         q_network=q_net,
         optimizer=None)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = tf.constant([[0], [1]], dtype=tf.int32)
@@ -252,7 +245,7 @@ class DqnAgentTest(test_utils.TestCase):
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = trajectories_test_utils.stacked_trajectory_from_transition(
@@ -276,7 +269,7 @@ class DqnAgentTest(test_utils.TestCase):
         optimizer=None,
         n_step_update=2)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = tf.constant([[0], [1]], dtype=tf.int32)
@@ -284,10 +277,10 @@ class DqnAgentTest(test_utils.TestCase):
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
-    third_observations = [tf.constant([[9, 10], [11, 12]], dtype=tf.float32)]
+    third_observations = tf.constant([[9, 10], [11, 12]], dtype=tf.float32)
     third_time_steps = ts.transition(third_observations, rewards, discounts)
 
     experience1 = trajectory.from_transition(
@@ -326,7 +319,7 @@ class DqnAgentTest(test_utils.TestCase):
         optimizer=None,
         n_step_update=3)
 
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
     # MID: use ts.transition
@@ -335,16 +328,15 @@ class DqnAgentTest(test_utils.TestCase):
     actions = tf.constant([[0], [1]], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
-    second_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    second_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
     # MID: use ts.transition
     second_time_steps = ts.transition(second_observations, rewards, discounts)
 
-    third_observations = [tf.constant([[9, 10], [11, 12]], dtype=tf.float32)]
+    third_observations = tf.constant([[9, 10], [11, 12]], dtype=tf.float32)
     # LAST: use ts.termination
     third_time_steps = ts.termination(third_observations, rewards)
 
-    fourth_observations = [tf.constant([[13, 14], [15, 16]],
-                                       dtype=tf.float32)]
+    fourth_observations = tf.constant([[13, 14], [15, 16]], dtype=tf.float32)
     # FIRST: use ts.restart
     fourth_time_steps = ts.restart(fourth_observations, batch_size=2)
 
@@ -381,16 +373,16 @@ class DqnAgentTest(test_utils.TestCase):
         self._observation_spec,
         tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1))
     time_step_spec = ts.time_step_spec(observation_spec_with_mask)
-    q_net = DummyNet(observation_spec_with_mask, self._action_spec,
-                     mask_split_fn=lambda x: (x[0], x[1]))
+    q_net = DummyNet(self._observation_spec, self._action_spec)
     agent = agent_class(
         time_step_spec,
         self._action_spec,
         q_network=q_net,
-        optimizer=None)
+        optimizer=None,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
 
     # For `observations`, the masks are set up so that all actions are valid.
-    observations = ([tf.constant([[1, 2], [3, 4]], dtype=tf.float32)],
+    observations = (tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
                     tf.constant([[1, 1], [1, 1]], dtype=tf.int32))
     time_steps = ts.restart(observations, batch_size=2)
 
@@ -402,7 +394,7 @@ class DqnAgentTest(test_utils.TestCase):
 
     # For `next_observations`, the masks are set up so that only one action is
     # valid for each element in the batch.
-    next_observations = ([tf.constant([[5, 6], [7, 8]], dtype=tf.float32)],
+    next_observations = (tf.constant([[5, 6], [7, 8]], dtype=tf.float32),
                          tf.constant([[0, 1], [1, 0]], dtype=tf.int32))
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
@@ -439,7 +431,7 @@ class DqnAgentTest(test_utils.TestCase):
         self._action_spec,
         q_network=q_net,
         optimizer=None)
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
     action_step = policy.action(time_steps)
@@ -458,7 +450,7 @@ class DqnAgentTest(test_utils.TestCase):
         self._action_spec,
         q_network=q_net,
         optimizer=None)
-    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
     action_step = policy.action(time_steps)

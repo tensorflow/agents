@@ -92,6 +92,7 @@ class DqnAgent(tf_agent.TFAgent):
       action_spec,
       q_network,
       optimizer,
+      observation_and_action_constraint_splitter=None,
       epsilon_greedy=0.1,
       n_step_update=1,
       boltzmann_temperature=None,
@@ -119,6 +120,28 @@ class DqnAgent(tf_agent.TFAgent):
         network will be called with `call(observation, step_type)` and should
         emit logits over the action space.
       optimizer: The optimizer to use for training.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
+        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
+        implemented. Until they are, action constraints will not work with
+        EpsilonGreedyPolicy exploration.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method).
@@ -193,6 +216,8 @@ class DqnAgent(tf_agent.TFAgent):
           'however only one of them can be used for exploration.'.format(
               epsilon_greedy, boltzmann_temperature))
 
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
     self._q_network = q_network
     q_network.create_variables()
     if target_q_network:
@@ -204,7 +229,8 @@ class DqnAgent(tf_agent.TFAgent):
     self._n_step_update = n_step_update
     self._boltzmann_temperature = boltzmann_temperature
     self._optimizer = optimizer
-    self._td_errors_loss_fn = td_errors_loss_fn or common.element_wise_huber_loss
+    self._td_errors_loss_fn = (
+        td_errors_loss_fn or common.element_wise_huber_loss)
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
@@ -255,7 +281,9 @@ class DqnAgent(tf_agent.TFAgent):
         time_step_spec,
         action_spec,
         q_network=self._q_network,
-        emit_log_probability=emit_log_probability)
+        emit_log_probability=emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            self._observation_and_action_constraint_splitter))
 
     if boltzmann_temperature is not None:
       collect_policy = boltzmann_policy.BoltzmannPolicy(
@@ -269,7 +297,9 @@ class DqnAgent(tf_agent.TFAgent):
     target_policy = q_policy.QPolicy(
         time_step_spec,
         action_spec,
-        q_network=self._target_q_network)
+        q_network=self._target_q_network,
+        observation_and_action_constraint_splitter=(
+            self._observation_and_action_constraint_splitter))
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
     return policy, collect_policy
@@ -471,8 +501,13 @@ class DqnAgent(tf_agent.TFAgent):
                                                  td_error=td_error))
 
   def _compute_q_values(self, time_steps, actions):
-    q_values, _ = self._q_network(time_steps.observation,
-                                  time_steps.step_type)
+    network_observation = time_steps.observation
+
+    if self._observation_and_action_constraint_splitter:
+      network_observation, _ = self._observation_and_action_constraint_splitter(
+          network_observation)
+
+    q_values, _ = self._q_network(network_observation, time_steps.step_type)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     multi_dim_actions = self._action_spec.shape.ndims > 0
@@ -490,13 +525,19 @@ class DqnAgent(tf_agent.TFAgent):
     Returns:
       A tensor of Q values for the given next state.
     """
+    network_observation = next_time_steps.observation
+
+    if self._observation_and_action_constraint_splitter:
+      network_observation, _ = self._observation_and_action_constraint_splitter(
+          network_observation)
+
     next_target_q_values, _ = self._target_q_network(
-        next_time_steps.observation, next_time_steps.step_type)
+        network_observation, next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
     # Find the greedy actions using our target greedy policy. This ensures that
-    # masked actions are respected and helps centralize the greedy logic.
+    # action constraints are respected and helps centralize the greedy logic.
     greedy_actions = self._target_greedy_policy.action(
         next_time_steps, dummy_state).action
 
@@ -531,13 +572,19 @@ class DdqnAgent(DqnAgent):
       A tensor of Q values for the given next state.
     """
     # TODO(b/117175589): Add binary tests for DDQN.
+    network_observation = next_time_steps.observation
+
+    if self._observation_and_action_constraint_splitter:
+      network_observation, _ = self._observation_and_action_constraint_splitter(
+          network_observation)
+
     next_target_q_values, _ = self._target_q_network(
-        next_time_steps.observation, next_time_steps.step_type)
+        network_observation, next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._policy.get_initial_state(batch_size)
-    # Find the greedy actions using our greedy policy. This ensures that masked
-    # actions are respected and helps centralize the greedy logic.
+    # Find the greedy actions using our greedy policy. This ensures that action
+    # constraints are respected and helps centralize the greedy logic.
     best_next_actions = self._policy.action(next_time_steps, dummy_state).action
 
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions

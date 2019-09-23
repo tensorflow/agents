@@ -40,6 +40,7 @@ class CategoricalQPolicy(tf_policy.Base):
                q_network,
                min_q_value,
                max_q_value,
+               observation_and_action_constraint_splitter=None,
                temperature=1.0):
     """Builds a categorical Q-policy given a categorical Q-network.
 
@@ -51,12 +52,36 @@ class CategoricalQPolicy(tf_policy.Base):
         the support.
       max_q_value: A float specifying the maximum Q-value, used for setting up
         the support.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
+        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
+        implemented. Until they are, action constraints will not work with
+        EpsilonGreedyPolicy exploration.
       temperature: temperature for sampling, when close to 0.0 is arg_max.
 
     Raises:
       ValueError: if `q_network` does not have property `num_atoms`.
       TypeError: if `action_spec` is not a `BoundedTensorSpec`.
     """
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:
@@ -105,16 +130,20 @@ class CategoricalQPolicy(tf_policy.Base):
       A policy_state Tensor, or a nested dict, list or tuple of Tensors,
         representing the new policy state.
     """
+    network_observation = time_step.observation
+
+    if self._observation_and_action_constraint_splitter:
+      network_observation, mask = (
+          self._observation_and_action_constraint_splitter(network_observation))
+
     q_logits, policy_state = self._q_network(
-        time_step.observation, time_step.step_type, policy_state)
+        network_observation, time_step.step_type, policy_state)
     q_logits.shape.assert_has_rank(3)
     q_values = common.convert_q_logits_to_values(q_logits, self._support)
 
     logits = q_values
-    mask_split_fn = self._q_network.mask_split_fn
 
-    if mask_split_fn:
-      _, mask = mask_split_fn(time_step.observation)
+    if self._observation_and_action_constraint_splitter:
       # Overwrite the logits for invalid actions to -inf.
       neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
       logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)

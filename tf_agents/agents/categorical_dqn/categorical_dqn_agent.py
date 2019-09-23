@@ -50,6 +50,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
                action_spec,
                categorical_q_network,
                optimizer,
+               observation_and_action_constraint_splitter=None,
                min_q_value=-10.0,
                max_q_value=10.0,
                epsilon_greedy=0.1,
@@ -77,6 +78,28 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       categorical_q_network: A categorical_q_network.CategoricalQNetwork that
         returns the q_distribution for each action.
       optimizer: The optimizer to use for training.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
+        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
+        implemented. Until they are, action constraints will not work with
+        EpsilonGreedyPolicy exploration.
       min_q_value: A float specifying the minimum Q-value, used for setting up
         the support.
       max_q_value: A float specifying the maximum Q-value, used for setting up
@@ -146,6 +169,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         action_spec,
         categorical_q_network,
         optimizer,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         epsilon_greedy=epsilon_greedy,
         n_step_update=n_step_update,
         boltzmann_temperature=boltzmann_temperature,
@@ -188,7 +213,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         self._action_spec,
         self._q_network,
         min_q_value,
-        max_q_value)
+        max_q_value,
+        observation_and_action_constraint_splitter=(
+            self._observation_and_action_constraint_splitter))
     if boltzmann_temperature is not None:
       self._collect_policy = boltzmann_policy.BoltzmannPolicy(
           policy, temperature=self._boltzmann_temperature)
@@ -202,7 +229,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         self._action_spec,
         self._target_q_network,
         min_q_value,
-        max_q_value)
+        max_q_value,
+        observation_and_action_constraint_splitter=(
+            self._observation_and_action_constraint_splitter))
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
   def _loss(self,
@@ -264,9 +293,15 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
                       if rank <= 1 or self._q_network.state_spec in ((), None)
                       else utils.BatchSquash(rank))
 
+      network_observation = time_steps.observation
+
+      if self._observation_and_action_constraint_splitter:
+        network_observation, _ = (
+            self._observation_and_action_constraint_splitter(
+                network_observation))
+
       # q_logits contains the Q-value logits for all actions.
-      q_logits, _ = self._q_network(time_steps.observation,
-                                    time_steps.step_type)
+      q_logits, _ = self._q_network(network_observation, time_steps.step_type)
 
       if batch_squash is not None:
         # Squash outer dimensions to a single dimensions for facilitation
@@ -410,15 +445,21 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       A [batch_size, num_atoms] tensor representing the Q-distribution for the
       next state.
     """
-    next_target_logits, _ = self._target_q_network(next_time_steps.observation,
-                                                   next_time_steps.step_type)
+    network_observation = next_time_steps.observation
+
+    if self._observation_and_action_constraint_splitter:
+      network_observation, _ = self._observation_and_action_constraint_splitter(
+          network_observation)
+
+    next_target_logits, _ = self._target_q_network(
+        network_observation, next_time_steps.step_type)
     batch_size = next_target_logits.shape[0] or tf.shape(next_target_logits)[0]
     next_target_probabilities = tf.nn.softmax(next_target_logits)
     next_target_q_values = tf.reduce_sum(
         self._support * next_target_probabilities, axis=-1)
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
     # Find the greedy actions using our target greedy policy. This ensures that
-    # masked actions are respected and helps centralize the greedy logic.
+    # action constraints are respected and helps centralize the greedy logic.
     greedy_actions = self._target_greedy_policy.action(
         next_time_steps, dummy_state).action
     next_qt_argmax = tf.cast(greedy_actions, tf.int32)[:, None]

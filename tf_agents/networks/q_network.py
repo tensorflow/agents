@@ -46,7 +46,6 @@ class QNetwork(network.Network):
   def __init__(self,
                input_tensor_spec,
                action_spec,
-               mask_split_fn=None,
                preprocessing_layers=None,
                preprocessing_combiner=None,
                conv_layer_params=None,
@@ -64,16 +63,6 @@ class QNetwork(network.Network):
         input observations.
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
-      mask_split_fn: A function used for masking valid/invalid actions with each
-        state of the environment. The function takes in a full observation and
-        returns a tuple consisting of 1) the part of the observation intended as
-        input to the network and 2) the mask. An example mask_split_fn could be
-        as simple as:
-        ```
-        def mask_split_fn(observation):
-          return observation['network_input'], observation['mask']
-        ```
-        If None, masking is not applied.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
         representing preprocessing for the different observations.
         All of these layers must not be already built. For more details see
@@ -112,9 +101,6 @@ class QNetwork(network.Network):
     num_actions = action_spec.maximum - action_spec.minimum + 1
     encoder_input_tensor_spec = input_tensor_spec
 
-    if mask_split_fn:
-      encoder_input_tensor_spec, _ = mask_split_fn(input_tensor_spec)
-
     encoder = encoding_network.EncodingNetwork(
         encoder_input_tensor_spec,
         preprocessing_layers=preprocessing_layers,
@@ -138,19 +124,23 @@ class QNetwork(network.Network):
     super(QNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
-        name=name,
-        mask_split_fn=mask_split_fn)
+        name=name)
 
     self._encoder = encoder
     self._q_value_layer = q_value_layer
 
   def call(self, observation, step_type=None, network_state=()):
-    mask_split_fn = self.mask_split_fn
+    """Runs the given observation through the network.
 
-    if mask_split_fn:
-      # Extract the network-specific portion of the observation.
-      observation, _ = mask_split_fn(observation)
+    Args:
+      observation: The observation to provide to the network.
+      step_type: The step type for the given observation. See `StepType` in
+        time_step.py.
+      network_state: A state tuple to pass to the network, mainly used by RNNs.
 
+    Returns:
+      A tuple `(logits, network_state)`.
+    """
     state, network_state = self._encoder(
         observation, step_type=step_type, network_state=network_state)
     return self._q_value_layer(state), network_state

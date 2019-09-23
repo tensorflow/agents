@@ -39,15 +39,13 @@ class DummyCategoricalNet(network.Network):
                input_tensor_spec,
                num_atoms=51,
                num_actions=2,
-               mask_split_fn=None,
                name=None):
     self._num_atoms = num_atoms
     self._num_actions = num_actions
     super(DummyCategoricalNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
-        name=name,
-        mask_split_fn=mask_split_fn)
+        name=name)
 
     # In CategoricalDQN we are dealing with a distribution over Q-values, which
     # are represented as num_atoms bins, ranging from min_q_value to
@@ -80,12 +78,6 @@ class DummyCategoricalNet(network.Network):
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
-    mask_split_fn = self.mask_split_fn
-
-    if mask_split_fn:
-      # Extract the network-specific portion of the observation.
-      inputs, _ = self._mask_split_fn(inputs)
-
     inputs = tf.cast(inputs, tf.float32)
     for layer in self._dummy_layers:
       inputs = layer(inputs)
@@ -260,14 +252,13 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._obs_spec,
         tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1))
     time_step_spec = ts.time_step_spec(observation_spec_with_mask)
-    dummy_categorical_net = DummyCategoricalNet(
-        observation_spec_with_mask,
-        mask_split_fn=lambda x: (x[0], x[1]))
+    dummy_categorical_net = DummyCategoricalNet(self._obs_spec)
     agent = categorical_dqn_agent.CategoricalDqnAgent(
         time_step_spec,
         self._action_spec,
         dummy_categorical_net,
-        self._optimizer)
+        self._optimizer,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
 
     # For `observations`, the masks are set up so that only one action is valid
     # for each element in the batch.

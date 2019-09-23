@@ -225,11 +225,12 @@ class CategoricalQPolicyTest(test_utils.TestCase):
         input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         num_atoms=3,
-        fc_layer_params=[4],
-        mask_split_fn=lambda observation: (observation, tf_mask))
+        fc_layer_params=[4])
     policy = categorical_q_policy.CategoricalQPolicy(
         self._time_step_spec, action_spec, q_network,
-        self._min_q_value, self._max_q_value)
+        self._min_q_value, self._max_q_value,
+        observation_and_action_constraint_splitter=(
+            lambda observation: (observation, tf_mask)))
 
     # Force creation of variables before global_variables_initializer.
     policy.variables()

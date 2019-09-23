@@ -206,14 +206,16 @@ class QPolicyTest(test_utils.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         [1], tf.int32, 0, num_actions - 1)
 
+    # We create a fixed mask here for testing purposes. Normally the mask would
+    # be part of the observation.
     mask = [0, 1, 0, 1, 0, 0, 1, 0]
     np_mask = np.array(mask)
     tf_mask = tf.constant([mask for _ in range(batch_size)])
-    q_net = q_network.QNetwork(
-        input_tensor_spec, action_spec,
-        mask_split_fn=lambda observation: (observation, tf_mask))
+    q_net = q_network.QNetwork(input_tensor_spec, action_spec)
     policy = q_policy.QPolicy(
-        ts.time_step_spec(input_tensor_spec), action_spec, q_net)
+        ts.time_step_spec(input_tensor_spec), action_spec, q_net,
+        observation_and_action_constraint_splitter=(
+            lambda observation: (observation, tf_mask)))
 
     # Force creation of variables before global_variables_initializer.
     policy.variables()

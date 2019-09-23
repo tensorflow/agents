@@ -36,6 +36,7 @@ class QPolicy(tf_policy.Base):
                time_step_spec,
                action_spec,
                q_network,
+               observation_and_action_constraint_splitter=None,
                emit_log_probability=False,
                name=None):
     """Builds a Q-Policy given a q_network.
@@ -45,6 +46,28 @@ class QPolicy(tf_policy.Base):
       action_spec: A nest of BoundedTensorSpec representing the actions.
       q_network: An instance of a `tf_agents.network.Network`,
         callable via `network(observation, step_type) -> (output, final_state)`.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
+        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
+        implemented. Until they are, action constraints will not work with
+        EpsilonGreedyPolicy exploration.
       emit_log_probability: Whether to emit log-probs in info of `PolicyStep`.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
@@ -55,6 +78,8 @@ class QPolicy(tf_policy.Base):
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec`.
     """
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:
@@ -89,8 +114,14 @@ class QPolicy(tf_policy.Base):
     # we expose all Q-values as a categorical distribution with Q-values as
     # logits, and apply the GreedyPolicy wrapper in dqn_agent.py to select the
     # action with the highest Q-value.
+    network_observation = time_step.observation
+
+    if self._observation_and_action_constraint_splitter:
+      network_observation, mask = (
+          self._observation_and_action_constraint_splitter(network_observation))
+
     q_values, policy_state = self._q_network(
-        time_step.observation, time_step.step_type, policy_state)
+        network_observation, time_step.step_type, policy_state)
 
     # TODO(b/122314058): Validate and enforce that sampling distributions
     # created with the q_network logits generate the right action shapes. This
@@ -104,11 +135,8 @@ class QPolicy(tf_policy.Base):
       q_values = tf.expand_dims(q_values, -2)
 
     logits = q_values
-    mask_split_fn = self._q_network.mask_split_fn
 
-    if mask_split_fn:
-      _, mask = mask_split_fn(time_step.observation)
-
+    if self._observation_and_action_constraint_splitter:
       # Expand the mask as needed in the same way as q_values above.
       if self._flat_action_spec.shape.ndims == 1:
         mask = tf.expand_dims(mask, -2)

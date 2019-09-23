@@ -245,23 +245,6 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     q_logits, _ = network(tf.ones((3, num_state_dims)))
     self.assertAllEqual(q_logits.shape.as_list(), [3, 2])
 
-  def testMasking(self):
-    batch_size = 3
-    num_state_dims = 5
-    num_actions = 6
-    states = tf.random.uniform([batch_size, num_state_dims])
-    input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
-    action_spec = tensor_spec.BoundedTensorSpec(
-        [1], tf.int32, 0, num_actions - 1)
-    mask = tf.constant([[1, 0, 1, 0, 0, 1] for _ in range(batch_size)])
-    network = q_network.QNetwork(
-        input_tensor_spec, action_spec,
-        mask_split_fn=lambda observation: (observation, mask))
-    self.assertIsNotNone(network.mask_split_fn)
-
-    # Run a pass through the network to catch any shape errors.
-    network(states)
-
 
 if __name__ == '__main__':
   tf.test.main()
