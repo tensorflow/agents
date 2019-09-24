@@ -135,6 +135,32 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [11, 12])
 
+  def testMaskedAction(self):
+    tf.compat.v1.set_random_seed(1)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)
+    observation_spec = (tensor_spec.TensorSpec([2], tf.float32),
+                        tensor_spec.TensorSpec([3], tf.int32))
+    time_step_spec = ts.time_step_spec(observation_spec)
+
+    def split_fn(obs):
+      return obs[0], obs[1]
+
+    policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
+        time_step_spec,
+        action_spec,
+        reward_network=DummyNet(),
+        observation_and_action_constraint_splitter=split_fn)
+
+    observations = (tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+                    tf.constant([[0, 0, 1], [0, 1, 0]], dtype=tf.int32))
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [2, 1])
+
   def testUpdate(self):
     tf.compat.v1.set_random_seed(1)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(

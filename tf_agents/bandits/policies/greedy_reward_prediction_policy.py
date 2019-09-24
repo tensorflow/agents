@@ -23,6 +23,7 @@ import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -36,6 +37,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
                time_step_spec=None,
                action_spec=None,
                reward_network=None,
+               observation_and_action_constraint_splitter=None,
                name=None):
     """Builds a GreedyRewardPredictionPolicy given a reward tf_agents.Network.
 
@@ -47,6 +49,14 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
       action_spec: A nest of BoundedTensorSpec representing the actions.
       reward_network: An instance of a `tf_agents.network.Network`,
         callable via `network(observation, step_type) -> (output, final_state)`.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the network and 2) the
+        mask.  The mask should be a 0-1 `Tensor` of shape
+        `[batch_size, num_actions]`. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -54,6 +64,8 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec` or the `BoundedTensorSpec` is not valid.
     """
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
@@ -81,6 +93,9 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
+    if self._observation_and_action_constraint_splitter:
+      observation, mask = self._observation_and_action_constraint_splitter(
+          observation)
     predicted_reward_values, policy_state = self._reward_network(
         observation, time_step.step_type, policy_state)
     predicted_reward_values.shape.with_rank_at_least(2)
@@ -90,8 +105,12 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
           'The number of actions ({}) does not match the reward_network output'
           ' size ({}.)'.format(self._expected_num_actions,
                                predicted_reward_values.shape[1]))
-    actions = tf.argmax(predicted_reward_values, axis=-1,
-                        output_type=self.action_spec.dtype)
+    if self._observation_and_action_constraint_splitter:
+      actions = policy_utilities.masked_argmax(
+          predicted_reward_values, mask, output_type=self.action_spec.dtype)
+    else:
+      actions = tf.argmax(
+          predicted_reward_values, axis=-1, output_type=self.action_spec.dtype)
     actions += self._action_offset
     return policy_step.PolicyStep(
         tfp.distributions.Deterministic(loc=actions), policy_state)

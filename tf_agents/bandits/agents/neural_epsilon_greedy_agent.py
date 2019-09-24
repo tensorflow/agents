@@ -85,10 +85,18 @@ class NeuralEpsilonGreedyAgent(
       ValueError: If the action spec contains more than one action or or it is
       not a bounded scalar int32 spec with minimum 0.
     """
-    super(NeuralEpsilonGreedyAgent,
-          self).__init__(time_step_spec, action_spec, reward_network, optimizer,
-                         error_loss_fn, gradient_clipping, debug_summaries,
-                         summarize_grads_and_vars, train_step_counter, name)
+    super(NeuralEpsilonGreedyAgent, self).__init__(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        reward_network=reward_network,
+        optimizer=optimizer,
+        observation_and_action_constraint_splitter=None,
+        error_loss_fn=error_loss_fn,
+        gradient_clipping=gradient_clipping,
+        debug_summaries=debug_summaries,
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter,
+        name=name)
     self._policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         self._policy, epsilon=epsilon)
     self._collect_policy = self._policy

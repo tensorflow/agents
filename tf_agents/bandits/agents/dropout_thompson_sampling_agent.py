@@ -99,7 +99,15 @@ class DropoutThompsonSamplingAgent(
         fc_layer_params=fc_layer_params,
         dropout_layer_params=dropout_layer_params)
 
-    super(DropoutThompsonSamplingAgent,
-          self).__init__(time_step_spec, action_spec, reward_network, optimizer,
-                         error_loss_fn, gradient_clipping, debug_summaries,
-                         summarize_grads_and_vars, train_step_counter, name)
+    super(DropoutThompsonSamplingAgent, self).__init__(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        reward_network=reward_network,
+        optimizer=optimizer,
+        observation_and_action_constraint_splitter=None,
+        error_loss_fn=error_loss_fn,
+        gradient_clipping=gradient_clipping,
+        debug_summaries=debug_summaries,
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step_counter,
+        name=name)

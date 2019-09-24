@@ -46,6 +46,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       action_spec,
       reward_network,
       optimizer,
+      observation_and_action_constraint_splitter=None,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -63,6 +64,13 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         network will be called with call(observation, step_type) and it is
         expected to provide a reward prediction for all actions.
       optimizer: The optimizer to use for training.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit agent and
+        policy, and 2) the boolean mask. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -82,6 +90,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       not a bounded scalar int32 spec with minimum 0.
     """
     tf.Module.__init__(self, name=name)
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
 
@@ -91,7 +101,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._gradient_clipping = gradient_clipping
 
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        time_step_spec, action_spec, reward_network=self._reward_network)
+        time_step_spec, action_spec, reward_network,
+        observation_and_action_constraint_splitter)
 
     super(GreedyRewardPredictionAgent, self).__init__(
         time_step_spec,
@@ -110,6 +121,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         experience.action, self._action_spec)
     observations, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
+    if self._observation_and_action_constraint_splitter:
+      observations, _ = self._observation_and_action_constraint_splitter(
+          observations)
 
     with tf.GradientTape() as tape:
       loss_info = self.loss(observations,

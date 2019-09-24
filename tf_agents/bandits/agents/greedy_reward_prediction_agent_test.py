@@ -75,6 +75,29 @@ def _get_initial_and_final_steps(observations, rewards):
   return initial_step, final_step
 
 
+def _get_initial_and_final_steps_with_action_mask(observations, rewards):
+  batch_size = observations[0].shape[0]
+  initial_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.FIRST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (tf.constant(observations[0]), tf.constant(observations[1])))
+  final_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.LAST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(rewards, dtype=tf.float32, name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (tf.constant(observations[0] + 100.0), tf.constant(observations[1])))
+  return initial_step, final_step
+
+
 def _get_action_step(action):
   return policy_step.PolicyStep(
       action=tf.convert_to_tensor(action))
@@ -200,6 +223,31 @@ class AgentTest(tf.test.TestCase):
     actions = np.array([0, 1], dtype=np.float32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+    loss_before, _ = agent.train(experience, None)
+    loss_after, _ = agent.train(experience, None)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.assertAllClose(self.evaluate(loss_before), 42.25)
+    self.assertAllClose(self.evaluate(loss_after), 93.46)
+
+  def testTrainAgentWithMask(self):
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    time_step_spec = ts.time_step_spec((tensor_spec.TensorSpec([2], tf.float32),
+                                        tensor_spec.TensorSpec([3], tf.int32)))
+    agent = greedy_agent.GreedyRewardPredictionAgent(
+        time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=optimizer,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
+    observations = (np.array([[1, 2], [3, 4]], dtype=np.float32),
+                    np.array([[1, 0, 0], [1, 1, 0]], dtype=np.int32))
+    actions = np.array([0, 1], dtype=np.float32)
+    rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
         observations, rewards)
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
