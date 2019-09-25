@@ -48,7 +48,7 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         test_utils.contains(list1, list2), '%s vs. %s' % (list1, list2))
 
   def _assertCircularOrdering(self, expected_order, given_order):
-    for i in xrange(len(given_order)):
+    for i in range(len(given_order)):
       self.assertIn(given_order[i], expected_order)
       if i > 0:
         prev_idx = expected_order.index(given_order[i - 1])
