@@ -24,6 +24,8 @@ import tensorflow as tf
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 
 def map_tensor_spec_to_dtypes_list(t_spec):
@@ -58,8 +60,8 @@ class TFPyPolicy(tf_policy.Base):
     (time_step_spec, action_spec,
      policy_state_spec, info_spec) = tf.nest.map_structure(
          tensor_spec.BoundedTensorSpec.from_spec,
-         (policy.time_step_spec, policy.action_spec,
-          policy.policy_state_spec, policy.info_spec))
+         (policy.time_step_spec, policy.action_spec, policy.policy_state_spec,
+          policy.info_spec))
 
     super(TFPyPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -76,6 +78,10 @@ class TFPyPolicy(tf_policy.Base):
     self._policy_step_dtypes = map_tensor_spec_to_dtypes_list(
         self.policy_step_spec)
 
+  # Wrapped in common.function to avoid failures in eager mode. This happens
+  # when the policy_state is empty and it gets dropped by tf.nest.flatten
+  # # in the py_func.
+  @common.function
   def _get_initial_state(self, batch_size):
     """Invokes  python policy reset through py_func.
 
@@ -88,6 +94,7 @@ class TFPyPolicy(tf_policy.Base):
       representing the new policy state.
       reset_op: a list of Tensors representing the results of py_policy.reset().
     """
+
     def _get_initial_state_fn(*batch_size):
       return tf.nest.flatten(
           self._py_policy.get_initial_state(batch_size=batch_size))
@@ -101,10 +108,15 @@ class TFPyPolicy(tf_policy.Base):
       return tf.nest.pack_sequence_as(
           structure=self.policy_state_spec, flat_sequence=flat_policy_state)
 
+  # Wrapped in common.function to avoid failures in eager mode. This happens
+  # when empty fields in the policy_step get dropped by tf.nest.flatten
+  # in the py_func.
+  @common.function
   def _action(self, time_step, policy_state, seed):
     if seed is not None:
       raise NotImplementedError(
           'seed is not supported; but saw seed: {}'.format(seed))
+
     def _action_fn(*flattened_time_step_and_policy_state):
       packed_py_time_step, packed_py_policy_state = tf.nest.pack_sequence_as(
           structure=(self._py_policy.time_step_spec,
@@ -115,16 +127,19 @@ class TFPyPolicy(tf_policy.Base):
       return tf.nest.flatten(py_action_step)
 
     with tf.name_scope('action'):
-      flattened_input_tensors = tf.nest.flatten((time_step, policy_state))
-      with tf.control_dependencies(flattened_input_tensors):
-        flat_action_step = tf.compat.v1.py_func(
-            _action_fn,
-            flattened_input_tensors,
-            self._policy_step_dtypes,
-            stateful=True,
-            name='action_py_func')
-        return tf.nest.pack_sequence_as(
-            structure=self.policy_step_spec, flat_sequence=flat_action_step)
+      flattened_input_tensors = tf.nest.flatten(
+          (nest_utils.unbatch_nested_tensors(time_step), policy_state))
+
+      flat_action_step = tf.compat.v1.py_func(
+          _action_fn,
+          flattened_input_tensors,
+          self._policy_step_dtypes,
+          stateful=True,
+          name='action_py_func')
+      action_step = tf.nest.pack_sequence_as(
+          structure=self.policy_step_spec, flat_sequence=flat_action_step)
+      return action_step._replace(
+          action=nest_utils.batch_nested_tensors(action_step.action))
 
   def _variables(self):
     """Returns default [] representing a policy that has no variables."""
@@ -132,5 +147,5 @@ class TFPyPolicy(tf_policy.Base):
 
   # TODO(kewa): revisit when py_policy.Base supports distribution.
   def _distribution(self, time_step, policy_state):
-    raise NotImplementedError(
-        '%s does not support distribution yet.' % self.__class__.__name__)
+    raise NotImplementedError('%s does not support distribution yet.' %
+                              self.__class__.__name__)
