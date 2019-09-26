@@ -85,6 +85,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
                expose_predicted_rewards=False,
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
+               debug_summaries=False,
+               summarize_grads_and_vars=False,
                dtype=tf.float32,
                name=None):
     """Initialize an instance of `LinearUCBAgent`.
@@ -111,6 +113,10 @@ class LinearUCBAgent(tf_agent.TFAgent):
         policy, and 2) the boolean mask. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
+      debug_summaries: A Python bool, default False. When True, debug summaries
+        are gathered.
+      summarize_grads_and_vars: A Python bool, default False. When True,
+        gradients and network variable summaries are written during training.
       dtype: The type of the parameters stored and updated by the agent. Should
         be one of `tf.float32` and `tf.float64`. Defaults to `tf.float32`.
       name: a name for this instance of `LinearUCBAgent`.
@@ -195,6 +201,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
         action_spec=action_spec,
         policy=policy,
         collect_policy=policy,
+        debug_summaries=debug_summaries,
+        summarize_grads_and_vars=summarize_grads_and_vars,
         train_sequence_length=None)
 
   @property
@@ -230,6 +238,24 @@ class LinearUCBAgent(tf_agent.TFAgent):
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
+
+  def compute_summaries(self, loss):
+    with tf.name_scope('Losses/'):
+      tf.compat.v2.summary.scalar(
+          name='loss', data=loss, step=self.train_step_counter)
+
+    if self._summarize_grads_and_vars:
+      with tf.name_scope('Variables/'):
+        for var in self.policy.variables():
+          var_name = var.name.replace(':', '_')
+          tf.compat.v2.summary.histogram(
+              name=var_name,
+              data=var,
+              step=self.train_step_counter)
+          tf.compat.v2.summary.scalar(
+              name=var_name + '_value_norm',
+              data=tf.linalg.global_norm([var]),
+              step=self.train_step_counter)
 
   def _train(self, experience, weights=None):
     """Updates the policy based on the data in `experience`.
@@ -298,9 +324,11 @@ class LinearUCBAgent(tf_agent.TFAgent):
       tf.compat.v1.assign(self._eig_vals_list[k], eig_vals)
       tf.compat.v1.assign(self._eig_matrix_list[k], eig_matrix)
 
+    loss = -1. * tf.reduce_sum(experience.reward)
+    self.compute_summaries(loss)
+
     batch_size = tf.cast(
         tf.compat.dimension_value(tf.shape(reward)[0]), dtype=tf.int64)
     self._train_step_counter.assign_add(batch_size)
 
-    return tf_agent.LossInfo(
-        loss=(-1. * tf.reduce_sum(experience.reward)), extra=())
+    return tf_agent.LossInfo(loss=(loss), extra=())
