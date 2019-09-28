@@ -31,7 +31,10 @@ from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
+def _spec_from_gym_space(space,
+                         dtype_map=None,
+                         simplify_box_bounds=True,
+                         name=None):
   """Converts gym spaces into array specs.
 
   Gym does not properly define dtypes for spaces. By default all spaces set
@@ -50,6 +53,7 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
     dtype_map: A dict from specs to dtypes to use as the default dtype.
     simplify_box_bounds: Whether to replace bounds of Box space that are arrays
       with identical values with one number and rely on broadcasting.
+    name: Name of the spec.
 
   Returns:
     A BoundedArraySpec nest mirroring the given space structure.
@@ -69,6 +73,12 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
     else:
       return np_array
 
+  def nested_spec(spec, child_name):
+    """Returns the nested spec with a unique name."""
+    nested_name = name + '/' + child_name if name else child_name
+    return _spec_from_gym_space(spec, dtype_map, simplify_box_bounds,
+                                nested_name)
+
   if isinstance(space, gym.spaces.Discrete):
     # Discrete spaces span the set {0, 1, ... , n-1} while Bounded Array specs
     # are inclusive on their bounds.
@@ -76,18 +86,18 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
     # TODO(oars): change to use dtype in space once Gym is updated.
     dtype = dtype_map.get(gym.spaces.Discrete, np.int64)
     return specs.BoundedArraySpec(
-        shape=(), dtype=dtype, minimum=0, maximum=maximum)
+        shape=(), dtype=dtype, minimum=0, maximum=maximum, name=name)
   elif isinstance(space, gym.spaces.MultiDiscrete):
     dtype = dtype_map.get(gym.spaces.MultiDiscrete, np.int32)
     maximum = try_simplify_array_to_value(
         np.asarray(space.nvec - 1, dtype=dtype))
     return specs.BoundedArraySpec(
-        shape=space.shape, dtype=dtype, minimum=0, maximum=maximum)
+        shape=space.shape, dtype=dtype, minimum=0, maximum=maximum, name=name)
   elif isinstance(space, gym.spaces.MultiBinary):
     dtype = dtype_map.get(gym.spaces.MultiBinary, np.int8)
     shape = (space.n,)
     return specs.BoundedArraySpec(
-        shape=shape, dtype=dtype, minimum=0, maximum=1)
+        shape=shape, dtype=dtype, minimum=0, maximum=1, name=name)
   elif isinstance(space, gym.spaces.Box):
     if hasattr(space, 'dtype'):
       dtype = space.dtype
@@ -99,14 +109,18 @@ def _spec_from_gym_space(space, dtype_map=None, simplify_box_bounds=True):
       minimum = try_simplify_array_to_value(minimum)
       maximum = try_simplify_array_to_value(maximum)
     return specs.BoundedArraySpec(
-        shape=space.shape, dtype=dtype, minimum=minimum, maximum=maximum)
+        shape=space.shape,
+        dtype=dtype,
+        minimum=minimum,
+        maximum=maximum,
+        name=name)
   elif isinstance(space, gym.spaces.Tuple):
-    return tuple([_spec_from_gym_space(s, dtype_map, simplify_box_bounds)
-                  for s in space.spaces])
+    return tuple(
+        [nested_spec(s, 'tuple_%d' % i) for i, s in enumerate(space.spaces)])
   elif isinstance(space, gym.spaces.Dict):
-    return collections.OrderedDict(
-        [(key, _spec_from_gym_space(s, dtype_map, simplify_box_bounds))
-         for key, s in space.spaces.items()])
+    return collections.OrderedDict([
+        (key, nested_spec(s, key)) for key, s in space.spaces.items()
+    ])
   else:
     raise ValueError(
         'The gym space {} is currently not supported.'.format(space))
@@ -136,10 +150,11 @@ class GymWrapper(py_environment.PyEnvironment):
     # TODO(sfishman): Add test for auto_reset param.
     self._auto_reset = auto_reset
     self._observation_spec = _spec_from_gym_space(
-        self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds)
+        self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds,
+        'observation')
     self._action_spec = _spec_from_gym_space(self._gym_env.action_space,
                                              spec_dtype_map,
-                                             simplify_box_bounds)
+                                             simplify_box_bounds, 'action')
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._info = None
     self._done = True

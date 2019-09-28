@@ -90,6 +90,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
     self.assertEqual((2,), spec['box2'].shape)
     self.assertEqual(np.float32, spec['box1'].dtype)
     self.assertEqual(np.float32, spec['box2'].dtype)
+    self.assertEqual('box1', spec['box1'].name)
+    self.assertEqual('box2', spec['box2'].name)
     np.testing.assert_array_equal(np.array([-1, -1], dtype=np.int),
                                   spec['box1'].minimum)
     np.testing.assert_array_equal(np.array([1, 1], dtype=np.int),
@@ -245,6 +247,27 @@ class GymWrapperSpecTest(test_utils.TestCase):
     self.assertEqual(np.uint8, spec[3]['spec_1'].dtype)
     self.assertEqual(np.uint8, spec[3]['spec_2'][0].dtype)
     self.assertEqual(np.uint16, spec[3]['spec_2'][1].dtype)
+
+  def test_spec_name(self):
+    box_space = gym.spaces.Box(
+        np.array([-1.0, -2.0]), np.array([2.0, 4.0]), dtype=np.float32)
+    spec = gym_wrapper._spec_from_gym_space(box_space, name='observation')
+    self.assertEqual('observation', spec.name)
+
+  def test_spec_name_nested(self):
+    dict_space = gym.spaces.Tuple((gym.spaces.Dict({
+        'spec_0':
+            gym.spaces.Dict({
+                'spec_1': gym.spaces.Discrete(2),
+                'spec_2': gym.spaces.Discrete(2),
+            }),
+    }), gym.spaces.Discrete(2)))
+    spec = gym_wrapper._spec_from_gym_space(dict_space, name='observation')
+    self.assertEqual('observation/tuple_0/spec_0/spec_1',
+                     spec[0]['spec_0']['spec_1'].name)
+    self.assertEqual('observation/tuple_0/spec_0/spec_2',
+                     spec[0]['spec_0']['spec_2'].name)
+    self.assertEqual('observation/tuple_1', spec[1].name)
 
 
 class GymWrapperOnCartpoleTest(test_utils.TestCase):
