@@ -87,6 +87,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
                observation_and_action_constraint_splitter=None,
                debug_summaries=False,
                summarize_grads_and_vars=False,
+               disable_summaries=False,
                dtype=tf.float32,
                name=None):
     """Initialize an instance of `LinearUCBAgent`.
@@ -117,6 +118,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
         gradients and network variable summaries are written during training.
+      disable_summaries: A Python bool, default False. When True, all summaries
+        (debug or otherwise) should not be written.
       dtype: The type of the parameters stored and updated by the agent. Should
         be one of `tf.float32` and `tf.float64`. Defaults to `tf.float32`.
       name: a name for this instance of `LinearUCBAgent`.
@@ -203,6 +206,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
         collect_policy=policy,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
+        disable_summaries=disable_summaries,
         train_sequence_length=None)
 
   @property
@@ -240,22 +244,23 @@ class LinearUCBAgent(tf_agent.TFAgent):
     tf.compat.v1.variables_initializer(self.variables)
 
   def compute_summaries(self, loss):
-    with tf.name_scope('Losses/'):
-      tf.compat.v2.summary.scalar(
-          name='loss', data=loss, step=self.train_step_counter)
+    if self.summaries_enabled:
+      with tf.name_scope('Losses/'):
+        tf.compat.v2.summary.scalar(
+            name='loss', data=loss, step=self.train_step_counter)
 
-    if self._summarize_grads_and_vars:
-      with tf.name_scope('Variables/'):
-        for var in self.policy.variables():
-          var_name = var.name.replace(':', '_')
-          tf.compat.v2.summary.histogram(
-              name=var_name,
-              data=var,
-              step=self.train_step_counter)
-          tf.compat.v2.summary.scalar(
-              name=var_name + '_value_norm',
-              data=tf.linalg.global_norm([var]),
-              step=self.train_step_counter)
+      if self._summarize_grads_and_vars:
+        with tf.name_scope('Variables/'):
+          for var in self.policy.variables():
+            var_name = var.name.replace(':', '_')
+            tf.compat.v2.summary.histogram(
+                name=var_name,
+                data=var,
+                step=self.train_step_counter)
+            tf.compat.v2.summary.scalar(
+                name=var_name + '_value_norm',
+                data=tf.linalg.global_norm([var]),
+                step=self.train_step_counter)
 
   def _train(self, experience, weights=None):
     """Updates the policy based on the data in `experience`.

@@ -54,6 +54,7 @@ class NeuralEpsilonGreedyAgent(
       # Params for debugging.
       debug_summaries=False,
       summarize_grads_and_vars=False,
+      disable_summaries=False,
       train_step_counter=None,
       name=None):
     """Creates a Neural Epsilon Greedy Agent.
@@ -76,6 +77,8 @@ class NeuralEpsilonGreedyAgent(
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
         gradients and network variable summaries are written during training.
+      disable_summaries: A Python bool, default False. When True, all summaries
+        (debug or otherwise) should not be written.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
       name: Python str name of this agent. All variables in this module will
@@ -95,6 +98,7 @@ class NeuralEpsilonGreedyAgent(
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
+        disable_summaries=disable_summaries,
         train_step_counter=train_step_counter,
         name=name)
     self._policy = epsilon_greedy_policy.EpsilonGreedyPolicy(

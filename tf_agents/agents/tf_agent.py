@@ -49,6 +49,7 @@ class TFAgent(tf.Module):
                num_outer_dims=2,
                debug_summaries=False,
                summarize_grads_and_vars=False,
+               disable_summaries=False,
                train_step_counter=None):
     """Meant to be called by subclass constructors.
 
@@ -77,6 +78,10 @@ class TFAgent(tf.Module):
         summaries.
       summarize_grads_and_vars: A bool; if true, subclasses should additionally
         collect gradient and variable summaries.
+      disable_summaries: A bool; if true, subclasses should not gather any
+        summaries (debug or otherwise); subclasses should gate all summaries
+        using either `summaries_enabled`, `debug_summaries`, or
+        `summarize_grads_and_vars` properties.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
 
@@ -101,6 +106,7 @@ class TFAgent(tf.Module):
     self._num_outer_dims = num_outer_dims
     self._debug_summaries = debug_summaries
     self._summarize_grads_and_vars = summarize_grads_and_vars
+    self._disable_summaries = disable_summaries
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
     self._train_step_counter = train_step_counter
@@ -287,12 +293,16 @@ class TFAgent(tf.Module):
     return self._train_sequence_length
 
   @property
+  def summaries_enabled(self):
+    return not self._disable_summaries
+
+  @property
   def debug_summaries(self):
-    return self._debug_summaries
+    return self._debug_summaries and self.summaries_enabled
 
   @property
   def summarize_grads_and_vars(self):
-    return self._summarize_grads_and_vars
+    return self._summarize_grads_and_vars and self.summaries_enabled
 
   @property
   def train_step_counter(self):
