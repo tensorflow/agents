@@ -139,9 +139,6 @@ class DqnAgent(tf_agent.TFAgent):
         called on the observation before passing to the network.
         If `observation_and_action_constraint_splitter` is None, action
         constraints are not applied.
-        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
-        implemented. Until they are, action constraints will not work with
-        EpsilonGreedyPolicy exploration.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method).

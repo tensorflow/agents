@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from tf_agents.distributions import masked
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -37,14 +38,57 @@ def _uniform_probability(action_spec):
 class RandomTFPolicy(tf_policy.Base):
   """Returns random samples of the given action_spec."""
 
+  def __init__(self, time_step_spec, action_spec, **kwargs):
+    self._observation_and_action_constraint_splitter = (
+        kwargs.pop('observation_and_action_constraint_splitter', None))
+
+    if self._observation_and_action_constraint_splitter is not None:
+      if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
+        raise NotImplementedError(
+            'RandomTFPolicy only supports action constraints for '
+            'BoundedTensorSpec action specs.')
+
+      scalar_shape = action_spec.shape.ndims == 0
+      single_dim_shape = (
+          action_spec.shape.ndims == 1 and action_spec.shape.dims == [1])
+
+      if not scalar_shape and not single_dim_shape:
+        raise NotImplementedError(
+            'RandomTFPolicy only supports action constraints for action specs '
+            'shaped as () or (1,) or their equivalent list forms.')
+
+    super(RandomTFPolicy, self).__init__(time_step_spec, action_spec, **kwargs)
+
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
+
   def _variables(self):
     return []
 
   def _action(self, time_step, policy_state, seed):
-    outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
 
-    action_ = tensor_spec.sample_spec_nest(
-        self._action_spec, seed=seed, outer_dims=outer_dims)
+    if observation_and_action_constraint_splitter is not None:
+      _, mask = observation_and_action_constraint_splitter(
+          time_step.observation)
+
+      zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
+      masked_categorical = masked.MaskedCategorical(zero_logits, mask)
+      action_ = tf.cast(masked_categorical.sample() + self.action_spec.minimum,
+                        self.action_spec.dtype)
+
+      # If the action spec says each action should be shaped (1,), add another
+      # dimension so the final shape is (B, 1) rather than (B,).
+      if self.action_spec.shape.ndims == 1:
+        action_ = tf.expand_dims(action_, axis=-1)
+    else:
+      outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)
+
+      action_ = tensor_spec.sample_spec_nest(
+          self._action_spec, seed=seed, outer_dims=outer_dims)
+
     # TODO(b/78181147): Investigate why this control dependency is required.
     if time_step is not None:
       with tf.control_dependencies(tf.nest.flatten(time_step)):
@@ -52,9 +96,14 @@ class RandomTFPolicy(tf_policy.Base):
     step = policy_step.PolicyStep(action_, policy_state)
 
     if self.emit_log_probability:
-      action_probability = tf.nest.map_structure(_uniform_probability,
-                                                 self._action_spec)
-      log_probability = tf.nest.map_structure(tf.math.log, action_probability)
+      if observation_and_action_constraint_splitter is not None:
+        log_probability = masked_categorical.log_prob(
+            action_ - self.action_spec.minimum)
+      else:
+        action_probability = tf.nest.map_structure(_uniform_probability,
+                                                   self._action_spec)
+        log_probability = tf.nest.map_structure(tf.math.log, action_probability)
+
       info = policy_step.PolicyInfo(log_probability=log_probability)
       return step._replace(info=info)
 

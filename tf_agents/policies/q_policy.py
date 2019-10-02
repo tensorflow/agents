@@ -65,9 +65,6 @@ class QPolicy(tf_policy.Base):
         called on the observation before passing to the network.
         If `observation_and_action_constraint_splitter` is None, action
         constraints are not applied.
-        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
-        implemented. Until they are, action constraints will not work with
-        EpsilonGreedyPolicy exploration.
       emit_log_probability: Whether to emit log-probs in info of `PolicyStep`.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
@@ -104,6 +101,10 @@ class QPolicy(tf_policy.Base):
         clip=False,
         emit_log_probability=emit_log_probability,
         name=name)
+
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return self._q_network.variables

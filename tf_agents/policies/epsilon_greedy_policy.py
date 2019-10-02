@@ -50,12 +50,16 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     Raises:
       ValueError: If epsilon is invalid.
     """
+    self._observation_and_action_constraint_splitter = getattr(
+        policy, 'observation_and_action_constraint_splitter', None)
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
     self._random_policy = random_tf_policy.RandomTFPolicy(
         policy.time_step_spec,
         policy.action_spec,
-        emit_log_probability=policy.emit_log_probability)
+        emit_log_probability=policy.emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            self._observation_and_action_constraint_splitter))
     super(EpsilonGreedyPolicy, self).__init__(
         policy.time_step_spec,
         policy.action_spec,
@@ -63,6 +67,10 @@ class EpsilonGreedyPolicy(tf_policy.Base):
         policy.info_spec,
         emit_log_probability=policy.emit_log_probability,
         name=name)
+
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return self._greedy_policy.variables()

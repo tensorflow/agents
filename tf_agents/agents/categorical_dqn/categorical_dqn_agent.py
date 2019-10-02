@@ -97,9 +97,6 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         called on the observation before passing to the network.
         If `observation_and_action_constraint_splitter` is None, action
         constraints are not applied.
-        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
-        implemented. Until they are, action constraints will not work with
-        EpsilonGreedyPolicy exploration.
       min_q_value: A float specifying the minimum Q-value, used for setting up
         the support.
       max_q_value: A float specifying the maximum Q-value, used for setting up

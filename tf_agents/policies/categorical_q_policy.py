@@ -71,9 +71,6 @@ class CategoricalQPolicy(tf_policy.Base):
         called on the observation before passing to the network.
         If `observation_and_action_constraint_splitter` is None, action
         constraints are not applied.
-        **WARNING**, action constraints in EpsilonGreedyPolicy are not yet
-        implemented. Until they are, action constraints will not work with
-        EpsilonGreedyPolicy exploration.
       temperature: temperature for sampling, when close to 0.0 is arg_max.
 
     Raises:
@@ -112,6 +109,10 @@ class CategoricalQPolicy(tf_policy.Base):
     max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
     self._support = tf.linspace(min_q_value, max_q_value, self._num_atoms)
     self._action_dtype = action_spec.dtype
+
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return self._q_network.variables

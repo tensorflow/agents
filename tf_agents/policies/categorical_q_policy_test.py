@@ -236,8 +236,8 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     policy.variables()
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    # Sample from the policy 1000 times and ensure that invalid actions are
-    # never chosen.
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
     action_step = policy.action(time_step)
     action = self.evaluate(action_step.action)
     self.assertEqual(action.shape, (batch_size,))
