@@ -83,6 +83,28 @@ class AgentTest(tf.test.TestCase):
     self.assertIn(actions[0], [0, 1, 2])
     self.assertIn(actions[1], [0, 1, 2])
 
+  def testPolicyWithEpsilonGreedyAndActionMask(self):
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    obs_spec = (tensor_spec.TensorSpec([2], tf.float32),
+                tensor_spec.TensorSpec([3], tf.int32))
+    agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
+        ts.time_step_spec(obs_spec),
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=None,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
+        epsilon=0.1)
+    observations = (tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+                    tf.constant([[0, 0, 1], [0, 1, 0]], dtype=tf.int32))
+    time_steps = ts.restart(observations, batch_size=2)
+    policy = agent.policy
+    action_step = policy.action(time_steps)
+    # Batch size 2.
+    self.assertAllEqual([2], action_step.action.shape)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    actions = self.evaluate(action_step.action)
+    self.assertAllEqual(actions, [2, 1])
+
 
 if __name__ == '__main__':
   tf.test.main()

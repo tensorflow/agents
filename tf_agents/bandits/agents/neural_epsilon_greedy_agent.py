@@ -48,6 +48,7 @@ class NeuralEpsilonGreedyAgent(
       reward_network,
       optimizer,
       epsilon,
+      observation_and_action_constraint_splitter=None,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -65,9 +66,21 @@ class NeuralEpsilonGreedyAgent(
       reward_network: A `tf_agents.network.Network` to be used by the agent. The
         network will be called with call(observation, step_type) and it is
         expected to provide a reward prediction for all actions.
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the `reward_network` is compatible with the network-specific half
+        of the output of the `observation_and_action_constraint_splitter`. In
+        particular, `observation_and_action_constraint_splitter` will be called
+        on the observation before passing to the network.
       optimizer: The optimizer to use for training.
       epsilon: A float representing the probability of choosing a random action
         instead of the greedy action.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit agent and
+        policy, and 2) the boolean mask. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -93,7 +106,8 @@ class NeuralEpsilonGreedyAgent(
         action_spec=action_spec,
         reward_network=reward_network,
         optimizer=optimizer,
-        observation_and_action_constraint_splitter=None,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         error_loss_fn=error_loss_fn,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,

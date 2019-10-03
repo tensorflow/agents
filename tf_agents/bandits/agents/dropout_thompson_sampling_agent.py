@@ -49,6 +49,7 @@ class DropoutThompsonSamplingAgent(
       dropout_rate,
       network_layers,
       dropout_only_top_layer=True,
+      observation_and_action_constraint_splitter=None,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -68,6 +69,13 @@ class DropoutThompsonSamplingAgent(
       network_layers: Tuple of ints determining the sizes of the network layers.
       dropout_only_top_layer: Boolean parameter determining if dropout should be
         done only in the top layer. True by default.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit agent and
+        policy, and 2) the boolean mask. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -95,9 +103,13 @@ class DropoutThompsonSamplingAgent(
       dropout_layer_params.append(dropout_param)
     else:
       dropout_layer_params = [dropout_param] * len(fc_layer_params)
-
+    if observation_and_action_constraint_splitter:
+      input_tensor_spec, _ = observation_and_action_constraint_splitter(
+          time_step_spec.observation)
+    else:
+      input_tensor_spec = time_step_spec.observation
     reward_network = q_network.QNetwork(
-        input_tensor_spec=time_step_spec.observation,
+        input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         fc_layer_params=fc_layer_params,
         dropout_layer_params=dropout_layer_params)
@@ -107,7 +119,8 @@ class DropoutThompsonSamplingAgent(
         action_spec=action_spec,
         reward_network=reward_network,
         optimizer=optimizer,
-        observation_and_action_constraint_splitter=None,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         error_loss_fn=error_loss_fn,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,

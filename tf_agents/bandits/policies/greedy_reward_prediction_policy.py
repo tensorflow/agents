@@ -88,6 +88,10 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
         clip=False,
         name=name)
 
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
+
   def _variables(self):
     return self._reward_network.variables
 

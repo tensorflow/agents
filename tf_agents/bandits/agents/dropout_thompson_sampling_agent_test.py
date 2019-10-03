@@ -50,6 +50,35 @@ def _get_initial_and_final_steps(observations, rewards):
   return initial_step, final_step
 
 
+def _get_initial_and_final_steps_with_action_mask(batch_size,
+                                                  context_dim,
+                                                  num_actions):
+  observation = np.array(range(batch_size * context_dim)).reshape(
+      [batch_size, context_dim])
+  observation = tf.constant(observation, dtype=tf.float32)
+  mask = 1 - tf.eye(batch_size, num_columns=num_actions, dtype=tf.int32)
+  reward = np.random.uniform(0.0, 1.0, [batch_size])
+  initial_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.FIRST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observation, mask))
+  final_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.LAST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(reward, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observation + 100.0, mask))
+  return initial_step, final_step
+
+
 def _get_action_step(action):
   return policy_step.PolicyStep(
       action=tf.convert_to_tensor(action))
@@ -98,6 +127,29 @@ class AgentTest(tf.test.TestCase):
     rewards = np.array([0.5, 3.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps(
         observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+    loss_before, _ = agent.train(experience, None)
+    loss_after, _ = agent.train(experience, None)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllGreater(self.evaluate(loss_before), 0)
+    self.assertAllGreater(self.evaluate(loss_after), 0)
+
+  def testAgentWithMask(self):
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    obs_spec = (tensor_spec.TensorSpec([2], tf.float32),
+                tensor_spec.TensorSpec([3], tf.int32))
+    agent = dropout_thompson_sampling_agent.DropoutThompsonSamplingAgent(
+        ts.time_step_spec(obs_spec),
+        self._action_spec,
+        optimizer=optimizer,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
+        dropout_rate=0.1,
+        network_layers=(20, 20, 20),
+        dropout_only_top_layer=False)
+    actions = np.array([0, 1], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
+        2, 2, 3)
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
     loss_before, _ = agent.train(experience, None)
