@@ -130,6 +130,13 @@ class SacAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
 
+    flat_action_spec = tf.nest.flatten(action_spec)
+    for spec in flat_action_spec:
+      if spec.dtype.is_integer:
+        raise NotImplementedError(
+            'SacAgent does not currently support discrete actions. '
+            'Action spec: {}'.format(action_spec))
+
     self._critic_network_1 = critic_network
     self._critic_network_1.create_variables()
     if target_critic_network:
