@@ -138,11 +138,16 @@ class LSTMEncodingNetwork(network.Network):
         dtype=dtype)
 
     # Create RNN cell
+    # Create LSTM with caching_device disabled in tf 2, which has it enabled
+    # by default. The variable scope in DynamicUnroll already handles it.
+    # Double specifying caching_device will cause model save to fail.
     if len(lstm_size) == 1:
       cell = tf.keras.layers.LSTMCell(
           lstm_size[0],
           dtype=dtype,
           implementation=KERAS_LSTM_FUSED_IMPLEMENTATION)
+      if hasattr(cell, '_enable_caching_device'):
+        cell._enable_caching_device = False   # pylint: disable=protected-access
     else:
       cell = tf.keras.layers.StackedRNNCells([
           tf.keras.layers.LSTMCell(  # pylint: disable=g-complex-comprehension
@@ -151,6 +156,9 @@ class LSTMEncodingNetwork(network.Network):
               implementation=KERAS_LSTM_FUSED_IMPLEMENTATION)
           for size in lstm_size
       ])
+      for c in cell.cells:
+        if hasattr(c, '_enable_caching_device'):
+          c._enable_caching_device = False  # pylint: disable=protected-access
 
     output_encoder = []
     if output_fc_layer_params:
