@@ -83,7 +83,7 @@ class DqnAgentTest(test_utils.TestCase):
     super(DqnAgentTest, self).setUp()
     self._observation_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._observation_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+    self._action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
 
   def testCreateAgent(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)
@@ -150,7 +150,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -193,7 +193,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -240,7 +240,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -272,7 +272,7 @@ class DqnAgentTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -325,7 +325,7 @@ class DqnAgentTest(test_utils.TestCase):
     # MID: use ts.transition
     time_steps = ts.transition(observations, rewards, discounts)
 
-    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     second_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
@@ -386,7 +386,7 @@ class DqnAgentTest(test_utils.TestCase):
                     tf.constant([[1, 1], [1, 1]], dtype=tf.int32))
     time_steps = ts.restart(observations, batch_size=2)
 
-    actions = tf.constant([[0], [1]], dtype=tf.int32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -463,11 +463,11 @@ class DqnAgentTest(test_utils.TestCase):
 
     if tf.executing_eagerly():
       self.evaluate(checkpoint_load_status.initialize_or_restore())
-      self.assertAllEqual(self.evaluate(action_step.action), [[0], [0]])
+      self.assertAllEqual(self.evaluate(action_step.action), [0, 0])
     else:
       with self.cached_session() as sess:
         checkpoint_load_status.initialize_or_restore(sess)
-        self.assertAllEqual(sess.run(action_step.action), [[0], [0]])
+        self.assertAllEqual(sess.run(action_step.action), [0, 0])
 
   def testTrainWithSparseTensorAndDenseFeaturesLayer(self, agent_class):
     obs_spec = {
