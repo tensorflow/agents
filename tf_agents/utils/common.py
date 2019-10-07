@@ -213,12 +213,25 @@ def soft_variables_update(source_variables,
   if sort_variables_by_name:
     source_variables = sorted(source_variables, key=lambda x: x.name)
     target_variables = sorted(target_variables, key=lambda x: x.name)
+
+  strategy = tf.distribute.get_strategy()
+
   for (v_s, v_t) in zip(source_variables, target_variables):
     v_t.shape.assert_is_compatible_with(v_s.shape)
-    if tau == 1.0:
-      update = v_t.assign(v_s)
+
+    def update_fn(v1, v2):
+      if tau == 1.0:
+        return v1.assign(v2)
+      else:
+        return v1.assign((1 - tau) * v1 + tau * v2)
+
+    if strategy is not None:
+      # assignment happens independently on each replica,
+      # see b/140690837 #46.
+      update = strategy.extended.update(v_t, update_fn, args=(v_s,))
     else:
-      update = v_t.assign((1 - tau) * v_t + tau * v_s)
+      update = update_fn(v_t, v_s)
+
     updates.append(update)
   return tf.group(*updates, name=op_name)
 
