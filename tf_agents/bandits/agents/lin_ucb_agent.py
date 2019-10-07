@@ -87,7 +87,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
                observation_and_action_constraint_splitter=None,
                debug_summaries=False,
                summarize_grads_and_vars=False,
-               disable_summaries=False,
+               enable_summaries=True,
                dtype=tf.float32,
                name=None):
     """Initialize an instance of `LinearUCBAgent`.
@@ -118,7 +118,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
         gradients and network variable summaries are written during training.
-      disable_summaries: A Python bool, default False. When True, all summaries
+      enable_summaries: A Python bool, default True. When False, all summaries
         (debug or otherwise) should not be written.
       dtype: The type of the parameters stored and updated by the agent. Should
         be one of `tf.float32` and `tf.float64`. Defaults to `tf.float32`.
@@ -206,7 +206,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
         collect_policy=policy,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        disable_summaries=disable_summaries,
+        enable_summaries=enable_summaries,
         train_sequence_length=None)
 
   @property

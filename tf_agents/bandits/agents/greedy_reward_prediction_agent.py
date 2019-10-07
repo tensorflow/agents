@@ -53,7 +53,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       # Params for debugging.
       debug_summaries=False,
       summarize_grads_and_vars=False,
-      disable_summaries=False,
+      enable_summaries=True,
       train_step_counter=None,
       name=None):
     """Creates a Greedy Reward Network Prediction Agent.
@@ -81,7 +81,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
         gradients and network variable summaries are written during training.
-      disable_summaries: A Python bool, default False. When True, all summaries
+      enable_summaries: A Python bool, default True. When False, all summaries
         (debug or otherwise) should not be written.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
@@ -115,7 +115,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         train_sequence_length=None,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        disable_summaries=disable_summaries,
+        enable_summaries=enable_summaries,
         train_step_counter=train_step_counter)
 
   def _train(self, experience, weights):
