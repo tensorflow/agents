@@ -263,7 +263,7 @@ class DqnAgent(tf_agent.TFAgent):
     ]
 
     # TODO(oars): Get DQN working with more than one dim in the actions.
-    if len(flat_action_spec) > 1 or flat_action_spec[0].shape.ndims > 1:
+    if len(flat_action_spec) > 1 or flat_action_spec[0].shape.rank > 1:
       raise ValueError('Only one dimensional actions are supported now.')
 
     if not all(spec.minimum == 0 for spec in flat_action_spec):
@@ -507,7 +507,7 @@ class DqnAgent(tf_agent.TFAgent):
     q_values, _ = self._q_network(network_observation, time_steps.step_type)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = self._action_spec.shape.ndims > 0
+    multi_dim_actions = self._action_spec.shape.rank > 0
     return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),
@@ -540,7 +540,7 @@ class DqnAgent(tf_agent.TFAgent):
 
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.rank > 0
     return common.index_with_actions(
         next_target_q_values,
         greedy_actions,
@@ -586,7 +586,7 @@ class DdqnAgent(DqnAgent):
 
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.ndims > 0
+    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.rank > 0
     return common.index_with_actions(
         next_target_q_values,
         best_next_actions,

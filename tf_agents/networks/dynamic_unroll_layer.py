@@ -306,7 +306,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
 
 def _maybe_reset_state(reset, s_zero, s):
-  if not isinstance(s, tf.TensorArray) and s.shape.ndims > 0:
+  if not isinstance(s, tf.TensorArray) and s.shape.rank > 0:
     return tf.compat.v1.where(reset, s_zero, s)
   else:
     return s
@@ -319,7 +319,7 @@ def _static_unroll_single_step(cell,
                                zero_state):
   """Helper for dynamic_unroll which runs a single step."""
   def _squeeze(t):
-    if not isinstance(t, tf.TensorArray) and t.shape.ndims > 0:
+    if not isinstance(t, tf.TensorArray) and t.shape.rank > 0:
       return tf.squeeze(t, [0])
     else:
       return t

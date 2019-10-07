@@ -24,7 +24,7 @@ from tf_agents.utils import common
 
 
 def _cg_check_shapes(a_mat, b):
-  if a_mat.shape[0] != a_mat.shape[1] or a_mat.shape.ndims != 2:
+  if a_mat.shape[0] != a_mat.shape[1] or a_mat.shape.rank != 2:
     raise ValueError('`a_mat` must be rank 2 square matrix; '
                      'got shape {}.'.format(a_mat.shape))
   if a_mat.shape[1] != b.shape[0]:
@@ -140,10 +140,10 @@ def conjugate_gradient_solve(a_mat, b_mat, tol=1e-10):
 
 
 def _check_shapes(a_inv, u):
-  if a_inv.shape[0] != a_inv.shape[1] or a_inv.shape.ndims != 2:
+  if a_inv.shape[0] != a_inv.shape[1] or a_inv.shape.rank != 2:
     raise ValueError('`a_inv` must be rank 2 square matrix; '
                      'got shape {}.'.format(a_inv.shape))
-  if u.shape.ndims != 2:
+  if u.shape.rank != 2:
     raise ValueError('`u` must be rank 2 matrix; '
                      'got shape {}.'.format(u.shape))
   if a_inv.shape[1] != u.shape[1]:

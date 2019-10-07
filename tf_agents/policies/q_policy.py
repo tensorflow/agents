@@ -132,14 +132,14 @@ class QPolicy(tf_policy.Base):
     # dimension so the final shape is (B, 1, A), where A is the number of
     # actions. This will make Categorical emit events shaped (B, 1) rather than
     # (B,). Using axis -2 to allow for (B, T, 1, A) shaped q_values.
-    if self._flat_action_spec.shape.ndims == 1:
+    if self._flat_action_spec.shape.rank == 1:
       q_values = tf.expand_dims(q_values, -2)
 
     logits = q_values
 
     if self._observation_and_action_constraint_splitter:
       # Expand the mask as needed in the same way as q_values above.
-      if self._flat_action_spec.shape.ndims == 1:
+      if self._flat_action_spec.shape.rank == 1:
         mask = tf.expand_dims(mask, -2)
 
       # Overwrite the logits for invalid actions to -inf.

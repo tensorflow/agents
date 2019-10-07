@@ -94,11 +94,11 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
 
-  if any(spec_shape.ndims is None for spec_shape in spec_shapes):
+  if any(spec_shape.rank is None for spec_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
                      (tf.nest.pack_sequence_as(specs, spec_shapes),))
 
-  if any(tensor_shape.ndims is None for tensor_shape in tensor_shapes):
+  if any(tensor_shape.rank is None for tensor_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
                      (tf.nest.pack_sequence_as(tensors, tensor_shapes),))
 
@@ -110,7 +110,7 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
     return False
 
   tensor_ndims_discrepancy = [
-      tensor_shape.ndims - spec_shape.ndims
+      tensor_shape.rank - spec_shape.rank
       for spec_shape, tensor_shape in zip(spec_shapes, tensor_shapes)
   ]
 
@@ -181,12 +181,12 @@ def batch_nested_tensors(tensors, specs=None):
   flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
   batched_tensors = []
 
-  tensor_rank = lambda tensor: tensor.shape.ndims
+  tensor_rank = lambda tensor: tensor.shape.rank
   for tensor, shape in zip(flat_tensors, flat_shapes):
-    if tensor_rank(tensor) == shape.ndims:
+    if tensor_rank(tensor) == shape.rank:
       tensor.shape.assert_is_compatible_with(shape)
       tensor = composite.expand_dims(tensor, 0)
-    elif tensor_rank(tensor) == shape.ndims + 1:
+    elif tensor_rank(tensor) == shape.rank + 1:
       tensor.shape[1:].assert_is_compatible_with(shape)
     else:
       raise ValueError('Tensor does not have the correct dimensions. '
@@ -202,9 +202,9 @@ def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
   for tensor, shape in zip(flat_tensors, flat_shapes):
-    if tensor.shape.ndims == shape.ndims:
+    if tensor.shape.rank == shape.rank:
       tensor.shape.assert_is_compatible_with(shape)
-    elif tensor.shape.ndims == shape.ndims + num_outer_dims:
+    elif tensor.shape.rank == shape.rank + num_outer_dims:
       tensor.shape[num_outer_dims:].assert_is_compatible_with(shape)
     else:
       raise ValueError('Tensor does not have the correct dimensions. '
@@ -249,7 +249,7 @@ def unbatch_nested_tensors(tensors, specs=None):
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
       tensors, specs)
   for tensor, shape in zip(flat_tensors, flat_shapes):
-    if tensor.shape.ndims == shape.ndims + 1:
+    if tensor.shape.rank == shape.rank + 1:
       tensor = composite.squeeze(tensor, 0)
     unbatched_tensors.append(tensor)
   return tf.nest.pack_sequence_as(tensors, unbatched_tensors)
@@ -282,9 +282,9 @@ def split_nested_tensors(tensors, specs, num_or_size_splits):
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
       tensors, specs)
   for tensor, shape in zip(flat_tensors, flat_shapes):
-    if tensor.shape.ndims == shape.ndims:
+    if tensor.shape.rank == shape.rank:
       raise ValueError('Can only split tensors with a batch dimension.')
-    if tensor.shape.ndims == shape.ndims + 1:
+    if tensor.shape.rank == shape.rank + 1:
       if isinstance(tensor, tf.SparseTensor):
         if not isinstance(num_or_size_splits, numbers.Number):
           raise ValueError(
@@ -318,9 +318,9 @@ def unstack_nested_tensors(tensors, specs):
   flat_tensors, flat_shapes = _flatten_and_check_shape_nested_tensors(
       tensors, specs)
   for tensor, shape in zip(flat_tensors, flat_shapes):
-    if tensor.shape.ndims == shape.ndims:
+    if tensor.shape.rank == shape.rank:
       raise ValueError('Can only unstack tensors with a batch dimension.')
-    if tensor.shape.ndims == shape.ndims + 1:
+    if tensor.shape.rank == shape.rank + 1:
       unstacked_tensors = tf.unstack(tensor)
     unstacked_tensor_lists.append(unstacked_tensors)
   unstacked_tensors_zipped = zip(*unstacked_tensor_lists)
@@ -367,13 +367,13 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   batch_dims = []
   for i, (tensor, shape) in enumerate(zip(flat_tensors, flat_shapes)):
     if i == 0:  # Set batch_dims based on first tensor.
-      batch_dims = tensor.shape[:tensor.shape.ndims - shape.ndims]
+      batch_dims = tensor.shape[:tensor.shape.rank - shape.rank]
       if batch_dims.is_fully_defined():
         batch_dims = batch_dims.as_list()
         batch_prod = np.prod(batch_dims)
         batch_dims = tf.constant(batch_dims, dtype=tf.int64)
       else:
-        batch_dims = tf.shape(tensor)[:tensor.shape.ndims - shape.ndims]
+        batch_dims = tf.shape(tensor)[:tensor.shape.rank - shape.rank]
         batch_prod = tf.reduce_prod(batch_dims)
     reshaped_dims = [batch_prod] + shape.as_list()
     out_tensors.append(composite.reshape(tensor, reshaped_dims))
@@ -421,11 +421,11 @@ def get_outer_rank(tensors, specs):
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
 
-  if any(spec_shape.ndims is None for spec_shape in spec_shapes):
+  if any(spec_shape.rank is None for spec_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
                      spec_shapes)
 
-  if any(tensor_shape.ndims is None for tensor_shape in tensor_shapes):
+  if any(tensor_shape.rank is None for tensor_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
                      tensor_shapes)
 
@@ -437,7 +437,7 @@ def get_outer_rank(tensors, specs):
     return 0
 
   tensor_ndims_discrepancy = [
-      tensor_shape.ndims - spec_shape.ndims
+      tensor_shape.rank - spec_shape.rank
       for spec_shape, tensor_shape in zip(spec_shapes, tensor_shapes)
   ]
 

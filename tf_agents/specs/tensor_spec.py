@@ -316,13 +316,15 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
 
       if shape.num_elements() == 0 or tf.compat.dimension_value(shape[0]) == 0:
         return tf.SparseTensor(
-            indices=tf.zeros([0, shape.ndims], dtype=tf.int64),
+            indices=tf.zeros([0, shape.rank], dtype=tf.int64),
             values=tf.zeros([0], dtype=spec.dtype),
             dense_shape=shape)
 
       indices_spec = BoundedTensorSpec(
-          dtype=tf.int64, shape=[7, shape.ndims],
-          minimum=[0] * shape.ndims, maximum=[x - 1 for x in shape.as_list()])
+          dtype=tf.int64,
+          shape=[7, shape.rank],
+          minimum=[0] * shape.rank,
+          maximum=[x - 1 for x in shape.as_list()])
       values_dtype = tf.int32 if spec.dtype == tf.string else spec.dtype
       values_spec = BoundedTensorSpec(
           dtype=values_dtype, shape=[7],

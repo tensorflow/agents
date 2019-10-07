@@ -175,7 +175,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   def _get_default_loss_fn(self, spec):
     if spec.dtype.is_floating:
       return tf.math.squared_difference
-    if spec.shape.ndims > 1:
+    if spec.shape.rank > 1:
       raise NotImplementedError(
           'Only scalar and one dimensional integer actions are supported.')
     # TODO(ebrevdo): Maybe move the subtraction of the minimum into a

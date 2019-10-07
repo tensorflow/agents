@@ -311,8 +311,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
       next_q_distribution = self._next_q_distribution(next_time_steps)
 
-      if actions.shape.ndims > 1:
-        actions = tf.squeeze(actions, list(range(1, actions.shape.ndims)))
+      if actions.shape.rank > 1:
+        actions = tf.squeeze(actions, list(range(1, actions.shape.rank)))
 
       # Project the sample Bellman update \hat{T}Z_{\theta} onto the original
       # support of Z_{\theta} (see Figure 1 in paper).
@@ -322,7 +322,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
       if self._n_step_update == 1:
         discount = next_time_steps.discount
-        if discount.shape.ndims == 1:
+        if discount.shape.rank == 1:
           # We expect discount to have a shape of [batch_size], while
           # tiled_support will have a shape of [batch_size, num_atoms]. To
           # multiply these, we add a second dimension of 1 to the discount.
@@ -332,7 +332,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
                                       name='next_value_term')
 
         reward = next_time_steps.reward
-        if reward.shape.ndims == 1:
+        if reward.shape.rank == 1:
           # See the explanation above.
           reward = tf.expand_dims(reward, -1)
         reward_term = tf.multiply(reward_scale_factor,

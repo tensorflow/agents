@@ -291,7 +291,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
       if self._check_dims:
         for action in flat_actions:
           dim_value = tensor_shape.dimension_value(action.shape[0])
-          if (action.shape.ndims == 0 or
+          if (action.shape.rank == 0 or
               (dim_value is not None and dim_value != self.batch_size)):
             raise ValueError(
                 'Expected actions whose major dimension is batch_size (%d), '

@@ -48,9 +48,9 @@ class RandomTFPolicy(tf_policy.Base):
             'RandomTFPolicy only supports action constraints for '
             'BoundedTensorSpec action specs.')
 
-      scalar_shape = action_spec.shape.ndims == 0
+      scalar_shape = action_spec.shape.rank == 0
       single_dim_shape = (
-          action_spec.shape.ndims == 1 and action_spec.shape.dims == [1])
+          action_spec.shape.rank == 1 and action_spec.shape.dims == [1])
 
       if not scalar_shape and not single_dim_shape:
         raise NotImplementedError(
@@ -81,7 +81,7 @@ class RandomTFPolicy(tf_policy.Base):
 
       # If the action spec says each action should be shaped (1,), add another
       # dimension so the final shape is (B, 1) rather than (B,).
-      if self.action_spec.shape.ndims == 1:
+      if self.action_spec.shape.rank == 1:
         action_ = tf.expand_dims(action_, axis=-1)
     else:
       outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)

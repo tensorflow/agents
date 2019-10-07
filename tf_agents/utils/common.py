@@ -264,9 +264,9 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
   Raises:
     ValueError: If actions have unknown rank.
   """
-  if actions.shape.ndims is None:
+  if actions.shape.rank is None:
     raise ValueError('actions should have known rank.')
-  batch_dims = actions.shape.ndims
+  batch_dims = actions.shape.rank
   if multi_dim_actions:
     # In the multidimensional case, the last dimension of actions indexes the
     # vector of actions for each batch, so exclude it from the batch dimensions.
@@ -560,7 +560,7 @@ def log_probability(distributions, actions, action_spec):
 
   def _compute_log_prob(single_distribution, single_action):
     # sum log-probs over everything but the batch
-    rank = single_action.shape.ndims
+    rank = single_action.shape.rank
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(
         input_tensor=single_distribution.log_prob(single_action),
@@ -598,7 +598,7 @@ def entropy(distributions, action_spec):
   def _compute_entropy(single_distribution):
     entropies = single_distribution.entropy()
     # Sum entropies over everything but the batch.
-    rank = entropies.shape.ndims
+    rank = entropies.shape.rank
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(input_tensor=entropies, axis=reduce_dims)
 
@@ -635,9 +635,9 @@ def discounted_future_sum(values, gamma, num_steps):
   Raises:
     ValueError: If values is not of rank 2.
   """
-  if values.get_shape().ndims != 2:
+  if values.get_shape().rank != 2:
     raise ValueError('Input must be rank 2 tensor.  Got %d.' %
-                     values.get_shape().ndims)
+                     values.get_shape().rank)
 
   (batch_size, total_steps) = values.get_shape().as_list()
 
@@ -673,7 +673,7 @@ def discounted_future_sum_masked(values, gamma, num_steps, episode_lengths):
   Raises:
     ValueError: If values is not of rank 2, or if total_steps is not defined.
   """
-  if values.shape.ndims != 2:
+  if values.shape.rank != 2:
     raise ValueError('Input must be a rank 2 tensor.  Got %d.' % values.shape)
 
   total_steps = tf.compat.dimension_value(values.shape[1])
@@ -705,9 +705,9 @@ def shift_values(values, gamma, num_steps, final_values=None):
   Raises:
     ValueError: If values is not of rank 2.
   """
-  if values.get_shape().ndims != 2:
+  if values.get_shape().rank != 2:
     raise ValueError('Input must be rank 2 tensor.  Got %d.' %
-                     values.get_shape().ndims)
+                     values.get_shape().rank)
 
   (batch_size, total_steps) = values.get_shape().as_list()
   num_steps = tf.minimum(num_steps, total_steps)

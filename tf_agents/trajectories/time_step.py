@@ -133,7 +133,7 @@ def restart(observation, batch_size=None):
 def _as_multi_dim(maybe_scalar):
   if maybe_scalar is None:
     shape = ()
-  elif tf.is_tensor(maybe_scalar) and maybe_scalar.shape.ndims > 0:
+  elif tf.is_tensor(maybe_scalar) and maybe_scalar.shape.rank > 0:
     shape = maybe_scalar
   elif np.asarray(maybe_scalar).ndim > 0:
     shape = maybe_scalar
@@ -173,14 +173,14 @@ def transition(observation, reward, discount=1.0):
       step_type = StepType.MID
     return TimeStep(step_type, reward, discount, observation)
 
-  # TODO(b/130245199): If reward.shape.ndims == 2, and static
+  # TODO(b/130245199): If reward.shape.rank == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
   reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
-  if reward.shape.ndims is None or reward.shape.ndims > 1:
+  if reward.shape.rank is None or reward.shape.rank > 1:
     raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
                      reward.shape)
-  if reward.shape.ndims == 0:
+  if reward.shape.rank == 0:
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
@@ -191,7 +191,7 @@ def transition(observation, reward, discount=1.0):
   discount = tf.convert_to_tensor(
       value=discount, dtype=tf.float32, name='discount')
 
-  if discount.shape.ndims == 0:
+  if discount.shape.rank == 0:
     discount = tf.fill(shape, discount, name='discount_fill')
   else:
     reward.shape.assert_is_compatible_with(discount.shape)
@@ -224,14 +224,14 @@ def termination(observation, reward):
       return TimeStep(StepType.LAST, reward, _as_float32_array(0.0),
                       observation)
 
-  # TODO(b/130245199): If reward.shape.ndims == 2, and static
+  # TODO(b/130245199): If reward.shape.rank == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
   reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
-  if reward.shape.ndims is None or reward.shape.ndims > 1:
+  if reward.shape.rank is None or reward.shape.rank > 1:
     raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
                      reward.shape)
-  if reward.shape.ndims == 0:
+  if reward.shape.rank == 0:
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
@@ -273,10 +273,10 @@ def truncation(observation, reward, discount=1.0):
     return TimeStep(step_type, reward, discount, observation)
 
   reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
-  if reward.shape.ndims is None or reward.shape.ndims > 1:
+  if reward.shape.rank is None or reward.shape.rank > 1:
     raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
                      reward.shape)
-  if reward.shape.ndims == 0:
+  if reward.shape.rank == 0:
     shape = []
   else:
     first_observation.shape[:1].assert_is_compatible_with(reward.shape)
@@ -286,7 +286,7 @@ def truncation(observation, reward, discount=1.0):
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
   discount = tf.convert_to_tensor(
       value=discount, dtype=tf.float32, name='discount')
-  if discount.shape.ndims == 0:
+  if discount.shape.rank == 0:
     discount = tf.fill(shape, discount, name='discount_fill')
   else:
     reward.shape.assert_is_compatible_with(discount.shape)
