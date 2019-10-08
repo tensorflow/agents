@@ -143,11 +143,12 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         spec.maximum - spec.minimum + 1 for spec in flat_action_spec
     ]
 
-    if len(flat_action_spec) > 1 and not loss_fn:
-      raise ValueError('When using multi-dimensional actions, a custom loss_fn '
-                       'must be provided.')
+    if tf.nest.is_nested(action_spec) and not loss_fn:
+      raise ValueError(
+          'When using nested actions (i.e., `tf.nest.is_nested(action_spec)` '
+          'is True), a custom loss_fn must be provided.')
 
-    self._multi_dimensional_actions = len(flat_action_spec) > 1
+    self._nested_actions = len(flat_action_spec) > 1
 
     if loss_fn is None:
       loss_fn = self._get_default_loss_fn(flat_action_spec[0])
@@ -177,7 +178,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       return tf.math.squared_difference
     if spec.shape.rank > 1:
       raise NotImplementedError(
-          'Only scalar and one dimensional integer actions are supported.')
+          'The default loss_fn only supports scalar, unnested integer actions.')
     # TODO(ebrevdo): Maybe move the subtraction of the minimum into a
     # self._label_fn and rewrite this.
     def xent_loss_fn(logits, actions):
@@ -238,7 +239,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         If the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      if self._multi_dimensional_actions:
+      if self._nested_actions:
         actions = experience.action
       else:
         actions = tf.nest.flatten(experience.action)[0]

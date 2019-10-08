@@ -81,7 +81,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     tf.compat.v1.enable_resource_variables()
     self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)]
+    self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateAgent(self):
@@ -100,7 +100,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     ]
 
     cloning_net = DummyNet(self._observation_spec, action_spec)
-    with self.assertRaisesRegexp(ValueError, '.*multi-dimensional.*'):
+    with self.assertRaisesRegexp(ValueError, '.*nested actions.*'):
       behavioral_cloning_agent.BehavioralCloningAgent(
           self._time_step_spec,
           action_spec,
@@ -124,10 +124,19 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         optimizer=None,
         loss_fn=lambda logits, actions: 0)
 
-  def testCreateAgentDimChecks(self):
-    action_spec = [tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)]
+  def testCreateAgentWithListActionSpec(self):
+    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
     cloning_net = DummyNet(self._observation_spec, action_spec)
-    with self.assertRaisesRegexp(NotImplementedError, '.*one dimensional.*'):
+    with self.assertRaisesRegexp(ValueError, '.*nested actions.*'):
+      behavioral_cloning_agent.BehavioralCloningAgent(
+          self._time_step_spec, action_spec,
+          cloning_network=cloning_net,
+          optimizer=None)
+
+  def testCreateAgentDimChecks(self):
+    action_spec = tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)
+    cloning_net = DummyNet(self._observation_spec, action_spec)
+    with self.assertRaisesRegexp(NotImplementedError, '.*scalar, unnested.*'):
       behavioral_cloning_agent.BehavioralCloningAgent(
           self._time_step_spec, action_spec,
           cloning_network=cloning_net,
@@ -143,7 +152,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         optimizer=None)
 
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
-    actions = [tf.constant([0, 1], dtype=tf.int32)]
+    actions = tf.constant([0, 1], dtype=tf.int32)
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
 
@@ -160,7 +169,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
 
     expected_loss = tf.reduce_mean(
         input_tensor=tf.compat.v1.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=cloning_net(observations)[0], labels=actions[0]))
+            logits=cloning_net(observations)[0], labels=actions))
 
     self.assertAllClose(total_loss, expected_loss)
 
@@ -271,13 +280,13 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     action_step = policy.action(time_steps)
     # Batch size 2.
     self.assertAllEqual(
-        [2] + self._action_spec[0].shape.as_list(),
-        action_step.action[0].shape,
+        [2] + self._action_spec.shape.as_list(),
+        action_step.action.shape,
     )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
-    self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
-    self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
+    self.assertTrue(all(actions_ <= self._action_spec.maximum))
+    self.assertTrue(all(actions_ >= self._action_spec.minimum))
 
   def testInitializeRestoreAgent(self):
     cloning_net = DummyNet(self._observation_spec, self._action_spec)
@@ -299,7 +308,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
 
     with self.cached_session() as sess:
       checkpoint_load_status.initialize_or_restore(sess)
-      self.assertAllEqual(sess.run(action_step.action), [[0, 0]])
+      self.assertAllEqual(sess.run(action_step.action), [0, 0])
 
 
 if __name__ == '__main__':
