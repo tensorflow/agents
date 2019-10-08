@@ -223,7 +223,7 @@ def train_eval(
       return ~trajectories.is_boundary()[0]
     dataset = replay_buffer.as_dataset(
         sample_batch_size=5 * batch_size,
-        num_steps=2).apply(tf.data.experimental.unbatch()).filter(
+        num_steps=2).unbatch().filter(
             _filter_invalid_transition).batch(batch_size).prefetch(
                 batch_size * 5)
     dataset_iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
