@@ -99,7 +99,7 @@ def _spec_from_gym_space(space,
     return specs.BoundedArraySpec(
         shape=shape, dtype=dtype, minimum=0, maximum=1, name=name)
   elif isinstance(space, gym.spaces.Box):
-    if hasattr(space, 'dtype'):
+    if hasattr(space, 'dtype') and gym.spaces.Box not in dtype_map:
       dtype = space.dtype
     else:
       dtype = dtype_map.get(gym.spaces.Box, np.float32)
