@@ -31,6 +31,7 @@ import tensorflow as tf
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import lin_ucb_policy
+from tf_agents.bandits.policies import linalg
 from tf_agents.utils import nest_utils
 
 
@@ -239,6 +240,25 @@ class LinearUCBAgent(tf_agent.TFAgent):
 
   def update_alpha(self, alpha):
     return tf.compat.v1.assign(self._alpha, alpha)
+
+  @property
+  def theta(self):
+    """Returns the matrix of per-arm feature weights.
+
+    The returned matrix has shape (num_actions, context_dim).
+    It's equivalent to a stacking of theta vectors from the paper.
+    """
+    thetas = []
+    for k in range(self._num_actions):
+      thetas.append(
+          tf.squeeze(
+              linalg.conjugate_gradient_solve(
+                  self._cov_matrix_list[k] + self._tikhonov_weight *
+                  tf.eye(self._context_dim, dtype=self._dtype),
+                  tf.expand_dims(self._data_vector_list[k], axis=-1)),
+              axis=-1))
+
+    return tf.stack(thetas, axis=0)
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)

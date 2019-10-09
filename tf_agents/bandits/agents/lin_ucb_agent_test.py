@@ -182,6 +182,7 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(loss_info)
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
+    final_theta = self.evaluate(agent.theta)
 
     # Compute the expected updated estimates.
     observations_list = tf.dynamic_partition(
@@ -195,6 +196,7 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         num_partitions=num_actions)
     expected_a_updated_list = []
     expected_b_updated_list = []
+    expected_theta_updated_list = []
     for _, (observations_for_arm, rewards_for_arm) in enumerate(zip(
         observations_list, rewards_list)):
       num_samples_for_arm_current = tf.cast(
@@ -214,13 +216,21 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
 
       a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0, true_fn, false_fn)
+      theta_new = tf.squeeze(
+          tf.linalg.solve(a_new, tf.expand_dims(b_new, axis=-1)), axis=-1)
 
       expected_a_updated_list.append(self.evaluate(a_new))
       expected_b_updated_list.append(self.evaluate(b_new))
+      expected_theta_updated_list.append(self.evaluate(theta_new))
 
     # Check that the actual updated estimates match the expectations.
     self.assertAllClose(expected_a_updated_list, final_a)
     self.assertAllClose(expected_b_updated_list, final_b)
+    self.assertAllClose(
+        self.evaluate(tf.stack(expected_theta_updated_list)),
+        final_theta,
+        atol=0.1,
+        rtol=0.05)
 
   @test_cases()
   def testLinearUCBUpdateWithMaskedActions(self,
