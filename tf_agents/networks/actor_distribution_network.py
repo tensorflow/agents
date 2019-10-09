@@ -160,9 +160,12 @@ class ActorDistributionNetwork(network.DistributionNetwork):
   def output_tensor_spec(self):
     return self._output_tensor_spec
 
-  def call(self, observations, step_type, network_state):
+  def call(self, observations, step_type, network_state, training=False):
     state, network_state = self._encoder(
-        observations, step_type=step_type, network_state=network_state)
+        observations,
+        step_type=step_type,
+        network_state=network_state,
+        training=training)
     outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
     output_actions = tf.nest.map_structure(
         lambda proj_net: proj_net(state, outer_rank), self._projection_networks)

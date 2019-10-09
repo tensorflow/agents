@@ -48,9 +48,14 @@ class _MockDistribution(object):
 
 class DummyActorPolicy(object):
 
-  def __init__(self, time_step_spec, action_spec, actor_network):
+  def __init__(self,
+               time_step_spec,
+               action_spec,
+               actor_network,
+               training=False):
     del time_step_spec
     del actor_network
+    del training
     single_action_spec = tf.nest.flatten(action_spec)[0]
     # Action is maximum of action range.
     self._action = single_action_spec.maximum

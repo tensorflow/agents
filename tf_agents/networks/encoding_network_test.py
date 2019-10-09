@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import parameterized
+import numpy as np
 import tensorflow as tf
 
 from tf_agents.networks import encoding_network
@@ -27,7 +29,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
 
 
-class EncodingNetworkTest(test_utils.TestCase):
+class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
   def test_empty_layers(self):
     input_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
@@ -43,7 +45,7 @@ class EncodingNetworkTest(test_utils.TestCase):
 
     out, _ = network(tf.ones((1, 2, 3)))
     self.assertAllEqual(out, [[1, 1, 1, 1, 1, 1]])
-    self.assertLen(network.variables, 0)
+    self.assertEmpty(network.variables)
 
   def test_non_preprocessing_layers_2d(self):
     input_spec = tensor_spec.TensorSpec((32, 32, 3), tf.float32)
@@ -57,8 +59,8 @@ class EncodingNetworkTest(test_utils.TestCase):
     network.create_variables()
 
     variables = network.variables
-    self.assertEqual(10, len(variables))
-    self.assertEqual(6, len(network.layers))
+    self.assertLen(variables, 10)
+    self.assertLen(network.layers, 6)
 
     # Validate first conv layer.
     config = network.layers[0].get_config()
@@ -98,8 +100,8 @@ class EncodingNetworkTest(test_utils.TestCase):
     network.create_variables()
 
     variables = network.variables
-    self.assertEqual(10, len(variables))
-    self.assertEqual(6, len(network.layers))
+    self.assertLen(variables, 10)
+    self.assertLen(network.layers, 6)
 
     # Validate first conv layer.
     config = network.layers[0].get_config()
@@ -138,8 +140,8 @@ class EncodingNetworkTest(test_utils.TestCase):
       network.create_variables()
       variables = network.variables
 
-      self.assertEqual(4, len(variables))
-      self.assertEqual(3, len(network.layers))
+      self.assertLen(variables, 4)
+      self.assertLen(network.layers, 3)
 
       # Validate dilation rates
       config = network.layers[0].get_config()
@@ -157,8 +159,8 @@ class EncodingNetworkTest(test_utils.TestCase):
       network.create_variables()
       variables = network.variables
 
-      self.assertEqual(4, len(variables))
-      self.assertEqual(3, len(network.layers))
+      self.assertLen(variables, 4)
+      self.assertLen(network.layers, 3)
 
       # Validate dilation rates
       config = network.layers[0].get_config()
@@ -368,6 +370,26 @@ class EncodingNetworkTest(test_utils.TestCase):
     expected_shape = (batch_size, expected_dim)
     self.assertEqual(expected_shape, output.shape)
 
+  @parameterized.named_parameters(
+      ('TrainingTrue', True,),
+      ('TrainingFalse', False))
+  def testDropoutFCLayers(self, training):
+    batch_size = 3
+    num_obs_dims = 5
+    obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
+    network = encoding_network.EncodingNetwork(
+        obs_spec,
+        fc_layer_params=[20],
+        dropout_layer_params=[0.5])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    output1, _ = network(obs, training=training)
+    output2, _ = network(obs, training=training)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    output1, output2 = self.evaluate([output1, output2])
+    if training:
+      self.assertGreater(np.linalg.norm(output1 - output2), 0)
+    else:
+      self.assertAllEqual(output1, output2)
 
 if __name__ == '__main__':
   tf.test.main()

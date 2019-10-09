@@ -280,7 +280,7 @@ class EncodingNetwork(network.Network):
     self._postprocessing_layers = layers
     self._batch_squash = batch_squash
 
-  def call(self, observation, step_type=None, network_state=()):
+  def call(self, observation, step_type=None, network_state=(), training=False):
     del step_type  # unused.
 
     if self._batch_squash:
@@ -297,7 +297,7 @@ class EncodingNetwork(network.Network):
           nest.flatten_up_to(
               self._preprocessing_nest, observation, check_types=False),
           self._flat_preprocessing_layers):
-        processed.append(layer(obs))
+        processed.append(layer(obs, training=training))
       if len(processed) == 1 and self._preprocessing_combiner is None:
         # If only one observation is passed and the preprocessing_combiner
         # is unspecified, use the preprocessed version of this observation.
@@ -309,7 +309,7 @@ class EncodingNetwork(network.Network):
       states = self._preprocessing_combiner(states)
 
     for layer in self._postprocessing_layers:
-      states = layer(states)
+      states = layer(states, training=training)
 
     if self._batch_squash:
       states = tf.nest.map_structure(batch_squash.unflatten, states)

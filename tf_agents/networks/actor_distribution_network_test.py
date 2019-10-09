@@ -18,6 +18,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import parameterized
+import numpy as np
 import tensorflow as tf
 from tf_agents.networks import actor_distribution_network
 from tf_agents.specs import tensor_spec
@@ -25,7 +27,7 @@ from tf_agents.trajectories import time_step as ts
 from tensorflow.python.framework import test_util  # TF internal
 
 
-class ActorDistributionNetworkTest(tf.test.TestCase):
+class ActorDistributionNetworkTest(tf.test.TestCase, parameterized.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testBuilds(self):
@@ -108,6 +110,39 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
     self.assertEqual([3, 2], action_distributions[0].mode().shape.as_list())
     self.assertEqual([3, 3], action_distributions[1].mode().shape.as_list())
     self.assertGreater(len(net.trainable_variables), 4)
+
+  @parameterized.named_parameters(
+      ('TrainingTrue', True,),
+      ('TrainingFalse', False))
+  def testDropoutFCLayersWithConv(self, training):
+    tf.compat.v1.set_random_seed(0)
+    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
+                                                     1)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
+    action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
+
+    net = actor_distribution_network.ActorDistributionNetwork(
+        observation_spec,
+        action_spec,
+        conv_layer_params=[(4, 2, 2)],
+        fc_layer_params=[5],
+        dropout_layer_params=[0.5])
+
+    action_distributions1, _ = net(
+        time_step.observation, time_step.step_type, (), training=training)
+    action_distributions2, _ = net(
+        time_step.observation, time_step.step_type, (), training=training)
+    mode1 = action_distributions1.mode()
+    mode2 = action_distributions2.mode()
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    mode1, mode2 = self.evaluate([mode1, mode2])
+
+    if training:
+      self.assertGreater(np.linalg.norm(mode1 - mode2), 0)
+    else:
+      self.assertAllEqual(mode1, mode2)
 
 
 if __name__ == '__main__':
