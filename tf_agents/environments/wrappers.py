@@ -793,3 +793,37 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
 
     time_step = self._env.step(action)
     return self._add_history(time_step, action)
+
+
+@gin.configurable
+class OneHotActionWrapper(PyEnvironmentBaseWrapper):
+  """Converts discrete action to one_hot format."""
+
+  def action_spec(self):
+
+    def convert_to_one_hot(action_spec):
+      """Convert action_spec to one_hot format."""
+      if np.issubdtype(action_spec.dtype, np.integer):
+        if len(action_spec.shape) > 1:
+          raise ValueError('OneHotActionWrapper only supports single action!'
+                           'action_spec: {}'.format(action_spec))
+
+        num_actions = action_spec.maximum - action_spec.minimum + 1
+        output_shape = action_spec.shape + (num_actions,)
+
+        return array_spec.BoundedArraySpec(
+            shape=output_shape,
+            dtype=action_spec.dtype,
+            minimum=0,
+            maximum=1,
+            name='one_hot_action_spec')
+      else:
+        return action_spec
+
+    action_spec = tf.nest.map_structure(
+        convert_to_one_hot, self._env.action_spec())
+    return action_spec
+
+  def _step(self, action):
+    action = np.argmax(action, axis=-1)
+    return self._env.step(action)

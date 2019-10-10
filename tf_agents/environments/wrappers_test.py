@@ -988,5 +988,32 @@ class PerformanceProfilerWrapperTest(test_utils.TestCase):
     self.assertNotEqual(profile[0], previous_profile)
 
 
+class OneHotActionWrapperTest(test_utils.TestCase):
+
+  def testActionSpec(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    one_hot_action_wrapper = wrappers.OneHotActionWrapper(env)
+    expected_spec = array_spec.BoundedArraySpec(
+        shape=(2,),
+        dtype=np.int64,
+        minimum=0,
+        maximum=1,
+        name='one_hot_action_spec')
+    self.assertEqual(one_hot_action_wrapper.action_spec(), expected_spec)
+
+  def testStep(self):
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    action_spec = array_spec.BoundedArraySpec((1,), np.int32, 0, 2)
+    mock_env = mock.Mock(
+        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
+    one_hot_action_wrapper = wrappers.OneHotActionWrapper(mock_env)
+    one_hot_action_wrapper.reset()
+
+    one_hot_action_wrapper.step(np.array([0.5, 0.4, 0.1]))
+    self.assertTrue(mock_env.step.called)
+    np.testing.assert_array_equal(0, mock_env.step.call_args[0][0])
+
+
 if __name__ == '__main__':
   test_utils.main()

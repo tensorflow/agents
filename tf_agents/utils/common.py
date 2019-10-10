@@ -573,10 +573,11 @@ def log_probability(distributions, actions, action_spec):
 
   def _compute_log_prob(single_distribution, single_action):
     # sum log-probs over everything but the batch
-    rank = single_action.shape.rank
+    single_log_prob = single_distribution.log_prob(single_action)
+    rank = single_log_prob.shape.rank
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(
-        input_tensor=single_distribution.log_prob(single_action),
+        input_tensor=single_log_prob,
         axis=reduce_dims)
 
   tf.nest.assert_same_structure(distributions, actions)

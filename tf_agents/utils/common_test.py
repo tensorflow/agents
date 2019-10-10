@@ -420,6 +420,17 @@ class LogProbabilityTest(test_utils.TestCase):
     self.assertEqual(len(log_probs_.shape), 0)
     self.assertNear(log_probs_, 2 * -0.5 * np.log(2 * 3.14159), 0.001)
 
+  def testLogProbabilityOneHot(self):
+    action_spec = tensor_spec.BoundedTensorSpec([3], tf.int32, 0, 1)
+    distribution = tfp.distributions.OneHotCategorical(probs=[0.6, 0.3, 0.1])
+    actions = tf.constant([1, 0, 0])
+    log_probs = common.log_probability(distribution, actions, action_spec)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    log_probs_ = self.evaluate(log_probs)
+    self.assertEqual(len(log_probs_.shape), 0)
+    self.assertNear(log_probs_, np.log(0.6), 0.00001)
+
   def testNestedLogProbability(self):
     action_spec = [
         tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1),
