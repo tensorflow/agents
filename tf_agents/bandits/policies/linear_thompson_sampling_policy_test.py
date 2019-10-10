@@ -37,7 +37,7 @@ def test_cases():
       }, {
           'testcase_name': 'batch4',
           'batch_size': 4,
-          'num_actions': 3,
+          'num_actions': 5,
       })
 
 
@@ -73,6 +73,14 @@ class LinearThompsonSamplingPolicyTest(parameterized.TestCase,
         name='observation')
     return ts.restart(observation, batch_size=batch_size)
 
+  def _time_step_batch_with_action_mask(self, batch_size, num_actions):
+    mask = tf.eye(batch_size, num_columns=num_actions, dtype=tf.int32)
+    observation = (tf.constant(
+        np.array(range(batch_size * self._obs_dim)),
+        dtype=tf.float32,
+        shape=[batch_size, self._obs_dim]), mask)
+    return ts.restart(observation, batch_size=batch_size)
+
   @test_cases()
   def testActionBatch(self, batch_size, num_actions):
     action_spec = tensor_spec.BoundedTensorSpec(
@@ -82,8 +90,9 @@ class LinearThompsonSamplingPolicyTest(parameterized.TestCase,
         dtype=tf.int32,
         name='action')
     policy = lin_ts.LinearThompsonSamplingPolicy(
-        action_spec, self._weight_covariance_matrices(num_actions),
-        self._parameter_estimators(num_actions), self._time_step_spec)
+        action_spec, self._time_step_spec,
+        self._weight_covariance_matrices(num_actions),
+        self._parameter_estimators(num_actions))
 
     action_step = policy.action(self._time_step_batch(batch_size, num_actions))
 
@@ -111,6 +120,32 @@ class LinearThompsonSamplingPolicyTest(parameterized.TestCase,
     expected_variances = [[85, 170]] * batch_size
     self.assertAllEqual(
         self.evaluate(tf.stack(variances, axis=-1)), expected_variances)
+
+  @test_cases()
+  def testMaskedActions(self, batch_size, num_actions):
+    action_spec = tensor_spec.BoundedTensorSpec(
+        shape=(),
+        minimum=0,
+        maximum=num_actions - 1,
+        dtype=tf.int32,
+        name='action')
+    obs_spec = (tensor_spec.TensorSpec(self._obs_dim, tf.float32),
+                tensor_spec.TensorSpec(num_actions, tf.int32))
+    policy = lin_ts.LinearThompsonSamplingPolicy(
+        action_spec,
+        ts.time_step_spec(obs_spec),
+        self._weight_covariance_matrices(num_actions),
+        self._parameter_estimators(num_actions),
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
+
+    action_step = policy.action(
+        self._time_step_batch_with_action_mask(batch_size, num_actions))
+
+    self.assertEqual(action_step.action.shape.as_list(), [batch_size])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    actions = self.evaluate(action_step.action)
+    print(actions)
+    self.assertAllEqual(actions, range(batch_size))
 
 
 if __name__ == '__main__':

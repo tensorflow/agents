@@ -58,6 +58,7 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
                time_step_spec,
                action_spec,
                gamma=1.0,
+               observation_and_action_constraint_splitter=None,
                dtype=tf.float32,
                name=None):
     """Initialize an instance of `LinearThompsonSamplingAgent`.
@@ -68,6 +69,13 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
         describing the number of actions for this agent.
       gamma: a float forgetting factor in [0.0, 1.0]. When set to
         1.0, the algorithm does not forget.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit agent and
+        policy, and 2) the boolean mask. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       dtype: The type of the parameters stored and updated by the agent. Should
         be one of `tf.float32` and `tf.float64`. Defaults to `tf.float32`.
       name: a name for this instance of `LinearThompsonSamplingAgent`.
@@ -78,7 +86,15 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
-    self._context_dim = int(time_step_spec.observation.shape[0])
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter:
+      context_shape = observation_and_action_constraint_splitter(
+          time_step_spec.observation)[0].shape.as_list()
+    else:
+      context_shape = time_step_spec.observation.shape.as_list()
+    self._context_dim = (
+        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     self._gamma = gamma
     if self._gamma < 0.0 or self._gamma > 1.0:
       raise ValueError('Forgetting factor `gamma` must be in [0.0, 1.0].')
@@ -98,9 +114,13 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
           tf.compat.v2.Variable(
               tf.zeros(self._context_dim, dtype=dtype), name='b_' + str(k)))
 
-    policy = ts_policy.LinearThompsonSamplingPolicy(action_spec,
-                                                    self._weight_covariances,
-                                                    self._parameter_estimators)
+    policy = ts_policy.LinearThompsonSamplingPolicy(
+        action_spec,
+        time_step_spec,
+        self._weight_covariances,
+        self._parameter_estimators,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter))
     super(LinearThompsonSamplingAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=policy.action_spec,
@@ -151,7 +171,9 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
         experience.action, self._action_spec)
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
-
+    if self._observation_and_action_constraint_splitter:
+      observation, _ = self._observation_and_action_constraint_splitter(
+          observation)
     observation = tf.cast(observation, self._dtype)
     reward = tf.cast(reward, self._dtype)
 

@@ -82,6 +82,35 @@ def _get_initial_and_final_steps(batch_size, context_dim):
   return initial_step, final_step
 
 
+def _get_initial_and_final_steps_with_action_mask(batch_size,
+                                                  context_dim,
+                                                  num_actions=None):
+  observation = np.array(range(batch_size * context_dim)).reshape(
+      [batch_size, context_dim])
+  observation = tf.constant(observation, dtype=tf.float32)
+  mask = 1 - tf.eye(batch_size, num_columns=num_actions, dtype=tf.int32)
+  reward = np.random.uniform(0.0, 1.0, [batch_size])
+  initial_step = time_step.TimeStep(
+      tf.constant(
+          time_step.StepType.FIRST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observation, mask))
+  final_step = time_step.TimeStep(
+      tf.constant(
+          time_step.StepType.LAST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(reward, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observation + 100.0, mask))
+  return initial_step, final_step
+
+
 def _get_action_step(action):
   return policy_step.PolicyStep(action=tf.convert_to_tensor(action))
 
@@ -156,6 +185,75 @@ class LinearThompsonSamplingAgentTest(tf.test.TestCase, parameterized.TestCase):
     # Compute the expected updates.
     observations_list = tf.dynamic_partition(
         data=tf.reshape(experience.observation, [batch_size, context_dim]),
+        partitions=tf.convert_to_tensor(action),
+        num_partitions=num_actions)
+    rewards_list = tf.dynamic_partition(
+        data=tf.reshape(experience.reward, [batch_size]),
+        partitions=tf.convert_to_tensor(action),
+        num_partitions=num_actions)
+    expected_weight_covariances_update = []
+    expected_parameter_estimators_update = []
+    for k, (observations_for_arm,
+            rewards_for_arm) in enumerate(zip(observations_list, rewards_list)):
+      expected_weight_covariances_update.append(
+          self.evaluate(
+              tf.matmul(
+                  observations_for_arm, observations_for_arm,
+                  transpose_a=True)))
+      expected_parameter_estimators_update.append(
+          self.evaluate(
+              bandit_utils.sum_reward_weighted_observations(
+                  rewards_for_arm, observations_for_arm)))
+    self.assertAllClose(expected_weight_covariances_update,
+                        actual_weight_covariances_update)
+    self.assertAllClose(expected_parameter_estimators_update,
+                        actual_parameter_estimators_update)
+
+  @test_cases()
+  def testLinearThompsonSamplingUpdateWithMaskedActions(self, batch_size,
+                                                        context_dim, dtype):
+    """Check agent updates for specified actions and rewards."""
+
+    # Construct a `Trajectory` for the given action, observation, reward.
+    num_actions = 5
+    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
+        batch_size, context_dim, num_actions)
+    action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
+    action_step = _get_action_step(action)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    # Construct an agent and perform the update. Record initial and final
+    # weights.
+    observation_spec = (tensor_spec.TensorSpec([context_dim], tf.float32),
+                        tensor_spec.TensorSpec([num_actions], tf.int32))
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    agent = lin_ts_agent.LinearThompsonSamplingAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
+        dtype=dtype)
+    self.evaluate(agent.initialize())
+    initial_weight_covariances = self.evaluate(agent._weight_covariances)
+    initial_parameter_estimators = self.evaluate(agent._parameter_estimators)
+
+    loss_info = agent.train(experience)
+    self.evaluate(loss_info)
+    final_weight_covariances = self.evaluate(agent.weight_covariances)
+    final_parameter_estimators = self.evaluate(agent.parameter_estimators)
+    actual_weight_covariances_update = [
+        final_weight_covariances[k] - initial_weight_covariances[k]
+        for k in range(num_actions)
+    ]
+    actual_parameter_estimators_update = [
+        final_parameter_estimators[k] - initial_parameter_estimators[k]
+        for k in range(num_actions)
+    ]
+
+    # Compute the expected updates.
+    observations_list = tf.dynamic_partition(
+        data=tf.reshape(experience.observation[0], [batch_size, context_dim]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(

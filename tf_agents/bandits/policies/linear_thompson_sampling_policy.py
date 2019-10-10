@@ -22,10 +22,9 @@ from __future__ import print_function
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import tf_policy
-from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
-from tf_agents.trajectories import time_step as ts
 
 tfd = tfp.distributions
 
@@ -79,12 +78,13 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
   action we sample a reward and take the argmax.
   """
 
-  def __init__(
-      self,
-      action_spec,
-      weight_covariance_matrices,
-      parameter_estimators,
-      name=None):
+  def __init__(self,
+               action_spec,
+               time_step_spec,
+               weight_covariance_matrices,
+               parameter_estimators,
+               observation_and_action_constraint_splitter=None,
+               name=None):
     """Initializes `LinearThompsonSamplingPolicy`.
 
     The `weight_covariance_matrices` and `parameter_estimators`
@@ -94,11 +94,20 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
 
     Args:
       action_spec: Array spec containing action specification.
+      time_step_spec: A `TimeStep` spec of the expected time_steps.
       weight_covariance_matrices: A list of `B` inverse matrices from the paper.
         The list has `num_actions` elements of shape
         `[context_dim, context_dim]`.
       parameter_estimators: List of `f` vectors from the paper. The list has
         `num_actions' elements of shape is `[context_dim]`.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit policy and 2)
+        the mask. The mask should be a 0-1 `Tensor` of shape
+        `[batch_size, num_actions]`. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       name: The name of this policy.
     """
     if not isinstance(weight_covariance_matrices, (list, tuple)):
@@ -113,9 +122,16 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
 
     self._action_spec = action_spec
     self._num_actions = action_spec.maximum + 1
-    self._context_dim = tf.compat.dimension_value(
-        parameter_estimators[0].shape[0])
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter:
+      context_shape = observation_and_action_constraint_splitter(
+          time_step_spec.observation)[0].shape.as_list()
+    else:
+      context_shape = time_step_spec.observation.shape.as_list()
 
+    self._context_dim = (
+        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     self._variables = [
         x for x in weight_covariance_matrices + parameter_estimators
         if isinstance(x, tf.Variable)
@@ -127,10 +143,6 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
       _assert_shape([self._context_dim, self._context_dim], t.shape.as_list(),
                     'Weight covariance')
 
-    observation_spec = tensor_spec.TensorSpec(
-        shape=(self._context_dim), dtype=tf.float32)
-
-    time_step_spec = ts.time_step_spec(observation_spec)
     super(LinearThompsonSamplingPolicy, self).__init__(
         time_step_spec=time_step_spec, action_spec=action_spec)
 
@@ -143,9 +155,13 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
 
   def _action(self, time_step, policy_state, seed):
     seed_stream = tfd.SeedStream(seed=seed, salt='ts_policy')
+    observation = time_step.observation
+    if self._observation_and_action_constraint_splitter:
+      observation, mask = self._observation_and_action_constraint_splitter(
+          observation)
 
     observation = tf.cast(
-        time_step.observation, dtype=self._parameter_estimators[0].dtype)
+        observation, dtype=self._parameter_estimators[0].dtype)
     mean_estimates, scales = _get_means_and_variances(
         self._parameter_estimators, self._weight_covariance_matrices,
         observation)
@@ -153,6 +169,10 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
         loc=tf.stack(mean_estimates, axis=-1),
         scale=tf.sqrt(tf.stack(scales, axis=-1)))
     reward_samples = mu_sampler.sample(seed=seed_stream())
-    actions = tf.argmax(
-        reward_samples, axis=-1, output_type=self._action_spec.dtype)
+    if self._observation_and_action_constraint_splitter:
+      actions = policy_utilities.masked_argmax(
+          reward_samples, mask, output_type=self._action_spec.dtype)
+    else:
+      actions = tf.argmax(
+          reward_samples, axis=-1, output_type=self._action_spec.dtype)
     return policy_step.PolicyStep(actions, policy_state)
