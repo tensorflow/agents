@@ -37,20 +37,12 @@ def sample(distribution, reparam=False, **kwargs):
   Returns:
   """
   if reparam:
-    if isinstance(distribution, tfp.distributions.Categorical):
-      raise ValueError('Categorical distribution cannot be reparameterized'
+    if (distribution.reparameterization_type !=
+        tfp.distributions.FULLY_REPARAMETERIZED):
+      raise ValueError('This distribution cannot be reparameterized'
                        ': {}'.format(distribution))
-    elif isinstance(distribution, tfp.distributions.Normal):
-      return distribution.sample(**kwargs)
-    elif isinstance(distribution, gumbel_softmax.GumbelSoftmax):
-      return distribution.sample(**kwargs)
     else:
-      raise ValueError('This distribution is not supported by '
-                       'tf_agents.distributions.reparameterizied_sampling. '
-                       'Please check the implementation of the distribution. '
-                       'If the distribution itself supports '
-                       'reparameterized sampling, feel free to register it '
-                       'here.: {}'.format(distribution))
+      return distribution.sample(**kwargs)
   else:
     if isinstance(distribution, gumbel_softmax.GumbelSoftmax):
       samples = distribution.sample(**kwargs)
