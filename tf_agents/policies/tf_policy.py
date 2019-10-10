@@ -22,6 +22,7 @@ from __future__ import print_function
 import abc
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tf_agents.distributions import reparameterized_sampling
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
@@ -430,8 +431,9 @@ class Base(tf.Module):
     """
     seed_stream = tfd.SeedStream(seed=seed, salt='ppo_policy')
     distribution_step = self._distribution(time_step, policy_state)
-    actions = tf.nest.map_structure(lambda d: d.sample(seed=seed_stream()),
-                                    distribution_step.action)
+    actions = tf.nest.map_structure(
+        lambda d: reparameterized_sampling.sample(d, seed=seed_stream()),
+        distribution_step.action)
     info = distribution_step.info
     if self.emit_log_probability:
       try:
