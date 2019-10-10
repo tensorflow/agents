@@ -91,7 +91,7 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
       raise ValueError('Dataset must have exactly two outputs; got {}'.format(
           len(output_shapes)))
     context_shape = output_shapes[0]
-    context_dtype, lbl_dtype = tf.compat.v1.data.get_output_types(dataset)
+    context_dtype, _ = tf.compat.v1.data.get_output_types(dataset)
     observation_spec = tensor_spec.TensorSpec(
         shape=context_shape, dtype=context_dtype)
     time_step_spec = time_step.time_step_spec(observation_spec)
@@ -104,9 +104,9 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
     self._data_iterator = eager_utils.dataset_iterator(
         dataset.batch(batch_size, drop_remainder=True))
     self._current_label = tf.compat.v2.Variable(
-        tf.zeros(batch_size, dtype=lbl_dtype))
+        tf.zeros(batch_size, dtype=tf.int32))
     self._previous_label = tf.compat.v2.Variable(
-        tf.zeros(batch_size, dtype=lbl_dtype))
+        tf.zeros(batch_size, dtype=tf.int32))
     self._reward_distribution = reward_distribution
 
     reward_means = self._reward_distribution.mean()
@@ -117,7 +117,8 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
   def _observe(self):
     context, lbl = eager_utils.get_next(self._data_iterator)
     self._previous_label.assign(self._current_label)
-    self._current_label.assign(tf.reshape(lbl, shape=[self._batch_size]))
+    self._current_label.assign(tf.reshape(
+        tf.cast(lbl, dtype=tf.int32), shape=[self._batch_size]))
     return tf.reshape(
         context,
         shape=[self._batch_size] + self._time_step_spec.observation.shape)
