@@ -268,6 +268,40 @@ def last(observation, action, policy_info, reward, discount):
                             next_step_type=ts.StepType.LAST)
 
 
+def single_step(observation, action, policy_info, reward, discount):
+  """Create a Trajectory transitioning between StepTypes `FIRST` and `LAST`.
+
+  All inputs may be batched.
+
+  The input `discount` is used to infer the outer shape of the inputs,
+  as it is always expected to be a singleton array with scalar inner shape.
+
+  Args:
+    observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
+      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
+      `[T]`, or `[B, T]` (optional).
+
+  Returns:
+    A `Trajectory` instance.
+  """
+  return _create_trajectory(
+      observation,
+      action,
+      policy_info,
+      reward,
+      discount,
+      name_scope='trajectory_single_step',
+      step_type=ts.StepType.FIRST,
+      next_step_type=ts.StepType.LAST)
+
+
 def boundary(observation, action, policy_info, reward, discount):
   """Create a Trajectory transitioning between StepTypes `LAST` and `FIRST`.
 
