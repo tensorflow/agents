@@ -23,6 +23,8 @@ from __future__ import print_function
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
+from tf_agents.bandits.policies import policy_utilities
+from tf_agents.distributions import masked
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -57,6 +59,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
                time_step_spec=None,
                alpha=1.0,
                emit_log_probability=False,
+               observation_and_action_constraint_splitter=None,
                name=None):
     """Initializes `NeuralLinUCBPolicy`.
 
@@ -77,6 +80,14 @@ class NeuralLinUCBPolicy(tf_policy.Base):
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       alpha: (float) non-negative weight multiplying the confidence intervals.
       emit_log_probability: (bool) whether to emit log probabilities.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit policy and 2)
+        the mask. The mask should be a 0-1 `Tensor` of shape
+        `[batch_size, num_actions]`. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       name: The name of this policy.
     """
     self._encoding_network = encoding_network
@@ -113,8 +124,15 @@ class NeuralLinUCBPolicy(tf_policy.Base):
 
     self._num_actions = len(cov_matrix)
     assert self._num_actions
-    self._observation_dim = tf.compat.dimension_value(
-        time_step_spec.observation.shape[0])
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter:
+      context_shape = observation_and_action_constraint_splitter(
+          time_step_spec.observation)[0].shape.as_list()
+    else:
+      context_shape = time_step_spec.observation.shape.as_list()
+    self._context_dim = (
+        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
     if self._encoding_dim != cov_matrix_dim:
       raise ValueError('The dimension of matrix `cov_matrix` must match '
@@ -145,18 +163,29 @@ class NeuralLinUCBPolicy(tf_policy.Base):
                      self._reward_layer.variables)
     return [v for v in all_variables if isinstance(v, tf.Variable)]
 
-  def _get_actions_from_reward_layer(self, encoded_observation):
+  def _get_actions_from_reward_layer(self, encoded_observation, mask):
     # Get the predicted expected reward.
     est_mean_reward = self._reward_layer(encoded_observation)
-    greedy_actions = tf.argmax(est_mean_reward, axis=-1, output_type=tf.int32)
+    if mask is None:
+      greedy_actions = tf.argmax(est_mean_reward, axis=-1, output_type=tf.int32)
+    else:
+      greedy_actions = policy_utilities.masked_argmax(
+          est_mean_reward, mask, output_type=tf.int32)
 
     # Add epsilon greedy on top, if needed.
     if self._epsilon_greedy:
       batch_size = (tf.compat.dimension_value(encoded_observation.shape[0]) or
                     tf.shape(encoded_observation)[0])
-      random_actions = tf.random.uniform(
-          [batch_size], maxval=self._num_actions,
-          dtype=tf.int32)
+      if mask is None:
+        random_actions = tf.random.uniform(
+            [batch_size], maxval=self._num_actions,
+            dtype=tf.int32)
+      else:
+        zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
+        masked_categorical = masked.MaskedCategorical(
+            zero_logits, mask, dtype=tf.int32)
+        random_actions = masked_categorical.sample()
+
       rng = tf.random.uniform([batch_size], maxval=1.0)
       cond = tf.greater(rng, self._epsilon_greedy)
       chosen_actions = tf.compat.v1.where(cond, greedy_actions, random_actions)
@@ -165,7 +194,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
 
     return chosen_actions
 
-  def _get_actions_from_linucb(self, encoded_observation):
+  def _get_actions_from_linucb(self, encoded_observation, mask):
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
     p_values = []
@@ -181,10 +210,15 @@ class NeuralLinUCBPolicy(tf_policy.Base):
       p_values.append(
           tf.reshape(mean_reward_est, [-1, 1]) + self._alpha * tf.sqrt(ci))
 
-    chosen_actions = tf.argmax(
-        tf.squeeze(tf.stack(p_values, axis=-1), axis=[1]),
-        axis=-1,
-        output_type=tf.int32)
+    stacked_p_values = tf.squeeze(tf.stack(p_values, axis=-1), axis=[1])
+    if mask is None:
+      chosen_actions = tf.argmax(
+          stacked_p_values,
+          axis=-1,
+          output_type=tf.int32)
+    else:
+      chosen_actions = policy_utilities.masked_argmax(
+          stacked_p_values, mask, output_type=tf.int32)
     return chosen_actions
 
   def _distribution(self, time_step, policy_state):
@@ -193,10 +227,14 @@ class NeuralLinUCBPolicy(tf_policy.Base):
 
   def _action(self, time_step, policy_state, seed):
     observation = time_step.observation
+    mask = None
+    if self._observation_and_action_constraint_splitter:
+      observation, mask = self._observation_and_action_constraint_splitter(
+          observation)
     # Check the shape of the observation matrix.
-    if not observation.shape.is_compatible_with([None, self._observation_dim]):
+    if not observation.shape.is_compatible_with([None, self._context_dim]):
       raise ValueError('Observation shape is expected to be {}. Got {}.'.format(
-          [None, self._observation_dim], observation.shape.as_list()))
+          [None, self._context_dim], observation.shape.as_list()))
 
     observation = tf.cast(observation, dtype=self._dtype)
 
@@ -205,7 +243,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
 
     chosen_actions = tf.cond(
         self._actions_from_reward_layer,
-        lambda: self._get_actions_from_reward_layer(encoded_observation),
-        lambda: self._get_actions_from_linucb(encoded_observation))
+        lambda: self._get_actions_from_reward_layer(encoded_observation, mask),
+        lambda: self._get_actions_from_linucb(encoded_observation, mask))
 
     return policy_step.PolicyStep(chosen_actions, policy_state)

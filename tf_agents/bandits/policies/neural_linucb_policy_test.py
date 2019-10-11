@@ -119,6 +119,23 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
                     dtype=tf.float32, shape=[batch_size, self._obs_dim],
                     name='observation'))
 
+  def _time_step_batch_with_mask(self, batch_size):
+    observation = tf.constant(
+        np.array(range(batch_size * self._obs_dim)),
+        dtype=tf.float32,
+        shape=[batch_size, self._obs_dim])
+    mask = tf.eye(batch_size, num_columns=self._num_actions, dtype=tf.int32)
+    observation_with_mask = (observation, mask)
+    return ts.TimeStep(
+        tf.constant(
+            ts.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[batch_size],
+            name='step_type'),
+        tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+        tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+        observation_with_mask)
+
   @test_cases()
   def testBuild(self, batch_size, actions_from_reward_layer):
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
@@ -184,6 +201,32 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     actions_ = self.evaluate(action_step.action)
     self.assertAllGreaterEqual(actions_, self._action_spec.minimum)
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
+
+  @test_cases()
+  def testActionBatchWithMask(self, batch_size, actions_from_reward_layer):
+    obs_spec = (tensor_spec.TensorSpec([self._obs_dim], tf.float32),
+                tensor_spec.TensorSpec([self._num_actions], tf.int32))
+    time_step_spec = ts.time_step_spec(obs_spec)
+    policy = neural_linucb_policy.NeuralLinUCBPolicy(
+        DummyNet(),
+        self._encoding_dim,
+        get_reward_layer(),
+        actions_from_reward_layer=tf.constant(
+            actions_from_reward_layer, dtype=tf.bool),
+        cov_matrix=self._a,
+        data_vector=self._b,
+        num_samples=self._num_samples_per_arm,
+        epsilon_greedy=0.5,
+        time_step_spec=time_step_spec,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
+
+    action_step = policy.action(
+        self._time_step_batch_with_mask(batch_size=batch_size))
+    self.assertEqual(action_step.action.shape.as_list(), [batch_size])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    actions = self.evaluate(action_step.action)
+    self.assertAllEqual(actions, range(batch_size))
 
   @test_cases()
   def testActionBatchWithVariablesAndPolicyUpdate(

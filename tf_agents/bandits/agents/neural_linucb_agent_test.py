@@ -91,6 +91,35 @@ def _get_initial_and_final_steps(batch_size, context_dim):
   return initial_step, final_step
 
 
+def _get_initial_and_final_steps_with_action_mask(batch_size,
+                                                  context_dim,
+                                                  num_actions=None):
+  observation = np.array(range(batch_size * context_dim)).reshape(
+      [batch_size, context_dim])
+  observation = tf.constant(observation, dtype=tf.float32)
+  mask = 1 - tf.eye(batch_size, num_columns=num_actions, dtype=tf.int32)
+  reward = np.random.uniform(0.0, 1.0, [batch_size])
+  initial_step = time_step.TimeStep(
+      tf.constant(
+          time_step.StepType.FIRST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observation, mask))
+  final_step = time_step.TimeStep(
+      tf.constant(
+          time_step.StepType.LAST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      tf.constant(reward, dtype=tf.float32, shape=[batch_size], name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observation + 100.0, mask))
+  return initial_step, final_step
+
+
 def _get_action_step(action):
   return policy_step.PolicyStep(
       action=tf.convert_to_tensor(action))
@@ -254,6 +283,45 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         encoding_network_num_train_steps=10,
         encoding_dim=encoding_dim,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001))
+
+    loss_info_before, _ = agent.train(experience)
+    loss_info_after, _ = agent.train(experience)
+    self.evaluate(agent.initialize())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_before_value = self.evaluate(loss_info_before)
+    loss_after_value = self.evaluate(loss_info_after)
+    self.assertLess(
+        np.absolute(loss_before_value - loss_after_value), 10.0)
+
+  @test_cases()
+  def testNeuralLinUCBUpdateNumTrainSteps10MaskedActions(
+      self, batch_size=1, context_dim=10):
+    """Check updates when behaving like eps-greedy and using masked actions."""
+
+    # Construct a `Trajectory` for the given action, observation, reward.
+    num_actions = 5
+    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
+        batch_size, context_dim, num_actions)
+    action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
+    action_step = _get_action_step(action)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    # Construct an agent and perform the update.
+    observation_spec = (tensor_spec.TensorSpec([context_dim], tf.float32),
+                        tensor_spec.TensorSpec([num_actions], tf.int32))
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    encoder = DummyNet(obs_dim=context_dim)
+    encoding_dim = 10
+    agent = neural_linucb_agent.NeuralLinUCBAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        encoding_network=encoder,
+        encoding_network_num_train_steps=10,
+        encoding_dim=encoding_dim,
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001),
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
 
     loss_info_before, _ = agent.train(experience)
     loss_info_after, _ = agent.train(experience)

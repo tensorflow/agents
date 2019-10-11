@@ -58,6 +58,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
                alpha=1.0,
                gamma=1.0,
                epsilon_greedy=0.0,
+               observation_and_action_constraint_splitter=None,
                # Params for training.
                error_loss_fn=tf.compat.v1.losses.mean_squared_error,
                gradient_clipping=None,
@@ -86,6 +87,13 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         1.0, the algorithm does not forget.
       epsilon_greedy: A float representing the probability of choosing a random
         action instead of the greedy action.
+      observation_and_action_constraint_splitter: A function used for masking
+        valid/invalid actions with each state of the environment. The function
+        takes in a full observation and returns a tuple consisting of 1) the
+        part of the observation intended as input to the bandit agent and
+        policy, and 2) the boolean mask. This function should also work with a
+        `TensorSpec` as input, and should output `TensorSpec` objects for the
+        observation and mask.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -110,7 +118,15 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
-    self._context_dim = int(time_step_spec.observation.shape[0])
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter:
+      context_shape = observation_and_action_constraint_splitter(
+          time_step_spec.observation)[0].shape.as_list()
+    else:
+      context_shape = time_step_spec.observation.shape.as_list()
+    self._context_dim = (
+        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     self._alpha = alpha
     self._cov_matrix_list = []
     self._data_vector_list = []
@@ -165,7 +181,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         num_samples=self._num_samples_list,
         time_step_spec=time_step_spec,
         alpha=alpha,
-        emit_log_probability=emit_log_probability)
+        emit_log_probability=emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter))
 
     super(NeuralLinUCBAgent, self).__init__(
         time_step_spec=time_step_spec,
@@ -387,6 +405,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
 
+    if self._observation_and_action_constraint_splitter:
+      observation, _ = self._observation_and_action_constraint_splitter(
+          observation)
     observation = tf.cast(observation, self._dtype)
     reward = tf.cast(reward, self._dtype)
 
