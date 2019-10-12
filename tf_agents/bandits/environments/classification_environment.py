@@ -56,7 +56,8 @@ def _batched_table_lookup(tbl, row, col):
 class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
   """An environment based on an arbitrary classification problem."""
 
-  def __init__(self, dataset, reward_distribution, batch_size):
+  def __init__(self, dataset, reward_distribution, batch_size,
+               label_dtype_cast=None):
     """Initialize `ClassificationBanditEnvironment`.
 
     Args:
@@ -67,6 +68,7 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
         `[num_classes, num_actions]`. Entry `[i, j]` is the reward for taking
         action `j` for an instance of class `i`.
       batch_size: if `dataset` is batched, this is the size of the batches.
+      label_dtype_cast: if not None, casts dataset labels to this dtype.
     Raises:
       ValueError: if `reward_distribution` does not have an event shape with
         rank 2.
@@ -92,6 +94,8 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
           len(output_shapes)))
     context_shape = output_shapes[0]
     context_dtype, lbl_dtype = tf.compat.v1.data.get_output_types(dataset)
+    if label_dtype_cast:
+      lbl_dtype = label_dtype_cast
     observation_spec = tensor_spec.TensorSpec(
         shape=context_shape, dtype=context_dtype)
     time_step_spec = time_step.time_step_spec(observation_spec)
@@ -108,6 +112,7 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
     self._previous_label = tf.compat.v2.Variable(
         tf.zeros(batch_size, dtype=lbl_dtype))
     self._reward_distribution = reward_distribution
+    self._label_dtype = lbl_dtype
 
     reward_means = self._reward_distribution.mean()
     self._optimal_action_table = tf.argmax(
@@ -117,7 +122,8 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
   def _observe(self):
     context, lbl = eager_utils.get_next(self._data_iterator)
     self._previous_label.assign(self._current_label)
-    self._current_label.assign(tf.reshape(lbl, shape=[self._batch_size]))
+    self._current_label.assign(tf.reshape(
+        tf.cast(lbl, dtype=self._label_dtype), shape=[self._batch_size]))
     return tf.reshape(
         context,
         shape=[self._batch_size] + self._time_step_spec.observation.shape)
