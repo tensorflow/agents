@@ -11,15 +11,15 @@ running in the Cartpole environment.
 
 ## Table of contents
 
-<a href="#Agents">Agents</a><br>
-<a href="#Tutorials">Tutorials</a><br>
+<a href='#Agents'>Agents</a><br>
+<a href='#Tutorials'>Tutorials</a><br>
+<a href='#Multi-Armed Bandits'>Multi-Armed Bandits</a><br>
 <a href='#Examples'>Examples</a><br>
-<a href="#Installation">Installation</a><br>
+<a href='#Installation'>Installation</a><br>
 <a href='#Contributing'>Contributing</a><br>
 <a href='#Principles'>Principles</a><br>
 <a href='#Citation'>Citation</a><br>
 <a href='#Disclaimer'>Disclaimer</a><br>
-
 
 <a id='Agents'></a>
 ## Agents
@@ -45,6 +45,17 @@ Currently the following algorithms are available under TF-Agents:
 
 See [`tf_agents/colabs/`](tf_agents/colabs/) for tutorials on the major
 components provided.
+
+<a id='Multi-Armed Bandits'></a>
+
+## Multi-Armed Bandits
+
+The TF-Agents library contains also a Multi-Armed Bandits suite with a few
+environments and agents. RL agents can also be used on Bandit environments. For
+a tutorial, see
+[`tf_agents/bandits/colabs/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/colabs/bandits_tutorial.ipynb).
+For examples ready to run, see
+[`tf_agents/bandits/agents/examples/`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/).
 
 <a id='Examples'></a>
 ## Examples
@@ -95,6 +106,7 @@ If you use this code please cite it as:
   title = {{TF-Agents}: A library for Reinforcement Learning in TensorFlow},
   author = "{Sergio Guadarrama, Anoop Korattikara, Oscar Ramirez,
     Pablo Castro, Ethan Holly, Sam Fishman, Ke Wang, Ekaterina Gonina, Neal Wu,
+    Efi Kokiopoulou, Luciano Sbaiz, Jamie Smith, Gábor Bartók, Jesse Berent,
     Chris Harris, Vincent Vanhoucke, Eugene Brevdo}",
   howpublished = {\url{https://github.com/tensorflow/agents}},
   url = "https://github.com/tensorflow/agents",
