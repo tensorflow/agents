@@ -220,7 +220,8 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         time_step_spec=time_step_spec,
         observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
 
-    action_step = policy.action(
+    action_fn = common.function_in_tf1()(policy.action)
+    action_step = action_fn(
         self._time_step_batch_with_mask(batch_size=batch_size))
     self.assertEqual(action_step.action.shape.as_list(), [batch_size])
     self.assertEqual(action_step.action.dtype, tf.int32)
