@@ -152,9 +152,6 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
     self.assertEqual(self.evaluate(num_steps_transition_observer.num_steps), 10)
 
   def testOneStepReplayBufferObservers(self):
-    if tf.executing_eagerly():
-      self.skipTest('b/123880410')
-
     env = tf_py_environment.TFPyEnvironment(
         driver_test_utils.PyEnvironmentMock())
     policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
@@ -164,15 +161,14 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env, policy, num_episodes=1, observers=[replay_buffer.add_batch])
 
-    run_driver = driver.run()
-    rb_gather_all = replay_buffer.gather_all()
+    run_driver = driver.run if tf.executing_eagerly() else driver.run()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     for _ in range(3):
       self.evaluate(run_driver)
 
-    trajectories = self.evaluate(rb_gather_all)
+    trajectories = self.evaluate(replay_buffer.gather_all())
 
     self.assertAllEqual(trajectories.step_type, [[0, 1, 2, 0, 1, 2, 0, 1, 2]])
     self.assertAllEqual(trajectories.action, [[1, 2, 1, 1, 2, 1, 1, 2, 1]])
