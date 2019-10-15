@@ -32,17 +32,19 @@ class ReplayBuffer(tf.Module):
   mode, methods return ops that do so when executed.
   """
 
-  def __init__(self, data_spec, capacity):
+  def __init__(self, data_spec, capacity, stateful_dataset=False):
     """Initializes the replay buffer.
 
     Args:
       data_spec: A spec or a list/tuple/nest of specs describing
         a single item that can be stored in this buffer
       capacity: number of elements that the replay buffer can hold.
+      stateful_dataset: whether the dataset contains stateful ops or not.
     """
     super(ReplayBuffer, self).__init__()
     self._data_spec = data_spec
     self._capacity = capacity
+    self._stateful_dataset = stateful_dataset
 
   @property
   def data_spec(self):
@@ -53,6 +55,11 @@ class ReplayBuffer(tf.Module):
   def capacity(self):
     """Returns the capacity of the replay buffer."""
     return self._capacity
+
+  @property
+  def stateful_dataset(self):
+    """Returns whether the dataset of the replay buffer has stateful ops."""
+    return self._stateful_dataset
 
   def num_frames(self):
     """Returns the number of frames in the replay buffer."""
@@ -172,15 +179,21 @@ class ReplayBuffer(tf.Module):
               tf.nest.map_structure(lambda spec: spec.dtype, self._data_spec)))
 
     if single_deterministic_pass:
-      return self._single_deterministic_pass_dataset(
+      ds = self._single_deterministic_pass_dataset(
           sample_batch_size=sample_batch_size,
           num_steps=num_steps,
           num_parallel_calls=num_parallel_calls)
     else:
-      return self._as_dataset(
+      ds = self._as_dataset(
           sample_batch_size=sample_batch_size,
           num_steps=num_steps,
           num_parallel_calls=num_parallel_calls)
+
+    if self._stateful_dataset:
+      options = tf.data.Options()
+      options.experimental_allow_stateful = True
+      ds = ds.with_options(options)
+    return ds
 
   def gather_all(self):
     """Returns all the items in buffer.

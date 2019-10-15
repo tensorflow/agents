@@ -49,6 +49,14 @@ class ReplayBufferInitTest(tf.test.TestCase):
     self.assertEqual(rb.data_spec, spec)
     self.assertEqual(rb.capacity, capacity)
 
+  def testReplayBufferInitWithStatefulDataset(self):
+    spec = self._data_spec()
+    capacity = 10
+    rb = ReplayBufferTestClass(spec, capacity, stateful_dataset=True)
+    self.assertEqual(rb.data_spec, spec)
+    self.assertEqual(rb.capacity, capacity)
+    self.assertEqual(rb.stateful_dataset, True)
+
   def testMethods(self):
     spec = self._data_spec()
     capacity = 10

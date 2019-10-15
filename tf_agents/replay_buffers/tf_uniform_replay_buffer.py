@@ -55,7 +55,8 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
                device='cpu:*',
                table_fn=table.Table,
                dataset_drop_remainder=False,
-               dataset_window_shift=None):
+               dataset_window_shift=None,
+               stateful_dataset=False):
     """Creates a TFUniformReplayBuffer.
 
     The TFUniformReplayBuffer stores episodes in `B == batch_size` blocks of
@@ -129,11 +130,13 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         (`dataset_window_shift=None`) but users often want to see all
         combinations of frame sequences, in which case `dataset_window_shift=1`
         is the appropriate value.
+      stateful_dataset: whether the dataset contains stateful ops or not.
     """
     self._batch_size = batch_size
     self._max_length = max_length
     capacity = self._batch_size * self._max_length
-    super(TFUniformReplayBuffer, self).__init__(data_spec, capacity)
+    super(TFUniformReplayBuffer, self).__init__(
+        data_spec, capacity, stateful_dataset)
 
     self._id_spec = tensor_spec.TensorSpec([], dtype=tf.int64, name='id')
     self._capacity_value = np.int64(self._capacity)
@@ -318,10 +321,6 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
     dataset = tf.data.experimental.Counter().map(
         get_next, num_parallel_calls=num_parallel_calls)
-    options = tf.data.Options()
-    if hasattr(options, 'experimental_allow_stateful'):
-      options.experimental_allow_stateful = True
-      dataset = dataset.with_options(options)
     return dataset
 
   def _single_deterministic_pass_dataset(self,
