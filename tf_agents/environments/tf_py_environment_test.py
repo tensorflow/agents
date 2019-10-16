@@ -22,6 +22,7 @@ from __future__ import print_function
 import threading
 
 from absl.testing import parameterized
+from absl.testing.absltest import mock
 import numpy as np
 
 import tensorflow as tf
@@ -116,6 +117,13 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       return py_env
     # If using isolation, we'll pass a callable
     return _create_env if isolation else _create_env()
+
+  def testMethodPropagation(self):
+    env = self._get_py_env(True, False, batch_size=1)
+    env.foo = mock.Mock()
+    tf_env = tf_py_environment.TFPyEnvironment(env)
+    tf_env.foo()
+    env.foo.assert_called_once()
 
   @parameterized.parameters(*COMMON_PARAMETERS)
   def testActionSpec(self, batch_py_env, isolation):

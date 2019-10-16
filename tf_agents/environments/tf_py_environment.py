@@ -160,6 +160,22 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     self._time_step = None
     self._lock = threading.Lock()
 
+  def __getattr__(self, name):
+    """Enables access attributes of the wrapped PyEnvironment.
+
+    Use with caution since methods of the PyEnvironment can be incompatible
+    with TF.
+
+    Args:
+      name: Name of the attribute.
+
+    Returns:
+      The attribute.
+    """
+    if name in self.__dict__:
+      return getattr(self, name)
+    return getattr(self._env, name)
+
   def close(self):
     """Send close messages to the isolation pool and join it.
 
