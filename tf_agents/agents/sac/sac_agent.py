@@ -533,8 +533,8 @@ class SacAgent(tf_agent.TFAgent):
       tf.nest.assert_same_structure(time_steps, self.time_step_spec)
 
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
-      alpha_loss = (
-          self._log_alpha * tf.stop_gradient(-log_pi - self._target_entropy))
+      entropy_diff = tf.stop_gradient(-log_pi - self._target_entropy)
+      alpha_loss = (self._log_alpha * entropy_diff)
 
       if weights is not None:
         alpha_loss *= weights
@@ -544,5 +544,12 @@ class SacAgent(tf_agent.TFAgent):
       if self._debug_summaries:
         common.generate_tensor_summaries('alpha_loss', alpha_loss,
                                          self.train_step_counter)
+        common.generate_tensor_summaries('entropy_diff', entropy_diff,
+                                         self.train_step_counter)
+
+        tf.compat.v2.summary.scalar(
+            name='log_alpha',
+            data=self._log_alpha,
+            step=self.train_step_counter)
 
       return alpha_loss
