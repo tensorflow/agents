@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
@@ -185,6 +186,26 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.assertAllEqual(self.evaluate(action_step.action), [1, 2])
     self.assertAllEqual(self.evaluate(new_action_step.action), [1, 2])
 
+  def testPredictedRewards(self):
+    tf.compat.v1.set_random_seed(1)
+    policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
+        self._time_step_spec, self._action_spec, reward_network=DummyNet(),
+        expose_predicted_rewards=True)
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [1, 2])
+    # The expected values are obtained by passing the observation through the
+    # Keras dense layer of the DummyNet (defined above).
+    predicted_rewards_expected_array = np.array([[4.0, 5.5, 0.0],
+                                                 [8.0, 11.5, 12.0]])
+    p_info = self.evaluate(action_step.info)
+    self.assertAllClose(p_info.predicted_rewards,
+                        predicted_rewards_expected_array)
 
 if __name__ == '__main__':
   tf.test.main()
