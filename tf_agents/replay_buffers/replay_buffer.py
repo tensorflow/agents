@@ -191,8 +191,9 @@ class ReplayBuffer(tf.Module):
 
     if self._stateful_dataset:
       options = tf.data.Options()
-      options.experimental_allow_stateful = True
-      ds = ds.with_options(options)
+      if hasattr(options, 'experimental_allow_stateful'):
+        options.experimental_allow_stateful = True
+        ds = ds.with_options(options)
     return ds
 
   def gather_all(self):
