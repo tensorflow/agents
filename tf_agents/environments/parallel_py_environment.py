@@ -381,6 +381,7 @@ class ProcessPyEnvironment(object):
           continue
         if message == self._CLOSE:
           assert payload is None
+          env.close()
           break
         raise KeyError('Received message of unknown type {}'.format(message))
     except Exception:  # pylint: disable=broad-except
