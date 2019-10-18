@@ -292,7 +292,7 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
     NotImplementedError: If `outer_dims` is not statically known but nest
       contains a `SparseTensorSpec`.
   """
-  seed_stream = tfd.SeedStream(seed=seed, salt="sample_spec_nest")
+  seed_stream = tfp.util.SeedStream(seed=seed, salt="sample_spec_nest")
 
   def sample_fn(spec):
     """Return a composite tensor sample given `spec`.
