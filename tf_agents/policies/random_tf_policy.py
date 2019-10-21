@@ -38,7 +38,7 @@ def _uniform_probability(action_spec):
 class RandomTFPolicy(tf_policy.Base):
   """Returns random samples of the given action_spec."""
 
-  def __init__(self, time_step_spec, action_spec, **kwargs):
+  def __init__(self, time_step_spec, action_spec, *args, **kwargs):
     self._observation_and_action_constraint_splitter = (
         kwargs.pop('observation_and_action_constraint_splitter', None))
 
@@ -57,7 +57,8 @@ class RandomTFPolicy(tf_policy.Base):
             'RandomTFPolicy only supports action constraints for action specs '
             'shaped as () or (1,) or their equivalent list forms.')
 
-    super(RandomTFPolicy, self).__init__(time_step_spec, action_spec, **kwargs)
+    super(RandomTFPolicy, self).__init__(
+        time_step_spec, action_spec, *args, **kwargs)
 
   @property
   def observation_and_action_constraint_splitter(self):
