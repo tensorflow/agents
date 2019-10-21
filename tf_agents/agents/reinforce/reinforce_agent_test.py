@@ -346,11 +346,13 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     discount = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
     observations = tf.constant(
         [[[1, 2], [1, 2], [1, 2], [1, 2]]], dtype=tf.float32)
-    time_steps = ts.TimeStep(step_type, reward, discount, observations)
-
     actions = tf.constant([[[0], [1], [2], [3]]], dtype=tf.float32)
 
-    agent.total_loss(time_steps, actions, time_steps.reward, None)
+    experience = trajectory.Trajectory(
+        step_type, observations, actions, (),
+        step_type, reward, discount)
+
+    agent.total_loss(experience, reward, None)
 
     advantage_fn.assert_called_once()
 
