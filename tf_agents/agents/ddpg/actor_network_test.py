@@ -15,16 +15,17 @@
 
 """Tests for tf_agents.agents.ddpg.actor_network."""
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.agents.ddpg import actor_network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
 
 from tensorflow.python.framework import test_util  # TF internal
 
 
-class ActorNetworkTest(tf.test.TestCase):
+class ActorNetworkTest(tf.test.TestCase, parameterized.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testBuild(self):
@@ -147,6 +148,62 @@ class ActorNetworkTest(tf.test.TestCase):
     self.assertAllEqual(actions['motor'].shape.as_list(),
                         [batch_size] + action_spec['motor'].shape.as_list())
     self.assertEqual(len(actor_net.trainable_variables), 2)
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testHandlePreprocessingLayers(self):
+    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
+                        tensor_spec.TensorSpec([], tf.float32))
+    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(3,))
+
+    action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
+
+    preprocessing_layers = (tf.keras.layers.Dense(4),
+                            tf.keras.Sequential([
+                                tf.keras.layers.Reshape((1,)),
+                                tf.keras.layers.Dense(4)
+                            ]))
+
+    net = actor_network.ActorNetwork(
+        observation_spec,
+        action_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=tf.keras.layers.Add())
+
+    action, _ = net(time_step.observation, time_step.step_type,
+                                  ())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertEqual([3, 2], action.shape.as_list())
+    self.assertGreater(len(net.trainable_variables), 4)
+
+  @parameterized.named_parameters(
+      ('TrainingTrue', True,),
+      ('TrainingFalse', False))
+  def testDropoutFCLayersWithConv(self, training):
+    tf.compat.v1.set_random_seed(0)
+    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
+                                                     1)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(8, 4))
+    action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
+
+    net = actor_network.ActorNetwork(
+        observation_spec,
+        action_spec,
+        conv_layer_params=[(4, 2, 2)],
+        fc_layer_params=[5],
+        dropout_layer_params=[0.5])
+
+    action1, _ = net(
+        time_step.observation, time_step.step_type, (), training=training)
+    action2, _ = net(
+        time_step.observation, time_step.step_type, (), training=training)
+
+    self.assertEqual([8, 4, 2], action1.shape.as_list())
+    if training:
+      self.assertGreater(np.linalg.norm(action1 - action2), 0)
+    else:
+      self.assertAllEqual(action1, action2)
 
 if __name__ == '__main__':
   tf.test.main()
