@@ -105,9 +105,12 @@ class CategoricalQPolicy(tf_policy.Base):
     self._num_atoms = q_network.num_atoms
     q_network.create_variables()
     self._q_network = q_network
-    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
-    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
-    self._support = tf.linspace(min_q_value, max_q_value, self._num_atoms)
+
+    # Generate support in numpy so that we can assign it to a constant and avoid
+    # having a tensor property.
+    support = np.linspace(min_q_value, max_q_value, self._num_atoms,
+                          dtype=np.float32)
+    self._support = tf.constant(support, dtype=tf.float32)
     self._action_dtype = action_spec.dtype
 
   @property

@@ -201,9 +201,6 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
           'different numbers of atoms: {} vs. {}'.format(
               num_atoms, target_num_atoms))
     self._num_atoms = num_atoms
-    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
-    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
-    self._support = tf.linspace(min_q_value, max_q_value, num_atoms)
 
     policy = categorical_q_policy.CategoricalQPolicy(
         time_step_spec,
@@ -213,6 +210,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         max_q_value,
         observation_and_action_constraint_splitter=(
             self._observation_and_action_constraint_splitter))
+
     if boltzmann_temperature is not None:
       self._collect_policy = boltzmann_policy.BoltzmannPolicy(
           policy, temperature=self._boltzmann_temperature)
@@ -230,6 +228,10 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         observation_and_action_constraint_splitter=(
             self._observation_and_action_constraint_splitter))
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
+
+    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
+    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
+    self._support = tf.linspace(min_q_value, max_q_value, num_atoms)
 
   def _loss(self,
             experience,

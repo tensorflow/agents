@@ -19,12 +19,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+from absl import flags
 
 import numpy as np
 import tensorflow as tf
+
 from tf_agents.networks import categorical_q_network
 from tf_agents.networks import network
 from tf_agents.policies import categorical_q_policy
+from tf_agents.policies import policy_saver
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
@@ -232,8 +236,6 @@ class CategoricalQPolicyTest(test_utils.TestCase):
         observation_and_action_constraint_splitter=(
             lambda observation: (observation, tf_mask)))
 
-    # Force creation of variables before global_variables_initializer.
-    policy.variables()
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Sample from the policy 1000 times, and ensure that actions considered
@@ -242,6 +244,20 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     action = self.evaluate(action_step.action)
     self.assertEqual(action.shape, (batch_size,))
     self.assertAllEqual(np_mask[action], np.ones([batch_size]))
+
+  def testSaver(self):
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec, self._action_spec, self._q_network,
+        self._min_q_value, self._max_q_value)
+
+    saver = policy_saver.PolicySaver(policy)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.local_variables_initializer())
+
+    save_path = os.path.join(flags.FLAGS.test_tmpdir,
+                             'saved_categorical_q_policy')
+    saver.save(save_path)
 
 
 if __name__ == '__main__':
