@@ -799,31 +799,46 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
 class OneHotActionWrapper(PyEnvironmentBaseWrapper):
   """Converts discrete action to one_hot format."""
 
-  def action_spec(self):
+  def __init__(self, env):
+    super(OneHotActionWrapper, self).__init__(env)
 
-    def convert_to_one_hot(action_spec):
-      """Convert action_spec to one_hot format."""
-      if np.issubdtype(action_spec.dtype, np.integer):
-        if len(action_spec.shape) > 1:
+    def convert_to_one_hot(spec):
+      """Convert spec to one_hot format."""
+      if np.issubdtype(spec.dtype, np.integer):
+        if len(spec.shape) > 1:
           raise ValueError('OneHotActionWrapper only supports single action!'
-                           'action_spec: {}'.format(action_spec))
+                           'action_spec: {}'.format(spec))
 
-        num_actions = action_spec.maximum - action_spec.minimum + 1
-        output_shape = action_spec.shape + (num_actions,)
+        num_actions = spec.maximum - spec.minimum + 1
+        output_shape = spec.shape + (num_actions,)
 
         return array_spec.BoundedArraySpec(
             shape=output_shape,
-            dtype=action_spec.dtype,
+            dtype=spec.dtype,
             minimum=0,
             maximum=1,
             name='one_hot_action_spec')
       else:
-        return action_spec
+        return spec
 
-    action_spec = tf.nest.map_structure(
+    self._one_hot_action_spec = tf.nest.map_structure(
         convert_to_one_hot, self._env.action_spec())
-    return action_spec
+
+  def action_spec(self):
+    return self._one_hot_action_spec
 
   def _step(self, action):
-    action = np.argmax(action, axis=-1)
+
+    def convert_back(action, inner_spec, spec):
+      if action.shape != inner_spec.shape or action.dtype != inner_spec.dtype:
+        raise ValueError('Action shape/dtype different from its definition in '
+                         'the inner_spec. Action: {action}. Inner_spec: '
+                         '{spec}.'.format(action=action, spec=spec))
+      if np.issubdtype(action.dtype, np.integer):
+        action = spec.minimum + np.argmax(action, axis=-1)
+      return action
+
+    action = tf.nest.map_structure(
+        convert_back, action, self._one_hot_action_spec,
+        self._env.action_spec())
     return self._env.step(action)
