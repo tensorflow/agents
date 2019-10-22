@@ -65,7 +65,7 @@ class CriticRnnNetworkTest(tf.test.TestCase):
     self.assertEqual((64, 4), net.variables[2].shape)
     # Obs Fc Bias
     self.assertEqual((4,), net.variables[3].shape)
-    # Action Fc Kernel
+    # Action Fc kernel
     self.assertEqual((2, 5), net.variables[4].shape)
     # Action Fc Bias
     self.assertEqual((5,), net.variables[5].shape)
