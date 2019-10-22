@@ -20,6 +20,8 @@ import tensorflow as tf
 
 from tf_agents.networks import network
 from tf_agents.networks import utils
+from tf_agents.utils import nest_utils
+from tf_agents.networks import encoding_network
 
 
 @gin.configurable
@@ -28,6 +30,8 @@ class CriticNetwork(network.Network):
 
   def __init__(self,
                input_tensor_spec,
+               observation_preprocessing_layers=None,
+               observation_preprocessing_combiner=None,
                observation_conv_layer_params=None,
                observation_fc_layer_params=None,
                observation_dropout_layer_params=None,
@@ -36,12 +40,24 @@ class CriticNetwork(network.Network):
                joint_fc_layer_params=None,
                joint_dropout_layer_params=None,
                activation_fn=tf.nn.relu,
+               kernel_initializer=None,
+               batch_squash=True,
+               dtype=tf.float32,
                name='CriticNetwork'):
     """Creates an instance of `CriticNetwork`.
 
     Args:
       input_tensor_spec: A tuple of (observation, action) each a nest of
         `tensor_spec.TensorSpec` representing the inputs.
+      observation_preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
+        representing preprocessing for the different observations.
+        All of these layers must not be already built. For more details see
+        the documentation of `networks.EncodingNetwork`.
+      observation_preprocessing_combiner: (Optional.) A keras layer that takes a flat list
+        of tensors and combines them. Good options include
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
+        This layer must not be already built. For more details see
+        the documentation of `networks.EncodingNetwork`.
       observation_conv_layer_params: Optional list of convolution layer
         parameters for observations, where each item is a length-three tuple
         indicating (num_units, kernel_size, stride).
@@ -80,10 +96,16 @@ class CriticNetwork(network.Network):
         None. This list must have the same length of joint_fc_layer_params, or
         be None.
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
+      kernel_initializer: Initializer to use for the kernels of the conv and
+        dense layers. If none is provided a default variance_scaling_initializer
+      batch_squash: If True the outer_ranks of the observation are squashed into
+        the batch dimension. This allow encoding networks to be used with
+        observations with shape [BxTx...].
+      dtype: The dtype to use by the convolution and fully connected layers.
       name: A string representing name of the network.
 
     Raises:
-      ValueError: If `observation_spec` or `action_spec` contains more than one
+      ValueError: If `action_spec` contains more than one
         observation.
     """
     super(CriticNetwork, self).__init__(
@@ -93,23 +115,25 @@ class CriticNetwork(network.Network):
 
     observation_spec, action_spec = input_tensor_spec
 
-    if len(tf.nest.flatten(observation_spec)) > 1:
-      raise ValueError('Only a single observation is supported by this network')
+    if not kernel_initializer:
+      kernel_initializer = tf.compat.v1.keras.initializers.glorot_uniform()
+
+    self._encoder = encoding_network.EncodingNetwork(
+        observation_spec,
+        preprocessing_layers=observation_preprocessing_layers,
+        preprocessing_combiner=observation_preprocessing_combiner,
+        conv_layer_params=observation_conv_layer_params,
+        fc_layer_params=observation_fc_layer_params,
+        dropout_layer_params=observation_dropout_layer_params,
+        activation_fn=activation_fn,
+        kernel_initializer=kernel_initializer,
+        batch_squash=batch_squash,
+        dtype=dtype)
 
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise ValueError('Only a single action is supported by this network')
     self._single_action_spec = flat_action_spec[0]
-
-    # TODO(kbanoop): Replace mlp_layers with encoding networks.
-    self._observation_layers = utils.mlp_layers(
-        observation_conv_layer_params,
-        observation_fc_layer_params,
-        observation_dropout_layer_params,
-        activation_fn=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=1. / 3., mode='fan_in', distribution='uniform'),
-        name='observation_encoding')
 
     self._action_layers = utils.mlp_layers(
         None,
@@ -138,18 +162,27 @@ class CriticNetwork(network.Network):
             name='value'))
 
   def call(self, inputs, step_type=(), network_state=(), training=False):
+    outer_rank = nest_utils.get_outer_rank(inputs, self.input_tensor_spec)
+    batch_squash = utils.BatchSquash(outer_rank)
+
     observations, actions = inputs
-    del step_type  # unused.
-    observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
-    for layer in self._observation_layers:
-      observations = layer(observations, training=training)
+    observations, network_state = self._encoder(
+      observations,
+      step_type=step_type,
+      network_state=network_state,
+      training=training)
+
+    observations = batch_squash.flatten(observations)
 
     actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
+    actions = batch_squash.flatten(actions)
     for layer in self._action_layers:
       actions = layer(actions, training=training)
 
-    joint = tf.concat([observations, actions], 1)
+    joint = tf.concat([observations, actions], -1)
     for layer in self._joint_layers:
       joint = layer(joint, training=training)
 
-    return tf.reshape(joint, [-1]), network_state
+    q_value = tf.reshape(joint, [-1])
+    q_value = batch_squash.unflatten(q_value)
+    return q_value, network_state

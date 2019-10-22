@@ -66,7 +66,7 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec), observation_fc_layer_params=[20, 10])
 
-    obs = tf.random.uniform([batch_size, num_obs_dims])
+    obs = tf.random.uniform([batch_size, 3, 3, num_obs_dims])
     actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
 
