@@ -296,6 +296,9 @@ class DqnAgent(tf_agent.TFAgent):
 
     self._optimizer.apply_gradients(grads_and_vars)
 
+    # Increment train_step_counter
+    self.train_step_counter.assign_add(1)
+    
     self._update_target()
 
     return loss_info
