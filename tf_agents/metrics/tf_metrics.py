@@ -42,7 +42,7 @@ class TFDeque(object):
 
   @property
   def data(self):
-    return self._buffer
+    return self._buffer[:self.length]
 
   @common.function(autograph=True)
   def extend(self, value):
@@ -224,6 +224,31 @@ class AverageEpisodeLengthMetric(tf_metric.TFStepMetric):
   def reset(self):
     self._buffer.clear()
     self._length_accumulator.assign(tf.zeros_like(self._length_accumulator))
+
+
+class ChosenActionHistogram(tf_metric.TFHistogramStepMetric):
+  """Metric to compute the frequency of each action chosen."""
+
+  def __init__(self,
+               name='ChosenActionHistogram',
+               dtype=tf.int32,
+               buffer_size=100):
+    super(ChosenActionHistogram, self).__init__(name=name)
+    self._buffer = TFDeque(buffer_size, dtype)
+    self._dtype = dtype
+
+  @common.function
+  def call(self, trajectory):
+    self._buffer.extend(trajectory.action)
+    return trajectory
+
+  @common.function
+  def result(self):
+    return self._buffer.data
+
+  @common.function
+  def reset(self):
+    self._buffer.clear()
 
 
 def log_metrics(metrics, prefix=''):

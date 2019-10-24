@@ -31,7 +31,7 @@ class TFDequeTest(tf.test.TestCase):
   def test_data_is_zero(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual([0, 0, 0], self.evaluate(d.data))
+    self.assertAllEqual([], self.evaluate(d.data))
 
   def test_rolls_over(self):
     d = tf_metrics.TFDeque(3, tf.int32)
@@ -55,11 +55,11 @@ class TFDequeTest(tf.test.TestCase):
     self.assertAllEqual([1, 2, 3], self.evaluate(d.data))
 
     self.evaluate(d.clear())
-    self.assertAllEqual([0, 0, 0], self.evaluate(d.data))
+    self.assertAllEqual([], self.evaluate(d.data))
 
     self.evaluate(d.add(4))
     self.evaluate(d.add(5))
-    self.assertAllEqual([4, 5, 0], self.evaluate(d.data))
+    self.assertAllEqual([4, 5], self.evaluate(d.data))
 
   def test_mean_not_full(self):
     d = tf_metrics.TFDeque(3, tf.int32)
@@ -106,27 +106,35 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
     # Order of args for trajectory methods:
     # observation, action, policy_info, reward, discount
     ts0 = _concat_nested_tensors(
-        trajectory.boundary((), (), (), tf.constant([0.], dtype=tf.float32),
-                            [1.]),
-        trajectory.boundary((), (), (), tf.constant([0.], dtype=tf.float32),
-                            [1.]))
+        trajectory.boundary((), tf.constant([1]), (),
+                            tf.constant([0.], dtype=tf.float32), [1.]),
+        trajectory.boundary((), tf.constant([2]), (),
+                            tf.constant([0.], dtype=tf.float32), [1.]))
     ts1 = _concat_nested_tensors(
-        trajectory.first((), (), (), tf.constant([1.], dtype=tf.float32), [1.]),
-        trajectory.first((), (), (), tf.constant([2.], dtype=tf.float32), [1.]))
+        trajectory.first((), tf.constant([2]), (),
+                         tf.constant([1.], dtype=tf.float32), [1.]),
+        trajectory.first((), tf.constant([1]), (),
+                         tf.constant([2.], dtype=tf.float32), [1.]))
     ts2 = _concat_nested_tensors(
-        trajectory.last((), (), (), tf.constant([3.], dtype=tf.float32), [1.]),
-        trajectory.last((), (), (), tf.constant([4.], dtype=tf.float32), [1.]))
+        trajectory.last((), tf.constant([1]), (),
+                        tf.constant([3.], dtype=tf.float32), [1.]),
+        trajectory.last((), tf.constant([1]), (),
+                        tf.constant([4.], dtype=tf.float32), [1.]))
     ts3 = _concat_nested_tensors(
-        trajectory.boundary((), (), (), tf.constant([0.], dtype=tf.float32),
-                            [1.]),
-        trajectory.boundary((), (), (), tf.constant([0.], dtype=tf.float32),
-                            [1.]))
+        trajectory.boundary((), tf.constant([2]), (),
+                            tf.constant([0.], dtype=tf.float32), [1.]),
+        trajectory.boundary((), tf.constant([0]), (),
+                            tf.constant([0.], dtype=tf.float32), [1.]))
     ts4 = _concat_nested_tensors(
-        trajectory.first((), (), (), tf.constant([5.], dtype=tf.float32), [1.]),
-        trajectory.first((), (), (), tf.constant([6.], dtype=tf.float32), [1.]))
+        trajectory.first((), tf.constant([1]), (),
+                         tf.constant([5.], dtype=tf.float32), [1.]),
+        trajectory.first((), tf.constant([1]), (),
+                         tf.constant([6.], dtype=tf.float32), [1.]))
     ts5 = _concat_nested_tensors(
-        trajectory.last((), (), (), tf.constant([7.], dtype=tf.float32), [1.]),
-        trajectory.last((), (), (), tf.constant([8.], dtype=tf.float32), [1.]))
+        trajectory.last((), tf.constant([1]), (),
+                        tf.constant([7.], dtype=tf.float32), [1.]),
+        trajectory.last((), tf.constant([1]), (),
+                        tf.constant([8.], dtype=tf.float32), [1.]))
 
     return [ts0, ts1, ts2, ts3, ts4, ts5]
 
@@ -165,6 +173,25 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       self.assertEqual(expected_result, self.evaluate(metric.result()))
       self.evaluate(metric.reset())
       self.assertEqual(0.0, self.evaluate(metric.result()))
+
+  @parameterized.named_parameters([
+      ('testActionRelativeFreqGraph', context.graph_mode),
+      ('testActionRelativeFreqEager', context.eager_mode),
+  ])
+  def testChosenActionHistogram(self, run_mode):
+    with run_mode():
+      trajectories = self._create_trajectories()
+      num_trajectories = 5
+      expected_result = [1, 2, 2, 1, 1, 1, 2, 0, 1, 1]
+      metric = tf_metrics.ChosenActionHistogram(buffer_size=10)
+      self.evaluate(tf.compat.v1.global_variables_initializer())
+      self.evaluate(metric.init_variables())
+      for i in range(num_trajectories):
+        self.evaluate(metric(trajectories[i]))
+
+      self.assertAllEqual(expected_result, self.evaluate(metric.result()))
+      self.evaluate(metric.reset())
+      self.assertEmpty(self.evaluate(metric.result()))
 
 
 if __name__ == '__main__':
