@@ -90,7 +90,7 @@ class QNetwork(network.Network):
         the batch dimension. This allow encoding networks to be used with
         observations with shape [BxTx...].
       dtype: The dtype to use by the convolution and fully connected layers.
-      name: A string representing name of the network.
+      name: A string representing the name of the network.
 
     Raises:
       ValueError: If `input_tensor_spec` contains more than one observation. Or
@@ -99,9 +99,10 @@ class QNetwork(network.Network):
     validate_specs(action_spec, input_tensor_spec)
     action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
+    encoder_input_tensor_spec = input_tensor_spec
 
     encoder = encoding_network.EncodingNetwork(
-        input_tensor_spec,
+        encoder_input_tensor_spec,
         preprocessing_layers=preprocessing_layers,
         preprocessing_combiner=preprocessing_combiner,
         conv_layer_params=conv_layer_params,
@@ -129,6 +130,17 @@ class QNetwork(network.Network):
     self._q_value_layer = q_value_layer
 
   def call(self, observation, step_type=None, network_state=()):
+    """Runs the given observation through the network.
+
+    Args:
+      observation: The observation to provide to the network.
+      step_type: The step type for the given observation. See `StepType` in
+        time_step.py.
+      network_state: A state tuple to pass to the network, mainly used by RNNs.
+
+    Returns:
+      A tuple `(logits, network_state)`.
+    """
     state, network_state = self._encoder(
         observation, step_type=step_type, network_state=network_state)
     return self._q_value_layer(state), network_state

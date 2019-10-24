@@ -5,11 +5,13 @@
 
 # Module: tf_agents.networks.dynamic_unroll_layer
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
+
 Tensorflow RL Agent RNN utilities.
-
-
-
-Defined in [`networks/dynamic_unroll_layer.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py).
 
 <!-- Placeholder for "Used in" -->
 

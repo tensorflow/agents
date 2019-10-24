@@ -152,15 +152,17 @@ class LSTMEncodingNetwork(network.Network):
           for size in lstm_size
       ])
 
-    output_encoder = ([
-        tf.keras.layers.Dense(
-            num_units,
-            activation=activation_fn,
-            kernel_initializer=kernel_initializer,
-            dtype=dtype,
-            name='/'.join([name, 'dense']))
-        for num_units in output_fc_layer_params
-    ])
+    output_encoder = []
+    if output_fc_layer_params:
+      output_encoder = [
+          tf.keras.layers.Dense(
+              num_units,
+              activation=activation_fn,
+              kernel_initializer=kernel_initializer,
+              dtype=dtype,
+              name='/'.join([name, 'dense']))
+          for num_units in output_fc_layer_params
+      ]
 
     counter = [-1]
     def create_spec(size):

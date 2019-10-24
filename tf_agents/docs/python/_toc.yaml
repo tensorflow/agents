@@ -116,6 +116,8 @@ toc:
         section:
         - title: Overview
           path: /tf_agents/api_docs/python/tf_agents/agents/sac/sac_agent
+        - title: SacLossInfo
+          path: /tf_agents/api_docs/python/tf_agents/agents/sac/sac_agent/SacLossInfo
         - title: std_clip_transform
           path: /tf_agents/api_docs/python/tf_agents/agents/sac/sac_agent/std_clip_transform
     - title: td3
@@ -164,6 +166,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/distributions/utils
       - title: scale_distribution_to_spec
         path: /tf_agents/api_docs/python/tf_agents/distributions/utils/scale_distribution_to_spec
+      - title: SquashToSpecNormal
+        path: /tf_agents/api_docs/python/tf_agents/distributions/utils/SquashToSpecNormal
   - title: tf_agents.drivers
     section:
     - title: Overview
@@ -228,6 +232,12 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/environments/random_py_environment
       - title: RandomPyEnvironment
         path: /tf_agents/api_docs/python/tf_agents/environments/random_py_environment/RandomPyEnvironment
+    - title: random_tf_environment
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/environments/random_tf_environment
+      - title: RandomTFEnvironment
+        path: /tf_agents/api_docs/python/tf_agents/environments/random_tf_environment/RandomTFEnvironment
     - title: tf_environment
       section:
       - title: Overview
@@ -270,6 +280,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/FlattenObservationsWrapper
       - title: GoalReplayEnvWrapper
         path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/GoalReplayEnvWrapper
+      - title: HistoryWrapper
+        path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/HistoryWrapper
       - title: PyEnvironmentBaseWrapper
         path: /tf_agents/api_docs/python/tf_agents/environments/wrappers/PyEnvironmentBaseWrapper
       - title: RunStats
@@ -334,6 +346,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/log_metrics
       - title: NumberOfEpisodes
         path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/NumberOfEpisodes
+      - title: TFDeque
+        path: /tf_agents/api_docs/python/tf_agents/metrics/tf_metrics/TFDeque
     - title: tf_py_metric
       section:
       - title: Overview
@@ -422,6 +436,12 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/networks/q_rnn_network
       - title: QRnnNetwork
         path: /tf_agents/api_docs/python/tf_agents/networks/q_rnn_network/QRnnNetwork
+    - title: sequential_layer
+      section:
+      - title: Overview
+        path: /tf_agents/api_docs/python/tf_agents/networks/sequential_layer
+      - title: SequentialLayer
+        path: /tf_agents/api_docs/python/tf_agents/networks/sequential_layer/SequentialLayer
     - title: utils
       section:
       - title: Overview
@@ -482,6 +502,8 @@ toc:
       section:
       - title: Overview
         path: /tf_agents/api_docs/python/tf_agents/policies/greedy_policy
+      - title: DeterministicWithLogProb
+        path: /tf_agents/api_docs/python/tf_agents/policies/greedy_policy/DeterministicWithLogProb
       - title: GreedyPolicy
         path: /tf_agents/api_docs/python/tf_agents/policies/greedy_policy/GreedyPolicy
     - title: ou_noise_policy
@@ -612,6 +634,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/sample_bounded_spec
       - title: sample_spec_nest
         path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/sample_spec_nest
+      - title: update_spec_shape
+        path: /tf_agents/api_docs/python/tf_agents/specs/array_spec/update_spec_shape
     - title: distribution_spec
       section:
       - title: Overview
@@ -700,6 +724,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/mid
       - title: to_transition
         path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/to_transition
+      - title: to_transition_spec
+        path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/to_transition_spec
       - title: Trajectory
         path: /tf_agents/api_docs/python/tf_agents/trajectories/trajectory/Trajectory
   - title: tf_agents.utils
@@ -752,6 +778,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/utils/common/initialize_uninitialized_variables
       - title: join_scope
         path: /tf_agents/api_docs/python/tf_agents/utils/common/join_scope
+      - title: load_spec
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/load_spec
       - title: log_probability
         path: /tf_agents/api_docs/python/tf_agents/utils/common/log_probability
       - title: ornstein_uhlenbeck_process
@@ -766,6 +794,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/utils/common/replicate
       - title: resource_variables_enabled
         path: /tf_agents/api_docs/python/tf_agents/utils/common/resource_variables_enabled
+      - title: save_spec
+        path: /tf_agents/api_docs/python/tf_agents/utils/common/save_spec
       - title: scale_to_spec
         path: /tf_agents/api_docs/python/tf_agents/utils/common/scale_to_spec
       - title: shift_values
@@ -856,6 +886,8 @@ toc:
         path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/unstack_nested_arrays
       - title: unstack_nested_tensors
         path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/unstack_nested_tensors
+      - title: where
+        path: /tf_agents/api_docs/python/tf_agents/utils/nest_utils/where
     - title: numpy_storage
       section:
       - title: Overview

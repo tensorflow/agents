@@ -16,6 +16,12 @@
 
 # tf_agents.specs.BoundedArraySpec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 ## Class `BoundedArraySpec`
 
 An `ArraySpec` that specifies minimum and maximum values.
@@ -28,12 +34,10 @@ Inherits From: [`ArraySpec`](../../tf_agents/specs/ArraySpec.md)
 * Class `tf_agents.specs.array_spec.BoundedArraySpec`
 
 
-
-Defined in [`specs/array_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py).
-
 <!-- Placeholder for "Used in" -->
 
-Example usage:
+#### Example usage:
+
 ```python
 # Specifying the same minimum and maximum for every element.
 spec = BoundedArraySpec((3, 4), np.float64, minimum=0.0, maximum=1.0)
@@ -56,13 +60,10 @@ spec = BoundedArraySpec((3, 4), np.int, minimum=0, maximum=2)
 
 <h2 id="__init__"><code>__init__</code></h2>
 
-``` python
+```python
 __init__(
-    shape,
-    dtype,
-    minimum=None,
-    maximum=None,
-    name=None
+    *args,
+    **kwargs
 )
 ```
 
@@ -70,24 +71,21 @@ Initializes a new `BoundedArraySpec`.
 
 #### Args:
 
-* <b>`shape`</b>: An iterable specifying the array shape.
-* <b>`dtype`</b>: numpy dtype or string specifying the array dtype.
-* <b>`minimum`</b>: Number or sequence specifying the maximum element bounds
+*   <b>`shape`</b>: An iterable specifying the array shape.
+*   <b>`dtype`</b>: numpy dtype or string specifying the array dtype.
+*   <b>`minimum`</b>: Number or sequence specifying the maximum element bounds
     (inclusive). Must be broadcastable to `shape`.
-* <b>`maximum`</b>: Number or sequence specifying the maximum element bounds
+*   <b>`maximum`</b>: Number or sequence specifying the maximum element bounds
     (inclusive). Must be broadcastable to `shape`.
-* <b>`name`</b>: Optional string containing a semantic name for the corresponding
-    array. Defaults to `None`.
-
+*   <b>`name`</b>: Optional string containing a semantic name for the
+    corresponding array. Defaults to `None`.
 
 #### Raises:
 
-* <b>`ValueError`</b>: If `minimum` or `maximum` are not broadcastable to `shape` or
-    if the limits are outside of the range of the specified dtype.
-* <b>`TypeError`</b>: If the shape is not an iterable or if the `dtype` is an invalid
-    numpy dtype.
-
-
+*   <b>`ValueError`</b>: If `minimum` or `maximum` are not broadcastable to
+    `shape` or if the limits are outside of the range of the specified dtype.
+*   <b>`TypeError`</b>: If the shape is not an iterable or if the `dtype` is an
+    invalid numpy dtype.
 
 ## Properties
 
@@ -111,27 +109,30 @@ Returns the name of the ArraySpec.
 
 Returns a `tuple` specifying the array shape.
 
-
-
 ## Methods
 
 <h3 id="__eq__"><code>__eq__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 __eq__(other)
 ```
 
-
-
 <h3 id="__ne__"><code>__ne__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 __ne__(other)
 ```
 
-
-
 <h3 id="check_array"><code>check_array</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 check_array(array)
@@ -140,6 +141,9 @@ check_array(array)
 Return true if the given array conforms to the spec.
 
 <h3 id="from_array"><code>from_array</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
 
 ``` python
 from_array(
@@ -152,6 +156,9 @@ Construct a spec from the given array or number.
 
 <h3 id="from_spec"><code>from_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 ``` python
 @classmethod
 from_spec(
@@ -160,8 +167,3 @@ from_spec(
     name=None
 )
 ```
-
-
-
-
-

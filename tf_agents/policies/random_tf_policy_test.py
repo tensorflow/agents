@@ -27,18 +27,13 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 from tf_agents.utils import test_utils
-from tensorflow.python.eager import context  # TF internal
 
 
 @parameterized.named_parameters(
-    ('tf.int32', tf.int32, context.graph_mode),
-    ('tf.int32_eager', tf.int32, context.eager_mode),
-    ('tf.int64', tf.int64, context.graph_mode),
-    ('tf.int64_eager', tf.int64, context.eager_mode),
-    ('tf.float32', tf.float32, context.graph_mode),
-    ('tf.float32_eager', tf.float32, context.eager_mode),
-    ('tf.float64', tf.float64, context.graph_mode),
-    ('tf.float64_eager', tf.float64, context.eager_mode),
+    ('_int32', tf.int32),
+    ('_int64', tf.int64),
+    ('_float32', tf.float32),
+    ('_float64', tf.float64),
 )
 class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
@@ -57,96 +52,136 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
     return time_step_spec, time_step
 
-  def testGeneratesBoundedActions(self, dtype, run_mode):
-    with run_mode():
-      action_spec = [
-          tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
-          tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
-      ]
-      time_step_spec, time_step = self.create_time_step()
-      policy = random_tf_policy.RandomTFPolicy(
-          time_step_spec=time_step_spec, action_spec=action_spec)
+  def testGeneratesBoundedActions(self, dtype):
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
+        tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
+    ]
+    time_step_spec, time_step = self.create_time_step()
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec, action_spec=action_spec)
 
-      action_step = policy.action(time_step)
-      tf.nest.assert_same_structure(action_spec, action_step.action)
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
-      action_ = self.evaluate(action_step.action)
-      self.assertTrue(np.all(action_[0] >= -10))
-      self.assertTrue(np.all(action_[0] <= 10))
-      self.assertTrue(np.all(action_[1] >= -10))
-      self.assertTrue(np.all(action_[1] <= 10))
+    action_ = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action_[0] >= -10))
+    self.assertTrue(np.all(action_[0] <= 10))
+    self.assertTrue(np.all(action_[1] >= -10))
+    self.assertTrue(np.all(action_[1] <= 10))
 
-  def testGeneratesUnBoundedActions(self, dtype, run_mode):
-    with run_mode():
-      action_spec = [
-          tensor_spec.TensorSpec((2, 3), dtype),
-          tensor_spec.TensorSpec((1, 2), dtype)
-      ]
-      bounded = tensor_spec.BoundedTensorSpec.from_spec(action_spec[0])
-      time_step_spec, time_step = self.create_time_step()
-      policy = random_tf_policy.RandomTFPolicy(
-          time_step_spec=time_step_spec, action_spec=action_spec)
+  def testGeneratesUnBoundedActions(self, dtype):
+    action_spec = [
+        tensor_spec.TensorSpec((2, 3), dtype),
+        tensor_spec.TensorSpec((1, 2), dtype)
+    ]
+    bounded = tensor_spec.BoundedTensorSpec.from_spec(action_spec[0])
+    time_step_spec, time_step = self.create_time_step()
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec, action_spec=action_spec)
 
-      action_step = policy.action(time_step)
-      tf.nest.assert_same_structure(action_spec, action_step.action)
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
-      action_ = self.evaluate(action_step.action)
-      # TODO(kbanoop) assertWithinBounds to test_utils.
-      self.assertTrue(np.all(action_[0] >= bounded.minimum))
-      self.assertTrue(np.all(action_[0] <= bounded.maximum))
-      self.assertTrue(np.all(action_[1] >= bounded.minimum))
-      self.assertTrue(np.all(action_[1] <= bounded.maximum))
+    action_ = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action_[0] >= bounded.minimum))
+    self.assertTrue(np.all(action_[0] <= bounded.maximum))
+    self.assertTrue(np.all(action_[1] >= bounded.minimum))
+    self.assertTrue(np.all(action_[1] <= bounded.maximum))
 
-  def testGeneratesBatchedActionsImplicitBatchSize(self, dtype, run_mode):
-    with run_mode():
-      action_spec = [
-          tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
-          tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
-      ]
-      time_step_spec, time_step = self.create_time_step()
-      time_step = self.create_batch(time_step, 2)
-      policy = random_tf_policy.RandomTFPolicy(
-          time_step_spec=time_step_spec, action_spec=action_spec)
+  def testGeneratesBatchedActionsImplicitBatchSize(self, dtype):
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
+        tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
+    ]
+    time_step_spec, time_step = self.create_time_step()
+    time_step = self.create_batch(time_step, 2)
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec, action_spec=action_spec)
 
-      action_step = policy.action(time_step)
-      tf.nest.assert_same_structure(action_spec, action_step.action)
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
-      action_ = self.evaluate(action_step.action)
-      self.assertTrue(np.all(action_[0] >= -10))
-      self.assertTrue(np.all(action_[0] <= 10))
-      self.assertTrue(np.all(action_[1] >= -10))
-      self.assertTrue(np.all(action_[1] <= 10))
+    action_ = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action_[0] >= -10))
+    self.assertTrue(np.all(action_[0] <= 10))
+    self.assertTrue(np.all(action_[1] >= -10))
+    self.assertTrue(np.all(action_[1] <= 10))
 
-      self.assertEqual((2, 2, 3), action_[0].shape)
-      self.assertEqual((2, 1, 2), action_[1].shape)
+    self.assertEqual((2, 2, 3), action_[0].shape)
+    self.assertEqual((2, 1, 2), action_[1].shape)
 
-  def testEmitLogProbability(self, dtype, run_mode):
-    with run_mode():
-      action_spec = [
-          tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
-          tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
-      ]
-      time_step_spec, time_step = self.create_time_step()
-      policy = random_tf_policy.RandomTFPolicy(
-          time_step_spec=time_step_spec,
-          action_spec=action_spec,
-          emit_log_probability=True)
+  def testEmitLogProbability(self, dtype):
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
+        tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
+    ]
+    time_step_spec, time_step = self.create_time_step()
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        emit_log_probability=True)
 
-      action_step = policy.action(time_step)
-      tf.nest.assert_same_structure(action_spec, action_step.action)
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
 
-      step = self.evaluate(action_step)
-      action_ = step.action
-      # For integer specs, boundaries are inclusive.
-      p = 1./21 if dtype.is_integer else 1./20
-      np.testing.assert_allclose(
-          np.array(step.info.log_probability, dtype=np.float32),
-          np.array(np.log([p, p], dtype=np.float32)),
-          rtol=1e-5)
-      self.assertTrue(np.all(action_[0] >= -10))
-      self.assertTrue(np.all(action_[0] <= 10))
-      self.assertTrue(np.all(action_[1] >= -10))
-      self.assertTrue(np.all(action_[1] <= 10))
+    step = self.evaluate(action_step)
+    action_ = step.action
+    # For integer specs, boundaries are inclusive.
+    p = 1./21 if dtype.is_integer else 1./20
+    np.testing.assert_allclose(
+        np.array(step.info.log_probability, dtype=np.float32),
+        np.array(np.log([p, p], dtype=np.float32)),
+        rtol=1e-5)
+    self.assertTrue(np.all(action_[0] >= -10))
+    self.assertTrue(np.all(action_[0] <= 10))
+    self.assertTrue(np.all(action_[1] >= -10))
+    self.assertTrue(np.all(action_[1] <= 10))
+
+  def testMasking(self, dtype):
+    if not dtype.is_integer:
+      self.skipTest('testMasking only applies to integer dtypes')
+
+    batch_size = 1000
+
+    action_spec = tensor_spec.BoundedTensorSpec((), dtype, -5, 5)
+    time_step_spec, time_step = self.create_time_step()
+    time_step = self.create_batch(time_step, batch_size)
+
+    # We create a fixed mask here for testing purposes. Normally the mask would
+    # be part of the observation.
+    mask = [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+    np_mask = np.array(mask)
+    tf_mask = tf.constant([mask for _ in range(batch_size)])
+
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        emit_log_probability=True,
+        observation_and_action_constraint_splitter=lambda obs: (obs, tf_mask))
+
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
+    step = self.evaluate(action_step)
+    action_ = step.action
+    self.assertTrue(np.all(action_ >= -5))
+    self.assertTrue(np.all(action_ <= 5))
+    self.assertAllEqual(np_mask[action_ - action_spec.minimum],
+                        np.ones([batch_size]))
+
+    # Ensure that all valid actions occur somewhere within the batch. Because we
+    # sample 1000 times, the chance of this failing for any particular action is
+    # (2/3)^1000, roughly 1e-176.
+    for index in range(action_spec.minimum, action_spec.maximum + 1):
+      if np_mask[index - action_spec.minimum]:
+        self.assertIn(index, action_)
+
+    # With only three valid actions, all of the probabilities should be 1/3.
+    self.assertAllClose(step.info.log_probability,
+                        tf.constant(np.log(1. / 3), shape=[batch_size]))
 
 
 if __name__ == '__main__':

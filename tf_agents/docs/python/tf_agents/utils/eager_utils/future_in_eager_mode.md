@@ -5,6 +5,12 @@
 
 # tf_agents.utils.eager_utils.future_in_eager_mode
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py">View
+source</a>
+
 Decorator that allow a function/method to run in graph and in eager modes.
 
 ``` python
@@ -12,8 +18,6 @@ tf_agents.utils.eager_utils.future_in_eager_mode(func_or_method)
 ```
 
 
-
-Defined in [`utils/eager_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -38,9 +42,11 @@ with context.eager_mode():
 
 #### Args:
 
+
 * <b>`func_or_method`</b>: A function or method to decorate.
 
 
 #### Returns:
 
 Either the output ops of the function/method or a Future (lambda function).
+```

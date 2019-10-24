@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.specs.array_spec" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.specs.array_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py">View
+source</a>
+
 A class to describe the shape and dtype of numpy arrays.
-
-
-
-Defined in [`specs/array_spec.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/specs/array_spec.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -39,11 +38,5 @@ Defined in [`specs/array_spec.py`](https://github.com/tensorflow/agents/tree/mas
 
 [`sample_spec_nest(...)`](../../tf_agents/specs/array_spec/sample_spec_nest.md): Samples the given nest of specs.
 
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
-
+[`update_spec_shape(...)`](../../tf_agents/specs/array_spec/update_spec_shape.md):
+Returns a copy of the given spec with the new shape.

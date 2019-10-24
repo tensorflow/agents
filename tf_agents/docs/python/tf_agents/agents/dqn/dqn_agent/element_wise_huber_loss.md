@@ -5,7 +5,11 @@
 
 # tf_agents.agents.dqn.dqn_agent.element_wise_huber_loss
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/dqn_agent.py">View
+source</a>
 
 ``` python
 tf_agents.agents.dqn.dqn_agent.element_wise_huber_loss(
@@ -15,7 +19,5 @@ tf_agents.agents.dqn.dqn_agent.element_wise_huber_loss(
 ```
 
 
-
-Defined in [`agents/dqn/dqn_agent.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/dqn_agent.py).
 
 <!-- Placeholder for "Used in" -->

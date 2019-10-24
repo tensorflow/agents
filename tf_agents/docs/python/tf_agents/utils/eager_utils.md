@@ -1,49 +1,48 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.utils.eager_utils" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.utils.eager_utils
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py">View
+source</a>
+
 Common utilities for TF-Agents.
-
-
-
-Defined in [`utils/eager_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
-Example of usage:
+#### Example of usage:
 
-  ```python
-  from tf_agents.utils import eager_utils
+```python
+from tf_agents.utils import eager_utils
 
-  @eager_utils.run_in_graph_and_eager_modes
-  def loss_fn(x, y):
-    v = tf.get_variable('v', initializer=tf.ones_initializer(), shape=())
-    return v + x - y
+@eager_utils.run_in_graph_and_eager_modes
+def loss_fn(x, y):
+  v = tf.get_variable('v', initializer=tf.ones_initializer(), shape=())
+  return v + x - y
 
-  with tfe.graph_mode():
-    # loss and train_step are Tensors/Ops in the graph
-    loss_op = loss_fn(inputs, labels)
-    train_step_op = eager_utils.create_train_step(loss_op, optimizer)
-    # Compute the loss and apply gradients to the variables using the optimizer.
-    with tf.Session() as sess:
-      sess.run(tf.global_variables_initializer())
-      for _ in range(num_train_steps):
-        loss_value = sess.run(train_step_op)
-
-  with tfe.eager_mode():
-    # loss and train_step are lambda functions that can be called.
-    loss = loss_fn(inputs, labels)
-    train_step = eager_utils.create_train_step(loss, optimizer)
-    # Compute the loss and apply gradients to the variables using the optimizer.
+with tfe.graph_mode():
+  # loss and train_step are Tensors/Ops in the graph
+  loss_op = loss_fn(inputs, labels)
+  train_step_op = eager_utils.create_train_step(loss_op, optimizer)
+  # Compute the loss and apply gradients to the variables using the optimizer.
+  with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
     for _ in range(num_train_steps):
-      loss_value = train_step()
-  ```
+      loss_value = sess.run(train_step_op)
+
+with tfe.eager_mode():
+  # loss and train_step are lambda functions that can be called.
+  loss = loss_fn(inputs, labels)
+  train_step = eager_utils.create_train_step(loss, optimizer)
+  # Compute the loss and apply gradients to the variables using the optimizer.
+  for _ in range(num_train_steps):
+    loss_value = train_step()
+```
 
 ## Classes
 
@@ -74,12 +73,4 @@ Example of usage:
 [`is_unbound(...)`](../../tf_agents/utils/eager_utils/is_unbound.md): Checks if it is an unbounded method.
 
 [`np_function(...)`](../../tf_agents/utils/eager_utils/np_function.md): Decorator that allow a numpy function to be used in Eager and Graph modes.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

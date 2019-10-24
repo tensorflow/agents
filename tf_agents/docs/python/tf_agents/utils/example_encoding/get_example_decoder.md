@@ -5,6 +5,12 @@
 
 # tf_agents.utils.example_encoding.get_example_decoder
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/example_encoding.py">View
+source</a>
+
 Get an example decoder function for a nested spec.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.utils.example_encoding.get_example_decoder(
 
 
 
-Defined in [`utils/example_encoding.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/example_encoding.py).
-
 <!-- Placeholder for "Used in" -->
 
 Given a spec, returns an example decoder function. The decoder function parses
@@ -25,10 +29,10 @@ string serialized example protos into tensors according to the given spec.
 
 #### Args:
 
-* <b>`example_spec`</b>: list/tuple/nest of ArraySpecs describing a single example.
-* <b>`batched`</b>: Boolean indicating if the decoder will receive batches of
+*   <b>`example_spec`</b>: list/tuple/nest of ArraySpecs describing a single
+    example.
+*   <b>`batched`</b>: Boolean indicating if the decoder will receive batches of
     serialized data.
-
 
 #### Returns:
 

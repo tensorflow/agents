@@ -5,6 +5,12 @@
 
 # tf_agents.utils.example_encoding.get_example_serializer
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/example_encoding.py">View
+source</a>
+
 Returns string serializer of example protos.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.utils.example_encoding.get_example_serializer(spec)
 ```
 
 
-
-Defined in [`utils/example_encoding.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/example_encoding.py).
 
 <!-- Placeholder for "Used in" -->

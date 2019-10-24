@@ -18,16 +18,16 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 from absl.testing.absltest import mock
 from tf_agents.policies import py_epsilon_greedy_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.utils import test_utils
 
 
-class EpsilonGreedyPolicyTest(absltest.TestCase):
+class EpsilonGreedyPolicyTest(test_utils.TestCase):
 
   def setUp(self):
+    super(EpsilonGreedyPolicyTest, self).setUp()
     self.greedy_policy = mock.MagicMock()
     self.random_policy = mock.MagicMock()
     self.random_policy.action.return_value = policy_step.PolicyStep(0, ())
@@ -142,4 +142,4 @@ class EpsilonGreedyPolicyTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

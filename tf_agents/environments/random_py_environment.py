@@ -169,3 +169,6 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
           format(mode))
 
     return self._rng.randint(0, 256, size=self._render_size, dtype=np.uint8)
+
+  def seed(self, seed):
+    self._rng.seed(seed)

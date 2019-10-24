@@ -47,7 +47,7 @@ class ExpandDims(tf.keras.layers.Layer):
 
   def compute_output_shape(self, input_shape):
     input_shape = tf.TensorShape(input_shape)
-    if input_shape.ndims is None:
+    if input_shape.rank is None:
       return input_shape
     input_shape = input_shape.as_list()
     if self.axis == -1:

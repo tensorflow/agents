@@ -14,15 +14,17 @@
 
 # tf_agents.replay_buffers.py_hashed_replay_buffer.FrameBuffer
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
+
 ## Class `FrameBuffer`
 
 Saves some frames in a memory efficient way.
 
 
-
-
-
-Defined in [`replay_buffers/py_hashed_replay_buffer.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -30,25 +32,28 @@ Thread safety: cannot add multiple frames in parallel.
 
 <h2 id="__init__"><code>__init__</code></h2>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
+
 ``` python
 __init__()
 ```
-
-
-
-
 
 ## Methods
 
 <h3 id="__len__"><code>__len__</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
+
 ``` python
 __len__()
 ```
 
-
-
 <h3 id="add_frame"><code>add_frame</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
 
 ``` python
 add_frame(frame)
@@ -67,13 +72,17 @@ A deduplicated frame.
 
 <h3 id="clear"><code>clear</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
+
 ``` python
 clear()
 ```
 
-
-
 <h3 id="compress"><code>compress</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
 
 ``` python
 compress(
@@ -82,9 +91,10 @@ compress(
 )
 ```
 
-
-
 <h3 id="decompress"><code>decompress</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
 
 ``` python
 decompress(
@@ -93,9 +103,10 @@ decompress(
 )
 ```
 
-
-
 <h3 id="deserialize"><code>deserialize</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
 
 ``` python
 deserialize(string_value)
@@ -105,6 +116,9 @@ Callback for `PythonStateWrapper` to deserialize the array.
 
 <h3 id="on_delete"><code>on_delete</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
+
 ``` python
 on_delete(
     observation,
@@ -112,15 +126,13 @@ on_delete(
 )
 ```
 
-
-
 <h3 id="serialize"><code>serialize</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/py_hashed_replay_buffer.py">View
+source</a>
 
 ``` python
 serialize()
 ```
 
 Callback for `PythonStateWrapper` to serialize the dictionary.
-
-
-

@@ -146,21 +146,26 @@ class DqnAgent(tf_agent.TFAgent):
         `target_update_period` train steps, the weights from
         `q_network` are copied (possibly with smoothing via
         `target_update_tau`) to `target_q_network`.
+
         If `target_q_network` is not provided, it is created by
         making a copy of `q_network`, which initializes a new
         network with the same structure and its own layers and weights.
+
         Network copying is performed via the `Network.copy` superclass method,
         and may inadvertently lead to the resulting network to share weights
         with the original.  This can happen if, for example, the original
         network accepted a pre-built Keras layer in its `__init__`, or
         accepted a Keras layer that wasn't built, but neglected to create
         a new copy.
+
         In these cases, it is up to you to provide a target Network having
         weights that are not shared with the original `q_network`.
         If you provide a `target_q_network` that shares any
         weights with `q_network`, a warning will be logged but
         no exception is thrown.
+
         Note; shallow copies of Keras layers may be built via the code:
+
         ```python
         new_layer = type(layer).from_config(layer.get_config())
         ```
@@ -344,7 +349,7 @@ class DqnAgent(tf_agent.TFAgent):
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
     training.apply_gradients(self._optimizer,
-                             grads_and_vars)
+                                          grads_and_vars)
     
     # Increment train_step_counter
     self.train_step_counter.assign_add(1)

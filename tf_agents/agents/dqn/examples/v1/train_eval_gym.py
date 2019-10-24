@@ -133,7 +133,7 @@ def train_eval(
         epsilon_greedy=epsilon_greedy,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
-        td_errors_loss_fn=dqn_agent.element_wise_squared_loss,
+        td_errors_loss_fn=common.element_wise_squared_loss,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,

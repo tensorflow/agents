@@ -5,11 +5,13 @@
 
 # Module: tf_agents.utils.value_ops
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/value_ops.py">View
+source</a>
+
 Methods for computing advantages and target values.
-
-
-
-Defined in [`utils/value_ops.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/value_ops.py).
 
 <!-- Placeholder for "Used in" -->
 

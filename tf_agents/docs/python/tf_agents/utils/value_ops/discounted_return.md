@@ -5,20 +5,23 @@
 
 # tf_agents.utils.value_ops.discounted_return
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/value_ops.py">View
+source</a>
+
 Computes discounted return.
 
-``` python
+```python
 tf_agents.utils.value_ops.discounted_return(
     rewards,
     discounts,
     final_value=None,
-    time_major=True
+    time_major=True,
+    provide_all_returns=True
 )
 ```
-
-
-
-Defined in [`utils/value_ops.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/value_ops.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -30,22 +33,27 @@ For details, see
 "Reinforcement Learning: An Introduction" Second Edition
 by Richard S. Sutton and Andrew G. Barto
 
-Define abbreviations:
+#### Define abbreviations:
+
 (B) batch size representing number of trajectories
 (T) number of steps per trajectory
 
 #### Args:
 
-* <b>`rewards`</b>: Tensor with shape [T, B] (or [T]) representing rewards.
-* <b>`discounts`</b>: Tensor with shape [T, B] (or [T]) representing discounts.
-* <b>`final_value`</b>: Tensor with shape [B] (or [1]) representing value estimate at
-    t=T. This is optional, when set, it allows final value to bootstrap the
-    reward to go computation. Otherwise it's zero.
-* <b>`time_major`</b>: A boolean indicating whether input tensors are time major. False
-    means input tensors have shape [B, T].
-
+*   <b>`rewards`</b>: Tensor with shape [T, B](or [T]) representing rewards.
+*   <b>`discounts`</b>: Tensor with shape [T, B](or [T]) representing discounts.
+*   <b>`final_value`</b>: Tensor with shape [B](or [1]) representing value
+    estimate at t=T. This is optional, when set, it allows final value to
+    bootstrap the reward to go computation. Otherwise it's zero.
+*   <b>`time_major`</b>: A boolean indicating whether input tensors are time
+    major. False means input tensors have shape [B, T].
+*   <b>`provide_all_returns`</b>: A boolean; if True, this will provide all of
+    the returns by time dimension; if False, this will only give the single
+    complete discounted return.
 
 #### Returns:
 
-A tensor with shape [T, B] (or [T]) representing the discounted returns.
-Shape is [B, T] when time_major is false.
+If provide_all_returns is True: A tensor with shape [T, B](or [T]) representing
+the discounted returns. Shape is [B, T] when time_major is false. If
+provide_all_returns is False: A tensor with shape [B](or []) representing the
+discounted returns.

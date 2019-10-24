@@ -10,20 +10,25 @@
 
 # tf_agents.drivers.py_driver.PyDriver
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/py_driver.py">View
+source</a>
+
 ## Class `PyDriver`
 
 A driver that runs a python policy in a python environment.
 
 Inherits From: [`Driver`](../../../tf_agents/drivers/driver/Driver.md)
 
-
-
-Defined in [`drivers/py_driver.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/py_driver.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/py_driver.py">View
+source</a>
 
 ``` python
 __init__(
@@ -39,17 +44,16 @@ A driver that runs a python policy in a python environment.
 
 #### Args:
 
-* <b>`env`</b>: A py_environment.Base environment.
-* <b>`policy`</b>: A py_policy.Base policy.
-* <b>`observers`</b>: A list of observers that are notified after every step
+*   <b>`env`</b>: A py_environment.Base environment.
+*   <b>`policy`</b>: A py_policy.Base policy.
+*   <b>`observers`</b>: A list of observers that are notified after every step
     in the environment. Each observer is a callable(trajectory.Trajectory).
-* <b>`max_steps`</b>: Optional maximum number of steps for each run() call.
-    Also see below.  Default: 0.
-* <b>`max_episodes`</b>: Optional maximum number of episodes for each run() call.
-    At least one of max_steps or max_episodes must be provided. If both
-    are set, run() terminates when at least one of the conditions is
-    satisfied.  Default: 0.
-
+*   <b>`max_steps`</b>: Optional maximum number of steps for each run() call.
+    Also see below. Default: 0.
+*   <b>`max_episodes`</b>: Optional maximum number of episodes for each run()
+    call. At least one of max_steps or max_episodes must be provided. If both
+    are set, run() terminates when at least one of the conditions is satisfied.
+    Default: 0.
 
 #### Raises:
 
@@ -61,21 +65,16 @@ A driver that runs a python policy in a python environment.
 
 <h3 id="env"><code>env</code></h3>
 
-
-
 <h3 id="observers"><code>observers</code></h3>
 
-
-
 <h3 id="policy"><code>policy</code></h3>
-
-
-
-
 
 ## Methods
 
 <h3 id="run"><code>run</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/py_driver.py">View
+source</a>
 
 ``` python
 run(
@@ -95,6 +94,3 @@ Run policy in environment given initial time_step and policy_state.
 #### Returns:
 
 A tuple (final time_step, final policy_state).
-
-
-

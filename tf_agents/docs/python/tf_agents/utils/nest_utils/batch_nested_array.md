@@ -5,14 +5,16 @@
 
 # tf_agents.utils.nest_utils.batch_nested_array
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
 
 ``` python
 tf_agents.utils.nest_utils.batch_nested_array(nested_array)
 ```
 
 
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
 
 <!-- Placeholder for "Used in" -->

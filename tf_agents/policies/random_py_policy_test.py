@@ -18,16 +18,15 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 import numpy as np
 import tensorflow as tf
 from tf_agents.policies import random_py_policy
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step
+from tf_agents.utils import test_utils
 
 
-class RandomPyPolicyTest(absltest.TestCase):
+class RandomPyPolicyTest(test_utils.TestCase):
 
   def testGeneratesActions(self):
     action_spec = [
@@ -89,6 +88,44 @@ class RandomPyPolicyTest(absltest.TestCase):
         time_step_spec=None, action_spec=[])
     self.assertEqual(policy.policy_state_spec, ())
 
+  def testMasking(self):
+    batch_size = 1000
+
+    time_step_spec = time_step.time_step_spec(
+        observation_spec=array_spec.ArraySpec((1,), np.int32))
+    action_spec = array_spec.BoundedArraySpec((), np.int64, -5, 5)
+
+    # We create a fixed mask here for testing purposes. Normally the mask would
+    # be part of the observation.
+    mask = [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+    np_mask = np.array(mask)
+    batched_mask = np.array([mask for _ in range(batch_size)])
+
+    policy = random_py_policy.RandomPyPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        observation_and_action_constraint_splitter=(
+            lambda obs: (obs, batched_mask)))
+
+    my_time_step = time_step.restart(time_step_spec, batch_size)
+    action_step = policy.action(my_time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
+    action_ = self.evaluate(action_step.action)
+    self.assertTrue(np.all(action_ >= -5))
+    self.assertTrue(np.all(action_ <= 5))
+    self.assertAllEqual(np_mask[action_ - action_spec.minimum],
+                        np.ones([batch_size]))
+
+    # Ensure that all valid actions occur somewhere within the batch. Because we
+    # sample 1000 times, the chance of this failing for any particular action is
+    # (2/3)^1000, roughly 1e-176.
+    for index in range(action_spec.minimum, action_spec.maximum + 1):
+      if np_mask[index - action_spec.minimum]:
+        self.assertIn(index, action_)
+
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

@@ -8,15 +8,17 @@
 
 # tf_agents.networks.utils.BatchSquash
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py">View
+source</a>
+
 ## Class `BatchSquash`
 
 Facilitates flattening and unflattening batch dims of a tensor.
 
 
-
-
-
-Defined in [`networks/utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -26,6 +28,9 @@ expect inputs to have only 1 batch dimension.
 
 <h2 id="__init__"><code>__init__</code></h2>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py">View
+source</a>
+
 ``` python
 __init__(batch_dims)
 ```
@@ -34,9 +39,8 @@ Create two tied ops to flatten and unflatten the front dimensions.
 
 #### Args:
 
-* <b>`batch_dims`</b>: Number of batch dimensions the flatten/unflatten ops should
-    handle.
-
+*   <b>`batch_dims`</b>: Number of batch dimensions the flatten/unflatten ops
+    should handle.
 
 #### Raises:
 
@@ -48,6 +52,9 @@ Create two tied ops to flatten and unflatten the front dimensions.
 
 <h3 id="flatten"><code>flatten</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py">View
+source</a>
+
 ``` python
 flatten(tensor)
 ```
@@ -56,11 +63,11 @@ Flattens and caches the tensor's batch_dims.
 
 <h3 id="unflatten"><code>unflatten</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/utils.py">View
+source</a>
+
 ``` python
 unflatten(tensor)
 ```
 
 Unflattens the tensor's batch_dims using the cached shape.
-
-
-

@@ -1,16 +1,15 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="symbol"/>
 </div>
 
 # Module: tf_agents
 
-TF Agents.
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
-
-
-Defined in [`__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/__init__.py).
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/__init__.py">View
+source</a>
 
 <!-- Placeholder for "Used in" -->
 
@@ -38,8 +37,4 @@ Defined in [`__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_a
 [`trajectories`](./tf_agents/trajectories.md) module: Trajectories module.
 
 [`utils`](./tf_agents/utils.md) module: Utils module.
-
-## Other Members
-
-<h3 id="symbol"><code>symbol</code></h3>
 

@@ -10,15 +10,17 @@
 
 # tf_agents.drivers.dynamic_step_driver.DynamicStepDriver
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/dynamic_step_driver.py">View
+source</a>
+
 ## Class `DynamicStepDriver`
 
 A driver that takes N steps in an environment using a tf.while_loop.
 
 Inherits From: [`Driver`](../../../tf_agents/drivers/driver/Driver.md)
-
-
-
-Defined in [`drivers/dynamic_step_driver.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/dynamic_step_driver.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -49,39 +51,31 @@ Creates a DynamicStepDriver.
 
 #### Args:
 
-* <b>`env`</b>: A tf_environment.Base environment.
-* <b>`policy`</b>: A tf_policy.Base policy.
-* <b>`observers`</b>: A list of observers that are updated after every step in
+*   <b>`env`</b>: A tf_environment.Base environment.
+*   <b>`policy`</b>: A tf_policy.Base policy.
+*   <b>`observers`</b>: A list of observers that are updated after every step in
     the environment. Each observer is a callable(time_step.Trajectory).
-* <b>`num_steps`</b>: The number of steps to take in the environment.
-
+*   <b>`num_steps`</b>: The number of steps to take in the environment.
 
 #### Raises:
 
-* <b>`ValueError`</b>:     If env is not a tf_environment.Base or policy is not an instance of
-    tf_policy.Base.
-
-
+*   <b>`ValueError`</b>: If env is not a tf_environment.Base or policy is not an
+    instance of tf_policy.Base.
 
 ## Properties
 
 <h3 id="env"><code>env</code></h3>
 
-
-
 <h3 id="observers"><code>observers</code></h3>
 
-
-
 <h3 id="policy"><code>policy</code></h3>
-
-
-
-
 
 ## Methods
 
 <h3 id="run"><code>run</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/dynamic_step_driver.py">View
+source</a>
 
 ``` python
 run(
@@ -95,15 +89,14 @@ Takes steps in the environment using the policy while updating observers.
 
 #### Args:
 
-* <b>`time_step`</b>: optional initial time_step. If None, it will use the
-    current_time_step of the environment. Elements should be shape
-    [batch_size, ...].
-* <b>`policy_state`</b>: optional initial state for the policy.
-* <b>`maximum_iterations`</b>: Optional maximum number of iterations of the while
-    loop to run. If provided, the cond output is AND-ed with an additional
+*   <b>`time_step`</b>: optional initial time_step. If None, it will use the
+    current_time_step of the environment. Elements should be shape [batch_size,
+    ...].
+*   <b>`policy_state`</b>: optional initial state for the policy.
+*   <b>`maximum_iterations`</b>: Optional maximum number of iterations of the
+    while loop to run. If provided, the cond output is AND-ed with an additional
     condition ensuring the number of iterations executed is no greater than
     maximum_iterations.
-
 
 #### Returns:
 

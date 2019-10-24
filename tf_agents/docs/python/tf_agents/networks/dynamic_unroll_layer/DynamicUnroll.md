@@ -7,6 +7,7 @@
 <meta itemprop="property" content="input"/>
 <meta itemprop="property" content="input_mask"/>
 <meta itemprop="property" content="input_shape"/>
+<meta itemprop="property" content="input_spec"/>
 <meta itemprop="property" content="losses"/>
 <meta itemprop="property" content="metrics"/>
 <meta itemprop="property" content="name"/>
@@ -17,16 +18,14 @@
 <meta itemprop="property" content="output_mask"/>
 <meta itemprop="property" content="output_shape"/>
 <meta itemprop="property" content="submodules"/>
+<meta itemprop="property" content="trainable"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="trainable_weights"/>
 <meta itemprop="property" content="updates"/>
 <meta itemprop="property" content="variables"/>
 <meta itemprop="property" content="weights"/>
 <meta itemprop="property" content="__call__"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
-<meta itemprop="property" content="apply"/>
 <meta itemprop="property" content="build"/>
 <meta itemprop="property" content="compute_mask"/>
 <meta itemprop="property" content="compute_output_shape"/>
@@ -48,15 +47,17 @@
 
 # tf_agents.networks.dynamic_unroll_layer.DynamicUnroll
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
+
 ## Class `DynamicUnroll`
 
 Process a history of sequences that are concatenated without padding.
 
 
-
-
-
-Defined in [`networks/dynamic_unroll_layer.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -79,6 +80,9 @@ subclass of Keras `Network`, then apply it manually inside the Network's
 
 <h2 id="__init__"><code>__init__</code></h2>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
+
 ``` python
 __init__(
     cell,
@@ -92,25 +96,22 @@ Create a `DynamicUnroll` layer.
 
 #### Args:
 
-* <b>`cell`</b>: A `tf.nn.rnn_cell.RNNCell` or Keras `RNNCell` (e.g. `LSTMCell`)
-    whose `call()` method has the signature `call(input, state, ...)`.
-    Each tensor in the tuple is shaped `[batch_size, ...]`.
-* <b>`parallel_iterations`</b>: Parallel iterations to pass to `tf.while_loop`.
-    The default value is a good trades off between memory use and
-    performance.  See documentation of `tf.while_loop` for more details.
-* <b>`swap_memory`</b>: Python bool.  Whether to swap memory from GPU to CPU when
-    storing activations for backprop.  This may sometimes have a negligible
-    performance impact, but can improve memory usage.  See documentation
-    of `tf.while_loop` for more details.
-* <b>`**kwargs`</b>: Additional layer arguments, such as `dtype` and `name`.
-
+*   <b>`cell`</b>: A `tf.nn.rnn_cell.RNNCell` or Keras `RNNCell` (e.g.
+    `LSTMCell`) whose `call()` method has the signature `call(input, state,
+    ...)`. Each tensor in the tuple is shaped `[batch_size, ...]`.
+*   <b>`parallel_iterations`</b>: Parallel iterations to pass to
+    `tf.while_loop`. The default value is a good trades off between memory use
+    and performance. See documentation of `tf.while_loop` for more details.
+*   <b>`swap_memory`</b>: Python bool. Whether to swap memory from GPU to CPU
+    when storing activations for backprop. This may sometimes have a negligible
+    performance impact, but can improve memory usage. See documentation of
+    `tf.while_loop` for more details.
+*   <b>`**kwargs`</b>: Additional layer arguments, such as `dtype` and `name`.
 
 #### Raises:
 
-* <b>`TypeError`</b>: if `cell` lacks `get_initial_state`, `output_size`, or
+*   <b>`TypeError`</b>: if `cell` lacks `get_initial_state`, `output_size`, or
     `state_size` property.
-
-
 
 ## Properties
 
@@ -120,11 +121,7 @@ Optional regularizer function for the output of this layer.
 
 <h3 id="dtype"><code>dtype</code></h3>
 
-
-
 <h3 id="dynamic"><code>dynamic</code></h3>
-
-
 
 <h3 id="input"><code>input</code></h3>
 
@@ -137,14 +134,8 @@ i.e. if it is connected to one incoming layer.
 
 Input tensor or list of input tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to
-    more than one incoming layers.
-
-
-#### Raises:
 
 * <b>`RuntimeError`</b>: If called in Eager mode.
 * <b>`AttributeError`</b>: If no inbound nodes are found.
@@ -161,11 +152,10 @@ i.e. if it is connected to one incoming layer.
 Input mask tensor (potentially None) or list of input
 mask tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to
-    more than one incoming layers.
+*   <b>`AttributeError`</b>: if the layer is connected to more than one incoming
+    layers.
 
 <h3 id="input_shape"><code>input_shape</code></h3>
 
@@ -180,23 +170,18 @@ have the same shape.
 Input shape, as an integer shape tuple
 (or list of shape tuples, one tuple per input tensor).
 
-
 #### Raises:
 
 * <b>`AttributeError`</b>: if the layer has no defined input_shape.
 * <b>`RuntimeError`</b>: if called in Eager mode.
 
+<h3 id="input_spec"><code>input_spec</code></h3>
+
 <h3 id="losses"><code>losses</code></h3>
-
-
 
 <h3 id="metrics"><code>metrics</code></h3>
 
-
-
 <h3 id="name"><code>name</code></h3>
-
-
 
 <h3 id="name_scope"><code>name_scope</code></h3>
 
@@ -204,11 +189,7 @@ Returns a `tf.name_scope` instance for this class.
 
 <h3 id="non_trainable_variables"><code>non_trainable_variables</code></h3>
 
-
-
 <h3 id="non_trainable_weights"><code>non_trainable_weights</code></h3>
-
-
 
 <h3 id="output"><code>output</code></h3>
 
@@ -221,12 +202,11 @@ i.e. if it is connected to one incoming layer.
 
 Output tensor or list of output tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to more than one incoming
+*   <b>`AttributeError`</b>: if the layer is connected to more than one incoming
     layers.
-* <b>`RuntimeError`</b>: if called in Eager mode.
+*   <b>`RuntimeError`</b>: if called in Eager mode.
 
 <h3 id="output_mask"><code>output_mask</code></h3>
 
@@ -240,11 +220,10 @@ i.e. if it is connected to one incoming layer.
 Output mask tensor (potentially None) or list of output
 mask tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to
-    more than one incoming layers.
+*   <b>`AttributeError`</b>: if the layer is connected to more than one incoming
+    layers.
 
 <h3 id="output_shape"><code>output_shape</code></h3>
 
@@ -258,7 +237,6 @@ or if all outputs have the same shape.
 Output shape, as an integer shape tuple
 (or list of shape tuples, one tuple per output tensor).
 
-
 #### Raises:
 
 * <b>`AttributeError`</b>: if the layer has no defined output shape.
@@ -271,30 +249,28 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
 A sequence of all submodules.
 
+<h3 id="trainable"><code>trainable</code></h3>
+
 <h3 id="trainable_variables"><code>trainable_variables</code></h3>
-
-
 
 <h3 id="trainable_weights"><code>trainable_weights</code></h3>
 
-
-
 <h3 id="updates"><code>updates</code></h3>
-
-
 
 <h3 id="variables"><code>variables</code></h3>
 
@@ -313,8 +289,6 @@ Returns the list of all layer variables/weights.
 #### Returns:
 
 A list of variables.
-
-
 
 ## Methods
 
@@ -339,75 +313,31 @@ Wraps `call`, applying pre- and post-processing steps.
 
 #### Returns:
 
-  Output tensor(s).
+Output tensor(s).
 
-Note:
-  - The following optional keyword arguments are reserved for specific uses:
-    * `training`: Boolean scalar tensor of Python boolean indicating
-      whether the `call` is meant for training or inference.
-    * `mask`: Boolean input mask.
-  - If the layer's `call` method takes a `mask` argument (as some Keras
-    layers do), its default value will be set to the mask generated
-    for `inputs` by the previous layer (if `input` did come from
-    a layer that generated a corresponding mask, i.e. if it came from
-    a Keras layer with masking support.
+#### Note:
 
+-   The following optional keyword arguments are reserved for specific uses:
+    *   `training`: Boolean scalar tensor of Python boolean indicating whether
+        the `call` is meant for training or inference.
+    *   `mask`: Boolean input mask.
+-   If the layer's `call` method takes a `mask` argument (as some Keras layers
+    do), its default value will be set to the mask generated for `inputs` by the
+    previous layer (if `input` did come from a layer that generated a
+    corresponding mask, i.e. if it came from a Keras layer with masking support.
 
 #### Raises:
 
 * <b>`ValueError`</b>: if the layer's `call` method returns None (an invalid value).
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-
-
-<h3 id="apply"><code>apply</code></h3>
-
-``` python
-apply(
-    inputs,
-    *args,
-    **kwargs
-)
-```
-
-Apply the layer on a input.
-
-This is an alias of `self.__call__`.
-
-#### Arguments:
-
-* <b>`inputs`</b>: Input tensor(s).
-* <b>`*args`</b>: additional positional arguments to be passed to `self.call`.
-* <b>`**kwargs`</b>: additional keyword arguments to be passed to `self.call`.
-
-
-#### Returns:
-
-Output tensor(s).
-
 <h3 id="build"><code>build</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
 
 ``` python
 build(input_shape)
 ```
-
-
 
 <h3 id="compute_mask"><code>compute_mask</code></h3>
 
@@ -433,11 +363,12 @@ None or a tensor (or list of tensors,
 
 <h3 id="compute_output_shape"><code>compute_output_shape</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
+
 ``` python
 compute_output_shape(input_shape)
 ```
-
-
 
 <h3 id="count_params"><code>count_params</code></h3>
 
@@ -451,13 +382,15 @@ Count the total number of scalars composing the weights.
 
 An integer count.
 
-
 #### Raises:
 
-* <b>`ValueError`</b>: if the layer isn't yet built
-      (in which case its weights aren't yet defined).
+*   <b>`ValueError`</b>: if the layer isn't yet built (in which case its weights
+    aren't yet defined).
 
 <h3 id="from_config"><code>from_config</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
 
 ``` python
 @classmethod
@@ -468,15 +401,14 @@ from_config(
 )
 ```
 
-
-
 <h3 id="get_config"><code>get_config</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/dynamic_unroll_layer.py">View
+source</a>
 
 ``` python
 get_config()
 ```
-
-
 
 <h3 id="get_input_at"><code>get_input_at</code></h3>
 
@@ -488,16 +420,13 @@ Retrieves the input tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A tensor (or list of tensors if the layer has multiple inputs).
-
 
 #### Raises:
 
@@ -513,11 +442,9 @@ Retrieves the input mask tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
@@ -534,17 +461,14 @@ Retrieves the input shape(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A shape tuple
 (or list of shape tuples if the layer has multiple inputs).
-
 
 #### Raises:
 
@@ -577,16 +501,13 @@ Retrieves the output tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A tensor (or list of tensors if the layer has multiple outputs).
-
 
 #### Raises:
 
@@ -602,11 +523,9 @@ Retrieves the output mask tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
@@ -623,17 +542,14 @@ Retrieves the output shape(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A shape tuple
 (or list of shape tuples if the layer has multiple outputs).
-
 
 #### Raises:
 
@@ -678,17 +594,14 @@ Sets the weights of the layer, from Numpy arrays.
 
 #### Arguments:
 
-* <b>`weights`</b>: a list of Numpy arrays. The number
-        of arrays and their shape must match
-        number of the dimensions of the weights
-        of the layer (i.e. it should match the
-        output of `get_weights`).
-
+*   <b>`weights`</b>: a list of Numpy arrays. The number of arrays and their
+    shape must match number of the dimensions of the weights of the layer (i.e.
+    it should match the output of `get_weights`).
 
 #### Raises:
 
-* <b>`ValueError`</b>: If the provided weights list does not match the
-        layer's specifications.
+*   <b>`ValueError`</b>: If the provided weights list does not match the layer's
+    specifications.
 
 <h3 id="with_name_scope"><code>with_name_scope</code></h3>
 
@@ -701,21 +614,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -725,6 +642,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

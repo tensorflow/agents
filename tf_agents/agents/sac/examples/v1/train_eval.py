@@ -53,6 +53,7 @@ from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import normal_projection_network
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_policy
+from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
@@ -84,6 +85,8 @@ def normal_projection_net(action_spec,
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
+    eval_env_name=None,
+    env_load_fn=suite_mujoco.load,
     num_iterations=1000000,
     actor_fc_layers=(256, 256),
     critic_obs_fc_layers=None,
@@ -141,8 +144,9 @@ def train_eval(
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
     # Create the environment.
-    tf_env = tf_py_environment.TFPyEnvironment(suite_mujoco.load(env_name))
-    eval_py_env = suite_mujoco.load(env_name)
+    tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
+    eval_env_name = eval_env_name or env_name
+    eval_py_env = env_load_fn(eval_env_name)
 
     # Get the data specs from the environment
     time_step_spec = tf_env.time_step_spec()
@@ -199,10 +203,12 @@ def train_eval(
     ]
 
     collect_policy = tf_agent.collect_policy
+    initial_collect_policy = random_tf_policy.RandomTFPolicy(
+        tf_env.time_step_spec(), tf_env.action_spec())
 
     initial_collect_op = dynamic_step_driver.DynamicStepDriver(
         tf_env,
-        collect_policy,
+        initial_collect_policy,
         observers=replay_observer + train_metrics,
         num_steps=initial_collect_steps).run()
 
@@ -217,7 +223,7 @@ def train_eval(
       return ~trajectories.is_boundary()[0]
     dataset = replay_buffer.as_dataset(
         sample_batch_size=5 * batch_size,
-        num_steps=2).apply(tf.data.experimental.unbatch()).filter(
+        num_steps=2).unbatch().filter(
             _filter_invalid_transition).batch(batch_size).prefetch(
                 batch_size * 5)
     dataset_iterator = tf.compat.v1.data.make_initializable_iterator(dataset)

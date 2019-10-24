@@ -46,7 +46,7 @@ def load(environment_name,
     discount: Discount to use for the environment.
     max_episode_steps: If None the max_episode_steps will be set to the default
       step limit defined in the environment's spec. No limit is applied if set
-      to 0 or if there is no timestep_limit set in the environment's spec.
+      to 0 or if there is no max_episode_steps set in the environment's spec.
     gym_env_wrappers: Iterable with references to wrapper classes to use
       directly on the gym environment.
     env_wrappers: Iterable with references to wrapper classes to use on the
@@ -63,7 +63,7 @@ def load(environment_name,
   gym_spec = gym.spec(environment_name)
   gym_env = gym_spec.make()
 
-  if max_episode_steps is None and gym_spec.timestep_limit is not None:
+  if max_episode_steps is None and gym_spec.max_episode_steps is not None:
     max_episode_steps = gym_spec.max_episode_steps
 
   return wrap_env(
@@ -78,7 +78,7 @@ def load(environment_name,
 @gin.configurable
 def wrap_env(gym_env,
              discount=1.0,
-             max_episode_steps=None,
+             max_episode_steps=0,
              gym_env_wrappers=(),
              time_limit_wrapper=wrappers.TimeLimit,
              env_wrappers=(),
@@ -92,9 +92,8 @@ def wrap_env(gym_env,
   Args:
     gym_env: An instance of OpenAI gym environment.
     discount: Discount to use for the environment.
-    max_episode_steps: If None the max_episode_steps will be set to the default
-      step limit defined in the environment's spec. No limit is applied if set
-      to 0 or if there is no timestep_limit set in the environment's spec.
+    max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied
+      if set to 0. Usually set to `gym_spec.max_episode_steps` as done in `load.
     gym_env_wrappers: Iterable with references to wrapper classes to use
       directly on the gym environment.
     time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to

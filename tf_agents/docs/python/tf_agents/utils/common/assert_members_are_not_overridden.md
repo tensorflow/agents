@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.assert_members_are_not_overridden
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Asserts public members of `base_cls` are not overridden in `instance`.
 
 ``` python
@@ -17,8 +23,6 @@ tf_agents.utils.common.assert_members_are_not_overridden(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 

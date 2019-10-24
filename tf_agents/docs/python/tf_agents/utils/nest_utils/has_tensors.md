@@ -5,14 +5,16 @@
 
 # tf_agents.utils.nest_utils.has_tensors
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
 
 ``` python
 tf_agents.utils.nest_utils.has_tensors(*x)
 ```
 
 
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
 
 <!-- Placeholder for "Used in" -->

@@ -87,6 +87,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
         clip=clip)
 
     self._collect = collect
+    if value_network is not None:
+      value_network.create_variables()
     self._value_network = value_network
 
   def apply_value_network(self, observations, step_types, policy_state):

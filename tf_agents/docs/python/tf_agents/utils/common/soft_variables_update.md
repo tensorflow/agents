@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.soft_variables_update
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Performs a soft/hard update of variables from the source to the target.
 
 ``` python
@@ -18,8 +24,6 @@ tf_agents.utils.common.soft_variables_update(
 
 
 
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
-
 <!-- Placeholder for "Used in" -->
 
 For each variable v_t in target variables and its corresponding variable v_s
@@ -31,12 +35,12 @@ v_t = v_s
 
 #### Args:
 
-* <b>`source_variables`</b>: list of source variables.
-* <b>`target_variables`</b>: list of target variables.
-* <b>`tau`</b>: A float scalar in [0, 1]. When tau is 1.0 (the default), we do a hard
-    update.
-* <b>`sort_variables_by_name`</b>: A bool, when True would sort the variables by name
-    before doing the update.
+*   <b>`source_variables`</b>: list of source variables.
+*   <b>`target_variables`</b>: list of target variables.
+*   <b>`tau`</b>: A float scalar in [0, 1]. When tau is 1.0 (the default), we do
+    a hard update.
+*   <b>`sort_variables_by_name`</b>: A bool, when True would sort the variables
+    by name before doing the update.
 
 #### Returns:
 

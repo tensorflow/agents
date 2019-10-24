@@ -29,8 +29,8 @@ from tf_agents.utils import nest_utils
 class NestedTensorsTest(tf.test.TestCase):
   """Tests functions related to nested tensors."""
 
-  def nest_spec(self, shape=(2, 3), dtype=tf.float32):
-    return {
+  def nest_spec(self, shape=(2, 3), dtype=tf.float32, include_sparse=True):
+    spec = {
         'tensor_spec_1':
             tensor_spec.TensorSpec(shape, dtype),
         'bounded_spec_1':
@@ -50,13 +50,18 @@ class NestedTensorsTest(tf.test.TestCase):
             (tensor_spec.TensorSpec(shape, dtype),
              tensor_spec.BoundedTensorSpec(shape, dtype, -10, 10)),
         ],
+        'sparse_tensor_spec': tf.SparseTensorSpec(
+            shape=shape, dtype=dtype)
     }
+    if not include_sparse:
+      del spec['sparse_tensor_spec']
+    return spec
 
   def zeros_from_spec(self, spec, batch_size=None, extra_sizes=None):
     """Return tensors matching spec with desired additional dimensions.
 
     Args:
-      spec: A TensorSpec.
+      spec: A `tf.TypeSpec`, e.g. `tf.TensorSpec` or `tf.SparseTensorSpec`.
       batch_size: The desired batch size; the size of the first dimension of
         all tensors.
       extra_sizes: An optional list of additional dimension sizes beyond the
@@ -66,13 +71,52 @@ class NestedTensorsTest(tf.test.TestCase):
       A possibly nested tuple of Tensors matching the spec.
     """
     tensors = []
+    extra_sizes = extra_sizes or []
     for s in tf.nest.flatten(spec):
-      shape = s.shape
-      if batch_size:
-        extra_sizes = extra_sizes or []
-        shape = tf.TensorShape([batch_size] + extra_sizes).concatenate(
-            s.shape)
-      tensors.append(tf.zeros(shape, dtype=s.dtype))
+      if isinstance(s, tf.SparseTensorSpec):
+        if batch_size:
+          shape = [batch_size] + extra_sizes + s.shape
+          rank = 1 + len(extra_sizes) + 2
+        else:
+          shape = s.shape
+          rank = 2
+        tensors.append(
+            tf.SparseTensor(
+                indices=tf.zeros([7, rank], dtype=tf.int64),
+                values=tf.zeros([7], dtype=s.dtype),
+                dense_shape=tf.constant(shape.as_list(), dtype=tf.int64)))
+      elif isinstance(s, tf.TensorSpec):
+        if batch_size:
+          shape = tf.TensorShape([batch_size] + extra_sizes).concatenate(
+              s.shape)
+        else:
+          shape = s.shape
+        tensors.append(tf.zeros(shape, dtype=s.dtype))
+      else:
+        raise TypeError('Unexpected spec type: {}'.format(s))
+
+    return tf.nest.pack_sequence_as(spec, tensors)
+
+  def placeholders_from_spec(self, spec):
+    """Return tensors matching spec with an added unknown batch dimension.
+
+    Args:
+      spec: A `tf.TypeSpec`, e.g. `tf.TensorSpec` or `tf.SparseTensorSpec`.
+
+    Returns:
+      A possibly nested tuple of Tensors matching the spec.
+    """
+    tensors = []
+    for s in tf.nest.flatten(spec):
+      if isinstance(s, tf.SparseTensorSpec):
+        raise NotImplementedError(
+            'Support for SparseTensor placeholders not implemented.')
+      elif isinstance(s, tf.TensorSpec):
+        shape = tf.TensorShape([None]).concatenate(s.shape)
+        tensors.append(tf.placeholder(dtype=s.dtype, shape=shape))
+      else:
+        raise TypeError('Unexpected spec type: {}'.format(s))
+
     return tf.nest.pack_sequence_as(spec, tensors)
 
   def testGetOuterShapeNotBatched(self):
@@ -358,7 +402,7 @@ class NestedTensorsTest(tf.test.TestCase):
     shape = [2, 3]
     batch_size = 1
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=False)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
     tf.nest.assert_same_structure(batched_tensors, specs)
 
@@ -372,7 +416,7 @@ class NestedTensorsTest(tf.test.TestCase):
     shape = [2, 3]
     batch_size = 1
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=False)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
     tf.nest.assert_same_structure(batched_tensors, specs)
 
@@ -386,7 +430,7 @@ class NestedTensorsTest(tf.test.TestCase):
     shape = [2, 3]
     batch_size = 7
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=True)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
     tf.nest.assert_same_structure(batched_tensors, specs)
 
@@ -396,7 +440,14 @@ class NestedTensorsTest(tf.test.TestCase):
 
     for t in tensors:
       tf.nest.assert_same_structure(specs, t)
-    assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [1] + shape)
+
+    def assert_shapes(t):
+      if not tf.executing_eagerly() and isinstance(t, tf.SparseTensor):
+        # Constant value propagation in SparseTensors does not allow us to infer
+        # the value of output t.shape from input's t.shape; only its rank.
+        self.assertEqual(len(t.shape), 1 + len(shape))
+      else:
+        self.assertEqual(t.shape.as_list(), [1] + shape)
     tf.nest.map_structure(assert_shapes, tensors)
 
   def testSplitNestedTensorsSizeSplits(self):
@@ -404,7 +455,7 @@ class NestedTensorsTest(tf.test.TestCase):
     batch_size = 9
     size_splits = [2, 4, 3]
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=False)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
     tf.nest.assert_same_structure(batched_tensors, specs)
 
@@ -425,7 +476,7 @@ class NestedTensorsTest(tf.test.TestCase):
     shape = [5, 8]
     batch_size = 7
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=False)
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
     tf.nest.assert_same_structure(batched_tensors, specs)
 
@@ -442,7 +493,7 @@ class NestedTensorsTest(tf.test.TestCase):
     batch_size = 3
     batched_shape = [batch_size,] + shape
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=False)
     unstacked_tensors = [self.zeros_from_spec(specs) for _ in range(batch_size)]
     stacked_tensor = nest_utils.stack_nested_tensors(unstacked_tensors)
 
@@ -450,10 +501,10 @@ class NestedTensorsTest(tf.test.TestCase):
     assert_shapes = lambda tensor: self.assertEqual(tensor.shape, batched_shape)
     tf.nest.map_structure(assert_shapes, stacked_tensor)
 
-  def testUnBatchedNestedTensors(self):
+  def testUnBatchedNestedTensors(self, include_sparse=False):
     shape = [2, 3]
 
-    specs = self.nest_spec(shape)
+    specs = self.nest_spec(shape, include_sparse=False)
     unbatched_tensors = self.zeros_from_spec(specs)
     tf.nest.assert_same_structure(unbatched_tensors, specs)
 
@@ -492,6 +543,22 @@ class NestedTensorsTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     batch_dims_ = self.evaluate(batch_dims)
     self.assertAllEqual(batch_dims_, [7, 5])
+
+  def testFlattenMultiBatchedNestedTensorsWithPartiallyKnownShape(self):
+    if tf.executing_eagerly():
+      self.skipTest('Do not check nest processing of data in eager mode. '
+                    'Placeholders are not compatible with eager execution.')
+    shape = [2, 3]
+    specs = self.nest_spec(shape, include_sparse=False)
+    tensors = self.placeholders_from_spec(specs)
+
+    (batch_flattened_tensors,
+     _) = nest_utils.flatten_multi_batched_nested_tensors(
+         tensors, specs)
+
+    tf.nest.assert_same_structure(specs, batch_flattened_tensors)
+    assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [None, 2, 3])
+    tf.nest.map_structure(assert_shapes, batch_flattened_tensors)
 
 
 class NestedArraysTest(tf.test.TestCase):

@@ -25,6 +25,7 @@ from __future__ import print_function
 
 import abc
 import collections
+import cProfile
 import gin
 import numpy as np
 import six
@@ -62,14 +63,23 @@ class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
   def _step(self, action):
     return self._env.step(action)
 
+  def get_info(self):
+    return self._env.get_info()
+
   def observation_spec(self):
     return self._env.observation_spec()
 
   def action_spec(self):
     return self._env.action_spec()
 
+  def close(self):
+    return self._env.close()
+
   def render(self, mode='rgb_array'):
     return self._env.render(mode)
+
+  def seed(self, seed):
+    return self._env.seed(seed)
 
   def wrapped_env(self):
     return self._env
@@ -103,6 +113,68 @@ class TimeLimit(PyEnvironmentBaseWrapper):
 
     return time_step
 
+  @property
+  def duration(self):
+    return self._duration
+
+
+@gin.configurable
+class PerformanceProfiler(PyEnvironmentBaseWrapper):
+  """End episodes after specified number of steps."""
+
+  def __init__(self, env, process_profile_fn, process_steps):
+    """Create a PerformanceProfiler that uses cProfile to profile env execution.
+
+    Args:
+      env: Environment to wrap.
+      process_profile_fn: A callback that accepts a `Profile` object.
+        After `process_profile_fn` is called, profile information is reset.
+      process_steps: The frequency with which `process_profile_fn` is
+        called.  The counter is incremented each time `step` is called
+        (not `reset`); every `process_steps` steps, `process_profile_fn`
+        is called and the profiler is reset.
+    """
+    super(PerformanceProfiler, self).__init__(env)
+    self._started = False
+    self._num_steps = 0
+    self._process_steps = process_steps
+    self._process_profile_fn = process_profile_fn
+    self._profile = cProfile.Profile()
+
+  def _reset(self):
+    self._profile.enable()
+    try:
+      return self._env.reset()
+    finally:
+      self._profile.disable()
+
+  def _step(self, action):
+    if not self._started:
+      self._started = True
+      self._num_steps += 1
+      return self.reset()
+
+    self._profile.enable()
+    try:
+      time_step = self._env.step(action)
+    finally:
+      self._profile.disable()
+
+    self._num_steps += 1
+    if self._num_steps >= self._process_steps:
+      self._process_profile_fn(self._profile)
+      self._profile = cProfile.Profile()
+      self._num_steps = 0
+
+    if time_step.is_last():
+      self._started = False
+
+    return time_step
+
+  @property
+  def duration(self):
+    return self._duration
+
 
 @gin.configurable
 class ActionRepeat(PyEnvironmentBaseWrapper):
@@ -130,9 +202,11 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
     for _ in range(self._times):
       time_step = self._env.step(action)
       total_reward += time_step.reward
-      if time_step.is_last():
+      if time_step.is_first() or time_step.is_last():
         break
 
+    total_reward = np.asarray(total_reward,
+                              dtype=np.asarray(time_step.reward).dtype)
     return ts.TimeStep(time_step.step_type, total_reward, time_step.discount,
                        time_step.observation)
 
@@ -527,9 +601,9 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
 
     # Flatten the individual observations if they are multi-dimensional and then
     # flatten the nested structure.
-    observations = tf.nest.map_structure(np_flatten, observations)
+    flat_observations = [np_flatten(x) for x in tf.nest.flatten(observations)]
     axis = 1 if is_batched else 0
-    return np.concatenate(tf.nest.flatten(observations), axis=axis)
+    return np.concatenate(flat_observations, axis=axis)
 
   def _step(self, action):
     """Steps the environment while packing the observations returned.
@@ -719,3 +793,52 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
 
     time_step = self._env.step(action)
     return self._add_history(time_step, action)
+
+
+@gin.configurable
+class OneHotActionWrapper(PyEnvironmentBaseWrapper):
+  """Converts discrete action to one_hot format."""
+
+  def __init__(self, env):
+    super(OneHotActionWrapper, self).__init__(env)
+
+    def convert_to_one_hot(spec):
+      """Convert spec to one_hot format."""
+      if np.issubdtype(spec.dtype, np.integer):
+        if len(spec.shape) > 1:
+          raise ValueError('OneHotActionWrapper only supports single action!'
+                           'action_spec: {}'.format(spec))
+
+        num_actions = spec.maximum - spec.minimum + 1
+        output_shape = spec.shape + (num_actions,)
+
+        return array_spec.BoundedArraySpec(
+            shape=output_shape,
+            dtype=spec.dtype,
+            minimum=0,
+            maximum=1,
+            name='one_hot_action_spec')
+      else:
+        return spec
+
+    self._one_hot_action_spec = tf.nest.map_structure(
+        convert_to_one_hot, self._env.action_spec())
+
+  def action_spec(self):
+    return self._one_hot_action_spec
+
+  def _step(self, action):
+
+    def convert_back(action, inner_spec, spec):
+      if action.shape != inner_spec.shape or action.dtype != inner_spec.dtype:
+        raise ValueError('Action shape/dtype different from its definition in '
+                         'the inner_spec. Action: {action}. Inner_spec: '
+                         '{spec}.'.format(action=action, spec=spec))
+      if np.issubdtype(action.dtype, np.integer):
+        action = spec.minimum + np.argmax(action, axis=-1)
+      return action
+
+    action = tf.nest.map_structure(
+        convert_back, action, self._one_hot_action_spec,
+        self._env.action_spec())
+    return self._env.step(action)

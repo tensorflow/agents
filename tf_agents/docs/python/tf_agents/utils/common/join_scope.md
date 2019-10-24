@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.join_scope
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Joins a parent and child scope using `/`, checking for empty/none.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.utils.common.join_scope(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 

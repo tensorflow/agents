@@ -34,7 +34,8 @@ from tf_agents.utils import test_utils
 class DummyActorNet(network.Network):
 
   def __init__(self, action_spec, name=None):
-    super(DummyActorNet, self).__init__(name, (), 'DummyActorNet')
+    super(DummyActorNet, self).__init__(
+        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyActorNet')
     self._action_spec = action_spec
     self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
 
@@ -46,7 +47,8 @@ class DummyActorNet(network.Network):
             activation=tf.keras.activations.tanh,
         ))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     for layer in self.layers:
       hidden_state = layer(hidden_state)
@@ -69,7 +71,7 @@ class DummyActorDistributionNet(network.DistributionNetwork):
     output_spec = tf.nest.map_structure(self._get_normal_distribution_spec,
                                         action_spec)
     super(DummyActorDistributionNet, self).__init__(
-        name,
+        tensor_spec.TensorSpec([2], tf.float32),
         (),
         output_spec=output_spec,
         name='DummyActorDistributionNet')
@@ -87,7 +89,8 @@ class DummyActorDistributionNet(network.DistributionNetwork):
     return distribution_spec.DistributionSpec(
         tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     action_means, network_state = self._action_net(inputs, network_state)
 
     def _action_distribution(action_mean):
@@ -101,14 +104,16 @@ class DummyActorDistributionNet(network.DistributionNetwork):
 class DummyValueNet(network.Network):
 
   def __init__(self, name=None):
-    super(DummyValueNet, self).__init__(name, (), 'DummyValueNet')
+    super(DummyValueNet, self).__init__(
+        tensor_spec.TensorSpec([2], tf.float32), (), 'DummyValueNet')
     self._layers.append(
         tf.keras.layers.Dense(
             1,
             kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
             bias_initializer=tf.compat.v1.initializers.constant([5])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     for layer in self.layers:
       hidden_state = layer(hidden_state)

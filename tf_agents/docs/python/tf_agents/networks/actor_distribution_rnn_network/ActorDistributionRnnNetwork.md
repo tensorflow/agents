@@ -1,7 +1,6 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.networks.actor_distribution_rnn_network.ActorDistributionRnnNetwork" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="action_spec"/>
 <meta itemprop="property" content="activity_regularizer"/>
 <meta itemprop="property" content="dtype"/>
 <meta itemprop="property" content="dynamic"/>
@@ -21,20 +20,19 @@
 <meta itemprop="property" content="output_mask"/>
 <meta itemprop="property" content="output_shape"/>
 <meta itemprop="property" content="output_spec"/>
+<meta itemprop="property" content="output_tensor_spec"/>
 <meta itemprop="property" content="state_spec"/>
 <meta itemprop="property" content="state_updates"/>
 <meta itemprop="property" content="stateful"/>
 <meta itemprop="property" content="submodules"/>
+<meta itemprop="property" content="trainable"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="trainable_weights"/>
 <meta itemprop="property" content="updates"/>
 <meta itemprop="property" content="variables"/>
 <meta itemprop="property" content="weights"/>
 <meta itemprop="property" content="__call__"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
-<meta itemprop="property" content="apply"/>
 <meta itemprop="property" content="build"/>
 <meta itemprop="property" content="compute_mask"/>
 <meta itemprop="property" content="compute_output_shape"/>
@@ -65,18 +63,24 @@
 
 # tf_agents.networks.actor_distribution_rnn_network.ActorDistributionRnnNetwork
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/actor_distribution_rnn_network.py">View
+source</a>
+
 ## Class `ActorDistributionRnnNetwork`
 
 Creates an actor producing either Normal or Categorical distribution.
 
 Inherits From: [`DistributionNetwork`](../../../tf_agents/networks/network/DistributionNetwork.md)
 
-
-
-Defined in [`networks/actor_distribution_rnn_network.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/networks/actor_distribution_rnn_network.py).
-
 <!-- Placeholder for "Used in" -->
 
+Note: By default, this network uses `NormalProjectionNetwork` for continuous
+projection which by default uses `tanh_squash_to_spec` to normalize its output.
+Due to the nature of the `tanh` function, values near the spec bounds cannot be
+returned.
 
 <h2 id="__init__"><code>__init__</code></h2>
 
@@ -91,37 +95,37 @@ Creates an instance of `ActorDistributionRnnNetwork`.
 
 #### Args:
 
-* <b>`input_tensor_spec`</b>: A nest of `tensor_spec.TensorSpec` representing the
-    input.
-* <b>`output_tensor_spec`</b>: A nest of `tensor_spec.BoundedTensorSpec` representing
-    the output.
-* <b>`input_fc_layer_params`</b>: Optional list of fully_connected parameters, where
-    each item is the number of units in the layer. This is applied before
+*   <b>`input_tensor_spec`</b>: A nest of `tensor_spec.TensorSpec` representing
+    the input.
+*   <b>`output_tensor_spec`</b>: A nest of `tensor_spec.BoundedTensorSpec`
+    representing the output.
+*   <b>`input_fc_layer_params`</b>: Optional list of fully_connected parameters,
+    where each item is the number of units in the layer. This is applied before
     the LSTM cell.
-* <b>`input_dropout_layer_params`</b>: Optional list of dropout layer parameters,
-    each item is the fraction of input units to drop or a dictionary of
-    parameters according to the keras.Dropout documentation. The additional
-    parameter `permanent', if set to True, allows to apply dropout at
-    inference for approximated Bayesian inference. The dropout layers are
-    interleaved with the fully connected layers; there is a dropout layer
-    after each fully connected layer, except if the entry in the list is
-    None. This list must have the same length of input_fc_layer_params, or
-    be None.
-* <b>`output_fc_layer_params`</b>: Optional list of fully_connected parameters, where
-    each item is the number of units in the layer. This is applied after the
-    LSTM cell.
-* <b>`conv_layer_params`</b>: Optional list of convolution layers parameters, where
-    each item is a length-three tuple indicating (filters, kernel_size,
+*   <b>`input_dropout_layer_params`</b>: Optional list of dropout layer
+    parameters, each item is the fraction of input units to drop or a dictionary
+    of parameters according to the keras.Dropout documentation. The additional
+    parameter `permanent', if set to True, allows to apply dropout at inference
+    for approximated Bayesian inference. The dropout layers are interleaved with
+    the fully connected layers; there is a dropout layer after each fully
+    connected layer, except if the entry in the list is None. This list must
+    have the same length of input_fc_layer_params, or be None.
+*   <b>`output_fc_layer_params`</b>: Optional list of fully_connected
+    parameters, where each item is the number of units in the layer. This is
+    applied after the LSTM cell.
+*   <b>`conv_layer_params`</b>: Optional list of convolution layers parameters,
+    where each item is a length-three tuple indicating (filters, kernel_size,
     stride).
-* <b>`lstm_size`</b>: An iterable of ints specifying the LSTM cell sizes to use.
-* <b>`activation_fn`</b>: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
-* <b>`categorical_projection_net`</b>: Callable that generates a categorical
-    projection network to be called with some hidden state and the
-    outer_rank of the state.
-* <b>`normal_projection_net`</b>: Callable that generates a normal projection network
-    to be called with some hidden state and the outer_rank of the state.
-* <b>`name`</b>: A string representing name of the network.
-
+*   <b>`lstm_size`</b>: An iterable of ints specifying the LSTM cell sizes to
+    use.
+*   <b>`activation_fn`</b>: Activation function, e.g. tf.nn.relu,
+    slim.leaky_relu, ...
+*   <b>`categorical_projection_net`</b>: Callable that generates a categorical
+    projection network to be called with some hidden state and the outer_rank of
+    the state.
+*   <b>`normal_projection_net`</b>: Callable that generates a normal projection
+    network to be called with some hidden state and the outer_rank of the state.
+*   <b>`name`</b>: A string representing name of the network.
 
 #### Raises:
 
@@ -131,21 +135,13 @@ Creates an instance of `ActorDistributionRnnNetwork`.
 
 ## Properties
 
-<h3 id="action_spec"><code>action_spec</code></h3>
-
-
-
 <h3 id="activity_regularizer"><code>activity_regularizer</code></h3>
 
 Optional regularizer function for the output of this layer.
 
 <h3 id="dtype"><code>dtype</code></h3>
 
-
-
 <h3 id="dynamic"><code>dynamic</code></h3>
-
-
 
 <h3 id="input"><code>input</code></h3>
 
@@ -158,14 +154,8 @@ i.e. if it is connected to one incoming layer.
 
 Input tensor or list of input tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to
-    more than one incoming layers.
-
-
-#### Raises:
 
 * <b>`RuntimeError`</b>: If called in Eager mode.
 * <b>`AttributeError`</b>: If no inbound nodes are found.
@@ -182,11 +172,10 @@ i.e. if it is connected to one incoming layer.
 Input mask tensor (potentially None) or list of input
 mask tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to
-    more than one incoming layers.
+*   <b>`AttributeError`</b>: if the layer is connected to more than one incoming
+    layers.
 
 <h3 id="input_shape"><code>input_shape</code></h3>
 
@@ -200,7 +189,6 @@ have the same shape.
 
 Input shape, as an integer shape tuple
 (or list of shape tuples, one tuple per input tensor).
-
 
 #### Raises:
 
@@ -222,8 +210,6 @@ Returns the spec of the input to the network of type InputSpec.
 
 <h3 id="layers"><code>layers</code></h3>
 
-
-
 <h3 id="losses"><code>losses</code></h3>
 
 Losses which are associated with this `Layer`.
@@ -238,11 +224,7 @@ A list of tensors.
 
 <h3 id="metrics"><code>metrics</code></h3>
 
-
-
 <h3 id="name"><code>name</code></h3>
-
-
 
 <h3 id="name_scope"><code>name_scope</code></h3>
 
@@ -250,11 +232,7 @@ Returns a `tf.name_scope` instance for this class.
 
 <h3 id="non_trainable_variables"><code>non_trainable_variables</code></h3>
 
-
-
 <h3 id="non_trainable_weights"><code>non_trainable_weights</code></h3>
-
-
 
 <h3 id="output"><code>output</code></h3>
 
@@ -267,12 +245,11 @@ i.e. if it is connected to one incoming layer.
 
 Output tensor or list of output tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to more than one incoming
+*   <b>`AttributeError`</b>: if the layer is connected to more than one incoming
     layers.
-* <b>`RuntimeError`</b>: if called in Eager mode.
+*   <b>`RuntimeError`</b>: if called in Eager mode.
 
 <h3 id="output_mask"><code>output_mask</code></h3>
 
@@ -286,11 +263,10 @@ i.e. if it is connected to one incoming layer.
 Output mask tensor (potentially None) or list of output
 mask tensors.
 
-
 #### Raises:
 
-* <b>`AttributeError`</b>: if the layer is connected to
-    more than one incoming layers.
+*   <b>`AttributeError`</b>: if the layer is connected to more than one incoming
+    layers.
 
 <h3 id="output_shape"><code>output_shape</code></h3>
 
@@ -304,7 +280,6 @@ or if all outputs have the same shape.
 Output shape, as an integer shape tuple
 (or list of shape tuples, one tuple per output tensor).
 
-
 #### Raises:
 
 * <b>`AttributeError`</b>: if the layer has no defined output shape.
@@ -312,11 +287,9 @@ Output shape, as an integer shape tuple
 
 <h3 id="output_spec"><code>output_spec</code></h3>
 
-
+<h3 id="output_tensor_spec"><code>output_tensor_spec</code></h3>
 
 <h3 id="state_spec"><code>state_spec</code></h3>
-
-
 
 <h3 id="state_updates"><code>state_updates</code></h3>
 
@@ -332,8 +305,6 @@ A list of update ops.
 
 <h3 id="stateful"><code>stateful</code></h3>
 
-
-
 <h3 id="submodules"><code>submodules</code></h3>
 
 Sequence of all sub-modules.
@@ -341,30 +312,28 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
 A sequence of all submodules.
 
+<h3 id="trainable"><code>trainable</code></h3>
+
 <h3 id="trainable_variables"><code>trainable_variables</code></h3>
-
-
 
 <h3 id="trainable_weights"><code>trainable_weights</code></h3>
 
-
-
 <h3 id="updates"><code>updates</code></h3>
-
-
 
 <h3 id="variables"><code>variables</code></h3>
 
@@ -385,11 +354,12 @@ Returns the list of all layer variables/weights.
 
 A list of variables.
 
-
-
 ## Methods
 
 <h3 id="__call__"><code>__call__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/network.py">View
+source</a>
 
 ``` python
 __call__(
@@ -401,49 +371,6 @@ __call__(
 
 
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-
-
-<h3 id="apply"><code>apply</code></h3>
-
-``` python
-apply(
-    inputs,
-    *args,
-    **kwargs
-)
-```
-
-Apply the layer on a input.
-
-This is an alias of `self.__call__`.
-
-#### Arguments:
-
-* <b>`inputs`</b>: Input tensor(s).
-* <b>`*args`</b>: additional positional arguments to be passed to `self.call`.
-* <b>`**kwargs`</b>: additional keyword arguments to be passed to `self.call`.
-
-
-#### Returns:
-
-Output tensor(s).
 
 <h3 id="build"><code>build</code></h3>
 
@@ -463,21 +390,20 @@ never throw unexpected errors in an unrelated workflow).
 
 #### Args:
 
-input_shape: Single tuple, TensorShape, or list of shapes, where shapes
-    are tuples, integers, or TensorShapes.
-
+*   <b>`input_shape`</b>: Single tuple, TensorShape, or list of shapes, where
+    shapes are tuples, integers, or TensorShapes.
 
 #### Raises:
 
-* <b>`ValueError`</b>:     1. In case of invalid user-provided data (not of type tuple,
-       list, or TensorShape).
-    2. If the model requires call arguments that are agnostic
-       to the input shapes (positional or kwarg in call signature).
-    3. If not all layers were properly built.
-    4. If float type inputs are not supported within the layers.
+*   <b>`ValueError`</b>: 1. In case of invalid user-provided data (not of type
+    tuple, list, or TensorShape).
+    1.  If the model requires call arguments that are agnostic to the input
+        shapes (positional or kwarg in call signature).
+    2.  If not all layers were properly built.
+    3.  If float type inputs are not supported within the layers.
 
-  In each of these cases, the user should build their model by calling it
-  on real tensor data.
+In each of these cases, the user should build their model by calling it on real
+tensor data.
 
 <h3 id="compute_mask"><code>compute_mask</code></h3>
 
@@ -488,17 +414,16 @@ compute_mask(
 )
 ```
 
-
-
 <h3 id="compute_output_shape"><code>compute_output_shape</code></h3>
 
 ``` python
 compute_output_shape(input_shape)
 ```
 
-
-
 <h3 id="copy"><code>copy</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/networks/network.py">View
+source</a>
 
 ``` python
 copy(**kwargs)
@@ -512,9 +437,8 @@ the `Network` instance with the same arguments it was initialized with
 
 #### Args:
 
-* <b>`**kwargs`</b>: Args to override when recreating this network.  Commonly
+*   <b>`**kwargs`</b>: Args to override when recreating this network. Commonly
     overridden args include 'name'.
-
 
 #### Returns:
 
@@ -532,11 +456,10 @@ Count the total number of scalars composing the weights.
 
 An integer count.
 
-
 #### Raises:
 
-* <b>`ValueError`</b>: if the layer isn't yet built
-      (in which case its weights aren't yet defined).
+*   <b>`ValueError`</b>: if the layer isn't yet built (in which case its weights
+    aren't yet defined).
 
 <h3 id="from_config"><code>from_config</code></h3>
 
@@ -552,16 +475,13 @@ Instantiates a Model from its config (output of `get_config()`).
 
 #### Arguments:
 
-* <b>`config`</b>: Model config dictionary.
-* <b>`custom_objects`</b>: Optional dictionary mapping names
-        (strings) to custom classes or functions to be
-        considered during deserialization.
-
+*   <b>`config`</b>: Model config dictionary.
+*   <b>`custom_objects`</b>: Optional dictionary mapping names (strings) to
+    custom classes or functions to be considered during deserialization.
 
 #### Returns:
 
 A model instance.
-
 
 #### Raises:
 
@@ -573,8 +493,6 @@ A model instance.
 get_config()
 ```
 
-
-
 <h3 id="get_input_at"><code>get_input_at</code></h3>
 
 ``` python
@@ -585,16 +503,13 @@ Retrieves the input tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A tensor (or list of tensors if the layer has multiple inputs).
-
 
 #### Raises:
 
@@ -610,11 +525,9 @@ Retrieves the input mask tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
@@ -631,17 +544,14 @@ Retrieves the input shape(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A shape tuple
 (or list of shape tuples if the layer has multiple inputs).
-
 
 #### Raises:
 
@@ -670,7 +580,6 @@ Indices are based on order of horizontal graph traversal (bottom-up).
 #### Returns:
 
 A layer instance.
-
 
 #### Raises:
 
@@ -703,16 +612,13 @@ Retrieves the output tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A tensor (or list of tensors if the layer has multiple outputs).
-
 
 #### Raises:
 
@@ -728,11 +634,9 @@ Retrieves the output mask tensor(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
@@ -749,17 +653,14 @@ Retrieves the output shape(s) of a layer at a given node.
 
 #### Arguments:
 
-* <b>`node_index`</b>: Integer, index of the node
-        from which to retrieve the attribute.
-        E.g. `node_index=0` will correspond to the
-        first time the layer was called.
-
+*   <b>`node_index`</b>: Integer, index of the node from which to retrieve the
+    attribute. E.g. `node_index=0` will correspond to the first time the layer
+    was called.
 
 #### Returns:
 
 A shape tuple
 (or list of shape tuples if the layer has multiple outputs).
-
 
 #### Raises:
 
@@ -824,13 +725,12 @@ which layers are assigned in the `Model`'s constructor.
 
 #### Arguments:
 
-* <b>`filepath`</b>: String, path to the weights file to load. For weight files in
-        TensorFlow format, this is the file prefix (the same as was passed
-        to `save_weights`).
-* <b>`by_name`</b>: Boolean, whether to load weights by name or by topological
-        order. Only topological loading is supported for weight files in
-        TensorFlow format.
-
+*   <b>`filepath`</b>: String, path to the weights file to load. For weight
+    files in TensorFlow format, this is the file prefix (the same as was passed
+    to `save_weights`).
+*   <b>`by_name`</b>: Boolean, whether to load weights by name or by topological
+    order. Only topological loading is supported for weight files in TensorFlow
+    format.
 
 #### Returns:
 
@@ -842,19 +742,16 @@ already built).
 
 When loading weights in HDF5 format, returns `None`.
 
-
 #### Raises:
 
-* <b>`ImportError`</b>: If h5py is not available and the weight file is in HDF5
-        format.
+*   <b>`ImportError`</b>: If h5py is not available and the weight file is in
+    HDF5 format.
 
 <h3 id="reset_states"><code>reset_states</code></h3>
 
 ``` python
 reset_states()
 ```
-
-
 
 <h3 id="save"><code>save</code></h3>
 
@@ -869,11 +766,12 @@ save(
 
 Saves the model to Tensorflow SavedModel or a single HDF5 file.
 
-The savefile includes:
-    - The model architecture, allowing to re-instantiate the model.
-    - The model weights.
-    - The state of the optimizer, allowing to resume training
-        exactly where you left off.
+#### The savefile includes:
+
+-   The model architecture, allowing to re-instantiate the model.
+-   The model weights.
+-   The state of the optimizer, allowing to resume training exactly where you
+    left off.
 
 This allows you to save the entirety of the state of a model
 in a single file.
@@ -885,16 +783,16 @@ was never compiled in the first place).
 
 #### Arguments:
 
-* <b>`filepath`</b>: String, path to SavedModel or H5 file to save the model.
-* <b>`overwrite`</b>: Whether to silently overwrite any existing file at the
-        target location, or provide the user with a manual prompt.
-* <b>`include_optimizer`</b>: If True, save optimizer's state together.
-* <b>`save_format`</b>: Either 'tf' or 'h5', indicating whether to save the model
-      to Tensorflow SavedModel or HDF5. The default is currently 'h5', but
-      will switch to 'tf' in TensorFlow 2.0. The 'tf' option is currently
-      disabled (use `tf.keras.experimental.export_saved_model` instead).
+*   <b>`filepath`</b>: String, path to SavedModel or H5 file to save the model.
+*   <b>`overwrite`</b>: Whether to silently overwrite any existing file at the
+    target location, or provide the user with a manual prompt.
+*   <b>`include_optimizer`</b>: If True, save optimizer's state together.
+*   <b>`save_format`</b>: Either 'tf' or 'h5', indicating whether to save the
+    model to Tensorflow SavedModel or HDF5. The default is currently 'h5', but
+    will switch to 'tf' in TensorFlow 2.0. The 'tf' option is currently disabled
+    (use `tf.keras.experimental.export_saved_model` instead).
 
-Example:
+#### Example:
 
 ```python
 from keras.models import load_model
@@ -942,24 +840,40 @@ automatically. For user-defined classes which inherit from `tf.keras.Model`,
 constructor. See the documentation of `tf.train.Checkpoint` and
 `tf.keras.Model` for details.
 
+While the formats are the same, do not mix `save_weights` and
+`tf.train.Checkpoint`. Checkpoints saved by `Model.save_weights` should be
+loaded using `Model.load_weights`. Checkpoints saved using
+`tf.train.Checkpoint.save` should be restored using the corresponding
+`tf.train.Checkpoint.restore`. Prefer `tf.train.Checkpoint` over `save_weights`
+for training checkpoints.
+
+The TensorFlow format matches objects and variables by starting at a root
+object, `self` for `save_weights`, and greedily matching attribute names. For
+`Model.save` this is the `Model`, and for `Checkpoint.save` this is the
+`Checkpoint` even if the `Checkpoint` has a model attached. This means saving a
+`tf.keras.Model` using `save_weights` and loading into a `tf.train.Checkpoint`
+with a `Model` attached (or vice versa) will not match the `Model`'s variables.
+See the
+[guide to training checkpoints](https://www.tensorflow.org/alpha/guide/checkpoints)
+for details on the TensorFlow format.
+
 #### Arguments:
 
-* <b>`filepath`</b>: String, path to the file to save the weights to. When saving
-        in TensorFlow format, this is the prefix used for checkpoint files
-        (multiple files are generated). Note that the '.h5' suffix causes
-        weights to be saved in HDF5 format.
-* <b>`overwrite`</b>: Whether to silently overwrite any existing file at the
-        target location, or provide the user with a manual prompt.
-* <b>`save_format`</b>: Either 'tf' or 'h5'. A `filepath` ending in '.h5' or
-        '.keras' will default to HDF5 if `save_format` is `None`. Otherwise
-        `None` defaults to 'tf'.
-
+*   <b>`filepath`</b>: String, path to the file to save the weights to. When
+    saving in TensorFlow format, this is the prefix used for checkpoint files
+    (multiple files are generated). Note that the '.h5' suffix causes weights to
+    be saved in HDF5 format.
+*   <b>`overwrite`</b>: Whether to silently overwrite any existing file at the
+    target location, or provide the user with a manual prompt.
+*   <b>`save_format`</b>: Either 'tf' or 'h5'. A `filepath` ending in '.h5' or
+    '.keras' will default to HDF5 if `save_format` is `None`. Otherwise `None`
+    defaults to 'tf'.
 
 #### Raises:
 
-* <b>`ImportError`</b>: If h5py is not available when attempting to save in HDF5
-        format.
-* <b>`ValueError`</b>: For invalid/unknown format arguments.
+*   <b>`ImportError`</b>: If h5py is not available when attempting to save in
+    HDF5 format.
+*   <b>`ValueError`</b>: For invalid/unknown format arguments.
 
 <h3 id="set_weights"><code>set_weights</code></h3>
 
@@ -971,17 +885,14 @@ Sets the weights of the layer, from Numpy arrays.
 
 #### Arguments:
 
-* <b>`weights`</b>: a list of Numpy arrays. The number
-        of arrays and their shape must match
-        number of the dimensions of the weights
-        of the layer (i.e. it should match the
-        output of `get_weights`).
-
+*   <b>`weights`</b>: a list of Numpy arrays. The number of arrays and their
+    shape must match number of the dimensions of the weights of the layer (i.e.
+    it should match the output of `get_weights`).
 
 #### Raises:
 
-* <b>`ValueError`</b>: If the provided weights list does not match the
-        layer's specifications.
+*   <b>`ValueError`</b>: If the provided weights list does not match the layer's
+    specifications.
 
 <h3 id="summary"><code>summary</code></h3>
 
@@ -997,17 +908,13 @@ Prints a string summary of the network.
 
 #### Arguments:
 
-* <b>`line_length`</b>: Total length of printed lines
-        (e.g. set this to adapt the display to different
-        terminal window sizes).
-* <b>`positions`</b>: Relative or absolute positions of log elements
-        in each line. If not provided,
-        defaults to `[.33, .55, .67, 1.]`.
-* <b>`print_fn`</b>: Print function to use. Defaults to `print`.
-        It will be called on each line of the summary.
-        You can set it to a custom function
-        in order to capture the string summary.
-
+*   <b>`line_length`</b>: Total length of printed lines (e.g. set this to adapt
+    the display to different terminal window sizes).
+*   <b>`positions`</b>: Relative or absolute positions of log elements in each
+    line. If not provided, defaults to `[.33, .55, .67, 1.]`.
+*   <b>`print_fn`</b>: Print function to use. Defaults to `print`. It will be
+    called on each line of the summary. You can set it to a custom function in
+    order to capture the string summary.
 
 #### Raises:
 
@@ -1026,9 +933,8 @@ To load a network from a JSON save file, use
 
 #### Arguments:
 
-* <b>`**kwargs`</b>: Additional keyword arguments
-        to be passed to `json.dumps()`.
-
+*   <b>`**kwargs`</b>: Additional keyword arguments to be passed to
+    `json.dumps()`.
 
 #### Returns:
 
@@ -1051,14 +957,12 @@ functions / classes.
 
 #### Arguments:
 
-* <b>`**kwargs`</b>: Additional keyword arguments
-        to be passed to `yaml.dump()`.
-
+*   <b>`**kwargs`</b>: Additional keyword arguments to be passed to
+    `yaml.dump()`.
 
 #### Returns:
 
 A YAML string.
-
 
 #### Raises:
 
@@ -1075,21 +979,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -1099,6 +1007,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

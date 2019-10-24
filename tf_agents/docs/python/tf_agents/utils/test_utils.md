@@ -2,18 +2,17 @@
 <meta itemprop="name" content="tf_agents.utils.test_utils" />
 <meta itemprop="path" content="Stable" />
 <meta itemprop="property" content="FLAGS"/>
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.utils.test_utils
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/test_utils.py">View
+source</a>
+
 Common utility functions for testing.
-
-
-
-Defined in [`utils/test_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/test_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -30,11 +29,4 @@ Defined in [`utils/test_utils.py`](https://github.com/tensorflow/agents/tree/mas
 
 ## Other Members
 
-<h3 id="FLAGS"><code>FLAGS</code></h3>
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
-
+*   `FLAGS` <a id="FLAGS"></a>

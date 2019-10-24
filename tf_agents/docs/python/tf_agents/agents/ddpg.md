@@ -5,11 +5,13 @@
 
 # Module: tf_agents.agents.ddpg
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/__init__.py">View
+source</a>
+
 A Deep Deterministic Policy Gradient (DDPG) agent and its networks.
-
-
-
-Defined in [`agents/ddpg/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

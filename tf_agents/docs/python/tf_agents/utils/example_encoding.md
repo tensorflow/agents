@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.utils.example_encoding" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.utils.example_encoding
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/example_encoding.py">View
+source</a>
+
 Utilities for easily encoding nests of numpy arrays into example protos.
-
-
-
-Defined in [`utils/example_encoding.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/example_encoding.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -24,12 +23,4 @@ Defined in [`utils/example_encoding.py`](https://github.com/tensorflow/agents/tr
 [`get_example_encoder(...)`](../../tf_agents/utils/example_encoding/get_example_encoder.md): Get example encoder function for the given spec.
 
 [`get_example_serializer(...)`](../../tf_agents/utils/example_encoding/get_example_serializer.md): Returns string serializer of example protos.
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

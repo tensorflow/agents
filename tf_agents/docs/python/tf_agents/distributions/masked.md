@@ -5,11 +5,13 @@
 
 # Module: tf_agents.distributions.masked
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/distributions/masked.py">View
+source</a>
+
 Define distributions for spaces where not all actions are valid.
-
-
-
-Defined in [`distributions/masked.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/distributions/masked.py).
 
 <!-- Placeholder for "Used in" -->
 

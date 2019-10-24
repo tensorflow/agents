@@ -26,7 +26,6 @@ python tf_agents/agents/sac/examples/v2/train_eval.py \
 ```
 """
 
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -47,20 +46,18 @@ from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
 from tf_agents.eval import metric_utils
-from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metrics
-from tf_agents.metrics import tf_py_metric
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import normal_projection_network
 from tf_agents.policies import greedy_policy
+from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_multi_string('gin_file', None,
-                          'Path to the trainer config files.')
+flags.DEFINE_multi_string('gin_file', None, 'Path to the trainer config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding to pass through.')
 
 FLAGS = flags.FLAGS
@@ -84,6 +81,8 @@ def normal_projection_net(action_spec,
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
+    eval_env_name=None,
+    env_load_fn=suite_mujoco.load,
     num_iterations=1000000,
     actor_fc_layers=(256, 256),
     critic_obs_fc_layers=None,
@@ -139,8 +138,9 @@ def train_eval(
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
-    tf_env = tf_py_environment.TFPyEnvironment(suite_mujoco.load(env_name))
-    eval_tf_env = tf_py_environment.TFPyEnvironment(suite_mujoco.load(env_name))
+    tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
+    eval_env_name = eval_env_name or env_name
+    eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(eval_env_name))
 
     time_step_spec = tf_env.time_step_spec()
     observation_spec = time_step_spec.observation
@@ -189,11 +189,15 @@ def train_eval(
     train_metrics = [
         tf_metrics.NumberOfEpisodes(),
         tf_metrics.EnvironmentSteps(),
-        tf_py_metric.TFPyMetric(py_metrics.AverageReturnMetric()),
-        tf_py_metric.TFPyMetric(py_metrics.AverageEpisodeLengthMetric()),
+        tf_metrics.AverageReturnMetric(
+            buffer_size=num_eval_episodes, batch_size=tf_env.batch_size),
+        tf_metrics.AverageEpisodeLengthMetric(
+            buffer_size=num_eval_episodes, batch_size=tf_env.batch_size),
     ]
 
     eval_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
+    initial_collect_policy = random_tf_policy.RandomTFPolicy(
+        tf_env.time_step_spec(), tf_env.action_spec())
     collect_policy = tf_agent.collect_policy
 
     train_checkpointer = common.Checkpointer(
@@ -215,7 +219,7 @@ def train_eval(
 
     initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
-        collect_policy,
+        initial_collect_policy,
         observers=replay_observer,
         num_steps=initial_collect_steps)
 
@@ -262,6 +266,13 @@ def train_eval(
         num_steps=2).prefetch(3)
     iterator = iter(dataset)
 
+    def train_step():
+      experience, _ = next(iterator)
+      return tf_agent.train(experience)
+
+    if use_tf_functions:
+      train_step = common.function(train_step)
+
     for _ in range(num_iterations):
       start_time = time.time()
       time_step, policy_state = collect_driver.run(
@@ -269,8 +280,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _ = next(iterator)
-        train_loss = tf_agent.train(experience)
+        train_loss = train_step()
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:

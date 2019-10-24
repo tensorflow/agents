@@ -5,6 +5,12 @@
 
 # tf_agents.trajectories.time_step.time_step_spec
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/time_step.py">View
+source</a>
+
 Returns a `TimeStep` spec given the observation_spec.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.trajectories.time_step.time_step_spec(observation_spec=None)
 ```
 
 
-
-Defined in [`trajectories/time_step.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/trajectories/time_step.py).
 
 <!-- Placeholder for "Used in" -->

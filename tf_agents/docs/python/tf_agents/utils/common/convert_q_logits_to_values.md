@@ -5,6 +5,12 @@
 
 # tf_agents.utils.common.convert_q_logits_to_values
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Converts a set of Q-value logits into Q-values using the provided support.
 
 ``` python
@@ -15,8 +21,6 @@ tf_agents.utils.common.convert_q_logits_to_values(
 ```
 
 
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 

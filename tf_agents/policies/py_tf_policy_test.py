@@ -46,9 +46,10 @@ class DummyNet(network.Network):
       state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
     else:
       state_spec = ()
-    super(DummyNet, self).__init__(input_tensor_spec=None,
-                                   state_spec=state_spec,
-                                   name=name)
+    super(DummyNet, self).__init__(
+        input_tensor_spec=tensor_spec.TensorSpec([2], tf.float32, 'obs'),
+        state_spec=state_spec,
+        name=name)
 
     kernel_initializer = None
     bias_initializer = None
@@ -66,7 +67,8 @@ class DummyNet(network.Network):
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self._dummy_layers:
       inputs = layer(inputs)
@@ -123,6 +125,8 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(expected_action_spec, policy.action_spec)
 
   def testRaiseValueErrorWithoutSession(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     with self.assertRaisesRegexp(
         AttributeError,
@@ -132,7 +136,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAssignSession(self, batch_size):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     policy.session = tf.compat.v1.Session()
@@ -144,7 +148,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testZeroState(self, batch_size):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
@@ -156,7 +160,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAction(self, batch_size):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     single_observation = np.array([1, 2], dtype=np.float32)
     time_steps = ts.restart(single_observation)
@@ -239,7 +243,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def testDeferredBatchingAction(self):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     # Construct policy without providing batch_size.
     tf_policy = q_policy.QPolicy(
@@ -265,7 +269,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def testDeferredBatchingStateful(self):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     # Construct policy without providing batch_size.
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)

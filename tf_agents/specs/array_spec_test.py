@@ -97,6 +97,14 @@ class ArraySpecNestSampleTest(tf.test.TestCase, parameterized.TestCase):
     self.assertTrue(np.all(sample >= -10))
     self.assertTrue(np.all(sample <= 10))
 
+  def testBoundedArraySpecSampleMultipleBounds(self, dtype):
+    spec = array_spec.BoundedArraySpec((2,), dtype, [-10, 1], [10, 3])
+    sample = array_spec.sample_spec_nest(spec, self.rng)
+    self.assertGreaterEqual(sample[0], -10)
+    self.assertLessEqual(sample[0], 10)
+    self.assertGreaterEqual(sample[1], 1)
+    self.assertLessEqual(sample[1], 3)
+
   def testBoundedArraySpecNoBounds(self, dtype):
     spec = array_spec.ArraySpec((2, 3), dtype)
     bounded_spec = array_spec.BoundedArraySpec.from_spec(spec)

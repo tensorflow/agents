@@ -71,6 +71,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     self._action_spec = self._envs[0].action_spec()
     self._observation_spec = self._envs[0].observation_spec()
     self._time_step_spec = self._envs[0].time_step_spec()
+    self._parallel_execution = True
     if any(env.action_spec() != self._action_spec for env in self._envs):
       raise ValueError('All environments must have the same action spec.')
     if any(env.time_step_spec() != self._time_step_spec for env in self._envs):
@@ -163,6 +164,16 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
       ]
     return unstacked_actions
 
+  def seed(self, seeds):
+    """Seeds the parallel environments."""
+    if len(seeds) != len(self._envs):
+      raise ValueError(
+          'Number of seeds should match the number of parallel_envs.')
+
+    promises = [env.call('seed', seed) for seed, env in zip(seeds, self._envs)]
+    # Block until all envs are seeded.
+    return [promise() for promise in promises]
+
 
 class ProcessPyEnvironment(object):
   """Step a single env in a separate process for lock free paralellism."""
@@ -221,7 +232,7 @@ class ProcessPyEnvironment(object):
       self._conn.close()
       self._process.join(5)
       raise result
-    assert result is self._READY, result
+    assert result == self._READY, result
 
   def observation_spec(self):
     if not self._observation_spec:
@@ -370,6 +381,7 @@ class ProcessPyEnvironment(object):
           continue
         if message == self._CLOSE:
           assert payload is None
+          env.close()
           break
         raise KeyError('Received message of unknown type {}'.format(message))
     except Exception:  # pylint: disable=broad-except

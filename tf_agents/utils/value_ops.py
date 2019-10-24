@@ -19,7 +19,11 @@
 import tensorflow as tf
 
 
-def discounted_return(rewards, discounts, final_value=None, time_major=True):
+def discounted_return(rewards,
+                      discounts,
+                      final_value=None,
+                      time_major=True,
+                      provide_all_returns=True):
   """Computes discounted return.
 
   ```
@@ -42,15 +46,21 @@ def discounted_return(rewards, discounts, final_value=None, time_major=True):
       reward to go computation. Otherwise it's zero.
     time_major: A boolean indicating whether input tensors are time major. False
       means input tensors have shape [B, T].
+    provide_all_returns: A boolean; if True, this will provide all of the
+      returns by time dimension; if False, this will only give the single
+      complete discounted return.
 
   Returns:
+    If provide_all_returns is True:
       A tensor with shape [T, B] (or [T]) representing the discounted returns.
       Shape is [B, T] when time_major is false.
+    If provide_all_returns is False:
+      A tensor with shape [B] (or []) representing the discounted returns.
   """
   if not time_major:
     with tf.name_scope("to_time_major_tensors"):
-      discounts = tf.transpose(a=discounts)
-      rewards = tf.transpose(a=rewards)
+      discounts = tf.transpose(discounts)
+      rewards = tf.transpose(rewards)
 
   if final_value is None:
     final_value = tf.zeros_like(rewards[-1])
@@ -59,16 +69,23 @@ def discounted_return(rewards, discounts, final_value=None, time_major=True):
     reward, discount = reward_discount
     return accumulated_discounted_reward * discount + reward
 
-  returns = tf.scan(
-      fn=discounted_return_fn,
-      elems=(rewards, discounts),
-      reverse=True,
-      initializer=final_value,
-      back_prop=False)
+  if provide_all_returns:
+    returns = tf.scan(
+        fn=discounted_return_fn,
+        elems=(rewards, discounts),
+        reverse=True,
+        initializer=final_value,
+        back_prop=False)
 
-  if not time_major:
-    with tf.name_scope("to_batch_major_tensors"):
-      returns = tf.transpose(a=returns)
+    if not time_major:
+      with tf.name_scope("to_batch_major_tensors"):
+        returns = tf.transpose(returns)
+  else:
+    returns = tf.foldr(
+        fn=discounted_return_fn,
+        elems=(rewards, discounts),
+        initializer=final_value,
+        back_prop=False)
 
   return tf.stop_gradient(returns)
 
@@ -109,9 +126,9 @@ def generalized_advantage_estimation(values,
 
   if not time_major:
     with tf.name_scope("to_time_major_tensors"):
-      discounts = tf.transpose(a=discounts)
-      rewards = tf.transpose(a=rewards)
-      values = tf.transpose(a=values)
+      discounts = tf.transpose(discounts)
+      rewards = tf.transpose(rewards)
+      values = tf.transpose(values)
 
   with tf.name_scope("gae"):
 
@@ -133,6 +150,6 @@ def generalized_advantage_estimation(values,
 
   if not time_major:
     with tf.name_scope("to_batch_major_tensors"):
-      advantages = tf.transpose(a=advantages)
+      advantages = tf.transpose(advantages)
 
   return tf.stop_gradient(advantages)

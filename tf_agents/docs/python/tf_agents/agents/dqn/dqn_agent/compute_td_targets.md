@@ -5,7 +5,11 @@
 
 # tf_agents.agents.dqn.dqn_agent.compute_td_targets
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/dqn_agent.py">View
+source</a>
 
 ``` python
 tf_agents.agents.dqn.dqn_agent.compute_td_targets(
@@ -16,7 +20,5 @@ tf_agents.agents.dqn.dqn_agent.compute_td_targets(
 ```
 
 
-
-Defined in [`agents/dqn/dqn_agent.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/dqn_agent.py).
 
 <!-- Placeholder for "Used in" -->

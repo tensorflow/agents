@@ -51,6 +51,7 @@ from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
+from tf_agents.policies import policy_saver
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
@@ -100,6 +101,8 @@ def train_eval(
     num_eval_episodes=30,
     eval_interval=500,
     # Params for summaries and logging
+    train_checkpoint_interval=500,
+    policy_checkpoint_interval=500,
     log_interval=50,
     summary_interval=50,
     summaries_flush_secs=1,
@@ -113,6 +116,7 @@ def train_eval(
   root_dir = os.path.expanduser(root_dir)
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
+  saved_model_dir = os.path.join(root_dir, 'policy_saved_model')
 
   train_summary_writer = tf.compat.v2.summary.create_file_writer(
       train_dir, flush_millis=summaries_flush_secs * 1000)
@@ -172,8 +176,10 @@ def train_eval(
     ]
 
     train_metrics = step_metrics + [
-        tf_metrics.AverageReturnMetric(),
-        tf_metrics.AverageEpisodeLengthMetric(),
+        tf_metrics.AverageReturnMetric(
+            batch_size=num_parallel_environments),
+        tf_metrics.AverageEpisodeLengthMetric(
+            batch_size=num_parallel_environments),
     ]
 
     eval_policy = tf_agent.policy
@@ -184,16 +190,35 @@ def train_eval(
         batch_size=num_parallel_environments,
         max_length=replay_buffer_capacity)
 
+    train_checkpointer = common.Checkpointer(
+        ckpt_dir=train_dir,
+        agent=tf_agent,
+        global_step=global_step,
+        metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
+    policy_checkpointer = common.Checkpointer(
+        ckpt_dir=os.path.join(train_dir, 'policy'),
+        policy=eval_policy,
+        global_step=global_step)
+    saved_model = policy_saver.PolicySaver(
+        eval_policy, train_step=global_step)
+
+    train_checkpointer.initialize_or_restore()
+
     collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=collect_episodes_per_iteration)
 
+    def train_step():
+      trajectories = replay_buffer.gather_all()
+      return tf_agent.train(experience=trajectories)
+
     if use_tf_functions:
       # TODO(b/123828980): Enable once the cause for slowdown was identified.
       collect_driver.run = common.function(collect_driver.run, autograph=False)
       tf_agent.train = common.function(tf_agent.train, autograph=False)
+      train_step = common.function(train_step)
 
     collect_time = 0
     train_time = 0
@@ -217,8 +242,7 @@ def train_eval(
       collect_time += time.time() - start_time
 
       start_time = time.time()
-      trajectories = replay_buffer.gather_all()
-      total_loss, _ = tf_agent.train(experience=trajectories)
+      total_loss, _ = train_step()
       replay_buffer.clear()
       train_time += time.time() - start_time
 
@@ -236,6 +260,15 @@ def train_eval(
         with tf.compat.v2.summary.record_if(True):
           tf.compat.v2.summary.scalar(
               name='global_steps_per_sec', data=steps_per_sec, step=global_step)
+
+        if global_step_val % train_checkpoint_interval == 0:
+          train_checkpointer.save(global_step=global_step_val)
+
+        if global_step_val % policy_checkpoint_interval == 0:
+          policy_checkpointer.save(global_step=global_step_val)
+          saved_model_path = os.path.join(
+              saved_model_dir, 'policy_' + ('%d' % global_step_val).zfill(9))
+          saved_model.save(saved_model_path)
 
         timed_at_step = global_step_val
         collect_time = 0

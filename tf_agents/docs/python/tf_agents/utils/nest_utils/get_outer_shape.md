@@ -5,6 +5,12 @@
 
 # tf_agents.utils.nest_utils.get_outer_shape
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Runtime batch dims of tensor's batch dimension `dim`.
 
 ``` python
@@ -15,7 +21,5 @@ tf_agents.utils.nest_utils.get_outer_shape(
 ```
 
 
-
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
 
 <!-- Placeholder for "Used in" -->

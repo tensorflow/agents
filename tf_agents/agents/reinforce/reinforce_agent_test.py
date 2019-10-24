@@ -20,6 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
+from absl.testing.absltest import mock
+
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -96,7 +98,8 @@ class DummyValueNet(network.Network):
             kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
             bias_initializer=tf.compat.v1.initializers.constant([5])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     batch_squash = network_utils.BatchSquash(self._outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
@@ -312,10 +315,46 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     else:
       loss = agent.train(experience)
 
-    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 0)
     self.evaluate(loss)
     self.assertEqual(self.evaluate(counter), 1)
+
+  @parameterized.parameters(
+      (False,), (True,)
+  )
+  def testWithAdvantageFn(self, with_value_network):
+    advantage_fn = mock.Mock(
+        side_effect=lambda returns, _: returns)
+
+    value_network = (DummyValueNet(self._obs_spec) if with_value_network
+                     else None)
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=False),
+        value_network=value_network,
+        advantage_fn=advantage_fn,
+        optimizer=None,
+    )
+
+    step_type = tf.constant(
+        [[ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
+          ts.StepType.LAST]])
+    reward = tf.constant([[0, 0, 0, 0]], dtype=tf.float32)
+    discount = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
+    observations = tf.constant(
+        [[[1, 2], [1, 2], [1, 2], [1, 2]]], dtype=tf.float32)
+    actions = tf.constant([[[0], [1], [2], [3]]], dtype=tf.float32)
+
+    experience = trajectory.Trajectory(
+        step_type, observations, actions, (),
+        step_type, reward, discount)
+
+    agent.total_loss(experience, reward, None)
+
+    advantage_fn.assert_called_once()
 
 
 if __name__ == '__main__':

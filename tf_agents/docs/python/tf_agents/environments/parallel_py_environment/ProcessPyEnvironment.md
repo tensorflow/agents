@@ -1,7 +1,6 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.environments.parallel_py_environment.ProcessPyEnvironment" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="__getattr__"/>
 <meta itemprop="property" content="__init__"/>
 <meta itemprop="property" content="action_spec"/>
 <meta itemprop="property" content="call"/>
@@ -16,20 +15,25 @@
 
 # tf_agents.environments.parallel_py_environment.ProcessPyEnvironment
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
+
 ## Class `ProcessPyEnvironment`
 
 Step a single env in a separate process for lock free paralellism.
 
 
 
-
-
-Defined in [`environments/parallel_py_environment.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
 
 ``` python
 __init__(
@@ -47,10 +51,10 @@ not access global variables.
 
 #### Args:
 
-* <b>`env_constructor`</b>: Callable that creates and returns a Python environment.
-* <b>`flatten`</b>: Boolean, whether to assume flattened actions and time_steps
-    during communication to avoid overhead.
-
+*   <b>`env_constructor`</b>: Callable that creates and returns a Python
+    environment.
+*   <b>`flatten`</b>: Boolean, whether to assume flattened actions and
+    time_steps during communication to avoid overhead.
 
 #### Attributes:
 
@@ -62,35 +66,19 @@ not access global variables.
 
 ## Methods
 
-<h3 id="__getattr__"><code>__getattr__</code></h3>
-
-``` python
-__getattr__(name)
-```
-
-Request an attribute from the environment.
-
-Note that this involves communication with the external process, so it can
-be slow.
-
-#### Args:
-
-* <b>`name`</b>: Attribute to access.
-
-
-#### Returns:
-
-Value of the attribute.
-
 <h3 id="action_spec"><code>action_spec</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
 
 ``` python
 action_spec()
 ```
 
-
-
 <h3 id="call"><code>call</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
 
 ``` python
 call(
@@ -115,6 +103,9 @@ Promise object that blocks and provides the return value when called.
 
 <h3 id="close"><code>close</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
+
 ``` python
 close()
 ```
@@ -123,13 +114,17 @@ Send a close message to the external process and join it.
 
 <h3 id="observation_spec"><code>observation_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
+
 ``` python
 observation_spec()
 ```
 
-
-
 <h3 id="reset"><code>reset</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
 
 ``` python
 reset(blocking=True)
@@ -149,6 +144,9 @@ observation.
 
 <h3 id="start"><code>start</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
+
 ``` python
 start(wait_to_start=True)
 ```
@@ -160,6 +158,9 @@ Start the process.
 * <b>`wait_to_start`</b>: Whether the call should wait for an env initialization.
 
 <h3 id="step"><code>step</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
 
 ``` python
 step(
@@ -182,19 +183,20 @@ time step when blocking, otherwise callable that returns the time step.
 
 <h3 id="time_step_spec"><code>time_step_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
+
 ``` python
 time_step_spec()
 ```
 
-
-
 <h3 id="wait_start"><code>wait_start</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/parallel_py_environment.py">View
+source</a>
 
 ``` python
 wait_start()
 ```
 
 Wait for the started process to finish initialization.
-
-
-

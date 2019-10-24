@@ -19,40 +19,39 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import random
 
+from absl import flags
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tf_agents.networks import test_utils as networks_test_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
+from tf_agents.utils import test_utils
 
 
-class CreateCounterTest(tf.test.TestCase):
+class CreateCounterTest(test_utils.TestCase):
 
-  @test_util.run_in_graph_and_eager_modes()
   def testDefaults(self):
     counter = common.create_variable('counter')
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 0)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testInitialValue(self):
     counter = common.create_variable('counter', 1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 1)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testIncrement(self):
     counter = common.create_variable('counter', 0)
     inc_counter = counter.assign_add(1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(inc_counter), 1)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testMultipleCounters(self):
     counter1 = common.create_variable('counter', 1)
     counter2 = common.create_variable('counter', 2)
@@ -60,20 +59,18 @@ class CreateCounterTest(tf.test.TestCase):
     self.assertEqual(self.evaluate(counter1), 1)
     self.assertEqual(self.evaluate(counter2), 2)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testInitialValueWithShape(self):
     counter = common.create_variable('counter', 1, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(counter), [1, 1])
 
-  @test_util.run_in_graph_and_eager_modes()
   def testNonScalarInitialValue(self):
     var = common.create_variable('var', [1, 2], shape=None)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(var), [1, 2])
 
 
-class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
+class SoftVariablesUpdateTest(test_utils.TestCase, parameterized.TestCase):
 
   @parameterized.parameters(0.0, 0.5, 1.0)
   def testUpdateOnlyTargetVariables(self, tau):
@@ -135,7 +132,7 @@ class SoftVariablesUpdateTest(tf.test.TestCase, parameterized.TestCase):
       self.assertAllClose(n_v_t, tau*i_v_s + (1-tau)*i_v_t)
 
 
-class JoinScopeTest(tf.test.TestCase):
+class JoinScopeTest(test_utils.TestCase):
 
   def _test_scopes(self, parent_scope, child_scope, expected_joined_scope):
     joined_scope = common.join_scope(parent_scope, child_scope)
@@ -154,7 +151,7 @@ class JoinScopeTest(tf.test.TestCase):
     self._test_scopes('', '', '')
 
 
-class IndexWithActionsTest(tf.test.TestCase):
+class IndexWithActionsTest(test_utils.TestCase):
 
   def checkCorrect(self,
                    q_values,
@@ -217,10 +214,9 @@ class IndexWithActionsTest(tf.test.TestCase):
     self.assertAllClose([[51, 52]], self.evaluate(values))
 
 
-class PeriodicallyTest(tf.test.TestCase):
+class PeriodicallyTest(test_utils.TestCase):
   """Tests function periodically."""
 
-  @test_util.run_in_graph_and_eager_modes()
   def testPeriodically(self):
     """Tests that a function is called exactly every `period` steps."""
     target = tf.compat.v2.Variable(0)
@@ -236,7 +232,6 @@ class PeriodicallyTest(tf.test.TestCase):
       self.assertEqual(desired_value, result)
       self.evaluate(periodic_update)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testPeriodOne(self):
     """Tests that the function is called every time if period == 1."""
     target = tf.compat.v2.Variable(0)
@@ -250,7 +245,6 @@ class PeriodicallyTest(tf.test.TestCase):
       self.assertEqual(desired_value, result)
       self.evaluate(periodic_update)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testPeriodNone(self):
     """Tests that the function is never called if period == None."""
     target = tf.compat.v2.Variable(0)
@@ -264,13 +258,11 @@ class PeriodicallyTest(tf.test.TestCase):
       _, result = self.evaluate([periodic_update, target])
       self.assertEqual(desired_value, result)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testFunctionNotCallable(self):
     """Tests value error when argument fn is not a callable."""
     self.assertRaises(
         TypeError, common.periodically, body=1, period=2)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testPeriodVariable(self):
     """Tests that a function is called exactly every `period` steps."""
     target = tf.compat.v2.Variable(0)
@@ -296,7 +288,6 @@ class PeriodicallyTest(tf.test.TestCase):
       self.assertEqual(desired_value, result)
       self.evaluate(periodic_update)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testMultiplePeriodically(self):
     """Tests that 2 periodically ops run independently."""
     target1 = tf.compat.v2.Variable(0)
@@ -321,7 +312,7 @@ class PeriodicallyTest(tf.test.TestCase):
       self.evaluate([periodic_update1, periodic_update2])
 
 
-class ClipToSpecTest(tf.test.TestCase):
+class ClipToSpecTest(test_utils.TestCase):
 
   def testClipToBounds(self):
     value = tf.constant([1, 2, 4, -3])
@@ -334,7 +325,7 @@ class ClipToSpecTest(tf.test.TestCase):
     self.assertAllClose(expected_clipped_value, clipped_value_)
 
 
-class ScaleToSpecTest(tf.test.TestCase):
+class ScaleToSpecTest(test_utils.TestCase):
 
   def testSpecMeansAndMagnitudes(self):
     spec = tensor_spec.BoundedTensorSpec(
@@ -365,9 +356,8 @@ class ScaleToSpecTest(tf.test.TestCase):
     self.assertAllClose(expected_scaled_value, scaled_value_)
 
 
-class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
+class OrnsteinUhlenbeckSamplesTest(test_utils.TestCase):
 
-  @test_util.run_in_graph_and_eager_modes()
   def testSamples(self):
     """Tests that samples follow Ornstein-Uhlenbeck process.
 
@@ -396,7 +386,6 @@ class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
     self.assertAlmostEqual(mean, 0.0, places=1)
     self.assertAlmostEqual(variance, sigma*sigma, places=2)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testMultipleSamples(self):
     """Tests that creates different samples.
 
@@ -418,7 +407,7 @@ class OrnsteinUhlenbeckSamplesTest(tf.test.TestCase):
     self.assertGreater(difference, 0.0)
 
 
-class LogProbabilityTest(tf.test.TestCase):
+class LogProbabilityTest(test_utils.TestCase):
 
   def testLogProbability(self):
     action_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
@@ -430,6 +419,17 @@ class LogProbabilityTest(tf.test.TestCase):
     log_probs_ = self.evaluate(log_probs)
     self.assertEqual(len(log_probs_.shape), 0)
     self.assertNear(log_probs_, 2 * -0.5 * np.log(2 * 3.14159), 0.001)
+
+  def testLogProbabilityOneHot(self):
+    action_spec = tensor_spec.BoundedTensorSpec([3], tf.int32, 0, 1)
+    distribution = tfp.distributions.OneHotCategorical(probs=[0.6, 0.3, 0.1])
+    actions = tf.constant([1, 0, 0])
+    log_probs = common.log_probability(distribution, actions, action_spec)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    log_probs_ = self.evaluate(log_probs)
+    self.assertEqual(len(log_probs_.shape), 0)
+    self.assertNear(log_probs_, np.log(0.6), 0.00001)
 
   def testNestedLogProbability(self):
     action_spec = [
@@ -477,7 +477,7 @@ class LogProbabilityTest(tf.test.TestCase):
                          4 * -0.5 * np.log(8 * 3.14159)], 0.001)
 
 
-class EntropyTest(tf.test.TestCase):
+class EntropyTest(test_utils.TestCase):
 
   def testEntropy(self):
     action_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
@@ -535,7 +535,7 @@ class EntropyTest(tf.test.TestCase):
                          4 * (0.5 + 0.5 * np.log(8 * 3.14159))], 0.001)
 
 
-class DiscountedFutureSumTest(tf.test.TestCase):
+class DiscountedFutureSumTest(test_utils.TestCase):
 
   def testNumSteps(self):
     values = [[0, 1, 2, 3],
@@ -605,7 +605,7 @@ class DiscountedFutureSumTest(tf.test.TestCase):
                         self.evaluate(discounted_returns), atol=0.001)
 
 
-class ShiftValuesTest(tf.test.TestCase):
+class ShiftValuesTest(test_utils.TestCase):
 
   def testNumSteps(self):
     values = [[0, 1, 2, 3],
@@ -681,7 +681,7 @@ class ShiftValuesTest(tf.test.TestCase):
     self.assertAllClose(expected_result_step20, self.evaluate(result_step20))
 
 
-class GetEpisodeMaskTest(tf.test.TestCase):
+class GetEpisodeMaskTest(test_utils.TestCase):
 
   def test(self):
     first = ts.StepType.FIRST
@@ -701,7 +701,7 @@ class GetEpisodeMaskTest(tf.test.TestCase):
     self.assertAllEqual(expected_mask, self.evaluate(episode_mask))
 
 
-class GetContiguousSubEpisodesTest(tf.test.TestCase):
+class GetContiguousSubEpisodesTest(test_utils.TestCase):
 
   def testNumSteps(self):
     discounts = [
@@ -720,7 +720,7 @@ class GetContiguousSubEpisodesTest(tf.test.TestCase):
     self.assertAllClose(expected_result, self.evaluate(result))
 
 
-class ConvertQLogitsToValuesTest(tf.test.TestCase):
+class ConvertQLogitsToValuesTest(test_utils.TestCase):
 
   def testConvertQLogitsToValues(self):
     logits = tf.constant([[2., 4., 2.], [1., 1., 20.]])
@@ -738,7 +738,7 @@ class ConvertQLogitsToValuesTest(tf.test.TestCase):
     self.assertAllClose(values_, [[20.0, 30.0], [10., 25.]], 0.001)
 
 
-class ComputeReturnsTest(tf.test.TestCase):
+class ComputeReturnsTest(test_utils.TestCase):
 
   def testComputeReturns(self):
     rewards = tf.constant(np.ones(9), dtype=tf.float32)
@@ -774,7 +774,7 @@ class ComputeReturnsTest(tf.test.TestCase):
     self.assertAllClose(returns, expected_returns)
 
 
-class ReplicateTensorTest(tf.test.TestCase, parameterized.TestCase):
+class ReplicateTensorTest(test_utils.TestCase, parameterized.TestCase):
 
   @parameterized.parameters('list', 'tf_constant')
   def testReplicateTensor(self, outer_shape_type):
@@ -793,6 +793,158 @@ class ReplicateTensorTest(tf.test.TestCase, parameterized.TestCase):
       # The shape should be fully defined in this case.
       self.assertEqual(tf.TensorShape(outer_shape + list(value.shape)),
                        replicated_value.shape)
+
+
+class FunctionTest(test_utils.TestCase):
+
+  def testFunction(self):
+    outer_graph = tf.compat.v1.get_default_graph()
+
+    @common.function_in_tf1()
+    def add(x, y):
+      if common.has_eager_been_enabled():
+        # In TF2, this should be executed in eager mode.
+        self.assertTrue(tf.executing_eagerly())
+      else:
+        # In TF1, this should be inside a temporary graph because it's being
+        # created inside a tf.function.
+        inner_graph = tf.compat.v1.get_default_graph()
+        self.assertNotEqual(outer_graph, inner_graph)
+      return x + y
+
+    z = add(tf.constant(1.0), 2.0)
+
+    self.assertAllClose(3.0, self.evaluate(z))
+
+
+class SpecSaveTest(tf.test.TestCase, parameterized.TestCase):
+
+  def test_save_and_load(self):
+    spec = {
+        'spec_1':
+            tensor_spec.TensorSpec((2, 3), tf.int32),
+        'bounded_spec_1':
+            tensor_spec.BoundedTensorSpec((2, 3), tf.float32, -10, 10),
+        'bounded_spec_2':
+            tensor_spec.BoundedTensorSpec((2, 3), tf.int8, -10, -10),
+        'bounded_array_spec_3':
+            tensor_spec.BoundedTensorSpec((2,), tf.int32, [-10, -10], [10, 10]),
+        'bounded_array_spec_4':
+            tensor_spec.BoundedTensorSpec((2,), tf.float16, [-10, -9], [10, 9]),
+        'dict_spec': {
+            'spec_2':
+                tensor_spec.TensorSpec((2, 3), tf.float32),
+            'bounded_spec_2':
+                tensor_spec.BoundedTensorSpec((2, 3), tf.int16, -10, 10)
+        },
+        'tuple_spec': (
+            tensor_spec.TensorSpec((2, 3), tf.int32),
+            tensor_spec.BoundedTensorSpec((2, 3), tf.float64, -10, 10),
+        ),
+        'list_spec': [
+            tensor_spec.TensorSpec((2, 3), tf.int64),
+            (tensor_spec.TensorSpec((2, 3), tf.float32),
+             tensor_spec.BoundedTensorSpec((2, 3), tf.float32, -10, 10)),
+        ],
+    }
+
+    spec_save_path = os.path.join(flags.FLAGS.test_tmpdir, 'spec.tfrecord')
+    common.save_spec(spec, spec_save_path)
+
+    loaded_spec_nest = common.load_spec(spec_save_path)
+
+    self.assertAllEqual(sorted(spec.keys()), sorted(loaded_spec_nest.keys()))
+
+    for expected_spec, loaded_spec in zip(
+        tf.nest.flatten(spec), tf.nest.flatten(loaded_spec_nest)):
+      self.assertAllEqual(expected_spec.shape, loaded_spec.shape)
+      self.assertEqual(expected_spec.dtype, loaded_spec.dtype)
+
+
+class NetworkVariableChecks(tf.test.TestCase):
+
+  def setUp(self):
+    super(tf.test.TestCase, self).setUp()
+    self._observation_spec = tensor_spec.TensorSpec([1, 2], tf.float32)
+    self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
+
+  def test_check_no_shared_variables(self):
+    layer_1 = tf.keras.layers.Dense(3)
+    layer_2 = tf.keras.layers.Dense(3)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
+    q_net_1.create_variables()
+    q_net_2.create_variables()
+    common.check_no_shared_variables(q_net_1, q_net_2)
+
+  def test_check_no_shared_variables_expect_fail(self):
+    dense_layer = tf.keras.layers.Dense(3)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, dense_layer)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, dense_layer)
+    q_net_1.create_variables()
+    q_net_2.create_variables()
+    with self.assertRaises(ValueError):
+      common.check_no_shared_variables(q_net_1, q_net_2)
+
+  def test_check_matching_networks(self):
+    layer_1 = tf.keras.layers.Dense(3)
+    layer_2 = tf.keras.layers.Dense(3)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
+    q_net_1.create_variables()
+    q_net_2.create_variables()
+    common.check_matching_networks(q_net_1, q_net_2)
+
+  def test_check_matching_networks_different_input_spec(self):
+    layer_1 = tf.keras.layers.Dense(3)
+    layer_2 = tf.keras.layers.Dense(3)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(
+        tensor_spec.TensorSpec([3], tf.float32), self._action_spec, layer_2)
+    q_net_1.create_variables()
+    q_net_2.create_variables()
+    with self.assertRaisesRegexp(
+        ValueError, 'Input tensor specs of network and target network '
+        'do not match'):
+      common.check_matching_networks(q_net_1, q_net_2)
+
+  def test_check_matching_networks_different_vars(self):
+    layer_1 = tf.keras.layers.Dense(3)
+    layer_2 = tf.keras.layers.GRU(3)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
+    q_net_1.create_variables()
+    q_net_2.create_variables()
+    with self.assertRaisesRegexp(ValueError, 'Variables lengths do not match'):
+      common.check_matching_networks(q_net_1, q_net_2)
+
+  def test_check_matching_networks_different_shape(self):
+    layer_1 = tf.keras.layers.Dense(3)
+    layer_2 = tf.keras.layers.Dense(4)
+    q_net_1 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_1)
+    q_net_2 = networks_test_utils.KerasLayersNet(self._observation_spec,
+                                                 self._action_spec, layer_2)
+    q_net_1.create_variables()
+    q_net_2.create_variables()
+    with self.assertRaisesRegexp(ValueError,
+                                 'Variable dtypes or shapes do not match'):
+      common.check_matching_networks(q_net_1, q_net_2)
+
+
+class LegacyTF1Test(test_utils.TestCase):
+
+  def test_in_legacy_tf1(self):
+    self.assertIsInstance(common.in_legacy_tf1(), bool)
 
 
 if __name__ == '__main__':

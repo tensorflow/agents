@@ -20,13 +20,19 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+import os
+
 from absl import logging
+import distutils.version
 
 import tensorflow as tf
 
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
+from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 MISSING_RESOURCE_VARIABLES_ERROR = """
 Resource variables are not enabled.  Please enable them by adding the following
@@ -38,6 +44,17 @@ For unit tests, subclass `tf_agents.utils.test_utils.TestCase`.
 
 def resource_variables_enabled():
   return tf.compat.v1.resource_variables_enabled()
+
+
+_IN_LEGACY_TF1 = (
+    tf.__git_version__ != 'unknown'
+    and tf.__version__ != '1.15.0'
+    and (distutils.version.LooseVersion(tf.__version__) <=
+         distutils.version.LooseVersion('1.15.0.dev20190821')))
+
+
+def in_legacy_tf1():
+  return _IN_LEGACY_TF1
 
 
 def function(*args, **kwargs):
@@ -93,21 +110,24 @@ def function_in_tf1(*args, **kwargs):
   Returns:
     A callable that wraps a function.
   """
+
   def maybe_wrap(fn):
     """Helper function."""
-    if has_eager_been_enabled():
-      # We're either in eager mode or in tf.function mode (no in-between); so
-      # autodep-like behavior is already expected of fn.
-      return fn
-    else:
-      # We're in TF1 mode and want to wrap in common.function to get autodeps.
-      @functools.wraps(fn)
-      def with_check_resource_vars(*fn_args, **fn_kwargs):
-        if not resource_variables_enabled():
-          raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
+    # We're in TF1 mode and want to wrap in common.function to get autodeps.
+    wrapped = [None]
+    @functools.wraps(fn)
+    def with_check_resource_vars(*fn_args, **fn_kwargs):
+      """Helper function for calling common.function."""
+      if has_eager_been_enabled():
+        # We're either in eager mode or in tf.function mode (no in-between); so
+        # autodep-like behavior is already expected of fn.
         return fn(*fn_args, **fn_kwargs)
-      wrapped = function(*args, **kwargs)(with_check_resource_vars)
-      return wrapped
+      if not resource_variables_enabled():
+        raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
+      if wrapped[0] is None:
+        wrapped[0] = function(*args, **kwargs)(fn)
+      return wrapped[0](*fn_args, **fn_kwargs)  # pylint: disable=not-callable
+    return with_check_resource_vars
   return maybe_wrap
 
 
@@ -131,10 +151,8 @@ def create_variable(name,
         initial_value = lambda: initializer(shape)
       else:
         initial_value = initializer
-    return tf.compat.v2.Variable(initial_value,
-                                 trainable=trainable,
-                                 dtype=dtype,
-                                 name=name)
+    return tf.compat.v2.Variable(
+        initial_value, trainable=trainable, dtype=dtype, name=name)
   collections = [tf.compat.v1.GraphKeys.GLOBAL_VARIABLES]
   if use_local_variable:
     collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
@@ -154,7 +172,9 @@ def create_variable(name,
       trainable=trainable)
 
 
-def soft_variables_update(source_variables, target_variables, tau=1.0,
+def soft_variables_update(source_variables,
+                          target_variables,
+                          tau=1.0,
                           sort_variables_by_name=False):
   """Performs a soft/hard update of variables from the source to the target.
 
@@ -172,10 +192,12 @@ def soft_variables_update(source_variables, target_variables, tau=1.0,
       update.
     sort_variables_by_name: A bool, when True would sort the variables by name
       before doing the update.
+
   Returns:
     An operation that updates target variables from source variables.
   Raises:
-    ValueError: if tau is not in [0, 1].
+    ValueError: if `tau not in [0, 1]`.
+    ValueError: if `len(source_variables) != len(target_variables)`.
   """
   if tau < 0 or tau > 1:
     raise ValueError('Input `tau` should be in [0, 1].')
@@ -184,15 +206,32 @@ def soft_variables_update(source_variables, target_variables, tau=1.0,
   op_name = 'soft_variables_update'
   if tau == 0.0 or not source_variables or not target_variables:
     return tf.no_op(name=op_name)
+  if len(source_variables) != len(target_variables):
+    raise ValueError(
+        'Source and target variable lists have different lengths: '
+        '{} vs. {}'.format(len(source_variables), len(target_variables)))
   if sort_variables_by_name:
     source_variables = sorted(source_variables, key=lambda x: x.name)
     target_variables = sorted(target_variables, key=lambda x: x.name)
+
+  strategy = tf.distribute.get_strategy()
+
   for (v_s, v_t) in zip(source_variables, target_variables):
     v_t.shape.assert_is_compatible_with(v_s.shape)
-    if tau == 1.0:
-      update = v_t.assign(v_s)
+
+    def update_fn(v1, v2):
+      if tau == 1.0:
+        return v1.assign(v2)
+      else:
+        return v1.assign((1 - tau) * v1 + tau * v2)
+
+    if strategy is not None:
+      # assignment happens independently on each replica,
+      # see b/140690837 #46.
+      update = strategy.extended.update(v_t, update_fn, args=(v_s,))
     else:
-      update = v_t.assign((1 - tau) * v_t + tau * v_s)
+      update = update_fn(v_t, v_s)
+
     updates.append(update)
   return tf.group(*updates, name=op_name)
 
@@ -203,6 +242,7 @@ def join_scope(parent_scope, child_scope):
   Args:
     parent_scope: (string) parent/prefix scope.
     child_scope: (string) child/suffix scope.
+
   Returns:
     joined scope: (string) parent and child scopes joined by /.
   """
@@ -213,24 +253,23 @@ def join_scope(parent_scope, child_scope):
   return '/'.join([parent_scope, child_scope])
 
 
+# TODO(b/138322868): Add an optional action_spec for validation.
 def index_with_actions(q_values, actions, multi_dim_actions=False):
   """Index into q_values using actions.
 
   Note: this supports multiple outer dimensions (e.g. time, batch etc).
 
   Args:
-    q_values: A float tensor of shape
-      [outer_dim1, ... outer_dimK, action_dim1, ..., action_dimJ].
-    actions: An int tensor of shape
-      [outer_dim1, ... outer_dimK]    if multi_dim_actions=False
-      [outer_dim1, ... outer_dimK, J] if multi_dim_actions=True
-      I.e. in the multidimensional case, actions[outer_dim1, ... outer_dimK]
-      is a vector [actions_1, ..., actions_J] where each element actions_j is an
-      action in the range [0, num_actions_j).
-      While in the single dimensional case, actions[outer_dim1, ... outer_dimK]
-      is a scalar.
+    q_values: A float tensor of shape [outer_dim1, ... outer_dimK, action_dim1,
+      ..., action_dimJ].
+    actions: An int tensor of shape [outer_dim1, ... outer_dimK]    if
+      multi_dim_actions=False [outer_dim1, ... outer_dimK, J] if
+      multi_dim_actions=True I.e. in the multidimensional case,
+      actions[outer_dim1, ... outer_dimK] is a vector [actions_1, ...,
+      actions_J] where each element actions_j is an action in the range [0,
+      num_actions_j). While in the single dimensional case, actions[outer_dim1,
+      ... outer_dimK] is a scalar.
     multi_dim_actions: whether the actions are multidimensional.
-    # TODO(kbanoop): Add an optional action_spec for validation.
 
   Returns:
     A [outer_dim1, ... outer_dimK] tensor of q_values for the given actions.
@@ -238,9 +277,9 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
   Raises:
     ValueError: If actions have unknown rank.
   """
-  if actions.shape.ndims is None:
+  if actions.shape.rank is None:
     raise ValueError('actions should have known rank.')
-  batch_dims = actions.shape.ndims
+  batch_dims = actions.shape.rank
   if multi_dim_actions:
     # In the multidimensional case, the last dimension of actions indexes the
     # vector of actions for each batch, so exclude it from the batch dimensions.
@@ -248,13 +287,13 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
 
   outer_shape = tf.shape(input=actions)
   batch_indices = tf.meshgrid(
-      *[tf.range(outer_shape[i]) for i in range(batch_dims)],
-      indexing='ij')
-  batch_indices = [
-      tf.expand_dims(batch_index, -1) for batch_index in batch_indices
-  ]
+      *[tf.range(outer_shape[i]) for i in range(batch_dims)], indexing='ij')
+  batch_indices = [tf.cast(tf.expand_dims(batch_index, -1), dtype=tf.int32)
+                   for batch_index in batch_indices]
   if not multi_dim_actions:
     actions = tf.expand_dims(actions, -1)
+  # Cast actions to tf.int32 in order to avoid a TypeError in tf.concat.
+  actions = tf.cast(actions, dtype=tf.int32)
   action_indices = tf.concat(batch_indices + [actions], -1)
   return tf.gather_nd(q_values, action_indices)
 
@@ -275,9 +314,9 @@ def periodically(body, period, name='periodically'):
   or conditionals.
 
   Args:
-    body: callable that returns the tensorflow op to be performed every time
-      an internal counter is divisible by the period. The op must have no
-      output (for example, a tf.group()).
+    body: callable that returns the tensorflow op to be performed every time an
+      internal counter is divisible by the period. The op must have no output
+      (for example, a tf.group()).
     period: inverse frequency with which to perform the op.
     name: name of the variable_scope.
 
@@ -317,8 +356,8 @@ class Periodically(tf.Module):
       body: callable that returns the tensorflow op to be performed every time
         an internal counter is divisible by the period. The op must have no
         output (for example, a tf.group()).
-      period: inverse frequency with which to perform the op.
-        It can be a Tensor or a Variable.
+      period: inverse frequency with which to perform the op. It can be a Tensor
+        or a Variable.
       name: name of the object.
 
     Raises:
@@ -335,6 +374,7 @@ class Periodically(tf.Module):
     self._counter = create_variable(self.name + '/counter', 0)
 
   def __call__(self):
+
     def call(strategy=None):
       del strategy  # unused
       if self._period is None:
@@ -349,7 +389,7 @@ class Periodically(tf.Module):
     # TODO(b/129083817) add an explicit unit test to ensure correct behavior
     ctx = tf.distribute.get_replica_context()
     if ctx:
-      return  tf.distribute.get_replica_context().merge_call(call)
+      return tf.distribute.get_replica_context().merge_call(call)
     else:
       return call()
 
@@ -367,8 +407,8 @@ class EagerPeriodically(object):
       body: callable that returns the tensorflow op to be performed every time
         an internal counter is divisible by the period. The op must have no
         output (for example, a tf.group()).
-      period: inverse frequency with which to perform the op.
-        Must be a simple python int/long.
+      period: inverse frequency with which to perform the op. Must be a simple
+        python int/long.
 
     Raises:
       TypeError: if body is not a callable.
@@ -398,6 +438,7 @@ def clip_to_spec(value, spec):
   Args:
     value: (tensor) value to be clipped.
     spec: (BoundedTensorSpec) spec containing min. and max. values for clipping.
+
   Returns:
     clipped_value: (tensor) `value` clipped to be compatible with `spec`.
   """
@@ -421,6 +462,7 @@ def scale_to_spec(tensor, spec):
   Args:
     tensor: A [batch x n] tensor with values in the range of [-1, 1].
     spec: (BoundedTensorSpec) to use for scaling the action.
+
   Returns:
     A batch scaled the given spec bounds.
   """
@@ -454,8 +496,8 @@ def ornstein_uhlenbeck_process(initial_value,
     initial_value: Initial value of the process.
     damping: The rate at which the noise trajectory is damped towards the mean.
       We must have 0 <= damping <= 1, where a value of 0 gives an undamped
-      random walk and a value of 1 gives uncorrelated Gaussian noise. Hence
-      in most applications a small non-zero value is appropriate.
+      random walk and a value of 1 gives uncorrelated Gaussian noise. Hence in
+      most applications a small non-zero value is appropriate.
     stddev: Standard deviation of the Gaussian component.
     seed: Seed for random number generation.
     scope: Scope of the variables.
@@ -504,8 +546,8 @@ class OUProcess(tf.Module):
     self._stddev = stddev
     self._seed = seed
     with tf.name_scope(scope):
-      self._x = tf.compat.v2.Variable(initial_value=initial_value,
-                                      trainable=False)
+      self._x = tf.compat.v2.Variable(
+          initial_value=initial_value, trainable=False)
 
   def __call__(self):
     noise = tf.random.normal(
@@ -531,10 +573,11 @@ def log_probability(distributions, actions, action_spec):
 
   def _compute_log_prob(single_distribution, single_action):
     # sum log-probs over everything but the batch
-    rank = single_action.shape.ndims
+    single_log_prob = single_distribution.log_prob(single_action)
+    rank = single_log_prob.shape.rank
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(
-        input_tensor=single_distribution.log_prob(single_action),
+        input_tensor=single_log_prob,
         axis=reduce_dims)
 
   tf.nest.assert_same_structure(distributions, actions)
@@ -569,7 +612,7 @@ def entropy(distributions, action_spec):
   def _compute_entropy(single_distribution):
     entropies = single_distribution.entropy()
     # Sum entropies over everything but the batch.
-    rank = entropies.shape.ndims
+    rank = entropies.shape.rank
     reduce_dims = list(range(outer_rank, rank))
     return tf.reduce_sum(input_tensor=entropies, axis=reduce_dims)
 
@@ -606,17 +649,16 @@ def discounted_future_sum(values, gamma, num_steps):
   Raises:
     ValueError: If values is not of rank 2.
   """
-  if values.get_shape().ndims != 2:
-    raise ValueError(
-        'Input must be rank 2 tensor.  Got %d.' % values.get_shape().ndims)
+  if values.get_shape().rank != 2:
+    raise ValueError('Input must be rank 2 tensor.  Got %d.' %
+                     values.get_shape().rank)
 
   (batch_size, total_steps) = values.get_shape().as_list()
 
   num_steps = tf.minimum(num_steps, total_steps)
   discount_filter = tf.reshape(gamma**tf.cast(tf.range(num_steps), tf.float32),
                                [-1, 1, 1])
-  padded_values = tf.concat(
-      [values, tf.zeros([batch_size, num_steps - 1])], 1)
+  padded_values = tf.concat([values, tf.zeros([batch_size, num_steps - 1])], 1)
 
   convolved_values = tf.squeeze(
       tf.nn.conv1d(
@@ -645,9 +687,8 @@ def discounted_future_sum_masked(values, gamma, num_steps, episode_lengths):
   Raises:
     ValueError: If values is not of rank 2, or if total_steps is not defined.
   """
-  if values.shape.ndims != 2:
-    raise ValueError(
-        'Input must be a rank 2 tensor.  Got %d.' % values.shape)
+  if values.shape.rank != 2:
+    raise ValueError('Input must be a rank 2 tensor.  Got %d.' % values.shape)
 
   total_steps = tf.compat.dimension_value(values.shape[1])
   if total_steps is None:
@@ -678,9 +719,9 @@ def shift_values(values, gamma, num_steps, final_values=None):
   Raises:
     ValueError: If values is not of rank 2.
   """
-  if values.get_shape().ndims != 2:
-    raise ValueError(
-        'Input must be rank 2 tensor.  Got %d.' % values.get_shape().ndims)
+  if values.get_shape().rank != 2:
+    raise ValueError('Input must be rank 2 tensor.  Got %d.' %
+                     values.get_shape().rank)
 
   (batch_size, total_steps) = values.get_shape().as_list()
   num_steps = tf.minimum(num_steps, total_steps)
@@ -690,7 +731,7 @@ def shift_values(values, gamma, num_steps, final_values=None):
 
   padding_exponent = tf.expand_dims(
       tf.cast(tf.range(num_steps, 0, -1), tf.float32), 0)
-  final_pad = tf.expand_dims(final_values, 1) * gamma ** padding_exponent
+  final_pad = tf.expand_dims(final_values, 1) * gamma**padding_exponent
   return tf.concat([
       gamma**tf.cast(num_steps, tf.float32) * values[:, num_steps:], final_pad
   ], 1)
@@ -715,8 +756,8 @@ def get_contiguous_sub_episodes(next_time_steps_discount):
 
   Args:
     next_time_steps_discount: Tensor of shape [batch_size, total_steps]
-      corresponding to environment discounts on next time steps
-      (i.e. next_time_steps.discount).
+      corresponding to environment discounts on next time steps (i.e.
+      next_time_steps.discount).
 
   Returns:
     A float Tensor of shape [batch_size, total_steps] specifying mask including
@@ -798,9 +839,9 @@ def compute_returns(rewards, discounts):
   #   R_t = r_t + discount * (r_t+1 + discount * (r_t+2 * discount( ...
   # As discount is 0 for terminal states, ends of episode will not include
   #   reward from subsequent timesteps.
-  returns = tf.scan(discounted_accumulate_rewards,
-                    [rewards, discounts],
-                    initializer=tf.constant(0, dtype=discounts.dtype))
+  returns = tf.scan(
+      discounted_accumulate_rewards, [rewards, discounts],
+      initializer=tf.constant(0, dtype=discounts.dtype))
   returns = tf.reverse(returns, [0])
   return returns
 
@@ -845,13 +886,17 @@ class Checkpointer(object):
         self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
 
     if self._manager.latest_checkpoint is not None:
-      logging.info(
-          '%s',
-          'Checkpoint available: {}'.format(self._manager.latest_checkpoint))
+      logging.info('Checkpoint available: %s', self._manager.latest_checkpoint)
+      self._checkpoint_exists = True
     else:
-      logging.info('%s', 'No checkpoint available at {}'.format(ckpt_dir))
+      logging.info('No checkpoint available at %s', ckpt_dir)
+      self._checkpoint_exists = False
     self._load_status = self._checkpoint.restore(
         self._manager.latest_checkpoint)
+
+  @property
+  def checkpoint_exists(self):
+    return self._checkpoint_exists
 
   def initialize_or_restore(self, session=None):
     """Initialize or restore graph (based on checkpoint if exists)."""
@@ -861,6 +906,7 @@ class Checkpointer(object):
   def save(self, global_step):
     """Save state to checkpoint."""
     saved_checkpoint = self._manager.save(checkpoint_number=global_step)
+    self._checkpoint_exists = True
     logging.info('%s', 'Saved checkpoint: {}'.format(saved_checkpoint))
 
 
@@ -875,8 +921,8 @@ def replicate(tensor, outer_shape):
 
   Args:
     tensor: A tf.Tensor.
-    outer_shape: Outer shape given as a 1D tensor of type
-      list, numpy or tf.Tensor.
+    outer_shape: Outer shape given as a 1D tensor of type list, numpy or
+      tf.Tensor.
 
   Returns:
     The replicated tensor.
@@ -895,9 +941,8 @@ def replicate(tensor, outer_shape):
     return tensor
 
   # Replicate tensor "t" along the 1st dimension.
-  tiled_tensor = tf.tile(
-      tensor,
-      [tf.reduce_prod(input_tensor=outer_shape)] + [1] * (tensor_ndims - 1))
+  tiled_tensor = tf.tile(tensor, [tf.reduce_prod(input_tensor=outer_shape)] +
+                         [1] * (tensor_ndims - 1))
 
   # Reshape to match outer_shape.
   target_shape = tf.concat([outer_shape, tf.shape(input=tensor)], axis=0)
@@ -932,8 +977,8 @@ def assert_members_are_not_overridden(base_cls,
 
   instance_type = type(instance)
   subclass_members = set(instance_type.__dict__.keys())
-  public_members = set([
-      m for m in base_cls.__dict__.keys() if not m.startswith('_')])
+  public_members = set(
+      [m for m in base_cls.__dict__.keys() if not m.startswith('_')])
   common_members = public_members & subclass_members
 
   if white_list:
@@ -943,7 +988,8 @@ def assert_members_are_not_overridden(base_cls,
 
   overridden_members = [
       m for m in common_members
-      if base_cls.__dict__[m] != instance_type.__dict__[m]]
+      if base_cls.__dict__[m] != instance_type.__dict__[m]
+  ]
   if overridden_members:
     raise ValueError(
         'Subclasses of {} cannot override most of its base members, but '
@@ -979,7 +1025,123 @@ def transpose_batch_time(x):
   x_rank = tf.rank(x)
   x_t = tf.transpose(a=x, perm=tf.concat(([1, 0], tf.range(2, x_rank)), axis=0))
   x_t.set_shape(
-      tf.TensorShape([
-          x_static_shape.dims[1].value, x_static_shape.dims[0].value
-      ]).concatenate(x_static_shape[2:]))
+      tf.TensorShape(
+          [x_static_shape.dims[1].value,
+           x_static_shape.dims[0].value]).concatenate(x_static_shape[2:]))
   return x_t
+
+
+def save_spec(spec, file_path):
+  """Saves the given spec nest as a StructProto.
+
+  **Note**: Currently this will convert BoundedTensorSpecs into regular
+    TensorSpecs.
+
+  Args:
+    spec: A nested structure of TensorSpecs.
+    file_path: Path to save the encoded spec to.
+  """
+  signature_encoder = nested_structure_coder.StructureCoder()
+  spec = tensor_spec.from_spec(spec)
+  spec_proto = signature_encoder.encode_structure(spec)
+
+  dir_path = os.path.dirname(file_path)
+  if not tf.io.gfile.exists(dir_path):
+    tf.io.gfile.makedirs(dir_path)
+
+  with tf.compat.v2.io.gfile.GFile(file_path, 'wb') as gfile:
+    gfile.write(spec_proto.SerializeToString())
+
+
+def load_spec(file_path):
+  """Loads a data spec from a file.
+
+  **Note**: Types for Named tuple classes will not match. Users need to convert
+    to these manually:
+
+    # Convert from:
+    # 'tensorflow.python.saved_model.nested_structure_coder.Trajectory'
+    # to proper TrajectorySpec.
+    # trajectory_spec = trajectory.Trajectory(*spec)
+
+  Args:
+    file_path: Path to the saved data spec.
+  Returns:
+    A nested structure of TensorSpecs.
+  """
+  with tf.compat.v2.io.gfile.GFile(file_path, 'rb') as gfile:
+    signature_proto = struct_pb2.StructuredValue.FromString(gfile.read())
+
+  signature_encoder = nested_structure_coder.StructureCoder()
+  return signature_encoder.decode_proto(signature_proto)
+
+
+def check_no_shared_variables(network_1, network_2):
+  """Checks that there are no shared trainable variables in the two networks.
+
+  Args:
+    network_1: A network.Network.
+    network_2: A network.Network.
+
+  Raises:
+    ValueError: if there are any common trainable variables.
+    ValueError: if one of the networks has not yet been built
+      (e.g. user must call `create_variables`).
+  """
+  variables_1 = {id(v): v for v in network_1.trainable_variables}
+  variables_2 = {id(v): v for v in network_2.trainable_variables}
+  shared = set(variables_1.keys()) & set(variables_2.keys())
+  if shared:
+    shared_variables = [variables_1[v] for v in shared]
+    raise ValueError(
+        'After making a copy of network \'{}\' to create a target '
+        'network \'{}\', the target network shares weights with '
+        'the original network.  This is not allowed.  If '
+        'you want explicitly share weights with the target network, or '
+        'if your input network shares weights with others, please '
+        'provide a target network which explicitly, selectively, shares '
+        'layers/weights with the input network.  If you are not intending to '
+        'share weights make sure all the weights are created inside the Network'
+        ' since a copy will be created by creating a new Network with the same '
+        'args but a new name. Shared variables found: '
+        '\'{}\'.'.format(network_1.name, network_2.name, shared_variables))
+
+
+def check_matching_networks(network_1, network_2):
+  """Check that two networks have matching input specs and variables.
+
+  Args:
+    network_1: A network.Network.
+    network_2: A network.Network.
+
+  Raises:
+    ValueError: if the networks differ in input_spec, variables (number, dtype,
+      or shape).
+    ValueError: if either of the networks has not been built yet
+      (e.g. user must call `create_variables`).
+  """
+  if network_1.input_tensor_spec != network_2.input_tensor_spec:
+    raise ValueError('Input tensor specs of network and target network '
+                     'do not match: {} vs. {}.'.format(
+                         network_1.input_tensor_spec,
+                         network_2.input_tensor_spec))
+  if len(network_1.variables) != len(network_2.variables):
+    raise ValueError(
+        'Variables lengths do not match between Q network and target network: '
+        '{} vs. {}'.format(network_1.variables, network_2.variables))
+  for v1, v2 in zip(network_1.variables, network_2.variables):
+    if v1.dtype != v2.dtype or v1.shape != v2.shape:
+      raise ValueError(
+          'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2))
+
+
+def maybe_copy_target_network_with_checks(network, target_network=None,
+                                          name='TargetNetwork'):
+  if target_network is None:
+    target_network = network.copy(name=name)
+    target_network.create_variables()
+    # Copy may have been shallow, and variable may inadvertently be shared
+    # between the target and original network.
+    check_no_shared_variables(network, target_network)
+  check_matching_networks(network, target_network)
+  return target_network

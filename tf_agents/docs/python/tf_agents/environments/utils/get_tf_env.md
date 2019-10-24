@@ -5,6 +5,12 @@
 
 # tf_agents.environments.utils.get_tf_env
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/utils.py">View
+source</a>
+
 Ensures output is a tf_environment, wrapping py_environments if needed.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.environments.utils.get_tf_env(environment)
 ```
 
 
-
-Defined in [`environments/utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/utils.py).
 
 <!-- Placeholder for "Used in" -->

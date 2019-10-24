@@ -5,11 +5,13 @@
 
 # Module: tf_agents.agents.ppo
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/__init__.py">View
+source</a>
+
 A PPO Agent.
-
-
-
-Defined in [`agents/ppo/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ppo/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

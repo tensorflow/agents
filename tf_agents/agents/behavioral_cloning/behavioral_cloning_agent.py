@@ -72,11 +72,12 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       action_spec,
       cloning_network,
       optimizer,
-      epsilon_greedy=0.1,
+      num_outer_dims=1,
       # Params for training.
+      epsilon_greedy=0.1,
       loss_fn=None,
       gradient_clipping=None,
-      # Params for debugging
+      # Params for debugging.
       debug_summaries=False,
       summarize_grads_and_vars=False,
       train_step_counter=None,
@@ -100,6 +101,10 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         `cloning_network` has an empty network state, then for training
         `time` will always be `1` (individual examples).
       optimizer: The optimizer to use for training.
+      num_outer_dims: The number of outer dimensions for the agent. Must be
+        either 1 or 2. If 2, training will require both a batch_size and time
+        dimension on every Tensor; if 1, training will require only a batch_size
+        outer dimension.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method).
@@ -110,7 +115,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
         ```python
         def loss_fn(logits, action):
-          return tf.nn.sparse_softmax_cross_entropy_with_logits(
+          return tf.compat.v1.nn.sparse_softmax_cross_entropy_with_logits(
             labels=action - action_spec.minimum, logits=logits)
         ```
 
@@ -128,7 +133,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         under that name. Defaults to the class name.
 
     Raises:
-      NotImplementedError: If the action spec contains more than one action.
+      ValueError: If `action_spec` contains more than one action, but a custom
+        `loss_fn` is not provided.
     """
     tf.Module.__init__(self, name=name)
 
@@ -137,11 +143,12 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         spec.maximum - spec.minimum + 1 for spec in flat_action_spec
     ]
 
-    # TODO(oars): Get behavioral cloning working with more than one dim in
-    # the actions.
-    if len(flat_action_spec) > 1:
-      raise NotImplementedError(
-          'Multi-arity actions are not currently supported.')
+    if tf.nest.is_nested(action_spec) and not loss_fn:
+      raise ValueError(
+          'When using nested actions (i.e., `tf.nest.is_nested(action_spec)` '
+          'is True), a custom loss_fn must be provided.')
+
+    self._nested_actions = len(flat_action_spec) > 1
 
     if loss_fn is None:
       loss_fn = self._get_default_loss_fn(flat_action_spec[0])
@@ -161,6 +168,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         policy,
         collect_policy,
         train_sequence_length=1 if not cloning_network.state_spec else None,
+        num_outer_dims=num_outer_dims,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
@@ -168,15 +176,15 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   def _get_default_loss_fn(self, spec):
     if spec.dtype.is_floating:
       return tf.math.squared_difference
-    if spec.shape.ndims > 1:
+    if spec.shape.rank > 1:
       raise NotImplementedError(
-          'Only scalar and one dimensional integer actions are supported.')
+          'The default loss_fn only supports scalar, unnested integer actions.')
     # TODO(ebrevdo): Maybe move the subtraction of the minimum into a
     # self._label_fn and rewrite this.
     def xent_loss_fn(logits, actions):
       # Subtract the minimum so that we get a proper cross entropy loss on
       # [0, maximum - minimum).
-      return tf.nn.sparse_softmax_cross_entropy_with_logits(
+      return tf.compat.v1.nn.sparse_softmax_cross_entropy_with_logits(
           logits=logits, labels=actions - spec.minimum)
 
     return xent_loss_fn
@@ -231,13 +239,19 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         If the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      actions = tf.nest.flatten(experience.action)[0]
+      if self._nested_actions:
+        actions = experience.action
+      else:
+        actions = tf.nest.flatten(experience.action)[0]
+
       logits, _ = self._cloning_network(
           experience.observation,
           experience.step_type)
 
-      boundary_weights = tf.cast(~experience.is_boundary(), logits.dtype)
-      error = boundary_weights * self._loss_fn(logits, actions)
+      error = self._loss_fn(logits, actions)
+      error_dtype = tf.nest.flatten(error)[0].dtype
+      boundary_weights = tf.cast(~experience.is_boundary(), error_dtype)
+      error *= boundary_weights
 
       if nest_utils.is_batched_nested_tensors(
           experience.action, self.action_spec, num_outer_dims=2):

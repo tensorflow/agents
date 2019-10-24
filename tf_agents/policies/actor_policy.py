@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Simple Actor Policy based on an actor network.
+"""Actor Policy based on an actor network.
 
 This is used in e.g. actor-critic algorithms like DDPG.
 """
@@ -30,33 +30,35 @@ from tf_agents.networks import network
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
 
-tfd = tfp.distributions
-
 
 @gin.configurable
 class ActorPolicy(tf_policy.Base):
   """Class to build Actor Policies."""
 
   def __init__(self,
-               time_step_spec=None,
-               action_spec=None,
-               actor_network=None,
+               time_step_spec,
+               action_spec,
+               actor_network,
                info_spec=(),
                observation_normalizer=None,
                clip=True,
+               training=False,
                name=None):
     """Builds an Actor Policy given a actor network.
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      actor_network: An instance of a tf_agents.networks.network.Network, with
-        call(observation, step_type).
+      actor_network: An instance of a `tf_agents.networks.network.Network` to be
+        used by the policy. The network will be called with call(observation,
+        step_type, policy_state) and should return (actions_or_distributions,
+        new_state).
       info_spec: A nest of TensorSpec representing the policy info.
-      observation_normalizer: An object to use for obervation normalization.
+      observation_normalizer: An object to use for observation normalization.
       clip: Whether to clip actions to spec before returning them.  Default
         True. Most policy-based algorithms (PCL, PPO, REINFORCE) use unclipped
         continuous actions for training.
+      training: Whether the network should be called in training mode.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -66,8 +68,10 @@ class ActorPolicy(tf_policy.Base):
     if not isinstance(actor_network, network.Network):
       raise ValueError('actor_network must be a network.Network. Found '
                        '{}.'.format(type(actor_network)))
+    actor_network.create_variables()
     self._actor_network = actor_network
     self._observation_normalizer = observation_normalizer
+    self._training = training
 
     super(ActorPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -81,7 +85,8 @@ class ActorPolicy(tf_policy.Base):
     observation = time_step.observation
     if self._observation_normalizer:
       observation = self._observation_normalizer.normalize(observation)
-    return self._actor_network(observation, time_step.step_type, policy_state)
+    return self._actor_network(
+        observation, time_step.step_type, policy_state, training=self._training)
 
   @property
   def observation_normalizer(self):

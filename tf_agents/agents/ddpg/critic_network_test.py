@@ -15,17 +15,16 @@
 
 """Tests for tf_agents.agents.ddpg.critic_network."""
 
+from absl.testing import parameterized
+import numpy as np
 import tensorflow as tf
 
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.specs import tensor_spec
 
-from tensorflow.python.framework import test_util  # TF internal
 
+class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
 
-class CriticNetworkTest(tf.test.TestCase):
-
-  @test_util.run_in_graph_and_eager_modes()
   def testBuild(self):
     batch_size = 3
     num_obs_dims = 5
@@ -39,9 +38,8 @@ class CriticNetworkTest(tf.test.TestCase):
 
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
-    self.assertEqual(len(critic_net.trainable_variables), 2)
+    self.assertLen(critic_net.trainable_variables, 2)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddObsConvLayers(self):
     batch_size = 3
     num_obs_dims = 5
@@ -56,9 +54,8 @@ class CriticNetworkTest(tf.test.TestCase):
     actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
-    self.assertEqual(len(critic_net.trainable_variables), 4)
+    self.assertLen(critic_net.trainable_variables, 4)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddObsFCLayers(self):
     batch_size = 3
     num_obs_dims = 5
@@ -74,9 +71,8 @@ class CriticNetworkTest(tf.test.TestCase):
     q_values, _ = critic_net((obs, actions))
 
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
-    self.assertEqual(len(critic_net.trainable_variables), 6)
+    self.assertLen(critic_net.trainable_variables, 6)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddActionFCLayers(self):
     batch_size = 3
     num_obs_dims = 5
@@ -91,9 +87,8 @@ class CriticNetworkTest(tf.test.TestCase):
     actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
-    self.assertEqual(len(critic_net.trainable_variables), 4)
+    self.assertLen(critic_net.trainable_variables, 4)
 
-  @test_util.run_in_graph_and_eager_modes()
   def testAddJointFCLayers(self):
     batch_size = 3
     num_obs_dims = 5
@@ -108,7 +103,33 @@ class CriticNetworkTest(tf.test.TestCase):
     actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values, _ = critic_net((obs, actions))
     self.assertAllEqual(q_values.shape.as_list(), [batch_size])
-    self.assertEqual(len(critic_net.trainable_variables), 4)
+    self.assertLen(critic_net.trainable_variables, 4)
+
+  @parameterized.named_parameters(
+      ('TrainingTrue', True,),
+      ('TrainingFalse', False))
+  def testDropoutJointFCLayers(self, training):
+    batch_size = 3
+    num_obs_dims = 5
+    num_actions_dims = 2
+
+    obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
+    action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
+    critic_net = critic_network.CriticNetwork(
+        (obs_spec, action_spec),
+        joint_fc_layer_params=[20],
+        joint_dropout_layer_params=[0.5])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    actions = tf.random.uniform([batch_size, num_actions_dims])
+    q_values1, _ = critic_net((obs, actions), training=training)
+    q_values2, _ = critic_net((obs, actions), training=training)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    q_values1, q_values2 = self.evaluate([q_values1, q_values2])
+    if training:
+      self.assertGreater(np.linalg.norm(q_values1 - q_values2), 0)
+    else:
+      self.assertAllEqual(q_values1, q_values2)
+
 
 if __name__ == '__main__':
   tf.test.main()

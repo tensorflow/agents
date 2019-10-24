@@ -1,18 +1,17 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.metrics.tf_metrics" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.metrics.tf_metrics
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/tf_metrics.py">View
+source</a>
+
 TF metrics.
-
-
-
-Defined in [`metrics/tf_metrics.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/metrics/tf_metrics.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -27,15 +26,10 @@ Defined in [`metrics/tf_metrics.py`](https://github.com/tensorflow/agents/tree/m
 
 [`class NumberOfEpisodes`](../../tf_agents/metrics/tf_metrics/NumberOfEpisodes.md): Counts the number of episodes in the environment.
 
+[`class TFDeque`](../../tf_agents/metrics/tf_metrics/TFDeque.md): Deque backed
+by tf.Variable storage.
+
 ## Functions
 
 [`log_metrics(...)`](../../tf_agents/metrics/tf_metrics/log_metrics.md)
-
-## Other Members
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
 

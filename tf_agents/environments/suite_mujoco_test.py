@@ -19,8 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from absl.testing import absltest
-
 import gin
 import numpy as np
 
@@ -30,14 +28,16 @@ from tf_agents.environments import wrappers
 from tf_agents.utils import test_utils
 
 
-class SuiteMujocoTest(absltest.TestCase):
+class SuiteMujocoTest(test_utils.TestCase):
 
   def setUp(self):
     super(SuiteMujocoTest, self).setUp()
     if not suite_mujoco.is_available():
       self.skipTest('suite_mujoco is not available.')
-    else:
-      gin.clear_config()
+
+  def tearDown(self):
+    gin.clear_config()
+    super(SuiteMujocoTest, self).tearDown()
 
   def testMujocoEnvRegistered(self):
     env = suite_mujoco.load('HalfCheetah-v2')
@@ -51,8 +51,8 @@ class SuiteMujocoTest(absltest.TestCase):
 
   def testActionSpec(self):
     env = suite_mujoco.load('HalfCheetah-v2')
-    self.assertEqual(np.float32, env.observation_spec().dtype)
-    self.assertEqual((17,), env.observation_spec().shape)
+    self.assertEqual(np.float32, env.action_spec().dtype)
+    self.assertEqual((6,), env.action_spec().shape)
 
   def testGinConfig(self):
     gin.parse_config_file(
@@ -64,4 +64,4 @@ class SuiteMujocoTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

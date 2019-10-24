@@ -8,9 +8,7 @@
 <meta itemprop="property" content="submodules"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="variables"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
 <meta itemprop="property" content="add_batch"/>
 <meta itemprop="property" content="as_dataset"/>
 <meta itemprop="property" content="clear"/>
@@ -21,15 +19,17 @@
 
 # tf_agents.replay_buffers.replay_buffer.ReplayBuffer
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
+
 ## Class `ReplayBuffer`
 
 Abstract base class for TF-Agents replay buffer.
 
 
-
-
-
-Defined in [`replay_buffers/replay_buffer.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -37,6 +37,9 @@ In eager mode, methods modify the buffer or return values directly. In graph
 mode, methods return ops that do so when executed.
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
 
 ``` python
 __init__(
@@ -49,11 +52,9 @@ Initializes the replay buffer.
 
 #### Args:
 
-* <b>`data_spec`</b>: A spec or a list/tuple/nest of specs describing
-    a single item that can be stored in this buffer
-* <b>`capacity`</b>: number of elements that the replay buffer can hold.
-
-
+*   <b>`data_spec`</b>: A spec or a list/tuple/nest of specs describing a single
+    item that can be stored in this buffer
+*   <b>`capacity`</b>: number of elements that the replay buffer can hold.
 
 ## Properties
 
@@ -83,14 +84,16 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
@@ -124,30 +127,12 @@ A sequence of variables for the current module (sorted by attribute
 name) followed by variables from all submodules recursively (breadth
 first).
 
-
-
 ## Methods
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Support self.foo = trackable syntax.
-
 <h3 id="add_batch"><code>add_batch</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
 
 ``` python
 add_batch(items)
@@ -157,8 +142,8 @@ Adds a batch of items to the replay buffer.
 
 #### Args:
 
-* <b>`items`</b>: An item or list/tuple/nest of items to be added to the replay
-    buffer. `items` must match the data_spec of this class, with a
+*   <b>`items`</b>: An item or list/tuple/nest of items to be added to the
+    replay buffer. `items` must match the data_spec of this class, with a
     batch_size dimension added to the beginning of each tensor/array.
 
 #### Returns:
@@ -167,11 +152,15 @@ Adds `items` to the replay buffer.
 
 <h3 id="as_dataset"><code>as_dataset</code></h3>
 
-``` python
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
+
+```python
 as_dataset(
     sample_batch_size=None,
     num_steps=None,
-    num_parallel_calls=None
+    num_parallel_calls=None,
+    single_deterministic_pass=False
 )
 ```
 
@@ -182,23 +171,27 @@ A single entry from the dataset is equivalent to one output from
 
 #### Args:
 
-* <b>`sample_batch_size`</b>: (Optional.) An optional batch_size to specify the
-    number of items to return. If None (default), a single item is returned
+*   <b>`sample_batch_size`</b>: (Optional.) An optional batch_size to specify
+    the number of items to return. If None (default), a single item is returned
     which matches the data_spec of this class (without a batch dimension).
-    Otherwise, a batch of sample_batch_size items is returned, where each
-    tensor in items will have its first dimension equal to sample_batch_size
-    and the rest of the dimensions match the corresponding data_spec.
-* <b>`num_steps`</b>: (Optional.)  Optional way to specify that sub-episodes are
-    desired. If None (default), a batch of single items is returned.
+    Otherwise, a batch of sample_batch_size items is returned, where each tensor
+    in items will have its first dimension equal to sample_batch_size and the
+    rest of the dimensions match the corresponding data_spec.
+*   <b>`num_steps`</b>: (Optional.) Optional way to specify that sub-episodes
+    are desired. If None (default), a batch of single items is returned.
     Otherwise, a batch of sub-episodes is returned, where a sub-episode is a
     sequence of consecutive items in the replay_buffer. The returned tensors
-    will have first dimension equal to sample_batch_size (if
-    sample_batch_size is not None), subsequent dimension equal to num_steps,
-    and remaining dimensions which match the data_spec of this class.
-* <b>`num_parallel_calls`</b>: (Optional.) A `tf.int32` scalar `tf.Tensor`,
-    representing the number elements to process in parallel. If not
-    specified, elements will be processed sequentially.
-
+    will have first dimension equal to sample_batch_size (if sample_batch_size
+    is not None), subsequent dimension equal to num_steps, and remaining
+    dimensions which match the data_spec of this class.
+*   <b>`num_parallel_calls`</b>: (Optional.) A `tf.int32` scalar `tf.Tensor`,
+    representing the number elements to process in parallel. If not specified,
+    elements will be processed sequentially.
+*   <b>`single_deterministic_pass`</b>: Python boolean. If `True`, the dataset
+    will return a single deterministic pass through its underlying data.
+    **NOTE**: If the buffer is modified while a Dataset iterator is iterating
+    over this data, the iterator may miss any new data or otherwise have subtly
+    invalid data.
 
 #### Returns:
 
@@ -206,7 +199,17 @@ A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
   - An item or sequence of items or batch thereof
   - Auxiliary info for the items (i.e. ids, probs).
 
+#### Raises:
+
+*   <b>`NotImplementedError`</b>: If a non-default argument value is not
+    supported.
+*   <b>`ValueError`</b>: If the data spec contains lists that must be converted
+    to tuples.
+
 <h3 id="clear"><code>clear</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
 
 ``` python
 clear()
@@ -220,11 +223,17 @@ Clears the replay buffer contents.
 
 <h3 id="gather_all"><code>gather_all</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
+
 ``` python
 gather_all()
 ```
 
 Returns all the items in buffer.
+
+**NOTE** This method will soon be deprecated in favor of `as_dataset(...,
+single_deterministic_pass=True)`.
 
 #### Returns:
 
@@ -233,6 +242,9 @@ of shape [B, T, ...] where B = batch size, T = timesteps,
 and the remaining shape is the shape spec of the items in the buffer.
 
 <h3 id="get_next"><code>get_next</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/replay_buffer.py">View
+source</a>
 
 ``` python
 get_next(
@@ -246,41 +258,38 @@ Returns an item or batch of items from the buffer.
 
 #### Args:
 
-* <b>`sample_batch_size`</b>: (Optional.) An optional batch_size to specify the
-    number of items to return. If None (default), a single item is returned
+*   <b>`sample_batch_size`</b>: (Optional.) An optional batch_size to specify
+    the number of items to return. If None (default), a single item is returned
     which matches the data_spec of this class (without a batch dimension).
-    Otherwise, a batch of sample_batch_size items is returned, where each
-    tensor in items will have its first dimension equal to sample_batch_size
-    and the rest of the dimensions match the corresponding data_spec. See
-    examples below.
-* <b>`num_steps`</b>: (Optional.)  Optional way to specify that sub-episodes are
-    desired. If None (default), in non-episodic replay buffers, a batch of
-    single items is returned. In episodic buffers, full episodes are
-    returned (note that sample_batch_size must be None in that case).
-    Otherwise, a batch of sub-episodes is returned, where a sub-episode is a
-    sequence of consecutive items in the replay_buffer. The returned tensors
-    will have first dimension equal to sample_batch_size (if
-    sample_batch_size is not None), subsequent dimension equal to num_steps,
-    if time_stacked=True and remaining dimensions which match the data_spec
-    of this class. See examples below.
-* <b>`time_stacked`</b>: (Optional.) Boolean, when true and num_steps > 1 it returns
-    the items stacked on the time dimension. See examples below for details.
+    Otherwise, a batch of sample_batch_size items is returned, where each tensor
+    in items will have its first dimension equal to sample_batch_size and the
+    rest of the dimensions match the corresponding data_spec. See examples
+    below.
+*   <b>`num_steps`</b>: (Optional.) Optional way to specify that sub-episodes
+    are desired. If None (default), in non-episodic replay buffers, a batch of
+    single items is returned. In episodic buffers, full episodes are returned
+    (note that sample_batch_size must be None in that case). Otherwise, a batch
+    of sub-episodes is returned, where a sub-episode is a sequence of
+    consecutive items in the replay_buffer. The returned tensors will have first
+    dimension equal to sample_batch_size (if sample_batch_size is not None),
+    subsequent dimension equal to num_steps, if time_stacked=True and remaining
+    dimensions which match the data_spec of this class. See examples below.
+*   <b>`time_stacked`</b>: (Optional.) Boolean, when true and num_steps > 1 it
+    returns the items stacked on the time dimension. See examples below for
+    details.
 
-  Examples of tensor shapes returned:
-    (B = batch size, T = timestep, D = data spec)
+Examples of tensor shapes returned: (B = batch size, T = timestep, D = data
+spec)
 
-    get_next(sample_batch_size=None, num_steps=None, time_stacked=True)
-      return shape (non-episodic): [D]
-      return shape (episodic): [T, D] (T = full length of the episode)
-    get_next(sample_batch_size=B, num_steps=None, time_stacked=True)
-      return shape (non-episodic): [B, D]
-      return shape (episodic): Not supported
-    get_next(sample_batch_size=B, num_steps=T, time_stacked=True)
-      return shape: [B, T, D]
-    get_next(sample_batch_size=None, num_steps=T, time_stacked=False)
-      return shape: ([D], [D], ..) T tensors in the tuple
-    get_next(sample_batch_size=B, num_steps=T, time_stacked=False)
-      return shape: ([B, D], [B, D], ..) T tensors in the tuple
+get_next(sample_batch_size=None, num_steps=None, time_stacked=True) return shape
+(non-episodic): [D] return shape (episodic):
+[T, D](T = full length of the episode) get_next(sample_batch_size=B,
+num_steps=None, time_stacked=True) return shape (non-episodic): [B, D] return
+shape (episodic): Not supported get_next(sample_batch_size=B, num_steps=T,
+time_stacked=True) return shape: [B, T, D] get_next(sample_batch_size=None,
+num_steps=T, time_stacked=False) return shape: ([D], [D], ..) T tensors in the
+tuple get_next(sample_batch_size=B, num_steps=T, time_stacked=False) return
+shape: ([B, D], [B, D], ..) T tensors in the tuple
 
 #### Returns:
 
@@ -299,21 +308,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -323,6 +336,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

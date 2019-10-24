@@ -5,6 +5,12 @@
 
 # tf_agents.utils.eager_utils.get_next
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py">View
+source</a>
+
 Returns the next element in a `Dataset` iterator.
 
 ``` python
@@ -12,8 +18,6 @@ tf_agents.utils.eager_utils.get_next(iterator)
 ```
 
 
-
-Defined in [`utils/eager_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -23,8 +27,8 @@ construct an iterator and iterate through it inside a `tensorflow.function`.
 
 #### Args:
 
-* <b>`iterator`</b>: a `tf.data.Iterator` if in Graph mode; a `tf.data.EagerIterator`
-    if in eager mode.
+*   <b>`iterator`</b>: a `tf.data.Iterator` if in Graph mode; a
+    `tf.data.EagerIterator` if in eager mode.
 
 #### Returns:
 

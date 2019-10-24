@@ -160,7 +160,7 @@ class PPOAgent(tf_agent.TFAgent):
         value_predictions)
       normalize_rewards: If true, keeps moving variance of rewards and
         normalizes incoming rewards.
-      reward_norm_clipping: Value above an below to clip normalized reward.
+      reward_norm_clipping: Value above and below to clip normalized reward.
       normalize_observations: If true, keeps moving mean and variance of
         observations and normalizes incoming observations.
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
@@ -394,8 +394,8 @@ class PPOAgent(tf_agent.TFAgent):
 
     Args:
       next_time_steps: batched tensor of TimeStep tuples after action is taken.
-      value_preds: Batched value predction tensor. Should have one more entry in
-        time index than time_steps, with the final value corresponding to the
+      value_preds: Batched value prediction tensor. Should have one more entry
+        in time index than time_steps, with the final value corresponding to the
         value prediction of the final state.
 
     Returns:
@@ -596,11 +596,10 @@ class PPOAgent(tf_agent.TFAgent):
           name='l2_regularization_loss',
           data=total_l2_regularization_loss,
           step=self.train_step_counter)
-      if self._entropy_regularization:
-        tf.compat.v2.summary.scalar(
-            name='entropy_regularization_loss',
-            data=total_entropy_regularization_loss,
-            step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='entropy_regularization_loss',
+          data=total_entropy_regularization_loss,
+          step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='kl_penalty_loss',
           data=total_kl_penalty_loss,
@@ -1021,10 +1020,10 @@ class PPOAgent(tf_agent.TFAgent):
     mean_kl_above_bound = (
         mean_kl >
         self._adaptive_kl_target * (1.0 + self._adaptive_kl_tolerance))
-    adaptive_kl_update_factor = tf.case({
-        mean_kl_below_bound: lambda: tf.constant(1.0 / 1.5, dtype=tf.float32),
-        mean_kl_above_bound: lambda: tf.constant(1.5, dtype=tf.float32),
-    }, default=lambda: tf.constant(1.0, dtype=tf.float32), exclusive=True)
+    adaptive_kl_update_factor = tf.case([
+        (mean_kl_below_bound, lambda: tf.constant(1.0 / 1.5, dtype=tf.float32)),
+        (mean_kl_above_bound, lambda: tf.constant(1.5, dtype=tf.float32)),
+    ], default=lambda: tf.constant(1.0, dtype=tf.float32), exclusive=True)
 
     new_adaptive_kl_beta = tf.maximum(
         self._adaptive_kl_beta * adaptive_kl_update_factor, 10e-16)

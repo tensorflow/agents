@@ -7,9 +7,7 @@
 <meta itemprop="property" content="submodules"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="variables"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
 <meta itemprop="property" content="copy"/>
 <meta itemprop="property" content="normalize"/>
 <meta itemprop="property" content="update"/>
@@ -18,20 +16,25 @@
 
 # tf_agents.utils.tensor_normalizer.TensorNormalizer
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/tensor_normalizer.py">View
+source</a>
+
 ## Class `TensorNormalizer`
 
 Encapsulates tensor normalization and owns normalization variables.
 
 
 
-
-
-Defined in [`utils/tensor_normalizer.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/tensor_normalizer.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/tensor_normalizer.py">View
+source</a>
 
 ``` python
 __init__(
@@ -39,10 +42,6 @@ __init__(
     scope='normalize_tensor'
 )
 ```
-
-
-
-
 
 ## Properties
 
@@ -68,14 +67,16 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
@@ -99,30 +100,12 @@ first).
 
 Returns a tuple of tf variables owned by this normalizer.
 
-
-
 ## Methods
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Support self.foo = trackable syntax.
-
 <h3 id="copy"><code>copy</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/tensor_normalizer.py">View
+source</a>
 
 ``` python
 copy(scope=None)
@@ -131,6 +114,9 @@ copy(scope=None)
 Copy constructor for TensorNormalizer.
 
 <h3 id="normalize"><code>normalize</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/tensor_normalizer.py">View
+source</a>
 
 ``` python
 normalize(
@@ -145,18 +131,21 @@ Applies normalization to tensor.
 
 #### Args:
 
-* <b>`tensor`</b>: Tensor to normalize.
-* <b>`clip_value`</b>: Clips normalized observations between +/- this value if
+*   <b>`tensor`</b>: Tensor to normalize.
+*   <b>`clip_value`</b>: Clips normalized observations between +/- this value if
     clip_value > 0, otherwise does not apply clipping.
-* <b>`center_mean`</b>: If true, subtracts off mean from normalized tensor.
-* <b>`variance_epsilon`</b>: Epsilon to avoid division by zero in normalization.
-
+*   <b>`center_mean`</b>: If true, subtracts off mean from normalized tensor.
+*   <b>`variance_epsilon`</b>: Epsilon to avoid division by zero in
+    normalization.
 
 #### Returns:
 
 * <b>`normalized_tensor`</b>: Tensor after applying normalization.
 
 <h3 id="update"><code>update</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/tensor_normalizer.py">View
+source</a>
 
 ``` python
 update(
@@ -178,21 +167,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -202,6 +195,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

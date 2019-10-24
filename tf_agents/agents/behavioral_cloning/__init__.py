@@ -13,7 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A Behavioural Cloning agent."""
+"""A Behavioral Cloning agent."""
 from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
-
-

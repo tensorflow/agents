@@ -5,11 +5,13 @@
 
 # Module: tf_agents.agents.ddpg.critic_network
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/critic_network.py">View
+source</a>
+
 Sample Critic/Q network to use with DDPG agents.
-
-
-
-Defined in [`agents/ddpg/critic_network.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/ddpg/critic_network.py).
 
 <!-- Placeholder for "Used in" -->
 

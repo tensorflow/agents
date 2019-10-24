@@ -5,11 +5,13 @@
 
 # Module: tf_agents.replay_buffers
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/__init__.py">View
+source</a>
+
 Replay Buffers Module.
-
-
-
-Defined in [`replay_buffers/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/replay_buffers/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

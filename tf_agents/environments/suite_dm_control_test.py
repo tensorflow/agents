@@ -18,17 +18,15 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
-
 import numpy as np
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_dm_control
 from tf_agents.environments import utils
+from tf_agents.utils import test_utils
 
 
-class SuiteDMControlTest(absltest.TestCase):
+class SuiteDMControlTest(test_utils.TestCase):
 
   def setUp(self):
     super(SuiteDMControlTest, self).setUp()
@@ -44,15 +42,15 @@ class SuiteDMControlTest(absltest.TestCase):
   def testObservationSpec(self):
     env = suite_dm_control.load('ball_in_cup', 'catch')
     obs_spec = env.observation_spec()
-    self.assertEqual(np.float64, obs_spec['position'].dtype)
+    self.assertEqual(np.float32, obs_spec['position'].dtype)
     self.assertEqual((4,), obs_spec['position'].shape)
 
   def testActionSpec(self):
     env = suite_dm_control.load('ball_in_cup', 'catch')
-    obs_spec = env.observation_spec()
-    self.assertEqual(np.float64, obs_spec['position'].dtype)
-    self.assertEqual((4,), obs_spec['position'].shape)
+    action_spec = env.action_spec()
+    self.assertEqual(np.float32, action_spec.dtype)
+    self.assertEqual((2,), action_spec.shape)
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

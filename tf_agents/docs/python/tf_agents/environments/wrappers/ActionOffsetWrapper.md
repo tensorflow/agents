@@ -5,7 +5,6 @@
 <meta itemprop="property" content="batched"/>
 <meta itemprop="property" content="__enter__"/>
 <meta itemprop="property" content="__exit__"/>
-<meta itemprop="property" content="__getattr__"/>
 <meta itemprop="property" content="__init__"/>
 <meta itemprop="property" content="action_spec"/>
 <meta itemprop="property" content="close"/>
@@ -13,6 +12,7 @@
 <meta itemprop="property" content="observation_spec"/>
 <meta itemprop="property" content="render"/>
 <meta itemprop="property" content="reset"/>
+<meta itemprop="property" content="seed"/>
 <meta itemprop="property" content="step"/>
 <meta itemprop="property" content="time_step_spec"/>
 <meta itemprop="property" content="wrapped_env"/>
@@ -20,15 +20,17 @@
 
 # tf_agents.environments.wrappers.ActionOffsetWrapper
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
+
 ## Class `ActionOffsetWrapper`
 
 Offsets actions to be zero-based.
 
 Inherits From: [`PyEnvironmentBaseWrapper`](../../../tf_agents/environments/wrappers/PyEnvironmentBaseWrapper.md)
-
-
-
-Defined in [`environments/wrappers.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -37,29 +39,25 @@ negative-valued actions.
 
 <h2 id="__init__"><code>__init__</code></h2>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
+
 ``` python
 __init__(env)
 ```
-
-
-
-
 
 ## Properties
 
 <h3 id="batch_size"><code>batch_size</code></h3>
 
-
-
 <h3 id="batched"><code>batched</code></h3>
-
-
-
-
 
 ## Methods
 
 <h3 id="__enter__"><code>__enter__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 __enter__()
@@ -68,6 +66,9 @@ __enter__()
 Allows the environment to be used in a with-statement context.
 
 <h3 id="__exit__"><code>__exit__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 __exit__(
@@ -79,48 +80,32 @@ __exit__(
 
 Allows the environment to be used in a with-statement context.
 
-<h3 id="__getattr__"><code>__getattr__</code></h3>
-
-``` python
-__getattr__(name)
-```
-
-Forward all other calls to the base environment.
 
 <h3 id="action_spec"><code>action_spec</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
 
 ``` python
 action_spec()
 ```
 
-
-
 <h3 id="close"><code>close</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
 
 ``` python
 close()
 ```
 
-Frees any resources used by the environment.
 
-Implement this method for an environment backed by an external process.
 
-This method be used directly
-
-```python
-env = Env(...)
-# Use env.
-env.close()
-```
-
-or via a context manager
-
-```python
-with Env(...) as env:
-  # Use env.
-```
 
 <h3 id="current_time_step"><code>current_time_step</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 current_time_step()
@@ -130,21 +115,26 @@ Returns the current timestep.
 
 <h3 id="observation_spec"><code>observation_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
+
 ``` python
 observation_spec()
 ```
 
-
-
 <h3 id="render"><code>render</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
 
 ``` python
 render(mode='rgb_array')
 ```
 
-
-
 <h3 id="reset"><code>reset</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 reset()
@@ -158,14 +148,24 @@ be cached and made available through current_time_step().
 
 #### Returns:
 
-A `TimeStep` namedtuple containing:
-* <b>`step_type`</b>: A `StepType` of `FIRST`.
-* <b>`reward`</b>: 0.0, indicating the reward.
-* <b>`discount`</b>: 1.0, indicating the discount.
-* <b>`observation`</b>: A NumPy array, or a nested dict, list or tuple of arrays
-      corresponding to `observation_spec()`.
+A `TimeStep` namedtuple containing: step_type: A `StepType` of `FIRST`. reward:
+0.0, indicating the reward. discount: 1.0, indicating the discount. observation:
+A NumPy array, or a nested dict, list or tuple of arrays corresponding to
+`observation_spec()`.
+
+<h3 id="seed"><code>seed</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
+
+```python
+seed(seed)
+```
 
 <h3 id="step"><code>step</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 step(action)
@@ -173,13 +173,14 @@ step(action)
 
 Updates the environment according to the action and returns a `TimeStep`.
 
-If the environment returned a `TimeStep` with `StepType.LAST` at the
-previous step, this call to `step` will reset the environment,
-start a new sequence and `action` will be ignored.
+If the environment returned a `TimeStep` with
+<a href="../../../tf_agents/trajectories/time_step/StepType.md#LAST"><code>StepType.LAST</code></a>
+at the previous step the implementation of `_step` in the environment should
+call `reset` to start a new sequence and ignore `action`.
 
-This method will also start a new sequence if called after the environment
-has been constructed and `reset` has not been called. Again, in this case
-`action` will be ignored.
+This method will start a new sequence if called after the environment has been
+constructed and `reset` has not been called. In this case `action` will be
+ignored.
 
 Note: Subclasses cannot override this directly. Subclasses implement
 _step() which will be called by this method. The output of _step() will be
@@ -187,20 +188,20 @@ cached and made available through current_time_step().
 
 #### Args:
 
-* <b>`action`</b>: A NumPy array, or a nested dict, list or tuple of arrays
+*   <b>`action`</b>: A NumPy array, or a nested dict, list or tuple of arrays
     corresponding to `action_spec()`.
-
 
 #### Returns:
 
-A `TimeStep` namedtuple containing:
-* <b>`step_type`</b>: A `StepType` value.
-* <b>`reward`</b>: A NumPy array, reward value for this timestep.
-* <b>`discount`</b>: A NumPy array, discount in the range [0, 1].
-* <b>`observation`</b>: A NumPy array, or a nested dict, list or tuple of arrays
-      corresponding to `observation_spec()`.
+A `TimeStep` namedtuple containing: step_type: A `StepType` value. reward: A
+NumPy array, reward value for this timestep. discount: A NumPy array, discount
+in the range [0, 1]. observation: A NumPy array, or a nested dict, list or tuple
+of arrays corresponding to `observation_spec()`.
 
 <h3 id="time_step_spec"><code>time_step_spec</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 time_step_spec()
@@ -219,11 +220,9 @@ the step_type, reward, discount, and observation structure.
 
 <h3 id="wrapped_env"><code>wrapped_env</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/wrappers.py">View
+source</a>
+
 ``` python
 wrapped_env()
 ```
-
-
-
-
-

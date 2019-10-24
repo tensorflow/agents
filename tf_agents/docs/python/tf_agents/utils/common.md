@@ -2,18 +2,17 @@
 <meta itemprop="name" content="tf_agents.utils.common" />
 <meta itemprop="path" content="Stable" />
 <meta itemprop="property" content="MISSING_RESOURCE_VARIABLES_ERROR"/>
-<meta itemprop="property" content="absolute_import"/>
-<meta itemprop="property" content="division"/>
-<meta itemprop="property" content="print_function"/>
 </div>
 
 # Module: tf_agents.utils.common
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py">View
+source</a>
+
 Common utilities for TF-Agents.
-
-
-
-Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/common.py).
 
 <!-- Placeholder for "Used in" -->
 
@@ -68,6 +67,9 @@ Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/
 
 [`join_scope(...)`](../../tf_agents/utils/common/join_scope.md): Joins a parent and child scope using `/`, checking for empty/none.
 
+[`load_spec(...)`](../../tf_agents/utils/common/load_spec.md): Loads a data spec
+from a file.
+
 [`log_probability(...)`](../../tf_agents/utils/common/log_probability.md): Computes log probability of actions given distribution.
 
 [`ornstein_uhlenbeck_process(...)`](../../tf_agents/utils/common/ornstein_uhlenbeck_process.md): An op for generating noise from a zero-mean Ornstein-Uhlenbeck process.
@@ -77,6 +79,9 @@ Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/
 [`replicate(...)`](../../tf_agents/utils/common/replicate.md): Replicates a tensor so as to match the given outer shape.
 
 [`resource_variables_enabled(...)`](../../tf_agents/utils/common/resource_variables_enabled.md)
+
+[`save_spec(...)`](../../tf_agents/utils/common/save_spec.md): Saves the given
+spec nest as a StructProto.
 
 [`scale_to_spec(...)`](../../tf_agents/utils/common/scale_to_spec.md): Shapes and scales a batch into the given spec bounds.
 
@@ -90,11 +95,8 @@ Defined in [`utils/common.py`](https://github.com/tensorflow/agents/tree/master/
 
 ## Other Members
 
-<h3 id="MISSING_RESOURCE_VARIABLES_ERROR"><code>MISSING_RESOURCE_VARIABLES_ERROR</code></h3>
-
-<h3 id="absolute_import"><code>absolute_import</code></h3>
-
-<h3 id="division"><code>division</code></h3>
-
-<h3 id="print_function"><code>print_function</code></h3>
-
+*   `MISSING_RESOURCE_VARIABLES_ERROR = '\nResource variables are not enabled.
+    Please enable them by adding the following\ncode to your main() method:\n
+    tf.compat.v1.enable_resource_variables()\nFor unit tests,
+    subclass`tf_agents.utils.test_utils.TestCase`.\n'`
+    <a id="MISSING_RESOURCE_VARIABLES_ERROR"></a>

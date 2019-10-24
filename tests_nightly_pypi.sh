@@ -29,18 +29,24 @@ run_tests() {
   # TensorFlow isn't a regular dependency because there are many different pip
   # packages a user might have installed.
   if [[ $2 == "test" ]] ; then
-    pip install tf-nightly
+    pip install tf-nightly==1.15.0.dev20190821
 
     # Install pypi package from test.pypi
     pip install --index-url https://test.pypi.org/simple/ tf-agents-nightly
 
   elif [[ $2 == "official" ]] ; then
-    pip install tf-nightly
+    pip install tf-nightly==1.15.0.dev20190821
+
+    # Install pypi package
+    pip install tf-agents-nightly
+
+  elif [[ $2 == "preview" ]] ; then
+    pip install tf-nightly-2.0-preview
 
     # Install pypi package
     pip install tf-agents-nightly
   else
-    echo "Error unknow option only [test|official]"
+    echo "Error unknown option only [test|official]"
     exit
   fi
 

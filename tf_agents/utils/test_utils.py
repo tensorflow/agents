@@ -23,6 +23,7 @@ import os
 
 from absl import flags
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -67,7 +68,22 @@ def test_src_dir_path(relative_path):
 
 
 class TestCase(tf.test.TestCase):
+  """Base class for TF-Agents unit tests."""
 
   def setUp(self):
     super(TestCase, self).setUp()
     tf.compat.v1.enable_resource_variables()
+    # Guard against tests calling gin.parse_config() without calling
+    # gin.clear_config(), which can cause nasty bugs that show up in a
+    # completely different test. See b/139088071 for example.
+    gin.clear_config()
+
+  def tearDown(self):
+    gin.clear_config()
+    super(TestCase, self).tearDown()
+
+
+# Main function so that users of `test_utils.TestCase` can also call
+# `test_utils.main()`.
+def main():
+  tf.test.main()

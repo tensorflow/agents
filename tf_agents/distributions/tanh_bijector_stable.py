@@ -53,6 +53,11 @@ class Tanh(bijector.Bijector):
     return tf.nn.tanh(x)
 
   def _inverse(self, y):
+    # 0.99999997 is the maximum value such that atanh(x) is valid for both
+    # tf.float32 and tf.float64
+    y = tf.where(tf.less_equal(tf.abs(y), 1.),
+                 tf.clip_by_value(y, -0.99999997, 0.99999997),
+                 y)
     return tf.atanh(y)
 
   def _forward_log_det_jacobian(self, x):

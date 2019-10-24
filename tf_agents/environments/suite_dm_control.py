@@ -43,6 +43,7 @@ def is_available():
 def load(domain_name,
          task_name,
          task_kwargs=None,
+         environment_kwargs=None,
          visualize_reward=False,
          render_kwargs=None,
          env_wrappers=()):
@@ -52,6 +53,8 @@ def load(domain_name,
     domain_name: A string containing the name of a domain.
     task_name: A string containing the name of a task.
     task_kwargs: Optional `dict` of keyword arguments for the task.
+    environment_kwargs: Optional `dict` specifying keyword arguments for the
+      environment.
     visualize_reward: Optional `bool`. If `True`, object colours in rendered
       frames are set to indicate the reward at each step. Default `False`.
     render_kwargs: Optional `dict` of keyword arguments for rendering.
@@ -66,7 +69,9 @@ def load(domain_name,
   """
   if not is_available():
     raise ImportError("dm_control module is not available.")
-  dm_env = suite.load(domain_name, task_name, task_kwargs, visualize_reward)
+  dm_env = suite.load(domain_name, task_name, task_kwargs=task_kwargs,
+                      environment_kwargs=environment_kwargs,
+                      visualize_reward=visualize_reward)
   env = dm_control_wrapper.DmControlWrapper(dm_env, render_kwargs)
 
   for wrapper in env_wrappers:

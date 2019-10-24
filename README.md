@@ -3,19 +3,23 @@
 *NOTE:* Current TF-Agents pre-release is under active development and
 interfaces may change at any time. Feel free to provide feedback and comments.
 
-The documentation, examples and tutorials will grow over the next few weeks.
+To get started, we recommend checking out one of our Colab tutorials. If you
+need an intro to RL (or a quick recap),
+[start here](tf_agents/colabs/0_intro_rl.ipynb). Otherwise, check out our
+[DQN tutorial](tf_agents/colabs/1_dqn_tutorial.ipynb) to get an agent up and
+running in the Cartpole environment.
 
 ## Table of contents
 
-<a href="#Agents">Agents</a><br>
-<a href="#Tutorials">Tutorials</a><br>
+<a href='#Agents'>Agents</a><br>
+<a href='#Tutorials'>Tutorials</a><br>
+<a href='#Multi-Armed Bandits'>Multi-Armed Bandits</a><br>
 <a href='#Examples'>Examples</a><br>
-<a href="#Installation">Installation</a><br>
+<a href='#Installation'>Installation</a><br>
 <a href='#Contributing'>Contributing</a><br>
 <a href='#Principles'>Principles</a><br>
 <a href='#Citation'>Citation</a><br>
 <a href='#Disclaimer'>Disclaimer</a><br>
-
 
 <a id='Agents'></a>
 ## Agents
@@ -39,8 +43,19 @@ Currently the following algorithms are available under TF-Agents:
 <a id='Tutorials'></a>
 ## Tutorials
 
-See [`tf_agents/colabs/`](https://github.com/tensorflow/agents/tree/master/tf_agents/colabs/)
-for tutorials on the major components provided.
+See [`tf_agents/colabs/`](tf_agents/colabs/) for tutorials on the major
+components provided.
+
+<a id='Multi-Armed Bandits'></a>
+
+## Multi-Armed Bandits
+
+The TF-Agents library contains also a Multi-Armed Bandits suite with a few
+environments and agents. RL agents can also be used on Bandit environments. For
+a tutorial, see
+[`tf_agents/bandits/colabs/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/colabs/bandits_tutorial.ipynb).
+For examples ready to run, see
+[`tf_agents/bandits/agents/examples/`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/).
 
 <a id='Examples'></a>
 ## Examples
@@ -90,12 +105,13 @@ If you use this code please cite it as:
 @misc{TFAgents,
   title = {{TF-Agents}: A library for Reinforcement Learning in TensorFlow},
   author = "{Sergio Guadarrama, Anoop Korattikara, Oscar Ramirez,
-    Pablo Castro, Ethan Holly, Sam Fishman, Ke Wang, Ekaterina Gonina,
+    Pablo Castro, Ethan Holly, Sam Fishman, Ke Wang, Ekaterina Gonina, Neal Wu,
+    Efi Kokiopoulou, Luciano Sbaiz, Jamie Smith, Gábor Bartók, Jesse Berent,
     Chris Harris, Vincent Vanhoucke, Eugene Brevdo}",
   howpublished = {\url{https://github.com/tensorflow/agents}},
   url = "https://github.com/tensorflow/agents",
   year = 2018,
-  note = "[Online; accessed 30-November-2018]"
+  note = "[Online; accessed 25-June-2019]"
 }
 ```
 

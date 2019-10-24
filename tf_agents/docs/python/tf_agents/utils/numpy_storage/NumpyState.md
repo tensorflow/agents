@@ -1,25 +1,23 @@
 <div itemscope itemtype="http://developers.google.com/ReferenceObject">
 <meta itemprop="name" content="tf_agents.utils.numpy_storage.NumpyState" />
 <meta itemprop="path" content="Stable" />
-<meta itemprop="property" content="__getattribute__"/>
-<meta itemprop="property" content="__setattr__"/>
 </div>
 
 # tf_agents.utils.numpy_storage.NumpyState
+
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/numpy_storage.py">View
+source</a>
 
 ## Class `NumpyState`
 
 A checkpointable object whose NumPy array attributes are saved/restored.
 
-
-
-
-
-Defined in [`utils/numpy_storage.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/numpy_storage.py).
-
 <!-- Placeholder for "Used in" -->
 
-Example usage:
+#### Example usage:
 
 ```python
 arrays = numpy_storage.NumpyState()
@@ -51,27 +49,4 @@ eagerly). When restoring they skip the TensorFlow graph entirely, and so no
 restore ops need be run. This means that restoration always happens eagerly,
 rather than waiting for `checkpoint.restore(...).run_restore_ops()` like
 TensorFlow variables when graph building.
-
-## Methods
-
-<h3 id="__getattribute__"><code>__getattribute__</code></h3>
-
-``` python
-__getattribute__(name)
-```
-
-Un-wrap `_NumpyWrapper` objects when accessing attributes.
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Automatically wrap NumPy arrays assigned to attributes.
-
-
 

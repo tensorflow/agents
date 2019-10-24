@@ -23,8 +23,11 @@ import os
 
 from absl.testing import parameterized
 import tensorflow as tf
+
+from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
+from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_saver
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
@@ -103,27 +106,62 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     ]
     self.assertAllEqual(['batch_size'], initial_state_signature_names)
 
-  @parameterized.named_parameters(('NotSeededNoState', False, False),
-                                  ('NotSeededWithState', False, True),
-                                  ('SeededNoState', True, False),
-                                  ('SeededWithState', True, True))
-  def testSaveAction(self, seeded, has_state):
+  def _convert_action_input_to_string_vector(self, action_input_tensors):
+    action_input_tensors_strings = tf.nest.map_structure(
+        tf.strings.as_string, action_input_tensors)
+
+    return tf.concat([
+        tf.expand_dims(action_input_tensors_strings[0].step_type, 1),
+        tf.expand_dims(action_input_tensors_strings[0].reward, 1),
+        tf.expand_dims(action_input_tensors_strings[0].discount, 1),
+        action_input_tensors_strings[0].observation], 1)
+
+  def _convert_string_vector_to_action_input(self, example):
+    return (ts.TimeStep(
+        step_type=tf.cast(
+            tf.strings.to_number(example[:, 0], tf.float32), tf.int32),
+        reward=tf.strings.to_number(example[:, 1], tf.float32),
+        discount=tf.strings.to_number(example[:, 2], tf.float32),
+        observation=tf.strings.to_number(example[:, 3:7], tf.float32)),
+            ())
+
+  @parameterized.named_parameters(
+      ('NotSeededNoStateNoInputFn', False, False, False, False),
+      ('NotSeededWithStateNoInputFn', False, True, False, False),
+      ('NotSeededDistributionNetworkNoInputFn', False, False, True, False),
+      ('SeededNoStateNoInputFn', True, False, False, False),
+      ('SeededWithStateNoInputFn', True, True, False, False),
+      ('SeededDistributionNetworkNoInputFn', True, False, True, False),
+      ('NotSeededNoStateInputFn', False, False, False, True),
+      ('SeededNoStateInputFn', True, False, False, True),
+  )
+  def testSaveAction(self, seeded, has_state, distribution_net,
+                     has_input_fn_and_spec):
     with tf.compat.v1.Graph().as_default():
       tf.compat.v1.set_random_seed(self._global_seed)
       with tf.compat.v1.Session().as_default():
-        if has_state:
-          network = q_rnn_network.QRnnNetwork(
-              input_tensor_spec=self._time_step_spec.observation,
-              action_spec=self._action_spec)
+        if distribution_net:
+          network = actor_distribution_network.ActorDistributionNetwork(
+              self._time_step_spec.observation,
+              self._action_spec)
+          policy = actor_policy.ActorPolicy(
+              time_step_spec=self._time_step_spec,
+              action_spec=self._action_spec,
+              actor_network=network)
         else:
-          network = q_network.QNetwork(
-              input_tensor_spec=self._time_step_spec.observation,
-              action_spec=self._action_spec)
+          if has_state:
+            network = q_rnn_network.QRnnNetwork(
+                input_tensor_spec=self._time_step_spec.observation,
+                action_spec=self._action_spec)
+          else:
+            network = q_network.QNetwork(
+                input_tensor_spec=self._time_step_spec.observation,
+                action_spec=self._action_spec)
 
-        policy = q_policy.QPolicy(
-            time_step_spec=self._time_step_spec,
-            action_spec=self._action_spec,
-            q_network=network)
+          policy = q_policy.QPolicy(
+              time_step_spec=self._time_step_spec,
+              action_spec=self._action_spec,
+              q_network=network)
 
         action_seed = 98723
 
@@ -148,9 +186,15 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         (action_output_value, action_output_dict) = self.evaluate(
             (action_output, action_output_dict))
 
+        input_fn_and_spec = None
+        if has_input_fn_and_spec:
+          input_fn_and_spec = (self._convert_string_vector_to_action_input,
+                               tf.TensorSpec((7,), tf.string, name='example'))
+
         saver = policy_saver.PolicySaver(
             policy, batch_size=None, use_nest_path_signatures=False,
-            seed=action_seed)
+            seed=action_seed,
+            input_fn_and_spec=input_fn_and_spec)
         path = os.path.join(self.get_temp_dir(), 'save_model_action')
         saver.save(path)
 
@@ -161,12 +205,20 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
         self.assertIn('action', reloaded.signatures)
         reloaded_action = reloaded.signatures['action']
-        self._compare_input_output_specs(
-            reloaded_action,
-            expected_input_specs=(self._time_step_spec,
-                                  policy.policy_state_spec),
-            expected_output_spec=policy.policy_step_spec,
-            batch_input=True)
+        if has_input_fn_and_spec:
+          self._compare_input_output_specs(
+              reloaded_action,
+              expected_input_specs=input_fn_and_spec[1],
+              expected_output_spec=policy.policy_step_spec,
+              batch_input=True)
+
+        else:
+          self._compare_input_output_specs(
+              reloaded_action,
+              expected_input_specs=(self._time_step_spec,
+                                    policy.policy_state_spec),
+              expected_output_spec=policy.policy_step_spec,
+              batch_input=True)
 
         # Reload action_input_values as tensors in the new graph.
         action_input_tensors = tf.nest.map_structure(
@@ -184,36 +236,40 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         # cases.
         self.assertEqual(reloaded_action.graph.seed, self._global_seed)
 
-        # The seed= argument for the SavedModel action call was given at
-        # creation of the PolicySaver.
-
-        # This is the flat-signature function.
-        reloaded_action_output_dict = reloaded_action(
-            **function_action_input_dict)
-
         def match_dtype_shape(x, y, msg=None):
           self.assertEqual(x.shape, y.shape, msg=msg)
           self.assertEqual(x.dtype, y.dtype, msg=msg)
 
-        # This is the non-flat function.
-        if has_state:
-          reloaded_action_output = reloaded.action(*action_input_tensors)
-        else:
-          # Try both cases: one with an empty policy_state and one with no
-          # policy_state.  Compare them.
+        # The seed= argument for the SavedModel action call was given at
+        # creation of the PolicySaver.
+        if has_input_fn_and_spec:
+          action_string_vector = self._convert_action_input_to_string_vector(
+              action_input_tensors)
+          reloaded_action_output_dict = reloaded_action(action_string_vector)
+          reloaded_action_output = reloaded.action(action_string_vector)
 
-          # NOTE(ebrevdo): The first call to .action() must be stored in
-          # reloaded_action_output because this is the version being compared
-          # later against the true action_output and the values will change
-          # after the first call due to randomness.
+        else:
+          # This is the flat-signature function.
+          reloaded_action_output_dict = reloaded_action(
+              **function_action_input_dict)
+          # This is the non-flat function.
           reloaded_action_output = reloaded.action(*action_input_tensors)
-          reloaded_action_output_no_input_state = reloaded.action(
-              action_input_tensors[0])
-          # Even with a seed, multiple calls to action will get different
-          # values, so here we just check the signature matches.
-          tf.nest.map_structure(match_dtype_shape,
-                                reloaded_action_output_no_input_state,
-                                reloaded_action_output)
+
+          if not has_state:
+            # Try both cases: one with an empty policy_state and one with no
+            # policy_state.  Compare them.
+
+            # NOTE(ebrevdo): The first call to .action() must be stored in
+            # reloaded_action_output because this is the version being compared
+            # later against the true action_output and the values will change
+            # after the first call due to randomness.
+            reloaded_action_output_no_input_state = reloaded.action(
+                action_input_tensors[0])
+            # Even with a seed, multiple calls to action will get different
+            # values, so here we just check the signature matches.
+            tf.nest.map_structure(match_dtype_shape,
+                                  reloaded_action_output_no_input_state,
+                                  reloaded_action_output)
 
         self.evaluate(tf.compat.v1.global_variables_initializer())
         (reloaded_action_output_dict,
@@ -375,6 +431,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
           time_step_spec=self._time_step_spec,
           action_spec=self._action_spec,
           q_network=network)
+      self.evaluate(tf.compat.v1.initializers.variables(policy.variables()))
 
       train_step = common.create_variable('train_step', initial_value=7)
       self.evaluate(tf.compat.v1.initializers.variables([train_step]))

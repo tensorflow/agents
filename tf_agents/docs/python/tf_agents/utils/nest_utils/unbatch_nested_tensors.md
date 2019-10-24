@@ -5,6 +5,12 @@
 
 # tf_agents.utils.nest_utils.unbatch_nested_tensors
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py">View
+source</a>
+
 Remove the batch dimension if needed from nested tensors using their specs.
 
 ``` python
@@ -16,8 +22,6 @@ tf_agents.utils.nest_utils.unbatch_nested_tensors(
 
 
 
-Defined in [`utils/nest_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/nest_utils.py).
-
 <!-- Placeholder for "Used in" -->
 
 If specs is None, the first dimension of each tensor will be removed.
@@ -26,10 +30,9 @@ and the first dimension is removed only if the tensor was batched.
 
 #### Args:
 
-* <b>`tensors`</b>: Nested list/tuple or dict of batched Tensors.
-* <b>`specs`</b>: Nested list/tuple or dict of TensorSpecs, describing the shape of the
-    non-batched Tensors.
-
+*   <b>`tensors`</b>: Nested list/tuple or dict of batched Tensors.
+*   <b>`specs`</b>: Nested list/tuple or dict of TensorSpecs, describing the
+    shape of the non-batched Tensors.
 
 #### Returns:
 

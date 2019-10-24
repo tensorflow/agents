@@ -12,9 +12,7 @@
 <meta itemprop="property" content="time_step_spec"/>
 <meta itemprop="property" content="trainable_variables"/>
 <meta itemprop="property" content="trajectory_spec"/>
-<meta itemprop="property" content="__delattr__"/>
 <meta itemprop="property" content="__init__"/>
-<meta itemprop="property" content="__setattr__"/>
 <meta itemprop="property" content="action"/>
 <meta itemprop="property" content="distribution"/>
 <meta itemprop="property" content="get_initial_state"/>
@@ -25,22 +23,27 @@
 
 # tf_agents.policies.random_tf_policy.RandomTFPolicy
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/random_tf_policy.py">View
+source</a>
+
 ## Class `RandomTFPolicy`
 
 Returns random samples of the given action_spec.
 
 Inherits From: [`Base`](../../../tf_agents/policies/tf_policy/Base.md)
 
-
-
-Defined in [`policies/random_tf_policy.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/policies/random_tf_policy.py).
-
 <!-- Placeholder for "Used in" -->
 
 
 <h2 id="__init__"><code>__init__</code></h2>
 
-``` python
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
+
+```python
 __init__(
     time_step_spec,
     action_spec,
@@ -48,6 +51,7 @@ __init__(
     info_spec=(),
     clip=True,
     emit_log_probability=False,
+    automatic_state_reset=True,
     name=None
 )
 ```
@@ -56,26 +60,26 @@ Initialization of Base class.
 
 #### Args:
 
-* <b>`time_step_spec`</b>: A `TimeStep` spec of the expected time_steps. Usually
-    provided by the user to the subclass.
-* <b>`action_spec`</b>: A nest of BoundedTensorSpec representing the actions. Usually
-    provided by the user to the subclass.
-* <b>`policy_state_spec`</b>: A nest of TensorSpec representing the policy_state.
+*   <b>`time_step_spec`</b>: A `TimeStep` spec of the expected time_steps.
+    Usually provided by the user to the subclass.
+*   <b>`action_spec`</b>: A nest of BoundedTensorSpec representing the actions.
+    Usually provided by the user to the subclass.
+*   <b>`policy_state_spec`</b>: A nest of TensorSpec representing the
+    policy_state. Provided by the subclass, not directly by the user.
+*   <b>`info_spec`</b>: A nest of TensorSpec representing the policy info.
     Provided by the subclass, not directly by the user.
-* <b>`info_spec`</b>: A nest of TensorSpec representing the policy info. Provided by
-    the subclass, not directly by the user.
-* <b>`clip`</b>: Whether to clip actions to spec before returning them.  Default
-    True. Most policy-based algorithms (PCL, PPO, REINFORCE) use unclipped
-    continuous actions for training.
-* <b>`emit_log_probability`</b>: Emit log-probabilities of actions, if supported.
-    If True, policy_step.info will have CommonFields.LOG_PROBABILITY set.
-    Please consult utility methods provided in policy_step for setting and
-    retrieving these. When working with custom policies, either
-    provide a dictionary info_spec or a namedtuple with the field
-    'log_probability'.
-* <b>`name`</b>: A name for this module. Defaults to the class name.
-
-
+*   <b>`clip`</b>: Whether to clip actions to spec before returning them.
+    Default True. Most policy-based algorithms (PCL, PPO, REINFORCE) use
+    unclipped continuous actions for training.
+*   <b>`emit_log_probability`</b>: Emit log-probabilities of actions, if
+    supported. If True, policy_step.info will have CommonFields.LOG_PROBABILITY
+    set. Please consult utility methods provided in policy_step for setting and
+    retrieving these. When working with custom policies, either provide a
+    dictionary info_spec or a namedtuple with the field 'log_probability'.
+*   <b>`automatic_state_reset`</b>: If `True`, then `get_initial_policy_state`
+    is used to clear state in `action()` and `distribution()` for for time steps
+    where `time_step.is_first()`.
+*   <b>`name`</b>: A name for this module. Defaults to the class name.
 
 ## Properties
 
@@ -149,14 +153,16 @@ Sequence of all sub-modules.
 Submodules are modules which are properties of this module, or found as
 properties of modules which are properties of this module (and so on).
 
->>> a = tf.Module()
->>> b = tf.Module()
->>> c = tf.Module()
->>> a.b = b
->>> b.c = c
->>> assert list(a.submodules) == [b, c]
->>> assert list(b.submodules) == [c]
->>> assert list(c.submodules) == []
+```
+a = tf.Module()
+b = tf.Module()
+c = tf.Module()
+a.b = b
+b.c = c
+assert list(a.submodules) == [b, c]
+assert list(b.submodules) == [c]
+assert list(c.submodules) == []
+```
 
 #### Returns:
 
@@ -196,30 +202,12 @@ A `Trajectory` containing all tensor specs associated with the
 observation_spec, action_spec, policy_state_spec, and info_spec of
 this policy.
 
-
-
 ## Methods
 
-<h3 id="__delattr__"><code>__delattr__</code></h3>
-
-``` python
-__delattr__(name)
-```
-
-
-
-<h3 id="__setattr__"><code>__setattr__</code></h3>
-
-``` python
-__setattr__(
-    name,
-    value
-)
-```
-
-Support self.foo = trackable syntax.
-
 <h3 id="action"><code>action</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
 
 ``` python
 action(
@@ -233,11 +221,10 @@ Generates next action given the time_step and policy_state.
 
 #### Args:
 
-* <b>`time_step`</b>: A `TimeStep` tuple corresponding to `time_step_spec()`.
-* <b>`policy_state`</b>: A Tensor, or a nested dict, list or tuple of Tensors
+*   <b>`time_step`</b>: A `TimeStep` tuple corresponding to `time_step_spec()`.
+*   <b>`policy_state`</b>: A Tensor, or a nested dict, list or tuple of Tensors
     representing the previous policy_state.
-* <b>`seed`</b>: Seed to use if action performs sampling (optional).
-
+*   <b>`seed`</b>: Seed to use if action performs sampling (optional).
 
 #### Returns:
 
@@ -246,12 +233,14 @@ A `PolicyStep` named tuple containing:
   `state`: A policy state tensor to be fed into the next call to action.
   `info`: Optional side information such as action log probabilities.
 
-
 #### Raises:
 
 * <b>`RuntimeError`</b>: If subclass __init__ didn't call super().__init__.
 
 <h3 id="distribution"><code>distribution</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
 
 ``` python
 distribution(
@@ -264,10 +253,9 @@ Generates the distribution over next actions given the time_step.
 
 #### Args:
 
-* <b>`time_step`</b>: A `TimeStep` tuple corresponding to `time_step_spec()`.
-* <b>`policy_state`</b>: A Tensor, or a nested dict, list or tuple of Tensors
+*   <b>`time_step`</b>: A `TimeStep` tuple corresponding to `time_step_spec()`.
+*   <b>`policy_state`</b>: A Tensor, or a nested dict, list or tuple of Tensors
     representing the previous policy_state.
-
 
 #### Returns:
 
@@ -278,6 +266,9 @@ A `PolicyStep` named tuple containing:
   `info`: Optional side information such as action log probabilities.
 
 <h3 id="get_initial_state"><code>get_initial_state</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
 
 ``` python
 get_initial_state(batch_size)
@@ -297,6 +288,9 @@ initialized Tensors.
 
 <h3 id="update"><code>update</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
+
 ``` python
 update(
     policy,
@@ -311,18 +305,20 @@ This would include copying the variables from the other policy.
 
 #### Args:
 
-* <b>`policy`</b>: Another policy it can update from.
-* <b>`tau`</b>: A float scalar in [0, 1]. When tau is 1.0 (default), we do a hard
-    update.
-* <b>`sort_variables_by_name`</b>: A bool, when True would sort the variables by name
-    before doing the update.
-
+*   <b>`policy`</b>: Another policy it can update from.
+*   <b>`tau`</b>: A float scalar in [0, 1]. When tau is 1.0 (default), we do a
+    hard update.
+*   <b>`sort_variables_by_name`</b>: A bool, when True would sort the variables
+    by name before doing the update.
 
 #### Returns:
 
 An TF op to do the update.
 
 <h3 id="variables"><code>variables</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/policies/tf_policy.py">View
+source</a>
 
 ``` python
 variables()
@@ -341,21 +337,25 @@ with_name_scope(
 
 Decorator to automatically enter the module name scope.
 
->>> class MyModule(tf.Module):
-...   @tf.Module.with_name_scope
-...   def __call__(self, x):
-...     if not hasattr(self, 'w'):
-...       self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
-...     return tf.matmul(x, self.w)
+```
+class MyModule(tf.Module):
+  @tf.Module.with_name_scope
+  def __call__(self, x):
+    if not hasattr(self, 'w'):
+      self.w = tf.Variable(tf.random.normal([x.shape[1], 64]))
+    return tf.matmul(x, self.w)
+```
 
 Using the above module would produce `tf.Variable`s and `tf.Tensor`s whose
 names included the module name:
 
->>> mod = MyModule()
->>> mod(tf.ones([8, 32]))
-<tf.Tensor: ...>
->>> mod.w
-<tf.Variable ...'my_module/w:0'>
+```
+mod = MyModule()
+mod(tf.ones([8, 32]))
+# ==> <tf.Tensor: ...>
+mod.w
+# ==> <tf.Variable ...'my_module/w:0'>
+```
 
 #### Args:
 
@@ -365,6 +365,3 @@ names included the module name:
 #### Returns:
 
 The original method wrapped such that it enters the module's name scope.
-
-
-

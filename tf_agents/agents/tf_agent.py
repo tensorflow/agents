@@ -23,6 +23,7 @@ import abc
 import collections
 import tensorflow as tf
 
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
@@ -45,8 +46,10 @@ class TFAgent(tf.Module):
                policy,
                collect_policy,
                train_sequence_length,
+               num_outer_dims=2,
                debug_summaries=False,
                summarize_grads_and_vars=False,
+               enable_summaries=True,
                train_step_counter=None):
     """Meant to be called by subclass constructors.
 
@@ -67,22 +70,43 @@ class TFAgent(tf.Module):
         this value to 2.  For agents that don't care, or which can handle `T`
         unknown at graph build time (i.e. most RNN-based agents), set this
         argument to `None`.
+      num_outer_dims: The number of outer dimensions for the agent. Must be
+        either 1 or 2. If 2, training will require both a batch_size and time
+        dimension on every Tensor; if 1, training will require only a batch_size
+        outer dimension.
       debug_summaries: A bool; if true, subclasses should gather debug
         summaries.
       summarize_grads_and_vars: A bool; if true, subclasses should additionally
         collect gradient and variable summaries.
+      enable_summaries: A bool; if false, subclasses should not gather any
+        summaries (debug or otherwise); subclasses should gate *all* summaries
+        using either `summaries_enabled`, `debug_summaries`, or
+        `summarize_grads_and_vars` properties.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
+
+    Raises:
+      ValueError: If `time_step_spec` is not an instance of `ts.TimeStep`.
+      ValueError: If `num_outer_dims` is not in [1, 2].
     """
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
+    if not isinstance(time_step_spec, ts.TimeStep):
+      raise ValueError(
+          "The `time_step_spec` must be an instance of `TimeStep`, but is `{}`."
+          .format(type(time_step_spec)))
+
+    if num_outer_dims not in [1, 2]:
+      raise ValueError("num_outer_dims must be in [1, 2].")
 
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
     self._policy = policy
     self._collect_policy = collect_policy
     self._train_sequence_length = train_sequence_length
+    self._num_outer_dims = num_outer_dims
     self._debug_summaries = debug_summaries
     self._summarize_grads_and_vars = summarize_grads_and_vars
+    self._enable_summaries = enable_summaries
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
     self._train_step_counter = train_step_counter
@@ -111,26 +135,52 @@ class TFAgent(tf.Module):
   def _check_trajectory_dimensions(self, experience):
     """Checks the given Trajectory for batch and time outer dimensions."""
     if not nest_utils.is_batched_nested_tensors(
-        experience, self.collect_data_spec, num_outer_dims=2):
+        experience, self.collect_data_spec,
+        num_outer_dims=self._num_outer_dims):
       debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
       debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
                                           self.collect_data_spec)
-      raise ValueError(
-          "All of the Tensors in `experience` must have two outer dimensions: "
-          "batch size and time. Specifically, tensors should be shaped as "
-          "[B x T x ...].\n"
-          "Full shapes of experience tensors:\n%s.\n"
-          "Full expected shapes (minus outer dimensions):\n%s." %
-          (debug_str_1, debug_str_2))
+
+      if self._num_outer_dims == 2:
+        raise ValueError(
+            "All of the Tensors in `experience` must have two outer "
+            "dimensions: batch size and time. Specifically, tensors should be "
+            "shaped as [B x T x ...].\n"
+            "Full shapes of experience tensors:\n{}.\n"
+            "Full expected shapes (minus outer dimensions):\n{}.".format(
+                debug_str_1, debug_str_2))
+      else:
+        # self._num_outer_dims must be 1.
+        raise ValueError(
+            "All of the Tensors in `experience` must have a single outer "
+            "batch_size dimension. If you also want to include an outer time "
+            "dimension, set num_outer_dims=2 when initializing your agent.\n"
+            "Full shapes of experience tensors:\n{}.\n"
+            "Full expected shapes (minus batch_size dimension):\n{}.".format(
+                debug_str_1, debug_str_2))
+
+    # If we have a time dimension and a train_sequence_length, make sure they
+    # match.
+    if self._num_outer_dims == 2 and self.train_sequence_length is not None:
+      def check_shape(t):  # pylint: disable=invalid-name
+        if t.shape[1] != self.train_sequence_length:
+          debug_str = tf.nest.map_structure(lambda tp: tp.shape, experience)
+          raise ValueError(
+              "One of the Tensors in `experience` has a time axis dim value "
+              "'%s', but we require dim value '%d'. Full shape structure of "
+              "experience:\n%s" %
+              (t.shape[1], self.train_sequence_length, debug_str))
+
+      tf.nest.map_structure(check_shape, experience)
 
   def train(self, experience, weights=None):
     """Trains the agent.
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.policy.step_spec`.
+        structure of `experience` must match that of `self.collect_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
-        `time` must be equal to `self.required_experience_time_steps` if that
+        `time` must be equal to `self.train_step_length` if that
         property is not `None`.
       weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
         containing weights to be used when calculating the total train loss.
@@ -163,18 +213,6 @@ class TFAgent(tf.Module):
           "experience must be type Trajectory, saw type: %s" % type(experience))
 
     self._check_trajectory_dimensions(experience)
-
-    if self.train_sequence_length is not None:
-      def check_shape(t):  # pylint: disable=invalid-name
-        if t.shape[1] != self.train_sequence_length:
-          debug_str = tf.nest.map_structure(lambda tp: tp.shape, experience)
-          raise ValueError(
-              "One of the tensors in `experience` has a time axis "
-              "dim value '%s', but we require dim value '%d'.  "
-              "Full shape structure of experience:\n%s" %
-              (t.shape[1], self.train_sequence_length, debug_str))
-
-      tf.nest.map_structure(check_shape, experience)
 
     if self._enable_functions:
       loss_info = self._train_fn(experience=experience, weights=weights)
@@ -255,12 +293,16 @@ class TFAgent(tf.Module):
     return self._train_sequence_length
 
   @property
+  def summaries_enabled(self):
+    return self._enable_summaries
+
+  @property
   def debug_summaries(self):
-    return self._debug_summaries
+    return self._debug_summaries and self.summaries_enabled
 
   @property
   def summarize_grads_and_vars(self):
-    return self._summarize_grads_and_vars
+    return self._summarize_grads_and_vars and self.summaries_enabled
 
   @property
   def train_step_counter(self):
@@ -280,10 +322,10 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.policy.step_spec`.
+        structure of `experience` must match that of `self.collect_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
-        `time` must be equal to `self.required_experience_time_steps` if that
-        property is not `None`.
+        `time` must be equal to `self.train_step_length` if that property is
+        not `None`.
       weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,

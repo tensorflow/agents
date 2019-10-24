@@ -77,8 +77,8 @@ class MaskedCategorical(tfp.distributions.Categorical):
       neg_inf = logits.dtype.min
     neg_inf = tf.cast(
         tf.fill(dims=tf.shape(input=logits), value=neg_inf), logits.dtype)
+    logits = tf.compat.v2.where(self._mask, logits, neg_inf)
 
-    logits = tf.compat.v1.where(self._mask, logits, neg_inf)
     super(MaskedCategorical, self).__init__(
         logits=logits,
         probs=None,

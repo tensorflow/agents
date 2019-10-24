@@ -5,11 +5,13 @@
 
 # Module: tf_agents.drivers
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/__init__.py">View
+source</a>
+
 Drivers for running a policy in an environment.
-
-
-
-Defined in [`drivers/__init__.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/drivers/__init__.py).
 
 <!-- Placeholder for "Used in" -->
 

@@ -5,6 +5,12 @@
 
 # tf_agents.utils.eager_utils.clip_gradient_norms_fn
 
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py">View
+source</a>
+
 Returns a `transform_grads_fn` function for gradient clipping.
 
 ``` python
@@ -12,7 +18,5 @@ tf_agents.utils.eager_utils.clip_gradient_norms_fn(max_norm)
 ```
 
 
-
-Defined in [`utils/eager_utils.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/utils/eager_utils.py).
 
 <!-- Placeholder for "Used in" -->

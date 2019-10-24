@@ -137,19 +137,19 @@ class CriticNetwork(network.Network):
                 minval=-0.003, maxval=0.003),
             name='value'))
 
-  def call(self, inputs, step_type=(), network_state=()):
+  def call(self, inputs, step_type=(), network_state=(), training=False):
     observations, actions = inputs
     del step_type  # unused.
     observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     for layer in self._observation_layers:
-      observations = layer(observations)
+      observations = layer(observations, training=training)
 
     actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
     for layer in self._action_layers:
-      actions = layer(actions)
+      actions = layer(actions, training=training)
 
     joint = tf.concat([observations, actions], 1)
     for layer in self._joint_layers:
-      joint = layer(joint)
+      joint = layer(joint, training=training)
 
     return tf.reshape(joint, [-1]), network_state

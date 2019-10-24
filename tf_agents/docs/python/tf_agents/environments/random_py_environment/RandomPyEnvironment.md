@@ -12,11 +12,18 @@
 <meta itemprop="property" content="observation_spec"/>
 <meta itemprop="property" content="render"/>
 <meta itemprop="property" content="reset"/>
+<meta itemprop="property" content="seed"/>
 <meta itemprop="property" content="step"/>
 <meta itemprop="property" content="time_step_spec"/>
 </div>
 
 # tf_agents.environments.random_py_environment.RandomPyEnvironment
+
+<table class="tfo-notebook-buttons tfo-api" align="left">
+</table>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py">View
+source</a>
 
 ## Class `RandomPyEnvironment`
 
@@ -24,16 +31,15 @@ Randomly generates observations following the given observation_spec.
 
 Inherits From: [`PyEnvironment`](../../../tf_agents/environments/py_environment/PyEnvironment.md)
 
-
-
-Defined in [`environments/random_py_environment.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py).
-
 <!-- Placeholder for "Used in" -->
 
 If an action_spec is provided it validates that the actions used to step the
 environment fall within the defined spec.
 
 <h2 id="__init__"><code>__init__</code></h2>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py">View
+source</a>
 
 ``` python
 __init__(
@@ -54,50 +60,44 @@ Initializes the environment.
 
 #### Args:
 
-* <b>`observation_spec`</b>: An `ArraySpec`, or a nested dict, list or tuple of
+*   <b>`observation_spec`</b>: An `ArraySpec`, or a nested dict, list or tuple
+    of `ArraySpec`s.
+*   <b>`action_spec`</b>: An `ArraySpec`, or a nested dict, list or tuple of
     `ArraySpec`s.
-* <b>`action_spec`</b>: An `ArraySpec`, or a nested dict, list or tuple of
-    `ArraySpec`s.
-* <b>`episode_end_probability`</b>: Probability an episode will end when the
+*   <b>`episode_end_probability`</b>: Probability an episode will end when the
     environment is stepped.
-* <b>`discount`</b>: Discount to set in time_steps.
-* <b>`reward_fn`</b>: Callable that takes in step_type, action, an observation(s),
-    and returns a numpy array of rewards.
-* <b>`batch_size`</b>: (Optional) Number of observations generated per call.
-    If this value is not `None`, then all actions are expected to
-    have an additional major axis of size `batch_size`, and all outputs
-    will have an additional major axis of size `batch_size`.
-* <b>`seed`</b>: Seed to use for rng used in observation generation.
-* <b>`render_size`</b>: Size of the random render image to return when calling
+*   <b>`discount`</b>: Discount to set in time_steps.
+*   <b>`reward_fn`</b>: Callable that takes in step_type, action, an
+    observation(s), and returns a numpy array of rewards.
+*   <b>`batch_size`</b>: (Optional) Number of observations generated per call.
+    If this value is not `None`, then all actions are expected to have an
+    additional major axis of size `batch_size`, and all outputs will have an
+    additional major axis of size `batch_size`.
+*   <b>`seed`</b>: Seed to use for rng used in observation generation.
+*   <b>`render_size`</b>: Size of the random render image to return when calling
     render.
-* <b>`min_duration`</b>: Number of steps at the beginning of the
-    episode during which the episode can not terminate.
-* <b>`max_duration`</b>: Optional number of steps after which the episode
+*   <b>`min_duration`</b>: Number of steps at the beginning of the episode
+    during which the episode can not terminate.
+*   <b>`max_duration`</b>: Optional number of steps after which the episode
     terminates regarless of the termination probability.
-
 
 #### Raises:
 
-* <b>`ValueError`</b>: If batch_size argument is not None and does not match the
-  shapes of discount or reward.
-
-
+*   <b>`ValueError`</b>: If batch_size argument is not None and does not match
+    the shapes of discount or reward.
 
 ## Properties
 
 <h3 id="batch_size"><code>batch_size</code></h3>
 
-
-
 <h3 id="batched"><code>batched</code></h3>
-
-
-
-
 
 ## Methods
 
 <h3 id="__enter__"><code>__enter__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 __enter__()
@@ -106,6 +106,9 @@ __enter__()
 Allows the environment to be used in a with-statement context.
 
 <h3 id="__exit__"><code>__exit__</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 __exit__(
@@ -119,13 +122,17 @@ Allows the environment to be used in a with-statement context.
 
 <h3 id="action_spec"><code>action_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py">View
+source</a>
+
 ``` python
 action_spec()
 ```
 
-
-
 <h3 id="close"><code>close</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 close()
@@ -152,6 +159,9 @@ with Env(...) as env:
 
 <h3 id="current_time_step"><code>current_time_step</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
+
 ``` python
 current_time_step()
 ```
@@ -160,21 +170,26 @@ Returns the current timestep.
 
 <h3 id="observation_spec"><code>observation_spec</code></h3>
 
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py">View
+source</a>
+
 ``` python
 observation_spec()
 ```
 
-
-
 <h3 id="render"><code>render</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py">View
+source</a>
 
 ``` python
 render(mode='rgb_array')
 ```
 
-
-
 <h3 id="reset"><code>reset</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 reset()
@@ -188,14 +203,24 @@ be cached and made available through current_time_step().
 
 #### Returns:
 
-A `TimeStep` namedtuple containing:
-* <b>`step_type`</b>: A `StepType` of `FIRST`.
-* <b>`reward`</b>: 0.0, indicating the reward.
-* <b>`discount`</b>: 1.0, indicating the discount.
-* <b>`observation`</b>: A NumPy array, or a nested dict, list or tuple of arrays
-      corresponding to `observation_spec()`.
+A `TimeStep` namedtuple containing: step_type: A `StepType` of `FIRST`. reward:
+0.0, indicating the reward. discount: 1.0, indicating the discount. observation:
+A NumPy array, or a nested dict, list or tuple of arrays corresponding to
+`observation_spec()`.
+
+<h3 id="seed"><code>seed</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/random_py_environment.py">View
+source</a>
+
+```python
+seed(seed)
+```
 
 <h3 id="step"><code>step</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 step(action)
@@ -203,13 +228,14 @@ step(action)
 
 Updates the environment according to the action and returns a `TimeStep`.
 
-If the environment returned a `TimeStep` with `StepType.LAST` at the
-previous step, this call to `step` will reset the environment,
-start a new sequence and `action` will be ignored.
+If the environment returned a `TimeStep` with
+<a href="../../../tf_agents/trajectories/time_step/StepType.md#LAST"><code>StepType.LAST</code></a>
+at the previous step the implementation of `_step` in the environment should
+call `reset` to start a new sequence and ignore `action`.
 
-This method will also start a new sequence if called after the environment
-has been constructed and `reset` has not been called. Again, in this case
-`action` will be ignored.
+This method will start a new sequence if called after the environment has been
+constructed and `reset` has not been called. In this case `action` will be
+ignored.
 
 Note: Subclasses cannot override this directly. Subclasses implement
 _step() which will be called by this method. The output of _step() will be
@@ -217,20 +243,20 @@ cached and made available through current_time_step().
 
 #### Args:
 
-* <b>`action`</b>: A NumPy array, or a nested dict, list or tuple of arrays
+*   <b>`action`</b>: A NumPy array, or a nested dict, list or tuple of arrays
     corresponding to `action_spec()`.
-
 
 #### Returns:
 
-A `TimeStep` namedtuple containing:
-* <b>`step_type`</b>: A `StepType` value.
-* <b>`reward`</b>: A NumPy array, reward value for this timestep.
-* <b>`discount`</b>: A NumPy array, discount in the range [0, 1].
-* <b>`observation`</b>: A NumPy array, or a nested dict, list or tuple of arrays
-      corresponding to `observation_spec()`.
+A `TimeStep` namedtuple containing: step_type: A `StepType` value. reward: A
+NumPy array, reward value for this timestep. discount: A NumPy array, discount
+in the range [0, 1]. observation: A NumPy array, or a nested dict, list or tuple
+of arrays corresponding to `observation_spec()`.
 
 <h3 id="time_step_spec"><code>time_step_spec</code></h3>
+
+<a target="_blank" href="https://github.com/tensorflow/agents/tree/master/tf_agents/environments/py_environment.py">View
+source</a>
 
 ``` python
 time_step_spec()
@@ -246,6 +272,3 @@ array-valued rewards.
 
 A `TimeStep` namedtuple containing (possibly nested) `ArraySpec`s defining
 the step_type, reward, discount, and observation structure.
-
-
-

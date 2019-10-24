@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import numbers
 
+import gin
 import numpy as np
 import tensorflow as tf
 
@@ -58,18 +59,25 @@ def sample_bounded_spec(spec, rng):
       low = low / 2  # pylint: disable=g-no-augmented-assignment
       high = high / 2  # pylint: disable=g-no-augmented-assignment
 
-    if high < tf_dtype.max:
-      high = high + 1  # pylint: disable=g-no-augmented-assignment
+    if np.any(high < tf_dtype.max):
+      high = np.where(high < tf_dtype.max, high + 1, high)  # pylint: disable=g-no-augmented-assignment
     elif spec.dtype != np.int64 or spec.dtype != np.uint64:
       # We can still +1 the high if we cast it to the larger dtype.
       high = high.astype(np.int64) + 1
 
-    return rng.randint(
-        low,
-        high,
-        size=spec.shape,
-        dtype=spec.dtype,
-    )
+    if low.size == 1 and high.size == 1:
+      return rng.randint(
+          low,
+          high,
+          size=spec.shape,
+          dtype=spec.dtype,
+      )
+    else:
+      return np.reshape(
+          np.array([
+              rng.randint(low, high, size=1, dtype=spec.dtype)
+              for low, high in zip(low.flatten(), high.flatten())
+          ]), spec.shape)
 
 
 def sample_spec_nest(structure, rng, outer_dims=()):
@@ -134,6 +142,7 @@ def add_outer_dims_nest(structure, outer_dims):
   return tf.nest.map_structure(add_outer_dims, structure)
 
 
+@gin.configurable
 class ArraySpec(object):
   """Describes a numpy array or scalar shape and dtype.
 
@@ -141,6 +150,8 @@ class ArraySpec(object):
   returns, before that array exists.
   The equivalent version describing a `tf.Tensor` is `TensorSpec`.
   """
+
+  __hash__ = None
   __slots__ = ('_shape', '_dtype', '_name')
 
   def __init__(self, shape, dtype, name=None):
@@ -222,6 +233,7 @@ class ArraySpec(object):
     return ArraySpec(spec.shape, spec.dtype, spec.name)
 
 
+@gin.configurable
 class BoundedArraySpec(ArraySpec):
   """An `ArraySpec` that specifies minimum and maximum values.
 
@@ -247,6 +259,7 @@ class BoundedArraySpec(ArraySpec):
   ```
   """
 
+  __hash__ = None
   __slots__ = ('_minimum', '_maximum')
 
   def __init__(self, shape, dtype, minimum=None, maximum=None, name=None):
@@ -381,3 +394,15 @@ def update_spec_shape(spec, shape):
         maximum=spec.maximum,
         name=spec.name)
   return ArraySpec(shape=shape, dtype=spec.dtype, name=spec.name)
+
+
+def update_spec_dtype(spec, dtype):
+  """Returns a copy of the given spec with the new dtype."""
+  if is_bounded(spec):
+    return BoundedArraySpec(
+        shape=spec.shape,
+        dtype=dtype,
+        minimum=spec.minimum,
+        maximum=spec.maximum,
+        name=spec.name)
+  return ArraySpec(shape=spec.shape, dtype=dtype, name=spec.name)

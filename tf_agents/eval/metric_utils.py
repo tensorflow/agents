@@ -123,7 +123,8 @@ def eager_compute(metrics,
                   num_episodes=1,
                   train_step=None,
                   summary_writer=None,
-                  summary_prefix=''):
+                  summary_prefix='',
+                  use_function=True):
   """Compute metrics using `policy` on the `environment`.
 
   *NOTE*: Because placeholders are not compatible with Eager mode we can not use
@@ -139,6 +140,8 @@ def eager_compute(metrics,
     train_step: An optional step to write summaries against.
     summary_writer: An optional writer for generating metric summaries.
     summary_prefix: An optional prefix scope for metric summaries.
+    use_function: Option to enable use of `tf.function` when collecting the
+      metrics.
   Returns:
     A dictionary of results {metric_name: metric_value}
   """
@@ -153,7 +156,10 @@ def eager_compute(metrics,
       policy,
       observers=metrics,
       num_episodes=num_episodes)
-  common.function(driver.run)(time_step, policy_state)
+  if use_function:
+    common.function(driver.run)(time_step, policy_state)
+  else:
+    driver.run(time_step, policy_state)
 
   results = [(metric.name, metric.result()) for metric in metrics]
   # TODO(b/120301678) remove the summaries and merge with compute

@@ -69,6 +69,7 @@ FLAGS = flags.FLAGS
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
+    eval_env_name=None,
     env_load_fn=suite_mujoco.load,
     num_iterations=2000000,
     actor_fc_layers=(400, 300),
@@ -132,7 +133,8 @@ def train_eval(
               [lambda: env_load_fn(env_name)] * num_parallel_environments))
     else:
       tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
-    eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
+    eval_env_name = eval_env_name or env_name
+    eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(eval_env_name))
 
     actor_net = actor_network.ActorNetwork(
         tf_env.time_step_spec().observation,
@@ -237,6 +239,13 @@ def train_eval(
         num_steps=2).prefetch(3)
     iterator = iter(dataset)
 
+    def train_step():
+      experience, _ = next(iterator)
+      return tf_agent.train(experience)
+
+    if use_tf_functions:
+      train_step = common.function(train_step)
+
     for _ in range(num_iterations):
       start_time = time.time()
       time_step, policy_state = collect_driver.run(
@@ -244,8 +253,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _ = next(iterator)
-        train_loss = tf_agent.train(experience)
+        train_loss = train_step()
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
