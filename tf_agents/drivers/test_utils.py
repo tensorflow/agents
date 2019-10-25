@@ -188,6 +188,10 @@ class NumStepsObserver(object):
   def num_steps(self):
     return self._num_steps
 
+  @num_steps.setter
+  def num_steps(self, num_steps):
+    self._num_steps.assign(num_steps)
+
   def __call__(self, traj):
     num_steps = tf.reduce_sum(
         input_tensor=tf.cast(~traj.is_boundary(), dtype=tf.int32))
@@ -206,6 +210,10 @@ class NumStepsTransitionObserver(object):
   @property
   def num_steps(self):
     return self._num_steps
+
+  @num_steps.setter
+  def num_steps(self, num_steps):
+    self._num_steps.assign(num_steps)
 
   def __call__(self, transition):
     _, _, next_time_step = transition
@@ -226,6 +234,10 @@ class NumEpisodesObserver(object):
   @property
   def num_episodes(self):
     return self._num_episodes
+
+  @num_episodes.setter
+  def num_episodes(self, num_episodes):
+    self._num_episodes.assign(num_episodes)
 
   def __call__(self, traj):
     with tf.control_dependencies(
