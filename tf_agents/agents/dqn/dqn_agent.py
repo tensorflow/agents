@@ -112,7 +112,7 @@ class DqnAgent(tf_agent.TFAgent):
       train_step_counter=None,
       name=None):
     """Creates a DQN Agent.
-    -
+    
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
