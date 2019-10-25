@@ -350,6 +350,7 @@ class DqnAgent(tf_agent.TFAgent):
           weights=weights)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
+    non_trainable_weights = self._q_network.non_trainable_weights
     assert list(variables_to_train), "No variables in the agent's q_network."
     grads = tape.gradient(loss_info.loss, variables_to_train)
     # Tuple is used for py3, where zip is a generator producing values once.
@@ -359,7 +360,9 @@ class DqnAgent(tf_agent.TFAgent):
                                                        self._gradient_clipping)
 
     if self._summarize_grads_and_vars:
-      eager_utils.add_variables_summaries(grads_and_vars,
+      grads_and_vars_with_non_trainable = (
+          grads_and_vars + tuple((None, v) for v in non_trainable_weights))
+      eager_utils.add_variables_summaries(grads_and_vars_with_non_trainable,
                                           self.train_step_counter)
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
