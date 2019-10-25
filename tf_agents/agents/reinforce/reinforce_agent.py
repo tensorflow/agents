@@ -271,7 +271,12 @@ class ReinforceAgent(tf_agent.TFAgent):
         'to compute losses.')
 
     # Mask out partial episodes at the end of each batch of time_steps.
-    valid_mask = tf.cast(experience.is_boundary(), dtype=tf.float32)
+    # NOTE: We use is_last rather than is_boundary because the last transition
+    # is the transition with the last valid reward.  In other words, the
+    # reward on the boundary transitions do not have valid rewards.  Since
+    # REINFORCE is calculating a loss w.r.t. the returns (and not bootstrapping)
+    # keeping the boundary transitions is irrelevant.
+    valid_mask = tf.cast(experience.is_last(), dtype=tf.float32)
     valid_mask = tf.math.cumsum(valid_mask, axis=1, reverse=True)
     valid_mask = tf.cast(valid_mask > 0, dtype=tf.float32)
     if weights is not None:
