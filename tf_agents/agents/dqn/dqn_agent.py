@@ -15,8 +15,10 @@
 
 """A DQN Agent.
 Implements the DQN algorithm from
+
 "Human level control through deep reinforcement learning"
   Mnih et al., 2015
+
   https://deepmind.com/research/dqn/
 """
 
@@ -45,15 +47,20 @@ from tf_agents.utils import value_ops
 class DqnLossInfo(collections.namedtuple('DqnLossInfo',
                                          ('td_loss', 'td_error'))):
   """DqnLossInfo is stored in the `extras` field of the LossInfo instance.
+  
   Both `td_loss` and `td_error` have a validity mask applied to ensure that
   no loss or error is calculated for episode boundaries.
+  
   td_loss: The **weighted** TD loss (depends on choice of loss metric and
     any weights passed to the DQN loss function.
   td_error: The **unweighted** TD errors, which are just calculated as:
-    ```
+   
+   ```
     td_error = td_targets - q_values
     ```
+  
     These can be used to update Prioritized Replay Buffer priorities.
+  
     Note that, unlike `td_loss`, `td_error` may contain a time dimension when
     training with RNN mode.  For `td_loss`, this axis is averaged out.
   """
@@ -67,10 +74,13 @@ def compute_td_targets(next_q_values, rewards, discounts):
 @gin.configurable
 class DqnAgent(tf_agent.TFAgent):
   """A DQN Agent.
+  
   Implements the DQN algorithm from
+  
   "Human level control through deep reinforcement learning"
     Mnih et al., 2015
     https://deepmind.com/research/dqn/
+  
   This agent also implements n-step updates. See "Rainbow: Combining
   Improvements in Deep Reinforcement Learning" by Hessel et al., 2017, for a
   discussion on its benefits: https://arxiv.org/abs/1710.02298
@@ -102,6 +112,7 @@ class DqnAgent(tf_agent.TFAgent):
       train_step_counter=None,
       name=None):
     """Creates a DQN Agent.
+    -
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
@@ -185,6 +196,7 @@ class DqnAgent(tf_agent.TFAgent):
         op is run.  Defaults to the global_step.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
+    
     Raises:
       ValueError: If the action spec contains more than one action or action
         spec minimum is not equal to 0.
@@ -295,12 +307,15 @@ class DqnAgent(tf_agent.TFAgent):
 
   def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
+    
     For each weight w_s in the q network, and its corresponding
     weight w_t in the target_q_network, a soft update is:
     w_t = (1 - tau) * w_t + tau * w_s
+    
     Args:
       tau: A float scalar in [0, 1]. Default `tau=1.0` means hard update.
       period: Step interval at which the target network is updated.
+      
     Returns:
       A callable that performs a soft update of the target network parameters.
     """
@@ -368,6 +383,7 @@ class DqnAgent(tf_agent.TFAgent):
             reward_scale_factor=1.0,
             weights=None):
     """Computes loss for DQN training.
+    
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
         structure of `experience` must match that of `self.policy.step_spec`.
@@ -381,6 +397,7 @@ class DqnAgent(tf_agent.TFAgent):
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output td_loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
+        
     Returns:
       loss: An instance of `DqnLossInfo`.
     Raises:
@@ -536,16 +553,21 @@ class DqnAgent(tf_agent.TFAgent):
 @gin.configurable
 class DdqnAgent(DqnAgent):
   """A Double DQN Agent.
+  
   Implements the Double-DQN algorithm from
+  
   "Deep Reinforcement Learning with Double Q-learning"
    Hasselt et al., 2015
    https://arxiv.org/abs/1509.06461
+  
   """
 
   def _compute_next_q_values(self, next_time_steps):
     """Compute the q value of the next state for TD error computation.
+    
     Args:
       next_time_steps: A batch of next timesteps
+      
     Returns:
       A tensor of Q values for the given next state.
     """
