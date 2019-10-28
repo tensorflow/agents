@@ -21,6 +21,7 @@ import tensorflow as tf
 from tf_agents.agents.ddpg import actor_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.networks import sequential_layer
 
 from tensorflow.python.framework import test_util  # TF internal
 
@@ -159,7 +160,7 @@ class ActorNetworkTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
 
     preprocessing_layers = (tf.keras.layers.Dense(4),
-                            tf.keras.Sequential([
+                            sequential_layer.SequentialLayer([
                                 tf.keras.layers.Reshape((1,)),
                                 tf.keras.layers.Dense(4)
                             ]))
