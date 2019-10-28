@@ -163,7 +163,7 @@ class CriticNetwork(network.Network):
 
   def call(self, inputs, step_type=(), network_state=(), training=False):
     outer_rank = nest_utils.get_outer_rank(inputs, self.input_tensor_spec)
-    batch_squash = utils.BatchSquash(outer_rank)
+    batch_squash = utils.BatchSquash(outer_rank)  # Squash B, and T dims.
 
     observations, actions = inputs
     observations, network_state = self._encoder(
@@ -172,10 +172,10 @@ class CriticNetwork(network.Network):
       network_state=network_state,
       training=training)
 
-    observations = batch_squash.flatten(observations)
+    observations = batch_squash.flatten(observations)  # [B, T, ...] -> [BxT, ...]
 
     actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
-    actions = batch_squash.flatten(actions)
+    actions = batch_squash.flatten(actions)  # [B, T, ...] -> [BxT, ...]
     for layer in self._action_layers:
       actions = layer(actions, training=training)
 
@@ -184,5 +184,5 @@ class CriticNetwork(network.Network):
       joint = layer(joint, training=training)
 
     q_value = tf.reshape(joint, [-1])
-    q_value = batch_squash.unflatten(q_value)
+    q_value = batch_squash.unflatten(q_value)  # [B x T,] -> [B, T,]
     return q_value, network_state

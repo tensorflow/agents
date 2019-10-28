@@ -143,7 +143,7 @@ class CriticRnnNetwork(network.Network):
   # TODO(kbanoop): Standardize argument names across different networks.
   def call(self, inputs, step_type, network_state=None):
     outer_rank = nest_utils.get_outer_rank(inputs, self.input_tensor_spec)
-    batch_squash = utils.BatchSquash(outer_rank)
+    batch_squash = utils.BatchSquash(outer_rank)  # Squash B, and T dims.
 
     observation, action = inputs
     observation, _ = self._obs_encoder(
@@ -151,9 +151,9 @@ class CriticRnnNetwork(network.Network):
         step_type=step_type,
         network_state=network_state)
 
-    observation = batch_squash.flatten(observation)
+    observation = batch_squash.flatten(observation)  # [B, T, ...] -> [BxT, ...]
     action = tf.cast(tf.nest.flatten(action)[0], tf.float32)
-    action = batch_squash.flatten(action)
+    action = batch_squash.flatten(action)  # [B, T, ...] -> [BxT, ...]
 
     output, network_state = self._lstm_encoder(
         inputs=(observation, action),
@@ -164,6 +164,6 @@ class CriticRnnNetwork(network.Network):
       output = layer(output)
 
     q_value = tf.reshape(output, [-1])
-    q_value = batch_squash.unflatten(q_value)
+    q_value = batch_squash.unflatten(q_value)  # [B x T,] -> [B, T,]
 
     return q_value, network_state

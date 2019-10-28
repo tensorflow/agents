@@ -126,7 +126,7 @@ class ActorNetwork(network.Network):
 
   def call(self, observations, step_type=(), network_state=(), training=False):
     outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
-    batch_squash = utils.BatchSquash(outer_rank)
+    batch_squash = utils.BatchSquash(outer_rank)  # Squash B, and T dims.
 
     state, network_state = self._encoder(
       observations,
@@ -134,11 +134,11 @@ class ActorNetwork(network.Network):
       network_state=network_state,
       training=training)
 
-    state = batch_squash.flatten(state)
+    state = batch_squash.flatten(state)  # [B, T, ...] -> [BxT, ...]
     output = self._postprocessing_layers(state, training=training)
 
     actions = common.scale_to_spec(output, self._single_action_spec)
-    actions = batch_squash.unflatten(actions)
+    actions = batch_squash.unflatten(actions)  # [B x T, ...] -> [B, T, ...]
 
     output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
                                               [actions])

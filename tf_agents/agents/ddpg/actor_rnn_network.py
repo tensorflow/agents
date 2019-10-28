@@ -132,14 +132,14 @@ class ActorRnnNetwork(network.Network):
   # TODO(kbanoop): Standardize argument names across different networks.
   def call(self, observation, step_type, network_state=None):
     outer_rank = nest_utils.get_outer_rank(observation, self.input_tensor_spec)
-    batch_squash = utils.BatchSquash(outer_rank)
+    batch_squash = utils.BatchSquash(outer_rank)  # Squash B, and T dims.
 
     observation, network_state = self._lstm_encoder(
       observation,
       step_type=step_type,
       network_state=network_state)
 
-    states = batch_squash.flatten(observation)
+    states = batch_squash.flatten(observation)  # [B, T, ...] -> [BxT, ...]
 
     actions = []
     for layer, spec in zip(self._action_layers, self._flat_action_spec):
