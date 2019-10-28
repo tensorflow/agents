@@ -21,6 +21,7 @@ from tf_agents.networks import encoding_network
 from tf_agents.networks import lstm_encoding_network
 from tf_agents.networks import network
 from tf_agents.networks import utils
+from tf_agents.networks import sequential_layer
 from tf_agents.utils import nest_utils
 
 
@@ -101,7 +102,7 @@ class CriticRnnNetwork(network.Network):
     if len(tf.nest.flatten(action_spec)) > 1:
       raise ValueError('Only a single action is supported by this network.')
 
-    action_layers = tf.keras.Sequential(utils.mlp_layers(
+    action_layers = sequential_layer.SequentialLayer(utils.mlp_layers(
         None,
         action_fc_layer_params,
         activation_fn=activation_fn,
