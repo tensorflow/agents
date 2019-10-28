@@ -225,8 +225,15 @@ def soft_variables_update(source_variables,
       else:
         return v1.assign((1 - tau) * v1 + tau * v2)
 
-    if strategy is not None:
-      # assignment happens independently on each replica,
+    # TODO(b/142508640): remove this when b/142802462 is fixed.
+    # Workaround for b/142508640, only use extended.update for
+    # MirroredVariable variables (which are trainable variables).
+    # For other types of variables (i.e. SyncOnReadVariables, for example
+    # batch norm stats) do a regular assign, which will cause a sync and
+    # broadcast from replica 0, so will have slower performance but will be
+    # correct and not cause a failure.
+    if strategy is not None and v_t.trainable:
+      # Assignment happens independently on each replica,
       # see b/140690837 #46.
       update = strategy.extended.update(v_t, update_fn, args=(v_s,))
     else:
