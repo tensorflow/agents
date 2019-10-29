@@ -33,7 +33,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
   def test_spec_from_gym_space_discrete(self):
     discrete_space = gym.spaces.Discrete(3)
-    spec = gym_wrapper._spec_from_gym_space(discrete_space)
+    spec = gym_wrapper.spec_from_gym_space(discrete_space)
 
     self.assertEqual((), spec.shape)
     self.assertEqual(np.int64, spec.dtype)
@@ -42,7 +42,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
   def test_spec_from_gym_space_multi_discrete(self):
     multi_discrete_space = gym.spaces.MultiDiscrete([1, 2, 3, 4])
-    spec = gym_wrapper._spec_from_gym_space(multi_discrete_space)
+    spec = gym_wrapper.spec_from_gym_space(multi_discrete_space)
 
     self.assertEqual((4,), spec.shape)
     self.assertEqual(np.int32, spec.dtype)
@@ -52,7 +52,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
   def test_spec_from_gym_space_multi_binary(self):
     multi_binary_space = gym.spaces.MultiBinary(4)
-    spec = gym_wrapper._spec_from_gym_space(multi_binary_space)
+    spec = gym_wrapper.spec_from_gym_space(multi_binary_space)
 
     self.assertEqual((4,), spec.shape)
     self.assertEqual(np.int8, spec.dtype)
@@ -62,7 +62,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
   def test_spec_from_gym_space_box_scalars(self):
     for dtype in (np.float32, np.float64):
       box_space = gym.spaces.Box(-1.0, 1.0, (3, 4), dtype=dtype)
-      spec = gym_wrapper._spec_from_gym_space(box_space)
+      spec = gym_wrapper.spec_from_gym_space(box_space)
 
       self.assertEqual((3, 4), spec.shape)
       self.assertEqual(dtype, spec.dtype)
@@ -71,7 +71,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
   def test_spec_from_gym_space_box_scalars_simplify_bounds(self):
     box_space = gym.spaces.Box(-1.0, 1.0, (3, 4))
-    spec = gym_wrapper._spec_from_gym_space(box_space, simplify_box_bounds=True)
+    spec = gym_wrapper.spec_from_gym_space(box_space, simplify_box_bounds=True)
 
     self.assertEqual((3, 4), spec.shape)
     self.assertEqual(np.float32, spec.dtype)
@@ -83,8 +83,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
     # _spec_from_gym_space
     box_space = gym.spaces.Box(-1.0, 1.0, (2,))
     dict_space = gym.spaces.Dict({'box1': box_space, 'box2': box_space})
-    spec = gym_wrapper._spec_from_gym_space(dict_space,
-                                            simplify_box_bounds=False)
+    spec = gym_wrapper.spec_from_gym_space(
+        dict_space, simplify_box_bounds=False)
 
     self.assertEqual((2,), spec['box1'].shape)
     self.assertEqual((2,), spec['box2'].shape)
@@ -105,7 +105,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
     for dtype in (np.float32, np.float64):
       box_space = gym.spaces.Box(np.array([-1.0, -2.0]), np.array([2.0, 4.0]),
                                  dtype=dtype)
-      spec = gym_wrapper._spec_from_gym_space(box_space)
+      spec = gym_wrapper.spec_from_gym_space(box_space)
 
       self.assertEqual((2,), spec.shape)
       self.assertEqual(dtype, spec.dtype)
@@ -115,7 +115,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
   def test_spec_from_gym_space_tuple(self):
     tuple_space = gym.spaces.Tuple((gym.spaces.Discrete(2),
                                     gym.spaces.Discrete(3)))
-    spec = gym_wrapper._spec_from_gym_space(tuple_space)
+    spec = gym_wrapper.spec_from_gym_space(tuple_space)
 
     self.assertEqual(2, len(spec))
     self.assertEqual((), spec[0].shape)
@@ -141,7 +141,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
                                   gym.spaces.Discrete(3))),
         }),
     ))
-    spec = gym_wrapper._spec_from_gym_space(tuple_space)
+    spec = gym_wrapper.spec_from_gym_space(tuple_space)
 
     self.assertEqual(4, len(spec))
     # Test Discrete
@@ -193,7 +193,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
         ('spec_1', gym.spaces.Discrete(2)),
     ])
 
-    spec = gym_wrapper._spec_from_gym_space(dict_space)
+    spec = gym_wrapper.spec_from_gym_space(dict_space)
 
     keys = list(spec.keys())
     self.assertEqual('spec_1', keys[1])
@@ -239,7 +239,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
     ))
 
     dtype_map = {gym.spaces.Discrete: np.uint8, gym.spaces.Box: np.uint16}
-    spec = gym_wrapper._spec_from_gym_space(tuple_space, dtype_map=dtype_map)
+    spec = gym_wrapper.spec_from_gym_space(tuple_space, dtype_map=dtype_map)
     self.assertEqual(np.uint8, spec[0].dtype)
     self.assertEqual(np.uint16, spec[1].dtype)
     self.assertEqual(np.uint8, spec[2][0].dtype)
@@ -251,7 +251,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
   def test_spec_name(self):
     box_space = gym.spaces.Box(
         np.array([-1.0, -2.0]), np.array([2.0, 4.0]), dtype=np.float32)
-    spec = gym_wrapper._spec_from_gym_space(box_space, name='observation')
+    spec = gym_wrapper.spec_from_gym_space(box_space, name='observation')
     self.assertEqual('observation', spec.name)
 
   def test_spec_name_nested(self):
@@ -262,7 +262,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
                 'spec_2': gym.spaces.Discrete(2),
             }),
     }), gym.spaces.Discrete(2)))
-    spec = gym_wrapper._spec_from_gym_space(dict_space, name='observation')
+    spec = gym_wrapper.spec_from_gym_space(dict_space, name='observation')
     self.assertEqual('observation/tuple_0/spec_0/spec_1',
                      spec[0]['spec_0']['spec_1'].name)
     self.assertEqual('observation/tuple_0/spec_0/spec_2',
