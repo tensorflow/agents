@@ -503,7 +503,7 @@ class DqnAgent(tf_agent.TFAgent):
   def _compute_q_values(self, time_steps, actions):
     network_observation = time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
@@ -527,7 +527,7 @@ class DqnAgent(tf_agent.TFAgent):
     """
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
@@ -574,7 +574,7 @@ class DdqnAgent(DqnAgent):
     # TODO(b/117175589): Add binary tests for DDQN.
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 

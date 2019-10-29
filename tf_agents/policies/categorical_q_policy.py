@@ -77,8 +77,6 @@ class CategoricalQPolicy(tf_policy.Base):
       ValueError: if `q_network` does not have property `num_atoms`.
       TypeError: if `action_spec` is not a `BoundedTensorSpec`.
     """
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:
@@ -99,7 +97,11 @@ class CategoricalQPolicy(tf_policy.Base):
                        'CategoricalQNetwork.) Network is: %s' % q_network)
 
     super(CategoricalQPolicy, self).__init__(
-        time_step_spec, action_spec, policy_state_spec=q_network.state_spec)
+        time_step_spec,
+        action_spec,
+        policy_state_spec=q_network.state_spec,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter))
 
     self._temperature = tf.convert_to_tensor(temperature, dtype=tf.float32)
     self._num_atoms = q_network.num_atoms
@@ -112,10 +114,6 @@ class CategoricalQPolicy(tf_policy.Base):
                           dtype=np.float32)
     self._support = tf.constant(support, dtype=tf.float32)
     self._action_dtype = action_spec.dtype
-
-  @property
-  def observation_and_action_constraint_splitter(self):
-    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return self._q_network.variables
@@ -135,10 +133,12 @@ class CategoricalQPolicy(tf_policy.Base):
         representing the new policy state.
     """
     network_observation = time_step.observation
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
 
-    if self._observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       network_observation, mask = (
-          self._observation_and_action_constraint_splitter(network_observation))
+          observation_and_action_constraint_splitter(network_observation))
 
     q_logits, policy_state = self._q_network(
         network_observation, time_step.step_type, policy_state)
@@ -147,7 +147,7 @@ class CategoricalQPolicy(tf_policy.Base):
 
     logits = q_values
 
-    if self._observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       # Overwrite the logits for invalid actions to -inf.
       neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
       logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)

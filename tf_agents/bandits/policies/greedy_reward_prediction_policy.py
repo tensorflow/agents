@@ -74,8 +74,6 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec` or the `BoundedTensorSpec` is not valid.
     """
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
@@ -106,19 +104,19 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
         policy_state_spec=reward_network.state_spec,
         clip=False,
         info_spec=info_spec,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         name=name)
-
-  @property
-  def observation_and_action_constraint_splitter(self):
-    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return self._reward_network.variables
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
-    if self._observation_and_action_constraint_splitter:
-      observation, mask = self._observation_and_action_constraint_splitter(
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter is not None:
+      observation, mask = observation_and_action_constraint_splitter(
           observation)
     predicted_reward_values, policy_state = self._reward_network(
         observation, time_step.step_type, policy_state)
@@ -129,7 +127,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
           'The number of actions ({}) does not match the reward_network output'
           ' size ({}.)'.format(self._expected_num_actions,
                                predicted_reward_values.shape[1]))
-    if self._observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       actions = policy_utilities.masked_argmax(
           predicted_reward_values, mask, output_type=self.action_spec.dtype)
     else:

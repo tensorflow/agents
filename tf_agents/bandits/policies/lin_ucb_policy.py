@@ -137,9 +137,7 @@ class LinearUCBPolicy(tf_policy.Base):
           'The number of elements in `cov_matrix` ({}) must match '
           'the number of actions derived from `action_spec` ({}).'.format(
               len(cov_matrix), self._num_actions))
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       context_shape = observation_and_action_constraint_splitter(
           time_step_spec.observation)[0].shape.as_list()
     else:
@@ -174,6 +172,8 @@ class LinearUCBPolicy(tf_policy.Base):
         action_spec=action_spec,
         info_spec=info_spec,
         emit_log_probability=emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         name=name)
 
   def _variables(self):
@@ -183,8 +183,10 @@ class LinearUCBPolicy(tf_policy.Base):
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
-    if self._observation_and_action_constraint_splitter:
-      observation, mask = self._observation_and_action_constraint_splitter(
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter is not None:
+      observation, mask = observation_and_action_constraint_splitter(
           observation)
     # Check the shape of the observation matrix. The observations can be
     # batched.
@@ -224,7 +226,7 @@ class LinearUCBPolicy(tf_policy.Base):
     # Keeping the batch dimension during the squeeze, even if batch_size == 1.
     optimistic_reward_estimates = tf.squeeze(
         tf.stack(p_values, axis=-1), axis=[1])
-    if self._observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       chosen_actions = policy_utilities.masked_argmax(
           optimistic_reward_estimates,
           mask,

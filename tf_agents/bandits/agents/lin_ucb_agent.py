@@ -131,7 +131,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       context_shape = observation_and_action_constraint_splitter(
           time_step_spec.observation)[0].shape.as_list()
     else:
@@ -314,7 +314,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       observation, _ = self._observation_and_action_constraint_splitter(
           observation)
     observation = tf.reshape(observation, [-1, self._context_dim])

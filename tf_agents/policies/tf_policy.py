@@ -119,6 +119,7 @@ class Base(tf.Module):
                clip=True,
                emit_log_probability=False,
                automatic_state_reset=True,
+               observation_and_action_constraint_splitter=None,
                name=None):
     """Initialization of Base class.
 
@@ -142,6 +143,25 @@ class Base(tf.Module):
       automatic_state_reset:  If `True`, then `get_initial_policy_state` is used
         to clear state in `action()` and `distribution()` for for time steps
         where `time_step.is_first()`.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
       name: A name for this module. Defaults to the class name.
     """
     super(Base, self).__init__(name=name)
@@ -169,6 +189,8 @@ class Base(tf.Module):
     self._clip = clip
     self._action_fn = common.function_in_tf1()(self._action)
     self._automatic_state_reset = automatic_state_reset
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
 
   def _setup_specs(self):
     self._policy_step_spec = policy_step.PolicyStep(
@@ -182,6 +204,10 @@ class Base(tf.Module):
   def variables(self):
     """Returns the list of Variables that belong to the policy."""
     return self._variables()
+
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
 
   # TODO(kbanoop): Consider get_initial_state(inputs=None, batch_size=None).
   def get_initial_state(self, batch_size):

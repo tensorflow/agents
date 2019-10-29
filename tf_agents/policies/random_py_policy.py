@@ -72,10 +72,8 @@ class RandomPyPolicy(py_policy.Base):
     """
     self._seed = seed
     self._outer_dims = outer_dims
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
 
-    if self._observation_and_action_constraint_splitter is not None:
+    if observation_and_action_constraint_splitter is not None:
       if not isinstance(action_spec, array_spec.BoundedArraySpec):
         raise NotImplementedError(
             'RandomPyPolicy only supports action constraints for '
@@ -94,11 +92,10 @@ class RandomPyPolicy(py_policy.Base):
       time_step_spec = ts.time_step_spec()
 
     super(RandomPyPolicy, self).__init__(
-        time_step_spec=time_step_spec, action_spec=action_spec)
-
-  @property
-  def observation_and_action_constraint_splitter(self):
-    return self._observation_and_action_constraint_splitter
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter))
 
   def _action(self, time_step, policy_state):
     outer_dims = self._outer_dims

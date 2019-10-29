@@ -129,7 +129,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         experience.action, self._action_spec)
     observations, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       observations, _ = self._observation_and_action_constraint_splitter(
           observations)
 

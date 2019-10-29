@@ -122,9 +122,7 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
 
     self._action_spec = action_spec
     self._num_actions = action_spec.maximum + 1
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       context_shape = observation_and_action_constraint_splitter(
           time_step_spec.observation)[0].shape.as_list()
     else:
@@ -144,7 +142,10 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
                     'Weight covariance')
 
     super(LinearThompsonSamplingPolicy, self).__init__(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter))
 
   def _variables(self):
     return self._variables
@@ -156,8 +157,10 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
   def _action(self, time_step, policy_state, seed):
     seed_stream = tfd.SeedStream(seed=seed, salt='ts_policy')
     observation = time_step.observation
-    if self._observation_and_action_constraint_splitter:
-      observation, mask = self._observation_and_action_constraint_splitter(
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter is not None:
+      observation, mask = observation_and_action_constraint_splitter(
           observation)
 
     observation = tf.cast(
@@ -169,7 +172,7 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
         loc=tf.stack(mean_estimates, axis=-1),
         scale=tf.sqrt(tf.stack(scales, axis=-1)))
     reward_samples = mu_sampler.sample(seed=seed_stream())
-    if self._observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       actions = policy_utilities.masked_argmax(
           reward_samples, mask, output_type=self._action_spec.dtype)
     else:
