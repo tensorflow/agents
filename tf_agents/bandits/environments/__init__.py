@@ -17,6 +17,7 @@
 
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.bandits.environments import bandit_tf_environment
+from tf_agents.bandits.environments import bernoulli_action_mask_tf_environment
 from tf_agents.bandits.environments import bernoulli_py_environment
 from tf_agents.bandits.environments import classification_environment
 from tf_agents.bandits.environments import drifting_linear_environment
