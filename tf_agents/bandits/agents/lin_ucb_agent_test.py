@@ -29,6 +29,7 @@ from tf_agents.bandits.drivers import driver_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
+from tf_agents.utils import common
 from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
@@ -393,6 +394,81 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(expected_b_updated_list, final_b)
     self.assertAllClose(
         expected_eigvals_updated_list, final_eig_vals, atol=1e-4, rtol=1e-4)
+
+  @test_cases()
+  def testDistributedLinearUCBUpdate(
+      self, batch_size, context_dim, dtype, use_eigendecomp=False):
+    """Same as above, but uses the distributed train function of LinUCB."""
+
+    # Construct a `Trajectory` for the given action, observation, reward.
+    num_actions = 5
+    initial_step, final_step = _get_initial_and_final_steps(
+        batch_size, context_dim)
+    action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
+    action_step = _get_action_step(action)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    # Construct an agent and perform the update.
+    observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+
+    agent = lin_ucb_agent.LinearUCBAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        dtype=dtype)
+    self.evaluate(agent.initialize())
+    train_fn = common.function_in_tf1()(agent._distributed_train_step)
+    loss_info = train_fn(experience=experience)
+    self.evaluate(loss_info)
+
+    final_a = self.evaluate(agent.cov_matrix)
+    final_b = self.evaluate(agent.data_vector)
+
+    # Compute the expected updated estimates.
+    observations_list = tf.dynamic_partition(
+        data=tf.reshape(experience.observation,
+                        [batch_size, context_dim]),
+        partitions=tf.convert_to_tensor(action),
+        num_partitions=num_actions)
+    rewards_list = tf.dynamic_partition(
+        data=tf.reshape(experience.reward, [batch_size]),
+        partitions=tf.convert_to_tensor(action),
+        num_partitions=num_actions)
+    expected_a_updated_list = []
+    expected_b_updated_list = []
+    expected_theta_updated_list = []
+    for _, (observations_for_arm, rewards_for_arm) in enumerate(zip(
+        observations_list, rewards_list)):
+      num_samples_for_arm_current = tf.cast(
+          tf.shape(rewards_for_arm)[0], tf.float32)
+      num_samples_for_arm_total = num_samples_for_arm_current
+
+      # pylint: disable=cell-var-from-loop
+      def true_fn():
+        a_new = tf.eye(context_dim) + tf.matmul(
+            observations_for_arm, observations_for_arm, transpose_a=True)
+        b_new = bandit_utils.sum_reward_weighted_observations(
+            rewards_for_arm, observations_for_arm)
+        return a_new, b_new
+
+      def false_fn():
+        return tf.eye(context_dim), tf.zeros([context_dim])
+
+      a_new, b_new = tf.cond(
+          tf.squeeze(num_samples_for_arm_total) > 0, true_fn, false_fn)
+      theta_new = tf.squeeze(
+          tf.linalg.solve(a_new, tf.expand_dims(b_new, axis=-1)), axis=-1)
+
+      expected_a_updated_list.append(self.evaluate(a_new))
+      expected_b_updated_list.append(self.evaluate(b_new))
+      expected_theta_updated_list.append(self.evaluate(theta_new))
+
+    # Check that the actual updated estimates match the expectations.
+    self.assertAllClose(expected_a_updated_list, final_a)
+    self.assertAllClose(expected_b_updated_list, final_b)
+
 
 if __name__ == '__main__':
   tf.test.main()

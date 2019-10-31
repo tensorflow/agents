@@ -282,6 +282,84 @@ class LinearUCBAgent(tf_agent.TFAgent):
                 data=tf.linalg.global_norm([var]),
                 step=self.train_step_counter)
 
+  def _distributed_train_step(self, experience, weights=None):
+    """Distributed train fn to be passed as input to experimental_run_v2()."""
+    del weights  # unused
+    reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
+        experience.reward, self._time_step_spec.reward)
+    action, _ = nest_utils.flatten_multi_batched_nested_tensors(
+        experience.action, self._action_spec)
+    observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
+        experience.observation, self._time_step_spec.observation)
+
+    if self._observation_and_action_constraint_splitter is not None:
+      observation, _ = self._observation_and_action_constraint_splitter(
+          observation)
+    observation = tf.reshape(observation, [-1, self._context_dim])
+    observation = tf.cast(observation, self._dtype)
+    reward = tf.cast(reward, self._dtype)
+
+    # Increase the step counter.
+    batch_size = tf.cast(
+        tf.compat.dimension_value(tf.shape(reward)[0]), dtype=tf.int64)
+    self._train_step_counter.assign_add(batch_size)
+
+    for k in range(self._num_actions):
+      diag_mask = tf.linalg.tensor_diag(
+          tf.cast(tf.equal(action, k), self._dtype))
+      observations_for_arm = tf.matmul(diag_mask, observation)
+      rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
+
+      # Compute local updates for the matrix A and b of this arm.
+      cov_matrix_local_udpate = tf.matmul(
+          observations_for_arm, observations_for_arm, transpose_a=True)
+      data_vector_local_update = bandit_utils.sum_reward_weighted_observations(
+          rewards_for_arm, observations_for_arm)
+
+      def _merge_fn(strategy, per_replica_cov_matrix_update,
+                    per_replica_data_vector_update):
+        """Merge the per-replica-updates."""
+        # Reduce the per-replica-updates using SUM.
+        reduced_cov_matrix_updates = strategy.reduce(
+            tf.distribute.ReduceOp.SUM,
+            per_replica_cov_matrix_update, axis=None)
+        reduced_data_vector_updates = strategy.reduce(
+            tf.distribute.ReduceOp.SUM, per_replica_data_vector_update,
+            axis=None)
+
+        def update_fn(v, t):
+          v.assign(v + t)
+        def assign_fn(v, t):
+          v.assign(t)
+
+        # Update the model variables.
+        # pylint: disable=cell-var-from-loop
+        strategy.extended.update(
+            self._cov_matrix_list[k], update_fn,
+            args=(reduced_cov_matrix_updates,))
+        strategy.extended.update(
+            self._data_vector_list[k], update_fn,
+            args=(reduced_data_vector_updates,))
+        # Compute the eigendecomposition, if needed.
+        if self._use_eigendecomp:
+          eig_vals, eig_matrix = tf.linalg.eigh(self._cov_matrix_list[k])
+          strategy.extended.update(
+              self._eig_vals_list[k], assign_fn, args=(eig_vals,))
+          strategy.extended.update(
+              self._eig_matrix_list[k], assign_fn, args=(eig_matrix,))
+
+      # Passes the local_updates to the _merge_fn() above that performs custom
+      # computation on the per-replica values.
+      # All replicas pause their execution until merge_call() is done and then,
+      # execution is resumed.
+      replica_context = tf.distribute.get_replica_context()
+      replica_context.merge_call(
+          _merge_fn,
+          args=(cov_matrix_local_udpate, data_vector_local_update))
+
+    loss = -1. * tf.reduce_sum(experience.reward)
+    return tf_agent.LossInfo(loss=(loss), extra=())
+
   def _train(self, experience, weights=None):
     """Updates the policy based on the data in `experience`.
 
@@ -299,6 +377,10 @@ class LinearUCBAgent(tf_agent.TFAgent):
         have been calculated with the weights.  Note that each Agent chooses
         its own method of applying weights.
     """
+    strategy = tf.distribute.get_strategy()
+    if isinstance(strategy, tf.distribute.MirroredStrategy):
+      return self._distributed_train_step(experience)
+
     del weights  # unused
 
     # If the experience comes from a replay buffer, the reward has shape:
