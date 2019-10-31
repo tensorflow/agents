@@ -36,6 +36,7 @@ class CriticNetwork(network.Network):
                joint_fc_layer_params=None,
                joint_dropout_layer_params=None,
                activation_fn=tf.nn.relu,
+               output_activation_fn=None,
                name='CriticNetwork'):
     """Creates an instance of `CriticNetwork`.
 
@@ -80,6 +81,10 @@ class CriticNetwork(network.Network):
         None. This list must have the same length of joint_fc_layer_params, or
         be None.
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
+      output_activation_fn: Activation function for the last layer. This can be
+        used to restrict the range of the output. For example, one can pass
+        tf.keras.activations.sigmoid here to restrict the output to be bounded
+        between 0 and 1.
       name: A string representing name of the network.
 
     Raises:
@@ -132,7 +137,7 @@ class CriticNetwork(network.Network):
     self._joint_layers.append(
         tf.keras.layers.Dense(
             1,
-            activation=None,
+            activation=output_activation_fn,
             kernel_initializer=tf.keras.initializers.RandomUniform(
                 minval=-0.003, maxval=0.003),
             name='value'))
