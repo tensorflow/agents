@@ -455,7 +455,7 @@ class Base(tf.Module):
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """
-    seed_stream = tfd.SeedStream(seed=seed, salt='ppo_policy')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='ppo_policy')
     distribution_step = self._distribution(time_step, policy_state)
     actions = tf.nest.map_structure(
         lambda d: reparameterized_sampling.sample(d, seed=seed_stream()),

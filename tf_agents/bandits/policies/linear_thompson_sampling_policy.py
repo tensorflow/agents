@@ -155,7 +155,7 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
         'This policy outputs an action and not a distribution.')
 
   def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='ts_policy')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='ts_policy')
     observation = time_step.observation
     observation_and_action_constraint_splitter = (
         self.observation_and_action_constraint_splitter)

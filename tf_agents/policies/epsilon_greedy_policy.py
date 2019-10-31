@@ -80,7 +80,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
       return self._epsilon
 
   def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='epsilon_greedy')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='epsilon_greedy')
     greedy_action = self._greedy_policy.action(time_step, policy_state)
     random_action = self._random_policy.action(time_step, (), seed_stream())
 
