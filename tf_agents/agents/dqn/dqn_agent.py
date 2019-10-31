@@ -364,11 +364,7 @@ class DqnAgent(tf_agent.TFAgent):
           grads_and_vars + [(None, v) for v in non_trainable_weights])
       eager_utils.add_variables_summaries(grads_and_vars_with_non_trainable,
                                           self.train_step_counter)
-      eager_utils.add_gradients_summaries(grads_and_vars,
-                                          self.train_step_counter)
-    training.apply_gradients(self._optimizer,
-                                          grads_and_vars)
-    
+        
     # Increment train_step_counter
     self.train_step_counter.assign_add(1)
 
