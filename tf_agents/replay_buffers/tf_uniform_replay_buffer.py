@@ -107,20 +107,19 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         does not contain exactly `sample_batch_size` items.  This is helpful for
         static shape inference as the resulting tensors will always have
         leading dimension `sample_batch_size` instead of `None`.
-      dataset_window_shift: Window shift used when calling
-        `as_dataset` with arguments `single_deterministic_pass=True` and
-        `num_steps is not None`.  This determines how the resulting frames are
-        windowed.  If `None`, then there is no overlap created between frames
-        and each frame is seen exactly once.  For example, if `max_length=5`,
-        `num_steps=2`, `sample_batch_size=None`, and
-        `dataset_window_shift=None`, then the datasets returned will have
-        frames `{[0, 1], [2, 3], [4]}`.
+      dataset_window_shift: Window shift used when calling `as_dataset` with
+        arguments `single_deterministic_pass=True` and `num_steps is not None`.
+        This determines how the resulting frames are windowed.  If `None`, then
+        there is no overlap created between frames and each frame is seen
+        exactly once.  For example, if `max_length=5`, `num_steps=2`,
+        `sample_batch_size=None`, and `dataset_window_shift=None`, then the
+        datasets returned will have frames `{[0, 1], [2, 3], [4]}`.
 
-        If `num_steps is not None`, then windows are created
-        with a window overlap of `dataset_window_shift` and you will see each
-        frame up to `num_steps` times.  For example, if `max_length=5`,
-        `num_steps=2`, `sample_batch_size=None`, and `dataset_window_shift=1`,
-        then the datasets returned will have windows of shifted repeated frames:
+        If `dataset_window_shift is not None`, then windows are created with a
+        window overlap of `dataset_window_shift` and you will see each frame up
+        to `num_steps` times.  For example, if `max_length=5`, `num_steps=2`,
+        `sample_batch_size=None`, and `dataset_window_shift=1`, then the
+        datasets returned will have windows of shifted repeated frames:
         `{[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]}`.
 
         For more details, see the documentation of `tf.data.Dataset.window`,
