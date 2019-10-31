@@ -70,7 +70,7 @@ class OUNoisePolicy(tf_policy.Base):
     return self._wrapped_policy.variables()
 
   def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='ou_noise')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='ou_noise')
 
     def _create_ou_process(action_spec):
       return common.OUProcess(

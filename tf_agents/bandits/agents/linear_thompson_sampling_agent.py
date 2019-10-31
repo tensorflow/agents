@@ -88,7 +88,7 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
         action_spec)
     self._observation_and_action_constraint_splitter = (
         observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       context_shape = observation_and_action_constraint_splitter(
           time_step_spec.observation)[0].shape.as_list()
     else:
@@ -171,7 +171,7 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
         experience.action, self._action_spec)
     observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.observation, self._time_step_spec.observation)
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       observation, _ = self._observation_and_action_constraint_splitter(
           observation)
     observation = tf.cast(observation, self._dtype)

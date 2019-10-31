@@ -354,14 +354,14 @@ class DqnAgent(tf_agent.TFAgent):
     assert list(variables_to_train), "No variables in the agent's q_network."
     grads = tape.gradient(loss_info.loss, variables_to_train)
     # Tuple is used for py3, where zip is a generator producing values once.
-    grads_and_vars = tuple(zip(grads, variables_to_train))
+    grads_and_vars = list(zip(grads, variables_to_train))
     if self._gradient_clipping is not None:
       grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
                                                        self._gradient_clipping)
 
     if self._summarize_grads_and_vars:
       grads_and_vars_with_non_trainable = (
-          grads_and_vars + tuple((None, v) for v in non_trainable_weights))
+          grads_and_vars + [(None, v) for v in non_trainable_weights])
       eager_utils.add_variables_summaries(grads_and_vars_with_non_trainable,
                                           self.train_step_counter)
       eager_utils.add_gradients_summaries(grads_and_vars,
@@ -505,7 +505,7 @@ class DqnAgent(tf_agent.TFAgent):
   def _compute_q_values(self, time_steps, actions):
     network_observation = time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
@@ -527,7 +527,7 @@ class DqnAgent(tf_agent.TFAgent):
     """
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
@@ -574,7 +574,7 @@ class DdqnAgent(DqnAgent):
     # TODO(b/117175589): Add binary tests for DDQN.
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 

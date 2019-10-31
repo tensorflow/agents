@@ -15,7 +15,6 @@
 
 """Sample recurrent Critic network to use with DDPG agents."""
 
-import functools
 import gin
 import tensorflow as tf
 from tf_agents.networks import dynamic_unroll_layer
@@ -35,7 +34,7 @@ class CriticRnnNetwork(network.Network):
                observation_conv_layer_params=None,
                observation_fc_layer_params=(200,),
                action_fc_layer_params=(200,),
-               joint_fc_layer_params=(100),
+               joint_fc_layer_params=(100,),
                lstm_size=(40,),
                output_fc_layer_params=(200, 100),
                activation_fn=tf.keras.activations.relu,
@@ -111,10 +110,14 @@ class CriticRnnNetwork(network.Network):
       cell = tf.keras.layers.StackedRNNCells(
           [tf.keras.layers.LSTMCell(size) for size in lstm_size])
 
-    state_spec = tf.nest.map_structure(
-        functools.partial(
-            tensor_spec.TensorSpec, dtype=tf.float32,
-            name='network_state_spec'), list(cell.state_size))
+    counter = [-1]
+
+    def create_spec(size):
+      counter[0] += 1
+      return tensor_spec.TensorSpec(
+          size, dtype=tf.float32, name='network_state_%d' % counter[0])
+
+    state_spec = tf.nest.map_structure(create_spec, cell.state_size)
 
     output_layers = utils.mlp_layers(fc_layer_params=output_fc_layer_params,
                                      name='output')

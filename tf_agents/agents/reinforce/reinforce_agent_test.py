@@ -33,6 +33,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -76,7 +77,7 @@ class DummyActorNet(network.Network):
       states = layer(states)
 
     single_action_spec = tf.nest.flatten(self._output_tensor_spec)[0]
-    actions, stdevs = tf.split(states, 2, axis=1)
+    actions, stdevs = states[..., 0], states[..., 1]
     actions = tf.reshape(actions, [-1] + single_action_spec.shape.as_list())
     stdevs = tf.reshape(stdevs, [-1] + single_action_spec.shape.as_list())
     actions = tf.nest.pack_sequence_as(self._output_tensor_spec, [actions])
@@ -193,6 +194,205 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
+  def testMaskingRewardSingleEpisodeRewardOnFirst(self):
+    # Test that policy_gradient_loss reacts correctly to rewards when there are:
+    #   * A single MDP episode
+    #   * Returns on the tf.StepType.FIRST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]
+    # action      :   [0]       [1]
+    # reward      :    3         0
+    # ~is_boundary:    1         0
+    # is_last     :    1         0
+    # valid reward:   3*1       4*0
+    #
+    # The second action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.
+    #
+    # The expected_loss is > 0.0 in this case, only LAST should be excluded.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=None,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST])
+    reward = tf.constant([3, 4], dtype=tf.float32)
+    discount = tf.constant([1, 0], dtype=tf.float32)
+    observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
+    time_steps = ts.TimeStep(step_type, reward, discount, observations)
+
+    actions = tf.constant([[0], [1]], dtype=tf.float32)
+    actions_distribution = agent.collect_policy.distribution(
+        time_steps).action
+    returns = tf.constant([3.0, 0.0], dtype=tf.float32)
+
+    # Returns on the StepType.FIRST should be counted.
+    expected_loss = 10.8935775757
+    loss = agent.policy_gradient_loss(
+        actions_distribution, actions, time_steps.is_last(), returns, 1)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  def testMaskingReturnSingleEpisodeRewardOnLast(self):
+    # Test that policy_gradient_loss reacts correctly to rewards when there are:
+    #   * A single MDP episode
+    #   * Returns on the tf.StepType.LAST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]
+    # action      :   [0]       [1]
+    # reward      :    0         3
+    # ~is_boundary:    1         0
+    # is_last     :    1         0
+    # valid reward:   0*1       3*0
+    #
+    # The second action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.  The first has a 0 reward.
+    #
+    # The expected_loss is 0.0 in this case.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=None,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST])
+    reward = tf.constant([0, 3], dtype=tf.float32)
+    discount = tf.constant([1, 0], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2]], dtype=tf.float32)
+    time_steps = ts.TimeStep(step_type, reward, discount, observations)
+
+    actions = tf.constant([[0], [1]], dtype=tf.float32)
+    actions_distribution = agent.collect_policy.distribution(
+        time_steps).action
+    returns = tf.constant([0.0, 3.0], dtype=tf.float32)
+
+    # Returns on the StepType.LAST should not be counted.
+    expected_loss = 0.0
+    loss = agent.policy_gradient_loss(
+        actions_distribution, actions, time_steps.is_last(), returns, 1)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  def testMaskingReturnMultipleEpisodesRewardOnFirst(self):
+    # Test that policy_gradient_loss reacts correctly to rewards when there are:
+    #   * Multiple MDP episodes
+    #   * Returns on the tf.StepType.FIRST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F) -> (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]    [1, 2]    [1, 2]
+    # action      :   [0]       [1]       [2]       [3]
+    # reward      :    3         0         4         0
+    # ~is_boundary:    1         0         1         0
+    # is_last     :    1         0         1         0
+    # valid reward:   3*1       0*0       4*1       0*0
+    #
+    # The second & fourth action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.
+    #
+    # The expected_loss is > 0.0 in this case, only LAST should be excluded.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=None,
+    )
+
+    step_type = tf.constant(
+        [ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
+         ts.StepType.LAST])
+    reward = tf.constant([3, 0, 4, 0], dtype=tf.float32)
+    discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+    time_steps = ts.TimeStep(step_type, reward, discount, observations)
+
+    actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
+    actions_distribution = agent.collect_policy.distribution(
+        time_steps).action
+    returns = tf.constant([3.0, 0.0, 4.0, 0.0], dtype=tf.float32)
+
+    # Returns on the StepType.FIRST should be counted.
+    expected_loss = 12.2091741562
+    loss = agent.policy_gradient_loss(
+        actions_distribution, actions, time_steps.is_last(), returns, 2)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  def testMaskingReturnMultipleEpisodesRewardOnLast(self):
+    # Test that policy_gradient_loss reacts correctly to returns when there are:
+    #   * Multiple MDP episodes
+    #   * Returns on the tf.StepType.LAST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F) -> (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]    [1, 2]    [1, 2]
+    # action      :   [0]       [1]       [2]       [3]
+    # reward      :    0         3         0         4
+    # ~is_boundary:    1         0         1         0
+    # is_last     :    1         0         1         0
+    # valid reward:   0*1       3*0       0*1       4*0
+    #
+    # The second & fourth action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.
+    #
+    # The expected_loss is 0.0 in this case.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=None,
+    )
+
+    step_type = tf.constant(
+        [ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
+         ts.StepType.LAST])
+    reward = tf.constant([0, 3, 0, 4], dtype=tf.float32)
+    discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+    time_steps = ts.TimeStep(step_type, reward, discount, observations)
+
+    actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
+    actions_distribution = agent.collect_policy.distribution(
+        time_steps).action
+    returns = tf.constant([0.0, 3.0, 0.0, 4.0], dtype=tf.float32)
+
+    # Returns on the StepType.LAST should not be counted.
+    expected_loss = 0.0
+    loss = agent.policy_gradient_loss(
+        actions_distribution, actions, time_steps.is_last(), returns, 2)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
   @parameterized.parameters(
       ([[[0.8, 0.2]]], [1],),
       ([[[0.8, 0.2]], [[0.3, 0.7]]], [0.5, 0.5],),
@@ -233,6 +433,390 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
+
+  def testTrainMaskingRewardSingleBanditEpisode(self):
+    # Test that train reacts correctly to experience when there is only a
+    # single Bandit episode.  Bandit episodes are encoded differently than
+    # MDP episodes.  They have only a single transition with
+    # step_type=StepType.FIRST and next_step_type=StepType.LAST.
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L)
+    # observation : [1, 2]
+    # action      :   [0]
+    # reward      :    3
+    # ~is_boundary:    0
+    # is_last     :    1
+    # valid reward:   3*1
+    #
+    # The single bandit transition is valid and not masked.
+    #
+    # The expected_loss is > 0.0 in this case, matching the expected_loss of the
+    # testMaskingRewardSingleEpisodeRewardOnFirst policy_gradient_loss test.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST])
+    next_step_type = tf.constant([ts.StepType.LAST])
+    reward = tf.constant([3], dtype=tf.float32)
+    discount = tf.constant([0], dtype=tf.float32)
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
+    actions = tf.constant([[0]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards should be counted.
+    expected_loss = 10.8935775757
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
+
+  def testTrainMaskingRewardMultipleBanditEpisodes(self):
+    # Test that train reacts correctly to experience when there are multiple
+    # Bandit episodes.  Bandit episodes are encoded differently than
+    # MDP episodes.  They (each) have only a single transition with
+    # step_type=StepType.FIRST and next_step_type=StepType.LAST.  This test
+    # helps ensure that LAST->FIRST->LAST transitions are handled correctly.
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (F, L)
+    # observation : [1, 2]    [1, 2]
+    # action      :   [0]       [2]
+    # reward      :    3         4
+    # ~is_boundary:    0         0
+    # is_last     :    1         1
+    # valid reward:   3*1       4*1
+    #
+    # All bandit transitions are valid and none are masked.
+    #
+    # The expected_loss is > 0.0 in this case, matching the expected_loss of the
+    # testMaskingRewardMultipleEpisodesRewardOnFirst policy_gradient_loss test.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.FIRST])
+    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.LAST])
+    reward = tf.constant([3, 4], dtype=tf.float32)
+    discount = tf.constant([0, 0], dtype=tf.float32)
+    observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
+    actions = tf.constant([[0], [2]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards on the StepType.FIRST should be counted.
+    expected_loss = 12.2091741562
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
+
+  def testTrainMaskingRewardSingleEpisodeRewardOnFirst(self):
+    # Test that train reacts correctly to experience when there are:
+    #   * A single MDP episode
+    #   * Rewards on the tf.StepType.FIRST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]
+    # action      :   [0]       [1]
+    # reward      :    3         4
+    # ~is_boundary:    1         0
+    # is_last     :    1         0
+    # valid reward:   3*1       4*0
+    #
+    # The second action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.
+    #
+    # The expected_loss is > 0.0 in this case, matching the expected_loss of the
+    # testMaskingRewardSingleEpisodeRewardOnFirst policy_gradient_loss test.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST])
+    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST])
+    reward = tf.constant([3, 4], dtype=tf.float32)
+    discount = tf.constant([1, 0], dtype=tf.float32)
+    observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
+    actions = tf.constant([[0], [1]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards on the StepType.FIRST should be counted.
+    expected_loss = 10.8935775757
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
+
+  def testTrainMaskingRewardSingleEpisodeRewardOnLast(self):
+    # Test that train reacts correctly to experience when there are:
+    #   * A single MDP episode
+    #   * Rewards on the tf.StepType.LAST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]
+    # action      :   [0]       [1]
+    # reward      :    0         3
+    # ~is_boundary:    1         0
+    # is_last     :    1         0
+    # valid reward:   0*1       3*0
+    #
+    # The second action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.  The first has a 0 reward.
+    #
+    # The expected_loss is = 0.0 in this case.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST])
+    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST])
+    reward = tf.constant([0, 3], dtype=tf.float32)
+    discount = tf.constant([1, 0], dtype=tf.float32)
+    observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
+
+    actions = tf.constant([[0], [1]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards on the StepType.LAST should not be counted.
+    expected_loss = 0.0
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
+
+  def testTrainMaskingRewardMultipleEpisodesRewardOnFirst(self):
+    # Test that train reacts correctly to experience when there are:
+    #   * Multiple MDP episodes
+    #   * Rewards on the tf.StepType.FIRST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F) -> (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]    [1, 2]    [1, 2]
+    # action      :   [0]       [1]       [2]       [3]
+    # reward      :    3         0         4         0
+    # ~is_boundary:    1         0         1         0
+    # is_last     :    1         0         1         0
+    # valid reward:   3*1       0*0       4*1       0*0
+    #
+    # The second & fourth action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.
+    #
+    # The expected_loss is > 0.0 in this case, matching the expected_loss of the
+    # testMaskingRewardMultipleEpisodesRewardOnFirst policy_gradient_loss test.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST,
+                             ts.StepType.FIRST, ts.StepType.LAST])
+    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST,
+                                  ts.StepType.LAST, ts.StepType.FIRST])
+    reward = tf.constant([3, 0, 4, 0], dtype=tf.float32)
+    discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+    actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards on the StepType.FIRST should be counted.
+    expected_loss = 12.2091741562
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
+
+  def testTrainMaskingPartialEpisodeMultipleEpisodesRewardOnFirst(self):
+    # Test that train reacts correctly to experience when there are:
+    #   * Multiple MDP episodes
+    #   * Rewards on the tf.StepType.FIRST transitions
+    #   * Partial episode at end of experience
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F) -> (F, M) -> (M, M)
+    # observation : [1, 2]    [1, 2]    [1, 2]    [1, 2]
+    # action      :   [0]       [1]       [2]       [3]
+    # reward      :    3         0         4         0
+    # ~is_boundary:    1         0         1         1
+    # is_last     :    1         0         0         0
+    # valid reward:   3*1       0*0       4*0       0*0
+    #
+    # The second action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.  The third & fourth transitions
+    # should get masked out for everything due to it being an incomplete episode
+    # (notice there is no trailing step_type=(F,L)).
+    #
+    # The expected_loss is > 0.0 in this case, matching the expected_loss of the
+    # testMaskingRewardSingleEpisodeRewardOnFirst policy_gradient_loss test,
+    # because the partial second episode should be masked out.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST,
+                             ts.StepType.FIRST, ts.StepType.MID])
+    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST,
+                                  ts.StepType.MID, ts.StepType.MID])
+    reward = tf.constant([3, 0, 4, 0], dtype=tf.float32)
+    discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+    actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards on the StepType.FIRST should be counted.
+    expected_loss = 10.8935775757
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
+
+  def testTrainMaskingRewardMultipleEpisodesRewardOnLast(self):
+    # Test that train reacts correctly to experience when there are:
+    #   * Multiple MDP episodes
+    #   * Rewards on the tf.StepType.LAST transitions
+    #
+    # F, L, M = ts.StepType.{FIRST, MID, LAST} in the chart below.
+    #
+    # Experience looks like this:
+    # Trajectories: (F, L) -> (L, F) -> (F, L) -> (L, F)
+    # observation : [1, 2]    [1, 2]    [1, 2]    [1, 2]
+    # action      :   [0]       [1]       [2]       [3]
+    # reward      :    0         3         0         4
+    # ~is_boundary:    1         0         1         0
+    # is_last     :    1         0         1         0
+    # valid reward:   0*1       3*0       0*1       4*0
+    #
+    # The second & fourth action & reward should be masked out due to being on a
+    # boundary (step_type=(L, F)) transition.
+    #
+    # The expected_loss is = 0.0 in this case.
+    agent = reinforce_agent.ReinforceAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=DummyActorNet(
+            self._obs_spec, self._action_spec, unbounded_actions=True),
+        optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        use_advantage_loss=False,
+        normalize_returns=False,
+    )
+
+    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST,
+                             ts.StepType.FIRST, ts.StepType.LAST])
+    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST,
+                                  ts.StepType.LAST, ts.StepType.FIRST])
+    reward = tf.constant([0, 3, 0, 4], dtype=tf.float32)
+    discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+    actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
+
+    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
+        step_type, observations, actions, (), next_step_type, reward, discount))
+
+    # Rewards on the StepType.LAST should be counted.
+    expected_loss = 0.0
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info = self.evaluate(loss)
+    self.assertAllClose(loss_info.loss, expected_loss)
 
   def testPolicy(self):
     agent = reinforce_agent.ReinforceAgent(
@@ -339,9 +923,10 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         optimizer=None,
     )
 
-    step_type = tf.constant(
-        [[ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
-          ts.StepType.LAST]])
+    step_type = tf.constant([[ts.StepType.FIRST, ts.StepType.LAST,
+                              ts.StepType.FIRST, ts.StepType.LAST]])
+    next_step_type = tf.constant([[ts.StepType.LAST, ts.StepType.FIRST,
+                                   ts.StepType.LAST, ts.StepType.FIRST]])
     reward = tf.constant([[0, 0, 0, 0]], dtype=tf.float32)
     discount = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
     observations = tf.constant(
@@ -349,8 +934,7 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     actions = tf.constant([[[0], [1], [2], [3]]], dtype=tf.float32)
 
     experience = trajectory.Trajectory(
-        step_type, observations, actions, (),
-        step_type, reward, discount)
+        step_type, observations, actions, (), next_step_type, reward, discount)
 
     agent.total_loss(experience, reward, None)
 

@@ -39,10 +39,10 @@ class RandomTFPolicy(tf_policy.Base):
   """Returns random samples of the given action_spec."""
 
   def __init__(self, time_step_spec, action_spec, *args, **kwargs):
-    self._observation_and_action_constraint_splitter = (
-        kwargs.pop('observation_and_action_constraint_splitter', None))
+    observation_and_action_constraint_splitter = (
+        kwargs.get('observation_and_action_constraint_splitter', None))
 
-    if self._observation_and_action_constraint_splitter is not None:
+    if observation_and_action_constraint_splitter is not None:
       if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
         raise NotImplementedError(
             'RandomTFPolicy only supports action constraints for '
@@ -59,10 +59,6 @@ class RandomTFPolicy(tf_policy.Base):
 
     super(RandomTFPolicy, self).__init__(
         time_step_spec, action_spec, *args, **kwargs)
-
-  @property
-  def observation_and_action_constraint_splitter(self):
-    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return []

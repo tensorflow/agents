@@ -88,7 +88,7 @@ class MaskedCategorical(tfp.distributions.Categorical):
         name=name)
 
   def _entropy(self):
-    entropy = tf.nn.log_softmax(self.logits) * self.probs
+    entropy = tf.nn.log_softmax(self.logits) * self.probs_parameter()
     # Replace the (potentially -inf) values with 0s before summing.
     entropy = tf.compat.v1.where(self._mask, entropy, tf.zeros_like(entropy))
     return -tf.reduce_sum(input_tensor=entropy, axis=-1)

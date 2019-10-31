@@ -294,7 +294,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
       network_observation = time_steps.observation
 
-      if self._observation_and_action_constraint_splitter:
+      if self._observation_and_action_constraint_splitter is not None:
         network_observation, _ = (
             self._observation_and_action_constraint_splitter(
                 network_observation))
@@ -446,7 +446,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     """
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 

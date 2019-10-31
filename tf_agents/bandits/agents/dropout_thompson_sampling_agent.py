@@ -106,7 +106,7 @@ class DropoutThompsonSamplingAgent(
       dropout_layer_params.append(dropout_param)
     else:
       dropout_layer_params = [dropout_param] * len(fc_layer_params)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       input_tensor_spec, _ = observation_and_action_constraint_splitter(
           time_step_spec.observation)
     else:

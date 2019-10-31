@@ -124,9 +124,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
 
     self._num_actions = len(cov_matrix)
     assert self._num_actions
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       context_shape = observation_and_action_constraint_splitter(
           time_step_spec.observation)[0].shape.as_list()
     else:
@@ -155,6 +153,8 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         emit_log_probability=emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         name=name)
 
   def _variables(self):
@@ -228,8 +228,10 @@ class NeuralLinUCBPolicy(tf_policy.Base):
   def _action(self, time_step, policy_state, seed):
     observation = time_step.observation
     mask = None
-    if self._observation_and_action_constraint_splitter:
-      observation, mask = self._observation_and_action_constraint_splitter(
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter is not None:
+      observation, mask = observation_and_action_constraint_splitter(
           observation)
     # Check the shape of the observation matrix.
     if not observation.shape.is_compatible_with([None, self._context_dim]):
