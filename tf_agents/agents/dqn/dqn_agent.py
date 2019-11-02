@@ -366,9 +366,8 @@ class DqnAgent(tf_agent.TFAgent):
                                           self.train_step_counter)
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
-    training.apply_gradients(self._optimizer,
-                             grads_and_vars,
-                             global_step=self.train_step_counter)
+    training.apply_gradients(
+        self._optimizer, grads_and_vars, global_step=self.train_step_counter)
 
     self._update_target()
 
