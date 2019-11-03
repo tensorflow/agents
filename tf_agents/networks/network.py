@@ -170,6 +170,18 @@ class Network(keras_network.Network):
     tf.nest.assert_same_structure(inputs, self.input_tensor_spec)
     return super(Network, self).__call__(inputs, *args, **kwargs)
 
+  def _check_trainable_weights_consistency(self):
+    """Check trainable weights count consistency.
+
+    This method makes up for the missing method (b/143631010) of the same name
+    in `keras.Network`, which is needed when calling `Network.summary()`. This
+    method is a no op. If a Network wants to check the consistency of trainable
+    weights, see `keras.Model._check_trainable_weights_consistency` as a
+    reference.
+    """
+    # TODO(b/143631010): If recognized and fixed, remove this entire method.
+    return
+
 
 class DistributionNetwork(Network):
   """Base class for networks which generate Distributions as their output."""
