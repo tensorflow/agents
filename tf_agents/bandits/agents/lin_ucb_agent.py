@@ -83,6 +83,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
                gamma=1.0,
                use_eigendecomp=False,
                tikhonov_weight=1.0,
+               add_bias=False,
                expose_predicted_rewards=False,
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
@@ -104,6 +105,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
       use_eigendecomp: whether to use eigen-decomposition or not. The default
         solver is Conjugate Gradient.
       tikhonov_weight: (float) tikhonov regularization term.
+      add_bias: If true, a bias term will be added to the linear reward
+        estimation.
       expose_predicted_rewards: (bool) Whether to expose the predicted rewards
         in the policy info field under the name 'predicted_rewards'.
       emit_log_probability: Whether the LinearUCBPolicy emits log-probabilities
@@ -136,8 +139,12 @@ class LinearUCBAgent(tf_agent.TFAgent):
           time_step_spec.observation)[0].shape.as_list()
     else:
       context_shape = time_step_spec.observation.shape.as_list()
+    self._add_bias = add_bias
     self._context_dim = (
         tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
+    if self._add_bias:
+      # The bias is added via a constant 1 feature.
+      self._context_dim += 1
     self._alpha = alpha
     self._cov_matrix_list = []
     self._data_vector_list = []
@@ -196,6 +203,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
         eig_vals=self._eig_vals_list if self._use_eigendecomp else (),
         eig_matrix=self._eig_matrix_list if self._use_eigendecomp else (),
         tikhonov_weight=self._tikhonov_weight,
+        add_bias=add_bias,
         expose_predicted_rewards=expose_predicted_rewards,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=observation_and_action_constraint_splitter
@@ -280,6 +288,15 @@ class LinearUCBAgent(tf_agent.TFAgent):
             tf.compat.v2.summary.scalar(
                 name=var_name + '_value_norm',
                 data=tf.linalg.global_norm([var]),
+                step=self.train_step_counter)
+        if self._add_bias:
+          thetas = self.theta
+          biases = thetas[:, -1]
+          bias_list = tf.unstack(biases, axis=0)
+          for i in range(self._num_actions):
+            tf.compat.v2.summary.scalar(
+                name='bias/action_' + str(i),
+                data=bias_list[i],
                 step=self.train_step_counter)
 
   def _distributed_train_step(self, experience, weights=None):
@@ -399,8 +416,15 @@ class LinearUCBAgent(tf_agent.TFAgent):
     if self._observation_and_action_constraint_splitter is not None:
       observation, _ = self._observation_and_action_constraint_splitter(
           observation)
-    observation = tf.reshape(observation, [-1, self._context_dim])
+
+    batch_size = tf.cast(
+        tf.compat.dimension_value(tf.shape(reward)[0]), dtype=tf.int64)
     observation = tf.cast(observation, self._dtype)
+    if self._add_bias:
+      # The bias is added via a constant 1 feature.
+      observation = tf.concat(
+          [observation, tf.ones([batch_size, 1], dtype=self._dtype)], axis=1)
+    observation = tf.reshape(observation, [-1, self._context_dim])
     reward = tf.cast(reward, self._dtype)
 
     for k in range(self._num_actions):
@@ -434,8 +458,6 @@ class LinearUCBAgent(tf_agent.TFAgent):
     loss = -1. * tf.reduce_sum(experience.reward)
     self.compute_summaries(loss)
 
-    batch_size = tf.cast(
-        tf.compat.dimension_value(tf.shape(reward)[0]), dtype=tf.int64)
     self._train_step_counter.assign_add(batch_size)
 
     return tf_agent.LossInfo(loss=(loss), extra=())

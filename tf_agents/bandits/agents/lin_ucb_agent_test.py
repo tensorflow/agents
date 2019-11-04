@@ -234,6 +234,90 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         rtol=0.05)
 
   @test_cases()
+  def testLinearUCBUpdateWithBias(self,
+                                  batch_size,
+                                  context_dim,
+                                  dtype,
+                                  use_eigendecomp=False):
+    """Check LinearUCB agent updates for specified actions and rewards."""
+
+    # Construct a `Trajectory` for the given action, observation, reward.
+    num_actions = 5
+    initial_step, final_step = _get_initial_and_final_steps(
+        batch_size, context_dim)
+    action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
+    action_step = _get_action_step(action)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    # Construct an agent and perform the update.
+    observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    agent = lin_ucb_agent.LinearUCBAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        add_bias=True,
+        dtype=dtype)
+    self.evaluate(agent.initialize())
+    loss_info = agent.train(experience)
+    self.evaluate(loss_info)
+    final_a = self.evaluate(agent.cov_matrix)
+    final_b = self.evaluate(agent.data_vector)
+    final_theta = self.evaluate(agent.theta)
+
+    # Compute the expected updated estimates.
+    observations_list = tf.dynamic_partition(
+        data=tf.reshape(experience.observation, [batch_size, context_dim]),
+        partitions=tf.convert_to_tensor(action),
+        num_partitions=num_actions)
+    rewards_list = tf.dynamic_partition(
+        data=tf.reshape(experience.reward, [batch_size]),
+        partitions=tf.convert_to_tensor(action),
+        num_partitions=num_actions)
+    expected_a_updated_list = []
+    expected_b_updated_list = []
+    expected_theta_updated_list = []
+    for _, (observations_for_arm,
+            rewards_for_arm) in enumerate(zip(observations_list, rewards_list)):
+      observations_for_arm = tf.concat(
+          [observations_for_arm,
+           tf.ones_like(observations_for_arm[:, 0:1])],
+          axis=1)
+      num_samples_for_arm_current = tf.cast(
+          tf.shape(rewards_for_arm)[0], tf.float32)
+      num_samples_for_arm_total = num_samples_for_arm_current
+
+      # pylint: disable=cell-var-from-loop
+      def true_fn():
+        a_new = tf.eye(context_dim + 1) + tf.matmul(
+            observations_for_arm, observations_for_arm, transpose_a=True)
+        b_new = bandit_utils.sum_reward_weighted_observations(
+            rewards_for_arm, observations_for_arm)
+        return a_new, b_new
+
+      def false_fn():
+        return tf.eye(context_dim + 1), tf.zeros([context_dim + 1])
+
+      a_new, b_new = tf.cond(
+          tf.squeeze(num_samples_for_arm_total) > 0, true_fn, false_fn)
+      theta_new = tf.squeeze(
+          tf.linalg.solve(a_new, tf.expand_dims(b_new, axis=-1)), axis=-1)
+
+      expected_a_updated_list.append(self.evaluate(a_new))
+      expected_b_updated_list.append(self.evaluate(b_new))
+      expected_theta_updated_list.append(self.evaluate(theta_new))
+
+    # Check that the actual updated estimates match the expectations.
+    self.assertAllClose(expected_a_updated_list, final_a)
+    self.assertAllClose(expected_b_updated_list, final_b)
+    self.assertAllClose(
+        self.evaluate(tf.stack(expected_theta_updated_list)),
+        final_theta,
+        atol=0.1,
+        rtol=0.05)
+
+  @test_cases()
   def testLinearUCBUpdateWithMaskedActions(self,
                                            batch_size,
                                            context_dim,

@@ -56,6 +56,7 @@ class LinearUCBPolicy(tf_policy.Base):
                eig_vals=(),
                eig_matrix=(),
                tikhonov_weight=1.0,
+               add_bias=False,
                expose_predicted_rewards=False,
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
@@ -79,6 +80,8 @@ class LinearUCBPolicy(tf_policy.Base):
       eig_vals: list of eigenvalues for each covariance matrix (one per arm).
       eig_matrix: list of eigenvectors for each covariance matrix (one per arm).
       tikhonov_weight: (float) tikhonov regularization term.
+      add_bias: If true, a bias term will be added to the linear reward
+        estimation.
       expose_predicted_rewards: (bool) Whether to expose the predicted rewards
         in the policy info field under the name 'predicted_rewards'.
       emit_log_probability: Whether to emit log probabilities.
@@ -117,6 +120,7 @@ class LinearUCBPolicy(tf_policy.Base):
     if eig_matrix:
       self._use_eigendecomp = True
     self._tikhonov_weight = tikhonov_weight
+    self._add_bias = add_bias
 
     if len(cov_matrix) != len(data_vector):
       raise ValueError('The size of list cov_matrix must match the size of '
@@ -144,6 +148,9 @@ class LinearUCBPolicy(tf_policy.Base):
       context_shape = time_step_spec.observation.shape.as_list()
     self._context_dim = (
         tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
+    if self._add_bias:
+      # The bias is added via a constant 1 feature.
+      self._context_dim += 1
     cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
     if self._context_dim != cov_matrix_dim:
       raise ValueError('The dimension of matrix `cov_matrix` must match '
@@ -188,13 +195,20 @@ class LinearUCBPolicy(tf_policy.Base):
     if observation_and_action_constraint_splitter is not None:
       observation, mask = observation_and_action_constraint_splitter(
           observation)
+    observation = tf.cast(observation, dtype=self._dtype)
+    if self._add_bias:
+      # The bias is added via a constant 1 feature.
+      observation = tf.concat([
+          observation,
+          tf.ones([tf.shape(observation)[0], 1], dtype=self._dtype)
+      ],
+                              axis=1)
     # Check the shape of the observation matrix. The observations can be
     # batched.
     if not observation.shape.is_compatible_with([None, self._context_dim]):
       raise ValueError('Observation shape is expected to be {}. Got {}.'.format(
           [None, self._context_dim], observation.shape.as_list()))
     observation = tf.reshape(observation, [-1, self._context_dim])
-    observation = tf.cast(observation, dtype=self._dtype)
 
     p_values = []
     est_rewards = []

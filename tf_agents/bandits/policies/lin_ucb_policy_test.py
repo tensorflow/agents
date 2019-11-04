@@ -174,6 +174,29 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
 
   @test_cases()
+  def testActionBatchWithBias(self, batch_size):
+    a = [tf.constant([[4, 1, 2], [1, 5, 3], [2, 3, 6]], dtype=tf.float32)
+        ] * self._num_actions
+    b = [
+        tf.constant([r, r, r], dtype=tf.float32)
+        for r in range(self._num_actions)
+    ]
+    policy = lin_ucb_policy.LinearUCBPolicy(
+        self._action_spec,
+        a,
+        b,
+        self._num_samples_per_arm,
+        self._time_step_spec,
+        add_bias=True)
+
+    action_step = policy.action(self._time_step_batch(batch_size=batch_size))
+    self.assertEqual(action_step.action.shape.as_list(), [batch_size])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    actions_ = self.evaluate(action_step.action)
+    self.assertAllGreaterEqual(actions_, self._action_spec.minimum)
+    self.assertAllLessEqual(actions_, self._action_spec.maximum)
+
+  @test_cases()
   def testActionBatchWithMask(self, batch_size):
 
     def split_fn(obs):
