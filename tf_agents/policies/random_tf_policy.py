@@ -36,7 +36,11 @@ def _uniform_probability(action_spec):
 
 
 class RandomTFPolicy(tf_policy.Base):
-  """Returns random samples of the given action_spec."""
+  """Returns random samples of the given action_spec.
+
+  Note: the values in the info_spec (except for the log_probability) are random
+    values that have nothing to do with the emitted actions.
+  """
 
   def __init__(self, time_step_spec, action_spec, *args, **kwargs):
     observation_and_action_constraint_splitter = (
@@ -90,7 +94,8 @@ class RandomTFPolicy(tf_policy.Base):
     if time_step is not None:
       with tf.control_dependencies(tf.nest.flatten(time_step)):
         action_ = tf.nest.map_structure(tf.identity, action_)
-    step = policy_step.PolicyStep(action_, policy_state)
+
+    policy_info = tensor_spec.sample_spec_nest(self._info_spec)
 
     if self.emit_log_probability:
       if observation_and_action_constraint_splitter is not None:
@@ -100,10 +105,10 @@ class RandomTFPolicy(tf_policy.Base):
         action_probability = tf.nest.map_structure(_uniform_probability,
                                                    self._action_spec)
         log_probability = tf.nest.map_structure(tf.math.log, action_probability)
+      policy_info = policy_step.set_log_probability(
+          policy_info, log_probability)
 
-      info = policy_step.PolicyInfo(log_probability=log_probability)
-      return step._replace(info=info)
-
+    step = policy_step.PolicyStep(action_, policy_state, policy_info)
     return step
 
   def _distribution(self, time_step, policy_state):

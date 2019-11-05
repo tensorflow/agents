@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -124,6 +125,46 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # Verify that action distribution changes as we vary epsilon.
     self.checkActionDistribution(actions, epsilon, num_steps)
 
+  def testInfoSpec(self):
+    PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
+        'PolicyInfo',
+        ('log_probability', 'predicted_rewards'))
+    # Set default empty tuple for all fields.
+    PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
+
+    info_spec = PolicyInfo()
+    policy_with_info_spec = fixed_policy.FixedPolicy(
+        np.asarray([self._greedy_action], dtype=np.int32),
+        self._time_step_spec,
+        self._action_spec,
+        policy_info=PolicyInfo(),
+        info_spec=info_spec)
+
+    epsilon = 0.2
+    policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+        policy_with_info_spec, epsilon=epsilon)
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
+
+    time_step = tf.nest.map_structure(tf.convert_to_tensor, self._time_step)
+
+    @common.function
+    def action_step_fn(time_step=time_step):
+      return policy.action(time_step, policy_state=(), seed=54)
+
+    tf.nest.assert_same_structure(
+        self._action_spec,
+        self.evaluate(action_step_fn(time_step)).action)
+
+    if tf.executing_eagerly():
+      action_step = action_step_fn
+    else:
+      action_step = action_step_fn()
+
+    step = self.evaluate(action_step)
+    tf.nest.assert_same_structure(
+        info_spec,
+        step.info)
 
 if __name__ == '__main__':
   tf.test.main()

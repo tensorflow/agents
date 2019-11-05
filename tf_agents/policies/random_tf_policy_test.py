@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -182,6 +184,28 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # With only three valid actions, all of the probabilities should be 1/3.
     self.assertAllClose(step.info.log_probability,
                         tf.constant(np.log(1. / 3), shape=[batch_size]))
+
+  def testInfoSpec(self, dtype):
+    PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
+        'PolicyInfo',
+        ('log_probability', 'predicted_rewards'))
+    # Set default empty tuple for all fields.
+    PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
+
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
+        tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
+    ]
+    time_step_spec, time_step = self.create_time_step()
+    info_spec = PolicyInfo()
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        info_spec=info_spec)
+
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+    tf.nest.assert_same_structure(info_spec, action_step.info)
 
 
 if __name__ == '__main__':

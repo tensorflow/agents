@@ -59,7 +59,8 @@ class EpsilonGreedyPolicy(tf_policy.Base):
         policy.action_spec,
         emit_log_probability=policy.emit_log_probability,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter))
+            observation_and_action_constraint_splitter),
+        info_spec=policy.info_spec)
     super(EpsilonGreedyPolicy, self).__init__(
         policy.time_step_spec,
         policy.action_spec,
@@ -104,7 +105,9 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     if greedy_action.info:
       if not random_action.info:
         raise ValueError('Incompatible info field')
-      info = tf.compat.v1.where(cond, greedy_action.info, random_action.info)
+      info = tf.nest.map_structure(
+          lambda a, b: tf.where(cond, a, b),
+          greedy_action.info, random_action.info)
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
