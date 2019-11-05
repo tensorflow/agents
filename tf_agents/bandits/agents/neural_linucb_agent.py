@@ -372,6 +372,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
 
     loss_tensor = tf.cast(-1. * tf.reduce_sum(reward), dtype=tf.float32)
     loss_info = tf_agent.LossInfo(loss=loss_tensor, extra=())
+    self.train_step_counter.assign_add(1)
     return loss_info
 
   def _train(self, experience, weights=None):
