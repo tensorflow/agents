@@ -199,7 +199,7 @@ class TFAgent(tf.Module):
       TypeError: If experience is not type `Trajectory`.  Or if experience
         does not match `self.collect_data_spec` structure types.
       ValueError: If experience tensors' time axes are not compatible with
-        `self.train_sequene_length`.  Or if experience does not match
+        `self.train_sequence_length`.  Or if experience does not match
         `self.collect_data_spec` structure.
       RuntimeError: If the class was not initialized properly (`super.__init__`
         was not called).
