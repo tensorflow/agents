@@ -144,8 +144,47 @@ class LinearThompsonSamplingPolicyTest(parameterized.TestCase,
     self.assertEqual(action_step.action.shape.as_list(), [batch_size])
     self.assertEqual(action_step.action.dtype, tf.int32)
     actions = self.evaluate(action_step.action)
-    print(actions)
     self.assertAllEqual(actions, range(batch_size))
+
+  def testPredictedRewards(self):
+    num_actions = 2
+    batch_size = 7
+    parameter_estimators = tf.unstack(
+        tf.constant([[1, 2], [30, 40]], dtype=tf.float32))
+    weight_covariance_matrices = tf.unstack(
+        tf.constant([[[1, 0], [0, 1]], [[.5, 0], [0, .5]]], dtype=tf.float32))
+    action_spec = tensor_spec.BoundedTensorSpec(
+        shape=(),
+        minimum=0,
+        maximum=num_actions - 1,
+        dtype=tf.int32,
+        name='action')
+    policy = lin_ts.LinearThompsonSamplingPolicy(
+        action_spec, self._time_step_spec,
+        weight_covariance_matrices,
+        parameter_estimators,
+        emit_policy_info=('predicted_rewards_mean',
+                          'predicted_rewards_sampled'))
+
+    observation = tf.constant(
+        [6, 7] * batch_size,
+        dtype=tf.float32,
+        shape=[batch_size, 2],
+        name='observation')
+    input_time_step = ts.restart(observation, batch_size=batch_size)
+    action_step = policy.action(input_time_step)
+    p_info = self.evaluate(action_step.info)
+
+    self.assertEqual(p_info.predicted_rewards_sampled.shape[0], batch_size)
+    self.assertEqual(p_info.predicted_rewards_sampled.shape[1], num_actions)
+
+    # Check the predicted rewards means.
+    expected_means = [[20, 920]] * batch_size
+    self.assertAllClose(p_info.predicted_rewards_mean, expected_means)
+
+    # Check that the returned action is at the argmax of the sampled rewards.
+    expected_actions = np.argmax(p_info.predicted_rewards_sampled, axis=-1)
+    self.assertAllEqual(self.evaluate(action_step.action), expected_actions)
 
 
 if __name__ == '__main__':

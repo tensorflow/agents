@@ -24,6 +24,7 @@ import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 
 tfd = tfp.distributions
@@ -84,6 +85,7 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
                weight_covariance_matrices,
                parameter_estimators,
                observation_and_action_constraint_splitter=None,
+               emit_policy_info=(),
                name=None):
     """Initializes `LinearThompsonSamplingPolicy`.
 
@@ -108,6 +110,9 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
         `[batch_size, num_actions]`. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       name: The name of this policy.
     """
     if not isinstance(weight_covariance_matrices, (list, tuple)):
@@ -141,11 +146,27 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
       _assert_shape([self._context_dim, self._context_dim], t.shape.as_list(),
                     'Weight covariance')
 
+    self._emit_policy_info = emit_policy_info
+    self._dtype = self._weight_covariance_matrices[0].dtype
+    predicted_rewards_sampled = ()
+    if (policy_utilities.InfoFields.PREDICTED_REWARDS_SAMPLED
+        in emit_policy_info):
+      predicted_rewards_sampled = tensor_spec.TensorSpec(
+          [self._num_actions], dtype=self._dtype)
+    predicted_rewards_mean = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
+      predicted_rewards_mean = tensor_spec.TensorSpec(
+          [self._num_actions], dtype=self._dtype)
+    info_spec = policy_utilities.PolicyInfo(
+        predicted_rewards_sampled=predicted_rewards_sampled,
+        predicted_rewards_mean=predicted_rewards_mean)
+
     super(LinearThompsonSamplingPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter))
+            observation_and_action_constraint_splitter),
+        info_spec=info_spec)
 
   def _variables(self):
     return self._variables
@@ -178,4 +199,16 @@ class LinearThompsonSamplingPolicy(tf_policy.Base):
     else:
       actions = tf.argmax(
           reward_samples, axis=-1, output_type=self._action_spec.dtype)
-    return policy_step.PolicyStep(actions, policy_state)
+
+    policy_info = policy_utilities.PolicyInfo(
+        predicted_rewards_sampled=(
+            reward_samples
+            if policy_utilities.InfoFields.PREDICTED_REWARDS_SAMPLED in
+            self._emit_policy_info else ()),
+        predicted_rewards_mean=(
+            tf.stack(mean_estimates, axis=-1) if
+            policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
+            self._emit_policy_info else ())
+        )
+
+    return policy_step.PolicyStep(actions, policy_state, policy_info)

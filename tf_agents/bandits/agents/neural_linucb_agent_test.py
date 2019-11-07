@@ -26,6 +26,7 @@ import tensorflow_probability as tfp
 from tf_agents.bandits.agents import neural_linucb_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.drivers import driver_utils
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -122,7 +123,8 @@ def _get_initial_and_final_steps_with_action_mask(batch_size,
 
 def _get_action_step(action):
   return policy_step.PolicyStep(
-      action=tf.convert_to_tensor(action))
+      action=tf.convert_to_tensor(action),
+      info=policy_utilities.PolicyInfo())
 
 
 def _get_experience(initial_step, action_step, final_step):

@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
@@ -29,12 +28,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 
 tfd = tfp.distributions
-
-
-PolicyInfo = collections.namedtuple('PolicyInfo',  # pylint: disable=invalid-name
-                                    (policy_step.CommonFields.LOG_PROBABILITY,
-                                     'predicted_rewards'))
-PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
 
 class LinearUCBPolicy(tf_policy.Base):
@@ -57,7 +50,7 @@ class LinearUCBPolicy(tf_policy.Base):
                eig_matrix=(),
                tikhonov_weight=1.0,
                add_bias=False,
-               expose_predicted_rewards=False,
+               emit_policy_info=(),
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
                name=None):
@@ -82,8 +75,9 @@ class LinearUCBPolicy(tf_policy.Base):
       tikhonov_weight: (float) tikhonov regularization term.
       add_bias: If true, a bias term will be added to the linear reward
         estimation.
-      expose_predicted_rewards: (bool) Whether to expose the predicted rewards
-        in the policy info field under the name 'predicted_rewards'.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       emit_log_probability: Whether to emit log probabilities.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
@@ -166,13 +160,12 @@ class LinearUCBPolicy(tf_policy.Base):
                            self._context_dim, data_vector_dim))
 
     self._dtype = self._data_vector[0].dtype
-    self._expose_predicted_rewards = expose_predicted_rewards
-    if expose_predicted_rewards:
-      info_spec = PolicyInfo(
-          predicted_rewards=tensor_spec.TensorSpec(
-              [self._num_actions], dtype=self._dtype))
-    else:
-      info_spec = ()
+    self._emit_policy_info = emit_policy_info
+    predicted_rewards = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS in emit_policy_info:
+      predicted_rewards = tensor_spec.TensorSpec(
+          [self._num_actions], dtype=self._dtype)
+    info_spec = policy_utilities.PolicyInfo(predicted_rewards=predicted_rewards)
 
     super(LinearUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -252,10 +245,10 @@ class LinearUCBPolicy(tf_policy.Base):
           output_type=self._action_spec.dtype)
     action_distributions = tfp.distributions.Deterministic(loc=chosen_actions)
 
-    if self._expose_predicted_rewards:
-      policy_info = PolicyInfo(
-          predicted_rewards=tf.stack(est_rewards, axis=-1))
-    else:
-      policy_info = ()
+    policy_info = policy_utilities.PolicyInfo(
+        predicted_rewards=tf.stack(est_rewards, axis=-1) if
+        policy_utilities.InfoFields.PREDICTED_REWARDS in self._emit_policy_info
+        else ())
+
     return policy_step.PolicyStep(
         action_distributions, policy_state, policy_info)

@@ -66,6 +66,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
                debug_summaries=False,
                summarize_grads_and_vars=False,
                train_step_counter=None,
+               emit_policy_info=(),
                emit_log_probability=False,
                dtype=tf.float64,
                name=None):
@@ -105,6 +106,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         gradients and network variable summaries are written during training.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       emit_log_probability: Whether the NeuralLinUCBPolicy emits
         log-probabilities or not. Since the policy is deterministic, the
         probability is just 1.
@@ -181,6 +185,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         num_samples=self._num_samples_list,
         time_step_spec=time_step_spec,
         alpha=alpha,
+        emit_policy_info=emit_policy_info,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))

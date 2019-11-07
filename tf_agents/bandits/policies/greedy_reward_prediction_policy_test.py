@@ -190,7 +190,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     tf.compat.v1.set_random_seed(1)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
         self._time_step_spec, self._action_spec, reward_network=DummyNet(),
-        expose_predicted_rewards=True)
+        emit_policy_info=('predicted_rewards_mean',))
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -204,7 +204,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     predicted_rewards_expected_array = np.array([[4.0, 5.5, 0.0],
                                                  [8.0, 11.5, 12.0]])
     p_info = self.evaluate(action_step.info)
-    self.assertAllClose(p_info.predicted_rewards,
+    self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected_array)
 
 if __name__ == '__main__':

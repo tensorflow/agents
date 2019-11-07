@@ -60,6 +60,7 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
                gamma=1.0,
                observation_and_action_constraint_splitter=None,
                dtype=tf.float32,
+               emit_policy_info=(),
                name=None):
     """Initialize an instance of `LinearThompsonSamplingAgent`.
 
@@ -78,6 +79,9 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
         observation and mask.
       dtype: The type of the parameters stored and updated by the agent. Should
         be one of `tf.float32` and `tf.float64`. Defaults to `tf.float32`.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       name: a name for this instance of `LinearThompsonSamplingAgent`.
 
     Raises:
@@ -120,7 +124,8 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
         self._weight_covariances,
         self._parameter_estimators,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter))
+            observation_and_action_constraint_splitter),
+        emit_policy_info=emit_policy_info)
     super(LinearThompsonSamplingAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=policy.action_spec,

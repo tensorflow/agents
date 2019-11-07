@@ -54,7 +54,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       debug_summaries=False,
       summarize_grads_and_vars=False,
       enable_summaries=True,
-      expose_predicted_rewards=False,
+      emit_policy_info=(),
       train_step_counter=None,
       name=None):
     """Creates a Greedy Reward Network Prediction Agent.
@@ -84,8 +84,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         gradients and network variable summaries are written during training.
       enable_summaries: A Python bool, default True. When False, all summaries
         (debug or otherwise) should not be written.
-      expose_predicted_rewards: (bool) Whether to expose the predicted rewards
-        in the policy info field under the name 'predicted_rewards'.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
       name: Python str name of this agent. All variables in this module will
@@ -109,7 +110,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
         time_step_spec, action_spec, reward_network,
         observation_and_action_constraint_splitter,
-        expose_predicted_rewards=expose_predicted_rewards)
+        emit_policy_info=emit_policy_info)
 
     super(GreedyRewardPredictionAgent, self).__init__(
         time_step_spec,

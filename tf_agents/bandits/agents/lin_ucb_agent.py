@@ -84,7 +84,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
                use_eigendecomp=False,
                tikhonov_weight=1.0,
                add_bias=False,
-               expose_predicted_rewards=False,
+               emit_policy_info=(),
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
                debug_summaries=False,
@@ -107,8 +107,9 @@ class LinearUCBAgent(tf_agent.TFAgent):
       tikhonov_weight: (float) tikhonov regularization term.
       add_bias: If true, a bias term will be added to the linear reward
         estimation.
-      expose_predicted_rewards: (bool) Whether to expose the predicted rewards
-        in the policy info field under the name 'predicted_rewards'.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       emit_log_probability: Whether the LinearUCBPolicy emits log-probabilities
         or not. Since the policy is deterministic, the probability is just 1.
       observation_and_action_constraint_splitter: A function used for masking
@@ -204,7 +205,7 @@ class LinearUCBAgent(tf_agent.TFAgent):
         eig_matrix=self._eig_matrix_list if self._use_eigendecomp else (),
         tikhonov_weight=self._tikhonov_weight,
         add_bias=add_bias,
-        expose_predicted_rewards=expose_predicted_rewards,
+        emit_policy_info=emit_policy_info,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=observation_and_action_constraint_splitter
     )

@@ -58,6 +58,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
                num_samples,
                time_step_spec=None,
                alpha=1.0,
+               emit_policy_info=(),
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
                name=None):
@@ -79,6 +80,9 @@ class NeuralLinUCBPolicy(tf_policy.Base):
       num_samples: list of number of samples per arm.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       alpha: (float) non-negative weight multiplying the confidence intervals.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       emit_log_probability: (bool) whether to emit log probabilities.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
@@ -149,12 +153,17 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         minimum=0,
         maximum=self._num_actions - 1,
         name='action')
+
+    self._emit_policy_info = emit_policy_info
+    info_spec = policy_utilities.PolicyInfo()
+
     super(NeuralLinUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
+        info_spec=info_spec,
         name=name)
 
   def _variables(self):
@@ -248,4 +257,6 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         lambda: self._get_actions_from_reward_layer(encoded_observation, mask),
         lambda: self._get_actions_from_linucb(encoded_observation, mask))
 
-    return policy_step.PolicyStep(chosen_actions, policy_state)
+    policy_info = policy_utilities.PolicyInfo()
+
+    return policy_step.PolicyStep(chosen_actions, policy_state, policy_info)

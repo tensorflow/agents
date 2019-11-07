@@ -24,9 +24,11 @@ import tensorflow as tf
 
 from tf_agents.bandits.agents import dropout_thompson_sampling_agent
 from tf_agents.bandits.drivers import driver_utils
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
+
 
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -81,7 +83,8 @@ def _get_initial_and_final_steps_with_action_mask(batch_size,
 
 def _get_action_step(action):
   return policy_step.PolicyStep(
-      action=tf.convert_to_tensor(action))
+      action=tf.convert_to_tensor(action),
+      info=policy_utilities.PolicyInfo())
 
 
 def _get_experience(initial_step, action_step, final_step):

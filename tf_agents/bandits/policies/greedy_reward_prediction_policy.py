@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
 import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -28,12 +27,6 @@ from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
-
-
-PolicyInfo = collections.namedtuple('PolicyInfo',  # pylint: disable=invalid-name
-                                    (policy_step.CommonFields.LOG_PROBABILITY,
-                                     'predicted_rewards'))
-PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
 
 @gin.configurable
@@ -45,7 +38,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
                action_spec=None,
                reward_network=None,
                observation_and_action_constraint_splitter=None,
-               expose_predicted_rewards=False,
+               emit_policy_info=(),
                name=None):
     """Builds a GreedyRewardPredictionPolicy given a reward tf_agents.Network.
 
@@ -65,8 +58,9 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
         `[batch_size, num_actions]`. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
-      expose_predicted_rewards: (bool) Whether to expose the predicted rewards
-        in the policy info field under the name 'predicted_rewards'.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -91,13 +85,13 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     self._action_offset = action_spec.minimum
     self._reward_network = reward_network
 
-    self._expose_predicted_rewards = expose_predicted_rewards
-    if expose_predicted_rewards:
-      info_spec = PolicyInfo(
-          predicted_rewards=tensor_spec.TensorSpec(
-              [self._expected_num_actions], dtype=tf.float32))
-    else:
-      info_spec = ()
+    self._emit_policy_info = emit_policy_info
+    predicted_rewards_mean = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
+      predicted_rewards_mean = tensor_spec.TensorSpec(
+          [self._expected_num_actions])
+    info_spec = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=predicted_rewards_mean)
 
     super(GreedyRewardPredictionPolicy, self).__init__(
         time_step_spec, action_spec,
@@ -135,9 +129,11 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
           predicted_reward_values, axis=-1, output_type=self.action_spec.dtype)
     actions += self._action_offset
 
-    if self._expose_predicted_rewards:
-      policy_info = PolicyInfo(predicted_rewards=predicted_reward_values)
-    else:
-      policy_info = ()
+    policy_info = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=(
+            predicted_reward_values if
+            policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
+            self._emit_policy_info else ()))
+
     return policy_step.PolicyStep(
         tfp.distributions.Deterministic(loc=actions), policy_state, policy_info)
