@@ -184,11 +184,7 @@ def train_eval(
         tf_metrics.AverageReturnMetric(),
         tf_metrics.AverageEpisodeLengthMetric(),
     ]
-    '''
-    print('train_metrics\n\n')
-    print(train_metrics)
-    print('train_metrics\n\n')
-    '''
+
     eval_policy = tf_agent.policy
     collect_policy = tf_agent.collect_policy
 
