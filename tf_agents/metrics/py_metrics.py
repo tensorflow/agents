@@ -261,7 +261,8 @@ class CounterMetric(py_metric.PyMetric):
   def reset(self):
     self._np_state.count = np.int64(0)
 
-  def call(self):
+  def call(self, trajectory):
+    del trajectory  # unused
     self._np_state.count += 1
 
   def result(self):
