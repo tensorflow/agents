@@ -161,7 +161,10 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     self._error_loss_fn = error_loss_fn
     self._gradient_clipping = gradient_clipping
     train_step_counter = tf.compat.v1.train.get_or_create_global_step()
-    self._actions_from_reward_layer = tf.compat.v2.Variable(True, dtype=tf.bool)
+    # Whether the policy uses the reward layer to figure out optimal action.
+    # If False, LinUCB is used instead.
+    self._actions_from_reward_layer = tf.compat.v2.Variable(
+        True, dtype=tf.bool, name='is_action_from_reward_layer')
 
     for k in range(self._num_actions):
       self._cov_matrix_list.append(
@@ -417,9 +420,11 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     observation = tf.cast(observation, self._dtype)
     reward = tf.cast(reward, self._dtype)
 
+    tf.compat.v1.assign(
+        self._actions_from_reward_layer,
+        tf.less(self._train_step_counter,
+                self._encoding_network_num_train_steps))
     # pylint: disable=g-long-lambda
-    self._actions_from_reward_layer = tf.less(
-        self._train_step_counter, self._encoding_network_num_train_steps)
     loss_info = tf.cond(
         self._actions_from_reward_layer,
         lambda: self.compute_loss_using_reward_layer(
