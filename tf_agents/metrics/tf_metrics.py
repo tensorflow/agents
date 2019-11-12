@@ -74,8 +74,8 @@ class TFDeque(object):
 class EnvironmentSteps(tf_metric.TFStepMetric):
   """Counts the number of steps taken in the environment."""
 
-  def __init__(self, name='EnvironmentSteps', dtype=tf.int64):
-    super(EnvironmentSteps, self).__init__(name=name)
+  def __init__(self, name='EnvironmentSteps', prefix='Metrics', dtype=tf.int64):
+    super(EnvironmentSteps, self).__init__(name=name, prefix=prefix)
     self.dtype = dtype
     self.environment_steps = common.create_variable(
         initial_value=0, dtype=self.dtype, shape=(), name='environment_steps')
@@ -109,8 +109,8 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
 class NumberOfEpisodes(tf_metric.TFStepMetric):
   """Counts the number of episodes in the environment."""
 
-  def __init__(self, name='NumberOfEpisodes', dtype=tf.int64):
-    super(NumberOfEpisodes, self).__init__(name=name)
+  def __init__(self, name='NumberOfEpisodes', prefix='Metrics', dtype=tf.int64):
+    super(NumberOfEpisodes, self).__init__(name=name, prefix=prefix)
     self.dtype = dtype
     self.number_episodes = common.create_variable(
         initial_value=0, dtype=self.dtype, shape=(), name='number_episodes')
@@ -145,10 +145,11 @@ class AverageReturnMetric(tf_metric.TFStepMetric):
 
   def __init__(self,
                name='AverageReturn',
+               prefix='Metrics',
                dtype=tf.float32,
                batch_size=1,
                buffer_size=10):
-    super(AverageReturnMetric, self).__init__(name=name)
+    super(AverageReturnMetric, self).__init__(name=name, prefix=prefix)
     self._buffer = TFDeque(buffer_size, dtype)
     self._dtype = dtype
     self._return_accumulator = common.create_variable(
@@ -185,10 +186,11 @@ class AverageEpisodeLengthMetric(tf_metric.TFStepMetric):
 
   def __init__(self,
                name='AverageEpisodeLength',
+               prefix='Metrics',
                dtype=tf.float32,
                batch_size=1,
                buffer_size=10):
-    super(AverageEpisodeLengthMetric, self).__init__(name=name)
+    super(AverageEpisodeLengthMetric, self).__init__(name=name, prefix=prefix)
     self._buffer = TFDeque(buffer_size, dtype)
     self._dtype = dtype
     self._length_accumulator = common.create_variable(
