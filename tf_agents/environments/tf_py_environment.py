@@ -143,9 +143,8 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
           'wrapped environment are no longer guaranteed to happen in a common '
           'thread.  Environment: %s', (self._env,))
 
-    observation_spec = tensor_spec.from_spec(self._env.observation_spec())
     action_spec = tensor_spec.from_spec(self._env.action_spec())
-    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step_spec = tensor_spec.from_spec(self._env.time_step_spec())
     batch_size = self._env.batch_size if self._env.batch_size else 1
 
     super(TFPyEnvironment, self).__init__(time_step_spec,
