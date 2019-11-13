@@ -149,7 +149,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         self._num_actions,
         kernel_initializer=tf.compat.v1.initializers.random_uniform(
             minval=-0.03, maxval=0.03),
-        bias_initializer=tf.compat.v1.initializers.constant(-0.2),
+        use_bias=False,
         activation=None,
         name='reward_layer')
 
