@@ -168,7 +168,8 @@ class LinearUCBAgent(tf_agent.TFAgent):
     for k in range(self._num_actions):
       self._cov_matrix_list.append(
           tf.compat.v2.Variable(
-              tf.eye(self._context_dim, dtype=dtype), name='a_' + str(k)))
+              tf.zeros([self._context_dim, self._context_dim], dtype=dtype),
+              name='a_' + str(k)))
       self._data_vector_list.append(
           tf.compat.v2.Variable(
               tf.zeros(self._context_dim, dtype=dtype), name='b_' + str(k)))

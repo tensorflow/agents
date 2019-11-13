@@ -238,14 +238,15 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
 
       # pylint: disable=cell-var-from-loop
       def true_fn():
-        a_new = tf.eye(encoding_dim, dtype=tf.float64) + tf.matmul(
-            encoded_observations_for_arm, encoded_observations_for_arm,
+        a_new = tf.matmul(
+            encoded_observations_for_arm,
+            encoded_observations_for_arm,
             transpose_a=True)
         b_new = bandit_utils.sum_reward_weighted_observations(
             rewards_for_arm, encoded_observations_for_arm)
         return a_new, b_new
       def false_fn():
-        return (tf.eye(encoding_dim, dtype=tf.float64),
+        return (tf.zeros([encoding_dim, encoding_dim], dtype=tf.float64),
                 tf.zeros([encoding_dim], dtype=tf.float64))
       a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0,

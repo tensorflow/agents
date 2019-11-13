@@ -169,7 +169,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     for k in range(self._num_actions):
       self._cov_matrix_list.append(
           tf.compat.v2.Variable(
-              tf.eye(self._encoding_dim, dtype=dtype), name='a_' + str(k)))
+              tf.zeros([self._encoding_dim, self._encoding_dim], dtype=dtype),
+              name='a_' + str(k)))
       self._data_vector_list.append(
           tf.compat.v2.Variable(
               tf.zeros(self._encoding_dim, dtype=dtype), name='b_' + str(k)))
