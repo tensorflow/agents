@@ -24,6 +24,7 @@ import tensorflow as tf
 
 from tf_agents.policies import py_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
@@ -37,8 +38,12 @@ class PyTFEagerPolicyBase(py_policy.Base):
   """
 
   def __init__(self, policy, time_step_spec, action_spec, policy_state_spec,
-               info_spec):
+               info_spec, use_tf_function=False):
     self._policy = policy
+    if use_tf_function:
+      self._policy_action_fn = common.function(policy.action)
+    else:
+      self._policy_action_fn = policy.action
     super(PyTFEagerPolicyBase, self).__init__(time_step_spec, action_spec,
                                               policy_state_spec, info_spec)
 
@@ -47,8 +52,9 @@ class PyTFEagerPolicyBase(py_policy.Base):
 
   def _action(self, time_step, policy_state):
     time_step = nest_utils.batch_nested_array(time_step)
-    # Pull out action from policy_step
-    policy_step = self._policy.action(time_step, policy_state)
+    # Avoid passing numpy arrays to avoid retracing of the tf.function.
+    time_step = tf.nest.map_structure(tf.convert_to_tensor, time_step)
+    policy_step = self._policy_action_fn(time_step, policy_state)
     return policy_step._replace(
         action=nest_utils.unbatch_nested_array(policy_step.action.numpy()))
 

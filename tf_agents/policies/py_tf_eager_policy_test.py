@@ -30,6 +30,7 @@ from tf_agents.environments import random_py_environment
 from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_saver
 from tf_agents.policies import py_tf_eager_policy
+from tf_agents.policies import random_tf_policy
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -66,6 +67,29 @@ class PyTFEagerPolicyTest(test_utils.TestCase):
     env = random_py_environment.RandomPyEnvironment(observation_spec,
                                                     action_spec)
 
+    time_step = env.reset()
+
+    for _ in range(100):
+      action_step = py_policy.action(time_step)
+      time_step = env.step(action_step.action)
+
+  def testRandomTFPolicyCompatibility(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in eager.')
+
+    observation_spec = array_spec.ArraySpec([2], np.float32)
+    action_spec = array_spec.BoundedArraySpec([1], np.float32, 2, 3)
+
+    observation_tensor_spec = tensor_spec.from_spec(observation_spec)
+    action_tensor_spec = tensor_spec.from_spec(action_spec)
+    time_step_tensor_spec = ts.time_step_spec(observation_tensor_spec)
+
+    tf_policy = random_tf_policy.RandomTFPolicy(time_step_tensor_spec,
+                                                action_tensor_spec)
+
+    py_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_policy)
+    env = random_py_environment.RandomPyEnvironment(observation_spec,
+                                                    action_spec)
     time_step = env.reset()
 
     for _ in range(100):
@@ -130,8 +154,8 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
       saver = policy_saver.PolicySaver(self.tf_policy)
       expected_train_step = -1
     else:
-      saver = policy_saver.PolicySaver(self.tf_policy,
-                                       train_step=tf.constant(train_step))
+      saver = policy_saver.PolicySaver(
+          self.tf_policy, train_step=tf.constant(train_step))
       expected_train_step = train_step
     saver.save(path)
 
