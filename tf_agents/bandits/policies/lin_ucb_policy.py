@@ -161,11 +161,12 @@ class LinearUCBPolicy(tf_policy.Base):
 
     self._dtype = self._data_vector[0].dtype
     self._emit_policy_info = emit_policy_info
-    predicted_rewards = ()
-    if policy_utilities.InfoFields.PREDICTED_REWARDS in emit_policy_info:
-      predicted_rewards = tensor_spec.TensorSpec(
-          [self._num_actions], dtype=self._dtype)
-    info_spec = policy_utilities.PolicyInfo(predicted_rewards=predicted_rewards)
+    predicted_rewards_mean = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
+      predicted_rewards_mean = tensor_spec.TensorSpec([self._num_actions],
+                                                      dtype=self._dtype)
+    info_spec = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=predicted_rewards_mean)
 
     super(LinearUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -246,9 +247,9 @@ class LinearUCBPolicy(tf_policy.Base):
     action_distributions = tfp.distributions.Deterministic(loc=chosen_actions)
 
     policy_info = policy_utilities.PolicyInfo(
-        predicted_rewards=tf.stack(est_rewards, axis=-1) if
-        policy_utilities.InfoFields.PREDICTED_REWARDS in self._emit_policy_info
-        else ())
+        predicted_rewards_mean=tf.stack(est_rewards, axis=-1)
+        if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
+        self._emit_policy_info else ())
 
     return policy_step.PolicyStep(
         action_distributions, policy_state, policy_info)

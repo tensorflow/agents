@@ -28,8 +28,6 @@ from tf_agents.utils import common
 
 class InfoFields(object):
   """Strings which can be used in the policy info fields."""
-  # Predicted rewards (legacy). This is going to be removed soon.
-  PREDICTED_REWARDS = 'predicted_rewards'
   # Mean of predicted rewards (per arm).
   PREDICTED_REWARDS_MEAN = 'predicted_rewards_mean'
   # Samples of predicted rewards (per arm).
@@ -39,7 +37,6 @@ class InfoFields(object):
 PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PolicyInfo',
     (policy_step.CommonFields.LOG_PROBABILITY,
-     InfoFields.PREDICTED_REWARDS,
      InfoFields.PREDICTED_REWARDS_MEAN,
      InfoFields.PREDICTED_REWARDS_SAMPLED))
 # Set default empty tuple for all fields.
