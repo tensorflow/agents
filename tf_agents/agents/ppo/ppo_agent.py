@@ -409,6 +409,9 @@ class PPOAgent(tf_agent.TFAgent):
       # Summarize rewards before they get normalized below.
       tf.compat.v2.summary.histogram(
           name='rewards', data=rewards, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='rewards_mean', data=tf.reduce_mean(rewards),
+          step=self.train_step_counter)
 
     # Normalize rewards if self._reward_normalizer is defined.
     if self._reward_normalizer:
@@ -418,6 +421,9 @@ class PPOAgent(tf_agent.TFAgent):
         tf.compat.v2.summary.histogram(
             name='rewards_normalized',
             data=rewards,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.scalar(
+            name='rewards_normalized_mean', data=tf.reduce_mean(rewards),
             step=self.train_step_counter)
 
     # Make discount 0.0 at end of each episode to restart cumulative sum
@@ -574,16 +580,19 @@ class PPOAgent(tf_agent.TFAgent):
 
     loss_info = tf.nest.map_structure(tf.identity, loss_info)
 
-    # Make summaries for total loss across all epochs.
+    # Make summaries for total loss averaged across all epochs.
     # The *_losses lists will have been populated by
-    #   calls to self.get_epoch_loss.
+    #   calls to self.get_epoch_loss. Assumes all the losses have same length.
     with tf.name_scope('Losses/'):
-      total_policy_gradient_loss = tf.add_n(policy_gradient_losses)
-      total_value_estimation_loss = tf.add_n(value_estimation_losses)
-      total_l2_regularization_loss = tf.add_n(l2_regularization_losses)
+      num_epochs = len(policy_gradient_losses)
+      total_policy_gradient_loss = tf.add_n(policy_gradient_losses) / num_epochs
+      total_value_estimation_loss = tf.add_n(
+          value_estimation_losses) / num_epochs
+      total_l2_regularization_loss = tf.add_n(
+          l2_regularization_losses) / num_epochs
       total_entropy_regularization_loss = tf.add_n(
-          entropy_regularization_losses)
-      total_kl_penalty_loss = tf.add_n(kl_penalty_losses)
+          entropy_regularization_losses) / num_epochs
+      total_kl_penalty_loss = tf.add_n(kl_penalty_losses) / num_epochs
       tf.compat.v2.summary.scalar(
           name='policy_gradient_loss',
           data=total_policy_gradient_loss,
@@ -743,6 +752,14 @@ class PPOAgent(tf_agent.TFAgent):
       tf.compat.v2.summary.scalar(
           name='value_pred_avg',
           data=tf.reduce_mean(input_tensor=value_preds),
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='value_actual_avg',
+          data=tf.reduce_mean(input_tensor=returns),
+          step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='value_estimation_loss',
+          data=value_estimation_loss,
           step=self.train_step_counter)
       tf.compat.v2.summary.histogram(
           name='value_preds', data=value_preds, step=self.train_step_counter)
