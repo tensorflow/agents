@@ -200,13 +200,18 @@ class DdpgAgent(tf_agent.TFAgent):
     """
     with tf.name_scope('get_target_updater'):
       def update():
+        """Update target network."""
         # TODO(b/124381161): What about observation normalizer variables?
         critic_update = common.soft_variables_update(
             self._critic_network.variables,
-            self._target_critic_network.variables, tau)
+            self._target_critic_network.variables,
+            tau,
+            tau_non_trainable=1.0)
         actor_update = common.soft_variables_update(
-            self._actor_network.variables, self._target_actor_network.variables,
-            tau)
+            self._actor_network.variables,
+            self._target_actor_network.variables,
+            tau,
+            tau_non_trainable=1.0)
         return tf.group(critic_update, actor_update)
 
       return common.Periodically(update, period, 'periodic_update_targets')

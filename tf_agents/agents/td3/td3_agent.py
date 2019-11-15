@@ -241,13 +241,19 @@ class Td3Agent(tf_agent.TFAgent):
         # TODO(b/124381161): What about observation normalizer variables?
         critic_update_1 = common.soft_variables_update(
             self._critic_network_1.variables,
-            self._target_critic_network_1.variables, tau)
+            self._target_critic_network_1.variables,
+            tau,
+            tau_non_trainable=1.0)
         critic_update_2 = common.soft_variables_update(
             self._critic_network_2.variables,
-            self._target_critic_network_2.variables, tau)
+            self._target_critic_network_2.variables,
+            tau,
+            tau_non_trainable=1.0)
         actor_update = common.soft_variables_update(
-            self._actor_network.variables, self._target_actor_network.variables,
-            tau)
+            self._actor_network.variables,
+            self._target_actor_network.variables,
+            tau,
+            tau_non_trainable=1.0)
         return tf.group(critic_update_1, critic_update_2, actor_update)
 
       return common.Periodically(update, period, 'update_targets')

@@ -323,7 +323,10 @@ class DqnAgent(tf_agent.TFAgent):
 
       def update():
         return common.soft_variables_update(
-            self._q_network.variables, self._target_q_network.variables, tau)
+            self._q_network.variables,
+            self._target_q_network.variables,
+            tau,
+            tau_non_trainable=1.0)
 
       return common.Periodically(update, period, 'periodic_update_targets')
 

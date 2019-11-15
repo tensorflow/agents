@@ -175,6 +175,7 @@ def create_variable(name,
 def soft_variables_update(source_variables,
                           target_variables,
                           tau=1.0,
+                          tau_non_trainable=None,
                           sort_variables_by_name=False):
   """Performs a soft/hard update of variables from the source to the target.
 
@@ -189,7 +190,9 @@ def soft_variables_update(source_variables,
     source_variables: list of source variables.
     target_variables: list of target variables.
     tau: A float scalar in [0, 1]. When tau is 1.0 (the default), we do a hard
-      update.
+      update. This is used for trainable variables.
+    tau_non_trainable: A float scalar in [0, 1] for non_trainable variables. If
+      None, will copy from tau.
     sort_variables_by_name: A bool, when True would sort the variables by name
       before doing the update.
 
@@ -201,6 +204,12 @@ def soft_variables_update(source_variables,
   """
   if tau < 0 or tau > 1:
     raise ValueError('Input `tau` should be in [0, 1].')
+  if tau_non_trainable is None:
+    tau_non_trainable = tau
+
+  if tau_non_trainable < 0 or tau_non_trainable > 1:
+    raise ValueError('Input `tau_non_trainable` should be in [0, 1].')
+
   updates = []
 
   op_name = 'soft_variables_update'
@@ -220,10 +229,18 @@ def soft_variables_update(source_variables,
     v_t.shape.assert_is_compatible_with(v_s.shape)
 
     def update_fn(v1, v2):
-      if tau == 1.0:
+      """Update variables."""
+      # For not trainable variables do hard updates.
+      # This helps stabilaze BatchNorm moving averagees TODO(b/144455039)
+      if not v1.trainable:
+        current_tau = tau_non_trainable
+      else:
+        current_tau = tau
+
+      if current_tau == 1.0:
         return v1.assign(v2)
       else:
-        return v1.assign((1 - tau) * v1 + tau * v2)
+        return v1.assign((1 - current_tau) * v1 + current_tau * v2)
 
     # TODO(b/142508640): remove this when b/142802462 is fixed.
     # Workaround for b/142508640, only use extended.update for

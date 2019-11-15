@@ -335,15 +335,18 @@ class Base(tf.Module):
     tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 
-  def update(self, policy, tau=1.0, sort_variables_by_name=False):
+  def update(self, policy, tau=1.0, tau_non_trainable=None,
+             sort_variables_by_name=False):
     """Update the current policy with another policy.
 
     This would include copying the variables from the other policy.
 
     Args:
       policy: Another policy it can update from.
-      tau: A float scalar in [0, 1]. When tau is 1.0 (default), we do a hard
-        update.
+      tau: A float scalar in [0, 1]. When tau is 1.0 (the default), we do a hard
+        update. This is used for trainable variables.
+      tau_non_trainable: A float scalar in [0, 1] for non_trainable variables.
+        If None, will copy from tau.
       sort_variables_by_name: A bool, when True would sort the variables by name
         before doing the update.
 
@@ -355,6 +358,7 @@ class Base(tf.Module):
           policy.variables(),
           self.variables(),
           tau=tau,
+          tau_non_trainable=tau_non_trainable,
           sort_variables_by_name=sort_variables_by_name)
     else:
       return tf.no_op()

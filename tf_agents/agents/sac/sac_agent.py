@@ -359,10 +359,14 @@ class SacAgent(tf_agent.TFAgent):
         """Update target network."""
         critic_update_1 = common.soft_variables_update(
             self._critic_network_1.variables,
-            self._target_critic_network_1.variables, tau)
+            self._target_critic_network_1.variables,
+            tau,
+            tau_non_trainable=1.0)
         critic_update_2 = common.soft_variables_update(
             self._critic_network_2.variables,
-            self._target_critic_network_2.variables, tau)
+            self._target_critic_network_2.variables,
+            tau,
+            tau_non_trainable=1.0)
         return tf.group(critic_update_1, critic_update_2)
 
       return common.Periodically(update, period, 'update_targets')
