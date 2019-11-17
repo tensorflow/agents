@@ -367,6 +367,75 @@ class DqnAgentTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
+  def testLossNStepMidMidLastWithNonZeroDiscountFirstMid(self, agent_class):
+    """Tests that n-step loss handles LAST time steps properly when discount > 0."""
+    q_net = DummyNet(self._observation_spec, self._action_spec)
+    agent = agent_class(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        optimizer=None,
+        n_step_update=4)
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+    # MID: use ts.transition
+    time_steps = ts.transition(observations, rewards, discounts)
+
+    actions = tf.constant([0, 1], dtype=tf.int32)
+    action_steps = policy_step.PolicyStep(actions)
+
+    second_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
+    # MID: use ts.transition
+    second_time_steps = ts.transition(second_observations, rewards, discounts)
+
+    third_observations = tf.constant([[9, 10], [11, 12]], dtype=tf.float32)
+    # LAST: use ts.truncation with a discount of 0.75
+    third_time_steps = ts.truncation(third_observations, rewards, discount=0.75)
+
+    fourth_observations = tf.constant([[13, 14], [15, 16]], dtype=tf.float32)
+    # FIRST: use ts.restart
+    fourth_time_steps = ts.restart(fourth_observations, batch_size=2)
+
+    fifth_observations = tf.constant([[17, 18], [19, 20]], dtype=tf.float32)
+    fifth_time_steps = ts.transition(fifth_observations, rewards, discounts)
+
+    experience1 = trajectory.from_transition(
+        time_steps, action_steps, second_time_steps)
+    experience2 = trajectory.from_transition(
+        second_time_steps, action_steps, third_time_steps)
+    experience3 = trajectory.from_transition(
+        third_time_steps, action_steps, fourth_time_steps)
+    experience4 = trajectory.from_transition(
+        fourth_time_steps, action_steps, fourth_time_steps)
+    experience5 = trajectory.from_transition(
+        fifth_time_steps, action_steps, fifth_time_steps)
+
+    experience = tf.nest.map_structure(
+        lambda v, w, x, y, z: tf.stack([v, w, x, y, z], axis=1),
+        experience1, experience2, experience3, experience4, experience5)
+
+    # Once again we can extend the analysis from testLoss above as follows:
+    # Original Q-values are still 5 and 8 for the same reasons.
+    # However next Q-values are calculated from third observation and
+    # discount and subsequent steps are ignored.
+
+    # The next Q-values as calculated from the termination step are:
+    # 2 * 9 + 1 * 10 + 1 = 29
+    # 2 * 11 + 1 * 12 + 1 = 35
+
+    # Thus the TD targets become the discounted reward sums, or:
+    # 10 + 0.9 * 10 + 0.9 * 0.75 * 29 = 40.75 and 20 + 0.9 * 20 + 0.9 * 0.75 * 35 = 61.625
+    # TD errors: 38.575 - 5 = 33.575 and 61.625 - 8 = 53.625
+    # TD loss: 33.075 and 53.125 (Huber loss subtracts 0.5)
+    # Overall loss: (33.075 + 53.125) / 2 = 43.1
+    expected_loss = 43.1
+    loss, _ = agent._loss(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(self.evaluate(loss), expected_loss)
+
   def testLossWithMaskedActions(self, agent_class):
     # Observations are now a tuple of the usual observation and an action mask.
     observation_spec_with_mask = (

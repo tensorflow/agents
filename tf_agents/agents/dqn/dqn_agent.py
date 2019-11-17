@@ -35,6 +35,7 @@ from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
+from tf_agents.trajectories import time_step
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import composite
@@ -416,7 +417,28 @@ class DqnAgent(tf_agent.TFAgent):
       # actions, and the last time steps. Therefore we extract the first and
       # last transitions from our Trajectory.
       first_two_steps = tf.nest.map_structure(lambda x: x[:, :2], experience)
-      last_two_steps = tf.nest.map_structure(lambda x: x[:, -2:], experience)
+
+      # To handle the case of an episode boundary with a potentially non-zero discount, we find
+      # the appropriate "last_two_steps" for each example and don't simply assume they are the
+      # last two in the Trajectories provided. We must also treat the reward and discount as 0.0
+      # and 1.0 respectively for all steps after boundary, as they are from another episode, yet
+      # the possibility of a boundary with a non-zero discount would otherwise cause their rewards
+      # to be included in the calculated return.
+      batch_size = tf.shape(experience.step_type)[0]
+      num_steps = tf.shape(experience.step_type)[1]
+
+      step_type = tf.concat([experience.step_type, tf.broadcast_to(time_step.StepType.LAST, (batch_size, 1))], axis=-1)
+      last_step_idx = tf.cast(tf.where(tf.equal(step_type, time_step.StepType.LAST)), dtype=tf.int32)
+      last_step_idx = tf.math.segment_min(last_step_idx[:, 1], last_step_idx[:, 0])
+      valid_steps_mask = tf.sequence_mask(last_step_idx, maxlen=num_steps, dtype=tf.float32)
+
+      # Clipping to a minimum of 1 to avoid falling off the beginning of the tensor. In the case of
+      # the first step having step_type=StepType.LAST the example is excluded from the loss anyway.
+      last_step_idx = tf.clip_by_value(last_step_idx, 1, num_steps-1)
+      last_step_idx = tf.reshape(last_step_idx, (batch_size, 1, 1))
+      last_two_steps_idx = tf.concat([last_step_idx-1, last_step_idx], axis=1)
+      last_two_steps = tf.nest.map_structure(lambda x: tf.gather_nd(x, last_two_steps_idx, batch_dims=1), experience)
+
       time_steps, actions, _ = self._experience_to_transitions(first_two_steps)
       _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
 
@@ -434,12 +456,11 @@ class DqnAgent(tf_agent.TFAgent):
       else:
         # When computing discounted return, we need to throw out the last time
         # index of both reward and discount, which are filled with dummy values
-        # to match the dimensions of the observation.
-        rewards = reward_scale_factor * experience.reward[:, :-1]
-        discounts = gamma * experience.discount[:, :-1]
-
-        # TODO(b/134618876): Properly handle Trajectories that include episode
-        # boundaries with nonzero discount.
+        # to match the dimensions of the observation. Also, as described above,
+        # we nullify steps after any mid-trajectory episode boundary by setting
+        # their rewards and discounts to 0.0 and 1.0 respectively.
+        rewards = reward_scale_factor * experience.reward[:, :-1] * valid_steps_mask[:, :-1]
+        discounts = tf.math.maximum(gamma * experience.discount[:, :-1], 1.0-valid_steps_mask[:, :-1])
 
         td_targets = value_ops.discounted_return(
             rewards=rewards,
