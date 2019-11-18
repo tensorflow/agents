@@ -680,6 +680,20 @@ class NestedArraysTest(tf.test.TestCase):
     expected = (np.array([0, 1, 1, 0, 1]), np.array([1, 7, 8, 4, 10]))
     self.assertAllEqual(expected, result)
 
+  def testWhereV2(self):
+    condition = tf.convert_to_tensor([True, False, False, True, False])
+    true_output = tf.nest.map_structure(tf.convert_to_tensor,
+                                        (np.reshape(np.array([0] * 10), (5, 2)), np.reshape(np.arange(1, 11), (5, 2))))
+    false_output = tf.nest.map_structure(tf.convert_to_tensor,
+                                         (np.reshape(np.array([1] * 10), (5, 2)), np.reshape(np.arange(12, 22), (5, 2))))
+
+    result = nest_utils.wherev2(condition, true_output, false_output)
+    result = self.evaluate(result)
+
+    expected = (np.array([[0, 0], [1, 1], [1, 1], [0, 0], [1, 1]]),
+                np.array([[1, 2], [14, 15], [16, 17], [7, 8], [20, 21]]))
+    self.assertAllEqual(expected, result)
+
 
 if __name__ == '__main__':
   tf.test.main()
