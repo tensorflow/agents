@@ -96,6 +96,7 @@ class Base(object):
         If `observation_and_action_constraint_splitter` is None, action
         constraints are not applied.
     """
+    common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
     common.assert_members_are_not_overridden(base_cls=Base, instance=self)
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec

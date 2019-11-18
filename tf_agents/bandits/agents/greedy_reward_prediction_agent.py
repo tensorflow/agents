@@ -97,6 +97,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       not a bounded scalar int32 spec with minimum 0.
     """
     tf.Module.__init__(self, name=name)
+    common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._observation_and_action_constraint_splitter = (
         observation_and_action_constraint_splitter)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(

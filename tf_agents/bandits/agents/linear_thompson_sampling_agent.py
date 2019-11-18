@@ -33,6 +33,7 @@ import tensorflow as tf
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import linear_thompson_sampling_policy as ts_policy
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
@@ -88,6 +89,7 @@ class LinearThompsonSamplingAgent(tf_agent.TFAgent):
       ValueError if dtype is not one of `tf.float32` or `tf.float64`.
     """
     tf.Module.__init__(self, name=name)
+    common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
     self._observation_and_action_constraint_splitter = (

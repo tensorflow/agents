@@ -31,8 +31,15 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
-from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
+# pylint:disable=g-direct-tensorflow-import
+from tensorflow.core.protobuf import struct_pb2  # TF internal
+from tensorflow.python.eager import monitoring  # TF internal
+from tensorflow.python.saved_model import nested_structure_coder  # TF internal
+# pylint:enable=g-direct-tensorflow-import
+
+tf_agents_gauge = monitoring.BoolGauge('/tensorflow/agents/agents',
+                                       'TF-Agents usage', 'method')
+
 
 MISSING_RESOURCE_VARIABLES_ERROR = """
 Resource variables are not enabled.  Please enable them by adding the following

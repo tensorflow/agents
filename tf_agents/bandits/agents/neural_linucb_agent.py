@@ -120,6 +120,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       ValueError if dtype is not one of `tf.float32` or `tf.float64`.
     """
     tf.Module.__init__(self, name=name)
+    common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
     self._observation_and_action_constraint_splitter = (

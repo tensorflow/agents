@@ -165,6 +165,7 @@ class Base(tf.Module):
       name: A name for this module. Defaults to the class name.
     """
     super(Base, self).__init__(name=name)
+    common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
     common.assert_members_are_not_overridden(base_cls=Base, instance=self)
     if not isinstance(time_step_spec, ts.TimeStep):
       raise ValueError(
