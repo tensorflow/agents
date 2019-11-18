@@ -375,7 +375,7 @@ class DqnAgentTest(test_utils.TestCase):
         self._action_spec,
         q_network=q_net,
         optimizer=None,
-        n_step_update=4)
+        n_step_update=5)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     rewards = tf.constant([10, 20], dtype=tf.float32)
@@ -399,7 +399,12 @@ class DqnAgentTest(test_utils.TestCase):
     fourth_time_steps = ts.restart(fourth_observations, batch_size=2)
 
     fifth_observations = tf.constant([[17, 18], [19, 20]], dtype=tf.float32)
+    # MID: use ts.transition
     fifth_time_steps = ts.transition(fifth_observations, rewards, discounts)
+
+    sixth_observations = tf.constant([[17, 18], [19, 20]], dtype=tf.float32)
+    # MID: use ts.transition
+    sixth_time_steps = ts.transition(sixth_observations, rewards, discounts)
 
     experience1 = trajectory.from_transition(
         time_steps, action_steps, second_time_steps)
@@ -411,10 +416,12 @@ class DqnAgentTest(test_utils.TestCase):
         fourth_time_steps, action_steps, fourth_time_steps)
     experience5 = trajectory.from_transition(
         fifth_time_steps, action_steps, fifth_time_steps)
+    experience6 = trajectory.from_transition(
+        sixth_time_steps, action_steps, sixth_time_steps)
 
     experience = tf.nest.map_structure(
-        lambda v, w, x, y, z: tf.stack([v, w, x, y, z], axis=1),
-        experience1, experience2, experience3, experience4, experience5)
+        lambda u, v, w, x, y, z: tf.stack([u, v, w, x, y, z], axis=1),
+        experience1, experience2, experience3, experience4, experience5, experience6)
 
     # Once again we can extend the analysis from testLoss above as follows:
     # Original Q-values are still 5 and 8 for the same reasons.
