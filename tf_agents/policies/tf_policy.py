@@ -146,20 +146,22 @@ class Base(tf.Module):
       observation_and_action_constraint_splitter: A function used to process
         observations with action constraints. These constraints can indicate,
         for example, a mask of valid/invalid actions for a given state of the
-        environment. The function takes in a full observation and returns a
-        tuple consisting of 1) the part of the observation intended as input to
-        the network and 2) the constraint. An example
-        `observation_and_action_constraint_splitter` could be as simple as: ```
-        def observation_and_action_constraint_splitter(observation): return
-          observation['network_input'], observation['constraint'] ```
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
         *Note*: when using `observation_and_action_constraint_splitter`, make
-          sure the provided `q_network` is compatible with the network-specific
-          half of the output of the
-          `observation_and_action_constraint_splitter`. In particular,
-          `observation_and_action_constraint_splitter` will be called on the
-          observation before passing to the network. If
-          `observation_and_action_constraint_splitter` is None, action
-          constraints are not applied.
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
       name: A name for this module. Defaults to the class name.
     """
     super(Base, self).__init__(name=name)
@@ -176,10 +178,7 @@ class Base(tf.Module):
     self._emit_log_probability = emit_log_probability
     if emit_log_probability:
       log_probability_spec = tensor_spec.BoundedTensorSpec(
-          shape=(),
-          dtype=tf.float32,
-          maximum=0,
-          minimum=-float('inf'),
+          shape=(), dtype=tf.float32, maximum=0, minimum=-float('inf'),
           name='log_probability')
       log_probability_spec = tf.nest.map_structure(
           lambda _: log_probability_spec, action_spec)
@@ -337,10 +336,7 @@ class Base(tf.Module):
     tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 
-  def update(self,
-             policy,
-             tau=1.0,
-             tau_non_trainable=None,
+  def update(self, policy, tau=1.0, tau_non_trainable=None,
              sort_variables_by_name=False):
     """Update the current policy with another policy.
 
@@ -509,13 +505,26 @@ class Base(tf.Module):
 
   # Subclasses MAY optionally overwrite _get_initial_state.
   def _get_initial_state(self, batch_size):
-    """Returns the initial state of the policy network.
+    """Default implementation of `get_initial_state`.
+
+    This implementation returns tensors of all zeros matching `batch_size` and
+    spec `self.policy_state_spec`.
 
     Args:
-      batch_size: A Tensor holding the batch size.
+      batch_size: The batch shape.
 
     Returns:
-      A nest of zero tensors matching the spec of the policy network state.
+      A nested object of type `policy_state` containing properly
+      initialized Tensors.
     """
-    return tensor_spec.zero_spec_nest(
-        self._policy_state_spec, outer_dims=[batch_size])
+
+    def _zero_tensor(spec):
+      if batch_size is None:
+        shape = spec.shape
+      else:
+        spec_shape = tf.convert_to_tensor(value=spec.shape, dtype=tf.int32)
+        shape = tf.concat(([batch_size], spec_shape), axis=0)
+      dtype = spec.dtype
+      return tf.zeros(shape, dtype)
+
+    return tf.nest.map_structure(_zero_tensor, self._policy_state_spec)
