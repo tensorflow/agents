@@ -61,8 +61,8 @@ class RandomTFPolicy(tf_policy.Base):
             'RandomTFPolicy only supports action constraints for action specs '
             'shaped as () or (1,) or their equivalent list forms.')
 
-    super(RandomTFPolicy, self).__init__(
-        time_step_spec, action_spec, *args, **kwargs)
+    super(RandomTFPolicy, self).__init__(time_step_spec, action_spec, *args,
+                                         **kwargs)
 
   def _variables(self):
     return []
@@ -84,29 +84,30 @@ class RandomTFPolicy(tf_policy.Base):
       # dimension so the final shape is (B, 1) rather than (B,).
       if self.action_spec.shape.rank == 1:
         action_ = tf.expand_dims(action_, axis=-1)
+      policy_info = tensor_spec.sample_spec_nest(self._info_spec)
     else:
       outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)
 
       action_ = tensor_spec.sample_spec_nest(
           self._action_spec, seed=seed, outer_dims=outer_dims)
+      policy_info = tensor_spec.sample_spec_nest(
+          self._info_spec, outer_dims=outer_dims)
 
     # TODO(b/78181147): Investigate why this control dependency is required.
     if time_step is not None:
       with tf.control_dependencies(tf.nest.flatten(time_step)):
         action_ = tf.nest.map_structure(tf.identity, action_)
 
-    policy_info = tensor_spec.sample_spec_nest(self._info_spec)
-
     if self.emit_log_probability:
       if observation_and_action_constraint_splitter is not None:
-        log_probability = masked_categorical.log_prob(
-            action_ - self.action_spec.minimum)
+        log_probability = masked_categorical.log_prob(action_ -
+                                                      self.action_spec.minimum)
       else:
         action_probability = tf.nest.map_structure(_uniform_probability,
                                                    self._action_spec)
         log_probability = tf.nest.map_structure(tf.math.log, action_probability)
-      policy_info = policy_step.set_log_probability(
-          policy_info, log_probability)
+      policy_info = policy_step.set_log_probability(policy_info,
+                                                    log_probability)
 
     step = policy_step.PolicyStep(action_, policy_state, policy_info)
     return step

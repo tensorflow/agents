@@ -281,6 +281,33 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
 
 
 @parameterized.named_parameters(*TYPE_PARAMETERS)
+class TensorSpecZeroTest(tf.test.TestCase, parameterized.TestCase):
+
+  def testNestZero(self, dtype):
+    nested_spec = example_nested_tensor_spec(dtype)
+    zeros = tensor_spec.zero_spec_nest(nested_spec)
+    zeros_ = self.evaluate(zeros)
+
+    def check_shape_and_zero(spec, value):
+      self.assertEqual(spec.shape, value.shape)
+      self.assertTrue(np.all(value == 0))
+
+    tf.nest.map_structure(check_shape_and_zero, nested_spec, zeros_)
+
+  def testOnlyTensorSpecIsSupported(self, dtype):
+    sparse_spec = tf.SparseTensorSpec([1], tf.int32)
+    with self.assertRaisesRegexp(NotImplementedError, "not supported.*Sparse"):
+      _ = tensor_spec.zero_spec_nest(sparse_spec)
+    ragged_spec = tf.RaggedTensorSpec(ragged_rank=0, shape=[3, 5])
+    with self.assertRaisesRegexp(NotImplementedError, "not supported.*Ragged"):
+      _ = tensor_spec.zero_spec_nest(ragged_spec)
+
+  def testEmptySpec(self, dtype):
+    self.assertEqual((), tensor_spec.zero_spec_nest(()))
+    self.assertEqual([], tensor_spec.zero_spec_nest([]))
+
+
+@parameterized.named_parameters(*TYPE_PARAMETERS)
 class TensorSpecTypeTest(tf.test.TestCase, parameterized.TestCase):
 
   def testIsDiscrete(self, dtype):
