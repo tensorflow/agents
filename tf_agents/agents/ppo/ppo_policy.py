@@ -26,6 +26,7 @@ from tf_agents.agents.ppo import ppo_utils
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.specs import distribution_spec
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 
@@ -33,7 +34,17 @@ tfd = tfp.distributions
 
 
 class PPOPolicy(actor_policy.ActorPolicy):
-  """An ActorPolicy that also returns policy_info needed for PPO training."""
+  """An ActorPolicy that also returns policy_info needed for PPO training.
+
+  This policy requires two networks: the usual `actor_network` and the
+  additional `value_network`. The value network can be executed with the
+  `apply_value_network()` method.
+
+  When the networks have state (RNNs, LSTMs) you must be careful to pass the
+  state for the actor network to `action()` and the state of the value network
+  to `apply_value_network()`. Use `get_initial_value_state()` to access
+  the state of the value network.
+  """
 
   def __init__(self,
                time_step_spec=None,
@@ -91,7 +102,21 @@ class PPOPolicy(actor_policy.ActorPolicy):
       value_network.create_variables()
     self._value_network = value_network
 
-  def apply_value_network(self, observations, step_types, policy_state):
+  def get_initial_value_state(self, batch_size):
+    """Returns the initial state of the value network.
+
+    Args:
+      batch_size: A constant or Tensor holding the batch size. Can be None, in
+        which case the state will not have a batch dimension added.
+
+    Returns:
+      A nest of zero tensors matching the spec of the value network state.
+    """
+    return tensor_spec.zero_spec_nest(
+        self._value_network.state_spec,
+        outer_dims=None if batch_size is None else [batch_size])
+
+  def apply_value_network(self, observations, step_types, value_state=None):
     """Apply value network to time_step, potentially a sequence.
 
     If observation_normalizer is not None, applies observation normalization.
@@ -102,16 +127,17 @@ class PPOPolicy(actor_policy.ActorPolicy):
         time series and network is RNN, will run RNN steps over time series.
       step_types: A (possibly nested) step_types tensor with same outer_dims as
         observations.
-      policy_state: Initial policy state for value_network.
+      value_state: Optional. Initial state for the value_network. If not
+        provided the behavior depends on the value network itself.
 
     Returns:
       The output of value_net, which is a tuple of:
         - value_preds with same outer_dims as time_step
-        - policy_state at the end of the time series
+        - value_state at the end of the time series
     """
     if self._observation_normalizer:
       observations = self._observation_normalizer.normalize(observations)
-    return self._value_network(observations, step_types, policy_state)
+    return self._value_network(observations, step_types, value_state)
 
   def _apply_actor_network(self, time_step, policy_state):
     if self._observation_normalizer:
