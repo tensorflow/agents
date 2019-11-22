@@ -105,7 +105,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     if greedy_action.info:
       if not random_action.info:
         raise ValueError('Incompatible info field')
-      info = nest_utils.wherev2(cond, greedy_action.info, random_action.info)
+      info = nest_utils.where(cond, greedy_action.info, random_action.info)
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
