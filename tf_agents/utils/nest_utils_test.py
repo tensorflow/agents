@@ -680,18 +680,29 @@ class NestedArraysTest(tf.test.TestCase):
     expected = (np.array([0, 1, 1, 0, 1]), np.array([1, 7, 8, 4, 10]))
     self.assertAllEqual(expected, result)
 
-  def testWhereV2(self):
+  def testWhereDifferentRanks(self):
     condition = tf.convert_to_tensor([True, False, False, True, False])
     true_output = tf.nest.map_structure(tf.convert_to_tensor,
                                         (np.reshape(np.array([0] * 10), (5, 2)), np.reshape(np.arange(1, 11), (5, 2))))
     false_output = tf.nest.map_structure(tf.convert_to_tensor,
                                          (np.reshape(np.array([1] * 10), (5, 2)), np.reshape(np.arange(12, 22), (5, 2))))
 
-    result = nest_utils.wherev2(condition, true_output, false_output)
+    result = nest_utils.where(condition, true_output, false_output)
     result = self.evaluate(result)
 
     expected = (np.array([[0, 0], [1, 1], [1, 1], [0, 0], [1, 1]]),
                 np.array([[1, 2], [14, 15], [16, 17], [7, 8], [20, 21]]))
+    self.assertAllEqual(expected, result)
+
+  def testWhereSameRankDifferentDimension(self):
+    condition = tf.convert_to_tensor([True, False, True])
+    true_output = (tf.convert_to_tensor([1]), tf.convert_to_tensor([2]))
+    false_output = (tf.convert_to_tensor([3, 4, 5]), tf.convert_to_tensor([6, 7, 8]))
+
+    result = nest_utils.where(condition, true_output, false_output)
+    result = self.evaluate(result)
+
+    expected = (np.array([1, 4, 1]), np.array([2, 7, 2]))
     self.assertAllEqual(expected, result)
 
 
