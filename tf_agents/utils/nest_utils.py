@@ -539,27 +539,10 @@ def get_outer_array_shape(nested_array, spec):
   return first_array.shape[:num_outer_dims]
 
 
+
 def where(condition, true_outputs, false_outputs):
-  """Generalization of tf.compat.v1.where supporting nests as the outputs.
-
-
-  Args:
-    condition: A boolean Tensor of shape [B,].
-    true_outputs: Tensor or nested tuple of Tensors of any dtype, each with
-      shape [B, ...], to be split based on `condition`.
-    false_outputs: Tensor or nested tuple of Tensors of any dtype, each with
-      shape [B, ...], to be split based on `condition`.
-
-  Returns:
-    Interleaved output from `true_outputs` and `false_outputs` based on
-    `condition`.
-  """
-  return tf.nest.map_structure(lambda t, f: tf.compat.v1.where(condition, t, f),
-                               true_outputs, false_outputs)
-
-def wherev2(condition, true_outputs, false_outputs):
   """Generalization of tf.where where, returning a nest constructed though
-  application of tf.where to the input nests' constituent Tensors.
+  application of tf.where to the input nests.
 
   Args:
     condition: A boolean Tensor of shape [B, ...]. The shape of condition
@@ -579,7 +562,6 @@ def wherev2(condition, true_outputs, false_outputs):
   """
   return tf.nest.map_structure(
     lambda t, f: tf.where(
-      # Under semantics of tf.where v2, cond must have same rank as a/b. This differs from tf.compat.v1.where.
       tf.reshape(condition,
                  tf.concat([tf.shape(condition), tf.ones(tf.rank(t) - tf.rank(condition), dtype=tf.int32)], axis=0)),
       t, f),
