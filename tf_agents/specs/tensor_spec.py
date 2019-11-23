@@ -339,9 +339,17 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
               values=values_sample,
               dense_shape=shape))
     elif isinstance(spec, (TensorSpec, BoundedTensorSpec)):
-      spec = BoundedTensorSpec.from_spec(spec)
-      return sample_bounded_spec(
-          spec, outer_dims=outer_dims, seed=seed_stream())
+      if spec.dtype == tf.string:
+        sample_spec = BoundedTensorSpec(
+            spec.shape, tf.int32, minimum=0, maximum=10)
+        return tf.as_string(
+            sample_bounded_spec(
+                sample_spec, outer_dims=outer_dims, seed=seed_stream()))
+      else:
+        return sample_bounded_spec(
+            BoundedTensorSpec.from_spec(spec),
+            outer_dims=outer_dims,
+            seed=seed_stream())
     else:
       raise TypeError("Spec type not supported: '{}'".format(spec))
 
