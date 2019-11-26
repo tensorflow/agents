@@ -560,10 +560,10 @@ def where(condition, true_outputs, false_outputs):
     Interleaved output from `true_outputs` and `false_outputs` based on
     `condition`.
   """
-  def where_with_matching_ranks(t, f):
+  def _where_with_matching_ranks(t, f):
       rank_difference = tf.rank(t) - tf.rank(condition)
       condition_shape = tf.concat([tf.shape(condition), tf.ones(rank_difference, dtype=tf.int32)], axis=0)
       reshaped_condition = tf.reshape(condition, condition_shape)
       return tf.where(reshaped_condition, t, f)
 
-  return tf.nest.map_structure(where_with_matching_ranks, true_outputs, false_outputs)
+  return tf.nest.map_structure(_where_with_matching_ranks, true_outputs, false_outputs)
