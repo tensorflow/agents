@@ -194,20 +194,27 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
           categorical_q_network=q_net,
           optimizer=None)
 
-    # Explicitly share weights between q and target networks; this is ok.
+    # Explicitly share weights between q and target networks.
+    # This would be an unusual setup so we check that an error is thrown.
     q_target_net = KerasLayersNet(
         self._time_step_spec.observation, self._action_spec, dense_layer)
-    categorical_dqn_agent.CategoricalDqnAgent(
-        self._time_step_spec,
-        self._action_spec,
-        categorical_q_network=q_net,
-        optimizer=None,
-        target_categorical_q_network=q_target_net)
+    with self.assertRaisesRegexp(
+        ValueError, 'shares weights with the original network'):
+      categorical_dqn_agent.CategoricalDqnAgent(
+          self._time_step_spec,
+          self._action_spec,
+          categorical_q_network=q_net,
+          optimizer=None,
+          target_categorical_q_network=q_target_net)
 
+  def testCreateAgentWithPrebuiltPreprocessingLayersDiffAtoms(self):
+    dense_layer = tf.keras.layers.Dense(3)
+    q_net = KerasLayersNet(
+        self._time_step_spec.observation, self._action_spec, dense_layer)
+    dense_layer_target = tf.keras.layers.Dense(3)
     q_bad_target_net = KerasLayersNet(
-        self._time_step_spec.observation, self._action_spec, dense_layer,
+        self._time_step_spec.observation, self._action_spec, dense_layer_target,
         num_atoms=3)
-
     with self.assertRaisesRegexp(ValueError, 'have different numbers of atoms'):
       categorical_dqn_agent.CategoricalDqnAgent(
           self._time_step_spec,

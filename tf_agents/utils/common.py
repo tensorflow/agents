@@ -1168,11 +1168,15 @@ def check_matching_networks(network_1, network_2):
 
 def maybe_copy_target_network_with_checks(network, target_network=None,
                                           name='TargetNetwork'):
+  """Copies the network into target if None and checks for shared variables."""
   if target_network is None:
     target_network = network.copy(name=name)
     target_network.create_variables()
-    # Copy may have been shallow, and variable may inadvertently be shared
-    # between the target and original network.
-    check_no_shared_variables(network, target_network)
+  # Copy may have been shallow, and variables may inadvertently be shared
+  # between the target and the original networks. This would be an unusual
+  # setup, so we throw an error to protect users from accidentally doing so.
+  # If you explicitly want this to be enabled, please open a feature request
+  # with the team.
+  check_no_shared_variables(network, target_network)
   check_matching_networks(network, target_network)
   return target_network
