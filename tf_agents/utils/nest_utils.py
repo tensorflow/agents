@@ -539,7 +539,6 @@ def get_outer_array_shape(nested_array, spec):
   return first_array.shape[:num_outer_dims]
 
 
-
 def where(condition, true_outputs, false_outputs):
   """Generalization of tf.where where, returning a nest constructed though
   application of tf.where to the input nests.
@@ -560,10 +559,18 @@ def where(condition, true_outputs, false_outputs):
     Interleaved output from `true_outputs` and `false_outputs` based on
     `condition`.
   """
-  def _where_with_matching_ranks(t, f):
-      rank_difference = tf.rank(t) - tf.rank(condition)
-      condition_shape = tf.concat([tf.shape(condition), tf.ones(rank_difference, dtype=tf.int32)], axis=0)
-      reshaped_condition = tf.reshape(condition, condition_shape)
-      return tf.where(reshaped_condition, t, f)
 
-  return tf.nest.map_structure(_where_with_matching_ranks, true_outputs, false_outputs)
+  def _where_with_matching_ranks(t, f):
+    """Applies tf.where using a condition tensor whose rank may be less than
+    that of the true/false output tensors by padding the condition tensor's
+    shape with extra dimensions of size 1 to adhere to tf.where's parameter
+    requirements."""
+    rank_difference = tf.rank(t) - tf.rank(condition)
+    condition_shape = tf.concat([tf.shape(condition),
+                                 tf.ones(rank_difference, dtype=tf.int32)],
+                                axis=0)
+    reshaped_condition = tf.reshape(condition, condition_shape)
+    return tf.where(reshaped_condition, t, f)
+
+  return tf.nest.map_structure(_where_with_matching_ranks, true_outputs,
+                               false_outputs)
