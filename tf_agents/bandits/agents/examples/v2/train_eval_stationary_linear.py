@@ -85,6 +85,7 @@ def main(unused_argv):
       agent = lin_ts_agent.LinearThompsonSamplingAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
+          alpha=AGENT_ALPHA,
           dtype=tf.float32)
 
     regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
