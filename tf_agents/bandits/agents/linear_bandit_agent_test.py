@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.bandits.agents.lin_ucb_agent."""
+"""Tests for tf_agents.bandits.agents.linear_bandit_agent."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -23,7 +23,7 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from tf_agents.bandits.agents import lin_ucb_agent
+from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.policies import policy_utilities
@@ -39,21 +39,51 @@ tfd = tfp.distributions
 def test_cases():
   return parameterized.named_parameters(
       {
-          'testcase_name': '_batch1_contextdim10_float32',
-          'batch_size': 1,
-          'context_dim': 10,
-          'dtype': tf.float32,
+          'testcase_name':
+              '_batch1_contextdim10_float32',
+          'batch_size':
+              1,
+          'context_dim':
+              10,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_ucb_policy,
+          'dtype':
+              tf.float32,
       }, {
-          'testcase_name': '_batch4_contextdim5_float64',
-          'batch_size': 4,
-          'context_dim': 5,
-          'dtype': tf.float64,
+          'testcase_name':
+              '_batch4_contextdim5_float64_UCB',
+          'batch_size':
+              4,
+          'context_dim':
+              5,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_ucb_policy,
+          'dtype':
+              tf.float64,
       }, {
-          'testcase_name': '_batch4_contextdim5_float64_decomp',
-          'batch_size': 4,
-          'context_dim': 5,
-          'dtype': tf.float64,
-          'use_eigendecomp': True,
+          'testcase_name':
+              '_batch4_contextdim5_float64_TS',
+          'batch_size':
+              4,
+          'context_dim':
+              5,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_thompson_sampling_policy,
+          'dtype':
+              tf.float64,
+      }, {
+          'testcase_name':
+              '_batch4_contextdim5_float64_decomp',
+          'batch_size':
+              4,
+          'context_dim':
+              5,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_ucb_policy,
+          'dtype':
+              tf.float64,
+          'use_eigendecomp':
+              True,
       })
 
 
@@ -133,16 +163,17 @@ def _get_experience(initial_step, action_step, final_step):
 
 
 @test_util.run_all_in_graph_and_eager_modes
-class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
+class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
-    super(LinearUCBAgentTest, self).setUp()
+    super(LinearBanditAgentTest, self).setUp()
     tf.compat.v1.enable_resource_variables()
 
   @test_cases()
   def testInitializeAgent(self,
                           batch_size,
                           context_dim,
+                          exploration_policy,
                           dtype,
                           use_eigendecomp=False):
     num_actions = 5
@@ -150,8 +181,11 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    agent = lin_ucb_agent.LinearUCBAgent(
-        time_step_spec=time_step_spec, action_spec=action_spec, dtype=dtype)
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        dtype=dtype)
     self.evaluate(agent.initialize())
 
   def testInitializeAgentEmptyObservationSpec(self):
@@ -161,17 +195,21 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    agent = lin_ucb_agent.LinearUCBAgent(
-        time_step_spec=time_step_spec, action_spec=action_spec, dtype=dtype)
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=linear_agent.ExplorationPolicy.linear_ucb_policy,
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        dtype=dtype)
     self.evaluate(agent.initialize())
 
   @test_cases()
-  def testLinearUCBUpdate(self,
-                          batch_size,
-                          context_dim,
-                          dtype,
-                          use_eigendecomp=False):
-    """Check LinearUCB agent updates for specified actions and rewards."""
+  def testLinearAgentUpdate(self,
+                            batch_size,
+                            context_dim,
+                            exploration_policy,
+                            dtype,
+                            use_eigendecomp=False):
+    """Check that the agent updates for specified actions and rewards."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
     num_actions = 5
@@ -186,8 +224,11 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    agent = lin_ucb_agent.LinearUCBAgent(
-        time_step_spec=time_step_spec, action_spec=action_spec, dtype=dtype)
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        dtype=dtype)
     self.evaluate(agent.initialize())
     loss_info = agent.train(experience)
     self.evaluate(loss_info)
@@ -245,12 +286,13 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         rtol=0.05)
 
   @test_cases()
-  def testLinearUCBUpdateWithBias(self,
-                                  batch_size,
-                                  context_dim,
-                                  dtype,
-                                  use_eigendecomp=False):
-    """Check LinearUCB agent updates for specified actions and rewards."""
+  def testLinearAgentUpdateWithBias(self,
+                                    batch_size,
+                                    context_dim,
+                                    exploration_policy,
+                                    dtype,
+                                    use_eigendecomp=False):
+    """Check that the agent updates for specified actions and rewards."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
     num_actions = 5
@@ -265,7 +307,8 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    agent = lin_ucb_agent.LinearUCBAgent(
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         add_bias=True,
@@ -332,12 +375,13 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         rtol=0.05)
 
   @test_cases()
-  def testLinearUCBUpdateWithMaskedActions(self,
-                                           batch_size,
-                                           context_dim,
-                                           dtype,
-                                           use_eigendecomp=False):
-    """Check LinearUCB agent updates for specified actions and rewards."""
+  def testLinearAgentUpdateWithMaskedActions(self,
+                                             batch_size,
+                                             context_dim,
+                                             exploration_policy,
+                                             dtype,
+                                             use_eigendecomp=False):
+    """Check that the agent updates for specified actions and rewards."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
     num_actions = 5
@@ -357,7 +401,8 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     def observation_and_action_constraint_splitter(obs):
       return obs[0], obs[1]
 
-    agent = lin_ucb_agent.LinearUCBAgent(
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         observation_and_action_constraint_splitter=(
@@ -410,12 +455,13 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(expected_b_updated_list, final_b)
 
   @test_cases()
-  def testLinearUCBUpdateWithForgetting(self,
-                                        batch_size,
-                                        context_dim,
-                                        dtype,
-                                        use_eigendecomp=False):
-    """Check LinearUCB agent updates for specified actions and rewards."""
+  def testLinearAgentUpdateWithForgetting(self,
+                                          batch_size,
+                                          context_dim,
+                                          exploration_policy,
+                                          dtype,
+                                          use_eigendecomp=False):
+    """Check that the agent updates for specified actions and rewards."""
     # We should rewrite this test as it currently does not depend on
     # the value of `gamma`. To properly test the forgetting factor, we need to
     # call `train` twice.
@@ -434,7 +480,8 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    agent = lin_ucb_agent.LinearUCBAgent(
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         gamma=gamma,
@@ -499,12 +546,13 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         expected_eigvals_updated_list, final_eig_vals, atol=1e-4, rtol=1e-4)
 
   @test_cases()
-  def testDistributedLinearUCBUpdate(self,
-                                     batch_size,
-                                     context_dim,
-                                     dtype,
-                                     use_eigendecomp=False):
-    """Same as above, but uses the distributed train function of LinUCB."""
+  def testDistributedLinearAgentUpdate(self,
+                                       batch_size,
+                                       context_dim,
+                                       exploration_policy,
+                                       dtype,
+                                       use_eigendecomp=False):
+    """Same as above, but uses the distributed train function of the agent."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
     num_actions = 5
@@ -520,8 +568,11 @@ class LinearUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
 
-    agent = lin_ucb_agent.LinearUCBAgent(
-        time_step_spec=time_step_spec, action_spec=action_spec, dtype=dtype)
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        dtype=dtype)
     self.evaluate(agent.initialize())
     train_fn = common.function_in_tf1()(agent._distributed_train_step)
     loss_info = train_fn(experience=experience)

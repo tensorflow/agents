@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.bandits.policies.lin_ucb_policy."""
+"""Tests for tf_agents.bandits.policies.linear_bandit_policy."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -21,7 +21,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-from tf_agents.bandits.policies import lin_ucb_policy
+from tf_agents.bandits.policies import linear_bandit_policy as linear_policy
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -34,11 +34,34 @@ _POLICY_VARIABLES_OFFSET = 10.0
 def test_cases():
   return parameterized.named_parameters(
       {
-          'testcase_name': 'batch1',
+          'testcase_name': 'batch1UCB',
           'batch_size': 1,
+          'exploration_strategy': linear_policy.ExplorationStrategy.optimistic,
       }, {
-          'testcase_name': 'batch4',
+          'testcase_name': 'batch4UCB',
           'batch_size': 4,
+          'exploration_strategy': linear_policy.ExplorationStrategy.optimistic,
+      })
+
+
+def test_cases_with_strategy():
+  return parameterized.named_parameters(
+      {
+          'testcase_name': 'batch1UCB',
+          'batch_size': 1,
+          'exploration_strategy': linear_policy.ExplorationStrategy.optimistic,
+      }, {
+          'testcase_name': 'batch4UCB',
+          'batch_size': 4,
+          'exploration_strategy': linear_policy.ExplorationStrategy.optimistic,
+      }, {
+          'testcase_name': 'batch1TS',
+          'batch_size': 1,
+          'exploration_strategy': linear_policy.ExplorationStrategy.sampling,
+      }, {
+          'testcase_name': 'batch4TS',
+          'batch_size': 4,
+          'exploration_strategy': linear_policy.ExplorationStrategy.sampling,
       })
 
 
@@ -56,10 +79,10 @@ def test_cases_with_decomposition():
 
 
 @test_util.run_all_in_graph_and_eager_modes
-class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
+class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
-    super(LinUCBPolicyTest, self).setUp()
+    super(LinearBanditPolicyTest, self).setUp()
     self._obs_dim = 2
     self._num_actions = 5
     self._obs_spec = tensor_spec.TensorSpec([self._obs_dim], tf.float32)
@@ -134,38 +157,52 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
         observation)
 
-  def testBuild(self):
-    policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, self._a, self._b,
-                                            self._num_samples_per_arm,
-                                            self._time_step_spec)
+  @parameterized.parameters([
+      linear_policy.ExplorationStrategy.optimistic,
+      linear_policy.ExplorationStrategy.sampling
+  ])
+  def testBuild(self, exploration_strategy):
+    policy = linear_policy.LinearBanditPolicy(self._action_spec, self._a,
+                                              self._b,
+                                              self._num_samples_per_arm,
+                                              self._time_step_spec,
+                                              exploration_strategy)
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
 
-  @test_cases()
-  def testObservationShapeMismatch(self, batch_size):
-    policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, self._a, self._b,
-                                            self._num_samples_per_arm,
-                                            self._time_step_spec)
+  @test_cases_with_strategy()
+  def testObservationShapeMismatch(self, batch_size, exploration_strategy):
+    policy = linear_policy.LinearBanditPolicy(self._action_spec, self._a,
+                                              self._b,
+                                              self._num_samples_per_arm,
+                                              self._time_step_spec,
+                                              exploration_strategy)
 
     current_time_step = ts.TimeStep(
         tf.constant(
-            ts.StepType.FIRST, dtype=tf.int32, shape=[batch_size],
+            ts.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[batch_size],
             name='step_type'),
         tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
         tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
-        tf.constant(np.array(range(batch_size * (self._obs_dim + 1))),
-                    dtype=tf.float32, shape=[batch_size, self._obs_dim + 1],
-                    name='observation'))
+        tf.constant(
+            np.array(range(batch_size * (self._obs_dim + 1))),
+            dtype=tf.float32,
+            shape=[batch_size, self._obs_dim + 1],
+            name='observation'))
     with self.assertRaisesRegexp(
         ValueError, r'Observation shape is expected to be \[None, 2\].'
         r' Got \[%d, 3\].' % batch_size):
       policy.action(current_time_step)
 
-  @test_cases()
-  def testActionBatch(self, batch_size):
-    policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, self._a, self._b,
-                                            self._num_samples_per_arm,
-                                            self._time_step_spec)
+  @test_cases_with_strategy()
+  def testActionBatch(self, batch_size, exploration_strategy):
+    policy = linear_policy.LinearBanditPolicy(self._action_spec, self._a,
+                                              self._b,
+                                              self._num_samples_per_arm,
+                                              self._time_step_spec,
+                                              exploration_strategy)
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))
     self.assertEqual(action_step.action.shape.as_list(), [batch_size])
@@ -174,20 +211,21 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllGreaterEqual(actions_, self._action_spec.minimum)
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
 
-  @test_cases()
-  def testActionBatchWithBias(self, batch_size):
+  @test_cases_with_strategy()
+  def testActionBatchWithBias(self, batch_size, exploration_strategy):
     a = [tf.constant([[4, 1, 2], [1, 5, 3], [2, 3, 6]], dtype=tf.float32)
         ] * self._num_actions
     b = [
         tf.constant([r, r, r], dtype=tf.float32)
         for r in range(self._num_actions)
     ]
-    policy = lin_ucb_policy.LinearUCBPolicy(
+    policy = linear_policy.LinearBanditPolicy(
         self._action_spec,
         a,
         b,
         self._num_samples_per_arm,
         self._time_step_spec,
+        exploration_strategy,
         add_bias=True)
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))
@@ -197,18 +235,19 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllGreaterEqual(actions_, self._action_spec.minimum)
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
 
-  @test_cases()
-  def testActionBatchWithMask(self, batch_size):
+  @test_cases_with_strategy()
+  def testActionBatchWithMask(self, batch_size, exploration_strategy):
 
     def split_fn(obs):
       return obs[0], obs[1]
 
-    policy = lin_ucb_policy.LinearUCBPolicy(
+    policy = linear_policy.LinearBanditPolicy(
         self._action_spec,
         self._a,
         self._b,
         self._num_samples_per_arm,
         self._time_step_spec_with_mask,
+        exploration_strategy,
         observation_and_action_constraint_splitter=split_fn)
 
     action_step = policy.action(
@@ -219,7 +258,8 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllEqual(actions_, range(batch_size))
 
   @test_cases()
-  def testActionBatchWithVariablesAndPolicyUpdate(self, batch_size):
+  def testActionBatchWithVariablesAndPolicyUpdate(self, batch_size,
+                                                  exploration_strategy):
     a_list = []
     a_new_list = []
     b_list = []
@@ -252,15 +292,17 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, a_list, b_list,
-                                            num_samples_list,
-                                            self._time_step_spec)
+    policy = linear_policy.LinearBanditPolicy(self._action_spec, a_list, b_list,
+                                              num_samples_list,
+                                              self._time_step_spec,
+                                              exploration_strategy)
     self.assertLen(policy.variables(), 3 * self._num_actions)
 
-    new_policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, a_new_list,
-                                                b_new_list,
-                                                num_samples_new_list,
-                                                self._time_step_spec)
+    new_policy = linear_policy.LinearBanditPolicy(self._action_spec, a_new_list,
+                                                  b_new_list,
+                                                  num_samples_new_list,
+                                                  self._time_step_spec,
+                                                  exploration_strategy)
     self.assertLen(new_policy.variables(), 3 * self._num_actions)
 
     self.evaluate(new_policy.update(policy))
@@ -283,11 +325,14 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
       eig_vals_list = [eig_vals_one_arm] * self._num_actions
       eig_matrix_list = [eig_matrix_one_arm] * self._num_actions
 
-    policy = lin_ucb_policy.LinearUCBPolicy(self._action_spec, self._a, self._b,
-                                            self._num_samples_per_arm,
-                                            self._time_step_spec,
-                                            eig_vals=eig_vals_list,
-                                            eig_matrix=eig_matrix_list)
+    policy = linear_policy.LinearBanditPolicy(
+        self._action_spec,
+        self._a,
+        self._b,
+        self._num_samples_per_arm,
+        self._time_step_spec,
+        eig_vals=eig_vals_list,
+        eig_matrix=eig_matrix_list)
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))
     self.assertEqual(action_step.action.shape.as_list(), [batch_size])
@@ -314,14 +359,15 @@ class LinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         [batch_size])
     self.assertAllEqual(actions_.reshape([batch_size]), actions_numpy)
 
-  @test_cases()
-  def testPredictedRewards(self, batch_size):
-    policy = lin_ucb_policy.LinearUCBPolicy(
+  @test_cases_with_strategy()
+  def testPredictedRewards(self, batch_size, exploration_strategy):
+    policy = linear_policy.LinearBanditPolicy(
         self._action_spec,
         self._a,
         self._b,
         self._num_samples_per_arm,
         self._time_step_spec,
+        exploration_strategy,
         emit_policy_info=(policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,))
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))

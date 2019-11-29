@@ -19,18 +19,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-import tensorflow_probability as tfp
-from tf_agents.bandits.policies import linalg
-from tf_agents.bandits.policies import policy_utilities
-from tf_agents.policies import tf_policy
-from tf_agents.specs import tensor_spec
-from tf_agents.trajectories import policy_step
-
-tfd = tfp.distributions
+from tf_agents.bandits.policies import linear_bandit_policy as lin_policy
 
 
-class LinearUCBPolicy(tf_policy.Base):
+class LinearUCBPolicy(lin_policy.LinearBanditPolicy):
   """Linear UCB Policy.
 
   Implements the Linear UCB Policy from the following paper:
@@ -89,167 +81,20 @@ class LinearUCBPolicy(tf_policy.Base):
         observation and mask.
       name: The name of this policy.
     """
-    if not isinstance(cov_matrix, (list, tuple)):
-      raise ValueError('cov_matrix must be a list of matrices (Tensors).')
-    self._cov_matrix = cov_matrix
-
-    if not isinstance(data_vector, (list, tuple)):
-      raise ValueError('data_vector must be a list of vectors (Tensors).')
-    self._data_vector = data_vector
-
-    if not isinstance(num_samples, (list, tuple)):
-      raise ValueError('num_samples must be a list of vectors (Tensors).')
-    self._num_samples = num_samples
-
-    if not isinstance(eig_vals, (list, tuple)):
-      raise ValueError('eig_vals must be a list of vectors (Tensors).')
-    self._eig_vals = eig_vals
-
-    if not isinstance(eig_matrix, (list, tuple)):
-      raise ValueError('eig_matrix must be a list of vectors (Tensors).')
-    self._eig_matrix = eig_matrix
-
-    self._alpha = alpha
-    self._use_eigendecomp = False
-    if eig_matrix:
-      self._use_eigendecomp = True
-    self._tikhonov_weight = tikhonov_weight
-    self._add_bias = add_bias
-
-    if len(cov_matrix) != len(data_vector):
-      raise ValueError('The size of list cov_matrix must match the size of '
-                       'list data_vector. Got {} for cov_matrix and {} '
-                       'for data_vector'.format(
-                           len(self._cov_matrix), len((data_vector))))
-    if len(num_samples) != len(cov_matrix):
-      raise ValueError('The size of num_samples must match the size of '
-                       'list cov_matrix. Got {} for num_samples and {} '
-                       'for cov_matrix'.format(
-                           len(self._num_samples), len((cov_matrix))))
-    if tf.nest.is_nested(action_spec):
-      raise ValueError('Nested `action_spec` is not supported.')
-
-    self._num_actions = action_spec.maximum + 1
-    if self._num_actions != len(cov_matrix):
-      raise ValueError(
-          'The number of elements in `cov_matrix` ({}) must match '
-          'the number of actions derived from `action_spec` ({}).'.format(
-              len(cov_matrix), self._num_actions))
-    if observation_and_action_constraint_splitter is not None:
-      context_shape = observation_and_action_constraint_splitter(
-          time_step_spec.observation)[0].shape.as_list()
-    else:
-      context_shape = time_step_spec.observation.shape.as_list()
-    self._context_dim = (
-        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
-    if self._add_bias:
-      # The bias is added via a constant 1 feature.
-      self._context_dim += 1
-    cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
-    if self._context_dim != cov_matrix_dim:
-      raise ValueError('The dimension of matrix `cov_matrix` must match '
-                       'context dimension {}.'
-                       'Got {} for `cov_matrix`.'.format(
-                           self._context_dim, cov_matrix_dim))
-
-    data_vector_dim = tf.compat.dimension_value(data_vector[0].shape[0])
-    if self._context_dim != data_vector_dim:
-      raise ValueError('The dimension of vector `data_vector` must match '
-                       'context  dimension {}. '
-                       'Got {} for `data_vector`.'.format(
-                           self._context_dim, data_vector_dim))
-
-    self._dtype = self._data_vector[0].dtype
-    self._emit_policy_info = emit_policy_info
-    predicted_rewards_mean = ()
-    if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
-      predicted_rewards_mean = tensor_spec.TensorSpec([self._num_actions],
-                                                      dtype=self._dtype)
-    info_spec = policy_utilities.PolicyInfo(
-        predicted_rewards_mean=predicted_rewards_mean)
-
     super(LinearUCBPolicy, self).__init__(
-        time_step_spec=time_step_spec,
         action_spec=action_spec,
-        info_spec=info_spec,
+        cov_matrix=cov_matrix,
+        data_vector=data_vector,
+        num_samples=num_samples,
+        time_step_spec=time_step_spec,
+        exploration_strategy=lin_policy.ExplorationStrategy.optimistic,
+        alpha=alpha,
+        eig_vals=eig_vals,
+        eig_matrix=eig_matrix,
+        tikhonov_weight=tikhonov_weight,
+        add_bias=add_bias,
+        emit_policy_info=emit_policy_info,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
         name=name)
-
-  def _variables(self):
-    all_vars = (self._cov_matrix + self._data_vector + self._num_samples +
-                list(self._eig_matrix) + list(self._eig_vals))
-    return [v for v in all_vars if isinstance(v, tf.Variable)]
-
-  def _distribution(self, time_step, policy_state):
-    observation = time_step.observation
-    observation_and_action_constraint_splitter = (
-        self.observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter is not None:
-      observation, mask = observation_and_action_constraint_splitter(
-          observation)
-    observation = tf.cast(observation, dtype=self._dtype)
-    if self._add_bias:
-      # The bias is added via a constant 1 feature.
-      observation = tf.concat([
-          observation,
-          tf.ones([tf.shape(observation)[0], 1], dtype=self._dtype)
-      ],
-                              axis=1)
-    # Check the shape of the observation matrix. The observations can be
-    # batched.
-    if not observation.shape.is_compatible_with([None, self._context_dim]):
-      raise ValueError('Observation shape is expected to be {}. Got {}.'.format(
-          [None, self._context_dim], observation.shape.as_list()))
-    observation = tf.reshape(observation, [-1, self._context_dim])
-
-    p_values = []
-    est_rewards = []
-    for k in range(self._num_actions):
-      if self._use_eigendecomp:
-        q_t_b = tf.matmul(
-            self._eig_matrix[k],
-            tf.linalg.matrix_transpose(observation),
-            transpose_a=True)
-        lambda_inv = tf.divide(
-            tf.ones_like(self._eig_vals[k]),
-            self._eig_vals[k] + self._tikhonov_weight)
-        a_inv_x = tf.matmul(
-            self._eig_matrix[k], tf.einsum('j,jk->jk', lambda_inv, q_t_b))
-      else:
-        a_inv_x = linalg.conjugate_gradient_solve(
-            self._cov_matrix[k] +
-            self._tikhonov_weight * tf.eye(self._context_dim),
-            tf.linalg.matrix_transpose(observation))
-      est_mean_reward = tf.einsum('j,jk->k', self._data_vector[k], a_inv_x)
-      est_rewards.append(est_mean_reward)
-
-      ci = tf.reshape(
-          tf.linalg.tensor_diag_part(tf.matmul(observation, a_inv_x)),
-          [-1, 1])
-      p_values.append(
-          tf.reshape(est_mean_reward, [-1, 1]) + self._alpha * tf.sqrt(ci))
-
-    # Keeping the batch dimension during the squeeze, even if batch_size == 1.
-    optimistic_reward_estimates = tf.squeeze(
-        tf.stack(p_values, axis=-1), axis=[1])
-    if observation_and_action_constraint_splitter is not None:
-      chosen_actions = policy_utilities.masked_argmax(
-          optimistic_reward_estimates,
-          mask,
-          output_type=self._action_spec.dtype)
-    else:
-      chosen_actions = tf.argmax(
-          optimistic_reward_estimates,
-          axis=-1,
-          output_type=self._action_spec.dtype)
-    action_distributions = tfp.distributions.Deterministic(loc=chosen_actions)
-
-    policy_info = policy_utilities.PolicyInfo(
-        predicted_rewards_mean=tf.stack(est_rewards, axis=-1)
-        if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
-        self._emit_policy_info else ())
-
-    return policy_step.PolicyStep(
-        action_distributions, policy_state, policy_info)

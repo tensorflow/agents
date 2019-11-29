@@ -35,7 +35,7 @@ import gin
 import tensorflow as tf
 
 from tf_agents.agents import tf_agent
-from tf_agents.bandits.agents import lin_ucb_agent
+from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import neural_linucb_policy
 from tf_agents.utils import common
@@ -369,7 +369,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       # Update the matrix A and b.
       # pylint: disable=cell-var-from-loop
       def update(cov_matrix, data_vector):
-        a_new, b_new, _, _ = lin_ucb_agent.update_a_and_b_with_forgetting(
+        a_new, b_new, _, _ = linear_agent.update_a_and_b_with_forgetting(
             cov_matrix, data_vector, rewards_for_arm, observations_for_arm,
             self._gamma)
         return a_new, b_new
