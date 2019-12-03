@@ -25,7 +25,12 @@ import numpy as np
 import tensorflow as tf
 
 
-def run_test(target_call, num_steps, strategy, batch_size=None, log_steps=100):
+def run_test(target_call,
+             num_steps,
+             strategy,
+             batch_size=None,
+             log_steps=100,
+             num_steps_per_batch=1):
   """Run benchmark and return TimeHistory object with stats.
 
   Args:
@@ -34,11 +39,13 @@ def run_test(target_call, num_steps, strategy, batch_size=None, log_steps=100):
     strategy: None or tf.distribute.DistibutionStrategy object.
     batch_size: Total batch size.
     log_steps: Interval of steps between logging of stats.
+    num_steps_per_batch: Number of steps per batch. Used to account for total
+      number of transitions or examples processed per iteration.
 
   Returns:
     TimeHistory object containing step performance stats.
   """
-  history = TimeHistory(batch_size, log_steps)
+  history = TimeHistory(batch_size, log_steps, num_steps_per_batch)
 
   for _ in range(num_steps):
     history.on_batch_begin()
@@ -66,17 +73,19 @@ class BatchTimestamp(object):
 class TimeHistory(object):
   """Track step performance statistics."""
 
-  def __init__(self, batch_size, log_steps):
+  def __init__(self, batch_size, log_steps, num_steps_per_batch=1):
     """Callback for logging performance.
 
     Args:
       batch_size: Total batch size.
       log_steps: Interval of steps between logging of stats.
+      num_steps_per_batch: Number of steps per batch.
     """
     self.batch_size = batch_size
     super(TimeHistory, self).__init__()
     self.log_steps = log_steps
     self.global_steps = 0
+    self.num_steps_per_batch = num_steps_per_batch
 
     # Logs start of step 1 then end of each step based on log_steps interval.
     self.timestamp_log = []
@@ -107,6 +116,8 @@ class TimeHistory(object):
   def get_average_examples_per_second(self, warmup=True):
     """Returns average examples per second so far.
 
+    Examples per second are defined by `batch_size` * `num_steps_per_batch`
+
     Args:
       warmup: If true ignore first set of steps executed as determined by
         `log_steps`.
@@ -114,7 +125,8 @@ class TimeHistory(object):
     Returns:
       Average examples per second.
     """
-    return 1 / self.get_average_step_time(warmup=warmup) * self.batch_size
+    return 1 / self.get_average_step_time(
+        warmup=warmup) * self.batch_size * self.num_steps_per_batch
 
   def get_average_step_time(self, warmup=True):
     """Returns average step time (seconds) so far.
@@ -148,8 +160,7 @@ def set_session_config(enable_xla=False):
     # Disable PinToHostOptimizer in grappler when enabling XLA because it
     # causes OOM and performance regression.
     tf.config.optimizer.set_experimental_options(
-        {'pin_to_host_optimization': False}
-    )
+        {'pin_to_host_optimization': False})
 
 
 def get_variable_value(agent, name):
@@ -161,9 +172,8 @@ def get_variable_value(agent, name):
   if tf.executing_eagerly() and len(tf_vars) > 1:
     var = tf_vars[0]
   else:
-    assert len(
-        tf_vars) == 1, 'More than one variable with name {}. {}'.format(
-            name, [(v.name, v.shape) for v in tf_vars])
+    assert len(tf_vars) == 1, 'More than one variable with name {}. {}'.format(
+        name, [(v.name, v.shape) for v in tf_vars])
     var = tf_vars[0]
   return var.numpy() if tf.executing_eagerly() else var.eval()
 
