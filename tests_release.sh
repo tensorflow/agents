@@ -10,7 +10,7 @@ set -x
 
 if [[ $# -lt 1 ]] ; then
   echo "Usage:"
-  echo "test_release [nightly|stable]"
+  echo "test_release [nightly|stable|stable_tf1.x]"
   exit 1
 fi
 
@@ -35,9 +35,7 @@ run_tests() {
   # TensorFlow isn't a regular dependency because there are many different pip
   # packages a user might have installed.
   if [[ $2 == "nightly" ]] ; then
-    pip install tf-nightly==1.15.0.dev20190821 \
-      tf-estimator-nightly==1.14.0.dev2019091701 \
-      gast==0.2.2
+    pip install tf-nightly
 
     # Run the tests
     python setup.py test
@@ -45,8 +43,10 @@ run_tests() {
     # Install tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/
-  elif [[ $2 == "stable" ]] ; then
-    pip install tensorflow
+  elif [[ $2 == "stable_tf1.x" ]] ; then
+    pip install tensorflow==1.15.0 \
+      tensorflow-estimator==1.15.1 \
+      gast==0.2.2
 
     # Run the tests
     python setup.py test --release
@@ -54,21 +54,21 @@ run_tests() {
     # Install tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/ --release
-  elif [[ $2 == "preview" ]] ; then
-    pip install tf-nightly-2.0-preview
+  elif [[ $2 == "stable" ]] ; then
+    pip install tensorflow tensorflow-probability
 
     # Run the tests
-    python setup.py test
+    python setup.py test --release
 
     # Install tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
-    ./pip_pkg.sh ${WHEEL_PATH}/
+    ./pip_pkg.sh ${WHEEL_PATH}/ --release
   else
-    echo "Error unknow option only [nightly|stable]"
+    echo "Error unknown option only [nightly|stable]"
     exit
   fi
 
-  pip install ${WHEEL_PATH}/tf_agents_*.whl
+  pip install ${WHEEL_PATH}/tf_agents*.whl
 
   # Move away from repo directory so "import tf_agents" refers to the
   # installed wheel and not to the local fs.
@@ -87,7 +87,6 @@ if ! which cmake > /dev/null; then
 fi
 
 # Test on Python2.7
-run_tests "2.7" $1
+run_tests "2.7.14" $1
 # Test on Python3.6.1
 run_tests "3.6.1" $1
-
