@@ -155,7 +155,13 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         name='action')
 
     self._emit_policy_info = emit_policy_info
-    info_spec = policy_utilities.PolicyInfo()
+    predicted_rewards_mean = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
+      predicted_rewards_mean = tensor_spec.TensorSpec(
+          [self._num_actions],
+          dtype=self._dtype)
+    info_spec = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=predicted_rewards_mean)
 
     super(NeuralLinUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -201,17 +207,20 @@ class NeuralLinUCBPolicy(tf_policy.Base):
     else:
       chosen_actions = greedy_actions
 
-    return chosen_actions
+    est_mean_reward = tf.cast(est_mean_reward, dtype=self._dtype)
+    return chosen_actions, est_mean_reward
 
   def _get_actions_from_linucb(self, encoded_observation, mask):
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
     p_values = []
+    est_rewards = []
     for k in range(self._num_actions):
       a_inv_x = linalg.conjugate_gradient_solve(
           self._cov_matrix[k] + tf.eye(self._encoding_dim, dtype=self._dtype),
           tf.linalg.matrix_transpose(encoded_observation))
       mean_reward_est = tf.einsum('j,jk->k', self._data_vector[k], a_inv_x)
+      est_rewards.append(mean_reward_est)
 
       ci = tf.reshape(
           tf.linalg.tensor_diag_part(tf.matmul(encoded_observation, a_inv_x)),
@@ -228,7 +237,9 @@ class NeuralLinUCBPolicy(tf_policy.Base):
     else:
       chosen_actions = policy_utilities.masked_argmax(
           stacked_p_values, mask, output_type=tf.int32)
-    return chosen_actions
+
+    est_mean_reward = tf.stack(est_rewards, axis=-1)
+    return chosen_actions, est_mean_reward
 
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
@@ -252,11 +263,14 @@ class NeuralLinUCBPolicy(tf_policy.Base):
     # Pass the observations through the encoding network.
     encoded_observation, _ = self._encoding_network(observation)
 
-    chosen_actions = tf.cond(
+    chosen_actions, est_mean_rewards = tf.cond(
         self._actions_from_reward_layer,
         lambda: self._get_actions_from_reward_layer(encoded_observation, mask),
         lambda: self._get_actions_from_linucb(encoded_observation, mask))
 
-    policy_info = policy_utilities.PolicyInfo()
-
+    policy_info = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=(
+            est_mean_rewards if
+            policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
+            self._emit_policy_info else ()))
     return policy_step.PolicyStep(chosen_actions, policy_state, policy_info)
