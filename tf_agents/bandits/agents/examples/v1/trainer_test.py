@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os
 import tempfile
+import unittest
 
 from absl.testing import parameterized
 import tensorflow as tf
@@ -30,6 +31,8 @@ from tf_agents.bandits.agents.examples.v1 import trainer
 from tf_agents.bandits.environments import random_bandit_environment
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
+
+from tensorflow.python import tf2  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -62,6 +65,7 @@ class TrainerTF1Test(test_utils.TestCase, parameterized.TestCase):
            steps_per_loop=10,
            learning_rate=.1)
       )
+  @unittest.skipIf(tf2.enabled(), 'TF 1.x only test.')
   def testTrainerTF1ExportsCheckpoints(self,
                                        num_actions,
                                        observation_shape,
