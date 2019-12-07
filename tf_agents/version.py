@@ -28,11 +28,11 @@ _PATCH_VERSION = '0'
 _DEV_SUFFIX = 'dev'
 _REL_SUFFIX = 'rc1'
 
-# Example, '0.4.0.rc0'
+# Example, '0.4.0rc0'
 __version__ = '.'.join([
     _MAJOR_VERSION,
     _MINOR_VERSION,
     _PATCH_VERSION,
 ])
 __dev_version__ = '{}.{}'.format(__version__, _DEV_SUFFIX)
-__rel_version__ = '{}.{}'.format(__version__, _REL_SUFFIX)
+__rel_version__ = '{}{}'.format(__version__, _REL_SUFFIX)
