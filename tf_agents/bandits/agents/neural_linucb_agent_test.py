@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -279,12 +281,15 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
     encoder = DummyNet(obs_dim=context_dim)
     encoding_dim = 10
+    variable_collection = neural_linucb_agent.NeuralLinUCBVariableCollection(
+        num_actions, encoding_dim)
     agent = neural_linucb_agent.NeuralLinUCBAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         encoding_network=encoder,
         encoding_network_num_train_steps=10,
         encoding_dim=encoding_dim,
+        variable_collection=variable_collection,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001))
 
     loss_info_before, _ = agent.train(experience)
@@ -334,6 +339,28 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     loss_after_value = self.evaluate(loss_info_after)
     self.assertLess(
         np.absolute(loss_before_value - loss_after_value), 10.0)
+
+  def testInitializeRestoreVariableCollection(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Test only works in eager mode.')
+    num_actions = 5
+    encoding_dim = 7
+    variable_collection = neural_linucb_agent.NeuralLinUCBVariableCollection(
+        num_actions=num_actions, encoding_dim=encoding_dim)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(variable_collection.num_samples_list)
+    checkpoint = tf.train.Checkpoint(variable_collection=variable_collection)
+    checkpoint_dir = self.get_temp_dir()
+    checkpoint_prefix = os.path.join(checkpoint_dir, 'checkpoint')
+    checkpoint.save(file_prefix=checkpoint_prefix)
+
+    variable_collection.actions_from_reward_layer.assign(False)
+
+    latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+    checkpoint_load_status = checkpoint.restore(latest_checkpoint)
+    self.evaluate(checkpoint_load_status.initialize_or_restore())
+    self.assertEqual(
+        self.evaluate(variable_collection.actions_from_reward_layer), True)
 
 
 if __name__ == '__main__':

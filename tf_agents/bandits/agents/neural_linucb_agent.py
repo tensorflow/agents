@@ -44,33 +44,71 @@ from tf_agents.utils import nest_utils
 from tf_agents.utils import training
 
 
+class NeuralLinUCBVariableCollection(tf.Module):
+  """A collection of variables used by `NeuralLinUCBAgent`."""
+
+  def __init__(self, num_actions, encoding_dim, dtype=tf.float64, name=None):
+    """Initializes an instance of `NeuralLinUCBVariableCollection`.
+
+    Args:
+      num_actions: (int) number of actions the agent acts on.
+      encoding_dim: (int) The dimensionality of the output of the encoding
+        network.
+      dtype: The type of the variables. Should be one of `tf.float32` and
+        `tf.float64`.
+      name:  (string) the name of this instance.
+    """
+    tf.Module.__init__(self, name=name)
+    self.actions_from_reward_layer = tf.compat.v2.Variable(
+        True, dtype=tf.bool, name='is_action_from_reward_layer')
+
+    self.cov_matrix_list = []
+    self.data_vector_list = []
+    # We keep track of the number of samples per arm.
+    self.num_samples_list = []
+
+    for k in range(num_actions):
+      self.cov_matrix_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([encoding_dim, encoding_dim], dtype=dtype),
+              name='a_{}'.format(k)))
+      self.data_vector_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros(encoding_dim, dtype=dtype), name='b_{}'.format(k)))
+      self.num_samples_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([], dtype=dtype), name='num_samples_{}'.format(k)))
+
+
 @gin.configurable
 class NeuralLinUCBAgent(tf_agent.TFAgent):
   """An agent implementing the LinUCB algorithm on top of a neural network.
   """
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               encoding_network,
-               encoding_network_num_train_steps,
-               encoding_dim,
-               optimizer,
-               alpha=1.0,
-               gamma=1.0,
-               epsilon_greedy=0.0,
-               observation_and_action_constraint_splitter=None,
-               # Params for training.
-               error_loss_fn=tf.compat.v1.losses.mean_squared_error,
-               gradient_clipping=None,
-               # Params for debugging.
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               train_step_counter=None,
-               emit_policy_info=(),
-               emit_log_probability=False,
-               dtype=tf.float64,
-               name=None):
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      encoding_network,
+      encoding_network_num_train_steps,
+      encoding_dim,
+      optimizer,
+      variable_collection=None,
+      alpha=1.0,
+      gamma=1.0,
+      epsilon_greedy=0.0,
+      observation_and_action_constraint_splitter=None,
+      # Params for training.
+      error_loss_fn=tf.compat.v1.losses.mean_squared_error,
+      gradient_clipping=None,
+      # Params for debugging.
+      debug_summaries=False,
+      summarize_grads_and_vars=False,
+      train_step_counter=None,
+      emit_policy_info=(),
+      emit_log_probability=False,
+      dtype=tf.float64,
+      name=None):
     """Initialize an instance of `NeuralLinUCBAgent`.
 
     Args:
@@ -83,6 +121,10 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         the encoding network is assumed to be already trained.
       encoding_dim: the dimension of encoded observations.
       optimizer: The optimizer to use for training.
+      variable_collection: Instance of `NeuralLinUCBVariableCollection`.
+        Collection of variables to be updated by the agent. If `None`, a new
+        instance of `LinearBanditVariables` will be created. Note that this
+        collection excludes the variables owned by the encoding network.
       alpha: (float) positive scalar. This is the exploration parameter that
         multiplies the confidence intervals.
       gamma: a float forgetting factor in [0.0, 1.0]. When set to
@@ -118,6 +160,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       name: a name for this instance of `NeuralLinUCBAgent`.
 
     Raises:
+      TypeError if variable_collection is not an instance of
+        `NeuralLinUCBVariableCollection`.
       ValueError if dtype is not one of `tf.float32` or `tf.float64`.
     """
     tf.Module.__init__(self, name=name)
@@ -134,10 +178,13 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     self._context_dim = (
         tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
     self._alpha = alpha
-    self._cov_matrix_list = []
-    self._data_vector_list = []
-    # We keep track of the number of samples per arm.
-    self._num_samples_list = []
+    if variable_collection is None:
+      variable_collection = NeuralLinUCBVariableCollection(
+          self._num_actions, encoding_dim, dtype)
+    elif not isinstance(variable_collection, NeuralLinUCBVariableCollection):
+      raise TypeError('Parameter `variable_collection` should be '
+                      'of type `NeuralLinUCBVariableCollection`.')
+    self._variable_collection = variable_collection
     self._gamma = gamma
     if self._gamma < 0.0 or self._gamma > 1.0:
       raise ValueError('Forgetting factor `gamma` must be in [0.0, 1.0].')
@@ -163,32 +210,16 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     self._error_loss_fn = error_loss_fn
     self._gradient_clipping = gradient_clipping
     train_step_counter = tf.compat.v1.train.get_or_create_global_step()
-    # Whether the policy uses the reward layer to figure out optimal action.
-    # If False, LinUCB is used instead.
-    self._actions_from_reward_layer = tf.compat.v2.Variable(
-        True, dtype=tf.bool, name='is_action_from_reward_layer')
-
-    for k in range(self._num_actions):
-      self._cov_matrix_list.append(
-          tf.compat.v2.Variable(
-              tf.zeros([self._encoding_dim, self._encoding_dim], dtype=dtype),
-              name='a_' + str(k)))
-      self._data_vector_list.append(
-          tf.compat.v2.Variable(
-              tf.zeros(self._encoding_dim, dtype=dtype), name='b_' + str(k)))
-      self._num_samples_list.append(
-          tf.compat.v2.Variable(
-              tf.zeros([], dtype=dtype), name='num_samples_' + str(k)))
 
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
         encoding_network=self._encoding_network,
         encoding_dim=self._encoding_dim,
         reward_layer=self._reward_layer,
         epsilon_greedy=self._epsilon_greedy,
-        actions_from_reward_layer=self._actions_from_reward_layer,
-        cov_matrix=self._cov_matrix_list,
-        data_vector=self._data_vector_list,
-        num_samples=self._num_samples_list,
+        actions_from_reward_layer=self.actions_from_reward_layer,
+        cov_matrix=self.cov_matrix,
+        data_vector=self.data_vector,
+        num_samples=self.num_samples,
         time_step_spec=time_step_spec,
         alpha=alpha,
         emit_policy_info=emit_policy_info,
@@ -211,16 +242,20 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     return self._num_actions
 
   @property
+  def actions_from_reward_layer(self):
+    return self._variable_collection.actions_from_reward_layer
+
+  @property
   def cov_matrix(self):
-    return self._cov_matrix_list
+    return self._variable_collection.cov_matrix_list
 
   @property
   def data_vector(self):
-    return self._data_vector_list
+    return self._variable_collection.data_vector_list
 
   @property
   def num_samples(self):
-    return self._num_samples_list
+    return self._variable_collection.num_samples_list
 
   @property
   def alpha(self):
@@ -228,8 +263,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
 
   @property
   def variables(self):
-    return (self._num_samples_list + self._cov_matrix_list +
-            self._data_vector_list + self._encoding_network.trainable_weights +
+    return (self.num_samples + self.cov_matrix + self.data_vector +
+            self._encoding_network.trainable_weights +
             self._reward_layer.trainable_weights + [self.train_step_counter])
 
   @alpha.setter
@@ -362,9 +397,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
 
       num_samples_for_arm_current = tf.reduce_sum(diag_mask)
-      tf.compat.v1.assign_add(self._num_samples_list[k],
-                              num_samples_for_arm_current)
-      num_samples_for_arm_total = self._num_samples_list[k].read_value()
+      tf.compat.v1.assign_add(self.num_samples[k], num_samples_for_arm_current)
+      num_samples_for_arm_total = self.num_samples[k].read_value()
 
       # Update the matrix A and b.
       # pylint: disable=cell-var-from-loop
@@ -375,11 +409,11 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         return a_new, b_new
       a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0,
-          lambda: update(self._cov_matrix_list[k], self._data_vector_list[k]),
-          lambda: (self._cov_matrix_list[k], self._data_vector_list[k]))
+          lambda: update(self.cov_matrix[k], self.data_vector[k]),
+          lambda: (self.cov_matrix[k], self.data_vector[k]))
 
-      tf.compat.v1.assign(self._cov_matrix_list[k], a_new)
-      tf.compat.v1.assign(self._data_vector_list[k], b_new)
+      tf.compat.v1.assign(self.cov_matrix[k], a_new)
+      tf.compat.v1.assign(self.data_vector[k], b_new)
 
     loss_tensor = tf.cast(-1. * tf.reduce_sum(reward), dtype=tf.float32)
     loss_info = tf_agent.LossInfo(loss=loss_tensor, extra=())
@@ -424,14 +458,13 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     reward = tf.cast(reward, self._dtype)
 
     tf.compat.v1.assign(
-        self._actions_from_reward_layer,
+        self.actions_from_reward_layer,
         tf.less(self._train_step_counter,
                 self._encoding_network_num_train_steps))
     # pylint: disable=g-long-lambda
     loss_info = tf.cond(
-        self._actions_from_reward_layer,
-        lambda: self.compute_loss_using_reward_layer(
-            observation, action, reward, weights),
-        lambda: self.compute_loss_using_linucb(
-            observation, action, reward, weights))
+        self.actions_from_reward_layer, lambda: self.
+        compute_loss_using_reward_layer(observation, action, reward, weights),
+        lambda: self.compute_loss_using_linucb(observation, action, reward,
+                                               weights))
     return loss_info
