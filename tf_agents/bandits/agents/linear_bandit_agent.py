@@ -41,6 +41,64 @@ class ExplorationPolicy(Enum):
   linear_thompson_sampling_policy = 2
 
 
+class LinearBanditVariableCollection(tf.Module):
+  """A collection of variables used by `LinearBanditAgent`."""
+
+  def __init__(self,
+               context_dim,
+               num_actions,
+               use_eigendecomp=False,
+               dtype=tf.float32,
+               name=None):
+    """Initializes an instance of `LinearBanditVariableCollection`.
+
+    It creates all the variables needed for `LinearBanditAgent`.
+
+    Args:
+      context_dim: (int) The context dimension of the bandit environment the
+        agent will be used on.
+      num_actions: (int) The number of actions (arms).
+      use_eigendecomp: (bool) Whether the agent uses eigen decomposition for
+        maintaining its internal state.
+      dtype: The type of the variables. Should be one of `tf.float32` and
+        `tf.float64`.
+      name:  (string) the name of this instance.
+    """
+    tf.Module.__init__(self, name=name)
+    self.cov_matrix_list = []
+    self.data_vector_list = []
+    self.eig_matrix_list = []
+    self.eig_vals_list = []
+    self.num_samples_list = []
+    for k in range(num_actions):
+      self.cov_matrix_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([context_dim, context_dim], dtype=dtype),
+              name='a_' + str(k)))
+      self.data_vector_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros(context_dim, dtype=dtype), name='b_{}'.format(k)))
+      self.num_samples_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([], dtype=dtype), name='num_samples_{}'.format(k)))
+      if use_eigendecomp:
+        self.eig_matrix_list.append(
+            tf.compat.v2.Variable(
+                tf.eye(context_dim, dtype=dtype),
+                name='eig_matrix{}'.format(k)))
+        self.eig_vals_list.append(
+            tf.compat.v2.Variable(
+                tf.ones([context_dim], dtype=dtype),
+                name='eig_vals{}'.format(k)))
+      else:
+        self.eig_matrix_list.append(
+            tf.compat.v2.Variable(
+                tf.constant([], dtype=dtype), name='eig_matrix{}'.format(k)))
+        self.eig_vals_list.append(
+            tf.compat.v2.Variable(
+                tf.constant([], dtype=dtype), name='eig_vals{}'.format(k)))
+
+
 def update_a_and_b_with_forgetting(
     a_prev, b_prev, r, x, gamma, compute_eigendecomp=False):
   r"""Update the covariance matrix `a` and the weighted sum of rewards `b`.
@@ -81,6 +139,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
                exploration_policy,
                time_step_spec,
                action_spec,
+               variable_collection=None,
                alpha=1.0,
                gamma=1.0,
                use_eigendecomp=False,
@@ -103,6 +162,9 @@ class LinearBanditAgent(tf_agent.TFAgent):
       time_step_spec: A `TimeStep` spec describing the expected `TimeStep`s.
       action_spec: A scalar `BoundedTensorSpec` with `int32` or `int64` dtype
         describing the number of actions for this agent.
+      variable_collection: Instance of `LinearBanditVariableCollection`.
+        Collection of variables to be updated by the agent. If `None`, a new
+        instance of `LinearBanditVariableCollection` will be created.
       alpha: (float) positive scalar. This is the exploration parameter that
         multiplies the confidence intervals.
       gamma: a float forgetting factor in [0.0, 1.0]. When set to 1.0, the
@@ -136,6 +198,8 @@ class LinearBanditAgent(tf_agent.TFAgent):
 
     Raises:
       ValueError if dtype is not one of `tf.float32` or `tf.float64`.
+      TypeError if variable_collection is not an instance of
+        `LinearBanditVariableCollection`.
     """
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
@@ -153,12 +217,22 @@ class LinearBanditAgent(tf_agent.TFAgent):
       # The bias is added via a constant 1 feature.
       self._context_dim += 1
     self._alpha = alpha
-    self._cov_matrix_list = []
-    self._data_vector_list = []
-    self._eig_matrix_list = []
-    self._eig_vals_list = []
+    if variable_collection is None:
+      variable_collection = LinearBanditVariableCollection(
+          context_dim=self._context_dim,
+          num_actions=self._num_actions,
+          use_eigendecomp=use_eigendecomp,
+          dtype=dtype)
+    elif not isinstance(variable_collection, LinearBanditVariableCollection):
+      raise TypeError('Parameter `variable_collection` should be '
+                      'of type `LinearBanditVariableCollection`.')
+    self._variable_collection = variable_collection
+    self._cov_matrix_list = variable_collection.cov_matrix_list
+    self._data_vector_list = variable_collection.data_vector_list
+    self._eig_matrix_list = variable_collection.eig_matrix_list
+    self._eig_vals_list = variable_collection.eig_vals_list
     # We keep track of the number of samples per arm.
-    self._num_samples_list = []
+    self._num_samples_list = variable_collection.num_samples_list
     self._gamma = gamma
     if self._gamma < 0.0 or self._gamma > 1.0:
       raise ValueError('Forgetting factor `gamma` must be in [0.0, 1.0].')
@@ -170,36 +244,6 @@ class LinearBanditAgent(tf_agent.TFAgent):
     self._tikhonov_weight = tikhonov_weight
     self._observation_and_action_constraint_splitter = (
         observation_and_action_constraint_splitter)
-
-    for k in range(self._num_actions):
-      self._cov_matrix_list.append(
-          tf.compat.v2.Variable(
-              tf.zeros([self._context_dim, self._context_dim], dtype=dtype),
-              name='a_' + str(k)))
-      self._data_vector_list.append(
-          tf.compat.v2.Variable(
-              tf.zeros(self._context_dim, dtype=dtype), name='b_' + str(k)))
-      self._num_samples_list.append(
-          tf.compat.v2.Variable(
-              tf.zeros([], dtype=dtype), name='num_samples_' + str(k)))
-      if self._use_eigendecomp:
-        self._eig_matrix_list.append(
-            tf.compat.v2.Variable(
-                tf.eye(self._context_dim, dtype=dtype),
-                name='eig_matrix' + str(k)))
-        self._eig_vals_list.append(
-            tf.compat.v2.Variable(
-                tf.ones([self._context_dim], dtype=dtype),
-                name='eig_vals' + str(k)))
-      else:
-        self._eig_matrix_list.append(
-            tf.compat.v2.Variable(
-                tf.constant([], dtype=dtype),
-                name='eig_matrix' + str(k)))
-        self._eig_vals_list.append(
-            tf.compat.v2.Variable(
-                tf.constant([], dtype=dtype),
-                name='eig_vals' + str(k)))
 
     if exploration_policy == ExplorationPolicy.linear_ucb_policy:
       exploration_strategy = lin_policy.ExplorationStrategy.optimistic

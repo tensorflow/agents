@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -224,10 +226,14 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    variable_collection = linear_agent.LinearBanditVariableCollection(
+        context_dim, num_actions, use_eigendecomp, dtype)
     agent = linear_agent.LinearBanditAgent(
         exploration_policy=exploration_policy,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
+        variable_collection=variable_collection,
+        use_eigendecomp=use_eigendecomp,
         dtype=dtype)
     self.evaluate(agent.initialize())
     loss_info = agent.train(experience)
@@ -307,10 +313,14 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    variable_collection = linear_agent.LinearBanditVariableCollection(
+        context_dim + 1, num_actions, use_eigendecomp, dtype)
     agent = linear_agent.LinearBanditAgent(
         exploration_policy=exploration_policy,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
+        variable_collection=variable_collection,
+        use_eigendecomp=use_eigendecomp,
         add_bias=True,
         dtype=dtype)
     self.evaluate(agent.initialize())
@@ -624,6 +634,27 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     # Check that the actual updated estimates match the expectations.
     self.assertAllClose(expected_a_updated_list, final_a)
     self.assertAllClose(expected_b_updated_list, final_b)
+
+  def testInitializeRestoreVariableCollection(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Test only works in eager mode.')
+    context_dim = 7
+    num_actions = 5
+    variable_collection = linear_agent.LinearBanditVariableCollection(
+        context_dim=context_dim, num_actions=num_actions)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(variable_collection.num_samples_list)
+    checkpoint = tf.train.Checkpoint(variable_collection=variable_collection)
+    checkpoint_dir = self.get_temp_dir()
+    checkpoint_prefix = os.path.join(checkpoint_dir, 'checkpoint')
+    checkpoint.save(file_prefix=checkpoint_prefix)
+
+    variable_collection.num_samples_list[2].assign(14)
+
+    latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+    checkpoint_load_status = checkpoint.restore(latest_checkpoint)
+    self.evaluate(checkpoint_load_status.initialize_or_restore())
+    self.assertEqual(self.evaluate(variable_collection.num_samples_list[2]), 0)
 
 
 if __name__ == '__main__':
