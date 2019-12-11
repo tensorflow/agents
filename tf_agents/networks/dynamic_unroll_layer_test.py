@@ -33,7 +33,7 @@ class AddInputAndStateKerasRNNCell(tf.keras.layers.Layer):
     self.output_size = 1
     self.state_size = 1
 
-  def call(self, input_, state):
+  def call(self, input_, state, training=False):
     s = input_ + state
     return s, s
 
@@ -42,6 +42,17 @@ class AddInputAndStateKerasRNNCell(tf.keras.layers.Layer):
       return tf.zeros_like(inputs)
     return tf.zeros([batch_size, 1], dtype)
 
+  def get_dropout_mask_for_cell(self, **kwargs):
+    pass
+
+  def get_recurrent_dropout_mask_for_cell(self, **kwargs):
+    pass
+
+  def reset_dropout_mask(self):
+    pass
+
+  def reset_recurrent_dropout_mask(self):
+    pass
 
 class DynamicUnrollTest(tf.test.TestCase):
 
@@ -50,6 +61,30 @@ class DynamicUnrollTest(tf.test.TestCase):
         tf.keras.layers.LSTMCell(units=3), parallel_iterations=10)
     l2 = dynamic_unroll_layer.DynamicUnroll.from_config(l1.get_config())
     self.assertEqual(l1.get_config(), l2.get_config())
+
+
+  def testDropoutKerasLSTM(self):
+    def _testDropoutKerasLSTMHelper(training, dropout=0.0,
+                                    recurrent_dropout=0.0):
+      cell = tf.keras.layers.LSTMCell(3, dropout=dropout,
+                                      recurrent_dropout=recurrent_dropout)
+      batch_size = 4
+      max_time = 7
+      inputs = tf.random.uniform((batch_size, max_time, 2), dtype=tf.float32)
+      reset_mask = tf.zeros((batch_size, max_time), dtype=tf.bool)
+      layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
+      outputs_dun1, final_state_dun1 = layer(inputs, reset_mask, training=training)
+      outputs_dun2, final_state_dun2 = layer(inputs, reset_mask, training=training)
+
+      if not training:
+        self.assertAllEqual(outputs_dun1, outputs_dun2)
+      else:
+        self.assertGreater(np.linalg.norm(outputs_dun1 - outputs_dun2), 0)
+
+    _testDropoutKerasLSTMHelper(training=False, dropout=0.50)
+    _testDropoutKerasLSTMHelper(training=True, dropout=0.50)
+    _testDropoutKerasLSTMHelper(training=False, recurrent_dropout=0.50)
+    _testDropoutKerasLSTMHelper(training=True, recurrent_dropout=0.50)
 
   @test_util.run_in_graph_and_eager_modes()
   def testDynamicUnrollMatchesDynamicRNNWhenNoReset(self):

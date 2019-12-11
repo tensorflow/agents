@@ -220,7 +220,8 @@ class LSTMEncodingNetwork(network.Network):
     state, network_state = self._dynamic_unroll(
         state,
         reset_mask,
-        initial_state=network_state)
+        initial_state=network_state,
+        training=training)
 
     for layer in self._output_encoder:
       state = layer(state, training=training)
