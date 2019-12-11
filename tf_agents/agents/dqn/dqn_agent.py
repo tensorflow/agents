@@ -423,6 +423,11 @@ class DqnAgent(tf_agent.TFAgent):
     with tf.name_scope('loss'):
       q_values = self._compute_q_values(time_steps, actions)
 
+      # Capture the Q-network's losses here because it is invoked again
+      # (without training=true) when actions are calculated in
+      # _compute_next_q_values, causing losses to be... lost.
+      q_network_losses = self._q_network.losses
+
       next_q_values = self._compute_next_q_values(next_time_steps)
 
       if self._n_step_update == 1:
@@ -471,8 +476,8 @@ class DqnAgent(tf_agent.TFAgent):
       loss = tf.reduce_mean(input_tensor=td_loss)
 
       # Add network loss (such as regularization loss)
-      if self._q_network.losses:
-        loss = loss + tf.reduce_mean(self._q_network.losses)
+      if q_network_losses:
+        loss = loss + tf.reduce_mean(q_network_losses)
 
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(
@@ -509,7 +514,8 @@ class DqnAgent(tf_agent.TFAgent):
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
-    q_values, _ = self._q_network(network_observation, time_steps.step_type, training=True)
+    q_values, _ = self._q_network(network_observation, time_steps.step_type,
+                                  training=True)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     multi_dim_actions = self._action_spec.shape.rank > 0
@@ -534,7 +540,7 @@ class DqnAgent(tf_agent.TFAgent):
           network_observation)
 
     next_target_q_values, _ = self._target_q_network(
-        network_observation, next_time_steps.step_type, training=False)
+        network_observation, next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
@@ -581,7 +587,7 @@ class DdqnAgent(DqnAgent):
           network_observation)
 
     next_target_q_values, _ = self._target_q_network(
-        network_observation, next_time_steps.step_type, training=False)
+        network_observation, next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._policy.get_initial_state(batch_size)
