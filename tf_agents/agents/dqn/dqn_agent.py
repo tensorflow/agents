@@ -350,7 +350,8 @@ class DqnAgent(tf_agent.TFAgent):
           td_errors_loss_fn=self._td_errors_loss_fn,
           gamma=self._gamma,
           reward_scale_factor=self._reward_scale_factor,
-          weights=weights)
+          weights=weights,
+          training=True)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
     non_trainable_weights = self._q_network.non_trainable_weights
@@ -381,7 +382,8 @@ class DqnAgent(tf_agent.TFAgent):
             td_errors_loss_fn=common.element_wise_huber_loss,
             gamma=1.0,
             reward_scale_factor=1.0,
-            weights=None):
+            weights=None,
+            training=False):
     """Computes loss for DQN training.
 
     Args:
@@ -397,6 +399,10 @@ class DqnAgent(tf_agent.TFAgent):
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output td_loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
+      training: A boolean indicating whether the loss is being calculated in
+        training mode or inference mode. This parameter is passed to the call
+        method of the QNetwork which subsequently will pass it to the call
+        method of its constituent layers.
 
     Returns:
       loss: An instance of `DqnLossInfo`.
