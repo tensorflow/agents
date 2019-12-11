@@ -257,7 +257,7 @@ class SingleObservationSingleActionTest(tf.test.TestCase, parameterized.TestCase
 
     obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
     action_spec = tensor_spec.BoundedTensorSpec(
-        shape=(), minimum=0, maximum=num_actions,  dtype=tf.int32)
+        shape=(), minimum=0, maximum=num_actions-1,  dtype=tf.int32)
     q_net = q_network.QNetwork(
         input_tensor_spec=obs_spec,
         action_spec=action_spec,
