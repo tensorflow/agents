@@ -40,7 +40,7 @@ from tf_agents.utils import common
 from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents import utils
+import tf_agents.utils.training
 from tf_agents.utils import value_ops
 
 
@@ -370,7 +370,7 @@ class DqnAgent(tf_agent.TFAgent):
                                           self.train_step_counter)
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
-    utils.training.apply_gradients(
+    tf_agents.utils.training.apply_gradients(
         self._optimizer, grads_and_vars, global_step=self.train_step_counter)
 
     self._update_target()
