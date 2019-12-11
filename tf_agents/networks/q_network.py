@@ -137,6 +137,9 @@ class QNetwork(network.Network):
       step_type: The step type for the given observation. See `StepType` in
         time_step.py.
       network_state: A state tuple to pass to the network, mainly used by RNNs.
+      training: Python boolean indicating whether the network should behave in
+      training mode or in inference mode. This argument is passed to the
+      encoding network when calling it and is used for encoder dropout layers.
 
     Returns:
       A tuple `(logits, network_state)`.
