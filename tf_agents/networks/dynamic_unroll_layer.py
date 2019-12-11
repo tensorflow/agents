@@ -296,7 +296,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
     if not tf.is_tensor(iterations) and iterations == 1:
       # Take exactly one time step
-      state = _static_unroll_single_step(
+      outputs, final_state = _static_unroll_single_step(
         self.cell,
         inputs,
         reset_mask,
@@ -304,7 +304,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
         zero_state=zero_state,
         training=training)
     else:
-      state = _dynamic_unroll_multi_step(
+      outputs, final_state = _dynamic_unroll_multi_step(
         self.cell,
         inputs,
         reset_mask,
@@ -321,7 +321,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
       self.cell.reset_dropout_mask()
       self.cell.reset_recurrent_dropout_mask()
 
-    return state
+    return outputs, final_state
 
 
 def _maybe_reset_state(reset, s_zero, s):
