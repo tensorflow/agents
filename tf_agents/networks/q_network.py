@@ -129,7 +129,7 @@ class QNetwork(network.Network):
     self._encoder = encoder
     self._q_value_layer = q_value_layer
 
-  def call(self, observation, step_type=None, network_state=()):
+  def call(self, observation, step_type=None, network_state=(), training=False):
     """Runs the given observation through the network.
 
     Args:
@@ -142,5 +142,6 @@ class QNetwork(network.Network):
       A tuple `(logits, network_state)`.
     """
     state, network_state = self._encoder(
-        observation, step_type=step_type, network_state=network_state)
+        observation, step_type=step_type, network_state=network_state,
+        training=training)
     return self._q_value_layer(state), network_state

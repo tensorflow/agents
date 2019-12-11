@@ -181,7 +181,7 @@ class LSTMEncodingNetwork(network.Network):
     self._dynamic_unroll = dynamic_unroll_layer.DynamicUnroll(cell)
     self._output_encoder = output_encoder
 
-  def call(self, observation, step_type, network_state=None):
+  def call(self, observation, step_type, network_state=None, training=False):
     """Apply the network.
 
     Args:
@@ -211,7 +211,7 @@ class LSTMEncodingNetwork(network.Network):
                                         step_type)
 
     state, network_state = self._input_encoder(
-        observation, step_type, network_state)
+        observation, step_type, network_state, training=training)
 
     with tf.name_scope('reset_mask'):
       reset_mask = tf.equal(step_type, time_step.StepType.FIRST)
@@ -223,7 +223,7 @@ class LSTMEncodingNetwork(network.Network):
         initial_state=network_state)
 
     for layer in self._output_encoder:
-      state = layer(state)
+      state = layer(state, training=training)
 
     if not has_time_dim:
       # Remove time dimension from the state.
