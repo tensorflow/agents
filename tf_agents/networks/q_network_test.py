@@ -20,13 +20,15 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
+import numpy as np
 import tensorflow as tf
+from absl.testing import parameterized
 
 from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
 
-class SingleObservationSingleActionTest(tf.test.TestCase):
+class SingleObservationSingleActionTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(SingleObservationSingleActionTest, self).setUp()
@@ -245,6 +247,31 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     q_logits, _ = network(tf.ones((3, num_state_dims)))
     self.assertAllEqual(q_logits.shape.as_list(), [3, 2])
 
+  @parameterized.named_parameters(
+      ('TrainingTrue', True,),
+      ('TrainingFalse', False))
+  def testDropoutFCLayers(self, training):
+    batch_size = 3
+    num_obs_dims = 5
+    num_actions = 10
+
+    obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        shape=(), minimum=0, maximum=num_actions,  dtype=tf.int32)
+    q_net = q_network.QNetwork(
+        input_tensor_spec=obs_spec,
+        action_spec=action_spec,
+        fc_layer_params=[20],
+        dropout_layer_params=[0.5])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    q_values1, _ = q_net(obs, training=training)
+    q_values2, _ = q_net(obs, training=training)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    q_values1, q_values2 = self.evaluate([q_values1, q_values2])
+    if training:
+      self.assertGreater(np.linalg.norm(q_values1 - q_values2), 0)
+    else:
+      self.assertAllEqual(q_values1, q_values2)
 
 if __name__ == '__main__':
   tf.test.main()
