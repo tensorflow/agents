@@ -232,6 +232,10 @@ class DynamicUnroll(tf.keras.layers.Layer):
         instead of either the current state or the `initial_state`.
       initial_state: (optional) An initial state for `cell`.  If not provided,
         `dtype` must be set and `cell.get_initial_state()` is used instead.
+      training: A boolean indicating whether the layer is operating in
+        training or inference mode. The flag is used to get and clear the
+        Keras RNN cell's dropout masks (input and recurrent) at the appropriate
+        times.
 
     Returns:
       A 2-tuple `(outputs, final_state)` where:
@@ -283,38 +287,41 @@ class DynamicUnroll(tf.keras.layers.Layer):
     iterations = tensor_shape.dimension_value(inputs_flat[0].shape[0])
     iterations = iterations or tf.shape(input=inputs_flat[0])[0]
 
+    # These methods cannot be called for legacy
+    # tf.compat.v1.nn.rnn_cell.LSTMCell.
     if hasattr(self.cell, 'get_dropout_mask_for_cell'):
       self.cell.get_dropout_mask_for_cell(inputs=inputs, training=training)
-      self.cell.get_recurrent_dropout_mask_for_cell(inputs=initial_state, training=training)
+      self.cell.get_recurrent_dropout_mask_for_cell(inputs=initial_state,
+                                                    training=training)
 
     if not tf.is_tensor(iterations) and iterations == 1:
       # Take exactly one time step
-      value =  _static_unroll_single_step(
-          self.cell,
-          inputs,
-          reset_mask,
-          state=initial_state,
-          zero_state=zero_state,
-          training=training)
+      state = _static_unroll_single_step(
+        self.cell,
+        inputs,
+        reset_mask,
+        state=initial_state,
+        zero_state=zero_state,
+        training=training)
     else:
-      value = _dynamic_unroll_multi_step(
-          self.cell,
-          inputs,
-          reset_mask,
-          initial_state=initial_state,
-          zero_state=zero_state,
-          dtype=dtype,
-          parallel_iterations=self.parallel_iterations,
-          swap_memory=self.swap_memory,
-          iterations=iterations,
-          const_batch_size=const_batch_size,
-          training=training)
+      state = _dynamic_unroll_multi_step(
+        self.cell,
+        inputs,
+        reset_mask,
+        initial_state=initial_state,
+        zero_state=zero_state,
+        dtype=dtype,
+        parallel_iterations=self.parallel_iterations,
+        swap_memory=self.swap_memory,
+        iterations=iterations,
+        const_batch_size=const_batch_size,
+        training=training)
 
     if hasattr(self.cell, 'reset_dropout_mask'):
       self.cell.reset_dropout_mask()
       self.cell.reset_recurrent_dropout_mask()
 
-    return value
+    return state
 
 
 def _maybe_reset_state(reset, s_zero, s):

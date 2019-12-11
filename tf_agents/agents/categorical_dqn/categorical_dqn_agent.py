@@ -257,6 +257,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       gamma: Discount for future rewards.
       reward_scale_factor: Multiplicative factor to scale rewards.
       weights: Optional weights used for importance sampling.
+      training: A boolean indicating whether the loss is being calculated in
+        training or inference mode. The flag is propagated to the q_network's
+        call() method.
     Returns:
       critic_loss: A scalar critic loss.
     Raises:

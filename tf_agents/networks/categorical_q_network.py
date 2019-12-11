@@ -129,6 +129,9 @@ class CategoricalQNetwork(network.Network):
       step_type: The step type for the given observation. See `StepType` in
         time_step.py.
       network_state: A state tuple to pass to the network, mainly used by RNNs.
+      training: A boolean indicating whether the network is operating in
+        training or inference mode. The flag is propagated to the q_network's
+        call() method.
 
     Returns:
       A tuple `(logits, network_state)`.
