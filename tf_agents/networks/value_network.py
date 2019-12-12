@@ -120,8 +120,9 @@ class ValueNetwork(network.Network):
         kernel_initializer=tf.compat.v1.initializers.random_uniform(
             minval=-0.03, maxval=0.03))
 
-  def call(self, observation, step_type=None, network_state=()):
+  def call(self, observation, step_type=None, network_state=(), training=False):
     state, network_state = self._encoder(
-        observation, step_type=step_type, network_state=network_state)
-    value = self._postprocessing_layers(state)
+        observation, step_type=step_type, network_state=network_state,
+        training=training)
+    value = self._postprocessing_layers(state, training=training)
     return tf.squeeze(value, -1), network_state

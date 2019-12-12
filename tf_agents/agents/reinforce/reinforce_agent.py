@@ -233,7 +233,8 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     with tf.GradientTape() as tape:
       loss_info = self.total_loss(
-          experience, tf.stop_gradient(returns), weights=weights)
+          experience, tf.stop_gradient(returns), weights=weights,
+          training=True)
       tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
     variables_to_train = self._actor_network.trainable_weights
     if self._baseline:
@@ -256,7 +257,7 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return tf.nest.map_structure(tf.identity, loss_info)
 
-  def total_loss(self, experience, returns, weights):
+  def total_loss(self, experience, returns, weights, training=False):
     # Ensure we see at least one full episode.
     time_steps = ts.TimeStep(experience.step_type,
                              tf.zeros_like(experience.reward),
@@ -289,7 +290,8 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     if self._baseline:
       value_preds, _ = self._value_network(time_steps.observation,
-                                           time_steps.step_type)
+                                           time_steps.step_type,
+                                           training=True)
       if self._debug_summaries:
         tf.compat.v2.summary.histogram(
             name='value_preds', data=value_preds, step=self.train_step_counter)

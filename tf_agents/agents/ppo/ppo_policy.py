@@ -116,7 +116,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
         self._value_network.state_spec,
         outer_dims=None if batch_size is None else [batch_size])
 
-  def apply_value_network(self, observations, step_types, value_state=None):
+  def apply_value_network(self, observations, step_types, value_state=None,
+                          training=False):
     """Apply value network to time_step, potentially a sequence.
 
     If observation_normalizer is not None, applies observation normalization.
@@ -129,6 +130,7 @@ class PPOPolicy(actor_policy.ActorPolicy):
         observations.
       value_state: Optional. Initial state for the value_network. If not
         provided the behavior depends on the value network itself.
+      training: Whether the output value is going to be used for training.
 
     Returns:
       The output of value_net, which is a tuple of:
@@ -137,16 +139,18 @@ class PPOPolicy(actor_policy.ActorPolicy):
     """
     if self._observation_normalizer:
       observations = self._observation_normalizer.normalize(observations)
-    return self._value_network(observations, step_types, value_state)
+    return self._value_network(observations, step_types, value_state,
+                               training=training)
 
-  def _apply_actor_network(self, time_step, policy_state):
+  def _apply_actor_network(self, time_step, policy_state, training=False):
     if self._observation_normalizer:
       observation = self._observation_normalizer.normalize(
           time_step.observation)
       time_step = ts.TimeStep(time_step.step_type, time_step.reward,
                               time_step.discount, observation)
     return self._actor_network(
-        time_step.observation, time_step.step_type, network_state=policy_state)
+        time_step.observation, time_step.step_type, network_state=policy_state,
+        training=training)
 
   def _variables(self):
     var_list = self._actor_network.variables[:]
@@ -155,10 +159,10 @@ class PPOPolicy(actor_policy.ActorPolicy):
       var_list += self._observation_normalizer.variables
     return var_list
 
-  def _distribution(self, time_step, policy_state):
+  def _distribution(self, time_step, policy_state, training=False):
     # Actor network outputs nested structure of distributions or actions.
     actions_or_distributions, policy_state = self._apply_actor_network(
-        time_step, policy_state)
+        time_step, policy_state, training=training)
 
     def _to_distribution(action_or_distribution):
       if isinstance(action_or_distribution, tf.Tensor):

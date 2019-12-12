@@ -98,7 +98,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
         sample_spec=sample_spec,
         dtype=sample_spec.dtype)
 
-  def call(self, inputs, outer_rank):
+  def call(self, inputs, outer_rank, training=False):
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to
     # compare to.
@@ -106,7 +106,7 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
     inputs = batch_squash.flatten(inputs)
     inputs = tf.cast(inputs, tf.float32)
 
-    logits = self._projection_layer(inputs)
+    logits = self._projection_layer(inputs, training=training)
     logits = tf.reshape(logits, [-1] + self._output_shape.as_list())
     logits = batch_squash.unflatten(logits)
 

@@ -278,7 +278,8 @@ class SacAgent(tf_agent.TFAgent):
           td_errors_loss_fn=self._td_errors_loss_fn,
           gamma=self._gamma,
           reward_scale_factor=self._reward_scale_factor,
-          weights=weights)
+          weights=weights,
+          training=True)
 
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
@@ -393,7 +394,8 @@ class SacAgent(tf_agent.TFAgent):
                   td_errors_loss_fn,
                   gamma=1.0,
                   reward_scale_factor=1.0,
-                  weights=None):
+                  weights=None,
+                  training=False):
     """Computes the critic loss for SAC training.
 
     Args:
@@ -406,6 +408,7 @@ class SacAgent(tf_agent.TFAgent):
       reward_scale_factor: Multiplicative factor to scale rewards.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.
+      training: Whether this loss is being used for training.
 
     Returns:
       critic_loss: A scalar critic loss.
@@ -431,9 +434,9 @@ class SacAgent(tf_agent.TFAgent):
 
       pred_input = (time_steps.observation, actions)
       pred_td_targets1, _ = self._critic_network_1(
-          pred_input, time_steps.step_type, training=True)
+          pred_input, time_steps.step_type, training=training)
       pred_td_targets2, _ = self._critic_network_2(
-          pred_input, time_steps.step_type, training=True)
+          pred_input, time_steps.step_type, training=training)
       critic_loss1 = td_errors_loss_fn(td_targets, pred_td_targets1)
       critic_loss2 = td_errors_loss_fn(td_targets, pred_td_targets2)
       critic_loss = critic_loss1 + critic_loss2

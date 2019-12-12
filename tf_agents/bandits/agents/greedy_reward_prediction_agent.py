@@ -30,7 +30,7 @@ from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents.utils import training
+from tf_agents.utils import training as training_lib
 
 
 @gin.configurable
@@ -140,7 +140,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       loss_info = self.loss(observations,
                             actions,
                             rewards,
-                            weights=weights)
+                            weights=weights,
+                            training=True)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     self.compute_summaries(loss_info.loss)
     variables_to_train = self._reward_network.trainable_weights
@@ -161,8 +162,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
 
-    training.apply_gradients(self._optimizer, grads_and_vars,
-                             global_step=self.train_step_counter)
+    training_lib.apply_gradients(self._optimizer, grads_and_vars,
+                                 global_step=self.train_step_counter)
 
     return loss_info
 
@@ -170,7 +171,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
            observations,
            actions,
            rewards,
-           weights=None):
+           weights=None,
+           training=False):
     """Computes loss for reward prediction training.
 
     Args:
@@ -180,6 +182,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output batch loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
+      training: Whether the loss is being used for training.
 
     Returns:
       loss: A `LossInfo` containing the loss for the training step.
@@ -188,7 +191,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         if the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      predicted_values, _ = self._reward_network(observations)
+      predicted_values, _ = self._reward_network(
+          observations, training=training)
       action_predicted_values = common.index_with_actions(
           predicted_values,
           tf.cast(actions, dtype=tf.int32))

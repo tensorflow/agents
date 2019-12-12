@@ -283,7 +283,7 @@ class Td3Agent(tf_agent.TFAgent):
                                           'optimize.')
       tape.watch(trainable_critic_variables)
       critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
-                                     weights=weights)
+                                     weights=weights, training=True)
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
     self._apply_gradients(critic_grads, trainable_critic_variables,
@@ -294,7 +294,7 @@ class Td3Agent(tf_agent.TFAgent):
       assert trainable_actor_variables, ('No trainable actor variables to '
                                          'optimize.')
       tape.watch(trainable_actor_variables)
-      actor_loss = self.actor_loss(time_steps, weights=weights)
+      actor_loss = self.actor_loss(time_steps, weights=weights, training=True)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
 
     # We only optimize the actor every actor_update_period training steps.
@@ -332,7 +332,8 @@ class Td3Agent(tf_agent.TFAgent):
     return optimizer.apply_gradients(grads_and_vars)
 
   @common.function
-  def critic_loss(self, time_steps, actions, next_time_steps, weights=None):
+  def critic_loss(self, time_steps, actions, next_time_steps, weights=None,
+                  training=False):
     """Computes the critic loss for TD3 training.
 
     Args:
@@ -341,13 +342,15 @@ class Td3Agent(tf_agent.TFAgent):
       next_time_steps: A batch of next timesteps.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
+      training: Whether this loss is being used for training.
 
     Returns:
       critic_loss: A scalar critic loss.
     """
     with tf.name_scope('critic_loss'):
       target_actions, _ = self._target_actor_network(
-          next_time_steps.observation, next_time_steps.step_type)
+          next_time_steps.observation, next_time_steps.step_type,
+          training=training)
 
       # Add gaussian noise to each action before computing target q values
       def add_noise_to_action(action):  # pylint: disable=missing-docstring
@@ -366,11 +369,13 @@ class Td3Agent(tf_agent.TFAgent):
       target_q_input_1 = (next_time_steps.observation, noisy_target_actions)
       target_q_values_1, _ = self._target_critic_network_1(
           target_q_input_1,
-          next_time_steps.step_type)
+          next_time_steps.step_type,
+          training=False)
       target_q_input_2 = (next_time_steps.observation, noisy_target_actions)
       target_q_values_2, _ = self._target_critic_network_2(
           target_q_input_2,
-          next_time_steps.step_type)
+          next_time_steps.step_type,
+          training=False)
       target_q_values = tf.minimum(target_q_values_1, target_q_values_2)
 
       td_targets = tf.stop_gradient(
@@ -379,10 +384,10 @@ class Td3Agent(tf_agent.TFAgent):
 
       pred_input_1 = (time_steps.observation, actions)
       pred_td_targets_1, _ = self._critic_network_1(
-          pred_input_1, time_steps.step_type)
+          pred_input_1, time_steps.step_type, training=training)
       pred_input_2 = (time_steps.observation, actions)
       pred_td_targets_2, _ = self._critic_network_2(
-          pred_input_2, time_steps.step_type)
+          pred_input_2, time_steps.step_type, training=training)
       pred_td_targets_all = [pred_td_targets_1, pred_td_targets_2]
 
       if self._debug_summaries:
@@ -456,24 +461,27 @@ class Td3Agent(tf_agent.TFAgent):
       return tf.reduce_mean(input_tensor=critic_loss)
 
   @common.function
-  def actor_loss(self, time_steps, weights=None):
+  def actor_loss(self, time_steps, weights=None, training=False):
     """Computes the actor_loss for TD3 training.
 
     Args:
       time_steps: A batch of timesteps.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
+      training: Whether this loss is being used for training.
       # TODO(b/124383618): Add an action norm regularizer.
     Returns:
       actor_loss: A scalar actor loss.
     """
     with tf.name_scope('actor_loss'):
       actions, _ = self._actor_network(time_steps.observation,
-                                       time_steps.step_type)
+                                       time_steps.step_type,
+                                       training=training)
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actions)
         q_values, _ = self._critic_network_1((time_steps.observation, actions),
-                                             time_steps.step_type)
+                                             time_steps.step_type,
+                                             training=False)
         actions = tf.nest.flatten(actions)
 
       dqdas = tape.gradient([q_values], actions)

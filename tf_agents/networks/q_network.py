@@ -129,7 +129,7 @@ class QNetwork(network.Network):
     self._encoder = encoder
     self._q_value_layer = q_value_layer
 
-  def call(self, observation, step_type=None, network_state=()):
+  def call(self, observation, step_type=None, network_state=(), training=False):
     """Runs the given observation through the network.
 
     Args:
@@ -137,10 +137,13 @@ class QNetwork(network.Network):
       step_type: The step type for the given observation. See `StepType` in
         time_step.py.
       network_state: A state tuple to pass to the network, mainly used by RNNs.
+      training: Whether the output is being used for training.
 
     Returns:
       A tuple `(logits, network_state)`.
     """
     state, network_state = self._encoder(
-        observation, step_type=step_type, network_state=network_state)
-    return self._q_value_layer(state), network_state
+        observation, step_type=step_type, network_state=network_state,
+        training=training)
+    q_value = self._q_value_layer(state, training=training)
+    return q_value, network_state

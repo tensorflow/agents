@@ -238,7 +238,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
             td_errors_loss_fn=tf.compat.v1.losses.huber_loss,
             gamma=1.0,
             reward_scale_factor=1.0,
-            weights=None):
+            weights=None,
+            training=False):
     """Computes critic loss for CategoricalDQN training.
 
     See Algorithm 1 and the discussion immediately preceding it in page 6 of
@@ -256,6 +257,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       gamma: Discount for future rewards.
       reward_scale_factor: Multiplicative factor to scale rewards.
       weights: Optional weights used for importance sampling.
+      training: Whether the loss is being used for training.
     Returns:
       critic_loss: A scalar critic loss.
     Raises:
@@ -300,7 +302,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
                 network_observation))
 
       # q_logits contains the Q-value logits for all actions.
-      q_logits, _ = self._q_network(network_observation, time_steps.step_type)
+      q_logits, _ = self._q_network(network_observation, time_steps.step_type,
+                                    training=training)
 
       if batch_squash is not None:
         # Squash outer dimensions to a single dimensions for facilitation
@@ -451,7 +454,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
           network_observation)
 
     next_target_logits, _ = self._target_q_network(
-        network_observation, next_time_steps.step_type)
+        network_observation, next_time_steps.step_type, training=False)
     batch_size = next_target_logits.shape[0] or tf.shape(next_target_logits)[0]
     next_target_probabilities = tf.nn.softmax(next_target_logits)
     next_target_q_values = tf.reduce_sum(

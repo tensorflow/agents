@@ -41,7 +41,7 @@ from tf_agents.bandits.policies import neural_linucb_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents.utils import training
+from tf_agents.utils import training as training_lib
 
 
 class NeuralLinUCBVariableCollection(tf.Module):
@@ -290,7 +290,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
               data=var,
               step=self.train_step_counter)
 
-  def loss(self, observations, actions, rewards, weights=None):
+  def loss(self, observations, actions, rewards, weights=None, training=False):
     """Computes loss for reward prediction training.
 
     Args:
@@ -300,13 +300,16 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output batch loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
+      training: Whether the loss is being used for training.
 
     Returns:
       loss: A `LossInfo` containing the loss for the training step.
     """
     with tf.name_scope('loss'):
-      encoded_observation, _ = self._encoding_network(observations)
-      predicted_rewards = self._reward_layer(encoded_observation)
+      encoded_observation, _ = self._encoding_network(
+          observations, training=training)
+      predicted_rewards = self._reward_layer(
+          encoded_observation, training=training)
       chosen_actions_predicted_rewards = common.index_with_actions(
           predicted_rewards,
           tf.cast(actions, dtype=tf.int32))
@@ -330,7 +333,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     return tf_agent.LossInfo(loss, extra=())
 
   def compute_loss_using_reward_layer(
-      self, observation, action, reward, weights):
+      self, observation, action, reward, weights, training=False):
     """Computes loss using the reward layer.
 
     Args:
@@ -340,13 +343,15 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output batch loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
+      training: Whether the loss is being used for training.
 
     Returns:
       loss: A `LossInfo` containing the loss for the training step.
     """
     # Update the neural network params.
     with tf.GradientTape() as tape:
-      loss_info = self.loss(observation, action, reward, weights)
+      loss_info = self.loss(
+          observation, action, reward, weights, training=training)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     if self._summarize_grads_and_vars:
       self.compute_summaries(loss_info.loss)
@@ -368,11 +373,12 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         eager_utils.add_gradients_summaries(grads_and_vars,
                                             self.train_step_counter)
 
-    training.apply_gradients(self._optimizer, grads_and_vars,
-                             global_step=self.train_step_counter)
+    training_lib.apply_gradients(self._optimizer, grads_and_vars,
+                                 global_step=self.train_step_counter)
     return loss_info
 
-  def compute_loss_using_linucb(self, observation, action, reward, weights):
+  def compute_loss_using_linucb(self, observation, action, reward, weights,
+                                training=False):
     """Computes the loss using LinUCB.
 
     Args:
@@ -380,6 +386,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       action: A batch of actions.
       reward: A batch of rewards.
       weights: unused weights.
+      training: Whether the loss is being used to train.
 
     Returns:
       loss: A `LossInfo` containing the loss for the training step.
@@ -387,7 +394,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     del weights  # unused
 
     # The network is trained now. Update the covariance matrix.
-    encoded_observation, _ = self._encoding_network(observation)
+    encoded_observation, _ = self._encoding_network(
+        observation, training=training)
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
     for k in range(self._num_actions):
@@ -461,10 +469,16 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         self.actions_from_reward_layer,
         tf.less(self._train_step_counter,
                 self._encoding_network_num_train_steps))
-    # pylint: disable=g-long-lambda
+    def use_actions_from_reward_layer():
+      return self.compute_loss_using_reward_layer(
+          observation, action, reward, weights, training=True)
+
+    def no_actions_from_reward_layer():
+      return self.compute_loss_using_linucb(
+          observation, action, reward, weights, training=True)
+
     loss_info = tf.cond(
-        self.actions_from_reward_layer, lambda: self.
-        compute_loss_using_reward_layer(observation, action, reward, weights),
-        lambda: self.compute_loss_using_linucb(observation, action, reward,
-                                               weights))
+        self.actions_from_reward_layer,
+        use_actions_from_reward_layer,
+        no_actions_from_reward_layer)
     return loss_info

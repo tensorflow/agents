@@ -246,7 +246,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
       logits, _ = self._cloning_network(
           experience.observation,
-          experience.step_type)
+          experience.step_type,
+          training=True)
 
       error = self._loss_fn(logits, actions)
       error_dtype = tf.nest.flatten(error)[0].dtype

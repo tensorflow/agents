@@ -310,7 +310,7 @@ class PPOAgent(tf_agent.TFAgent):
 
   def get_epoch_loss(self, time_steps, actions, act_log_probs, returns,
                      normalized_advantages, action_distribution_parameters,
-                     weights, train_step, debug_summaries):
+                     weights, train_step, debug_summaries, training=False):
     """Compute the loss and create optimization op for one training epoch.
 
     All tensors should have a single batch dimension.
@@ -329,6 +329,7 @@ class PPOAgent(tf_agent.TFAgent):
       train_step: A train_step variable to increment for each train step.
         Typically the global_step.
       debug_summaries: True if debug summaries should be created.
+      training: Whether this loss is being used for training.
 
     Returns:
       A tf_agent.LossInfo named tuple with the total_loss and all intermediate
@@ -339,14 +340,20 @@ class PPOAgent(tf_agent.TFAgent):
     # batch_size from time_steps
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     policy_state = self._collect_policy.get_initial_state(batch_size)
-    distribution_step = self._collect_policy.distribution(
-        time_steps, policy_state)
+    # We must use _distribution because the distribution API doesn't pass down
+    # the training= kwarg.
+    distribution_step = self._collect_policy._distribution(  # pylint: disable=protected-access
+        time_steps, policy_state, training=training)
     # TODO(eholly): Rename policy distributions to something clear and uniform.
     current_policy_distribution = distribution_step.action
 
     # Call all loss functions and add all loss values.
-    value_estimation_loss = self.value_estimation_loss(time_steps, returns,
-                                                       weights, debug_summaries)
+    value_estimation_loss = self.value_estimation_loss(
+        time_steps=time_steps,
+        returns=returns,
+        weights=weights,
+        debug_summaries=debug_summaries,
+        training=training)
     policy_gradient_loss = self.policy_gradient_loss(
         time_steps,
         actions,
@@ -496,7 +503,8 @@ class PPOAgent(tf_agent.TFAgent):
     value_state = self._collect_policy.get_initial_value_state(batch_size)
 
     value_preds, _ = self._collect_policy.apply_value_network(
-        experience.observation, experience.step_type, value_state=value_state)
+        experience.observation, experience.step_type, value_state=value_state,
+        training=False)
     value_preds = tf.stop_gradient(value_preds)
 
     valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
@@ -531,7 +539,8 @@ class PPOAgent(tf_agent.TFAgent):
                                           returns, normalized_advantages,
                                           action_distribution_parameters,
                                           weights, self.train_step_counter,
-                                          debug_summaries)
+                                          debug_summaries,
+                                          training=True)
 
         variables_to_train = (
             self._actor_net.trainable_weights +
@@ -711,7 +720,8 @@ class PPOAgent(tf_agent.TFAgent):
                             time_steps,
                             returns,
                             weights,
-                            debug_summaries=False):
+                            debug_summaries=False,
+                            training=False):
     """Computes the value estimation loss for actor-critic training.
 
     All tensors should have a single batch dimension.
@@ -723,6 +733,7 @@ class PPOAgent(tf_agent.TFAgent):
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.  Includes a mask for invalid timesteps.
       debug_summaries: True if debug summaries should be created.
+      training: Whether this loss is going to be used for training.
 
     Returns:
       value_estimation_loss: A scalar value_estimation_loss loss.
@@ -743,7 +754,8 @@ class PPOAgent(tf_agent.TFAgent):
     value_state = self._collect_policy.get_initial_value_state(batch_size)
 
     value_preds, _ = self._collect_policy.apply_value_network(
-        time_steps.observation, time_steps.step_type, value_state=value_state)
+        time_steps.observation, time_steps.step_type, value_state=value_state,
+        training=training)
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
     value_estimation_error *= weights
 

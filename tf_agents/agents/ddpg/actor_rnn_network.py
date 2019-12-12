@@ -121,7 +121,7 @@ class ActorRnnNetwork(network.Network):
     self._action_layers = action_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, observation, step_type, network_state=None):
+  def call(self, observation, step_type, network_state=None, training=False):
     num_outer_dims = nest_utils.get_outer_rank(observation,
                                                self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
@@ -141,7 +141,7 @@ class ActorRnnNetwork(network.Network):
     states = batch_squash.flatten(states)  # [B, T, ...] -> [B x T, ...]
 
     for layer in self._input_layers:
-      states = layer(states)
+      states = layer(states, training=training)
 
     states = batch_squash.unflatten(states)  # [B x T, ...] -> [B, T, ...]
 
@@ -151,16 +151,17 @@ class ActorRnnNetwork(network.Network):
     states, network_state = self._dynamic_unroll(
         states,
         reset_mask,
-        initial_state=network_state)
+        initial_state=network_state,
+        training=training)
 
     states = batch_squash.flatten(states)  # [B, T, ...] -> [B x T, ...]
 
     for layer in self._output_layers:
-      states = layer(states)
+      states = layer(states, training=training)
 
     actions = []
     for layer, spec in zip(self._action_layers, self._flat_action_spec):
-      action = layer(states)
+      action = layer(states, training=training)
       action = common.scale_to_spec(action, spec)
       action = batch_squash.unflatten(action)  # [B x T, ...] -> [B, T, ...]
       if not has_time_dim:

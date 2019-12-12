@@ -218,7 +218,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
   # with this Layer.  It would require some redesign in terms of how we use
   # this layer inside networks, and possibly some additional logic (since
   # Keras masks are not reset masks).
-  def call(self, inputs, reset_mask, initial_state=None):
+  def call(self, inputs, reset_mask, initial_state=None, training=False):
     """Perform the computation.
 
     Args:
@@ -232,6 +232,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
         instead of either the current state or the `initial_state`.
       initial_state: (optional) An initial state for `cell`.  If not provided,
         `dtype` must be set and `cell.get_initial_state()` is used instead.
+      training: Whether the output is being used for training.
 
     Returns:
       A 2-tuple `(outputs, final_state)` where:
@@ -290,7 +291,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
           inputs,
           reset_mask,
           state=initial_state,
-          zero_state=zero_state)
+          zero_state=zero_state,
+          training=training)
     else:
       return _dynamic_unroll_multi_step(
           self.cell,
@@ -302,7 +304,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
           parallel_iterations=self.parallel_iterations,
           swap_memory=self.swap_memory,
           iterations=iterations,
-          const_batch_size=const_batch_size)
+          const_batch_size=const_batch_size,
+          training=training)
 
 
 def _maybe_reset_state(reset, s_zero, s):
@@ -316,7 +319,8 @@ def _static_unroll_single_step(cell,
                                inputs,
                                reset_mask,
                                state,
-                               zero_state):
+                               zero_state,
+                               training):
   """Helper for dynamic_unroll which runs a single step."""
   def _squeeze(t):
     if not isinstance(t, tf.TensorArray) and t.shape.rank > 0:
@@ -332,7 +336,7 @@ def _static_unroll_single_step(cell,
       lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s), state,
       zero_state)
 
-  outputs, final_state = cell(inputs, state)
+  outputs, final_state = cell(inputs, state, training=training)
   outputs = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1), outputs)
 
   return (outputs, final_state)
@@ -347,7 +351,8 @@ def _dynamic_unroll_multi_step(cell,
                                parallel_iterations,
                                swap_memory,
                                iterations,
-                               const_batch_size):
+                               const_batch_size,
+                               training):
   """Helper for dynamic_unroll which uses a tf.while_loop."""
 
   # Convert all inputs to TensorArrays
@@ -393,7 +398,7 @@ def _dynamic_unroll_multi_step(cell,
         lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s), zero_state,
         state)
 
-    outputs, next_state = cell(input_, state)
+    outputs, next_state = cell(input_, state, training=training)
 
     output_tas = tf.nest.map_structure(lambda ta, x: ta.write(time, x),
                                        output_tas, outputs)

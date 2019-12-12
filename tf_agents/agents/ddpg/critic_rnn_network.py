@@ -142,7 +142,7 @@ class CriticRnnNetwork(network.Network):
     self._output_layers = output_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, inputs, step_type, network_state=None):
+  def call(self, inputs, step_type, network_state=None, training=False):
     observation, action = inputs
     observation_spec, _ = self.input_tensor_spec
     num_outer_dims = nest_utils.get_outer_rank(observation,
@@ -168,14 +168,14 @@ class CriticRnnNetwork(network.Network):
     action = batch_squash.flatten(action)
 
     for layer in self._observation_layers:
-      observation = layer(observation)
+      observation = layer(observation, training=training)
 
     for layer in self._action_layers:
-      action = layer(action)
+      action = layer(action, training=training)
 
     joint = tf.concat([observation, action], -1)
     for layer in self._joint_layers:
-      joint = layer(joint)
+      joint = layer(joint, training=training)
 
     joint = batch_squash.unflatten(joint)  # [B x T, ...] -> [B, T, ...]
 
@@ -185,12 +185,13 @@ class CriticRnnNetwork(network.Network):
     joint, network_state = self._dynamic_unroll(
         joint,
         reset_mask,
-        initial_state=network_state)
+        initial_state=network_state,
+        training=training)
 
     output = batch_squash.flatten(joint)  # [B, T, ...] -> [B x T, ...]
 
     for layer in self._output_layers:
-      output = layer(output)
+      output = layer(output, training=training)
 
     q_value = tf.reshape(output, [-1])
     q_value = batch_squash.unflatten(q_value)  # [B x T, ...] -> [B, T, ...]

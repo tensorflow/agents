@@ -120,8 +120,13 @@ class ValueRnnNetwork(network.Network):
     self._lstm_encoder = lstm_encoder
     self._postprocessing_layers = postprocessing_layers
 
-  def call(self, observation, step_type=None, network_state=None):
+  def call(self,
+           observation,
+           step_type=None,
+           network_state=None,
+           training=False):
     state, network_state = self._lstm_encoder(
-        observation, step_type=step_type, network_state=network_state)
-    value = self._postprocessing_layers(state)
+        observation, step_type=step_type, network_state=network_state,
+        training=training)
+    value = self._postprocessing_layers(state, training=training)
     return tf.squeeze(value, -1), network_state
