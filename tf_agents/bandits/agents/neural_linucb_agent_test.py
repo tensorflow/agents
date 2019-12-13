@@ -292,14 +292,11 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         variable_collection=variable_collection,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001))
 
-    loss_info_before, _ = agent.train(experience)
-    loss_info_after, _ = agent.train(experience)
+    loss_info, _ = agent.train(experience)
     self.evaluate(agent.initialize())
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    loss_before_value = self.evaluate(loss_info_before)
-    loss_after_value = self.evaluate(loss_info_after)
-    self.assertLess(
-        np.absolute(loss_before_value - loss_after_value), 10.0)
+    loss_value = self.evaluate(loss_info)
+    self.assertGreater(loss_value, 0.0)
 
   @test_cases()
   def testNeuralLinUCBUpdateNumTrainSteps10MaskedActions(
@@ -331,14 +328,11 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001),
         observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
 
-    loss_info_before, _ = agent.train(experience)
-    loss_info_after, _ = agent.train(experience)
+    loss_info, _ = agent.train(experience)
     self.evaluate(agent.initialize())
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    loss_before_value = self.evaluate(loss_info_before)
-    loss_after_value = self.evaluate(loss_info_after)
-    self.assertLess(
-        np.absolute(loss_before_value - loss_after_value), 10.0)
+    loss_value = self.evaluate(loss_info)
+    self.assertGreater(loss_value, 0.0)
 
   def testInitializeRestoreVariableCollection(self):
     if not tf.executing_eagerly():
