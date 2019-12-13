@@ -370,6 +370,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
           observation_numpy, batch_size)
 
     p_info = self.evaluate(action_step.info)
+    self.assertEqual(p_info.predicted_rewards_mean.dtype, np.float32)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected)
 
