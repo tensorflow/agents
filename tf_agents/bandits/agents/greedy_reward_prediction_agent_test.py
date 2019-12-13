@@ -50,7 +50,8 @@ class DummyNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant(
                 [[1], [1], [-10]])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)

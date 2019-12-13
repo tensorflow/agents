@@ -41,17 +41,20 @@ tfd = tfp.distributions
 
 class DummyNet(network.Network):
 
-  def __init__(self, name=None, obs_dim=2, encoding_dim=10):
-    super(DummyNet, self).__init__(name, (), 'DummyNet')
+  def __init__(self, observation_spec, encoding_dim=10):
+    super(DummyNet, self).__init__(
+        observation_spec, state_spec=(), name='DummyNet')
+    context_dim = observation_spec.shape[0]
     self._layers.append(
         tf.keras.layers.Dense(
             encoding_dim,
             kernel_initializer=tf.compat.v1.initializers.constant(
-                np.ones([obs_dim, encoding_dim])),
+                np.ones([context_dim, encoding_dim])),
             bias_initializer=tf.compat.v1.initializers.constant(
                 np.zeros([encoding_dim]))))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
@@ -153,7 +156,7 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
 
-    encoder = DummyNet(obs_dim=context_dim)
+    encoder = DummyNet(observation_spec)
     agent = neural_linucb_agent.NeuralLinUCBAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
@@ -171,7 +174,7 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
 
-    encoder = DummyNet(obs_dim=context_dim)
+    encoder = DummyNet(observation_spec)
     agent = neural_linucb_agent.NeuralLinUCBAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
@@ -198,7 +201,7 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    encoder = DummyNet(obs_dim=context_dim)
+    encoder = DummyNet(observation_spec)
     encoding_dim = 10
     agent = neural_linucb_agent.NeuralLinUCBAgent(
         time_step_spec=time_step_spec,
@@ -279,7 +282,7 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    encoder = DummyNet(obs_dim=context_dim)
+    encoder = DummyNet(observation_spec)
     encoding_dim = 10
     variable_collection = neural_linucb_agent.NeuralLinUCBVariableCollection(
         num_actions, encoding_dim)
@@ -317,7 +320,7 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    encoder = DummyNet(obs_dim=context_dim)
+    encoder = DummyNet(observation_spec[0])
     encoding_dim = 10
     agent = neural_linucb_agent.NeuralLinUCBAgent(
         time_step_spec=time_step_spec,

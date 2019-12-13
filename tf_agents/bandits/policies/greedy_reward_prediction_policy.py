@@ -84,6 +84,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
           'Found {}.'.format(action_spec))
     self._expected_num_actions = action_spec.maximum - action_spec.minimum + 1
     self._action_offset = action_spec.minimum
+    reward_network.create_variables()
     self._reward_network = reward_network
 
     self._emit_policy_info = emit_policy_info

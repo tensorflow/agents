@@ -202,6 +202,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         activation=None,
         name='reward_layer')
 
+    encoding_network.create_variables()
     self._encoding_network = encoding_network
     self._reward_layer = reward_layer
     self._encoding_network_num_train_steps = encoding_network_num_train_steps

@@ -105,6 +105,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
 
+    reward_network.create_variables()
     self._reward_network = reward_network
     self._optimizer = optimizer
     self._error_loss_fn = error_loss_fn

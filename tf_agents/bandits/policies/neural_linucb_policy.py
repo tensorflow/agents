@@ -94,6 +94,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         observation and mask.
       name: The name of this policy.
     """
+    encoding_network.create_variables()
     self._encoding_network = encoding_network
     self._reward_layer = reward_layer
     self._encoding_dim = encoding_dim

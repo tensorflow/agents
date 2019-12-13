@@ -31,9 +31,8 @@ from tensorflow.python.framework import test_util  # pylint:disable=g-direct-ten
 
 class DummyNet(network.Network):
 
-  def __init__(self, unused_observation_spec, action_spec, name=None):
-    super(DummyNet, self).__init__(
-        unused_observation_spec, state_spec=(), name=name)
+  def __init__(self, observation_spec, action_spec, name=None):
+    super(DummyNet, self).__init__(observation_spec, state_spec=(), name=name)
     action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
     self._layers.append(
@@ -45,7 +44,8 @@ class DummyNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant(
                 [[1], [1], [-10]])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)

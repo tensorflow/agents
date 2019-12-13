@@ -34,8 +34,8 @@ from tensorflow.python.framework import test_util  # pylint: disable=g-direct-te
 
 class DummyNet(network.Network):
 
-  def __init__(self, name=None, num_actions=3):
-    super(DummyNet, self).__init__(name, (), 'DummyNet')
+  def __init__(self, observation_spec, num_actions=3):
+    super(DummyNet, self).__init__(observation_spec, (), 'DummyNet')
     self._layers.append(
         tf.keras.layers.Dense(
             num_actions,
@@ -44,7 +44,8 @@ class DummyNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant(
                 [[1], [1], [-10]])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
@@ -55,7 +56,7 @@ class HeteroscedasticDummyNet(
     heteroscedastic_q_network.HeteroscedasticQNetwork):
 
   def __init__(self, name=None, num_actions=3):
-    input_spec = array_spec.ArraySpec([3], np.float32)
+    input_spec = array_spec.ArraySpec([2], np.float32)
     action_spec = array_spec.BoundedArraySpec([1], np.float32, 1, num_actions)
 
     input_tensor_spec = tensor_spec.from_spec(input_spec)
@@ -77,7 +78,8 @@ class HeteroscedasticDummyNet(
         bias_initializer=tf.compat.v1.initializers.constant(
             [[1], [1], [-10]]))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     value = self._value_layer(inputs)
     log_variance = self._log_variance_layer(inputs)
@@ -99,7 +101,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
 
   def testBuild(self):
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, self._action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec))
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
@@ -110,7 +114,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         NotImplementedError,
         'action_spec can only contain a single BoundedTensorSpec'):
       greedy_reward_policy.GreedyRewardPredictionPolicy(
-          self._time_step_spec, action_spec, reward_network=DummyNet())
+          self._time_step_spec,
+          action_spec,
+          reward_network=DummyNet(self._obs_spec))
 
   def testWrongActionsRaiseError(self):
     action_spec = tensor_spec.BoundedTensorSpec((5, 6, 7), tf.float32, 0, 2)
@@ -118,13 +124,17 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         NotImplementedError,
         'action_spec must be a BoundedTensorSpec of type int32.*'):
       greedy_reward_policy.GreedyRewardPredictionPolicy(
-          self._time_step_spec, action_spec, reward_network=DummyNet())
+          self._time_step_spec,
+          action_spec,
+          reward_network=DummyNet(self._obs_spec))
 
   def testWrongOutputLayerRaiseError(self):
     tf.compat.v1.set_random_seed(1)
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 10, 20)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        action_spec,
+        reward_network=DummyNet(self._obs_spec))
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     with self.assertRaisesRegexp(
@@ -136,7 +146,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
   def testAction(self):
     tf.compat.v1.set_random_seed(1)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, self._action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec))
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -164,7 +176,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     tf.compat.v1.set_random_seed(1)
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        action_spec,
+        reward_network=DummyNet(self._obs_spec))
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
@@ -179,7 +193,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     tf.compat.v1.set_random_seed(1)
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 10, 12)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        action_spec,
+        reward_network=DummyNet(self._obs_spec))
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
@@ -203,7 +219,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
         time_step_spec,
         action_spec,
-        reward_network=DummyNet(),
+        reward_network=DummyNet(observation_spec[0]),
         observation_and_action_constraint_splitter=split_fn)
 
     observations = (tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
@@ -219,9 +235,13 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
   def testUpdate(self):
     tf.compat.v1.set_random_seed(1)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, self._action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec))
     new_policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, self._action_spec, reward_network=DummyNet())
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec))
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
@@ -243,7 +263,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
   def testPredictedRewards(self):
     tf.compat.v1.set_random_seed(1)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        self._time_step_spec, self._action_spec, reward_network=DummyNet(),
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec),
         emit_policy_info=('predicted_rewards_mean',))
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
