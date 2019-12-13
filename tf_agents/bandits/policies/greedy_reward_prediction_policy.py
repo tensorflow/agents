@@ -23,6 +23,7 @@ import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -112,8 +113,16 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     if observation_and_action_constraint_splitter is not None:
       observation, mask = observation_and_action_constraint_splitter(
           observation)
-    predicted_reward_values, policy_state = self._reward_network(
+
+    predictions, policy_state = self._reward_network(
         observation, time_step.step_type, policy_state)
+
+    if isinstance(self._reward_network,
+                  heteroscedastic_q_network.HeteroscedasticQNetwork):
+      predicted_reward_values = predictions.q_value_logits
+    else:
+      predicted_reward_values = predictions
+
     predicted_reward_values.shape.with_rank_at_least(2)
     predicted_reward_values.shape.with_rank_at_most(3)
     if predicted_reward_values.shape[-1] != self._expected_num_actions:

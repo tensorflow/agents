@@ -18,11 +18,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import numpy as np
 import tensorflow as tf
 
+from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
 from tf_agents.networks import network
+from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
@@ -46,6 +49,43 @@ class DummyNet(network.Network):
     for layer in self.layers:
       inputs = layer(inputs)
     return inputs, network_state
+
+
+class HeteroscedasticDummyNet(
+    heteroscedastic_q_network.HeteroscedasticQNetwork):
+
+  def __init__(self, name=None, num_actions=3):
+    input_spec = array_spec.ArraySpec([3], np.float32)
+    action_spec = array_spec.BoundedArraySpec([1], np.float32, 1, num_actions)
+
+    input_tensor_spec = tensor_spec.from_spec(input_spec)
+    action_tensor_spec = tensor_spec.from_spec(action_spec)
+
+    super(HeteroscedasticDummyNet, self).__init__(input_tensor_spec,
+                                                  action_tensor_spec)
+    self._value_layer = tf.keras.layers.Dense(
+        num_actions,
+        kernel_initializer=tf.compat.v1.initializers.constant(
+            [[1, 1.5, 2], [1, 1.5, 4]]),
+        bias_initializer=tf.compat.v1.initializers.constant(
+            [[1], [1], [-10]]))
+
+    self._log_variance_layer = tf.keras.layers.Dense(
+        num_actions,
+        kernel_initializer=tf.compat.v1.initializers.constant(
+            [[1, 1.5, 2], [1, 1.5, 4]]),
+        bias_initializer=tf.compat.v1.initializers.constant(
+            [[1], [1], [-10]]))
+
+  def call(self, inputs, unused_step_type=None, network_state=()):
+    inputs = tf.cast(inputs, tf.float32)
+    value = self._value_layer(inputs)
+    log_variance = self._log_variance_layer(inputs)
+    predictions = collections.namedtuple('QBanditNetworkResult',
+                                         ('q_value_logits', 'log_variance'))
+    predictions = predictions(value, log_variance)
+
+    return predictions, network_state
 
 
 @test_util.run_all_in_graph_and_eager_modes
@@ -97,6 +137,20 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     tf.compat.v1.set_random_seed(1)
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
         self._time_step_spec, self._action_spec, reward_network=DummyNet())
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [1, 2])
+
+  def testActionHeteroscedastic(self):
+    tf.compat.v1.set_random_seed(1)
+    policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
+        self._time_step_spec, self._action_spec,
+        reward_network=HeteroscedasticDummyNet())
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)

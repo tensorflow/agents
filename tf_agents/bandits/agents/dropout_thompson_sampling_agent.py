@@ -27,9 +27,12 @@ import gin
 import tensorflow as tf
 
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
+from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.networks import q_network
 
 
+# TODO(b/146206372): refactor DropoutThompsonSamplingAgent API to be compliant
+# with other APIs which take a reward network at initialisation
 @gin.configurable
 class DropoutThompsonSamplingAgent(
     greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
@@ -53,6 +56,7 @@ class DropoutThompsonSamplingAgent(
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
+      heteroscedastic=False,
       # Params for debugging.
       debug_summaries=False,
       summarize_grads_and_vars=False,
@@ -82,6 +86,8 @@ class DropoutThompsonSamplingAgent(
         work). The default is `tf.losses.mean_squared_error`.
       gradient_clipping: A float representing the norm length to clip gradients
         (or None for no clipping.)
+      heteroscedastic: If True, the variance per action is estimated and the
+        losses are weighted appropriately.
       debug_summaries: A Python bool, default False. When True, debug summaries
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
@@ -112,11 +118,19 @@ class DropoutThompsonSamplingAgent(
           time_step_spec.observation)
     else:
       input_tensor_spec = time_step_spec.observation
-    reward_network = q_network.QNetwork(
-        input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
-        fc_layer_params=fc_layer_params,
-        dropout_layer_params=dropout_layer_params)
+
+    if heteroscedastic:
+      reward_network = heteroscedastic_q_network.HeteroscedasticQNetwork(
+          input_tensor_spec=input_tensor_spec,
+          action_spec=action_spec,
+          fc_layer_params=fc_layer_params,
+          dropout_layer_params=dropout_layer_params)
+    else:
+      reward_network = q_network.QNetwork(
+          input_tensor_spec=input_tensor_spec,
+          action_spec=action_spec,
+          fc_layer_params=fc_layer_params,
+          dropout_layer_params=dropout_layer_params)
 
     super(DropoutThompsonSamplingAgent, self).__init__(
         time_step_spec=time_step_spec,

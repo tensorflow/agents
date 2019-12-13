@@ -26,6 +26,7 @@ import tensorflow as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
+from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
@@ -108,9 +109,13 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._optimizer = optimizer
     self._error_loss_fn = error_loss_fn
     self._gradient_clipping = gradient_clipping
+    self._heteroscedastic = isinstance(
+        reward_network, heteroscedastic_q_network.HeteroscedasticQNetwork)
 
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
-        time_step_spec, action_spec, reward_network,
+        time_step_spec,
+        action_spec,
+        reward_network,
         observation_and_action_constraint_splitter,
         emit_policy_info=emit_policy_info)
 
@@ -191,15 +196,37 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         if the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      predicted_values, _ = self._reward_network(
-          observations, training=training)
+      sample_weights = weights if weights else 1
+      if self._heteroscedastic:
+        predictions, _ = self._reward_network(observations,
+                                              training=training)
+        predicted_values = predictions.q_value_logits
+        predicted_log_variance = predictions.log_variance
+        action_predicted_log_variance = common.index_with_actions(
+            predicted_log_variance, tf.cast(actions, dtype=tf.int32))
+        sample_weights = sample_weights * 0.5 * tf.exp(
+            action_predicted_log_variance)
+
+        loss = 0.5 * tf.reduce_mean(action_predicted_log_variance)
+        # loss = 1/(2 * var(x)) * (y - f(x))^2 + 1/2 * log var(x)
+        # Kendall, Alex, and Yarin Gal. "What Uncertainties Do We Need in
+        # Bayesian Deep Learning for Computer Vision?." Advances in Neural
+        # Information Processing Systems. 2017. https://arxiv.org/abs/1703.04977
+      else:
+        predicted_values, _ = self._reward_network(observations,
+                                                   training=training)
+        loss = tf.constant(0.0)
+
       action_predicted_values = common.index_with_actions(
           predicted_values,
           tf.cast(actions, dtype=tf.int32))
 
-      loss = self._error_loss_fn(rewards,
-                                 action_predicted_values,
-                                 weights if weights else 1)
+      loss += self._error_loss_fn(
+          rewards,
+          action_predicted_values,
+          sample_weights,
+          reduction=tf.compat.v1.losses.Reduction.MEAN)
+
     return tf_agent.LossInfo(loss, extra=())
 
   def compute_summaries(self, loss):
