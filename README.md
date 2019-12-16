@@ -1,13 +1,21 @@
-# TF-Agents: A library for Reinforcement Learning in TensorFlow
+# TF-Agents: A reliable, scalable and easy to use Reinforcement Learning library for TensorFlow.
 
-*NOTE:* Current TF-Agents pre-release is under active development and
-interfaces may change at any time. Feel free to provide feedback and comments.
+
+[TF-Agents](https://github.com/tensorflow/agents) makes designing, implementing
+and testing new RL algorithms easier, by providing well tested modular
+components that can be modified and extended. It enables fast code iteration,
+with good test integration and benchmarking.
 
 To get started, we recommend checking out one of our Colab tutorials. If you
 need an intro to RL (or a quick recap),
 [start here](tf_agents/colabs/0_intro_rl.ipynb). Otherwise, check out our
 [DQN tutorial](tf_agents/colabs/1_dqn_tutorial.ipynb) to get an agent up and
 running in the Cartpole environment.
+
+*RELEASE:* New 0.3.0rc0 release available.
+
+*NOTE:* Current TF-Agents pre-release is under active development and
+interfaces may change at any time. Feel free to provide feedback and comments.
 
 ## Table of contents
 
