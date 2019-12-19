@@ -225,8 +225,8 @@ def sample_bounded_spec(spec, seed=None, outer_dims=None):
   if dtype in [tf.float64, tf.float32]:
     # Avoid under/over-flow as random_uniform can't sample over the full range
     # for these types.
-    minval = np.maximum(dtype.min / 2, minval)
-    maxval = np.minimum(dtype.max / 2, maxval)
+    minval = np.maximum(dtype.min / 8, minval)
+    maxval = np.minimum(dtype.max / 8, maxval)
 
   if outer_dims is None:
     outer_dims = tf.constant([], dtype=tf.int32)
