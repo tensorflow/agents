@@ -38,16 +38,16 @@ from tf_agents.utils import test_utils
 class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def create_batch(self, single_time_step, batch_size):
-    batch_time_step = nest_utils.stack_nested_tensors(
-        [single_time_step] * batch_size)
+    batch_time_step = nest_utils.stack_nested_tensors([single_time_step] *
+                                                      batch_size)
     return batch_time_step
 
   def create_time_step(self):
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observation)
 
-    observation_spec = tensor_spec.TensorSpec(
-        observation.shape.as_list(), tf.float32)
+    observation_spec = tensor_spec.TensorSpec(observation.shape.as_list(),
+                                              tf.float32)
     time_step_spec = ts.time_step_spec(observation_spec)
 
     return time_step_spec, time_step
@@ -128,7 +128,7 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     step = self.evaluate(action_step)
     action_ = step.action
     # For integer specs, boundaries are inclusive.
-    p = 1./21 if dtype.is_integer else 1./20
+    p = 1. / 21 if dtype.is_integer else 1. / 20
     np.testing.assert_allclose(
         np.array(step.info.log_probability, dtype=np.float32),
         np.array(np.log([p, p], dtype=np.float32)),
@@ -182,6 +182,42 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # With only three valid actions, all of the probabilities should be 1/3.
     self.assertAllClose(step.info.log_probability,
                         tf.constant(np.log(1. / 3), shape=[batch_size]))
+
+  def testInfoSpec(self, dtype):
+    action_spec = [
+        tensor_spec.BoundedTensorSpec((2, 3), dtype, -10, 10),
+        tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
+    ]
+    info_spec = [
+        tensor_spec.TensorSpec([1], dtype=tf.float32, name='loc'),
+        tensor_spec.TensorSpec([1], dtype=tf.float32, name='scale')
+    ]
+    time_step_spec, time_step = self.create_time_step()
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        info_spec=info_spec)
+
+    # Test without batch
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+    self.assertEqual((2, 3,), action_step.action[0].shape)
+    self.assertEqual((1, 2,), action_step.action[1].shape)
+    tf.nest.assert_same_structure(info_spec, action_step.info)
+    self.assertEqual((1,), action_step.info[0].shape)
+    self.assertEqual((1,), action_step.info[1].shape)
+
+    # Test with batch, we should see the additional outer batch dim for both
+    # `action` and `info`.
+    batch_size = 2
+    batched_time_step = self.create_batch(time_step, batch_size)
+    batched_action_step = policy.action(batched_time_step)
+    tf.nest.assert_same_structure(action_spec, batched_action_step.action)
+    self.assertEqual((batch_size, 2, 3,), batched_action_step.action[0].shape)
+    self.assertEqual((batch_size, 1, 2,), batched_action_step.action[1].shape)
+    tf.nest.assert_same_structure(info_spec, batched_action_step.info)
+    self.assertEqual((batch_size, 1,), batched_action_step.info[0].shape)
+    self.assertEqual((batch_size, 1,), batched_action_step.info[1].shape)
 
 
 if __name__ == '__main__':

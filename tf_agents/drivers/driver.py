@@ -40,7 +40,7 @@ class Driver(object):
         [N, batch_size, ...] of actions in time major form.
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
-        PolicyStep, NextTimeStep)). The transition is shaped in a just as
+        PolicyStep, NextTimeStep)). The transition is shaped just as
         trajectories are for regular observers.
     """
 

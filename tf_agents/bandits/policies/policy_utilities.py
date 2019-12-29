@@ -19,8 +19,28 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
+
 import tensorflow as tf
+from tf_agents.trajectories import policy_step
 from tf_agents.utils import common
+
+
+class InfoFields(object):
+  """Strings which can be used in the policy info fields."""
+  # Mean of predicted rewards (per arm).
+  PREDICTED_REWARDS_MEAN = 'predicted_rewards_mean'
+  # Samples of predicted rewards (per arm).
+  PREDICTED_REWARDS_SAMPLED = 'predicted_rewards_sampled'
+
+
+PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
+    'PolicyInfo',
+    (policy_step.CommonFields.LOG_PROBABILITY,
+     InfoFields.PREDICTED_REWARDS_MEAN,
+     InfoFields.PREDICTED_REWARDS_SAMPLED))
+# Set default empty tuple for all fields.
+PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
 
 @common.function

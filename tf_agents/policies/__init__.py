@@ -24,6 +24,7 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.policies import policy_saver
 from tf_agents.policies import py_policy
+from tf_agents.policies import py_tf_eager_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import q_policy
 from tf_agents.policies import random_py_policy

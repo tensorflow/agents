@@ -24,6 +24,7 @@ import tensorflow as tf
 
 from tf_agents.bandits.agents import greedy_reward_prediction_agent as greedy_agent
 from tf_agents.bandits.drivers import driver_utils
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -49,7 +50,8 @@ class DummyNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant(
                 [[1], [1], [-10]])))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
@@ -100,7 +102,8 @@ def _get_initial_and_final_steps_with_action_mask(observations, rewards):
 
 def _get_action_step(action):
   return policy_step.PolicyStep(
-      action=tf.convert_to_tensor(action))
+      action=tf.convert_to_tensor(action),
+      info=policy_utilities.PolicyInfo())
 
 
 def _get_experience(initial_step, action_step, final_step):

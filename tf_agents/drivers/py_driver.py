@@ -31,6 +31,7 @@ class PyDriver(driver.Driver):
                env,
                policy,
                observers,
+               transition_observers=None,
                max_steps=None,
                max_episodes=None):
     """A driver that runs a python policy in a python environment.
@@ -40,6 +41,10 @@ class PyDriver(driver.Driver):
       policy: A py_policy.Base policy.
       observers: A list of observers that are notified after every step
         in the environment. Each observer is a callable(trajectory.Trajectory).
+      transition_observers: A list of observers that are updated after every
+        step in the environment. Each observer is a callable((TimeStep,
+        PolicyStep, NextTimeStep)). The transition is shaped just as
+        trajectories are for regular observers.
       max_steps: Optional maximum number of steps for each run() call.
         Also see below.  Default: 0.
       max_episodes: Optional maximum number of episodes for each run() call.
@@ -56,7 +61,7 @@ class PyDriver(driver.Driver):
       raise ValueError(
           'Either `max_steps` or `max_episodes` should be greater than 0.')
 
-    super(PyDriver, self).__init__(env, policy, observers)
+    super(PyDriver, self).__init__(env, policy, observers, transition_observers)
     self._max_steps = max_steps or np.inf
     self._max_episodes = max_episodes or np.inf
 
@@ -77,6 +82,8 @@ class PyDriver(driver.Driver):
       next_time_step = self.env.step(action_step.action)
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
+      for observer in self._transition_observers:
+        observer((time_step, action_step, next_time_step))
       for observer in self.observers:
         observer(traj)
 

@@ -71,10 +71,12 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     replay_buffer_observer = MockReplayBufferObserver()
+    transition_replay_buffer_observer = MockReplayBufferObserver()
     driver = py_driver.PyDriver(
         env,
         policy,
         observers=[replay_buffer_observer],
+        transition_observers=[transition_replay_buffer_observer],
         max_steps=max_steps,
         max_episodes=max_episodes,
     )
@@ -84,6 +86,11 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     driver.run(initial_time_step, initial_policy_state)
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:expected_steps])
+
+    transitions = transition_replay_buffer_observer.gather_all()
+    self.assertLen(transitions, expected_steps)
+    # TimeStep, Action, NextTimeStep
+    self.assertLen(transitions[0], 3)
 
   def testMultipleRunMaxSteps(self):
 

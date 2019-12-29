@@ -246,7 +246,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(step.info.get("test", None), 1)
     self.assertAlmostEqual(step.info["log_probability"], np.log(0.2))
 
-  def test_automatic_reset(self):
+  def testAutomaticReset(self):
     observation_spec = tensor_spec.TensorSpec([1], tf.float32)
     action_spec = tensor_spec.TensorSpec([1], tf.float32)
     policy_state_spec = tensor_spec.TensorSpec([1], tf.float32)
@@ -280,6 +280,29 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(0, state[0])
     self.assertEqual(1, state[1])
     self.assertEqual(1, state[2])
+
+  def testStateShape(self):
+    time_step_spec = ts.time_step_spec(tensor_spec.TensorSpec([1], tf.float32))
+    action_spec = tensor_spec.TensorSpec([1], tf.float32)
+    policy_state_spec = {"foo": tensor_spec.TensorSpec([1], tf.float32),
+                         "bar": tensor_spec.TensorSpec([2, 2], tf.int8)}
+
+    policy = TfPassThroughPolicy(
+        time_step_spec,
+        action_spec,
+        policy_state_spec=policy_state_spec)
+
+    # Test state shape with explicit batch_size
+    initial_state = policy.get_initial_state(3)
+    tf.nest.assert_same_structure(policy_state_spec, initial_state)
+    self.assertEqual([3, 1], initial_state["foo"].shape.as_list())
+    self.assertEqual([3, 2, 2], initial_state["bar"].shape.as_list())
+
+    # Test state shape with batch_size None
+    initial_state = policy.get_initial_state(None)
+    tf.nest.assert_same_structure(policy_state_spec, initial_state)
+    self.assertEqual([1], initial_state["foo"].shape.as_list())
+    self.assertEqual([2, 2], initial_state["bar"].shape.as_list())
 
 
 if __name__ == "__main__":

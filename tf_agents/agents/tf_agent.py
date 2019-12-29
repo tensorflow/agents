@@ -89,6 +89,7 @@ class TFAgent(tf.Module):
       ValueError: If `time_step_spec` is not an instance of `ts.TimeStep`.
       ValueError: If `num_outer_dims` is not in [1, 2].
     """
+    common.tf_agents_gauge.get_cell("TFAgent").set(True)
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
     if not isinstance(time_step_spec, ts.TimeStep):
       raise ValueError(
@@ -199,7 +200,7 @@ class TFAgent(tf.Module):
       TypeError: If experience is not type `Trajectory`.  Or if experience
         does not match `self.collect_data_spec` structure types.
       ValueError: If experience tensors' time axes are not compatible with
-        `self.train_sequene_length`.  Or if experience does not match
+        `self.train_sequence_length`.  Or if experience does not match
         `self.collect_data_spec` structure.
       RuntimeError: If the class was not initialized properly (`super.__init__`
         was not called).

@@ -278,7 +278,8 @@ class SacAgent(tf_agent.TFAgent):
           td_errors_loss_fn=self._td_errors_loss_fn,
           gamma=self._gamma,
           reward_scale_factor=self._reward_scale_factor,
-          weights=weights)
+          weights=weights,
+          training=True)
 
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
@@ -359,10 +360,14 @@ class SacAgent(tf_agent.TFAgent):
         """Update target network."""
         critic_update_1 = common.soft_variables_update(
             self._critic_network_1.variables,
-            self._target_critic_network_1.variables, tau)
+            self._target_critic_network_1.variables,
+            tau,
+            tau_non_trainable=1.0)
         critic_update_2 = common.soft_variables_update(
             self._critic_network_2.variables,
-            self._target_critic_network_2.variables, tau)
+            self._target_critic_network_2.variables,
+            tau,
+            tau_non_trainable=1.0)
         return tf.group(critic_update_1, critic_update_2)
 
       return common.Periodically(update, period, 'update_targets')
@@ -389,7 +394,8 @@ class SacAgent(tf_agent.TFAgent):
                   td_errors_loss_fn,
                   gamma=1.0,
                   reward_scale_factor=1.0,
-                  weights=None):
+                  weights=None,
+                  training=False):
     """Computes the critic loss for SAC training.
 
     Args:
@@ -402,6 +408,7 @@ class SacAgent(tf_agent.TFAgent):
       reward_scale_factor: Multiplicative factor to scale rewards.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.
+      training: Whether this loss is being used for training.
 
     Returns:
       critic_loss: A scalar critic loss.
@@ -427,15 +434,20 @@ class SacAgent(tf_agent.TFAgent):
 
       pred_input = (time_steps.observation, actions)
       pred_td_targets1, _ = self._critic_network_1(
-          pred_input, time_steps.step_type, training=True)
+          pred_input, time_steps.step_type, training=training)
       pred_td_targets2, _ = self._critic_network_2(
-          pred_input, time_steps.step_type, training=True)
+          pred_input, time_steps.step_type, training=training)
       critic_loss1 = td_errors_loss_fn(td_targets, pred_td_targets1)
       critic_loss2 = td_errors_loss_fn(td_targets, pred_td_targets2)
       critic_loss = critic_loss1 + critic_loss2
 
       if weights is not None:
         critic_loss *= weights
+
+      if nest_utils.is_batched_nested_tensors(
+          time_steps, self.time_step_spec, num_outer_dims=2):
+        # Sum over the time dimension.
+        critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
 
       # Take the mean across the batch.
       critic_loss = tf.reduce_mean(input_tensor=critic_loss)
@@ -479,6 +491,10 @@ class SacAgent(tf_agent.TFAgent):
                                                    training=False)
       target_q_values = tf.minimum(target_q_values1, target_q_values2)
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
+      if nest_utils.is_batched_nested_tensors(
+          time_steps, self.time_step_spec, num_outer_dims=2):
+        # Sum over the time dimension.
+        actor_loss = tf.reduce_sum(input_tensor=actor_loss, axis=1)
       if weights is not None:
         actor_loss *= weights
       actor_loss = tf.reduce_mean(input_tensor=actor_loss)
@@ -535,6 +551,11 @@ class SacAgent(tf_agent.TFAgent):
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
       entropy_diff = tf.stop_gradient(-log_pi - self._target_entropy)
       alpha_loss = (self._log_alpha * entropy_diff)
+
+      if nest_utils.is_batched_nested_tensors(
+          time_steps, self.time_step_spec, num_outer_dims=2):
+        # Sum over the time dimension.
+        alpha_loss = tf.reduce_sum(input_tensor=alpha_loss, axis=1)
 
       if weights is not None:
         alpha_loss *= weights

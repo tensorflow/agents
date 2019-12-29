@@ -200,13 +200,18 @@ class DdpgAgent(tf_agent.TFAgent):
     """
     with tf.name_scope('get_target_updater'):
       def update():
+        """Update target network."""
         # TODO(b/124381161): What about observation normalizer variables?
         critic_update = common.soft_variables_update(
             self._critic_network.variables,
-            self._target_critic_network.variables, tau)
+            self._target_critic_network.variables,
+            tau,
+            tau_non_trainable=1.0)
         actor_update = common.soft_variables_update(
-            self._actor_network.variables, self._target_actor_network.variables,
-            tau)
+            self._actor_network.variables,
+            self._target_actor_network.variables,
+            tau,
+            tau_non_trainable=1.0)
         return tf.group(critic_update, actor_update)
 
       return common.Periodically(update, period, 'periodic_update_targets')
@@ -234,7 +239,7 @@ class DdpgAgent(tf_agent.TFAgent):
                                           'optimize.')
       tape.watch(trainable_critic_variables)
       critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
-                                     weights=weights)
+                                     weights=weights, training=True)
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
     self._apply_gradients(critic_grads, trainable_critic_variables,
@@ -245,7 +250,7 @@ class DdpgAgent(tf_agent.TFAgent):
       assert trainable_actor_variables, ('No trainable actor variables to '
                                          'optimize.')
       tape.watch(trainable_actor_variables)
-      actor_loss = self.actor_loss(time_steps, weights=weights)
+      actor_loss = self.actor_loss(time_steps, weights=weights, training=True)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
     actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
     self._apply_gradients(actor_grads, trainable_actor_variables,
@@ -278,7 +283,8 @@ class DdpgAgent(tf_agent.TFAgent):
                   time_steps,
                   actions,
                   next_time_steps,
-                  weights=None):
+                  weights=None,
+                  training=False):
     """Computes the critic loss for DDPG training.
 
     Args:
@@ -287,23 +293,27 @@ class DdpgAgent(tf_agent.TFAgent):
       next_time_steps: A batch of next timesteps.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
+      training: Whether this loss is being used for training.
     Returns:
       critic_loss: A scalar critic loss.
     """
     with tf.name_scope('critic_loss'):
       target_actions, _ = self._target_actor_network(
-          next_time_steps.observation, next_time_steps.step_type)
+          next_time_steps.observation, next_time_steps.step_type,
+          training=False)
       target_critic_net_input = (next_time_steps.observation, target_actions)
       target_q_values, _ = self._target_critic_network(
-          target_critic_net_input, next_time_steps.step_type)
-
+          target_critic_net_input, next_time_steps.step_type,
+          training=False)
+      
       td_targets = tf.stop_gradient(
           self._reward_scale_factor * next_time_steps.reward +
           self._gamma * next_time_steps.discount * target_q_values)
 
       critic_net_input = (time_steps.observation, actions)
       q_values, _ = self._critic_network(critic_net_input,
-                                         time_steps.step_type)
+                                         time_steps.step_type,
+                                         training=training)
 
       critic_loss = self._td_errors_loss_fn(td_targets, q_values)
       if nest_utils.is_batched_nested_tensors(
@@ -329,24 +339,27 @@ class DdpgAgent(tf_agent.TFAgent):
 
       return critic_loss
 
-  def actor_loss(self, time_steps, weights=None):
+  def actor_loss(self, time_steps, weights=None, training=False):
     """Computes the actor_loss for DDPG training.
 
     Args:
       time_steps: A batch of timesteps.
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.
+      training: Whether this loss is being used for training.
       # TODO(b/124383618): Add an action norm regularizer.
     Returns:
       actor_loss: A scalar actor loss.
     """
     with tf.name_scope('actor_loss'):
       actions, _ = self._actor_network(time_steps.observation,
-                                       time_steps.step_type)
+                                       time_steps.step_type,
+                                       training=training)
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actions)
         q_values, _ = self._critic_network((time_steps.observation, actions),
-                                           time_steps.step_type)
+                                           time_steps.step_type,
+                                           training=False)
         actions = tf.nest.flatten(actions)
 
       dqdas = tape.gradient([q_values], actions)

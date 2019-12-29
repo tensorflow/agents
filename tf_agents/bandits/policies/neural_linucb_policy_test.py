@@ -35,8 +35,8 @@ _POLICY_VARIABLES_OFFSET = 10.0
 
 class DummyNet(network.Network):
 
-  def __init__(self, name=None, obs_dim=2, encoding_dim=10):
-    super(DummyNet, self).__init__(name, (), 'DummyNet')
+  def __init__(self, observation_spec, obs_dim=2, encoding_dim=10):
+    super(DummyNet, self).__init__(observation_spec, (), 'DummyNet')
     self._layers.append(
         tf.keras.layers.Dense(
             encoding_dim,
@@ -45,7 +45,8 @@ class DummyNet(network.Network):
             bias_initializer=tf.compat.v1.initializers.constant(
                 np.zeros([encoding_dim]))))
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self.layers:
       inputs = layer(inputs)
@@ -99,8 +100,18 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     return [a_for_one_arm] * self._num_actions
 
   @property
+  def _a_numpy(self):
+    a_for_one_arm = 1.0 + 4.0 * np.eye(self._encoding_dim, dtype=np.float32)
+    return [a_for_one_arm] * self._num_actions
+
+  @property
   def _b(self):
     return [tf.constant(r * np.ones(self._encoding_dim), dtype=tf.float32)
+            for r in range(self._num_actions)]
+
+  @property
+  def _b_numpy(self):
+    return [np.array([r * np.ones(self._encoding_dim)], dtype=np.float32)
             for r in range(self._num_actions)]
 
   @property
@@ -136,10 +147,25 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
         observation_with_mask)
 
+  def _get_predicted_rewards_from_linucb(self, observation_numpy, batch_size):
+    """Runs one step of LinUCB using numpy arrays."""
+    observation_numpy.reshape([batch_size, self._encoding_dim])
+
+    predicted_rewards = []
+    for k in range(self._num_actions):
+      a_inv = np.linalg.inv(self._a_numpy[k] + np.eye(self._encoding_dim))
+      theta = np.matmul(
+          a_inv, self._b_numpy[k].reshape([self._encoding_dim, 1]))
+      est_mean_reward = np.matmul(observation_numpy, theta)
+      predicted_rewards.append(est_mean_reward)
+    predicted_rewards_array = np.stack(
+        predicted_rewards, axis=-1).reshape(batch_size, self._num_actions)
+    return predicted_rewards_array
+
   @test_cases()
   def testBuild(self, batch_size, actions_from_reward_layer):
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
-        DummyNet(),
+        DummyNet(self._obs_spec),
         self._encoding_dim,
         get_reward_layer(),
         actions_from_reward_layer=actions_from_reward_layer,
@@ -154,7 +180,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
   @test_cases()
   def testObservationShapeMismatch(self, batch_size, actions_from_reward_layer):
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
-        DummyNet(),
+        DummyNet(self._obs_spec),
         self._encoding_dim,
         get_reward_layer(),
         actions_from_reward_layer=actions_from_reward_layer,
@@ -182,7 +208,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
   def testActionBatch(self, batch_size, actions_from_reward_layer):
 
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
-        DummyNet(),
+        DummyNet(self._obs_spec),
         self._encoding_dim,
         get_reward_layer(),
         actions_from_reward_layer=tf.constant(
@@ -208,7 +234,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
                 tensor_spec.TensorSpec([self._num_actions], tf.int32))
     time_step_spec = ts.time_step_spec(obs_spec)
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
-        DummyNet(),
+        DummyNet(obs_spec[0]),
         self._encoding_dim,
         get_reward_layer(),
         actions_from_reward_layer=tf.constant(
@@ -264,7 +290,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
       num_samples_new_list.append(num_samples_for_one_arm_new)
 
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
-        encoding_network=DummyNet(),
+        encoding_network=DummyNet(self._obs_spec),
         encoding_dim=self._encoding_dim,
         reward_layer=get_reward_layer(),
         actions_from_reward_layer=tf.constant(
@@ -276,7 +302,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         time_step_spec=self._time_step_spec)
 
     new_policy = neural_linucb_policy.NeuralLinUCBPolicy(
-        encoding_network=DummyNet(),
+        encoding_network=DummyNet(self._obs_spec),
         encoding_dim=self._encoding_dim,
         reward_layer=get_reward_layer(),
         actions_from_reward_layer=tf.constant(
@@ -306,6 +332,48 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         [action_step.action, new_action_step.action])
     self.assertAllEqual(actions_, new_actions_)
 
+  @test_cases()
+  def testPredictedRewards(
+      self, batch_size, actions_from_reward_layer):
+    dummy_net = DummyNet(self._obs_spec)
+    reward_layer = get_reward_layer()
+
+    policy = neural_linucb_policy.NeuralLinUCBPolicy(
+        dummy_net,
+        self._encoding_dim,
+        reward_layer,
+        actions_from_reward_layer=tf.constant(
+            actions_from_reward_layer, dtype=tf.bool),
+        cov_matrix=self._a,
+        data_vector=self._b,
+        num_samples=self._num_samples_per_arm,
+        epsilon_greedy=0.0,
+        time_step_spec=self._time_step_spec,
+        emit_policy_info=('predicted_rewards_mean',))
+
+    current_time_step = self._time_step_batch(batch_size=batch_size)
+    action_step = policy.action(current_time_step)
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    action_fn = common.function_in_tf1()(policy.action)
+    action_step = action_fn(current_time_step)
+
+    input_observation = current_time_step.observation
+    encoded_observation, _ = dummy_net(input_observation)
+    predicted_rewards_from_reward_layer = reward_layer(encoded_observation)
+
+    if actions_from_reward_layer:
+      predicted_rewards_expected = self.evaluate(
+          predicted_rewards_from_reward_layer)
+    else:
+      observation_numpy = self.evaluate(encoded_observation)
+      predicted_rewards_expected = self._get_predicted_rewards_from_linucb(
+          observation_numpy, batch_size)
+
+    p_info = self.evaluate(action_step.info)
+    self.assertEqual(p_info.predicted_rewards_mean.dtype, np.float32)
+    self.assertAllClose(p_info.predicted_rewards_mean,
+                        predicted_rewards_expected)
 
 if __name__ == '__main__':
   tf.test.main()

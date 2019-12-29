@@ -90,6 +90,7 @@ def main(unused_argv):
       agent = lin_ts_agent.LinearThompsonSamplingAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
+          alpha=AGENT_ALPHA,
           gamma=0.95,
           dtype=tf.float32)
 

@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -34,6 +35,7 @@ from tf_agents.utils import nest_utils
 tfd = tfp.distributions
 
 
+@gin.configurable(module='tf_agents', blacklist=['policy'])
 class EpsilonGreedyPolicy(tf_policy.Base):
   """Returns epsilon-greedy samples of a given policy."""
 
@@ -50,7 +52,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     Raises:
       ValueError: If epsilon is invalid.
     """
-    self._observation_and_action_constraint_splitter = getattr(
+    observation_and_action_constraint_splitter = getattr(
         policy, 'observation_and_action_constraint_splitter', None)
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
@@ -59,18 +61,17 @@ class EpsilonGreedyPolicy(tf_policy.Base):
         policy.action_spec,
         emit_log_probability=policy.emit_log_probability,
         observation_and_action_constraint_splitter=(
-            self._observation_and_action_constraint_splitter))
+            observation_and_action_constraint_splitter),
+        info_spec=policy.info_spec)
     super(EpsilonGreedyPolicy, self).__init__(
         policy.time_step_spec,
         policy.action_spec,
         policy.policy_state_spec,
         policy.info_spec,
         emit_log_probability=policy.emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         name=name)
-
-  @property
-  def observation_and_action_constraint_splitter(self):
-    return self._observation_and_action_constraint_splitter
 
   def _variables(self):
     return self._greedy_policy.variables()
@@ -82,7 +83,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
       return self._epsilon
 
   def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='epsilon_greedy')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='epsilon_greedy')
     greedy_action = self._greedy_policy.action(time_step, policy_state)
     random_action = self._random_policy.action(time_step, (), seed_stream())
 
@@ -106,7 +107,7 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     if greedy_action.info:
       if not random_action.info:
         raise ValueError('Incompatible info field')
-      info = tf.compat.v1.where(cond, greedy_action.info, random_action.info)
+      info = nest_utils.where(cond, greedy_action.info, random_action.info)
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')

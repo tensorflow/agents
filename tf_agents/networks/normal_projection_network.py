@@ -143,7 +143,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     return distribution_spec.DistributionSpec(
         distribution_builder, input_param_spec, sample_spec=sample_spec)
 
-  def call(self, inputs, outer_rank):
+  def call(self, inputs, outer_rank, training=False):
     if inputs.dtype != self._sample_spec.dtype:
       raise ValueError(
           'Inputs to NormalProjectionNetwork must match the sample_spec.dtype.')
@@ -153,7 +153,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     batch_squash = network_utils.BatchSquash(outer_rank)
     inputs = batch_squash.flatten(inputs)
 
-    means = self._means_projection_layer(inputs)
+    means = self._means_projection_layer(inputs, training=training)
     means = tf.reshape(means, [-1] + self._sample_spec.shape.as_list())
 
     # If scaling the distribution later, use a normalized mean.
@@ -162,9 +162,9 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     means = tf.cast(means, self._sample_spec.dtype)
 
     if self._state_dependent_std:
-      stds = self._stddev_projection_layer(inputs)
+      stds = self._stddev_projection_layer(inputs, training=training)
     else:
-      stds = self._bias(tf.zeros_like(means))
+      stds = self._bias(tf.zeros_like(means), training=training)
       stds = tf.reshape(stds, [-1] + self._sample_spec.shape.as_list())
 
     if self._std_transform is not None:

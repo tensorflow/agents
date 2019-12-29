@@ -31,10 +31,10 @@ from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-def _spec_from_gym_space(space,
-                         dtype_map=None,
-                         simplify_box_bounds=True,
-                         name=None):
+def spec_from_gym_space(space,
+                        dtype_map=None,
+                        simplify_box_bounds=True,
+                        name=None):
   """Converts gym spaces into array specs.
 
   Gym does not properly define dtypes for spaces. By default all spaces set
@@ -76,8 +76,8 @@ def _spec_from_gym_space(space,
   def nested_spec(spec, child_name):
     """Returns the nested spec with a unique name."""
     nested_name = name + '/' + child_name if name else child_name
-    return _spec_from_gym_space(spec, dtype_map, simplify_box_bounds,
-                                nested_name)
+    return spec_from_gym_space(spec, dtype_map, simplify_box_bounds,
+                               nested_name)
 
   if isinstance(space, gym.spaces.Discrete):
     # Discrete spaces span the set {0, 1, ... , n-1} while Bounded Array specs
@@ -149,12 +149,12 @@ class GymWrapper(py_environment.PyEnvironment):
     self._match_obs_space_dtype = match_obs_space_dtype
     # TODO(sfishman): Add test for auto_reset param.
     self._auto_reset = auto_reset
-    self._observation_spec = _spec_from_gym_space(
+    self._observation_spec = spec_from_gym_space(
         self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds,
         'observation')
-    self._action_spec = _spec_from_gym_space(self._gym_env.action_space,
-                                             spec_dtype_map,
-                                             simplify_box_bounds, 'action')
+    self._action_spec = spec_from_gym_space(self._gym_env.action_space,
+                                            spec_dtype_map, simplify_box_bounds,
+                                            'action')
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._info = None
     self._done = True

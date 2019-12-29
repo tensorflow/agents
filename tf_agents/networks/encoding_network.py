@@ -86,6 +86,7 @@ class EncodingNetwork(network.Network):
                fc_layer_params=None,
                dropout_layer_params=None,
                activation_fn=tf.keras.activations.relu,
+               weight_decay_params=None,
                kernel_initializer=None,
                batch_squash=True,
                dtype=tf.float32,
@@ -163,7 +164,9 @@ class EncodingNetwork(network.Network):
         the fully connected layers; there is a dropout layer after each fully
         connected layer, except if the entry in the list is None. This list must
         have the same length of fc_layer_params, or be None.
-      activation_fn: Activation function, e.g. tf.keras.activations.relu,.
+      activation_fn: Activation function, e.g. tf.keras.activations.relu.
+      weight_decay_params: Optional list of weight decay parameters for the
+        fully connected layers.
       kernel_initializer: Initializer to use for the kernels of the conv and
         dense layers. If none is provided a default variance_scaling_initializer
       batch_squash: If True the outer_ranks of the observation are squashed into
@@ -252,13 +255,25 @@ class EncodingNetwork(network.Network):
           raise ValueError('Dropout and fully connected layer parameter lists'
                            'have different lengths (%d vs. %d.)' %
                            (len(dropout_layer_params), len(fc_layer_params)))
-      for num_units, dropout_params in zip(fc_layer_params,
-                                           dropout_layer_params):
+      if weight_decay_params is None:
+        weight_decay_params = [None] * len(fc_layer_params)
+      else:
+        if len(weight_decay_params) != len(fc_layer_params):
+          raise ValueError('Weight decay and fully connected layer parameter '
+                           'lists have different lengths (%d vs. %d.)' %
+                           (len(weight_decay_params), len(fc_layer_params)))
+
+      for num_units, dropout_params, weight_decay in zip(
+          fc_layer_params, dropout_layer_params, weight_decay_params):
+        kernal_regularizer = None
+        if weight_decay is not None:
+          kernal_regularizer = tf.keras.regularizers.l2(weight_decay)
         layers.append(
             tf.keras.layers.Dense(
                 num_units,
                 activation=activation_fn,
                 kernel_initializer=kernel_initializer,
+                kernel_regularizer=kernal_regularizer,
                 dtype=dtype,
                 name='%s/dense' % name))
         if not isinstance(dropout_params, dict):

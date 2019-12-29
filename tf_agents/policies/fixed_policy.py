@@ -33,7 +33,8 @@ from tf_agents.utils import nest_utils
 class FixedPolicy(tf_policy.Base):
   """A policy which always returns a fixed action."""
 
-  def __init__(self, actions, time_step_spec, action_spec, name=None):
+  def __init__(self, actions, time_step_spec, action_spec, policy_info=(),
+               info_spec=(), name=None):
     """A policy which always returns a fixed action.
 
     Args:
@@ -41,10 +42,13 @@ class FixedPolicy(tf_policy.Base):
         corresponding to `action_spec()`.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
+      policy_info: A policy info to be returned in PolicyStep.
+      info_spec: A policy info spec.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
     super(FixedPolicy, self).__init__(time_step_spec, action_spec, clip=False,
+                                      info_spec=info_spec,
                                       name=name)
     tf.nest.assert_same_structure(self._action_spec, actions)
 
@@ -53,6 +57,7 @@ class FixedPolicy(tf_policy.Base):
 
     self._action_value = tf.nest.map_structure(convert, actions,
                                                self._action_spec)
+    self._policy_info = policy_info
 
   def _variables(self):
     return []
@@ -61,7 +66,7 @@ class FixedPolicy(tf_policy.Base):
     del seed
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
     action = common.replicate(self._action_value, outer_shape)
-    return policy_step.PolicyStep(action, policy_state)
+    return policy_step.PolicyStep(action, policy_state, self._policy_info)
 
   def _distribution(self, time_step, policy_state):
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
@@ -72,4 +77,4 @@ class FixedPolicy(tf_policy.Base):
       return tfp.distributions.Deterministic(loc=action)
 
     return policy_step.PolicyStep(
-        tf.nest.map_structure(dist_fn, action), policy_state)
+        tf.nest.map_structure(dist_fn, action), policy_state, self._policy_info)

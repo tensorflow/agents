@@ -15,7 +15,6 @@
 
 """Sample recurrent Critic network to use with DDPG agents."""
 
-import functools
 import gin
 import tensorflow as tf
 from tf_agents.networks import dynamic_unroll_layer
@@ -35,7 +34,7 @@ class CriticRnnNetwork(network.Network):
                observation_conv_layer_params=None,
                observation_fc_layer_params=(200,),
                action_fc_layer_params=(200,),
-               joint_fc_layer_params=(100),
+               joint_fc_layer_params=(100,),
                lstm_size=(40,),
                output_fc_layer_params=(200, 100),
                activation_fn=tf.keras.activations.relu,
@@ -111,10 +110,14 @@ class CriticRnnNetwork(network.Network):
       cell = tf.keras.layers.StackedRNNCells(
           [tf.keras.layers.LSTMCell(size) for size in lstm_size])
 
-    state_spec = tf.nest.map_structure(
-        functools.partial(
-            tensor_spec.TensorSpec, dtype=tf.float32,
-            name='network_state_spec'), list(cell.state_size))
+    counter = [-1]
+
+    def create_spec(size):
+      counter[0] += 1
+      return tensor_spec.TensorSpec(
+          size, dtype=tf.float32, name='network_state_%d' % counter[0])
+
+    state_spec = tf.nest.map_structure(create_spec, cell.state_size)
 
     output_layers = utils.mlp_layers(fc_layer_params=output_fc_layer_params,
                                      name='output')
@@ -139,7 +142,7 @@ class CriticRnnNetwork(network.Network):
     self._output_layers = output_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, inputs, step_type, network_state=None):
+  def call(self, inputs, step_type, network_state=None, training=False):
     observation, action = inputs
     observation_spec, _ = self.input_tensor_spec
     num_outer_dims = nest_utils.get_outer_rank(observation,
@@ -165,14 +168,14 @@ class CriticRnnNetwork(network.Network):
     action = batch_squash.flatten(action)
 
     for layer in self._observation_layers:
-      observation = layer(observation)
+      observation = layer(observation, training=training)
 
     for layer in self._action_layers:
-      action = layer(action)
+      action = layer(action, training=training)
 
     joint = tf.concat([observation, action], -1)
     for layer in self._joint_layers:
-      joint = layer(joint)
+      joint = layer(joint, training=training)
 
     joint = batch_squash.unflatten(joint)  # [B x T, ...] -> [B, T, ...]
 
@@ -182,12 +185,13 @@ class CriticRnnNetwork(network.Network):
     joint, network_state = self._dynamic_unroll(
         joint,
         reset_mask,
-        initial_state=network_state)
+        initial_state=network_state,
+        training=training)
 
     output = batch_squash.flatten(joint)  # [B, T, ...] -> [B x T, ...]
 
     for layer in self._output_layers:
-      output = layer(output)
+      output = layer(output, training=training)
 
     q_value = tf.reshape(output, [-1])
     q_value = batch_squash.unflatten(q_value)  # [B x T, ...] -> [B, T, ...]

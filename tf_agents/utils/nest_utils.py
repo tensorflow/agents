@@ -52,8 +52,8 @@ def fast_map_structure_flatten(func, structure, *flat_structure, **kwargs):
 def fast_map_structure(func, *structure, **kwargs):
   expand_composites = kwargs.get('expand_composites', False)
   flat_structure = [
-      tf.nest.flatten(s, expand_composites=expand_composites)
-      for s in structure]
+      tf.nest.flatten(s, expand_composites=expand_composites) for s in structure
+  ]
   entries = zip(*flat_structure)
 
   return tf.nest.pack_sequence_as(
@@ -62,8 +62,8 @@ def fast_map_structure(func, *structure, **kwargs):
 
 
 def has_tensors(*x):
-  return np.any([
-      tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)])
+  return np.any(
+      [tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)])
 
 
 def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
@@ -220,8 +220,8 @@ def flatten_and_check_shape_nested_specs(specs, reference_specs):
         specs, reference_specs, num_outer_dims=0)
   except ValueError:
     raise ValueError('specs must be compatible with reference_specs'
-                     '; instead got specs=%s, reference_specs=%s'
-                     % (specs, reference_specs))
+                     '; instead got specs=%s, reference_specs=%s' %
+                     (specs, reference_specs))
   return flat_specs, flat_shapes
 
 
@@ -266,9 +266,9 @@ def split_nested_tensors(tensors, specs, num_or_size_splits):
       indicating the number of splits along batch_dim or a list of integer
       Tensors containing the sizes of each output tensor along batch_dim. If a
       scalar then it must evenly divide value.shape[axis]; otherwise the sum of
-      sizes along the split dimension must match that of the value.
-      For `SparseTensor` inputs, `num_or_size_splits` must be the scalar
-      `num_split` (see documentation of `tf.sparse.split` for more details).
+      sizes along the split dimension must match that of the value. For
+      `SparseTensor` inputs, `num_or_size_splits` must be the scalar `num_split`
+      (see documentation of `tf.sparse.split` for more details).
 
   Returns:
     A list of nested non-batched version of each tensor, where each list item
@@ -540,11 +540,19 @@ def get_outer_array_shape(nested_array, spec):
 
 
 def where(condition, true_outputs, false_outputs):
-  """Generalization of tf.compat.v1.where supporting nests as the outputs.
+  """Generalization of tf.where for nested structures.
 
+  This generalization handles applying where across nested structures and the
+  special case where the rank of the condition is smaller than the rank of the
+  true and false cases.
 
   Args:
-    condition: A boolean Tensor of shape [B,].
+    condition: A boolean Tensor of shape [B, ...]. The shape of condition must
+      be equal to or a prefix of the shape of true_outputs and false_outputs. If
+      condition's rank is smaller than the rank of true_outputs and
+      false_outputs, dimensions of size 1 are added to condition to make its
+      rank match that of true_outputs and false_outputs in order to satisfy the
+      requirements of tf.where.
     true_outputs: Tensor or nested tuple of Tensors of any dtype, each with
       shape [B, ...], to be split based on `condition`.
     false_outputs: Tensor or nested tuple of Tensors of any dtype, each with
@@ -554,5 +562,14 @@ def where(condition, true_outputs, false_outputs):
     Interleaved output from `true_outputs` and `false_outputs` based on
     `condition`.
   """
-  return tf.nest.map_structure(lambda t, f: tf.compat.v1.where(condition, t, f),
-                               true_outputs, false_outputs)
+  if tf.nest.flatten(true_outputs):
+    case_rank = tf.rank(tf.nest.flatten(true_outputs)[0])
+    rank_difference = case_rank - tf.rank(condition)
+    condition_shape = tf.concat(
+        [tf.shape(condition),
+         tf.ones(rank_difference, dtype=tf.int32)], axis=0)
+    condition = tf.reshape(condition, condition_shape)
+
+  return tf.nest.map_structure(
+      lambda t, f: tf.compat.v2.where(condition, t, f), true_outputs,
+      false_outputs)

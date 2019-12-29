@@ -43,6 +43,7 @@ import tensorflow as tf
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import sac_agent
 from tf_agents.drivers import dynamic_step_driver
+from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
 from tf_agents.eval import metric_utils
@@ -53,7 +54,6 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
@@ -77,6 +77,9 @@ def normal_projection_net(action_spec,
       scale_distribution=True)
 
 
+_DEFAULT_REWARD_SCALE = 0
+
+
 @gin.configurable
 def train_eval(
     root_dir,
@@ -88,6 +91,7 @@ def train_eval(
     critic_obs_fc_layers=None,
     critic_action_fc_layers=None,
     critic_joint_fc_layers=(256, 256),
+    num_parallel_environments=1,
     # Params for collect
     initial_collect_steps=10000,
     collect_steps_per_iteration=1,
@@ -103,7 +107,7 @@ def train_eval(
     alpha_learning_rate=3e-4,
     td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
     gamma=0.99,
-    reward_scale_factor=1.0,
+    reward_scale_factor=_DEFAULT_REWARD_SCALE,
     gradient_clipping=None,
     use_tf_functions=True,
     # Params for eval
@@ -119,17 +123,25 @@ def train_eval(
     debug_summaries=False,
     summarize_grads_and_vars=False,
     eval_metrics_callback=None):
-  """A simple train and eval for SAC."""
+  """A simple train and eval for SAC on Mujoco.
+
+  All hyperparameters come from the original SAC paper
+  (https://arxiv.org/pdf/1801.01290.pdf).
+  """
+
+  if reward_scale_factor == _DEFAULT_REWARD_SCALE:
+    # Use value recommended by https://arxiv.org/abs/1801.01290
+    if env_name.startswith('Humanoid'):
+      reward_scale_factor = 20.0
+    else:
+      reward_scale_factor = 5.0
+
   root_dir = os.path.expanduser(root_dir)
-  train_dir = os.path.join(root_dir, 'train')
-  eval_dir = os.path.join(root_dir, 'eval')
 
-  train_summary_writer = tf.compat.v2.summary.create_file_writer(
-      train_dir, flush_millis=summaries_flush_secs * 1000)
-  train_summary_writer.set_as_default()
+  summary_writer = tf.compat.v2.summary.create_file_writer(
+      root_dir, flush_millis=summaries_flush_secs * 1000)
+  summary_writer.set_as_default()
 
-  eval_summary_writer = tf.compat.v2.summary.create_file_writer(
-      eval_dir, flush_millis=summaries_flush_secs * 1000)
   eval_metrics = [
       tf_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
       tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes)
@@ -138,9 +150,17 @@ def train_eval(
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
-    tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
+    # create training environment
+    if num_parallel_environments == 1:
+      py_env = env_load_fn(env_name)
+    else:
+      py_env = parallel_py_environment.ParallelPyEnvironment(
+          [lambda: env_load_fn(env_name)] * num_parallel_environments)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env)
+    # create evaluation environment
     eval_env_name = eval_env_name or env_name
-    eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(eval_env_name))
+    eval_py_env = env_load_fn(eval_env_name)
+    eval_tf_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
     time_step_spec = tf_env.time_step_spec()
     observation_spec = time_step_spec.observation
@@ -182,17 +202,23 @@ def train_eval(
     # Make the replay buffer.
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=tf_agent.collect_data_spec,
-        batch_size=1,
+        batch_size=num_parallel_environments,
         max_length=replay_buffer_capacity)
     replay_observer = [replay_buffer.add_batch]
 
+    env_steps = tf_metrics.EnvironmentSteps(prefix='Train')
+    average_return = tf_metrics.AverageReturnMetric(
+        prefix='Train',
+        buffer_size=num_eval_episodes,
+        batch_size=tf_env.batch_size)
     train_metrics = [
-        tf_metrics.NumberOfEpisodes(),
-        tf_metrics.EnvironmentSteps(),
-        tf_metrics.AverageReturnMetric(
-            buffer_size=num_eval_episodes, batch_size=tf_env.batch_size),
+        tf_metrics.NumberOfEpisodes(prefix='Train'),
+        env_steps,
+        average_return,
         tf_metrics.AverageEpisodeLengthMetric(
-            buffer_size=num_eval_episodes, batch_size=tf_env.batch_size),
+            prefix='Train',
+            buffer_size=num_eval_episodes,
+            batch_size=tf_env.batch_size),
     ]
 
     eval_policy = greedy_policy.GreedyPolicy(tf_agent.policy)
@@ -201,16 +227,16 @@ def train_eval(
     collect_policy = tf_agent.collect_policy
 
     train_checkpointer = common.Checkpointer(
-        ckpt_dir=train_dir,
+        ckpt_dir=os.path.join(root_dir, 'train'),
         agent=tf_agent,
         global_step=global_step,
         metrics=metric_utils.MetricsGroup(train_metrics, 'train_metrics'))
     policy_checkpointer = common.Checkpointer(
-        ckpt_dir=os.path.join(train_dir, 'policy'),
+        ckpt_dir=os.path.join(root_dir, 'policy'),
         policy=eval_policy,
         global_step=global_step)
     rb_checkpointer = common.Checkpointer(
-        ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
+        ckpt_dir=os.path.join(root_dir, 'replay_buffer'),
         max_to_keep=1,
         replay_buffer=replay_buffer)
 
@@ -220,7 +246,7 @@ def train_eval(
     initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         initial_collect_policy,
-        observers=replay_observer,
+        observers=replay_observer + train_metrics,
         num_steps=initial_collect_steps)
 
     collect_driver = dynamic_step_driver.DynamicStepDriver(
@@ -235,34 +261,34 @@ def train_eval(
       tf_agent.train = common.function(tf_agent.train)
 
     # Collect initial replay data.
-    logging.info(
-        'Initializing replay buffer by collecting experience for %d steps with '
-        'a random policy.', initial_collect_steps)
-    initial_collect_driver.run()
+    if env_steps.result() == 0 or replay_buffer.num_frames() == 0:
+      logging.info(
+          'Initializing replay buffer by collecting experience for %d steps'
+          'with a random policy.', initial_collect_steps)
+      initial_collect_driver.run()
 
     results = metric_utils.eager_compute(
         eval_metrics,
         eval_tf_env,
         eval_policy,
         num_episodes=num_eval_episodes,
-        train_step=global_step,
-        summary_writer=eval_summary_writer,
-        summary_prefix='Metrics',
+        train_step=env_steps.result(),
+        summary_writer=summary_writer,
+        summary_prefix='Eval',
     )
     if eval_metrics_callback is not None:
-      eval_metrics_callback(results, global_step.numpy())
+      eval_metrics_callback(results, env_steps.result())
     metric_utils.log_metrics(eval_metrics)
 
     time_step = None
     policy_state = collect_policy.get_initial_state(tf_env.batch_size)
 
-    timed_at_step = global_step.numpy()
     time_acc = 0
+    env_steps_before = env_steps.result().numpy()
 
     # Dataset generates trajectories with shape [Bx2x...]
     dataset = replay_buffer.as_dataset(
-        num_parallel_calls=3,
-        sample_batch_size=batch_size,
+        num_parallel_calls=3, sample_batch_size=batch_size,
         num_steps=2).prefetch(3)
     iterator = iter(dataset)
 
@@ -280,22 +306,24 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        train_loss = train_step()
+        train_step()
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
-        logging.info('step = %d, loss = %f', global_step.numpy(),
-                     train_loss.loss)
-        steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
-        logging.info('%.3f steps/sec', steps_per_sec)
+        logging.info('env steps = %d, average return = %f', env_steps.result(),
+                     average_return.result())
+        env_steps_per_sec = (env_steps.result().numpy() -
+                             env_steps_before) / time_acc
+        logging.info('%.3f env steps/sec', env_steps_per_sec)
         tf.compat.v2.summary.scalar(
-            name='global_steps_per_sec', data=steps_per_sec, step=global_step)
-        timed_at_step = global_step.numpy()
+            name='env_steps_per_sec',
+            data=env_steps_per_sec,
+            step=env_steps.result())
         time_acc = 0
+        env_steps_before = env_steps.result().numpy()
 
       for train_metric in train_metrics:
-        train_metric.tf_summaries(
-            train_step=global_step, step_metrics=train_metrics[:2])
+        train_metric.tf_summaries(train_step=env_steps.result())
 
       if global_step.numpy() % eval_interval == 0:
         results = metric_utils.eager_compute(
@@ -303,12 +331,12 @@ def train_eval(
             eval_tf_env,
             eval_policy,
             num_episodes=num_eval_episodes,
-            train_step=global_step,
-            summary_writer=eval_summary_writer,
-            summary_prefix='Metrics',
+            train_step=env_steps.result(),
+            summary_writer=summary_writer,
+            summary_prefix='Eval',
         )
         if eval_metrics_callback is not None:
-          eval_metrics_callback(results, global_step.numpy())
+          eval_metrics_callback(results, env_steps.result())
         metric_utils.log_metrics(eval_metrics)
 
       global_step_val = global_step.numpy()
@@ -320,7 +348,6 @@ def train_eval(
 
       if global_step_val % rb_checkpoint_interval == 0:
         rb_checkpointer.save(global_step=global_step_val)
-    return train_loss
 
 
 def main(_):
@@ -328,6 +355,7 @@ def main(_):
   logging.set_verbosity(logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
   train_eval(FLAGS.root_dir)
+
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')

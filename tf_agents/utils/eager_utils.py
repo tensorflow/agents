@@ -179,19 +179,18 @@ def add_variables_summaries(grads_and_vars, step):
     step: Variable to use for summaries.
   """
   with tf.name_scope('summarize_vars'):
-    for grad, var in grads_and_vars:
-      if grad is not None:
-        if isinstance(var, tf.IndexedSlices):
-          var_values = var.values
-        else:
-          var_values = var
-        var_name = var.name.replace(':', '_')
-        tf.compat.v2.summary.histogram(
-            name=var_name + '_value', data=var_values, step=step)
-        tf.compat.v2.summary.scalar(
-            name=var_name + '_value_norm',
-            data=tf.linalg.global_norm([var_values]),
-            step=step)
+    for _, var in grads_and_vars:
+      if isinstance(var, tf.IndexedSlices):
+        var_values = var.values
+      else:
+        var_values = var
+      var_name = var.name.replace(':', '_')
+      tf.compat.v2.summary.histogram(
+          name=var_name + '_value', data=var_values, step=step)
+      tf.compat.v2.summary.scalar(
+          name=var_name + '_value_norm',
+          data=tf.linalg.global_norm([var_values]),
+          step=step)
 
 
 def add_gradients_summaries(grads_and_vars, step):

@@ -19,8 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
-
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -47,14 +45,6 @@ def _get_dummy_observation_step(observation_shape, batch_size):
 
 @test_util.run_all_in_graph_and_eager_modes
 class CategoricalPolicyTest(test_utils.TestCase, parameterized.TestCase):
-
-  def assert_uniform(self, counts, threshold=0.99):
-    """Use Chi2 to assert that `counts` is from a uniform distribution."""
-    expected_count = float(sum(counts)) / len(counts)
-    chi2_statistic = np.sum(
-        np.square(np.array(counts) - expected_count) / expected_count)
-    chi2_cdf = self.evaluate(tfd.Chi2(len(counts) - 1).cdf(chi2_statistic))
-    self.assertLess(chi2_cdf, threshold)
 
   @parameterized.parameters(
       dict(
@@ -145,10 +135,6 @@ class CategoricalPolicyTest(test_utils.TestCase, parameterized.TestCase):
                                                    TEMP_UPDATE_TEST_BATCH_SIZE)
     tf.compat.v1.set_random_seed(seed)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    initial_action_time_step = self.evaluate(
-        policy.action(observation_step, seed=seed))
-    initial_action_counts = collections.Counter(initial_action_time_step.action)
-    self.assert_uniform(list(initial_action_counts.values()))
 
     # Set the inverse temperature to a large value.
     self.evaluate(

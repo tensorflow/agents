@@ -124,3 +124,45 @@ class TFStepMetric(tf.Module):
           data=result,
           step=step))
     return summaries
+
+
+class TFHistogramStepMetric(TFStepMetric):
+  """A metric class for metrics that emit multiple values.
+
+  The only difference between `TFSTepMetric` and `TFHistogramStepMetric` is that
+  the latter uses histogram summaries instead of scalar summaries.
+  """
+
+  def tf_summaries(self, train_step=None, step_metrics=()):
+    """Generates histogram summaries against train_step and all step_metrics.
+
+    Args:
+      train_step: (Optional) Step counter for training iterations. If None, no
+        metric is generated against the global step.
+      step_metrics: (Optional) Iterable of step metrics to generate summaries
+        against.
+
+    Returns:
+      A list of histogram summaries.
+    """
+    summaries = []
+    prefix = self._prefix
+    tag = common.join_scope(prefix, self.name)
+    result = self.result()
+    if train_step is not None:
+      summaries.append(
+          tf.compat.v2.summary.histogram(
+              name=tag, data=result, step=train_step))
+    if prefix:
+      prefix += '_'
+    for step_metric in step_metrics:
+      # Skip plotting the metrics against itself.
+      if self.name == step_metric.name:
+        continue
+      step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
+      # Summaries expect the step value to be an int64.
+      step = tf.cast(step_metric.result(), tf.int64)
+      summaries.append(
+          tf.compat.v2.summary.histogram(
+              name=step_tag, data=result, step=step))
+    return summaries

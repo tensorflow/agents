@@ -24,7 +24,7 @@ import tensorflow as tf
 
 
 def apply_gradients(optimizer, grads_and_vars, global_step=None):
-  """Provide support a gradient application operation for optimizers.
+  """Returns a tf.Operation that applies gradients and incremements the global step.
 
   Args:
     optimizer: An instance of `tf.compat.v1.train.Optimizer` or
@@ -34,9 +34,8 @@ def apply_gradients(optimizer, grads_and_vars, global_step=None):
       the graph.
 
   Returns:
-    None.
+    A `tf.Operation` that when executed, applies gradients and increments the
+    global step.
   """
-  if isinstance(optimizer, tf.keras.optimizers.Optimizer):
-    optimizer.apply_gradients(grads_and_vars)
-  else:
-    optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+  with tf.control_dependencies([optimizer.apply_gradients(grads_and_vars)]):
+    return global_step.assign_add(1)

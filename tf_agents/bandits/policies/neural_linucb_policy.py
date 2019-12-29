@@ -58,6 +58,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
                num_samples,
                time_step_spec=None,
                alpha=1.0,
+               emit_policy_info=(),
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
                name=None):
@@ -79,6 +80,9 @@ class NeuralLinUCBPolicy(tf_policy.Base):
       num_samples: list of number of samples per arm.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       alpha: (float) non-negative weight multiplying the confidence intervals.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       emit_log_probability: (bool) whether to emit log probabilities.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
@@ -90,6 +94,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         observation and mask.
       name: The name of this policy.
     """
+    encoding_network.create_variables()
     self._encoding_network = encoding_network
     self._reward_layer = reward_layer
     self._encoding_dim = encoding_dim
@@ -124,9 +129,7 @@ class NeuralLinUCBPolicy(tf_policy.Base):
 
     self._num_actions = len(cov_matrix)
     assert self._num_actions
-    self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       context_shape = observation_and_action_constraint_splitter(
           time_step_spec.observation)[0].shape.as_list()
     else:
@@ -151,10 +154,23 @@ class NeuralLinUCBPolicy(tf_policy.Base):
         minimum=0,
         maximum=self._num_actions - 1,
         name='action')
+
+    self._emit_policy_info = emit_policy_info
+    predicted_rewards_mean = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
+      predicted_rewards_mean = tensor_spec.TensorSpec(
+          [self._num_actions],
+          dtype=tf.float32)
+    info_spec = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=predicted_rewards_mean)
+
     super(NeuralLinUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         emit_log_probability=emit_log_probability,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
+        info_spec=info_spec,
         name=name)
 
   def _variables(self):
@@ -192,17 +208,19 @@ class NeuralLinUCBPolicy(tf_policy.Base):
     else:
       chosen_actions = greedy_actions
 
-    return chosen_actions
+    return chosen_actions, est_mean_reward
 
   def _get_actions_from_linucb(self, encoded_observation, mask):
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
     p_values = []
+    est_rewards = []
     for k in range(self._num_actions):
       a_inv_x = linalg.conjugate_gradient_solve(
           self._cov_matrix[k] + tf.eye(self._encoding_dim, dtype=self._dtype),
           tf.linalg.matrix_transpose(encoded_observation))
       mean_reward_est = tf.einsum('j,jk->k', self._data_vector[k], a_inv_x)
+      est_rewards.append(mean_reward_est)
 
       ci = tf.reshape(
           tf.linalg.tensor_diag_part(tf.matmul(encoded_observation, a_inv_x)),
@@ -219,7 +237,9 @@ class NeuralLinUCBPolicy(tf_policy.Base):
     else:
       chosen_actions = policy_utilities.masked_argmax(
           stacked_p_values, mask, output_type=tf.int32)
-    return chosen_actions
+
+    est_mean_reward = tf.cast(tf.stack(est_rewards, axis=-1), tf.float32)
+    return chosen_actions, est_mean_reward
 
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
@@ -228,8 +248,10 @@ class NeuralLinUCBPolicy(tf_policy.Base):
   def _action(self, time_step, policy_state, seed):
     observation = time_step.observation
     mask = None
-    if self._observation_and_action_constraint_splitter:
-      observation, mask = self._observation_and_action_constraint_splitter(
+    observation_and_action_constraint_splitter = (
+        self.observation_and_action_constraint_splitter)
+    if observation_and_action_constraint_splitter is not None:
+      observation, mask = observation_and_action_constraint_splitter(
           observation)
     # Check the shape of the observation matrix.
     if not observation.shape.is_compatible_with([None, self._context_dim]):
@@ -241,9 +263,14 @@ class NeuralLinUCBPolicy(tf_policy.Base):
     # Pass the observations through the encoding network.
     encoded_observation, _ = self._encoding_network(observation)
 
-    chosen_actions = tf.cond(
+    chosen_actions, est_mean_rewards = tf.cond(
         self._actions_from_reward_layer,
         lambda: self._get_actions_from_reward_layer(encoded_observation, mask),
         lambda: self._get_actions_from_linucb(encoded_observation, mask))
 
-    return policy_step.PolicyStep(chosen_actions, policy_state)
+    policy_info = policy_utilities.PolicyInfo(
+        predicted_rewards_mean=(
+            est_mean_rewards if
+            policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
+            self._emit_policy_info else ()))
+    return policy_step.PolicyStep(chosen_actions, policy_state, policy_info)

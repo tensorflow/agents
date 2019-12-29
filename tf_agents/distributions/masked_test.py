@@ -27,10 +27,10 @@ class MaskedCategoricalTest(tf.test.TestCase):
                                             mask=[True, False, True])
     copy = distribution.copy()
     with self.cached_session() as s:
-      probs_np = s.run(copy.probs)
-      logits_np = s.run(copy.logits)
-      ref_probs_np = s.run(distribution.probs)
-      ref_logits_np = s.run(distribution.logits)
+      probs_np = s.run(copy.probs_parameter())
+      logits_np = s.run(copy.logits_parameter())
+      ref_probs_np = s.run(distribution.probs_parameter())
+      ref_logits_np = s.run(distribution.logits_parameter())
     self.assertAllEqual(ref_logits_np, logits_np)
     self.assertAllEqual(ref_probs_np, probs_np)
 
@@ -41,8 +41,8 @@ class MaskedCategoricalTest(tf.test.TestCase):
     sample = distribution.sample()
     results = []
 
-    probs_tensor = distribution.probs
-    logits_tensor = distribution.logits
+    probs_tensor = distribution.probs_parameter()
+    logits_tensor = distribution.logits_parameter()
 
     with self.cached_session() as s:
       probs_np = s.run(probs_tensor)

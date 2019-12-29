@@ -115,7 +115,6 @@ class ActorDistributionNetworkTest(tf.test.TestCase, parameterized.TestCase):
       ('TrainingTrue', True,),
       ('TrainingFalse', False))
   def testDropoutFCLayersWithConv(self, training):
-    tf.compat.v1.set_random_seed(0)
     observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
                                                      1)
     time_step_spec = ts.time_step_spec(observation_spec)
@@ -129,20 +128,24 @@ class ActorDistributionNetworkTest(tf.test.TestCase, parameterized.TestCase):
         fc_layer_params=[5],
         dropout_layer_params=[0.5])
 
-    action_distributions1, _ = net(
-        time_step.observation, time_step.step_type, (), training=training)
-    action_distributions2, _ = net(
-        time_step.observation, time_step.step_type, (), training=training)
-    mode1 = action_distributions1.mode()
-    mode2 = action_distributions2.mode()
+    modes = []
+    num_modes = 10
+    for _ in range(num_modes):
+      action_distributions, _ = net(
+          time_step.observation, time_step.step_type, (), training=training)
+      modes.append(action_distributions.mode())
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    mode1, mode2 = self.evaluate([mode1, mode2])
+    modes = self.evaluate(modes)
 
-    if training:
-      self.assertGreater(np.linalg.norm(mode1 - mode2), 0)
-    else:
-      self.assertAllEqual(mode1, mode2)
+    modes_differ = False
+    for i in range(num_modes):
+      for j in range(i+1, num_modes):
+        modes_differ = np.linalg.norm(modes[i] - modes[j]) > 1e-6
+        if modes_differ:
+          break
+
+    self.assertEqual(training, modes_differ)
 
 
 if __name__ == '__main__':

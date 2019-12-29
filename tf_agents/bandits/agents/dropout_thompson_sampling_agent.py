@@ -27,9 +27,12 @@ import gin
 import tensorflow as tf
 
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
+from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.networks import q_network
 
 
+# TODO(b/146206372): refactor DropoutThompsonSamplingAgent API to be compliant
+# with other APIs which take a reward network at initialisation
 @gin.configurable
 class DropoutThompsonSamplingAgent(
     greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
@@ -53,11 +56,12 @@ class DropoutThompsonSamplingAgent(
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
+      heteroscedastic=False,
       # Params for debugging.
       debug_summaries=False,
       summarize_grads_and_vars=False,
       enable_summaries=True,
-      expose_predicted_rewards=False,
+      emit_policy_info=(),
       train_step_counter=None,
       name=None):
     """Creates a Dropout Thompson Sampling Agent.
@@ -82,14 +86,17 @@ class DropoutThompsonSamplingAgent(
         work). The default is `tf.losses.mean_squared_error`.
       gradient_clipping: A float representing the norm length to clip gradients
         (or None for no clipping.)
+      heteroscedastic: If True, the variance per action is estimated and the
+        losses are weighted appropriately.
       debug_summaries: A Python bool, default False. When True, debug summaries
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
         gradients and network variable summaries are written during training.
       enable_summaries: A Python bool, default True. When False, all summaries
         (debug or otherwise) should not be written.
-      expose_predicted_rewards: (bool) Whether to expose the predicted rewards
-        in the policy info field under the name 'predicted_rewards'.
+      emit_policy_info: (tuple of strings) what side information we want to get
+        as part of the policy info. Allowed values can be found in
+        `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
       name: Python str name of this agent. All variables in this module will
@@ -106,16 +113,24 @@ class DropoutThompsonSamplingAgent(
       dropout_layer_params.append(dropout_param)
     else:
       dropout_layer_params = [dropout_param] * len(fc_layer_params)
-    if observation_and_action_constraint_splitter:
+    if observation_and_action_constraint_splitter is not None:
       input_tensor_spec, _ = observation_and_action_constraint_splitter(
           time_step_spec.observation)
     else:
       input_tensor_spec = time_step_spec.observation
-    reward_network = q_network.QNetwork(
-        input_tensor_spec=input_tensor_spec,
-        action_spec=action_spec,
-        fc_layer_params=fc_layer_params,
-        dropout_layer_params=dropout_layer_params)
+
+    if heteroscedastic:
+      reward_network = heteroscedastic_q_network.HeteroscedasticQNetwork(
+          input_tensor_spec=input_tensor_spec,
+          action_spec=action_spec,
+          fc_layer_params=fc_layer_params,
+          dropout_layer_params=dropout_layer_params)
+    else:
+      reward_network = q_network.QNetwork(
+          input_tensor_spec=input_tensor_spec,
+          action_spec=action_spec,
+          fc_layer_params=fc_layer_params,
+          dropout_layer_params=dropout_layer_params)
 
     super(DropoutThompsonSamplingAgent, self).__init__(
         time_step_spec=time_step_spec,
@@ -129,6 +144,6 @@ class DropoutThompsonSamplingAgent(
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        expose_predicted_rewards=expose_predicted_rewards,
+        emit_policy_info=emit_policy_info,
         train_step_counter=train_step_counter,
         name=name)

@@ -59,8 +59,12 @@ class Base(object):
   """
 
   # TODO(kbanoop): Expose a batched/batch_size property.
-  def __init__(self, time_step_spec, action_spec, policy_state_spec=(),
-               info_spec=()):
+  def __init__(self,
+               time_step_spec,
+               action_spec,
+               policy_state_spec=(),
+               info_spec=(),
+               observation_and_action_constraint_splitter=None):
     """Initialization of Base class.
 
     Args:
@@ -72,7 +76,27 @@ class Base(object):
         Provided by the subclass, not directly by the user.
       info_spec: A nest of ArraySpec representing the policy info.
         Provided by the subclass, not directly by the user.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment.
+        The function takes in a full observation and returns a tuple consisting
+        of 1) the part of the observation intended as input to the network and
+        2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as:
+        ```
+        def observation_and_action_constraint_splitter(observation):
+          return observation['network_input'], observation['constraint']
+        ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+        sure the provided `q_network` is compatible with the network-specific
+        half of the output of the `observation_and_action_constraint_splitter`.
+        In particular, `observation_and_action_constraint_splitter` will be
+        called on the observation before passing to the network.
+        If `observation_and_action_constraint_splitter` is None, action
+        constraints are not applied.
     """
+    common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
     common.assert_members_are_not_overridden(base_cls=Base, instance=self)
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
@@ -80,6 +104,8 @@ class Base(object):
     self._policy_state_spec = policy_state_spec
     self._info_spec = info_spec
     self._setup_specs()
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
 
   def _setup_specs(self):
     self._policy_step_spec = policy_step.PolicyStep(
@@ -87,6 +113,10 @@ class Base(object):
         info=self._info_spec)
     self._trajectory_spec = trajectory.from_transition(
         self._time_step_spec, self._policy_step_spec, self._time_step_spec)
+
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
 
   def get_initial_state(self, batch_size=None):
     """Returns an initial state usable by the policy.

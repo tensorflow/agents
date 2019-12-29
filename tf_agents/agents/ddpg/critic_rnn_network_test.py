@@ -24,12 +24,10 @@ import tensorflow as tf
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
-from tensorflow.python.framework import test_util  # TF internal
 
 
 class CriticRnnNetworkTest(tf.test.TestCase):
 
-  @test_util.run_in_graph_and_eager_modes()
   def testBuilds(self):
     observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
                                                      1)
@@ -91,6 +89,13 @@ class CriticRnnNetworkTest(tf.test.TestCase):
     # Assert LSTM cell is created.
     self.assertEqual((1, 3), network_state[0].shape)
     self.assertEqual((1, 3), network_state[1].shape)
+
+  def testInit(self):
+    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
+                                                     1)
+    action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
+    network_input_spec = (observation_spec, action_spec)
+    critic_rnn_network.CriticRnnNetwork(network_input_spec)
 
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for TF Agents ppo_eager_agent."""
+"""Tests for TF Agents ppo_agent."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -28,10 +28,16 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_agent
+from tf_agents.drivers import dynamic_episode_driver
+from tf_agents.environments import random_tf_environment
 from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.networks import value_network
+from tf_agents.networks import value_rnn_network
+from tf_agents.policies import random_tf_policy
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -178,7 +184,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         self._time_step_spec,
         self._action_spec,
         tf.compat.v1.train.AdamOptimizer(),
-        actor_net=DummyActorNet(self._obs_spec, self._action_spec,),
+        actor_net=DummyActorNet(
+            self._obs_spec,
+            self._action_spec,
+        ),
         value_net=DummyValueNet(self._obs_spec),
         normalize_observations=False,
         use_gae=True,
@@ -211,7 +220,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         self._time_step_spec,
         self._action_spec,
         tf.compat.v1.train.AdamOptimizer(),
-        actor_net=DummyActorNet(self._obs_spec, self._action_spec,),
+        actor_net=DummyActorNet(
+            self._obs_spec,
+            self._action_spec,
+        ),
         value_net=DummyValueNet(self._obs_spec),
         normalize_observations=False,
         num_epochs=num_epochs,
@@ -229,8 +241,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         observation=observations)
-    actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]],
-                          dtype=tf.float32)
+    actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
     action_distribution_parameters = {
         'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
@@ -239,12 +250,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
     policy_info = action_distribution_parameters
 
-    experience = trajectory.Trajectory(
-        time_steps.step_type, observations, actions, policy_info,
-        time_steps.step_type, time_steps.reward, time_steps.discount)
-
-    # Force variable creation.
-    agent.policy.variables()
+    experience = trajectory.Trajectory(time_steps.step_type, observations,
+                                       actions, policy_info,
+                                       time_steps.step_type, time_steps.reward,
+                                       time_steps.discount)
 
     if tf.executing_eagerly():
       loss = lambda: agent.train(experience)
@@ -320,8 +329,8 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         rtol=0.001)
     self.assertAllClose(expected_pg_loss, policy_gradient_loss)
     self.assertAllClose(expected_ve_loss, value_estimation_loss)
-    self.assertAllClose(expected_l2_loss, l2_regularization_loss, atol=0.001,
-                        rtol=0.001)
+    self.assertAllClose(
+        expected_l2_loss, l2_regularization_loss, atol=0.001, rtol=0.001)
     self.assertAllClose(expected_ent_loss, entropy_reg_loss)
     self.assertAllClose(expected_kl_penalty_loss, kl_penalty_loss)
 
@@ -355,8 +364,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
                                            time_steps.step_type, ())
     weights = tf.ones_like(advantages)
     agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
-                               advantages, current_policy_distribution,
-                               weights)
+                               advantages, current_policy_distribution, weights)
     agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request L2 regularization loss.
@@ -400,15 +408,15 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         self._obs_spec, self._action_spec)(time_steps.observation,
                                            time_steps.step_type, ())
     agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
-                               advantages, current_policy_distribution,
-                               weights)
+                               advantages, current_policy_distribution, weights)
     agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request entropy regularization loss.
     # Action stdevs should be ~1.0, and mean entropy ~3.70111.
     expected_loss = -3.70111 * ent_reg
-    loss = agent.entropy_regularization_loss(
-        time_steps, current_policy_distribution, weights)
+    loss = agent.entropy_regularization_loss(time_steps,
+                                             current_policy_distribution,
+                                             weights)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -504,9 +512,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
     expected_kl_penalty_loss = 7.0
 
-    kl_penalty_loss = agent.kl_penalty_loss(
-        time_steps, action_distribution_parameters, current_policy_distribution,
-        weights)
+    kl_penalty_loss = agent.kl_penalty_loss(time_steps,
+                                            action_distribution_parameters,
+                                            current_policy_distribution,
+                                            weights)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     kl_penalty_loss_ = self.evaluate(kl_penalty_loss)
     self.assertEqual(expected_kl_penalty_loss, kl_penalty_loss_)
@@ -560,8 +569,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         adaptive_kl_tolerance=0.5,
     )
 
-    # Force variable creation
-    agent.policy.variables()
+    # Initialize variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Loss should not change if data kl is target kl.
@@ -646,9 +654,60 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllClose(expected_advantages,
                         self.evaluate(normalized_advantages))
 
+  def testRNNTrain(self):
+    actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+        self._time_step_spec.observation,
+        self._action_spec,
+        input_fc_layer_params=None,
+        output_fc_layer_params=None,
+        lstm_size=(20,))
+    value_net = value_rnn_network.ValueRnnNetwork(
+        self._time_step_spec.observation,
+        input_fc_layer_params=None,
+        output_fc_layer_params=None,
+        lstm_size=(10,))
+    global_step = tf.compat.v1.train.get_or_create_global_step()
+    agent = ppo_agent.PPOAgent(
+        self._time_step_spec,
+        self._action_spec,
+        optimizer=tf.compat.v1.train.AdamOptimizer(),
+        actor_net=actor_net,
+        value_net=value_net,
+        num_epochs=1,
+        train_step_counter=global_step)
+    # Use a random env, policy, and replay buffer to collect training data.
+    random_env = random_tf_environment.RandomTFEnvironment(
+        self._time_step_spec, self._action_spec, batch_size=1)
+    collection_policy = random_tf_policy.RandomTFPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        info_spec=agent.collect_policy.info_spec)
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+        collection_policy.trajectory_spec, batch_size=1, max_length=7)
+    collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
+        random_env,
+        collection_policy,
+        observers=[replay_buffer.add_batch],
+        num_episodes=1)
+
+    # In graph mode: finish building the graph so the optimizer
+    # variables are created.
+    if not tf.executing_eagerly():
+      _, _ = agent.train(experience=replay_buffer.gather_all())
+
+    # Initialize.
+    self.evaluate(agent.initialize())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Train one step.
+    self.assertEqual(0, self.evaluate(global_step))
+    self.evaluate(collect_driver.run())
+    self.evaluate(agent.train(experience=replay_buffer.gather_all()))
+    self.assertEqual(1, self.evaluate(global_step))
+
   def testAgentDoesNotFailWhenNestedObservationActionAndDebugSummaries(self):
-    summary_writer = tf.compat.v2.summary.create_file_writer(FLAGS.test_tmpdir,
-                                                             flush_millis=10000)
+    summary_writer = tf.compat.v2.summary.create_file_writer(
+        FLAGS.test_tmpdir, flush_millis=10000)
     summary_writer.set_as_default()
 
     nested_obs_spec = (self._obs_spec, self._obs_spec, {
@@ -691,7 +750,8 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     observations = tf.constant([
         [[1, 2], [3, 4], [5, 6]],
         [[1, 2], [3, 4], [5, 6]],
-    ], dtype=tf.float32)
+    ],
+                               dtype=tf.float32)
 
     observations = (observations, observations, {
         'a': observations,

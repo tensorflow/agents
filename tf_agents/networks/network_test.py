@@ -102,6 +102,13 @@ class NetworkTest(tf.test.TestCase):
     self.assertLen(net.variables, 2)
     self.assertLen(net.trainable_variables, 1)
 
+  def test_summary_no_exception(self):
+    """Tests that Network.summary() does not throw an exception."""
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    action_spec = specs.TensorSpec([2], tf.float32, 'action')
+    net = MockNetwork(observation_spec, action_spec)
+    net.create_variables()
+    net.summary()
 
 if __name__ == '__main__':
   tf.test.main()

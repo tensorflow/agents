@@ -391,5 +391,20 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     else:
       self.assertAllEqual(output1, output2)
 
+  def testWeightDecay(self):
+    batch_size = 3
+    num_obs_dims = 5
+    obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
+    network = encoding_network.EncodingNetwork(
+        obs_spec,
+        fc_layer_params=[20],
+        weight_decay_params=[0.5])
+    obs = tf.random.uniform([batch_size, num_obs_dims])
+    network(obs)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    regularization_loss = self.evaluate(network.losses[0])
+    self.assertGreater(regularization_loss, 0)
+
+
 if __name__ == '__main__':
   tf.test.main()

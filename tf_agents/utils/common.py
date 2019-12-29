@@ -31,8 +31,15 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
-from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
+# pylint:disable=g-direct-tensorflow-import
+from tensorflow.core.protobuf import struct_pb2  # TF internal
+from tensorflow.python.eager import monitoring  # TF internal
+from tensorflow.python.saved_model import nested_structure_coder  # TF internal
+# pylint:enable=g-direct-tensorflow-import
+
+tf_agents_gauge = monitoring.BoolGauge('/tensorflow/agents/agents',
+                                       'TF-Agents usage', 'method')
+
 
 MISSING_RESOURCE_VARIABLES_ERROR = """
 Resource variables are not enabled.  Please enable them by adding the following
@@ -175,6 +182,7 @@ def create_variable(name,
 def soft_variables_update(source_variables,
                           target_variables,
                           tau=1.0,
+                          tau_non_trainable=None,
                           sort_variables_by_name=False):
   """Performs a soft/hard update of variables from the source to the target.
 
@@ -189,7 +197,9 @@ def soft_variables_update(source_variables,
     source_variables: list of source variables.
     target_variables: list of target variables.
     tau: A float scalar in [0, 1]. When tau is 1.0 (the default), we do a hard
-      update.
+      update. This is used for trainable variables.
+    tau_non_trainable: A float scalar in [0, 1] for non_trainable variables. If
+      None, will copy from tau.
     sort_variables_by_name: A bool, when True would sort the variables by name
       before doing the update.
 
@@ -201,6 +211,12 @@ def soft_variables_update(source_variables,
   """
   if tau < 0 or tau > 1:
     raise ValueError('Input `tau` should be in [0, 1].')
+  if tau_non_trainable is None:
+    tau_non_trainable = tau
+
+  if tau_non_trainable < 0 or tau_non_trainable > 1:
+    raise ValueError('Input `tau_non_trainable` should be in [0, 1].')
+
   updates = []
 
   op_name = 'soft_variables_update'
@@ -220,13 +236,28 @@ def soft_variables_update(source_variables,
     v_t.shape.assert_is_compatible_with(v_s.shape)
 
     def update_fn(v1, v2):
-      if tau == 1.0:
+      """Update variables."""
+      # For not trainable variables do hard updates.
+      # This helps stabilaze BatchNorm moving averagees TODO(b/144455039)
+      if not v1.trainable:
+        current_tau = tau_non_trainable
+      else:
+        current_tau = tau
+
+      if current_tau == 1.0:
         return v1.assign(v2)
       else:
-        return v1.assign((1 - tau) * v1 + tau * v2)
+        return v1.assign((1 - current_tau) * v1 + current_tau * v2)
 
-    if strategy is not None:
-      # assignment happens independently on each replica,
+    # TODO(b/142508640): remove this when b/142802462 is fixed.
+    # Workaround for b/142508640, only use extended.update for
+    # MirroredVariable variables (which are trainable variables).
+    # For other types of variables (i.e. SyncOnReadVariables, for example
+    # batch norm stats) do a regular assign, which will cause a sync and
+    # broadcast from replica 0, so will have slower performance but will be
+    # correct and not cause a failure.
+    if strategy is not None and v_t.trainable:
+      # Assignment happens independently on each replica,
       # see b/140690837 #46.
       update = strategy.extended.update(v_t, update_fn, args=(v_s,))
     else:
@@ -1137,11 +1168,15 @@ def check_matching_networks(network_1, network_2):
 
 def maybe_copy_target_network_with_checks(network, target_network=None,
                                           name='TargetNetwork'):
+  """Copies the network into target if None and checks for shared variables."""
   if target_network is None:
     target_network = network.copy(name=name)
     target_network.create_variables()
-    # Copy may have been shallow, and variable may inadvertently be shared
-    # between the target and original network.
-    check_no_shared_variables(network, target_network)
+  # Copy may have been shallow, and variables may inadvertently be shared
+  # between the target and the original networks. This would be an unusual
+  # setup, so we throw an error to protect users from accidentally doing so.
+  # If you explicitly want this to be enabled, please open a feature request
+  # with the team.
+  check_no_shared_variables(network, target_network)
   check_matching_networks(network, target_network)
   return target_network

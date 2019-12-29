@@ -40,7 +40,7 @@ from tf_agents.utils import common
 from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents.utils import training
+from tf_agents.utils import training as training_lib
 from tf_agents.utils import value_ops
 
 
@@ -323,7 +323,10 @@ class DqnAgent(tf_agent.TFAgent):
 
       def update():
         return common.soft_variables_update(
-            self._q_network.variables, self._target_q_network.variables, tau)
+            self._q_network.variables,
+            self._target_q_network.variables,
+            tau,
+            tau_non_trainable=1.0)
 
       return common.Periodically(update, period, 'periodic_update_targets')
 
@@ -347,25 +350,28 @@ class DqnAgent(tf_agent.TFAgent):
           td_errors_loss_fn=self._td_errors_loss_fn,
           gamma=self._gamma,
           reward_scale_factor=self._reward_scale_factor,
-          weights=weights)
+          weights=weights,
+          training=True)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
+    non_trainable_weights = self._q_network.non_trainable_weights
     assert list(variables_to_train), "No variables in the agent's q_network."
     grads = tape.gradient(loss_info.loss, variables_to_train)
     # Tuple is used for py3, where zip is a generator producing values once.
-    grads_and_vars = tuple(zip(grads, variables_to_train))
+    grads_and_vars = list(zip(grads, variables_to_train))
     if self._gradient_clipping is not None:
       grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
                                                        self._gradient_clipping)
 
     if self._summarize_grads_and_vars:
-      eager_utils.add_variables_summaries(grads_and_vars,
+      grads_and_vars_with_non_trainable = (
+          grads_and_vars + [(None, v) for v in non_trainable_weights])
+      eager_utils.add_variables_summaries(grads_and_vars_with_non_trainable,
                                           self.train_step_counter)
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
-    training.apply_gradients(self._optimizer,
-                             grads_and_vars,
-                             global_step=self.train_step_counter)
+    training_lib.apply_gradients(
+        self._optimizer, grads_and_vars, global_step=self.train_step_counter)
 
     self._update_target()
 
@@ -376,7 +382,8 @@ class DqnAgent(tf_agent.TFAgent):
             td_errors_loss_fn=common.element_wise_huber_loss,
             gamma=1.0,
             reward_scale_factor=1.0,
-            weights=None):
+            weights=None,
+            training=False):
     """Computes loss for DQN training.
 
     Args:
@@ -392,6 +399,7 @@ class DqnAgent(tf_agent.TFAgent):
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output td_loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
+      training: Whether this loss is being used for training.
 
     Returns:
       loss: An instance of `DqnLossInfo`.
@@ -416,7 +424,7 @@ class DqnAgent(tf_agent.TFAgent):
       _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
 
     with tf.name_scope('loss'):
-      q_values = self._compute_q_values(time_steps, actions)
+      q_values = self._compute_q_values(time_steps, actions, training=training)
 
       next_q_values = self._compute_next_q_values(next_time_steps)
 
@@ -497,14 +505,15 @@ class DqnAgent(tf_agent.TFAgent):
       return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss,
                                                  td_error=td_error))
 
-  def _compute_q_values(self, time_steps, actions):
+  def _compute_q_values(self, time_steps, actions, training=False):
     network_observation = time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
-    q_values, _ = self._q_network(network_observation, time_steps.step_type)
+    q_values, _ = self._q_network(network_observation, time_steps.step_type,
+                                  training=training)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     multi_dim_actions = self._action_spec.shape.rank > 0
@@ -524,7 +533,7 @@ class DqnAgent(tf_agent.TFAgent):
     """
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
@@ -571,7 +580,7 @@ class DdqnAgent(DqnAgent):
     # TODO(b/117175589): Add binary tests for DDQN.
     network_observation = next_time_steps.observation
 
-    if self._observation_and_action_constraint_splitter:
+    if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 

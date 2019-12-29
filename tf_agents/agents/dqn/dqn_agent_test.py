@@ -107,16 +107,19 @@ class DqnAgentTest(test_utils.TestCase):
           q_network=q_net,
           optimizer=None)
 
-    # Explicitly share weights between q and target networks; this is ok.
+    # Explicitly share weights between q and target networks.
+    # This would be an unusual setup so we check that an error is thrown.
     q_target_net = networks_test_utils.KerasLayersNet(self._observation_spec,
                                                       self._action_spec,
                                                       dense_layer)
-    agent_class(
-        self._time_step_spec,
-        self._action_spec,
-        q_network=q_net,
-        optimizer=None,
-        target_q_network=q_target_net)
+    with self.assertRaisesRegexp(
+        ValueError, 'shares weights with the original network'):
+      agent_class(
+          self._time_step_spec,
+          self._action_spec,
+          q_network=q_net,
+          optimizer=None,
+          target_q_network=q_target_net)
 
   def testInitializeAgent(self, agent_class):
     q_net = DummyNet(self._observation_spec, self._action_spec)

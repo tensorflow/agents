@@ -119,6 +119,7 @@ class Base(tf.Module):
                clip=True,
                emit_log_probability=False,
                automatic_state_reset=True,
+               observation_and_action_constraint_splitter=None,
                name=None):
     """Initialization of Base class.
 
@@ -142,9 +143,27 @@ class Base(tf.Module):
       automatic_state_reset:  If `True`, then `get_initial_policy_state` is used
         to clear state in `action()` and `distribution()` for for time steps
         where `time_step.is_first()`.
+      observation_and_action_constraint_splitter: A function used to process
+        observations with action constraints. These constraints can indicate,
+        for example, a mask of valid/invalid actions for a given state of the
+        environment. The function takes in a full observation and returns a
+        tuple consisting of 1) the part of the observation intended as input to
+        the network and 2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as: ```
+        def observation_and_action_constraint_splitter(observation): return
+          observation['network_input'], observation['constraint'] ```
+        *Note*: when using `observation_and_action_constraint_splitter`, make
+          sure the provided `q_network` is compatible with the network-specific
+          half of the output of the
+          `observation_and_action_constraint_splitter`. In particular,
+          `observation_and_action_constraint_splitter` will be called on the
+          observation before passing to the network. If
+          `observation_and_action_constraint_splitter` is None, action
+          constraints are not applied.
       name: A name for this module. Defaults to the class name.
     """
     super(Base, self).__init__(name=name)
+    common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
     common.assert_members_are_not_overridden(base_cls=Base, instance=self)
     if not isinstance(time_step_spec, ts.TimeStep):
       raise ValueError(
@@ -157,7 +176,10 @@ class Base(tf.Module):
     self._emit_log_probability = emit_log_probability
     if emit_log_probability:
       log_probability_spec = tensor_spec.BoundedTensorSpec(
-          shape=(), dtype=tf.float32, maximum=0, minimum=-float('inf'),
+          shape=(),
+          dtype=tf.float32,
+          maximum=0,
+          minimum=-float('inf'),
           name='log_probability')
       log_probability_spec = tf.nest.map_structure(
           lambda _: log_probability_spec, action_spec)
@@ -169,6 +191,8 @@ class Base(tf.Module):
     self._clip = clip
     self._action_fn = common.function_in_tf1()(self._action)
     self._automatic_state_reset = automatic_state_reset
+    self._observation_and_action_constraint_splitter = (
+        observation_and_action_constraint_splitter)
 
   def _setup_specs(self):
     self._policy_step_spec = policy_step.PolicyStep(
@@ -183,18 +207,22 @@ class Base(tf.Module):
     """Returns the list of Variables that belong to the policy."""
     return self._variables()
 
-  # TODO(kbanoop): Consider get_initial_state(inputs=None, batch_size=None).
+  @property
+  def observation_and_action_constraint_splitter(self):
+    return self._observation_and_action_constraint_splitter
+
   def get_initial_state(self, batch_size):
     """Returns an initial state usable by the policy.
 
     Args:
-      batch_size: The batch shape.
+      batch_size: Tensor or constant: size of the batch dimension. Can be None
+        in which case not dimensions gets added.
 
     Returns:
       A nested object of type `policy_state` containing properly
       initialized Tensors.
     """
-    return self._get_initial_state(batch_size=batch_size)
+    return self._get_initial_state(batch_size)
 
   def _maybe_reset_state(self, time_step, policy_state):
     if policy_state is ():  # pylint: disable=literal-comparison
@@ -309,15 +337,21 @@ class Base(tf.Module):
     tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 
-  def update(self, policy, tau=1.0, sort_variables_by_name=False):
+  def update(self,
+             policy,
+             tau=1.0,
+             tau_non_trainable=None,
+             sort_variables_by_name=False):
     """Update the current policy with another policy.
 
     This would include copying the variables from the other policy.
 
     Args:
       policy: Another policy it can update from.
-      tau: A float scalar in [0, 1]. When tau is 1.0 (default), we do a hard
-        update.
+      tau: A float scalar in [0, 1]. When tau is 1.0 (the default), we do a hard
+        update. This is used for trainable variables.
+      tau_non_trainable: A float scalar in [0, 1] for non_trainable variables.
+        If None, will copy from tau.
       sort_variables_by_name: A bool, when True would sort the variables by name
         before doing the update.
 
@@ -329,6 +363,7 @@ class Base(tf.Module):
           policy.variables(),
           self.variables(),
           tau=tau,
+          tau_non_trainable=tau_non_trainable,
           sort_variables_by_name=sort_variables_by_name)
     else:
       return tf.no_op()
@@ -429,7 +464,7 @@ class Base(tf.Module):
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """
-    seed_stream = tfd.SeedStream(seed=seed, salt='ppo_policy')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='ppo_policy')
     distribution_step = self._distribution(time_step, policy_state)
     actions = tf.nest.map_structure(
         lambda d: reparameterized_sampling.sample(d, seed=seed_stream()),
@@ -474,26 +509,15 @@ class Base(tf.Module):
 
   # Subclasses MAY optionally overwrite _get_initial_state.
   def _get_initial_state(self, batch_size):
-    """Default implementation of `get_initial_state`.
-
-    This implementation returns tensors of all zeros matching `batch_size` and
-    spec `self.policy_state_spec`.
+    """Returns the initial state of the policy network.
 
     Args:
-      batch_size: The batch shape.
+      batch_size: A constant or Tensor holding the batch size. Can be None, in
+        which case the state will not have a batch dimension added.
 
     Returns:
-      A nested object of type `policy_state` containing properly
-      initialized Tensors.
+      A nest of zero tensors matching the spec of the policy network state.
     """
-
-    def _zero_tensor(spec):
-      if batch_size is None:
-        shape = spec.shape
-      else:
-        spec_shape = tf.convert_to_tensor(value=spec.shape, dtype=tf.int32)
-        shape = tf.concat(([batch_size], spec_shape), axis=0)
-      dtype = spec.dtype
-      return tf.zeros(shape, dtype)
-
-    return tf.nest.map_structure(_zero_tensor, self._policy_state_spec)
+    return tensor_spec.zero_spec_nest(
+        self._policy_state_spec,
+        outer_dims=None if batch_size is None else [batch_size])

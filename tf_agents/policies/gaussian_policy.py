@@ -74,7 +74,7 @@ class GaussianPolicy(tf_policy.Base):
     return self._wrapped_policy.variables()
 
   def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='gaussian_noise')
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='gaussian_noise')
 
     action_step = self._wrapped_policy.action(time_step, policy_state,
                                               seed_stream())

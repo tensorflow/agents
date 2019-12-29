@@ -120,10 +120,10 @@ class SequentialLayer(tf.keras.layers.Layer):
       values.update(l.regularizers)
     return list(values)
 
-  def call(self, inputs):
+  def call(self, inputs, training=False):
     outputs = inputs
     for l in self.layers:
-      outputs = l(outputs)
+      outputs = l(outputs, training=training)
     return outputs
 
   def get_config(self):

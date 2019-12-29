@@ -104,12 +104,12 @@ class ActorNetwork(network.Network):
 
     self._output_tensor_spec = output_tensor_spec
 
-  def call(self, observations, step_type=(), network_state=()):
+  def call(self, observations, step_type=(), network_state=(), training=False):
     del step_type  # unused.
     observations = tf.nest.flatten(observations)
     output = tf.cast(observations[0], tf.float32)
     for layer in self._mlp_layers:
-      output = layer(output)
+      output = layer(output, training=training)
 
     actions = common.scale_to_spec(output, self._single_action_spec)
     output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,

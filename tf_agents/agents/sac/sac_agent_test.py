@@ -137,7 +137,7 @@ class SacAgentTest(test_utils.TestCase):
         actor_policy_ctor=DummyActorPolicy)
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_steps = ts.restart(observations)
+    time_steps = ts.restart(observations, batch_size=2)
     actions = tf.constant([[5], [6]], dtype=tf.float32)
 
     rewards = tf.constant([10, 20], dtype=tf.float32)

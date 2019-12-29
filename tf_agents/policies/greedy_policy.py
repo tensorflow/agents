@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
@@ -34,6 +35,7 @@ class DeterministicWithLogProb(tfp.distributions.Deterministic):
     return tf.math.log(tf.cast(self.prob(x), dtype=tf.float32))
 
 
+@gin.configurable(module='tf_agents', blacklist=['policy'])
 class GreedyPolicy(tf_policy.Base):
   """Returns greedy samples of a given policy."""
 

@@ -30,10 +30,10 @@ class ShiftedCategoricalTest(tf.test.TestCase):
         logits=[100.0, 100.0, 100.0], shift=2)
     copy = distribution.copy()
     with self.cached_session() as s:
-      probs_np = s.run(copy.probs)
-      logits_np = s.run(copy.logits)
-      ref_probs_np = s.run(distribution.probs)
-      ref_logits_np = s.run(distribution.logits)
+      probs_np = s.run(copy.probs_parameter())
+      logits_np = s.run(copy.logits_parameter())
+      ref_probs_np = s.run(distribution.probs_parameter())
+      ref_logits_np = s.run(distribution.logits_parameter())
     self.assertAllEqual(ref_logits_np, logits_np)
     self.assertAllEqual(ref_probs_np, probs_np)
 
