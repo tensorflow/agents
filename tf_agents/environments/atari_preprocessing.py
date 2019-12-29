@@ -196,7 +196,7 @@ class AtariPreprocessing(gym_core.Wrapper):
           out=self.screen_buffer[0])
 
     transformed_image = cv2.resize(
-        self.screen_buffer[0], (self.screen_size, self.screen_size),
+        self.screen_buffer[1], (self.screen_size, self.screen_size),
         interpolation=cv2.INTER_AREA)
     int_image = np.asarray(transformed_image, dtype=np.uint8)
     return np.expand_dims(int_image, axis=2)
