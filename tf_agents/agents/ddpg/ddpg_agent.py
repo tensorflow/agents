@@ -296,10 +296,6 @@ class DdpgAgent(tf_agent.TFAgent):
       target_critic_net_input = (next_time_steps.observation, target_actions)
       target_q_values, _ = self._target_critic_network(
           target_critic_net_input, next_time_steps.step_type)
-      if len(target_q_values.shape) != 1:
-        raise ValueError('Q-network should output a tensor of shape (batch,) '
-                         'but shape {} was returned.'.format(
-                             target_q_values.shape.as_list()))
 
       td_targets = tf.stop_gradient(
           self._reward_scale_factor * next_time_steps.reward +
