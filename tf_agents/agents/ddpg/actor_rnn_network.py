@@ -121,7 +121,7 @@ class ActorRnnNetwork(network.Network):
     self._action_layers = action_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, observation, step_type, network_state=None, training=False):
+  def call(self, observation, step_type, network_state=(), training=False):
     num_outer_dims = nest_utils.get_outer_rank(observation,
                                                self.input_tensor_spec)
     if num_outer_dims not in (1, 2):

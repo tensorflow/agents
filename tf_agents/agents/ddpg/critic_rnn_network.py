@@ -142,7 +142,7 @@ class CriticRnnNetwork(network.Network):
     self._output_layers = output_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, inputs, step_type, network_state=None, training=False):
+  def call(self, inputs, step_type, network_state=(), training=False):
     observation, action = inputs
     observation_spec, _ = self.input_tensor_spec
     num_outer_dims = nest_utils.get_outer_rank(observation,

@@ -248,7 +248,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
       ValueError: if static batch sizes within input tensors don't match.
       ValueError: if `initial_state` is `None` and `self.dtype` is `None`.
     """
-    if initial_state is None and self.dtype is None:
+    if not initial_state and self.dtype is None:
       raise ValueError("Must provide either dtype or initial_state")
 
     # Assume all inputs are batch major.  Convert to time major.
@@ -270,7 +270,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
             "batch_size is not the same for all the elements in the input. "
             "Saw values %s and %s" % (const_batch_size, got_batch_size))
 
-    if initial_state is None:
+    if not initial_state:
       dtype = self.dtype
       initial_state = zero_state = self.cell.get_initial_state(
           batch_size=batch_size, dtype=self.dtype)

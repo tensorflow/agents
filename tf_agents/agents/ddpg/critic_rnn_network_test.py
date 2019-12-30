@@ -49,7 +49,8 @@ class CriticRnnNetworkTest(tf.test.TestCase):
 
     network_input = (time_step.observation, action)
     q_values, network_state = net(network_input,
-                                  time_step.step_type)
+                                  time_step.step_type,
+                                  net.get_initial_state(batch_size=1))
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1], q_values.shape.as_list())

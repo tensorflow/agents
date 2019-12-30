@@ -38,7 +38,7 @@ class CategoricalProjectionNetworkTest(tf.test.TestCase):
 
     inputs = _get_inputs(batch_size=3, num_input_dims=5)
 
-    distribution = network(inputs, outer_rank=1)
+    distribution, _ = network(inputs, outer_rank=1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     sample = self.evaluate(distribution.sample())
 

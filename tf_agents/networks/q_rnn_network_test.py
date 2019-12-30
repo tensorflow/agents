@@ -39,7 +39,9 @@ class QRnnNetworkTest(tf.test.TestCase):
 
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(
-        first_time_step.observation, first_time_step.step_type)
+        first_time_step.observation, first_time_step.step_type,
+        network_state=rnn_network.get_initial_state(batch_size=1)
+    )
     self.assertEqual((1, 2), q_values.shape)
     self.assertEqual((1, 40), state[0].shape)
     self.assertEqual((1, 40), state[1].shape)
@@ -67,7 +69,8 @@ class QRnnNetworkTest(tf.test.TestCase):
             [1], tf.int32, 0, num_actions - 1))
     empty_step_type = tf.constant(
         [[time_step.StepType.FIRST] * frames] * batch_size)
-    q_values, _ = network(states, empty_step_type)
+    q_values, _ = network(states, empty_step_type,
+                          network_state=network.get_initial_state(batch_size))
     self.assertAllEqual(
         q_values.shape.as_list(), [batch_size, frames, num_actions])
     # At least 2 variables each for the preprocessing layers.
@@ -94,7 +97,9 @@ class QRnnNetworkTest(tf.test.TestCase):
         action_spec=tensor_spec.BoundedTensorSpec(
             [1], tf.int32, 0, num_actions - 1))
     empty_step_type = tf.constant([time_step.StepType.FIRST] * batch_size)
-    q_values, _ = network(states, empty_step_type)
+    q_values, _ = network(
+        states, empty_step_type,
+        network_state=network.get_initial_state(batch_size=batch_size))
 
     # Processed 1 time step and the time axis was squeezed back.
     self.assertAllEqual(
@@ -111,7 +116,9 @@ class QRnnNetworkTest(tf.test.TestCase):
 
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(
-        first_time_step.observation, first_time_step.step_type)
+        first_time_step.observation, first_time_step.step_type,
+        network_state=rnn_network.get_initial_state(batch_size=1)
+    )
     tf.nest.assert_same_structure(rnn_network.state_spec, state)
     self.assertEqual(2, len(state))
 

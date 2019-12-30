@@ -108,7 +108,7 @@ ATARI_FRAME_SKIP = 4
 class AtariCategoricalQNetwork(categorical_q_network.CategoricalQNetwork):
   """CategoricalQNetwork subclass that divides observations by 255."""
 
-  def call(self, observation, step_type=None, network_state=None):
+  def call(self, observation, step_type=None, network_state=()):
     state = tf.cast(observation, tf.float32)
     # We divide the grayscale pixel values by 255 here rather than storing
     # normalized values beause uint8s are 4x cheaper to store than float32s.

@@ -50,7 +50,7 @@ class MockNetwork(BaseNetwork):
     self.var2 = common.create_variable('trainable_variable', trainable=True)
 
   def call(self, observations, step_type, network_state=None):
-    return self.var1 + self.var2
+    return self.var1 + self.var2, ()
 
 
 class NoInitNetwork(MockNetwork):

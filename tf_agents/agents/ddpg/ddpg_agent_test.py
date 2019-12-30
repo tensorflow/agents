@@ -82,7 +82,7 @@ class DummyCriticNetwork(network.Network):
         kernel_initializer=tf.compat.v1.initializers.constant([1, 3, 2]),
         bias_initializer=tf.compat.v1.initializers.constant([4]))
 
-  def call(self, inputs, step_type=None, network_state=None):
+  def call(self, inputs, step_type=None, network_state=()):
     observations, actions = inputs
     del step_type
     observations = self._obs_layer(tf.nest.flatten(observations)[0])

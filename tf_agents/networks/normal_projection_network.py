@@ -174,4 +174,4 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     means = batch_squash.unflatten(means)
     stds = batch_squash.unflatten(stds)
 
-    return self.output_spec.build_distribution(loc=means, scale=stds)
+    return self.output_spec.build_distribution(loc=means, scale=stds), ()

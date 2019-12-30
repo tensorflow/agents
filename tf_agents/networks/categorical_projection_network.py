@@ -110,4 +110,4 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
     logits = tf.reshape(logits, [-1] + self._output_shape.as_list())
     logits = batch_squash.unflatten(logits)
 
-    return self.output_spec.build_distribution(logits=logits)
+    return self.output_spec.build_distribution(logits=logits), ()

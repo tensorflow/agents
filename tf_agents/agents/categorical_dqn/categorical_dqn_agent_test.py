@@ -125,7 +125,7 @@ class DummyCategoricalQRnnNetwork(q_rnn_network.QRnnNetwork):
   def num_atoms(self):
     return self._num_atoms
 
-  def call(self, observations, step_type=None, network_state=None):
+  def call(self, observations, step_type=None, network_state=()):
     logits, network_state = super(DummyCategoricalQRnnNetwork, self).call(
         observations, step_type, network_state)
     shape = logits.shape.as_list()

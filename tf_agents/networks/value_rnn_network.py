@@ -123,7 +123,7 @@ class ValueRnnNetwork(network.Network):
   def call(self,
            observation,
            step_type=None,
-           network_state=None,
+           network_state=(),
            training=False):
     state, network_state = self._lstm_encoder(
         observation, step_type=step_type, network_state=network_state,

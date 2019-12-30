@@ -168,5 +168,6 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         training=training)
     outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
     output_actions = tf.nest.map_structure(
-        lambda proj_net: proj_net(state, outer_rank), self._projection_networks)
+        lambda proj_net: proj_net(state, outer_rank)[0],
+        self._projection_networks)
     return output_actions, network_state

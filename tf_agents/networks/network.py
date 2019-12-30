@@ -83,9 +83,9 @@ class _NetworkMeta(abc.ABCMeta):
         # Error case: more inputs than args.  Call init so that the appropriate
         # error can be raised to the user.
         init(self, *args, **kwargs)
-      for i, arg in enumerate(args):
-        # Add +1 to skip `self` in arg_spec.args.
-        kwargs[arg_spec.args[1 + i]] = arg
+      # Convert to a canonical kwarg format.
+      kwargs = tf_inspect.getcallargs(init, self, *args, **kwargs)
+      kwargs.pop("self")
       init(self, **kwargs)
       # Avoid auto tracking which prevents keras from tracking layers that are
       # passed as kwargs to the Network.
@@ -167,8 +167,42 @@ class Network(keras_network.Network):
     return type(self)(**dict(self._saved_kwargs, **kwargs))
 
   def __call__(self, inputs, *args, **kwargs):
+    """A wrapper around `Network.call`.
+
+    A typical `call` method in a class subclassing `Network` looks like this:
+
+    ```python
+    def call(self,
+             observation,
+             step_type=None,
+             network_state=(),
+             training=False):
+        ...
+        return outputs, new_network_state
+    ```
+    In this case, we will validate the first argument (`observation`)
+    against `self.input_tensor_spec`.
+
+    If a `network_state` kwarg is given it is also validated against
+    `self.state_spec`.  Similarly, the return value
+    of the `call` method is expected to be a tuple/list with 2 values:
+    `(output, new_state)`; we validate `new_state` against `self.state_spec`.
+
+    Args:
+      inputs: The inputs to `self.call`, matching `self.input_state_spec`.
+      *args: Additional arguments to `self.call`.
+      **kwargs: Additional keyword arguments to `self.call`.
+
+    Returns:
+      A tuple `(outputs, new_network_state)`.
+    """
     tf.nest.assert_same_structure(inputs, self.input_tensor_spec)
-    return super(Network, self).__call__(inputs, *args, **kwargs)
+    network_state = kwargs.get("network_state", None)
+    if network_state is not None:
+      tf.nest.assert_same_structure(network_state, self.state_spec)
+    outputs, new_state = super(Network, self).__call__(inputs, *args, **kwargs)
+    tf.nest.assert_same_structure(new_state, self.state_spec)
+    return outputs, new_state
 
   def _check_trainable_weights_consistency(self):
     """Check trainable weights count consistency.
@@ -181,6 +215,33 @@ class Network(keras_network.Network):
     """
     # TODO(b/143631010): If recognized and fixed, remove this entire method.
     return
+
+  def get_initial_state(self, batch_size=None):
+    """Returns an initial state usable by the network.
+
+    Args:
+      batch_size: Tensor or constant: size of the batch dimension. Can be None
+        in which case not dimensions gets added.
+
+    Returns:
+      A nested object of type `self.state_spec` containing properly
+      initialized Tensors.
+    """
+    return self._get_initial_state(batch_size)
+
+  def _get_initial_state(self, batch_size):
+    """Returns the initial state of the policy network.
+
+    Args:
+      batch_size: A constant or Tensor holding the batch size. Can be None, in
+        which case the state will not have a batch dimension added.
+
+    Returns:
+      A nest of zero tensors matching the spec of the policy network state.
+    """
+    return tensor_spec.zero_spec_nest(
+        self._state_spec,
+        outer_dims=None if batch_size is None else [batch_size])
 
 
 class DistributionNetwork(Network):

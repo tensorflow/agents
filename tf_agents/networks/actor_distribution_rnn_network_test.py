@@ -47,8 +47,10 @@ class ActorDistributionNetworkTest(tf.test.TestCase):
         output_fc_layer_params=(5,),
         lstm_size=(3,))
 
-    action_distributions, network_state = net(time_step.observation,
-                                              time_step.step_type)
+    action_distributions, network_state = net(
+        time_step.observation,
+        time_step.step_type,
+        net.get_initial_state(batch_size=1))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], action_distributions[0].mode().shape.as_list())
     self.assertEqual([1, 3], action_distributions[1].mode().shape.as_list())

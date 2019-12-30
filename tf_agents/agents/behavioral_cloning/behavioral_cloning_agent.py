@@ -91,7 +91,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         The network will be called as
 
           ```
-          network(observation, step_type, network_state=None)
+          network(observation, step_type, network_state=())
           ```
         (with `network_state` optional) and must return a 2-tuple with elements
         `(output, next_network_state)` where `output` will be passed as the
