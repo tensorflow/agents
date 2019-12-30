@@ -135,18 +135,22 @@ class GymWrapperSpecTest(absltest.TestCase):
     self.assertEqual(2, tuple_in_dict[1].maximum)
 
   def test_spec_from_gym_space_dict(self):
-    dict_space = gym.spaces.Dict({
-        'spec_1': gym.spaces.Discrete(2),
-        'spec_2': gym.spaces.Box(-1.0, 1.0, (3, 4)),
-    })
+    dict_space = gym.spaces.Dict([
+        ('spec_2', gym.spaces.Box(-1.0, 1.0, (3, 4))),
+        ('spec_1', gym.spaces.Discrete(2)),
+    ])
+
     spec = gym_wrapper._spec_from_gym_space(dict_space)
 
+    keys = list(spec.keys())
+    self.assertEqual('spec_1', keys[1])
     self.assertEqual(2, len(spec))
     self.assertEqual((), spec['spec_1'].shape)
     self.assertEqual(np.int64, spec['spec_1'].dtype)
     self.assertEqual(0, spec['spec_1'].minimum)
     self.assertEqual(1, spec['spec_1'].maximum)
 
+    self.assertEqual('spec_2', keys[0])
     self.assertEqual((3, 4), spec['spec_2'].shape)
     self.assertEqual(np.float32, spec['spec_2'].dtype)
     np.testing.assert_array_almost_equal(

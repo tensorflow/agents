@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import gym
 import gym.spaces
 import numpy as np
@@ -48,6 +49,7 @@ def _spec_from_gym_space(space, dtype_map=None):
   Args:
     space: gym.Space to turn into a spec.
     dtype_map: A dict from specs to dtypes to use as the default dtype.
+
   Returns:
     A BoundedArraySpec nest mirroring the given space structure.
   Raises:
@@ -74,10 +76,8 @@ def _spec_from_gym_space(space, dtype_map=None):
   elif isinstance(space, gym.spaces.Tuple):
     return tuple([_spec_from_gym_space(s, dtype_map) for s in space.spaces])
   elif isinstance(space, gym.spaces.Dict):
-    return {
-        key: _spec_from_gym_space(s, dtype_map)
-        for key, s in space.spaces.items()
-    }
+    return collections.OrderedDict([(key, _spec_from_gym_space(s, dtype_map))
+                                    for key, s in space.spaces.items()])
   else:
     raise ValueError(
         'The gym space {} is currently not supported.'.format(space))
@@ -106,11 +106,9 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
     # TODO(sfishman): Add test for auto_reset param.
     self._auto_reset = auto_reset
     self._observation_spec = _spec_from_gym_space(
-        self._gym_env.observation_space,
-        spec_dtype_map)
-    self._action_spec = _spec_from_gym_space(
-        self._gym_env.action_space,
-        spec_dtype_map)
+        self._gym_env.observation_space, spec_dtype_map)
+    self._action_spec = _spec_from_gym_space(self._gym_env.action_space,
+                                             spec_dtype_map)
     self._flat_obs_spec = nest.flatten(self._observation_spec)
     self._info = None
     self._done = True
@@ -167,6 +165,7 @@ class GymWrapper(wrappers.PyEnvironmentBaseWrapper):
 
     Args:
       observation: Observation to match the dtype on.
+
     Returns:
       The observation with a dtype matching the observation spec.
     """
