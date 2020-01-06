@@ -56,6 +56,10 @@ class GreedyPolicy(tf_policy.Base):
         name=name)
     self._wrapped_policy = policy
 
+  @property
+  def wrapped_policy(self):
+    return self._wrapped_policy
+
   def _variables(self):
     return self._wrapped_policy.variables()
 

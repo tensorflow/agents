@@ -73,6 +73,10 @@ class EpsilonGreedyPolicy(tf_policy.Base):
             observation_and_action_constraint_splitter),
         name=name)
 
+  @property
+  def wrapped_policy(self):
+    return self._greedy_policy.wrapped_policy
+
   def _variables(self):
     return self._greedy_policy.variables()
 
