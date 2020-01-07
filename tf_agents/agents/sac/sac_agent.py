@@ -60,6 +60,9 @@ class SacAgent(tf_agent.TFAgent):
                actor_optimizer,
                critic_optimizer,
                alpha_optimizer,
+               actor_loss_weight=1.0,
+               critic_loss_weight=0.5,
+               alpha_loss_weight=1.0,
                actor_policy_ctor=actor_policy.ActorPolicy,
                critic_network_2=None,
                target_critic_network=None,
@@ -88,6 +91,9 @@ class SacAgent(tf_agent.TFAgent):
       actor_optimizer: The optimizer to use for the actor network.
       critic_optimizer: The default optimizer to use for the critic network.
       alpha_optimizer: The default optimizer to use for the alpha variable.
+      actor_loss_weight: The weight on actor loss.
+      critic_loss_weight: The weight on critic loss.
+      alpha_loss_weight: The weight on alpha loss.
       actor_policy_ctor: The policy class to use.
       critic_network_2: (Optional.)  A `tf_agents.network.Network` to be used as
         the second critic network during Q learning.  The weights from
@@ -196,6 +202,9 @@ class SacAgent(tf_agent.TFAgent):
     self._actor_optimizer = actor_optimizer
     self._critic_optimizer = critic_optimizer
     self._alpha_optimizer = alpha_optimizer
+    self._actor_loss_weight = actor_loss_weight
+    self._critic_loss_weight = critic_loss_weight
+    self._alpha_loss_weight = alpha_loss_weight
     self._td_errors_loss_fn = td_errors_loss_fn
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
@@ -271,7 +280,7 @@ class SacAgent(tf_agent.TFAgent):
       assert trainable_critic_variables, ('No trainable critic variables to '
                                           'optimize.')
       tape.watch(trainable_critic_variables)
-      critic_loss = self.critic_loss(
+      critic_loss = self._critic_loss_weight*self.critic_loss(
           time_steps,
           actions,
           next_time_steps,
@@ -291,7 +300,8 @@ class SacAgent(tf_agent.TFAgent):
       assert trainable_actor_variables, ('No trainable actor variables to '
                                          'optimize.')
       tape.watch(trainable_actor_variables)
-      actor_loss = self.actor_loss(time_steps, weights=weights)
+      actor_loss = self._actor_loss_weight*self.actor_loss(
+          time_steps, weights=weights)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
     actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
     self._apply_gradients(actor_grads, trainable_actor_variables,
@@ -301,7 +311,8 @@ class SacAgent(tf_agent.TFAgent):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       assert alpha_variable, 'No alpha variable to optimize.'
       tape.watch(alpha_variable)
-      alpha_loss = self.alpha_loss(time_steps, weights=weights)
+      alpha_loss = self._alpha_loss_weight*self.alpha_loss(
+          time_steps, weights=weights)
     tf.debugging.check_numerics(alpha_loss, 'Alpha loss is inf or nan.')
     alpha_grads = tape.gradient(alpha_loss, alpha_variable)
     self._apply_gradients(alpha_grads, alpha_variable, self._alpha_optimizer)
