@@ -80,10 +80,10 @@ class TFPyPolicy(tf_policy.Base):
 
   # Wrapped in common.function to avoid failures in eager mode. This happens
   # when the policy_state is empty and it gets dropped by tf.nest.flatten
-  # # in the py_func.
+  # # in the numpy_function
   @common.function
   def _get_initial_state(self, batch_size):
-    """Invokes  python policy reset through py_func.
+    """Invokes  python policy reset through numpy_function.
 
     Args:
       batch_size: Batch size for the get_initial_state tensor(s).
@@ -100,17 +100,16 @@ class TFPyPolicy(tf_policy.Base):
           self._py_policy.get_initial_state(batch_size=batch_size))
 
     with tf.name_scope('get_initial_state'):
-      flat_policy_state = tf.compat.v1.py_func(
+      flat_policy_state = tf.numpy_function(
           _get_initial_state_fn, [batch_size],
           self._policy_state_dtypes,
-          stateful=False,
-          name='get_initial_state_py_func')
+          name='get_initial_state_numpy_function')
       return tf.nest.pack_sequence_as(
           structure=self.policy_state_spec, flat_sequence=flat_policy_state)
 
   # Wrapped in common.function to avoid failures in eager mode. This happens
   # when empty fields in the policy_step get dropped by tf.nest.flatten
-  # in the py_func.
+  # in the numpy_function.
   @common.function
   def _action(self, time_step, policy_state, seed):
     if seed is not None:
@@ -130,12 +129,11 @@ class TFPyPolicy(tf_policy.Base):
       flattened_input_tensors = tf.nest.flatten(
           (nest_utils.unbatch_nested_tensors(time_step), policy_state))
 
-      flat_action_step = tf.compat.v1.py_func(
+      flat_action_step = tf.numpy_function(
           _action_fn,
           flattened_input_tensors,
           self._policy_step_dtypes,
-          stateful=True,
-          name='action_py_func')
+          name='action_numpy_function')
       action_step = tf.nest.pack_sequence_as(
           structure=self.policy_step_spec, flat_sequence=flat_action_step)
       return action_step._replace(

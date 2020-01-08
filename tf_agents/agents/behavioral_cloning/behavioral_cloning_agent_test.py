@@ -33,9 +33,10 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+from tf_agents.utils import test_utils
 
 # Number of times to train in test loops.
-TRAIN_ITERATIONS = 150
+TRAIN_ITERATIONS = 10
 
 
 class DummyNet(network.Network):
@@ -74,11 +75,10 @@ class ActorBCAgent(behavioral_cloning_agent.BehavioralCloningAgent):
     return policy, policy
 
 
-class BehavioralCloningAgentTest(tf.test.TestCase):
+class BehavioralCloningAgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(BehavioralCloningAgentTest, self).setUp()
-    tf.compat.v1.enable_resource_variables()
     self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
@@ -185,7 +185,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
         time_step_spec,
         action_spec,
         cloning_network=cloning_net,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01),
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001),
         num_outer_dims=2)
     # Disable clipping to make sure we can see the difference in behavior
     agent.policy._clip = False
@@ -201,6 +201,7 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
     initial_actions = self.evaluate(replay.run(traj)[0])
     for _ in range(TRAIN_ITERATIONS):
       self.evaluate(train_and_loss)
+      post_training_actions = self.evaluate(replay.run(traj)[0])
     post_training_actions = self.evaluate(replay.run(traj)[0])
     # We don't necessarily converge to the same actions as in trajectory after
     # 10 steps of an untuned optimizer, but the policy does change.
@@ -312,4 +313,4 @@ class BehavioralCloningAgentTest(tf.test.TestCase):
 
 
 if __name__ == '__main__':
-  tf.test.main()
+  test_utils.main()
