@@ -167,7 +167,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         action_spec,
         policy,
         collect_policy,
-        train_sequence_length=1 if not cloning_network.state_spec else None,
+        train_sequence_length=None,
         num_outer_dims=num_outer_dims,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,

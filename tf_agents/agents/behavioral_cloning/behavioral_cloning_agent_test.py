@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 
@@ -75,7 +76,7 @@ class ActorBCAgent(behavioral_cloning_agent.BehavioralCloningAgent):
     return policy, policy
 
 
-class BehavioralCloningAgentTest(test_utils.TestCase):
+class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(BehavioralCloningAgentTest, self).setUp()
@@ -173,12 +174,15 @@ class BehavioralCloningAgentTest(test_utils.TestCase):
 
     self.assertAllClose(total_loss, expected_loss)
 
-  def testTrain(self):
+  @parameterized.named_parameters(('TrainOnMultipleSteps', False),
+                                  ('TrainOnSingleStep', True))
+  def testTrainWithNN(self, is_convert):
     # Emits trajectories shaped (batch=1, time=6, ...)
     traj, time_step_spec, action_spec = (
         driver_test_utils.make_random_trajectory())
-    # Convert to shapes (batch=6, 1, ...) so this works with a non-RNN model.
-    traj = tf.nest.map_structure(common.transpose_batch_time, traj)
+    if is_convert:
+      # Convert to single step trajectory of shapes (batch=6, 1, ...).
+      traj = tf.nest.map_structure(common.transpose_batch_time, traj)
     cloning_net = q_network.QNetwork(
         time_step_spec.observation, action_spec)
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
