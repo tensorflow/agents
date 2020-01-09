@@ -220,11 +220,12 @@ def train_eval(
     train_checkpointer.initialize_or_restore()
     rb_checkpointer.initialize_or_restore()
 
-    initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
-        tf_env,
-        initial_collect_policy,
-        observers=replay_observer,
-        num_steps=initial_collect_steps)
+    if replay_buffer.num_frames() == 0:
+      initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
+          tf_env,
+          initial_collect_policy,
+          observers=replay_observer + train_metrics,
+          num_steps=initial_collect_steps)
 
     collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
@@ -286,21 +287,23 @@ def train_eval(
         train_loss = train_step()
       time_acc += time.time() - start_time
 
-      if global_step.numpy() % log_interval == 0:
-        logging.info('step = %d, loss = %f', global_step.numpy(),
+      global_step_val = global_step.numpy()
+
+      if global_step_val % log_interval == 0:
+        logging.info('step = %d, loss = %f', global_step_val,
                      train_loss.loss)
-        steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
+        steps_per_sec = (global_step_val - timed_at_step) / time_acc
         logging.info('%.3f steps/sec', steps_per_sec)
         tf.compat.v2.summary.scalar(
             name='global_steps_per_sec', data=steps_per_sec, step=global_step)
-        timed_at_step = global_step.numpy()
+        timed_at_step = global_step_val
         time_acc = 0
 
       for train_metric in train_metrics:
         train_metric.tf_summaries(
             train_step=global_step, step_metrics=train_metrics[:2])
 
-      if global_step.numpy() % eval_interval == 0:
+      if global_step_val % eval_interval == 0:
         results = metric_utils.eager_compute(
             eval_metrics,
             eval_tf_env,
@@ -311,10 +314,9 @@ def train_eval(
             summary_prefix='Metrics',
         )
         if eval_metrics_callback is not None:
-          eval_metrics_callback(results, global_step.numpy())
+          eval_metrics_callback(results, global_step_val)
         metric_utils.log_metrics(eval_metrics)
 
-      global_step_val = global_step.numpy()
       if global_step_val % train_checkpoint_interval == 0:
         train_checkpointer.save(global_step=global_step_val)
 
