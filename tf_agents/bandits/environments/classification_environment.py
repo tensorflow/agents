@@ -57,7 +57,7 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
   """An environment based on an arbitrary classification problem."""
 
   def __init__(self, dataset, reward_distribution, batch_size,
-               label_dtype_cast=None):
+               label_dtype_cast=None, repeat_dataset=True):
     """Initialize `ClassificationBanditEnvironment`.
 
     Args:
@@ -69,6 +69,9 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
         action `j` for an instance of class `i`.
       batch_size: if `dataset` is batched, this is the size of the batches.
       label_dtype_cast: if not None, casts dataset labels to this dtype.
+      repeat_dataset: Makes the environment iterate on the dataset once
+        avoiding `OutOfRangeError:  End of sequence` errors when the environment
+        is stepped past the end of the dataset.
     Raises:
       ValueError: if `reward_distribution` does not have an event shape with
         rank 2.
@@ -105,8 +108,10 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
         time_step_spec=time_step_spec,
         batch_size=batch_size)
 
-    self._data_iterator = eager_utils.dataset_iterator(
-        dataset.batch(batch_size, drop_remainder=True))
+    dataset = dataset.batch(batch_size, drop_remainder=True)
+    if repeat_dataset:
+      dataset.repeat()
+    self._data_iterator = eager_utils.dataset_iterator(dataset)
     self._current_label = tf.compat.v2.Variable(
         tf.zeros(batch_size, dtype=lbl_dtype))
     self._previous_label = tf.compat.v2.Variable(
