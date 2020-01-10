@@ -1,0 +1,41 @@
+upper_tabs:
+# Tabs left of dropdown menu
+- include: /_upper_tabs_left.yaml
+- include: /api_docs/_upper_tabs_api.yaml
+# Dropdown menu
+- name: Resources
+  path: /resources
+  is_default: true
+  menu:
+  - include: /resources/_menu_toc.yaml
+  lower_tabs:
+    # Subsite tabs
+    other:
+    - name: Tutorials
+      contents:
+      - title: Intro to Agents
+        path: /agents/tutorials/
+      - title: Train a Deep Q Network
+        path: /agents/tutorials/1_dqn_tutorial
+      - title: /agents/Environments
+        path: /agents/tutorials/2_environments_tutorial
+      - title: Policies
+        path: /agents/tutorials/3_policies_tutorial
+      - title: Drivers
+        path: /agents/tutorials/4_drivers_tutorial
+      - title: Replay Buffers
+        path: /agents/tutorials/5_replay_buffers_tutorial
+      - title: REINFORCE Agent
+        path: /agents/tutorials/6_reinforce_tutorial
+      - title: Soft Actor Critic in Minitaur
+        path: /agents/tutorials/7_SAC_minitaur_tutorial
+      - title: Networks
+        path: /agents/tutorials/8_networks_tutorial
+      - title: Categorical DQN
+        path: /agents/tutorials/9_c51_tutorial
+    - name: API
+      skip_translation: true
+      contents:
+      - include: /agents/api_docs/python/_toc.yaml
+
+- include: /_upper_tabs_right.yaml

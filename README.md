@@ -52,8 +52,8 @@ Currently the following algorithms are available under TF-Agents:
 <a id='Tutorials'></a>
 ## Tutorials
 
-See [`tf_agents/colabs/`](tf_agents/colabs/) for tutorials on the major
-components provided.
+See [`docs/tutorials/`](docs/tutorials) for tutorials on the major components
+provided.
 
 <a id='Multi-Armed Bandits'></a>
 
