@@ -22,23 +22,9 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 from tf_agents.policies import fixed_policy
-from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
-from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
-
-
-class DistributionPolicy(tf_policy.Base):
-  """A policy which always returns the configured distribution."""
-
-  def __init__(self, distribution, time_step_spec, action_spec, name=None):
-    self._distribution_value = distribution
-    super(DistributionPolicy, self).__init__(
-        time_step_spec, action_spec, name=name)
-
-  def _distribution(self, time_step, policy_state):
-    return policy_step.PolicyStep(self._distribution_value, policy_state)
 
 
 class FixedPolicyTest(test_utils.TestCase):
