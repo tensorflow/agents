@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """A Soft Actor-Critic Agent.
 
 Implements the Soft Actor-Critic (SAC) algorithm from
@@ -26,6 +27,7 @@ from __future__ import print_function
 import collections
 import gin
 import numpy as np
+from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 

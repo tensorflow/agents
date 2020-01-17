@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """A PPO Agent.
 
 Implements the PPO algorithm from (Schulman, 2017):
@@ -61,6 +62,8 @@ import collections
 from absl import logging
 
 import gin
+from six.moves import range
+from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent

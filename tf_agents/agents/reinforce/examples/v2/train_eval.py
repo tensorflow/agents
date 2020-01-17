@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 r"""Train and Eval REINFORCE.
 
 To run:
@@ -37,6 +38,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
+from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.reinforce import reinforce_agent

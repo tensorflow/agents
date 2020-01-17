@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """Benchmarks for DqnAgent."""
 
 from __future__ import absolute_import
@@ -22,6 +23,7 @@ from __future__ import print_function
 import unittest
 
 import numpy as np
+from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.benchmark import distribution_strategy_utils

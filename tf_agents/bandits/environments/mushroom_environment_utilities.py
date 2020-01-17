@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """Helper functions for the mushroom dataset.
 
 The dataset is expected to be a CSV with the first column being the label, the
@@ -27,6 +28,8 @@ from __future__ import print_function
 import gin
 import numpy as np
 
+from six.moves import range
+from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
@@ -63,7 +66,7 @@ def _one_hot(data):
   encoded = np.array([], dtype=np.int32).reshape((num_rows, 0))
   for i in range(num_cols):
     vocabulary = sorted(list(set(data[:, i])))
-    lookup = dict(zip(vocabulary, range(len(vocabulary))))
+    lookup = dict(list(zip(vocabulary, list(range(len(vocabulary))))))
     int_encoded = np.array([lookup[x] for x in data[:, i]])
     new_cols = np.eye(len(vocabulary), dtype=np.int32)[int_encoded]
     encoded = np.append(encoded, new_cols, axis=1)

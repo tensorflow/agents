@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """Tests for tf_agents.networks.encoding_network."""
 
 from __future__ import absolute_import
@@ -191,7 +192,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllEqual(out.shape.as_list(), [3, 2])
 
   def test_preprocessing_layers_no_combiner_error(self):
-    with self.assertRaisesRegexp(ValueError, 'required'):
+    with self.assertRaisesRegex(ValueError, 'required'):
       encoding_network.EncodingNetwork(
           input_tensor_spec=[
               tensor_spec.TensorSpec([5], tf.float32),
@@ -205,7 +206,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
           fc_layer_params=(2,))
 
   def test_error_raised_if_missing_preprocessing_layer(self):
-    with self.assertRaisesRegexp(ValueError, 'sequence length'):
+    with self.assertRaisesRegex(ValueError, 'sequence length'):
       encoding_network.EncodingNetwork(
           input_tensor_spec=[
               tensor_spec.TensorSpec([5], tf.float32),
@@ -218,7 +219,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
           fc_layer_params=(2,))
 
   def test_error_raised_extra_preprocessing_layer(self):
-    with self.assertRaisesRegexp(ValueError, 'sequence length'):
+    with self.assertRaisesRegex(ValueError, 'sequence length'):
       encoding_network.EncodingNetwork(
           input_tensor_spec=tensor_spec.TensorSpec([5], tf.float32),
           preprocessing_layers=[
@@ -283,7 +284,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     column = tf.feature_column.numeric_column(key, [state_dims])
     input_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
     dense_features = tf.compat.v1.keras.layers.DenseFeatures([column])
-    with self.assertRaisesRegexp(ValueError, 'DenseFeatures'):
+    with self.assertRaisesRegex(ValueError, 'DenseFeatures'):
       encoding_network.EncodingNetwork(
           input_spec, preprocessing_combiner=dense_features)
 
@@ -362,7 +363,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     specs[numeric_key] = tensor_spec.TensorSpec([state_dims], tf.int32)
     expected_dim += state_dims
 
-    dense_features = tf.compat.v2.keras.layers.DenseFeatures(columns.values())
+    dense_features = tf.compat.v2.keras.layers.DenseFeatures(
+        list(columns.values()))
     network = encoding_network.EncodingNetwork(
         specs, preprocessing_combiner=dense_features)
 

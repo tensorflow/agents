@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """Utility functions for configuring environments with Gin."""
 
 from __future__ import absolute_import
@@ -22,6 +23,7 @@ from __future__ import print_function
 import functools
 import gin
 import numpy as np
+from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import wheel_py_environment
