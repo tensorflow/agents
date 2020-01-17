@@ -330,16 +330,18 @@ def unstack_nested_tensors(tensors, specs):
   ]
 
 
-def stack_nested_tensors(tensors):
-  """Stacks a list of nested tensors along the first dimension.
+def stack_nested_tensors(tensors, axis=0):
+  """Stacks a list of nested tensors along the dimension specified.
 
   Args:
-    tensors: A list of nested tensors to be stacked along the first dimension.
+    tensors: A list of nested tensors to be stacked.
+    axis: the axis along which the stack operation is applied.
 
   Returns:
     A stacked nested tensor.
   """
-  return tf.nest.map_structure(lambda *tensors: tf.stack(tensors), *tensors)
+  return tf.nest.map_structure(lambda *tensors: tf.stack(tensors, axis=axis),
+                               *tensors)
 
 
 def flatten_multi_batched_nested_tensors(tensors, specs):

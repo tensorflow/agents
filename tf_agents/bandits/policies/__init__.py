@@ -20,5 +20,6 @@ from tf_agents.bandits.policies import greedy_reward_prediction_policy
 from tf_agents.bandits.policies import lin_ucb_policy
 from tf_agents.bandits.policies import linalg
 from tf_agents.bandits.policies import linear_thompson_sampling_policy
+from tf_agents.bandits.policies import mixture_policy
 from tf_agents.bandits.policies import neural_linucb_policy
 from tf_agents.bandits.policies import policy_utilities

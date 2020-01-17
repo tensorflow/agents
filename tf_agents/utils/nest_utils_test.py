@@ -501,6 +501,19 @@ class NestedTensorsTest(tf.test.TestCase):
     assert_shapes = lambda tensor: self.assertEqual(tensor.shape, batched_shape)
     tf.nest.map_structure(assert_shapes, stacked_tensor)
 
+  def testStackNestedTensorsAxis1(self):
+    shape = [5, 8]
+    stack_dim = 3
+    stacked_shape = [5, 3, 8]
+
+    specs = self.nest_spec(shape, include_sparse=False)
+    unstacked_tensors = [self.zeros_from_spec(specs)] * stack_dim
+    stacked_tensor = nest_utils.stack_nested_tensors(unstacked_tensors, axis=1)
+
+    tf.nest.assert_same_structure(specs, stacked_tensor)
+    assert_shapes = lambda tensor: self.assertEqual(tensor.shape, stacked_shape)
+    tf.nest.map_structure(assert_shapes, stacked_tensor)
+
   def testUnBatchedNestedTensors(self, include_sparse=False):
     shape = [2, 3]
 
