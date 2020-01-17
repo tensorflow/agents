@@ -22,7 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 from absl.testing.absltest import mock
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.agents.reinforce import reinforce_agent

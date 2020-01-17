@@ -61,7 +61,7 @@ import collections
 from absl import logging
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_policy

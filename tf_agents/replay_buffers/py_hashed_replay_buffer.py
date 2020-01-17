@@ -29,7 +29,7 @@ import threading
 from absl import logging
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import trajectory

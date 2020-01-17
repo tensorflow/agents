@@ -22,7 +22,7 @@ from __future__ import print_function
 import abc
 import six
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tensorflow.keras import layers  # pylint: disable=unused-import
 from tf_agents.specs import tensor_spec

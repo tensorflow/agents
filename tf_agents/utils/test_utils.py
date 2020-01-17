@@ -25,7 +25,7 @@ from absl import flags
 
 import gin
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 FLAGS = flags.FLAGS

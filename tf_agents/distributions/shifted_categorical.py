@@ -15,7 +15,7 @@
 
 """Categorical distribution where values are shifted to honor a range."""
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 

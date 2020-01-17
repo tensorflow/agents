@@ -16,7 +16,7 @@
 """Methods for computing advantages and target values.
 """
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 def discounted_return(rewards,

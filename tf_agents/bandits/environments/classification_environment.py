@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.environments import bandit_tf_environment as bte
 from tf_agents.specs import tensor_spec

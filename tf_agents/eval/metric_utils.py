@@ -23,7 +23,7 @@ import collections
 
 from absl import logging
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import py_driver
 from tf_agents.metrics import py_metric

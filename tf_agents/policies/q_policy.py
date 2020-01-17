@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import gin
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.distributions import shifted_categorical
 from tf_agents.policies import tf_policy

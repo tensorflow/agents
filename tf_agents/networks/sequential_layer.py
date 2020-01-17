@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import copy
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 class SequentialLayer(tf.keras.layers.Layer):

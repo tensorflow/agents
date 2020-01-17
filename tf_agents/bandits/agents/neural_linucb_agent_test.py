@@ -23,7 +23,7 @@ import os
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.agents import neural_linucb_agent
 from tf_agents.bandits.agents import utils as bandit_utils

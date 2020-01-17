@@ -22,7 +22,7 @@ import numbers
 
 import gin
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 def sample_bounded_spec(spec, rng):

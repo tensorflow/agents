@@ -25,7 +25,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.policies import epsilon_greedy_policy

@@ -24,7 +24,7 @@ import functools
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import random_py_environment

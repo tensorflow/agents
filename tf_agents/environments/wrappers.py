@@ -29,7 +29,7 @@ import cProfile
 import gin
 import numpy as np
 import six
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec

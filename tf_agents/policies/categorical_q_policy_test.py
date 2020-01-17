@@ -23,7 +23,7 @@ import os
 from absl import flags
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.networks import categorical_q_network
 from tf_agents.networks import network

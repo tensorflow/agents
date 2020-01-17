@@ -22,7 +22,7 @@ from __future__ import print_function
 import time
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 def run_test(target_call,

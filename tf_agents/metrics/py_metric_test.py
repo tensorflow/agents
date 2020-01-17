@@ -23,7 +23,7 @@ from __future__ import print_function
 import os
 import tempfile
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.metrics import py_metric
 

@@ -24,7 +24,7 @@ from __future__ import print_function
 
 from enum import Enum
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
 from tf_agents.bandits.policies import policy_utilities

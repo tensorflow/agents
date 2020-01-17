@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import sequential_layer
 from tf_agents.policies import actor_policy

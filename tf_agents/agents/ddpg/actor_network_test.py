@@ -16,7 +16,7 @@
 """Tests for tf_agents.agents.ddpg.actor_network."""
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import actor_network
 from tf_agents.specs import tensor_spec

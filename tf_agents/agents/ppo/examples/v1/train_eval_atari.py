@@ -28,7 +28,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ppo.examples.v1 import train_eval
 from tf_agents.environments import suite_atari

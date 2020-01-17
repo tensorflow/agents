@@ -39,7 +39,7 @@ from absl import flags
 from absl import logging
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import actor_rnn_network
 from tf_agents.agents.ddpg import critic_rnn_network

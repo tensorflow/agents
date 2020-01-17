@@ -28,7 +28,7 @@ import os
 from absl import app
 from absl import flags
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import environment_utilities

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Define distributions for spaces where not all actions are valid."""
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 

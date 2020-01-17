@@ -25,7 +25,7 @@ from __future__ import print_function
 from enum import Enum
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils

@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from absl.testing.absltest import mock
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import random_tf_environment
 from tf_agents.environments import tf_wrappers

@@ -22,7 +22,7 @@ returned.
 
 import functools
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import dynamic_unroll_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils

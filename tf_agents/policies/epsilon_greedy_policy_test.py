@@ -22,7 +22,7 @@ from __future__ import print_function
 import collections
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import fixed_policy
 from tf_agents.specs import tensor_spec

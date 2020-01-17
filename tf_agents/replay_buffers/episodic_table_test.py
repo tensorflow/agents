@@ -22,7 +22,7 @@ from __future__ import print_function
 import os
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents import specs
 from tf_agents.replay_buffers import episodic_table

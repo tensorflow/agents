@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import non_stationary_stochastic_environment as nsse
 from tf_agents.specs import tensor_spec

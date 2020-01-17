@@ -22,7 +22,7 @@ from __future__ import print_function
 import math
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.specs import tensor_spec

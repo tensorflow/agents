@@ -25,7 +25,7 @@ import os
 from absl import logging
 import distutils.version
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts

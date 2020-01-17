@@ -25,7 +25,7 @@ import random
 from absl import flags
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.networks import test_utils as networks_test_utils
 from tf_agents.specs import tensor_spec

@@ -24,7 +24,7 @@ from absl import logging
 
 import numpy as np
 import six
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.metrics import tf_metric
 from tf_agents.utils import common

@@ -22,7 +22,7 @@ from __future__ import print_function
 import os
 
 from absl.testing import parameterized
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import q_network

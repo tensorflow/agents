@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tensorflow.keras import layers
 
 from tf_agents.networks import lstm_encoding_network

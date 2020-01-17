@@ -20,7 +20,7 @@ from __future__ import print_function
 
 import io
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import array_spec
 

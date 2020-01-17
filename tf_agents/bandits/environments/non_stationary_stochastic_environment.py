@@ -23,7 +23,7 @@ import abc
 import gin
 import six
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import bandit_tf_environment as bte
 from tf_agents.trajectories import time_step

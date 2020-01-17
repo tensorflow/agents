@@ -23,7 +23,7 @@ import collections
 import gym
 import gym.spaces
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents import specs
 from tf_agents.environments import py_environment

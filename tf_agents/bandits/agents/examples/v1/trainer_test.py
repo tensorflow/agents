@@ -24,7 +24,7 @@ import tempfile
 import unittest
 
 from absl.testing import parameterized
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.agents import exp3_agent
 from tf_agents.bandits.agents.examples.v1 import trainer

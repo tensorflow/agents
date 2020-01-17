@@ -22,7 +22,7 @@ from __future__ import print_function
 import collections
 import os
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import example_encoding_dataset
 from tf_agents.utils import test_utils

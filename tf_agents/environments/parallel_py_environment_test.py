@@ -25,7 +25,7 @@ import multiprocessing.dummy as dummy_multiprocessing
 import time
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import random_py_environment

@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import functools
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 # Dictionary mapping a device name to a python bool.
 _IS_XLA_AVAILABLE = {}

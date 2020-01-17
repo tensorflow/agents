@@ -41,7 +41,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import batched_py_environment

@@ -32,7 +32,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import linear_bandit_agent as linear_agent

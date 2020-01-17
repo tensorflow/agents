@@ -22,7 +22,7 @@ from __future__ import print_function
 import unittest
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.benchmark import distribution_strategy_utils
 from tf_agents.benchmark import utils

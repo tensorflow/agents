@@ -22,7 +22,7 @@ from __future__ import print_function
 import os
 from absl import logging
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics

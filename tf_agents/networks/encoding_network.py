@@ -30,7 +30,7 @@ from __future__ import print_function
 
 from absl import logging
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.networks import network
 from tf_agents.networks import utils

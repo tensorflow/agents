@@ -30,7 +30,7 @@ from __future__ import print_function
 import threading
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils

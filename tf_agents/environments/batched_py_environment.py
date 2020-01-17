@@ -27,7 +27,7 @@ from multiprocessing import dummy as mp_threads
 # pylint: enable=line-too-long
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import py_environment
 from tf_agents.utils import nest_utils

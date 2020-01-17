@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.metrics import batched_py_metric
 from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_py_metric

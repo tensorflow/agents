@@ -29,7 +29,7 @@ from absl import flags
 from absl import logging
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ppo.examples.v1 import train_eval
 from tf_agents.environments import random_py_environment

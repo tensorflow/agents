@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Tests masked distributions."""
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.distributions import masked
 

@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
