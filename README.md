@@ -12,8 +12,6 @@ need an intro to RL (or a quick recap),
 [DQN tutorial](docs/tutorials/1_dqn_tutorial.ipynb) to get an agent up and
 running in the Cartpole environment.
 
-*RELEASE:* New 0.3.0rc0 release available.
-
 *NOTE:* Current TF-Agents pre-release is under active development and
 interfaces may change at any time. Feel free to provide feedback and comments.
 
@@ -84,7 +82,7 @@ GitHub clone.
 ### Stable
 
 Run the commands below to install the most recent stable release (0.3.0), which
-was tested with TensorFlow 1.15.0 and 2.0.0.
+was tested with TensorFlow 1.15.0 and 2.0.0 as well as Python 2 and 3.
 
 ```bash
 pip install --user tf-agents
@@ -109,7 +107,8 @@ Nightly builds include newer features, but may be less stable than the versioned
 releases. The nightly build is pushed as `tf-agents-nightly`. We suggest
 installing nightly versions of TensorFlow (`tf-nightly`) and TensorFlow
 Probability (`tfp-nightly`) as those are the version TF-Agents nightly are
-tested against.
+tested against. Nightly releases are only compatible with Python 3 as of
+17-JAN-2020.
 
 To install the nightly build version, run the following:
 
@@ -143,7 +142,8 @@ fine but can have issues to to upstream libraries being in flux. The table below
 lists the stable releases of TF Agents to help users that may be locked into a
 specific version of TensorFlow or other related supporting. TensorFlow version
 are the versions of TensorFlow tested with the build, other version might work
-but were not tested.
+but were not tested. Nightly releases are only compatible with Python 3. 0.3.0
+was the last release compatible with Python 2.
 
 | Release  | Branch / Tag      | TensorFlow Version |
 | -------- | ----------- | ------------------ |
