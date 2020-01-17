@@ -110,7 +110,7 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
 
     dataset = dataset.batch(batch_size, drop_remainder=True)
     if repeat_dataset:
-      dataset.repeat()
+      dataset = dataset.repeat()
     self._data_iterator = eager_utils.dataset_iterator(dataset)
     self._current_label = tf.compat.v2.Variable(
         tf.zeros(batch_size, dtype=lbl_dtype))
