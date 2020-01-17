@@ -8,8 +8,8 @@ with good test integration and benchmarking.
 
 To get started, we recommend checking out one of our Colab tutorials. If you
 need an intro to RL (or a quick recap),
-[start here](tf_agents/colabs/0_intro_rl.ipynb). Otherwise, check out our
-[DQN tutorial](tf_agents/colabs/1_dqn_tutorial.ipynb) to get an agent up and
+[start here](docs/tutorials/0_intro_rl.ipynb). Otherwise, check out our
+[DQN tutorial](docs/tutorials/1_dqn_tutorial.ipynb) to get an agent up and
 running in the Cartpole environment.
 
 *RELEASE:* New 0.3.0rc0 release available.

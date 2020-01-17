@@ -10,6 +10,10 @@ licenses(["notice"])  # Apache License 2.0
 
 colab_binary(
     name = "colab",
+    kernel_init = [
+        # Set up display.
+        "colab_kernel_init.py",
+    ],
     # We explicitly opt into hermetic Python (colab_binary is non-hermetic by default) to resolve
     # a problem relating to tcmalloc and the OSMesa rendering backend for MuJoCo (b/32466075).
     launcher = "//devtools/python/launcher",
@@ -19,6 +23,7 @@ colab_binary(
         "//learning/brain/python/client:notebook_deps",
         "//third_party/py/OpenGL",
         "//third_party/py/gfootball",
+        "//third_party/py/imageio",
         "//third_party/py/numpy",
         "//third_party/py/tensorflow",
         "//third_party/py/tensorflow_probability",
@@ -73,4 +78,11 @@ colab_notebook_test(
     colab_binary = ":colab",
     default_cell_diff = "ignore",
     ipynb = "5_replay_buffers_tutorial.ipynb",
+)
+
+colab_notebook_test(
+    name = "checkpointer_policysaver_tutorial_test",
+    colab_binary = ":colab",
+    default_cell_diff = "ignore",
+    ipynb = "10_checkpointer_policysaver_tutorial.ipynb",
 )
