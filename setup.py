@@ -214,6 +214,8 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     tests_require=TEST_REQUIRED_PACKAGES,
     extras_require={'tests': TEST_REQUIRED_PACKAGES},
+    # Supports Python 3 only.
+    python_requires='>=3',
     # Add in any packaged data.
     zip_safe=False,
     distclass=BinaryDistribution,
@@ -226,8 +228,6 @@ setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
