@@ -82,6 +82,37 @@ class UtilsTest(tf.test.TestCase, parameterized.TestCase):
     expected_b_update_array = np.zeros([context_dim], dtype=np.float32)
     self.assertAllClose(expected_b_update_array, self.evaluate(b_update))
 
+  def testLaplacian1D(self):
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=4)
+    num_actions = utils.get_num_actions_from_tensor_spec(action_spec)
+    laplacian_matrix = utils.build_laplacian_over_ordinal_integer_actions(
+        action_spec)
+    res = tf.matmul(
+        laplacian_matrix, tf.ones([num_actions, 1], dtype=tf.float32))
+    # The vector of ones is in the null space of the Laplacian matrix.
+    self.assertAllClose(0.0, self.evaluate(tf.norm(res)))
+
+    # The row sum is zero.
+    row_sum = tf.reduce_sum(laplacian_matrix, 1)
+    self.assertAllClose(0.0, self.evaluate(tf.norm(row_sum)))
+
+    # The column sum is zero.
+    column_sum = tf.reduce_sum(laplacian_matrix, 0)
+    self.assertAllClose(0.0, self.evaluate(tf.norm(column_sum)))
+
+    # The diagonal elements are 2.0.
+    self.assertAllClose(2.0, laplacian_matrix[1, 1])
+
+    laplacian_matrix_expected = np.array(
+        [[1.0, -1.0, 0.0, 0.0, 0.0],
+         [-1.0, 2.0, -1.0, 0.0, 0.0],
+         [0.0, -1.0, 2.0, -1.0, 0.0],
+         [0.0, 0.0, -1.0, 2.0, -1.0],
+         [0.0, 0.0, 0.0, -1.0, 1.0]])
+    self.assertAllClose(laplacian_matrix_expected,
+                        self.evaluate(laplacian_matrix))
+
 
 if __name__ == '__main__':
   tf.test.main()

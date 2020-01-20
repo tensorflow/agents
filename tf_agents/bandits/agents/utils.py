@@ -74,3 +74,38 @@ def get_num_actions_from_tensor_spec(action_spec):
     raise ValueError('Action spec must have minimum 0; '
                      'got {}'.format(action_spec.minimum))
   return action_spec.maximum + 1
+
+
+def build_laplacian_over_ordinal_integer_actions(action_spec):
+  """Build the unnormalized Laplacian matrix over ordinal integer actions.
+
+  Assuming integer actions, this functions builds the (unnormalized) Laplacian
+  matrix of the graph implied over the action space. The graph vertices are the
+  integers {0...action_spec.maximum - 1}. Two vertices are adjacent if they
+  correspond to consecutive integer actions. The `action_spec` must specify
+  a scalar int32 or int64 with minimum zero.
+
+  Args:
+    action_spec: a `BoundedTensorSpec`.
+
+  Returns:
+    The graph Laplacian matrix (float tensor) of size equal to the number of
+    actions. The diagonal elements are equal to 2 and the off-diagonal elements
+    are equal to -1.
+
+  Raises:
+    ValueError: if `action_spec` is not a bounded scalar int32 or int64 spec
+      with minimum 0.
+  """
+  num_actions = get_num_actions_from_tensor_spec(action_spec)
+  adjacency_matrix = tf.zeros([num_actions, num_actions], dtype=tf.float32)
+  row_indices = tf.reshape(tf.range(num_actions - 1), [-1, 1])
+  full_indices = tf.concat([row_indices, row_indices + 1], axis=1)
+  adjacency_matrix = tf.tensor_scatter_nd_update(
+      tensor=adjacency_matrix,
+      indices=full_indices,
+      updates=tf.ones([num_actions - 1], dtype=tf.float32))
+  adjacency_matrix = adjacency_matrix + tf.transpose(adjacency_matrix)
+  degree_matrix = tf.linalg.tensor_diag(tf.reduce_sum(adjacency_matrix, axis=1))
+  laplacian_matrix = degree_matrix - adjacency_matrix
+  return laplacian_matrix
