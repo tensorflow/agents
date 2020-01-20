@@ -113,6 +113,39 @@ class UtilsTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(laplacian_matrix_expected,
                         self.evaluate(laplacian_matrix))
 
+  def testComputePairwiseDistances(self):
+    input_vects = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    pdist_matrix = np.array(
+        [[0.0, 27.0, 108.0,],
+         [27.0, 0.0, 27.0],
+         [108.0, 27.0, 0.0]])
+    tf_dist_matrix = utils.compute_pairwise_distances(
+        tf.constant(input_vects, dtype=tf.float32))
+    self.assertAllClose(pdist_matrix, self.evaluate(tf_dist_matrix))
+
+  def testBuildLaplacianNearestNeighborGraph(self):
+    input_vects = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9],
+                            [10, 11, 12], [13, 14, 15]])
+    num_actions = input_vects.shape[0]
+    laplacian_matrix = utils.build_laplacian_nearest_neighbor_graph(
+        tf.constant(input_vects, dtype=tf.float32), k=2)
+
+    # The vector of ones is in the null space of the Laplacian matrix.
+    res = tf.matmul(
+        laplacian_matrix, tf.ones([num_actions, 1], dtype=tf.float32))
+    self.assertAllClose(0.0, self.evaluate(tf.norm(res)))
+
+    # The row sum is zero.
+    row_sum = tf.reduce_sum(laplacian_matrix, 1)
+    self.assertAllClose(0.0, self.evaluate(tf.norm(row_sum)))
+
+    # The column sum is zero.
+    column_sum = tf.reduce_sum(laplacian_matrix, 0)
+    self.assertAllClose(0.0, self.evaluate(tf.norm(column_sum)))
+
+    self.assertAllClose(2.0, laplacian_matrix[0, 0])
+    self.assertAllClose(4.0, laplacian_matrix[2, 2])
+
 
 if __name__ == '__main__':
   tf.test.main()
