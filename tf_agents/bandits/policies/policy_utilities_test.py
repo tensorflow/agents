@@ -23,8 +23,13 @@ from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.policies import policy_utilities
+from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
 from tf_agents.utils import test_utils
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
+_GREEDY = policy_utilities.BanditPolicyType.GREEDY
+_UNIFORM = policy_utilities.BanditPolicyType.UNIFORM
 
 
 @test_util.run_all_in_graph_and_eager_modes
@@ -51,6 +56,44 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
     with self.assertRaises(tf.errors.InvalidArgumentError):
       self.evaluate(
           policy_utilities.masked_argmax(input_tensor, tf.constant(mask)))
+
+  def testSetBanditPolicyType(self):
+    dims = (10, 1)
+    bandit_policy_spec = (
+        policy_utilities.create_bandit_policy_type_tensor_spec(dims))
+    info = policy_utilities.set_bandit_policy_type(None, bandit_policy_spec)
+    self.assertIsInstance(info, policy_utilities.PolicyInfo)
+    self.assertIsInstance(info.bandit_policy_type,
+                          tensor_spec.BoundedTensorSpec)
+    self.assertEqual(info.bandit_policy_type.shape, dims)
+    self.assertEqual(info.bandit_policy_type.dtype, tf.int32)
+    # Set to tensor.
+    input_tensor = tf.fill(dims, value=_GREEDY)
+    info = policy_utilities.set_bandit_policy_type(info, input_tensor)
+    self.assertIsInstance(info.bandit_policy_type, tf.Tensor)
+    self.assertEqual(info.bandit_policy_type.shape, input_tensor.shape)
+    expected = [[_GREEDY] for _ in range(dims[0])]
+    self.assertAllEqual(info.bandit_policy_type, expected)
+
+  def testWrongPolicyInfoType(self):
+    dims = (10, 1)
+    log_probability = tf.fill(dims, value=-0.5)
+    info = policy_step.PolicyInfo(log_probability=log_probability)
+    input_tensor = tf.fill(dims, value=_GREEDY)
+    result = policy_utilities.set_bandit_policy_type(info, input_tensor)
+    self.assertNotIsInstance(result, policy_utilities.PolicyInfo)
+    self.assertAllEqual(info.log_probability, result.log_probability)
+
+  def testBanditPolicyUniformMask(self):
+    dims = (10, 1)
+    input_tensor = tf.fill(dims, value=_GREEDY)
+    # Overwrite some values with UNIFORM.
+    mask_idx = (range(dims[0])[1:dims[0]:2])
+    mask = [[True if idx in mask_idx else False] for idx in range(dims[0])]
+    expected = [[_UNIFORM if mask_value[0]  else _GREEDY]
+                for mask_value in mask]
+    result = policy_utilities.bandit_policy_uniform_mask(input_tensor, mask)
+    self.assertAllEqual(result, expected)
 
 
 if __name__ == '__main__':

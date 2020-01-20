@@ -26,6 +26,7 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.policies import tf_policy
@@ -112,6 +113,12 @@ class EpsilonGreedyPolicy(tf_policy.Base):
       if not random_action.info:
         raise ValueError('Incompatible info field')
       info = nest_utils.where(cond, greedy_action.info, random_action.info)
+      # Overwrite bandit policy info type.
+      if policy_utilities.has_bandit_policy_type(info, check_for_tensor=True):
+        masked_bandit_policy_type = policy_utilities.bandit_policy_uniform_mask(
+            info.bandit_policy_type, mask=tf.logical_not(cond))
+        info = policy_utilities.set_bandit_policy_type(
+            info, masked_bandit_policy_type)
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
