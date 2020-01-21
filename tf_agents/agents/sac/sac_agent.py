@@ -38,7 +38,6 @@ from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
-
 SacLossInfo = collections.namedtuple(
     'SacLossInfo', ('critic_loss', 'actor_loss', 'alpha_loss'))
 
@@ -138,12 +137,7 @@ class SacAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
 
-    flat_action_spec = tf.nest.flatten(action_spec)
-    for spec in flat_action_spec:
-      if spec.dtype.is_integer:
-        raise NotImplementedError(
-            'SacAgent does not currently support discrete actions. '
-            'Action spec: {}'.format(action_spec))
+    self._check_action_spec(action_spec)
 
     self._critic_network_1 = critic_network
     self._critic_network_1.create_variables()
@@ -190,14 +184,8 @@ class SacAgent(tf_agent.TFAgent):
         dtype=tf.float32,
         trainable=True)
 
-    # If target_entropy was not passed, set it to negative of the total number
-    # of action dimensions.
     if target_entropy is None:
-      flat_action_spec = tf.nest.flatten(action_spec)
-      target_entropy = -np.sum([
-          np.product(single_spec.shape.as_list())
-          for single_spec in flat_action_spec
-      ])
+      target_entropy = self._get_default_target_entropy(action_spec)
 
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
@@ -228,6 +216,24 @@ class SacAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
+
+  def _check_action_spec(self, action_spec):
+    flat_action_spec = tf.nest.flatten(action_spec)
+    for spec in flat_action_spec:
+      if spec.dtype.is_integer:
+        raise NotImplementedError(
+            'SacAgent does not currently support discrete actions. '
+            'Action spec: {}'.format(action_spec))
+
+  def _get_default_target_entropy(self, action_spec):
+    # If target_entropy was not passed, set it to negative of the total number
+    # of action dimensions.
+    flat_action_spec = tf.nest.flatten(action_spec)
+    target_entropy = -np.sum([
+        np.product(single_spec.shape.as_list())
+        for single_spec in flat_action_spec
+    ])
+    return target_entropy
 
   def _initialize(self):
     """Returns an op to initialize the agent.
@@ -332,9 +338,8 @@ class SacAgent(tf_agent.TFAgent):
 
     total_loss = critic_loss + actor_loss + alpha_loss
 
-    extra = SacLossInfo(critic_loss=critic_loss,
-                        actor_loss=actor_loss,
-                        alpha_loss=alpha_loss)
+    extra = SacLossInfo(
+        critic_loss=critic_loss, actor_loss=actor_loss, alpha_loss=alpha_loss)
 
     return tf_agent.LossInfo(loss=total_loss, extra=extra)
 
@@ -465,18 +470,8 @@ class SacAgent(tf_agent.TFAgent):
       # Take the mean across the batch.
       critic_loss = tf.reduce_mean(input_tensor=critic_loss)
 
-      if self._debug_summaries:
-        td_errors1 = td_targets - pred_td_targets1
-        td_errors2 = td_targets - pred_td_targets2
-        td_errors = tf.concat([td_errors1, td_errors2], axis=0)
-        common.generate_tensor_summaries('td_errors', td_errors,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('td_targets', td_targets,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('pred_td_targets1', pred_td_targets1,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('pred_td_targets2', pred_td_targets2,
-                                         self.train_step_counter)
+      self._critic_loss_debug_summaries(td_targets, pred_td_targets1,
+                                        pred_td_targets2)
 
       return critic_loss
 
@@ -496,12 +491,10 @@ class SacAgent(tf_agent.TFAgent):
 
       actions, log_pi = self._actions_and_log_probs(time_steps)
       target_input = (time_steps.observation, actions)
-      target_q_values1, _ = self._critic_network_1(target_input,
-                                                   time_steps.step_type,
-                                                   training=False)
-      target_q_values2, _ = self._critic_network_2(target_input,
-                                                   time_steps.step_type,
-                                                   training=False)
+      target_q_values1, _ = self._critic_network_1(
+          target_input, time_steps.step_type, training=False)
+      target_q_values2, _ = self._critic_network_2(
+          target_input, time_steps.step_type, training=False)
       target_q_values = tf.minimum(target_q_values1, target_q_values2)
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
       if nest_utils.is_batched_nested_tensors(
@@ -512,38 +505,8 @@ class SacAgent(tf_agent.TFAgent):
         actor_loss *= weights
       actor_loss = tf.reduce_mean(input_tensor=actor_loss)
 
-      if self._debug_summaries:
-        common.generate_tensor_summaries('actor_loss', actor_loss,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('actions', actions,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('log_pi', log_pi,
-                                         self.train_step_counter)
-        tf.compat.v2.summary.scalar(
-            name='entropy_avg',
-            data=-tf.reduce_mean(input_tensor=log_pi),
-            step=self.train_step_counter)
-        common.generate_tensor_summaries('target_q_values', target_q_values,
-                                         self.train_step_counter)
-        batch_size = nest_utils.get_outer_shape(
-            time_steps, self._time_step_spec)[0]
-        policy_state = self._train_policy.get_initial_state(batch_size)
-        action_distribution = self._train_policy.distribution(
-            time_steps, policy_state).action
-        if isinstance(action_distribution, tfp.distributions.Normal):
-          common.generate_tensor_summaries('act_mean', action_distribution.loc,
-                                           self.train_step_counter)
-          common.generate_tensor_summaries(
-              'act_stddev', action_distribution.scale, self.train_step_counter)
-        elif isinstance(action_distribution, tfp.distributions.Categorical):
-          common.generate_tensor_summaries(
-              'act_mode', action_distribution.mode(), self.train_step_counter)
-        try:
-          common.generate_tensor_summaries('entropy_action',
-                                           action_distribution.entropy(),
-                                           self.train_step_counter)
-        except NotImplementedError:
-          pass  # Some distributions do not have an analytic entropy.
+      self._actor_loss_debug_summaries(actor_loss, actions, log_pi,
+                                       target_q_values, time_steps)
 
       return actor_loss
 
@@ -575,15 +538,67 @@ class SacAgent(tf_agent.TFAgent):
 
       alpha_loss = tf.reduce_mean(input_tensor=alpha_loss)
 
-      if self._debug_summaries:
-        common.generate_tensor_summaries('alpha_loss', alpha_loss,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('entropy_diff', entropy_diff,
-                                         self.train_step_counter)
-
-        tf.compat.v2.summary.scalar(
-            name='log_alpha',
-            data=self._log_alpha,
-            step=self.train_step_counter)
+      self._alpha_loss_debug_summaries(alpha_loss, entropy_diff)
 
       return alpha_loss
+
+  def _critic_loss_debug_summaries(self, td_targets, pred_td_targets1,
+                                   pred_td_targets2):
+    if self._debug_summaries:
+      td_errors1 = td_targets - pred_td_targets1
+      td_errors2 = td_targets - pred_td_targets2
+      td_errors = tf.concat([td_errors1, td_errors2], axis=0)
+      common.generate_tensor_summaries('td_errors', td_errors,
+                                       self.train_step_counter)
+      common.generate_tensor_summaries('td_targets', td_targets,
+                                       self.train_step_counter)
+      common.generate_tensor_summaries('pred_td_targets1', pred_td_targets1,
+                                       self.train_step_counter)
+      common.generate_tensor_summaries('pred_td_targets2', pred_td_targets2,
+                                       self.train_step_counter)
+
+  def _actor_loss_debug_summaries(self, actor_loss, actions, log_pi,
+                                  target_q_values, time_steps):
+    if self._debug_summaries:
+      common.generate_tensor_summaries('actor_loss', actor_loss,
+                                       self.train_step_counter)
+      common.generate_tensor_summaries('actions', actions,
+                                       self.train_step_counter)
+      common.generate_tensor_summaries('log_pi', log_pi,
+                                       self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='entropy_avg',
+          data=-tf.reduce_mean(input_tensor=log_pi),
+          step=self.train_step_counter)
+      common.generate_tensor_summaries('target_q_values', target_q_values,
+                                       self.train_step_counter)
+      batch_size = nest_utils.get_outer_shape(time_steps,
+                                              self._time_step_spec)[0]
+      policy_state = self._train_policy.get_initial_state(batch_size)
+      action_distribution = self._train_policy.distribution(
+          time_steps, policy_state).action
+      if isinstance(action_distribution, tfp.distributions.Normal):
+        common.generate_tensor_summaries('act_mean', action_distribution.loc,
+                                         self.train_step_counter)
+        common.generate_tensor_summaries('act_stddev',
+                                         action_distribution.scale,
+                                         self.train_step_counter)
+      elif isinstance(action_distribution, tfp.distributions.Categorical):
+        common.generate_tensor_summaries('act_mode', action_distribution.mode(),
+                                         self.train_step_counter)
+      try:
+        common.generate_tensor_summaries('entropy_action',
+                                         action_distribution.entropy(),
+                                         self.train_step_counter)
+      except NotImplementedError:
+        pass  # Some distributions do not have an analytic entropy.
+
+  def _alpha_loss_debug_summaries(self, alpha_loss, entropy_diff):
+    if self._debug_summaries:
+      common.generate_tensor_summaries('alpha_loss', alpha_loss,
+                                       self.train_step_counter)
+      common.generate_tensor_summaries('entropy_diff', entropy_diff,
+                                       self.train_step_counter)
+
+      tf.compat.v2.summary.scalar(
+          name='log_alpha', data=self._log_alpha, step=self.train_step_counter)
