@@ -206,7 +206,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         action_predicted_log_variance = common.index_with_actions(
             predicted_log_variance, tf.cast(actions, dtype=tf.int32))
         sample_weights = sample_weights * 0.5 * tf.exp(
-            action_predicted_log_variance)
+            -action_predicted_log_variance)
 
         loss = 0.5 * tf.reduce_mean(action_predicted_log_variance)
         # loss = 1/(2 * var(x)) * (y - f(x))^2 + 1/2 * log var(x)
