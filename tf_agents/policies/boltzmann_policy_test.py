@@ -32,17 +32,20 @@ class DummyNet(network.Network):
   def __init__(self, name=None, num_actions=2):
     super(DummyNet, self).__init__(
         tensor_spec.TensorSpec([2], tf.float32), (), 'DummyNet')
-    self._layers.append(
+
+    # Store custom layers that can be serialized through the Checkpointable API.
+    self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
             kernel_initializer=tf.compat.v1.initializers.constant([[1, 1.5],
                                                                    [1, 1.5]]),
-            bias_initializer=tf.compat.v1.initializers.constant([[1], [1]])))
+            bias_initializer=tf.compat.v1.initializers.constant([[1], [1]]))
+    ]
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
     inputs = tf.cast(inputs, tf.float32)
-    for layer in self.layers:
+    for layer in self._dummy_layers:
       inputs = layer(inputs)
     return inputs, network_state
 

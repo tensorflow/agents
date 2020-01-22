@@ -60,12 +60,12 @@ class DummyNet(network.Network):
                                                             verify_shape=True)
 
     # Store custom layers that can be serialized through the Checkpointable API.
-    self._dummy_layers = []
-    self._dummy_layers.append(
+    self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
             kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer))
+            bias_initializer=bias_initializer)
+    ]
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type

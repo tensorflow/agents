@@ -60,14 +60,15 @@ class DummyActorNet(network.DistributionNetwork):
     self._action_spec = action_spec
     self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
 
-    self._layers.append(
+    self._dummy_layers = [
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements() * 2,
             kernel_initializer=tf.compat.v1.initializers.constant([[2.0, 1.0],
                                                                    [1.0, 1.0]]),
             bias_initializer=tf.compat.v1.initializers.constant([5.0, 5.0]),
             activation=None,
-        ))
+        )
+    ]
 
   def _get_normal_distribution_spec(self, sample_spec):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
@@ -94,7 +95,7 @@ class DummyActorNet(network.DistributionNetwork):
     batch_squash = network_utils.BatchSquash(outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
 
-    for layer in self.layers:
+    for layer in self._dummy_layers:
       hidden_state = layer(hidden_state)
 
     actions, stdevs = tf.split(hidden_state, 2, axis=1)
@@ -112,18 +113,19 @@ class DummyValueNet(network.Network):
   def __init__(self, observation_spec, name=None, outer_rank=1):
     super(DummyValueNet, self).__init__(observation_spec, (), 'DummyValueNet')
     self._outer_rank = outer_rank
-    self._layers.append(
+    self._dummy_layers = [
         tf.keras.layers.Dense(
             1,
             kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5])))
+            bias_initializer=tf.compat.v1.initializers.constant([5]))
+    ]
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
     batch_squash = network_utils.BatchSquash(self._outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
-    for layer in self.layers:
+    for layer in self._dummy_layers:
       hidden_state = layer(hidden_state)
     value_pred = tf.squeeze(batch_squash.unflatten(hidden_state), axis=-1)
     return value_pred, network_state
