@@ -25,14 +25,19 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.utils import nest_utils
 
 tfd = tfp.distributions
+
+
+MIXTURE_AGENT_ID = 'mixture_agent_id'
+SUBPOLICY_INFO = 'subpolicy_info'
 
 
 @gin.configurable
@@ -58,9 +63,22 @@ class MixturePolicy(tf_policy.Base):
       assert action_spec == policy.action_spec, 'Inconsistent action specs.'
       assert time_step_spec == policy.time_step_spec, ('Inconsistent time step '
                                                        'specs.')
+      assert policies[0].info_spec == policy.info_spec, ('Inconsistent info '
+                                                         'specs.')
+
+    info_spec = {
+        MIXTURE_AGENT_ID:
+            tensor_spec.BoundedTensorSpec(
+                shape=(), dtype=tf.int32, minimum=0, maximum=len(policies) - 1),
+        SUBPOLICY_INFO:
+            policies[0].info_spec
+    }
 
     super(MixturePolicy, self).__init__(
-        time_step_spec=time_step_spec, action_spec=action_spec, name=name)
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        info_spec=info_spec,
+        name=name)
 
   def _variables(self):
     variables = reduce(lambda x, y: x + y,
@@ -83,10 +101,13 @@ class MixturePolicy(tf_policy.Base):
     batch_size = tf.compat.dimension_value(
         first_obs.shape[0]) or tf.shape(first_obs)[0]
     policy_choice = policy_sampler.sample(batch_size)
-    policy_actions = nest_utils.stack_nested_tensors([
-        policy.action(time_step, policy_state).action
-        for policy in self._policies
-    ], axis=-1)
+    policy_steps = [
+        policy.action(time_step, policy_state) for policy in self._policies
+    ]
+    policy_actions = nest_utils.stack_nested_tensors(
+        [step.action for step in policy_steps], axis=-1)
+    policy_infos = nest_utils.stack_nested_tensors(
+        [step.info for step in policy_steps], axis=-1)
 
     # TODO(b/147134243) Remove the expand_dims and squeeze once the fix in
     # b/143205052 is live.
@@ -94,6 +115,14 @@ class MixturePolicy(tf_policy.Base):
     expanded_mixture_action = tf.nest.map_structure(
         lambda t: tf.gather(t, expanded_choice, batch_dims=1), policy_actions)
 
-    mixture_action = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=-1),
+    mixture_action = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=1),
                                            expanded_mixture_action)
-    return policy_step.PolicyStep(mixture_action, policy_state)
+
+    expanded_mixture_info = tf.nest.map_structure(
+        lambda t: tf.gather(t, expanded_choice, batch_dims=1), policy_infos)
+    mixture_info = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=1),
+                                         expanded_mixture_info)
+    return policy_step.PolicyStep(mixture_action, policy_state, {
+        MIXTURE_AGENT_ID: policy_choice,
+        SUBPOLICY_INFO: mixture_info
+    })

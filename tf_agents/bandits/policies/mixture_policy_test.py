@@ -37,7 +37,9 @@ class ConstantPolicy(tf_policy.Base):
   def __init__(self, action_spec, time_step_spec, action):
     self._constant_action = action
     super(ConstantPolicy, self).__init__(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        info_spec={'a': tensor_spec.TensorSpec(shape=(), dtype=tf.int32)})
 
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
@@ -46,7 +48,8 @@ class ConstantPolicy(tf_policy.Base):
   def _action(self, time_step, policy_state, seed=None):
     batch_size = tf.compat.dimension_value(tf.shape(time_step.observation)[0])
     return policy_step.PolicyStep(
-        tf.fill([batch_size], self._constant_action), policy_state)
+        tf.fill([batch_size], self._constant_action), policy_state,
+        {'a': tf.range(batch_size, dtype=tf.int32)})
 
 
 class MixturePolicyTest(test_utils.TestCase):
@@ -124,7 +127,8 @@ class MixturePolicyTest(test_utils.TestCase):
             shape=[batch_size, context_dim],
             name='observation'))
     action_step = policy.action(time_step)
-    actions = self.evaluate(action_step.action)
+    actions, infos = self.evaluate([action_step.action, action_step.info])
+    tf.nest.assert_same_structure(policy.info_spec, infos)
     self.assertAllEqual(actions.shape, [batch_size])
     self.assertAllInSet(actions, [2, 5, 8])
 

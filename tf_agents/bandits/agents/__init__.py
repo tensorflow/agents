@@ -21,4 +21,5 @@ from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.agents import linear_thompson_sampling_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
+from tf_agents.bandits.agents import static_mixture_agent
 from tf_agents.bandits.agents import utils
