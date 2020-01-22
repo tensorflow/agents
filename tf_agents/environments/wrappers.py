@@ -294,6 +294,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
           'action spec. Got {}'.format(env.action_spec()))
 
     action_spec = action_spec[0]
+    self._original_spec = action_spec
     self._num_actions = np.broadcast_to(num_actions, action_spec.shape)
 
     if action_spec.shape != self._num_actions.shape:
@@ -319,15 +320,21 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
       raise ValueError('num_actions should all be at least size 2.')
 
     limits = np.asarray(limits)
+    # Simplify shape of bounds if they are all equal.
+    if np.all(limits == limits.flat[0]):
+      limits = limits.flat[0]
+    # Workaround for b/148086610. Makes the discretized wrapper generate a
+    # scalar spec when possible.
+    shape = () if spec.shape == (1,) else spec.shape
     discrete_spec = array_spec.BoundedArraySpec(
-        shape=spec.shape,
+        shape=shape,
         dtype=np.int32,
         minimum=0,
         maximum=limits - 1,
         name=spec.name)
 
-    minimum = np.broadcast_to(spec.minimum, spec.shape)
-    maximum = np.broadcast_to(spec.maximum, spec.shape)
+    minimum = np.broadcast_to(spec.minimum, shape)
+    maximum = np.broadcast_to(spec.maximum, shape)
 
     action_map = [
         np.linspace(spec_min, spec_max, num=n_actions)
@@ -360,7 +367,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
               action.shape, self._discrete_spec.shape))
 
     mapped_action = [action_map[i][a] for i, a in enumerate(action.flatten())]
-    return np.reshape(mapped_action, newshape=action.shape)
+    return np.reshape(mapped_action, newshape=self._original_spec.shape)
 
   def _step(self, action):
     """Steps the environment while remapping the actions.
