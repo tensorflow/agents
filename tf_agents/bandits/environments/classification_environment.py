@@ -57,7 +57,8 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
   """An environment based on an arbitrary classification problem."""
 
   def __init__(self, dataset, reward_distribution, batch_size,
-               label_dtype_cast=None, repeat_dataset=True):
+               label_dtype_cast=None, shuffle_buffer_size=None,
+               repeat_dataset=True, prefetch_size=None, seed=None):
     """Initialize `ClassificationBanditEnvironment`.
 
     Args:
@@ -69,9 +70,14 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
         action `j` for an instance of class `i`.
       batch_size: if `dataset` is batched, this is the size of the batches.
       label_dtype_cast: if not None, casts dataset labels to this dtype.
-      repeat_dataset: Makes the environment iterate on the dataset once
+      shuffle_buffer_size: If None, do not shuffle.  Otherwise, a shuffle buffer
+        of the specified size is used in the environment's `dataset`.
+      repeat_dataset: Makes the environment iterate on the `dataset` once
         avoiding `OutOfRangeError:  End of sequence` errors when the environment
-        is stepped past the end of the dataset.
+        is stepped past the end of the `dataset`.
+      prefetch_size: If None, do not prefetch.  Otherwise, a prefetch buffer
+        of the specified size is used in the environment's `dataset`.
+      seed: Used to make results deterministic.
     Raises:
       ValueError: if `reward_distribution` does not have an event shape with
         rank 2.
@@ -108,9 +114,15 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
         time_step_spec=time_step_spec,
         batch_size=batch_size)
 
-    dataset = dataset.batch(batch_size, drop_remainder=True)
+    if shuffle_buffer_size:
+      dataset = dataset.shuffle(buffer_size=shuffle_buffer_size,
+                                seed=seed,
+                                reshuffle_each_iteration=True)
     if repeat_dataset:
       dataset = dataset.repeat()
+    dataset = dataset.batch(batch_size, drop_remainder=True)
+    if prefetch_size:
+      dataset = dataset.prefetch(prefetch_size)
     self._data_iterator = eager_utils.dataset_iterator(dataset)
     self._current_label = tf.compat.v2.Variable(
         tf.zeros(batch_size, dtype=lbl_dtype))
