@@ -245,6 +245,67 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
     self.assertEqual([3], time_step.observation)
 
 
+class ObservationFilterWrapperTest(test_utils.TestCase):
+
+  def _get_mock_env_step(self):
+    mock_env = mock.MagicMock()
+    mock_env.observation_spec.side_effect = [
+        array_spec.BoundedArraySpec((3,), np.int32, -10, 10),
+        array_spec.BoundedArraySpec((3,), np.int32, -10, 10),
+        array_spec.BoundedArraySpec((3,), np.int32, -10, 10),
+    ]
+    mock_env.reset.side_effect = [ts.TimeStep(ts.StepType.MID, 5, 1, [3, 5, 2])]
+    mock_env.step.side_effect = [ts.TimeStep(ts.StepType.MID, 5, 1, [1, 2, 3])]
+    return mock_env
+
+  def test_filtered_obs_spec(self):
+    mock_env = self._get_mock_env_step()
+    env = wrappers.ObservationFilterWrapper(mock_env, [1])
+
+    self.assertEqual((1,), env.observation_spec().shape)
+
+  def test_obs_filtered_reset(self):
+    mock_env = self._get_mock_env_step()
+    env = wrappers.ObservationFilterWrapper(mock_env, [0])
+    time_step = env.reset()
+
+    self.assertLen(time_step.observation, 1)
+    self.assertEqual([3], time_step.observation)
+
+  def test_obs_filtered_step(self):
+    mock_env = self._get_mock_env_step()
+    env = wrappers.ObservationFilterWrapper(mock_env, [0, 2])
+    env.reset()
+    time_step = env.step(0)
+
+    self.assertLen(time_step.observation, 2)
+    self.assertAllEqual([1, 3], time_step.observation)
+
+  def test_checks_nested_obs(self):
+    mock_env = self._get_mock_env_step()
+    mock_env.observation_spec.side_effect = [
+        [array_spec.BoundedArraySpec((2,), np.int32, -10, 10),
+         array_spec.BoundedArraySpec((2,), np.int32, -10, 10)]
+    ]
+    with self.assertRaises(ValueError):
+      _ = wrappers.ObservationFilterWrapper(mock_env, [0])
+
+  def test_checks_multidim_idx(self):
+    mock_env = self._get_mock_env_step()
+    with self.assertRaises(ValueError):
+      _ = wrappers.ObservationFilterWrapper(mock_env, [[0]])
+
+  def test_checks_idx_provided(self):
+    mock_env = self._get_mock_env_step()
+    with self.assertRaises(ValueError):
+      _ = wrappers.ObservationFilterWrapper(mock_env, [])
+
+  def test_checks_idx_outofbounds(self):
+    mock_env = self._get_mock_env_step()
+    with self.assertRaises(ValueError):
+      _ = wrappers.ObservationFilterWrapper(mock_env, [5])
+
+
 class RunStatsWrapperTest(test_utils.TestCase):
 
   def test_episode_count(self):

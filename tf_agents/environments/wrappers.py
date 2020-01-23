@@ -212,6 +212,57 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
 
 
 @gin.configurable
+class ObservationFilterWrapper(PyEnvironmentBaseWrapper):
+  """Filters observations based on an array of indexes.
+
+  Note that this wrapper only supports single-dimensional observations.
+  """
+
+  def __init__(self, env, idx):
+    """Creates an observation filter wrapper.
+
+    Args:
+      env: Environment to wrap.
+      idx: Array of indexes pointing to elements to include in output.
+
+    Raises:
+      ValueError: If observation spec is nested.
+      ValueError: If indexes are not single-dimensional.
+      ValueError: If no index is provided.
+      ValueError: If one of the indexes is out of bounds.
+    """
+    super(ObservationFilterWrapper, self).__init__(env)
+    idx = np.array(idx)
+    if tf.nest.is_nested(env.observation_spec()):
+      raise ValueError('ObservationFilterWrapper only works with single-array '
+                       'observations (not nested).')
+    if len(idx.shape) != 1:
+      raise ValueError('ObservationFilterWrapper only works with '
+                       'single-dimensional indexes for filtering.')
+    if idx.shape[0] < 1:
+      raise ValueError('At least one index needs to be provided for filtering.')
+    if not np.all(idx < env.observation_spec().shape[0]):
+      raise ValueError('One of the indexes is out of bounds.')
+
+    self._idx = idx
+    self._observation_spec = array_spec.update_spec_shape(
+        env.observation_spec(), idx.shape)
+
+  def _step(self, action):
+    time_step = self._env.step(action)
+    return time_step._replace(observation=
+                              np.array(time_step.observation)[self._idx])
+
+  def observation_spec(self):
+    return self._observation_spec
+
+  def _reset(self):
+    time_step = self._env.reset()
+    return time_step._replace(observation=
+                              np.array(time_step.observation)[self._idx])
+
+
+@gin.configurable
 class RunStats(PyEnvironmentBaseWrapper):
   """Wrapper that accumulates run statistics as the environment iterates.
 
