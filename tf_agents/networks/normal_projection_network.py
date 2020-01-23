@@ -143,10 +143,16 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     return distribution_spec.DistributionSpec(
         distribution_builder, input_param_spec, sample_spec=sample_spec)
 
-  def call(self, inputs, outer_rank, training=False):
+  def call(self, inputs, outer_rank, training=False, mask=None):
     if inputs.dtype != self._sample_spec.dtype:
       raise ValueError(
           'Inputs to NormalProjectionNetwork must match the sample_spec.dtype.')
+
+    if mask is not None:
+      raise NotImplementedError(
+          'NormalProjectionNetwork does not yet implement action masking; got '
+          'mask={}'.format(mask))
+
     # outer_rank is needed because the projection is not done on the raw
     # observations so getting the outer rank is hard as there is no spec to
     # compare to.
