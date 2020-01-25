@@ -562,11 +562,12 @@ class SacAgent(tf_agent.TFAgent):
     if self._debug_summaries:
       common.generate_tensor_summaries('actor_loss', actor_loss,
                                        self.train_step_counter)
-      if actions:
-        # Guard against internal SAC variants that do not directly generate
-        # actions.
+      try:
         common.generate_tensor_summaries('actions', actions,
                                          self.train_step_counter)
+      except ValueError:
+        pass  # Guard against internal SAC variants that do not directly
+              # generate actions.
 
       common.generate_tensor_summaries('log_pi', log_pi,
                                        self.train_step_counter)
