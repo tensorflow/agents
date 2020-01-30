@@ -67,7 +67,7 @@ flags.DEFINE_integer('replay_buffer_capacity', 1001,
                      'Replay buffer capacity per env.')
 flags.DEFINE_integer('num_parallel_environments', 30,
                      'Number of environments to run in parallel')
-flags.DEFINE_integer('num_environment_steps', 10000000,
+flags.DEFINE_integer('num_environment_steps', 25000000,
                      'Number of environment steps to run before finishing.')
 flags.DEFINE_integer('num_epochs', 25,
                      'Number of epochs for computing policy updates.')
@@ -89,26 +89,25 @@ def train_eval(
     tf_master='',
     env_name='HalfCheetah-v2',
     env_load_fn=suite_mujoco.load,
-    random_seed=0,
+    random_seed=None,
     # TODO(b/127576522): rename to policy_fc_layers.
     actor_fc_layers=(200, 100),
     value_fc_layers=(200, 100),
     use_rnns=False,
     # Params for collect
-    num_environment_steps=10000000,
+    num_environment_steps=25000000,
     collect_episodes_per_iteration=30,
     num_parallel_environments=30,
     replay_buffer_capacity=1001,  # Per-environment
     # Params for train
     num_epochs=25,
-    learning_rate=1e-4,
+    learning_rate=1e-3,
     # Params for eval
     num_eval_episodes=30,
     eval_interval=500,
     # Params for summaries and logging
-    train_checkpoint_interval=100,
-    policy_checkpoint_interval=50,
-    rb_checkpoint_interval=200,
+    train_checkpoint_interval=500,
+    policy_checkpoint_interval=500,
     log_interval=50,
     summary_interval=50,
     summaries_flush_secs=1,
@@ -144,7 +143,8 @@ def train_eval(
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
-    tf.compat.v1.set_random_seed(random_seed)
+    if random_seed is not None:
+      tf.compat.v1.set_random_seed(random_seed)
     eval_py_env = parallel_py_environment.ParallelPyEnvironment(
         [lambda: env_load_fn(env_name)] * num_parallel_environments)
     tf_env = tf_py_environment.TFPyEnvironment(
@@ -166,9 +166,12 @@ def train_eval(
       actor_net = actor_distribution_network.ActorDistributionNetwork(
           tf_env.observation_spec(),
           tf_env.action_spec(),
-          fc_layer_params=actor_fc_layers)
+          fc_layer_params=actor_fc_layers,
+          activation_fn=tf.keras.activations.tanh)
       value_net = value_network.ValueNetwork(
-          tf_env.observation_spec(), fc_layer_params=value_fc_layers)
+          tf_env.observation_spec(),
+          fc_layer_params=value_fc_layers,
+          activation_fn=tf.keras.activations.tanh)
 
     tf_agent = ppo_agent.PPOAgent(
         tf_env.time_step_spec(),
@@ -176,6 +179,13 @@ def train_eval(
         optimizer,
         actor_net=actor_net,
         value_net=value_net,
+        entropy_regularization=0.0,
+        importance_ratio_clipping=0.2,
+        normalize_observations=False,
+        normalize_rewards=False,
+        use_gae=True,
+        kl_cutoff_factor=0.0,
+        initial_adaptive_kl_beta=0.0,
         num_epochs=num_epochs,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
@@ -231,10 +241,6 @@ def train_eval(
         ckpt_dir=os.path.join(train_dir, 'policy'),
         policy=tf_agent.policy,
         global_step=global_step)
-    rb_checkpointer = common.Checkpointer(
-        ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
-        max_to_keep=1,
-        replay_buffer=replay_buffer)
 
     summary_ops = []
     for train_metric in train_metrics:
@@ -252,7 +258,6 @@ def train_eval(
     with tf.compat.v1.Session(tf_master) as sess:
       # Initialize graph.
       train_checkpointer.initialize_or_restore(sess)
-      rb_checkpointer.initialize_or_restore(sess)
       common.initialize_uninitialized_variables(sess)
 
       sess.run(init_agent_op)
@@ -309,9 +314,6 @@ def train_eval(
 
         if global_step_val % policy_checkpoint_interval == 0:
           policy_checkpointer.save(global_step=global_step_val)
-
-        if global_step_val % rb_checkpoint_interval == 0:
-          rb_checkpointer.save(global_step=global_step_val)
 
       # One final eval before exiting.
       metric_utils.compute_summaries(
