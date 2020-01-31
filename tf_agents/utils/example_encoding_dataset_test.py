@@ -23,7 +23,15 @@ import collections
 import os
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+
+from tf_agents.drivers import dynamic_step_driver
+from tf_agents.drivers import test_utils as driver_test_utils
+from tf_agents.drivers import tf_driver
+from tf_agents.environments import tf_py_environment
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import trajectory
+from tf_agents.utils import common
+from tf_agents.utils import eager_utils
 from tf_agents.utils import example_encoding_dataset
 from tf_agents.utils import test_utils
 
@@ -91,6 +99,63 @@ class TFRecordsUtilsTest(test_utils.TestCase):
     with self.assertRaises(IOError):
       example_encoding_dataset.load_tfrecord_dataset(
           [self.dataset_path, self.other_dataset_path])
+
+  def test_with_tf_driver(self):
+    env = driver_test_utils.PyEnvironmentMock()
+    tf_env = tf_py_environment.TFPyEnvironment(env)
+    policy = driver_test_utils.TFPolicyMock(tf_env.time_step_spec(),
+                                            tf_env.action_spec())
+
+    trajectory_spec = trajectory.from_transition(tf_env.time_step_spec(),
+                                                 policy.policy_step_spec,
+                                                 tf_env.time_step_spec())
+
+    tfrecord_observer = example_encoding_dataset.TFRecordObserver(
+        self.dataset_path, trajectory_spec)
+    driver = tf_driver.TFDriver(
+        tf_env, policy, [tfrecord_observer], max_steps=10)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    time_step = self.evaluate(tf_env.reset())
+    initial_policy_state = policy.get_initial_state(batch_size=1)
+    self.evaluate(common.function(driver.run)(time_step, initial_policy_state))
+    tfrecord_observer.flush()
+
+    dataset = example_encoding_dataset.load_tfrecord_dataset(
+        [self.dataset_path], buffer_size=2, as_trajectories=True)
+    iterator = eager_utils.dataset_iterator(dataset)
+    sample = self.evaluate(eager_utils.get_next(iterator))
+    self.assertIsInstance(sample, trajectory.Trajectory)
+
+  def test_with_dynamic_step_driver(self):
+    env = driver_test_utils.PyEnvironmentMock()
+    tf_env = tf_py_environment.TFPyEnvironment(env)
+    policy = driver_test_utils.TFPolicyMock(tf_env.time_step_spec(),
+                                            tf_env.action_spec())
+
+    trajectory_spec = trajectory.from_transition(tf_env.time_step_spec(),
+                                                 policy.policy_step_spec,
+                                                 tf_env.time_step_spec())
+
+    tfrecord_observer = example_encoding_dataset.TFRecordObserver(
+        self.dataset_path, trajectory_spec)
+    driver = dynamic_step_driver.DynamicStepDriver(
+        tf_env,
+        policy,
+        observers=[common.function(tfrecord_observer)],
+        num_steps=10)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    time_step = self.evaluate(tf_env.reset())
+    initial_policy_state = policy.get_initial_state(batch_size=1)
+    self.evaluate(common.function(driver.run)(time_step, initial_policy_state))
+    tfrecord_observer.flush()
+
+    dataset = example_encoding_dataset.load_tfrecord_dataset(
+        [self.dataset_path], buffer_size=2, as_trajectories=True)
+    iterator = eager_utils.dataset_iterator(dataset)
+    sample = self.evaluate(eager_utils.get_next(iterator))
+    self.assertIsInstance(sample, trajectory.Trajectory)
 
 
 if __name__ == "__main__":

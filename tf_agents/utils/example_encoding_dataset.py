@@ -25,6 +25,7 @@ from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import eager_utils
 from tf_agents.utils import example_encoding
 from tf_agents.utils import nest_utils
@@ -97,6 +98,10 @@ class TFRecordObserver(object):
     ...
     observers=[..., tfrecord_observer],
     num_steps=collect_steps_per_iteration).run()
+
+  *Note*: Depending on your driver you may have to do
+    `common.function(tfrecord_observer)` to handle the use of a callable with no
+    return within a `tf.group` operation.
   """
 
   def __init__(self, output_path, tensor_data_spec):
@@ -122,13 +127,12 @@ class TFRecordObserver(object):
     spec_output_path = self.output_path + _SPEC_FILE_EXTENSION
     encode_spec_to_file(spec_output_path, tensor_data_spec)
 
-  def write(self, *tensor_data):
+  def write(self, *data):
     """Encodes and writes (to file) a batch of tensor data.
 
     Args:
-      *tensor_data: (unpacked) list/tuple of batched Tensors.
+      *data: (unpacked) list/tuple of batched np.arrays.
     """
-    data = [x.numpy() for x in tensor_data]
     data = nest_utils.unbatch_nested_array(data)
     structured_data = tf.nest.pack_sequence_as(self._array_data_spec, data)
     self._writer.write(self._encoder(structured_data))
@@ -148,10 +152,11 @@ class TFRecordObserver(object):
   def __call__(self, data):
     """Wraps write() function into a TensorFlow op for eager execution."""
     flat_data = tf.nest.flatten(data)
-    tf.py_function(self.write, flat_data, [], name='encoder_observer')
+    tf.numpy_function(self.write, flat_data, [], name='encoder_observer')
 
 
-def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False):
+def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
+                          as_trajectories=False):
   """Loads a TFRecord dataset from file, sequencing samples as Trajectories.
 
   Args:
@@ -161,6 +166,9 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False):
       will be shaped as if they had been pulled from a replay buffer with
       `num_steps=2`. These samples can be fed directly to agent's `train`
       method.
+    as_trajectories: (bool) Remaps the data into trajectory objects. This should
+      be enabled when the resulting types must be trajectories as expected by
+      agents.
 
   Returns:
     A dataset of type tf.data.Dataset. Samples follow the dataset's spec nested
@@ -194,6 +202,12 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False):
     return nest_utils.batch_nested_tensors(sample)
 
   if as_experience:
-    return dataset.map(decode_fn).batch(2)
+    dataset = dataset.map(decode_fn).batch(2)
   else:
-    return dataset.map(decode_and_batch_fn)
+    dataset = dataset.map(decode_and_batch_fn)
+
+  if as_trajectories:
+    as_trajectories_fn = lambda sample: trajectory.Trajectory(*sample)
+    dataset = dataset.map(as_trajectories_fn)
+  return dataset
+
