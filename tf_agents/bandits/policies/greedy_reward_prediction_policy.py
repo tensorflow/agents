@@ -119,6 +119,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     if observation_and_action_constraint_splitter is not None:
       observation, mask = observation_and_action_constraint_splitter(
           observation)
+    batch_size = tf.shape(observation)[0]
 
     predictions, policy_state = self._reward_network(
         observation, time_step.step_type, policy_state)
@@ -144,7 +145,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
           predicted_reward_values, axis=-1, output_type=self.action_spec.dtype)
     actions += self._action_offset
 
-    bandit_policy_values = tf.fill(tf.shape(actions),
+    bandit_policy_values = tf.fill([batch_size, 1],
                                    policy_utilities.BanditPolicyType.GREEDY)
 
     policy_info = policy_utilities.PolicyInfo(

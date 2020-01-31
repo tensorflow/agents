@@ -23,6 +23,7 @@ import collections
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.policies import policy_utilities as policy_util
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import fixed_policy
 from tf_agents.specs import tensor_spec
@@ -45,6 +46,9 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
         np.asarray([self._greedy_action], dtype=np.int32),
         self._time_step_spec,
         self._action_spec)
+    self._bandit_policy_type = tf.constant([[1], [1]])
+    self._bandit_policy_type_spec = (
+        policy_util.create_bandit_policy_type_tensor_spec(shape=(1,)))
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     self._time_step = ts.restart(observations, batch_size=2)
 
@@ -125,19 +129,23 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # Verify that action distribution changes as we vary epsilon.
     self.checkActionDistribution(actions, epsilon, num_steps)
 
+  def checkBanditPolicyTypeShape(self, bandit_policy_type, batch_size):
+    self.assertAllEqual(bandit_policy_type.shape, [batch_size, 1])
+
   def testInfoSpec(self):
     PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
         'PolicyInfo',
-        ('log_probability', 'predicted_rewards'))
+        ('log_probability', 'predicted_rewards', 'bandit_policy_type'))
     # Set default empty tuple for all fields.
     PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
-    info_spec = PolicyInfo()
+    info_spec = PolicyInfo(bandit_policy_type=self._bandit_policy_type_spec)
+
     policy_with_info_spec = fixed_policy.FixedPolicy(
         np.asarray([self._greedy_action], dtype=np.int32),
         self._time_step_spec,
         self._action_spec,
-        policy_info=PolicyInfo(),
+        policy_info=PolicyInfo(bandit_policy_type=self._bandit_policy_type),
         info_spec=info_spec)
 
     epsilon = 0.2
@@ -165,6 +173,8 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     tf.nest.assert_same_structure(
         info_spec,
         step.info)
+
+    self.checkBanditPolicyTypeShape(step.info.bandit_policy_type, batch_size=2)
 
 if __name__ == '__main__':
   tf.test.main()

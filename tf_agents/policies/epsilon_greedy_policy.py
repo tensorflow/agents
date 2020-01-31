@@ -115,10 +115,15 @@ class EpsilonGreedyPolicy(tf_policy.Base):
       info = nest_utils.where(cond, greedy_action.info, random_action.info)
       # Overwrite bandit policy info type.
       if policy_utilities.has_bandit_policy_type(info, check_for_tensor=True):
-        masked_bandit_policy_type = policy_utilities.bandit_policy_uniform_mask(
-            info.bandit_policy_type, mask=tf.logical_not(cond))
+        # Generate mask of the same shape as bandit_policy_type (batch_size, 1).
+        # This is the opposite of `cond`, which is 1-D bool tensor (batch_size,)
+        # that is true when greedy policy was used, otherwise `cond` is false.
+        random_policy_mask = tf.reshape(tf.logical_not(cond),
+                                        tf.shape(info.bandit_policy_type))
+        bandit_policy_type = policy_utilities.bandit_policy_uniform_mask(
+            info.bandit_policy_type, mask=random_policy_mask)
         info = policy_utilities.set_bandit_policy_type(
-            info, masked_bandit_policy_type)
+            info, bandit_policy_type)
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
