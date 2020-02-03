@@ -39,11 +39,16 @@ class TFPyPolicy(tf_policy.Base):
   # converting between TF and Py policies.
   """
 
-  def __init__(self, policy, name=None):
+  def __init__(self, policy, py_policy_is_batched=False, name=None):
     """Initializes a new `TFPyPolicy` instance with an Pyton policy .
 
     Args:
       policy: Python policy implementing `py_policy.Base`.
+      py_policy_is_batched: If False, time_steps will be unbatched before
+        passing to py_policy.action(), and a batch dimension will be added to
+        the returned action. This will only work with time_steps that have a
+        batch dimension of 1. If True, the time_step (input) and action (output)
+        are passed exactly as is from/to the py_policy.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -56,6 +61,7 @@ class TFPyPolicy(tf_policy.Base):
           type(policy).__name__)
 
     self._py_policy = policy
+    self._py_policy_is_batched = py_policy_is_batched
 
     (time_step_spec, action_spec,
      policy_state_spec, info_spec) = tf.nest.map_structure(
@@ -126,8 +132,9 @@ class TFPyPolicy(tf_policy.Base):
       return tf.nest.flatten(py_action_step)
 
     with tf.name_scope('action'):
-      flattened_input_tensors = tf.nest.flatten(
-          (nest_utils.unbatch_nested_tensors(time_step), policy_state))
+      if not self._py_policy_is_batched:
+        time_step = nest_utils.unbatch_nested_tensors(time_step)
+      flattened_input_tensors = tf.nest.flatten((time_step, policy_state))
 
       flat_action_step = tf.numpy_function(
           _action_fn,
@@ -136,8 +143,10 @@ class TFPyPolicy(tf_policy.Base):
           name='action_numpy_function')
       action_step = tf.nest.pack_sequence_as(
           structure=self.policy_step_spec, flat_sequence=flat_action_step)
-      return action_step._replace(
-          action=nest_utils.batch_nested_tensors(action_step.action))
+      if not self._py_policy_is_batched:
+        action_step = action_step._replace(
+            action=nest_utils.batch_nested_tensors(action_step.action))
+      return action_step
 
   def _variables(self):
     """Returns default [] representing a policy that has no variables."""
