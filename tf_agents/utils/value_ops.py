@@ -70,12 +70,13 @@ def discounted_return(rewards,
     return accumulated_discounted_reward * discount + reward
 
   if provide_all_returns:
-    returns = tf.scan(
-        fn=discounted_return_fn,
-        elems=(rewards, discounts),
-        reverse=True,
-        initializer=final_value,
-        back_prop=False)
+    returns = tf.nest.map_structure(
+        tf.stop_gradient,
+        tf.scan(
+            fn=discounted_return_fn,
+            elems=(rewards, discounts),
+            reverse=True,
+            initializer=final_value))
 
     if not time_major:
       with tf.name_scope("to_batch_major_tensors"):
@@ -141,12 +142,13 @@ def generalized_advantage_estimation(values,
       weighted_discount, td = reversed_weights_td_tuple
       return td + weighted_discount * accumulated_td
 
-    advantages = tf.scan(
-        fn=weighted_cumulative_td_fn,
-        elems=(weighted_discounts, delta),
-        initializer=tf.zeros_like(final_value),
-        reverse=True,
-        back_prop=False)
+    advantages = tf.nest.map_structure(
+        tf.stop_gradient,
+        tf.scan(
+            fn=weighted_cumulative_td_fn,
+            elems=(weighted_discounts, delta),
+            initializer=tf.zeros_like(final_value),
+            reverse=True))
 
   if not time_major:
     with tf.name_scope("to_batch_major_tensors"):
