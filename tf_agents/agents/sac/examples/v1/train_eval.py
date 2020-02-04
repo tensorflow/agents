@@ -44,6 +44,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import sac_agent
+from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
@@ -52,7 +53,6 @@ from tf_agents.metrics import py_metrics
 from tf_agents.metrics import tf_metrics
 from tf_agents.metrics import tf_py_metric
 from tf_agents.networks import actor_distribution_network
-from tf_agents.networks import normal_projection_network
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import random_tf_policy
@@ -70,31 +70,25 @@ FLAGS = flags.FLAGS
 
 
 @gin.configurable
-def normal_projection_net(action_spec,
-                          init_action_stddev=0.35,
-                          init_means_output_factor=0.1):
-  del init_action_stddev
-  return normal_projection_network.NormalProjectionNetwork(
-      action_spec,
-      mean_transform=None,
-      state_dependent_std=True,
-      init_means_output_factor=init_means_output_factor,
-      std_transform=sac_agent.std_clip_transform,
-      scale_distribution=True)
-
-
-@gin.configurable
 def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
     eval_env_name=None,
     env_load_fn=suite_mujoco.load,
-    num_iterations=1000000,
+    # The SAC paper reported:
+    # Hopper and Cartpole results up to 1000000 iters,
+    # Humanoid results up to 10000000 iters,
+    # Other mujoco tasks up to 3000000 iters.
+    num_iterations=3000000,
     actor_fc_layers=(256, 256),
     critic_obs_fc_layers=None,
     critic_action_fc_layers=None,
     critic_joint_fc_layers=(256, 256),
     # Params for collect
+    # Follow https://github.com/haarnoja/sac/blob/master/examples/variants.py
+    # HalfCheetah and Ant take 10000 initial collection steps.
+    # Other mujoco tasks take 1000.
+    # Different choices roughly keep the initial episodes about the same.
     initial_collect_steps=10000,
     collect_steps_per_iteration=1,
     replay_buffer_capacity=1000000,
@@ -109,7 +103,7 @@ def train_eval(
     alpha_learning_rate=3e-4,
     td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
     gamma=0.99,
-    reward_scale_factor=1.0,
+    reward_scale_factor=0.1,
     gradient_clipping=None,
     # Params for eval
     num_eval_episodes=30,
@@ -159,12 +153,15 @@ def train_eval(
         observation_spec,
         action_spec,
         fc_layer_params=actor_fc_layers,
-        continuous_projection_net=normal_projection_net)
+        continuous_projection_net=tanh_normal_projection_network
+        .TanhNormalProjectionNetwork)
     critic_net = critic_network.CriticNetwork(
         (observation_spec, action_spec),
         observation_fc_layer_params=critic_obs_fc_layers,
         action_fc_layer_params=critic_action_fc_layers,
-        joint_fc_layer_params=critic_joint_fc_layers)
+        joint_fc_layer_params=critic_joint_fc_layers,
+        kernel_initializer='glorot_uniform',
+        last_kernel_initializer='glorot_uniform')
 
     tf_agent = sac_agent.SacAgent(
         time_step_spec,
@@ -224,10 +221,9 @@ def train_eval(
     def _filter_invalid_transition(trajectories, unused_arg1):
       return ~trajectories.is_boundary()[0]
     dataset = replay_buffer.as_dataset(
-        sample_batch_size=5 * batch_size,
+        sample_batch_size=batch_size,
         num_steps=2).unbatch().filter(
-            _filter_invalid_transition).batch(batch_size).prefetch(
-                batch_size * 5)
+            _filter_invalid_transition).batch(batch_size).prefetch(5)
     dataset_iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
     trajectories, unused_info = dataset_iterator.get_next()
     train_op = tf_agent.train(trajectories)

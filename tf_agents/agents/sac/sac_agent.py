@@ -42,6 +42,7 @@ SacLossInfo = collections.namedtuple(
     'SacLossInfo', ('critic_loss', 'actor_loss', 'alpha_loss'))
 
 
+# TODO(b/148889463): deprecate std_clip_transform
 @gin.configurable
 def std_clip_transform(stddevs):
   stddevs = tf.nest.map_structure(lambda t: tf.clip_by_value(t, -20, 2),
@@ -226,13 +227,15 @@ class SacAgent(tf_agent.TFAgent):
             'Action spec: {}'.format(action_spec))
 
   def _get_default_target_entropy(self, action_spec):
-    # If target_entropy was not passed, set it to negative of the total number
-    # of action dimensions.
+    # If target_entropy was not passed, set it to -dim(A)/2.0
+    # Note that the original default entropy target is -dim(A) in the SAC paper.
+    # However this formulation has also been used in practice by the original
+    # authors and has in our experience been more stable for gym/mujoco.
     flat_action_spec = tf.nest.flatten(action_spec)
     target_entropy = -np.sum([
         np.product(single_spec.shape.as_list())
         for single_spec in flat_action_spec
-    ])
+    ]) / 2.0
     return target_entropy
 
   def _initialize(self):
@@ -567,7 +570,7 @@ class SacAgent(tf_agent.TFAgent):
                                          self.train_step_counter)
       except ValueError:
         pass  # Guard against internal SAC variants that do not directly
-              # generate actions.
+        # generate actions.
 
       common.generate_tensor_summaries('log_pi', log_pi,
                                        self.train_step_counter)

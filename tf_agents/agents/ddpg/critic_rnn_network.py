@@ -38,6 +38,8 @@ class CriticRnnNetwork(network.Network):
                lstm_size=(40,),
                output_fc_layer_params=(200, 100),
                activation_fn=tf.keras.activations.relu,
+               kernel_initializer=None,
+               last_kernel_initializer=None,
                name='CriticRnnNetwork'):
     """Creates an instance of `CriticRnnNetwork`.
 
@@ -61,6 +63,10 @@ class CriticRnnNetwork(network.Network):
         each item is the number of units in the layer. This is applied after the
         LSTM cell.
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
+      kernel_initializer: kernel initializer for all layers except for the value
+        regression layer. If None, a VarianceScaling initializer will be used.
+      last_kernel_initializer: kernel initializer for the value regression layer
+        . If None, a RandomUniform initializer will be used.
       name: A string representing name of the network.
 
     Returns:
@@ -79,28 +85,32 @@ class CriticRnnNetwork(network.Network):
     if len(tf.nest.flatten(action_spec)) > 1:
       raise ValueError('Only a single action is supported by this network.')
 
+    if kernel_initializer is None:
+      kernel_initializer = tf.compat.v1.keras.initializers.VarianceScaling(
+          scale=1. / 3., mode='fan_in', distribution='uniform')
+    if last_kernel_initializer is None:
+      last_kernel_initializer = tf.keras.initializers.RandomUniform(
+          minval=-0.003, maxval=0.003)
+
     observation_layers = utils.mlp_layers(
         observation_conv_layer_params,
         observation_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=1. / 3., mode='fan_in', distribution='uniform'),
+        kernel_initializer=kernel_initializer,
         name='observation_encoding')
 
     action_layers = utils.mlp_layers(
         None,
         action_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=1. / 3., mode='fan_in', distribution='uniform'),
+        kernel_initializer=kernel_initializer,
         name='action_encoding')
 
     joint_layers = utils.mlp_layers(
         None,
         joint_fc_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=1. / 3., mode='fan_in', distribution='uniform'),
+        kernel_initializer=kernel_initializer,
         name='joint_mlp')
 
     # Create RNN cell
@@ -126,8 +136,7 @@ class CriticRnnNetwork(network.Network):
         tf.keras.layers.Dense(
             1,
             activation=None,
-            kernel_initializer=tf.keras.initializers.RandomUniform(
-                minval=-0.003, maxval=0.003),
+            kernel_initializer=last_kernel_initializer,
             name='value'))
 
     super(CriticRnnNetwork, self).__init__(

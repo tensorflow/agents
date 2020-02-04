@@ -45,6 +45,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.agents.sac import sac_agent
+from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import suite_dm_control
@@ -53,7 +54,6 @@ from tf_agents.environments import wrappers
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_rnn_network
-from tf_agents.networks import normal_projection_network
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
@@ -65,23 +65,6 @@ flags.DEFINE_multi_string('gin_file', None, 'Path to the trainer config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding to pass through.')
 
 FLAGS = flags.FLAGS
-
-
-@gin.configurable
-def normal_projection_net(action_spec,
-                          init_action_stddev=0.35,
-                          init_means_output_factor=0.1):
-  del init_action_stddev
-  return normal_projection_network.NormalProjectionNetwork(
-      action_spec,
-      mean_transform=None,
-      state_dependent_std=True,
-      init_means_output_factor=init_means_output_factor,
-      std_transform=sac_agent.std_clip_transform,
-      scale_distribution=True)
-
-
-_DEFAULT_REWARD_SCALE = 0
 
 
 @gin.configurable
@@ -112,13 +95,13 @@ def train_eval(
     # Params for train
     train_steps_per_iteration=1,
     batch_size=256,
-    train_sequence_length=20,
     critic_learning_rate=3e-4,
+    train_sequence_length=20,
     actor_learning_rate=3e-4,
     alpha_learning_rate=3e-4,
     td_errors_loss_fn=tf.math.squared_difference,
     gamma=0.99,
-    reward_scale_factor=_DEFAULT_REWARD_SCALE,
+    reward_scale_factor=0.1,
     gradient_clipping=None,
     use_tf_functions=True,
     # Params for eval
@@ -135,15 +118,6 @@ def train_eval(
     summarize_grads_and_vars=False,
     eval_metrics_callback=None):
   """A simple train and eval for RNN SAC on DM control."""
-  root_dir = os.path.expanduser(root_dir)
-
-  if reward_scale_factor == _DEFAULT_REWARD_SCALE:
-    # Use value recommended by https://arxiv.org/abs/1801.01290
-    if env_name.startswith('Humanoid'):
-      reward_scale_factor = 20.0
-    else:
-      reward_scale_factor = 5.0
-
   root_dir = os.path.expanduser(root_dir)
 
   summary_writer = tf.compat.v2.summary.create_file_writer(
@@ -190,7 +164,8 @@ def train_eval(
         input_fc_layer_params=actor_fc_layers,
         lstm_size=actor_lstm_size,
         output_fc_layer_params=actor_output_fc_layers,
-        continuous_projection_net=normal_projection_net)
+        continuous_projection_net=tanh_normal_projection_network
+        .TanhNormalProjectionNetwork)
 
     critic_net = critic_rnn_network.CriticRnnNetwork(
         (observation_spec, action_spec),
@@ -198,7 +173,9 @@ def train_eval(
         action_fc_layer_params=critic_action_fc_layers,
         joint_fc_layer_params=critic_joint_fc_layers,
         lstm_size=critic_lstm_size,
-        output_fc_layer_params=critic_output_fc_layers)
+        output_fc_layer_params=critic_output_fc_layers,
+        kernel_initializer='glorot_uniform',
+        last_kernel_initializer='glorot_uniform')
 
     tf_agent = sac_agent.SacAgent(
         time_step_spec,
@@ -309,11 +286,17 @@ def train_eval(
     time_acc = 0
     env_steps_before = env_steps.result().numpy()
 
-    # Dataset generates trajectories with shape [Bx2x...]
+    # Prepare replay buffer as dataset with invalid transitions filtered.
+    def _filter_invalid_transition(trajectories, unused_arg1):
+      # Reduce filter_fn over full trajectory sampled. The sequence is kept only
+      # if all elements except for the last one pass the filter. This is to
+      # allow training on terminal steps.
+      return tf.reduce_all(~trajectories.is_boundary()[:-1])
     dataset = replay_buffer.as_dataset(
-        num_parallel_calls=3,
         sample_batch_size=batch_size,
-        num_steps=train_sequence_length + 1).prefetch(3)
+        num_steps=train_sequence_length+1).unbatch().filter(
+            _filter_invalid_transition).batch(batch_size).prefetch(5)
+    # Dataset generates trajectories with shape [Bx2x...]
     iterator = iter(dataset)
 
     def train_step():
