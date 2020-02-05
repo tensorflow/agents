@@ -309,7 +309,7 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
     env.reset()
-    transition_time_step = env.step(0)
+    transition_time_step = env.step(np.array(0, dtype=np.int32))
 
     self.assertTrue(transition_time_step.is_mid())
     self.assertNotEqual(None, transition_time_step.reward)
@@ -322,7 +322,7 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     time_step = env.reset()
 
     while not time_step.is_last():
-      time_step = env.step(1)
+      time_step = env.step(np.array(1, dtype=np.int32))
 
     self.assertTrue(time_step.is_last())
     self.assertNotEqual(None, time_step.reward)
@@ -335,7 +335,7 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     self.assertEqual(None, env.get_info())
     env.reset()
     self.assertEqual(None, env.get_info())
-    env.step(0)
+    env.step(np.array(0, dtype=np.int32))
     self.assertEqual({}, env.get_info())
 
   def test_automatic_reset_after_create(self):
@@ -351,7 +351,7 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     time_step = env.reset()
 
     while not time_step.is_last():
-      time_step = env.step(1)
+      time_step = env.step(np.array(1, dtype=np.int32))
 
     self.assertTrue(time_step.is_last())
     first_time_step = env.step(0)
@@ -363,7 +363,7 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     time_step = env.step(1)
 
     while not time_step.is_last():
-      time_step = env.step(1)
+      time_step = env.step(np.array(1, dtype=np.int32))
 
     self.assertTrue(time_step.is_last())
     first_time_step = env.step(0)
