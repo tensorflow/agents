@@ -78,7 +78,7 @@ def load(environment_name,
 @gin.configurable
 def wrap_env(gym_env,
              discount=1.0,
-             max_episode_steps=0,
+             max_episode_steps=None,
              gym_env_wrappers=(),
              time_limit_wrapper=wrappers.TimeLimit,
              env_wrappers=(),
@@ -93,7 +93,7 @@ def wrap_env(gym_env,
     gym_env: An instance of OpenAI gym environment.
     discount: Discount to use for the environment.
     max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied
-      if set to 0. Usually set to `gym_spec.max_episode_steps` as done in `load.
+      if set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load.
     gym_env_wrappers: Iterable with references to wrapper classes to use
       directly on the gym environment.
     time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to
@@ -122,7 +122,7 @@ def wrap_env(gym_env,
       auto_reset=auto_reset,
   )
 
-  if max_episode_steps > 0:
+  if max_episode_steps is not None and max_episode_steps > 0:
     env = time_limit_wrapper(env, max_episode_steps)
 
   for wrapper in env_wrappers:
