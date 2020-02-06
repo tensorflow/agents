@@ -211,12 +211,14 @@ class DynamicEpisodeDriver(driver.Driver):
     counter = tf.zeros(batch_dims, tf.int32)
 
     num_episodes = num_episodes or self._num_episodes
-    [_, time_step, policy_state] = tf.while_loop(
-        cond=self._loop_condition_fn(num_episodes),
-        body=self._loop_body_fn(),
-        loop_vars=[counter, time_step, policy_state],
-        back_prop=False,
-        parallel_iterations=1,
-        maximum_iterations=maximum_iterations,
-        name='driver_loop')
+    [_, time_step, policy_state] = tf.nest.map_structure(
+        tf.stop_gradient,
+        tf.while_loop(
+            cond=self._loop_condition_fn(num_episodes),
+            body=self._loop_body_fn(),
+            loop_vars=[counter, time_step, policy_state],
+            parallel_iterations=1,
+            maximum_iterations=maximum_iterations,
+            name='driver_loop'))
+
     return time_step, policy_state
