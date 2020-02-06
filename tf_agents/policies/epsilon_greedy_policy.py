@@ -106,8 +106,8 @@ class EpsilonGreedyPolicy(tf_policy.Base):
     if outer_ndims >= 2:
       raise ValueError(
           'Only supports batched time steps with a single batch dimension')
-    action = tf.compat.v1.where(cond, greedy_action.action,
-                                random_action.action)
+    action = tf.nest.map_structure(lambda g, r: tf.compat.v1.where(cond, g, r), 
+                                   greedy_action.action, random_action.action)
 
     if greedy_action.info:
       if not random_action.info:
