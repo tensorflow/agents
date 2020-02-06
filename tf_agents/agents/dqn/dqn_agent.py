@@ -266,6 +266,8 @@ class DqnAgent(tf_agent.TFAgent):
     if len(flat_action_spec) > 1 or flat_action_spec[0].shape.rank > 1:
       raise ValueError('Only one dimensional actions are supported now.')
 
+    # TODO(b/119321125): Disable this once index_with_actions supports
+    # negative-valued actions.
     if not all(spec.minimum == 0 for spec in flat_action_spec):
       raise ValueError(
           'Action specs should have minimum of 0, but saw: {0}'.format(
