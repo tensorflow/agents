@@ -138,15 +138,16 @@ class ActorDistributionNetworkTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     modes = self.evaluate(modes)
 
-    modes_differ = False
+    # Verify that the modes from action_distributions are not all the same.
+    any_modes_differ = False
     for i in range(num_modes):
       for j in range(i+1, num_modes):
-        modes_differ = np.linalg.norm(modes[i] - modes[j]) > 1e-6
-        if modes_differ:
-          break
+        any_modes_differ = np.linalg.norm(modes[i] - modes[j]) > 1e-6
+        if any_modes_differ:
+          self.assertEqual(training, any_modes_differ)
+          return
 
-    self.assertEqual(training, modes_differ)
-
+    self.assertEqual(training, any_modes_differ)
 
 if __name__ == '__main__':
   tf.test.main()
