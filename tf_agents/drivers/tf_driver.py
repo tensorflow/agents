@@ -61,6 +61,7 @@ class TFDriver(driver.Driver):
     Raises:
       ValueError: If both max_steps and max_episodes are None.
     """
+    common.check_tf1_allowed()
     max_steps = max_steps or 0
     max_episodes = max_episodes or 0
     if max_steps < 1 and max_episodes < 1:

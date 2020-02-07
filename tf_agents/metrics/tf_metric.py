@@ -28,6 +28,7 @@ class TFStepMetric(tf.Module):
 
   def __init__(self, name, prefix='Metrics'):
     super(TFStepMetric, self).__init__(name)
+    common.check_tf1_allowed()
     self._prefix = prefix
 
   def call(self, *args, **kwargs):

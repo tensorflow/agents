@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+import importlib
 import os
 
 from absl import logging
@@ -33,9 +34,18 @@ from tf_agents.utils import nest_utils
 
 # pylint:disable=g-direct-tensorflow-import
 from tensorflow.core.protobuf import struct_pb2  # TF internal
+from tensorflow.python import tf2 as tf2_checker  # TF internal
 from tensorflow.python.eager import monitoring  # TF internal
 from tensorflow.python.saved_model import nested_structure_coder  # TF internal
 # pylint:enable=g-direct-tensorflow-import
+
+try:
+  importlib.import_module('tf_agents.utils.allow_tf1')
+except ImportError:
+  _TF1_MODE_ALLOWED = False
+else:
+  _TF1_MODE_ALLOWED = True
+
 
 tf_agents_gauge = monitoring.BoolGauge('/tensorflow/agents/agents',
                                        'TF-Agents usage', 'method')
@@ -47,6 +57,18 @@ code to your main() method:
   tf.compat.v1.enable_resource_variables()
 For unit tests, subclass `tf_agents.utils.test_utils.TestCase`.
 """
+
+
+def check_tf1_allowed():
+  """Raises an error if running in TF1 (non-eager) mode and this is disabled."""
+  if _TF1_MODE_ALLOWED:
+    return
+  if not tf2_checker.enabled():
+    raise RuntimeError(
+        'You are using TF1 or running TF with eager mode disabled.  '
+        'TF-Agents no longer supports TF1 mode (except for a shrinking list of '
+        'internal whitelisted users).  If this negatively affects you, please '
+        'reach out to the TF-Agents team.  Otherwise please use TF2.')
 
 
 def resource_variables_enabled():
@@ -125,6 +147,7 @@ def function_in_tf1(*args, **kwargs):
     @functools.wraps(fn)
     def with_check_resource_vars(*fn_args, **fn_kwargs):
       """Helper function for calling common.function."""
+      check_tf1_allowed()
       if has_eager_been_enabled():
         # We're either in eager mode or in tf.function mode (no in-between); so
         # autodep-like behavior is already expected of fn.
@@ -147,6 +170,7 @@ def create_variable(name,
                     initializer=None,
                     unique_name=True):
   """Create a variable."""
+  check_tf1_allowed()
   if has_eager_been_enabled():
     if initializer is None:
       if shape:

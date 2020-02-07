@@ -27,6 +27,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tensorflow.keras import layers  # pylint: disable=unused-import
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
+from tf_agents.utils import common
 
 # pylint:disable=g-direct-tensorflow-import
 from tensorflow.python.keras.engine import network as keras_network  # TF internal
@@ -111,6 +112,7 @@ class Network(keras_network.Network):
       name: A string representing the name of the network.
     """
     super(Network, self).__init__(name=name)
+    common.check_tf1_allowed()
     self._input_tensor_spec = input_tensor_spec
     self._state_spec = state_spec
 

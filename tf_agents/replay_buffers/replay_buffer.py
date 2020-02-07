@@ -22,6 +22,8 @@ from __future__ import print_function
 import abc
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.utils import common
+
 from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
@@ -42,6 +44,7 @@ class ReplayBuffer(tf.Module):
       stateful_dataset: whether the dataset contains stateful ops or not.
     """
     super(ReplayBuffer, self).__init__()
+    common.check_tf1_allowed()
     self._data_spec = data_spec
     self._capacity = capacity
     self._stateful_dataset = stateful_dataset

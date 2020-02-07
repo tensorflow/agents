@@ -89,6 +89,7 @@ class TFAgent(tf.Module):
       ValueError: If `time_step_spec` is not an instance of `ts.TimeStep`.
       ValueError: If `num_outer_dims` is not in [1, 2].
     """
+    common.check_tf1_allowed()
     common.tf_agents_gauge.get_cell("TFAgent").set(True)
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
     if not isinstance(time_step_spec, ts.TimeStep):
