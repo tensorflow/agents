@@ -157,7 +157,9 @@ class AtariPreprocessing(gym_core.Wrapper):
         break
       # We max-pool over the last two frames, in grayscale.
       elif time_step >= self.frame_skip - 2:
-        t = time_step - (self.frame_skip - 2)
+        # When frame_skip==1, taking a max ensures that it's still
+        # screen_buffer[0] that holds the fetched observation
+        t = time_step - max(self.frame_skip - 2, 0)
         self._fetch_grayscale_observation(self.screen_buffer[t])
 
     # Pool the last two observations.
