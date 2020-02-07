@@ -20,12 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
-from tf_agents.drivers import test_utils as driver_test_utils
-from tf_agents.environments import trajectory_replay
 from tf_agents.networks import network
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
@@ -38,6 +35,50 @@ from tf_agents.utils import test_utils
 
 # Number of times to train in test loops.
 TRAIN_ITERATIONS = 10
+
+
+def create_arbitrary_trajectory():
+  """Creates an arbitrary trajectory for unit testing BehavioralCloningAgent.
+
+  This trajectory contains Tensors shaped `[6, 1, ...]` where `6` is the number
+  of time steps and `1` is the batch.
+
+  Observations are unbounded but actions are bounded to take values within
+  `[1, 2]`. The action space is discrete.
+
+  Policy info is not provided, as it is not used in BehavioralCloningAgent.
+
+  Returns:
+    traj: a hard coded `Trajectory` that matches time_step_spec and action_spec.
+    time_step_spec: a hard coded time spec.
+    action_spec: a hard coded action spec.
+  """
+
+  time_step_spec = ts.time_step_spec(
+      tensor_spec.TensorSpec([], tf.int32, name='observation'))
+  action_spec = tensor_spec.BoundedTensorSpec([],
+                                              tf.int32,
+                                              minimum=1,
+                                              maximum=2,
+                                              name='action')
+
+  observation = tf.constant([[1], [2], [3], [4], [5], [6]], dtype=tf.int32)
+  action = tf.constant([[1], [1], [1], [2], [2], [2]], dtype=tf.int32)
+  reward = tf.constant([[0], [0], [0], [0], [0], [0]], dtype=tf.int32)
+  step_type = tf.constant([[0], [1], [2], [0], [1], [2]], dtype=tf.int32)
+  next_step_type = tf.constant([[1], [2], [0], [1], [2], [0]], dtype=tf.int32)
+  discount = tf.constant([[1], [1], [1], [1], [1], [1]], dtype=tf.int32)
+
+  traj = trajectory.Trajectory(
+      observation=observation,
+      action=action,
+      policy_info=(),
+      reward=reward,
+      step_type=step_type,
+      next_step_type=next_step_type,
+      discount=discount,
+  )
+  return traj, time_step_spec, action_spec
 
 
 class DummyNet(network.Network):
@@ -180,9 +221,9 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
   @parameterized.named_parameters(('TrainOnMultipleSteps', False),
                                   ('TrainOnSingleStep', True))
   def testTrainWithNN(self, is_convert):
-    # Emits trajectories shaped (batch=1, time=6, ...)
-    traj, time_step_spec, action_spec = (
-        driver_test_utils.make_random_trajectory())
+    # Hard code a trajectory shaped (time=6, batch=1, ...).
+    traj, time_step_spec, action_spec = create_arbitrary_trajectory()
+
     if is_convert:
       # Convert to single step trajectory of shapes (batch=6, 1, ...).
       traj = tf.nest.map_structure(common.transpose_batch_time, traj)
@@ -196,32 +237,27 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         num_outer_dims=2)
     # Disable clipping to make sure we can see the difference in behavior
     agent.policy._clip = False
-    # Remove policy_info, as BehavioralCloningAgent expects none.
-    traj = traj.replace(policy_info=())
     # TODO(b/123883319)
     if tf.executing_eagerly():
       train_and_loss = lambda: agent.train(traj)
     else:
       train_and_loss = agent.train(traj)
-    replay = trajectory_replay.TrajectoryReplay(agent.policy)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    initial_actions = self.evaluate(replay.run(traj)[0])
-    for _ in range(TRAIN_ITERATIONS):
-      self.evaluate(train_and_loss)
-      post_training_actions = self.evaluate(replay.run(traj)[0])
-    post_training_actions = self.evaluate(replay.run(traj)[0])
+
+    initial_loss = self.evaluate(train_and_loss).loss
+    for _ in range(TRAIN_ITERATIONS - 1):
+      loss = self.evaluate(train_and_loss).loss
+
     # We don't necessarily converge to the same actions as in trajectory after
-    # 10 steps of an untuned optimizer, but the policy does change.
-    self.assertFalse(np.all(initial_actions == post_training_actions))
+    # 10 steps of an untuned optimizer, but the loss should go down.
+    self.assertGreater(initial_loss, loss)
 
   def testTrainWithSingleOuterDimension(self):
-    # Emits trajectories shaped (batch=1, time=6, ...)
-    traj, time_step_spec, action_spec = (
-        driver_test_utils.make_random_trajectory())
-    # Convert to shapes (batch=6, 1, ...) so this works with a non-RNN model.
-    traj = tf.nest.map_structure(common.transpose_batch_time, traj)
-    # Remove the time dimension so there is only one outer dimension.
+    # Hard code a trajectory shaped (time=6, batch=1, ...).
+    traj, time_step_spec, action_spec = create_arbitrary_trajectory()
+    # Remove the batch dimension so there is only one outer dimension.
     traj = tf.nest.map_structure(lambda x: tf.squeeze(x, axis=1), traj)
+
     cloning_net = q_network.QNetwork(
         time_step_spec.observation, action_spec)
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
@@ -244,9 +280,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
     # Note that we skip the TrajectoryReplay since it requires a time dimension.
 
   def testTrainWithRNN(self):
-    # Emits trajectories shaped (batch=1, time=6, ...)
-    traj, time_step_spec, action_spec = (
-        driver_test_utils.make_random_trajectory())
+    # Hard code a trajectory shaped (time=6, batch=1, ...).
+    traj, time_step_spec, action_spec = create_arbitrary_trajectory()
     cloning_net = q_rnn_network.QRnnNetwork(
         time_step_spec.observation, action_spec)
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
@@ -264,16 +299,15 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
       train_and_loss = lambda: agent.train(traj)
     else:
       train_and_loss = agent.train(traj)
-    replay = trajectory_replay.TrajectoryReplay(agent.policy)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    initial_actions = self.evaluate(replay.run(traj)[0])
 
-    for _ in range(TRAIN_ITERATIONS):
-      self.evaluate(train_and_loss)
-    post_training_actions = self.evaluate(replay.run(traj)[0])
+    initial_loss = self.evaluate(train_and_loss).loss
+    for _ in range(TRAIN_ITERATIONS - 1):
+      loss = self.evaluate(train_and_loss).loss
+
     # We don't necessarily converge to the same actions as in trajectory after
-    # 10 steps of an untuned optimizer, but the policy does change.
-    self.assertFalse(np.all(initial_actions == post_training_actions))
+    # 10 steps of an untuned optimizer, but the loss should go down.
+    self.assertGreater(initial_loss, loss)
 
   def testPolicy(self):
     cloning_net = DummyNet(self._observation_spec, self._action_spec)
