@@ -240,7 +240,8 @@ class LinearBanditPolicy(tf_policy.Base):
       else:
         a_inv_x = linalg.conjugate_gradient_solve(
             self._cov_matrix[k] +
-            self._tikhonov_weight * tf.eye(self._context_dim),
+            self._tikhonov_weight * tf.eye(
+                self._context_dim, dtype=self._dtype),
             tf.linalg.matrix_transpose(observation))
       est_mean_reward = tf.einsum('j,jk->k', self._data_vector[k], a_inv_x)
       est_rewards.append(est_mean_reward)
