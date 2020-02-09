@@ -28,7 +28,6 @@ from tf_agents.policies import actor_policy
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
-from tf_agents.trajectories import time_step as ts
 
 tfd = tfp.distributions
 
@@ -143,13 +142,11 @@ class PPOPolicy(actor_policy.ActorPolicy):
                                training=training)
 
   def _apply_actor_network(self, time_step, policy_state, training=False):
+    observation = time_step.observation
     if self._observation_normalizer:
-      observation = self._observation_normalizer.normalize(
-          time_step.observation)
-      time_step = ts.TimeStep(time_step.step_type, time_step.reward,
-                              time_step.discount, observation)
+      observation = self._observation_normalizer.normalize(observation)
     return self._actor_network(
-        time_step.observation, time_step.step_type, network_state=policy_state,
+        observation, time_step.step_type, network_state=policy_state,
         training=training)
 
   def _variables(self):
