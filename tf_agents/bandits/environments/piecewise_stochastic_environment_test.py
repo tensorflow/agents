@@ -64,16 +64,16 @@ class PiecewiseStochasticEnvironmentTest(tf.test.TestCase,
            action_shape=[5],
            batch_size=2,
            seed=98765),
-      )
+  )
 
   def testObservationAndRewardsVary(
       self, observation_shape, action_shape, batch_size, seed):
     """Ensure that observations and rewards change in consecutive calls."""
     interval = 4
-    tf.compat.v1.set_random_seed(seed)
+
     env = get_deterministic_gaussian_non_stationary_environment(
         observation_shape, action_shape, batch_size, interval)
-
+    tf.compat.v1.set_random_seed(seed)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     observation_to_reward_samples = []
@@ -110,6 +110,7 @@ class PiecewiseStochasticEnvironmentTest(tf.test.TestCase,
          env_time_sample) = self.evaluate([observation_to_reward,
                                            additive_reward,
                                            env_time])
+
         observation_to_reward_samples.append(observation_to_reward_sample)
         additive_reward_samples.append(additive_reward_sample)
         self.assertEqual(env_time_sample, (t + 1) * batch_size)
@@ -122,7 +123,7 @@ class PiecewiseStochasticEnvironmentTest(tf.test.TestCase,
           additive_reward_samples[int(t - t % (interval / batch_size))],
           additive_reward_samples[t])
 
-    for t in range(interval, 10, interval):
+    for t in range(interval // batch_size, 10, interval // batch_size):
       self.assertNotAllClose(
           observation_to_reward_samples[int(t) - 1],
           observation_to_reward_samples[int(t)])
