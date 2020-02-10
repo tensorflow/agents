@@ -159,9 +159,7 @@ class LSTMEncodingNetwork(network.Network):
               num_units,
               activation=activation_fn,
               kernel_initializer=kernel_initializer,
-              dtype=dtype,
-              name='/'.join([name, 'dense']))
-          for num_units in output_fc_layer_params
+              dtype=dtype) for num_units in output_fc_layer_params
       ]
 
     counter = [-1]
