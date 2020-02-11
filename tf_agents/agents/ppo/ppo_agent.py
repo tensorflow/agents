@@ -119,6 +119,7 @@ class PPOAgent(tf_agent.TFAgent):
                normalize_rewards=True,
                reward_norm_clipping=10.0,
                normalize_observations=True,
+               train_on_partial_episodes=False,
                log_prob_clipping=0.0,
                kl_cutoff_factor=2.0,
                kl_cutoff_coef=1000.0,
@@ -165,6 +166,9 @@ class PPOAgent(tf_agent.TFAgent):
       reward_norm_clipping: Value above and below to clip normalized reward.
       normalize_observations: If true, keeps moving mean and variance of
         observations and normalizes incoming observations.
+      train_on_partial_episodes: If True (default False), then data from
+        incomplete trajectories, not containing the end of an episode will also
+        be used. Otherwise, incomplete episodes are not used for training.
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       kl_cutoff_factor: If policy KL changes more than this much for any single
@@ -210,6 +214,7 @@ class PPOAgent(tf_agent.TFAgent):
     self._use_gae = use_gae
     self._use_td_lambda_return = use_td_lambda_return
     self._reward_norm_clipping = reward_norm_clipping
+    self._train_on_partial_episodes = train_on_partial_episodes
     self._log_prob_clipping = log_prob_clipping
     self._kl_cutoff_factor = kl_cutoff_factor
     self._kl_cutoff_coef = kl_cutoff_coef
@@ -396,7 +401,10 @@ class PPOAgent(tf_agent.TFAgent):
             kl_penalty_loss=kl_penalty_loss,
         ))
 
-  def compute_return_and_advantage(self, next_time_steps, value_preds):
+  def compute_return_and_advantage(self,
+                                   next_time_steps,
+                                   value_preds,
+                                   use_last_value_pred_for_bootstrapping=False):
     """Compute the Monte Carlo return and advantage.
 
     Normalazation will be applied to the computed returns and advantages if
@@ -407,6 +415,9 @@ class PPOAgent(tf_agent.TFAgent):
       value_preds: Batched value prediction tensor. Should have one more entry
         in time index than time_steps, with the final value corresponding to the
         value prediction of the final state.
+      use_last_value_pred_for_bootstrapping: Whether the last value prediction
+        should be used for bootstrapping the reward function. Can be useful in
+        non-episodic environments.
 
     Returns:
       tuple of (return, normalized_advantage), both are batched tensors.
@@ -444,7 +455,14 @@ class PPOAgent(tf_agent.TFAgent):
     discounts *= episode_mask
 
     # Compute Monte Carlo returns.
-    returns = value_ops.discounted_return(rewards, discounts, time_major=False)
+    # If the final step is terminal, the bootstrapped estimation will never be
+    # used, as it will be multiplied by zero (the discount on the last step).
+    final_value_bootstrapped = (value_preds[:, -1]
+                                if use_last_value_pred_for_bootstrapping
+                                else None)
+    returns = value_ops.discounted_return(rewards, discounts,
+                                          time_major=False,
+                                          final_value=final_value_bootstrapped)
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
           name='returns', data=returns, step=self.train_step_counter)
@@ -510,7 +528,8 @@ class PPOAgent(tf_agent.TFAgent):
         training=False)
     value_preds = tf.stop_gradient(value_preds)
 
-    valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
+    valid_mask = ppo_utils.make_timestep_mask(
+      next_time_steps, allow_partial_episodes=self._train_on_partial_episodes)
 
     if weights is None:
       weights = valid_mask
@@ -518,7 +537,8 @@ class PPOAgent(tf_agent.TFAgent):
       weights *= valid_mask
 
     returns, normalized_advantages = self.compute_return_and_advantage(
-        next_time_steps, value_preds)
+        next_time_steps, value_preds,
+        use_last_value_pred_for_bootstrapping=self._train_on_partial_episodes)
 
     # Loss tensors across batches will be aggregated for summaries.
     policy_gradient_losses = []
@@ -701,8 +721,11 @@ class PPOAgent(tf_agent.TFAgent):
         entropy = tf.cast(
             common.entropy(current_policy_distribution, self.action_spec),
             tf.float32)
+
+        entropy *= weights
+
         entropy_reg_loss = (
-            tf.reduce_mean(input_tensor=-entropy * weights) *
+            tf.reduce_mean(input_tensor=-entropy) *
             self._entropy_regularization)
         if self._check_numerics:
           entropy_reg_loss = tf.debugging.check_numerics(
@@ -1020,7 +1043,8 @@ class PPOAgent(tf_agent.TFAgent):
     """
     kl_divergence = self._kl_divergence(time_steps,
                                         action_distribution_parameters,
-                                        current_policy_distribution) * weights
+                                        current_policy_distribution)
+    kl_divergence *= weights
 
     if debug_summaries:
       tf.compat.v2.summary.histogram(
