@@ -109,14 +109,9 @@ class MixturePolicy(tf_policy.Base):
     policy_infos = nest_utils.stack_nested_tensors(
         [step.info for step in policy_steps], axis=-1)
 
-    # TODO(b/147134243) Remove the expand_dims and squeeze once the fix in
-    # b/143205052 is live.
     expanded_choice = tf.expand_dims(policy_choice, axis=-1)
-    expanded_mixture_action = tf.nest.map_structure(
-        lambda t: tf.gather(t, expanded_choice, batch_dims=1), policy_actions)
-
-    mixture_action = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=1),
-                                           expanded_mixture_action)
+    mixture_action = tf.nest.map_structure(
+        lambda t: tf.gather(t, policy_choice, batch_dims=1), policy_actions)
 
     expanded_mixture_info = tf.nest.map_structure(
         lambda t: tf.gather(t, expanded_choice, batch_dims=1), policy_infos)
