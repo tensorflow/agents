@@ -66,6 +66,12 @@ class SuiteGymTest(test_utils.TestCase):
     self.assertIsInstance(env, py_environment.PyEnvironment)
     self.assertIsInstance(env, wrappers.TimeLimit)
 
+  def test_gym_kwargs_argument(self):
+    env = suite_gym.load('FrozenLake-v0', gym_kwargs={'map_name': '4x4'})
+    self.assertTupleEqual(env.unwrapped.desc.shape, (4, 4))
+
+    env = suite_gym.load('FrozenLake-v0', gym_kwargs={'map_name': '8x8'})
+    self.assertTupleEqual(env.unwrapped.desc.shape, (8, 8))
 
 if __name__ == '__main__':
   test_utils.main()
