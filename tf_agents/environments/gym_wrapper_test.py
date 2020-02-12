@@ -55,7 +55,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
     spec = gym_wrapper.spec_from_gym_space(multi_binary_space)
 
     self.assertEqual((4,), spec.shape)
-    self.assertEqual(np.int8, spec.dtype)
+    self.assertEqual(np.int32, spec.dtype)
     np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
     np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
 
