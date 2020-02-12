@@ -39,7 +39,7 @@ class DummyActionNet(network.Network):
         name='DummyActionNet')
     self._output_tensor_spec = output_tensor_spec
     single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
-    self._layers = [
+    self._sub_layers = [
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
             activation=tf.nn.tanh,
@@ -52,7 +52,7 @@ class DummyActionNet(network.Network):
     del step_type
 
     states = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
-    for layer in self.layers:
+    for layer in self._sub_layers:
       states = layer(states)
 
     single_action_spec = tf.nest.flatten(self._output_tensor_spec)[0]
