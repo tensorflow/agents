@@ -23,6 +23,7 @@ import abc
 import collections
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
@@ -54,8 +55,8 @@ class TFAgent(tf.Module):
     """Meant to be called by subclass constructors.
 
     Args:
-      time_step_spec: A `TimeStep` spec of the expected time_steps. Provided by
-        the user.
+      time_step_spec: A nest of tf.TypeSpec representing the time_steps.
+        Provided by the user.
       action_spec: A nest of BoundedTensorSpec representing the actions.
         Provided by the user.
       policy: An instance of `tf_policy.Base` representing the Agent's current
@@ -89,6 +90,21 @@ class TFAgent(tf.Module):
       ValueError: If `time_step_spec` is not an instance of `ts.TimeStep`.
       ValueError: If `num_outer_dims` is not in [1, 2].
     """
+
+    def _each_isinstance(spec, spec_types):
+      """Checks if each element of `spec` is instance of any of `spec_types`."""
+      return all([isinstance(s, spec_types) for s in tf.nest.flatten(spec)])
+
+    if not _each_isinstance(time_step_spec, tf.TypeSpec):
+      raise TypeError("time_step_spec has to contain TypeSpec (TensorSpec, "
+                      "SparseTensorSpec, etc) objects, but received: {}".format(
+                          time_step_spec))
+
+    if not _each_isinstance(action_spec, tensor_spec.BoundedTensorSpec):
+      raise TypeError(
+          "action_spec has to contain BoundedTensorSpec objects, but received: "
+          "{}".format(action_spec))
+
     common.check_tf1_allowed()
     common.tf_agents_gauge.get_cell("TFAgent").set(True)
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
