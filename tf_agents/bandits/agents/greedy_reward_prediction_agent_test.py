@@ -31,6 +31,7 @@ from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
+from tensorflow.python.framework import errors  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
@@ -262,6 +263,60 @@ class AgentTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss_before), 42.25)
     self.assertAllClose(self.evaluate(loss_after), 93.46)
+
+  def testTrainAgentWithLaplacianSmoothing(self):
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    laplacian_matrix = tf.constant([[1.0, -1.0, 0.0],
+                                    [-1.0, 2.0, -1.0],
+                                    [0.0, -1.0, 1.0]])
+    agent = greedy_agent.GreedyRewardPredictionAgent(
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=optimizer,
+        laplacian_matrix=laplacian_matrix,
+        laplacian_smoothing_weight=1.0)
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.float32)
+    rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+    loss_before, _ = agent.train(experience, None)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    # The Laplacian smoothing term ends up adding 22.5 to the loss.
+    self.assertAllClose(self.evaluate(loss_before), 42.25 + 22.5)
+
+  def testTrainAgentWithLaplacianSmoothingInvalidMatrix(self):
+    if tf.executing_eagerly:
+      return
+
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.float32)
+    rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    with self.assertRaisesRegexp(errors.InvalidArgumentError, ''):
+      reward_net = DummyNet(self._observation_spec, self._action_spec)
+      optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+      # Set the Laplacian matrix to be the identity, which is not a valid
+      # Laplacian.
+      laplacian_matrix = tf.eye(3)
+      agent = greedy_agent.GreedyRewardPredictionAgent(
+          self._time_step_spec,
+          self._action_spec,
+          reward_network=reward_net,
+          optimizer=optimizer,
+          laplacian_matrix=laplacian_matrix,
+          laplacian_smoothing_weight=1.0)
+      self.evaluate(tf.compat.v1.initialize_all_variables())
+      loss_before, _ = agent.train(experience, None)
+      self.evaluate(loss_before)
 
 
 if __name__ == '__main__':

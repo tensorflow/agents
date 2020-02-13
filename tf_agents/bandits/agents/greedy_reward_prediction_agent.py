@@ -58,8 +58,28 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       enable_summaries=True,
       emit_policy_info=(),
       train_step_counter=None,
+      laplacian_matrix=None,
+      laplacian_smoothing_weight=0.001,
       name=None):
     """Creates a Greedy Reward Network Prediction Agent.
+
+     In some use cases, the actions are not independent and they are related to
+     each other (e.g., when the actions are ordinal integers). Assuming that
+     the relations between arms can be modeled by a graph, we may want to
+     enforce that the estimated reward function is smooth over the graph. This
+     implies that the estimated rewards `r_i` and `r_j` for two related actions
+     `i` and `j`, should be close to each other. To quantify this smoothness
+     criterion we use the Laplacian matrix `L` of the graph over the actions.
+     When the laplacian smoothing is enabled, the loss is extended to:
+     ```
+       Loss_new := Loss + lambda r^T * L * r,
+     ```
+     where `r` is the estimated reward vector for all actions. The second
+     term is the laplacian smoothing regularization term and `lambda` is the
+     weight that determines how strongly we enforce the regularization.
+     For more details, please see:
+     "Bandits on graphs and structures", Michal Valko
+     https://hal.inria.fr/tel-01359757/document
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
@@ -91,12 +111,21 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
+      laplacian_matrix: A float `Tensor` shaped `[num_actions, num_actions]`.
+        This holds the Laplacian matrix used to regularize the smoothness of the
+        estimated expected reward function. This only applies to problems where
+        the actions have a graph structure. If `None`, the regularization is not
+        applied.
+      laplacian_smoothing_weight: A float that determines the weight of the
+        regularization term. Note that this has no effect if `laplacian_matrix`
+        above is `None`.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
 
     Raises:
       ValueError: If the action spec contains more than one action or or it is
       not a bounded scalar int32 spec with minimum 0.
+      InvalidArgumentError: if the Laplacian provided is not None and not valid.
     """
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
@@ -112,6 +141,14 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._gradient_clipping = gradient_clipping
     self._heteroscedastic = isinstance(
         reward_network, heteroscedastic_q_network.HeteroscedasticQNetwork)
+    self._laplacian_matrix = laplacian_matrix
+    self._laplacian_smoothing_weight = laplacian_smoothing_weight
+    # Check the validity of the laplacian matrix.
+    if laplacian_matrix is not None:
+      tf.debugging.assert_near(
+          0.0, tf.norm(tf.reduce_sum(laplacian_matrix, 1)))
+      tf.debugging.assert_near(
+          0.0, tf.norm(tf.reduce_sum(laplacian_matrix, 0)))
 
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
         time_step_spec,
@@ -224,6 +261,15 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       action_predicted_values = common.index_with_actions(
           predicted_values,
           tf.cast(actions, dtype=tf.int32))
+
+      # Apply Laplacian smoothing on the estimated rewards, if applicable.
+      if self._laplacian_matrix is not None:
+        smoothness_batched = tf.matmul(
+            predicted_values,
+            tf.matmul(self._laplacian_matrix, predicted_values,
+                      transpose_b=True))
+        loss += (self._laplacian_smoothing_weight * tf.reduce_mean(
+            tf.linalg.tensor_diag_part(smoothness_batched) * sample_weights))
 
       loss += self._error_loss_fn(
           rewards,

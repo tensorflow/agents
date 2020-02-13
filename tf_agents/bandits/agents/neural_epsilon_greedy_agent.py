@@ -58,8 +58,13 @@ class NeuralEpsilonGreedyAgent(
       enable_summaries=True,
       emit_policy_info=(),
       train_step_counter=None,
+      laplacian_matrix=None,
+      laplacian_smoothing_weight=0.001,
       name=None):
     """Creates a Neural Epsilon Greedy Agent.
+
+    For more details about the Laplacian smoothing regularization, please see
+    the documentation of the `GreedyRewardPredictionAgent`.
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
@@ -98,6 +103,14 @@ class NeuralEpsilonGreedyAgent(
         `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
+      laplacian_matrix: A float `Tensor` shaped `[num_actions, num_actions]`.
+        This holds the Laplacian matrix used to regularize the smoothness of the
+        estimated expected reward function. This only applies to problems where
+        the actions have a graph structure. If `None`, the regularization is not
+        applied.
+      laplacian_smoothing_weight: A float that determines the weight of the
+        regularization term. Note that this has no effect if `laplacian_matrix`
+        above is `None`.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
 
@@ -119,6 +132,8 @@ class NeuralEpsilonGreedyAgent(
         enable_summaries=enable_summaries,
         emit_policy_info=emit_policy_info,
         train_step_counter=train_step_counter,
+        laplacian_matrix=laplacian_matrix,
+        laplacian_smoothing_weight=laplacian_smoothing_weight,
         name=name)
     self._policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         self._policy, epsilon=epsilon)
