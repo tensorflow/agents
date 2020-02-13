@@ -48,14 +48,17 @@ class MixturePolicy(tf_policy.Base):
     """Initializes an instance of `MixturePolicy`.
 
     Args:
-      mixture_distribution: List of non-negative floats or variables of floats.
-        It constitutes the (possibly unnormalized) distribution of policies
-        based on which the policy used is chosen.
+      mixture_distribution: A `tfd.Categorical` distribution on the domain `[0,
+        len(policies) -1]`. This distribution is used by the mixture policy to
+        choose which policy to listen to.
       policies: List of TF Policies. These are the policies that the mixture
         policy chooses from in every time step.
       name: The name of this instance of `MixturePolicy`.
     """
     self._policies = policies
+    if not isinstance(mixture_distribution, tfd.Categorical):
+      raise TypeError(
+          'mixture distribution must be an instance of `tfd.Categorical`.')
     self._mixture_distribution = mixture_distribution
     action_spec = policies[0].action_spec
     time_step_spec = policies[0].time_step_spec
@@ -81,10 +84,17 @@ class MixturePolicy(tf_policy.Base):
         name=name)
 
   def _variables(self):
-    variables = reduce(lambda x, y: x + y,
-                       [p.variables() for p in self._policies], [])
-    variables += self._mixture_distribution if isinstance(
-        self._mixture_distribution, tf.Variable) else []
+    variables = sum([p.variables() for p in self._policies], [])
+    if self._mixture_distribution.probs is None:
+      variables.extend([
+          p for p in self._mixture_distribution.logits
+          if isinstance(p, tf.Variable)
+      ])
+    else:
+      variables.extend([
+          p for p in self._mixture_distribution.probs
+          if isinstance(p, tf.Variable)
+      ])
     return variables
 
   def _distribution(self, time_step, policy_state):
@@ -92,15 +102,10 @@ class MixturePolicy(tf_policy.Base):
         '_distribution is not implemented for this policy.')
 
   def _action(self, time_step, policy_state, seed=None):
-    tf.debugging.assert_greater_equal(
-        self._mixture_distribution,
-        0.0,
-        message='Negative probability in mixture distribution.')
-    policy_sampler = tfd.Categorical(probs=self._mixture_distribution)
     first_obs = tf.nest.flatten(time_step.observation)[0]
     batch_size = tf.compat.dimension_value(
         first_obs.shape[0]) or tf.shape(first_obs)[0]
-    policy_choice = policy_sampler.sample(batch_size)
+    policy_choice = self._mixture_distribution.sample(batch_size)
     policy_steps = [
         policy.action(time_step, policy_state) for policy in self._policies
     ]

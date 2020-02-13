@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.bandits.agents.static_mixture_agent."""
+"""Tests for tf_agents.bandits.agents.mixture_agent."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -22,10 +22,11 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.bandits.agents import lin_ucb_agent
+from tf_agents.bandits.agents import mixture_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
-from tf_agents.bandits.agents import static_mixture_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.policies import mixture_policy
 from tf_agents.bandits.policies import policy_utilities
@@ -35,6 +36,28 @@ from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
 from tf_agents.utils import test_utils
 from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
+
+tfd = tfp.distributions
+
+
+class WeightRotatingMixtureAgent(mixture_agent.MixtureAgent):
+  """A mixture agent for testing purposes that 'rotates' the weights.
+
+  In every training step, the agent applies a rotation permuation on the agent
+  mixture weights.
+  """
+
+  def _update_mixture_distribution(self, experience):
+    weight_values = tf.identity(self._mixture_distribution.probs)
+    new_values = tf.concat(
+        [weight_values[1:], weight_values[0:1]], 0)
+    self._mixture_distribution.probs.assign(new_values)
+
+  def _initialize(self):
+    tf.compat.v1.variables_initializer(self.variables)
+
+  def _variables(self):
+    return self._mixture_weights
 
 
 def test_cases():
@@ -109,10 +132,10 @@ def _get_experience(initial_step, action_step, final_step):
 
 
 @test_util.run_all_in_graph_and_eager_modes
-class StaticMixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
+class MixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
-    super(StaticMixtureAgentTest, self).setUp()
+    super(MixtureAgentTest, self).setUp()
     tf.compat.v1.enable_resource_variables()
 
   @test_cases()
@@ -126,9 +149,10 @@ class StaticMixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
         lin_ucb_agent.LinearUCBAgent(time_step_spec, action_spec)
         for _ in range(num_agents)
     ]
-    mixture_agent = static_mixture_agent.StaticMixtureAgent([1] * num_agents,
-                                                            agents)
-    self.evaluate(mixture_agent.initialize())
+    dist = tfd.Categorical(
+        probs=tf.Variable(tf.range(num_agents, dtype=tf.float32)))
+    mixed_agent = WeightRotatingMixtureAgent(dist, agents)
+    self.evaluate(mixed_agent.initialize())
 
   @test_cases()
   def testAgentUpdate(self, batch_size, context_dim, num_agents):
@@ -145,17 +169,16 @@ class StaticMixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
               action_spec,
               emit_policy_info=(
                   policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,)))
-    mixture_agent = static_mixture_agent.StaticMixtureAgent([1] * num_agents,
-                                                            agents)
+    dist = tfd.Categorical(
+        probs=tf.Variable(tf.range(num_agents, dtype=tf.float32)))
+    mixed_agent = WeightRotatingMixtureAgent(dist, agents)
     initial_step, final_step = _get_initial_and_final_steps(
         batch_size, context_dim)
     action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
     action_step = _get_action_step(action, num_agents, num_actions)
     experience = _get_experience(initial_step, action_step, final_step)
-    for agent in agents:
-      self.evaluate(agent.initialize())
-    self.evaluate(mixture_agent.initialize())
-    loss_info = mixture_agent.train(experience)
+    self.evaluate(mixed_agent.initialize())
+    loss_info = mixed_agent.train(experience)
     self.evaluate(loss_info)
 
   def testAgentWithDifferentSubagentsUpdate(self):
@@ -183,17 +206,15 @@ class StaticMixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
             learning_rate=0.1),
         epsilon=0.1)
     agents = [agent1, agent2]
-    mixture_agent = static_mixture_agent.StaticMixtureAgent([1, 1], agents)
+    dist = tfd.Categorical(probs=tf.Variable([0., 1.]))
+    mixed_agent = WeightRotatingMixtureAgent(dist, agents)
     initial_step, final_step = _get_initial_and_final_steps(
         batch_size, context_dim)
     action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
     action_step = _get_action_step(action, 2, num_actions)
     experience = _get_experience(initial_step, action_step, final_step)
-    for agent in agents:
-      self.evaluate(agent.initialize())
-    self.evaluate(tf.compat.v1.initialize_all_variables())
-    self.evaluate(mixture_agent.initialize())
-    loss_info = mixture_agent.train(experience)
+    self.evaluate(mixed_agent.initialize())
+    loss_info = mixed_agent.train(experience)
     self.evaluate(loss_info)
 
   @test_cases()
@@ -206,7 +227,7 @@ class StaticMixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
     nested_structure = [{'a': tensor1}, tensor2]
     partition_array = [0, 1] * (batch_size // 2) + [0] * (batch_size % 2)
     partition = tf.constant(partition_array, dtype=tf.int32)
-    partitioned = static_mixture_agent._dynamic_partition_of_nested_tensors(
+    partitioned = mixture_agent._dynamic_partition_of_nested_tensors(
         nested_structure, partition, num_agents)
     evaluated = self.evaluate(partitioned)
     self.assertLen(partitioned, num_agents)

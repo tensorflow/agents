@@ -131,6 +131,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         enable_summaries=enable_summaries,
         train_step_counter=train_step_counter)
 
+  def _initialize(self):
+    tf.compat.v1.variables_initializer(self.variables)
+
   def _train(self, experience, weights):
     rewards, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.reward, self._time_step_spec.reward)
@@ -243,3 +246,4 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
                 name=var.name.replace(':', '_'),
                 data=var,
                 step=self.train_step_counter)
+

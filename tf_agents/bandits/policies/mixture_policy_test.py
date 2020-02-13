@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.bandits.policies import mixture_policy
 from tf_agents.policies import policy_saver
@@ -29,6 +30,8 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
+
+tfd = tfp.distributions
 
 
 class ConstantPolicy(tf_policy.Base):
@@ -54,35 +57,6 @@ class ConstantPolicy(tf_policy.Base):
 
 class MixturePolicyTest(test_utils.TestCase):
 
-  def testMixturePolicyNegativeProb(self):
-    context_dim = 11
-    observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
-    time_step_spec = ts.time_step_spec(observation_spec)
-    action_spec = tensor_spec.BoundedTensorSpec(
-        shape=(), dtype=tf.int32, minimum=0, maximum=9, name='action')
-    sub_policies = [
-        ConstantPolicy(action_spec, time_step_spec, i) for i in range(10)
-    ]
-    weights = [0, 0, 0.2, 0, 0, -0.3, 0, 0, 0.5, 0]
-    policy = mixture_policy.MixturePolicy(weights, sub_policies)
-    batch_size = 15
-    time_step = ts.TimeStep(
-        tf.constant(
-            ts.StepType.FIRST,
-            dtype=tf.int32,
-            shape=[batch_size],
-            name='step_type'),
-        tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
-        tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
-        tf.constant(
-            list(range(batch_size * context_dim)),
-            dtype=tf.float32,
-            shape=[batch_size, context_dim],
-            name='observation'))
-    with self.assertRaisesRegexp(tf.errors.InvalidArgumentError,
-                                 'Negative probability'):
-      policy.action(time_step)
-
   def testMixturePolicyInconsistentSpecs(self):
     context_dim = 11
     observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
@@ -97,9 +71,10 @@ class MixturePolicyTest(test_utils.TestCase):
     wrong_policy = ConstantPolicy(action_spec, wrong_time_step_spec, 9)
     sub_policies.append(wrong_policy)
     weights = [0, 0, 0.2, 0, 0, -0.3, 0, 0, 0.5, 0]
+    dist = tfd.Categorical(probs=weights)
     with self.assertRaisesRegexp(AssertionError,
                                  'Inconsistent time step specs'):
-      mixture_policy.MixturePolicy(weights, sub_policies)
+      mixture_policy.MixturePolicy(dist, sub_policies)
 
   def testMixturePolicyChoices(self):
     context_dim = 34
@@ -111,7 +86,8 @@ class MixturePolicyTest(test_utils.TestCase):
         ConstantPolicy(action_spec, time_step_spec, i) for i in range(10)
     ]
     weights = [0, 0, 0.2, 0, 0, 0.3, 0, 0, 0.5, 0]
-    policy = mixture_policy.MixturePolicy(weights, sub_policies)
+    dist = tfd.Categorical(probs=weights)
+    policy = mixture_policy.MixturePolicy(dist, sub_policies)
     batch_size = 15
     time_step = ts.TimeStep(
         tf.constant(
@@ -142,7 +118,8 @@ class MixturePolicyTest(test_utils.TestCase):
         ConstantPolicy(action_spec, time_step_spec, i) for i in range(10)
     ]
     weights = [0, 0, 0.2, 0, 0, 0.3, 0, 0, 0.5, 0]
-    policy = mixture_policy.MixturePolicy(weights, sub_policies)
+    dist = tfd.Categorical(probs=weights)
+    policy = mixture_policy.MixturePolicy(dist, sub_policies)
     batch_size = tf.random.uniform(
         shape=(), minval=10, maxval=15, dtype=tf.int32)
     time_step = ts.TimeStep(
