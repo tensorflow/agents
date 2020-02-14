@@ -188,11 +188,15 @@ class PPOAgent(tf_agent.TFAgent):
         that name. Defaults to the class name.
 
     Raises:
-      ValueError: If the actor_net is not a DistributionNetwork.
+      ValueError: If the actor_net is not a DistributionNetwork or value_net is
+        not a Network..
     """
     if not isinstance(actor_net, network.DistributionNetwork):
       raise ValueError(
-          'actor_net must be an instance of a DistributionNetwork.')
+          'actor_net must be an instance of a network.DistributionNetwork.')
+    if not isinstance(value_net, network.Network):
+      raise ValueError(
+          'value_net must be an instance of a network.Network.')
 
     tf.Module.__init__(self, name=name)
 

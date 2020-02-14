@@ -155,6 +155,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         self._action_spec,
         tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._obs_spec, self._action_spec),
+        value_net=DummyValueNet(self._obs_spec),
         check_numerics=True)
     agent.initialize()
 
@@ -458,6 +459,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         normalize_observations=False,
         normalize_rewards=False,
         actor_net=actor_net,
+        value_net=DummyValueNet(self._obs_spec),
         importance_ratio_clipping=10.0,
     )
 

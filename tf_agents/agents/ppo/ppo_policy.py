@@ -74,9 +74,14 @@ class PPOPolicy(actor_policy.ActorPolicy):
         action_distribution_params. (default True)
 
     Raises:
-      ValueError: if actor_network or value_network is not of type callable or
-        tensorflow.python.ops.template.Template.
+      ValueError: if actor_network or value_network is not of type
+        tf_agents.networks.network.Network.
     """
+    if not isinstance(actor_network, network.Network):
+      raise ValueError('actor_network is not of type network.Network')
+    if not isinstance(value_network, network.Network):
+      raise ValueError('value_network is not of type network.Network')
+
     info_spec = ()
     if collect:
       # TODO(oars): Cleanup how we handle non distribution networks.
