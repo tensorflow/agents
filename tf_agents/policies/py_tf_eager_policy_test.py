@@ -79,21 +79,40 @@ class PyTFEagerPolicyTest(test_utils.TestCase):
 
     observation_spec = array_spec.ArraySpec([2], np.float32)
     action_spec = array_spec.BoundedArraySpec([1], np.float32, 2, 3)
+    info_spec = {
+        'a': array_spec.BoundedArraySpec([1], np.float32, 0, 1),
+        'b': array_spec.BoundedArraySpec([1], np.float32, 100, 101)
+    }
 
     observation_tensor_spec = tensor_spec.from_spec(observation_spec)
     action_tensor_spec = tensor_spec.from_spec(action_spec)
+    info_tensor_spec = tensor_spec.from_spec(info_spec)
     time_step_tensor_spec = ts.time_step_spec(observation_tensor_spec)
 
-    tf_policy = random_tf_policy.RandomTFPolicy(time_step_tensor_spec,
-                                                action_tensor_spec)
+    tf_policy = random_tf_policy.RandomTFPolicy(
+        time_step_tensor_spec, action_tensor_spec, info_spec=info_tensor_spec)
 
     py_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_policy)
     env = random_py_environment.RandomPyEnvironment(observation_spec,
                                                     action_spec)
     time_step = env.reset()
 
+    def _check_action_step(action_step):
+      self.assertIsInstance(action_step.action, np.ndarray)
+      self.assertEqual(action_step.action.shape, (1,))
+      self.assertBetween(action_step.action[0], 2.0, 3.0)
+
+      self.assertIsInstance(action_step.info['a'], np.ndarray)
+      self.assertEqual(action_step.info['a'].shape, (1,))
+      self.assertBetween(action_step.info['a'][0], 0.0, 1.0)
+
+      self.assertIsInstance(action_step.info['b'], np.ndarray)
+      self.assertEqual(action_step.info['b'].shape, (1,))
+      self.assertBetween(action_step.info['b'][0], 100.0, 101.0)
+
     for _ in range(100):
       action_step = py_policy.action(time_step)
+      _check_action_step(action_step)
       time_step = env.step(action_step.action)
 
 

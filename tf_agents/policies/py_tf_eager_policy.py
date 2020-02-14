@@ -56,7 +56,16 @@ class PyTFEagerPolicyBase(py_policy.Base):
     time_step = tf.nest.map_structure(tf.convert_to_tensor, time_step)
     policy_step = self._policy_action_fn(time_step, policy_state)
     return policy_step._replace(
-        action=nest_utils.unbatch_nested_array(policy_step.action.numpy()))
+        action=nest_utils.unbatch_nested_tensors_to_arrays(policy_step.action),
+        # We intentionally do not convert the `state` so it is outputted as the
+        # underlying policy generated it (i.e. in the form of a Tensor) which is
+        # not necessarily compatible with a py-policy. However, we do so since
+        # the `state` is fed back to the policy. So if it was converted, it'd be
+        # required to convert back to the original form before calling the
+        # method `action` of the policy again in the next step. If one wants to
+        # store the `state` e.g. in replay buffer, then we suggest placing it
+        # into the `info` field.
+        info=nest_utils.unbatch_nested_tensors_to_arrays(policy_step.info))
 
 
 @gin.configurable

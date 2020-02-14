@@ -488,6 +488,14 @@ def unbatch_nested_array(nested_array):
   return tf.nest.map_structure(lambda x: np.squeeze(x, 0), nested_array)
 
 
+def unbatch_nested_tensors_to_arrays(nested_tensors):
+
+  def _to_unbatched_numpy(tensor):
+    return np.squeeze(tensor.numpy(), 0)
+
+  return tf.nest.map_structure(_to_unbatched_numpy, nested_tensors)
+
+
 def unstack_nested_arrays(nested_array):
   """Unstack/unbatch a nest of numpy arrays.
 
