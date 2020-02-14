@@ -258,22 +258,12 @@ class Td3Agent(tf_agent.TFAgent):
 
       return common.Periodically(update, period, 'update_targets')
 
-  def _experience_to_transitions(self, experience):
-    transitions = trajectory.to_transition(experience)
-
-    # Remove time dim if we are not using a recurrent network.
-    if not self._actor_network.state_spec:
-      transitions = tf.nest.map_structure(lambda x: tf.squeeze(x, [1]),
-                                          transitions)
-
-    time_steps, policy_steps, next_time_steps = transitions
-    actions = policy_steps.action
-    return time_steps, actions, next_time_steps
-
   def _train(self, experience, weights=None):
     # TODO(b/120034503): Move the conversion to transitions to the base class.
-    time_steps, actions, next_time_steps = self._experience_to_transitions(
-        experience)
+    squeeze_time_dim = not self._actor_network.state_spec
+    time_steps, policy_steps, next_time_steps = (
+        trajectory.experience_to_transitions(experience, squeeze_time_dim))
+    actions = policy_steps.action
 
     trainable_critic_variables = (
         self._critic_network_1.trainable_variables +

@@ -37,7 +37,6 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
-from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import training as training_lib
@@ -332,18 +331,6 @@ class DqnAgent(tf_agent.TFAgent):
 
       return common.Periodically(update, period, 'periodic_update_targets')
 
-  def _experience_to_transitions(self, experience):
-    transitions = trajectory.to_transition(experience)
-
-    # Remove time dim if we are not using a recurrent network.
-    if not self._q_network.state_spec:
-      transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
-                                          transitions)
-
-    time_steps, policy_steps, next_time_steps = transitions
-    actions = policy_steps.action
-    return time_steps, actions, next_time_steps
-
   # Use @common.function in graph mode or for speeding up.
   def _train(self, experience, weights):
     with tf.GradientTape() as tape:
@@ -413,17 +400,24 @@ class DqnAgent(tf_agent.TFAgent):
     # method requires a time dimension to compute the loss properly.
     self._check_trajectory_dimensions(experience)
 
+    squeeze_time_dim = not self._q_network.state_spec
     if self._n_step_update == 1:
-      time_steps, actions, next_time_steps = self._experience_to_transitions(
-          experience)
+      time_steps, policy_steps, next_time_steps = (
+          trajectory.experience_to_transitions(experience, squeeze_time_dim))
+      actions = policy_steps.action
     else:
       # To compute n-step returns, we need the first time steps, the first
       # actions, and the last time steps. Therefore we extract the first and
       # last transitions from our Trajectory.
       first_two_steps = tf.nest.map_structure(lambda x: x[:, :2], experience)
       last_two_steps = tf.nest.map_structure(lambda x: x[:, -2:], experience)
-      time_steps, actions, _ = self._experience_to_transitions(first_two_steps)
-      _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
+      time_steps, policy_steps, _ = (
+          trajectory.experience_to_transitions(
+              first_two_steps, squeeze_time_dim))
+      actions = policy_steps.action
+      _, _, next_time_steps = (
+          trajectory.experience_to_transitions(
+              last_two_steps, squeeze_time_dim))
 
     with tf.name_scope('loss'):
       q_values = self._compute_q_values(time_steps, actions, training=training)

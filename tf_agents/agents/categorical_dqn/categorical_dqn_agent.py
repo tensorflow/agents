@@ -36,6 +36,7 @@ from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import categorical_q_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import value_ops
@@ -268,17 +269,24 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     # method requires a time dimension to compute the loss properly.
     self._check_trajectory_dimensions(experience)
 
+    squeeze_time_dim = not self._q_network.state_spec
     if self._n_step_update == 1:
-      time_steps, actions, next_time_steps = self._experience_to_transitions(
-          experience)
+      time_steps, policy_steps, next_time_steps = (
+          trajectory.experience_to_transitions(experience, squeeze_time_dim))
+      actions = policy_steps.action
     else:
       # To compute n-step returns, we need the first time steps, the first
       # actions, and the last time steps. Therefore we extract the first and
       # last transitions from our Trajectory.
       first_two_steps = tf.nest.map_structure(lambda x: x[:, :2], experience)
       last_two_steps = tf.nest.map_structure(lambda x: x[:, -2:], experience)
-      time_steps, actions, _ = self._experience_to_transitions(first_two_steps)
-      _, _, next_time_steps = self._experience_to_transitions(last_two_steps)
+      time_steps, policy_steps, _ = (
+          trajectory.experience_to_transitions(
+              first_two_steps, squeeze_time_dim))
+      actions = policy_steps.action
+      _, _, next_time_steps = (
+          trajectory.experience_to_transitions(
+              last_two_steps, squeeze_time_dim))
 
     with tf.name_scope('critic_loss'):
       tf.nest.assert_same_structure(actions, self.action_spec)

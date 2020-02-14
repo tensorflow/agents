@@ -252,18 +252,6 @@ class SacAgent(tf_agent.TFAgent):
         self._target_critic_network_2.variables,
         tau=1.0)
 
-  def _experience_to_transitions(self, experience):
-    transitions = trajectory.to_transition(experience)
-    time_steps, policy_steps, next_time_steps = transitions
-    actions = policy_steps.action
-    if (self.train_sequence_length is not None and
-        self.train_sequence_length == 2):
-      # Sequence empty time dimension if critic network is stateless.
-      time_steps, actions, next_time_steps = tf.nest.map_structure(
-          lambda t: tf.squeeze(t, axis=1),
-          (time_steps, actions, next_time_steps))
-    return time_steps, actions, next_time_steps
-
   def _train(self, experience, weights):
     """Returns a train op to update the agent's networks.
 
@@ -281,8 +269,10 @@ class SacAgent(tf_agent.TFAgent):
       ValueError: If optimizers are None and no default value was provided to
         the constructor.
     """
-    time_steps, actions, next_time_steps = self._experience_to_transitions(
-        experience)
+    squeeze_time_dim = not self._critic_network_1.state_spec
+    time_steps, policy_steps, next_time_steps = (
+        trajectory.experience_to_transitions(experience, squeeze_time_dim))
+    actions = policy_steps.action
 
     trainable_critic_variables = (
         self._critic_network_1.trainable_variables +

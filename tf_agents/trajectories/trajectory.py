@@ -590,3 +590,14 @@ def _validate_rank(variable, min_rank, max_rank=None):
     raise ValueError(
         'Expect variable within rank [{},{}], but got rank {}.'.format(
             min_rank, max_rank, rank))
+
+
+def experience_to_transitions(experience, squeeze_time_dim):
+  """Break experience to transitions."""
+  transitions = to_transition(experience)
+
+  if squeeze_time_dim:
+    transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
+                                        transitions)
+  time_steps, policy_steps, next_time_steps = transitions
+  return time_steps, policy_steps, next_time_steps
