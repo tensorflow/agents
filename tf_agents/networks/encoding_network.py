@@ -67,7 +67,7 @@ def _copy_layer(layer):
     raise ValueError('DenseFeatures V1 is not supported. '
                      'Use tf.compat.v2.keras.layers.DenseFeatures instead.')
   if layer.built:
-    logging.warn(
+    logging.warning(
         'Beware: Copying a layer that has already been built: \'%s\'.  '
         'This can lead to subtle bugs because the original layer\'s weights '
         'will not be used in the copy.', layer.name)

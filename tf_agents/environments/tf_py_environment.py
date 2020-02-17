@@ -135,7 +135,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     self._check_dims = check_dims
 
     if isolation and getattr(self._env, '_parallel_execution', None):
-      logging.warn(
+      logging.warning(
           'Wrapped environment is executing in parallel.  '
           'Perhaps it is a BatchedPyEnvironment with multithreading=True, '
           'or it is a ParallelPyEnvironment.  This conflicts with the '
