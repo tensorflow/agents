@@ -217,6 +217,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
   @parameterized.named_parameters([
       ('OneEpoch', 1, True),
       ('FiveEpochs', 5, False),
+      ('IncompleteEpisodesReturnNonZeroLoss', 1, False),
   ])
   def testTrain(self, num_epochs, use_td_lambda_return):
     # Mock the build_train_op to return an op for incrementing this counter.
@@ -241,8 +242,9 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     ],
                                dtype=tf.float32)
 
+    mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
-        step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
+        step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         observation=observations)
@@ -266,9 +268,18 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
       loss = agent.train(experience)
 
     # Assert that counter starts out at zero.
-    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertEqual(0, self.evaluate(counter))
-    self.evaluate(loss)
+    loss_type = self.evaluate(loss)
+    loss_numpy = loss_type.loss
+
+    # Assert that loss is not zero as we are training in a non-episodic env.
+    self.assertNotEqual(
+        loss_numpy,
+        0.0,
+        msg=('Loss is exactly zero, looks like no training '
+             'was performed due to incomplete episodes.'))
+
     # Assert that train_op ran increment_counter num_epochs times.
     self.assertEqual(num_epochs, self.evaluate(counter))
 

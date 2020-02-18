@@ -197,6 +197,8 @@ class PPOAgent(tf_agent.TFAgent):
     if not isinstance(value_net, network.Network):
       raise ValueError(
           'value_net must be an instance of a network.Network.')
+    actor_net.create_variables()
+    value_net.create_variables()
 
     tf.Module.__init__(self, name=name)
 
@@ -447,8 +449,18 @@ class PPOAgent(tf_agent.TFAgent):
     episode_mask = common.get_episode_mask(next_time_steps)
     discounts *= episode_mask
 
-    # Compute Monte Carlo returns.
-    returns = value_ops.discounted_return(rewards, discounts, time_major=False)
+    # Compute Monte Carlo returns. Data from incomplete trajectories, not
+    #   containing the end of an episode will also be used, with a bootstrapped
+    #   estimation from the last value.
+    # Note that when a trajectory driver is used, then the final step is
+    #   terminal, the bootstrapped estimation will not be used, as it will be
+    #   multiplied by zero (the discount on the last step).
+    final_value_bootstrapped = value_preds[:, -1]
+    returns = value_ops.discounted_return(
+        rewards,
+        discounts,
+        time_major=False,
+        final_value=final_value_bootstrapped)
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
           name='returns', data=returns, step=self.train_step_counter)
@@ -514,7 +526,8 @@ class PPOAgent(tf_agent.TFAgent):
         training=False)
     value_preds = tf.stop_gradient(value_preds)
 
-    valid_mask = ppo_utils.make_timestep_mask(next_time_steps)
+    valid_mask = ppo_utils.make_timestep_mask(
+        next_time_steps, allow_partial_episodes=True)
 
     if weights is None:
       weights = valid_mask
@@ -705,8 +718,11 @@ class PPOAgent(tf_agent.TFAgent):
         entropy = tf.cast(
             common.entropy(current_policy_distribution, self.action_spec),
             tf.float32)
+
+        entropy *= weights
+
         entropy_reg_loss = (
-            tf.reduce_mean(input_tensor=-entropy * weights) *
+            tf.reduce_mean(input_tensor=-entropy) *
             self._entropy_regularization)
         if self._check_numerics:
           entropy_reg_loss = tf.debugging.check_numerics(
@@ -1024,7 +1040,8 @@ class PPOAgent(tf_agent.TFAgent):
     """
     kl_divergence = self._kl_divergence(time_steps,
                                         action_distribution_parameters,
-                                        current_policy_distribution) * weights
+                                        current_policy_distribution)
+    kl_divergence *= weights
 
     if debug_summaries:
       tf.compat.v2.summary.histogram(
