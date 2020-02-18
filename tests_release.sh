@@ -57,8 +57,8 @@ run_tests() {
     exit
   fi
 
-  pip install ${WHEEL_PATH}/tf_agents*.whl
   cp ${WHEEL_PATH}/tf_agents*.whl ./
+  pip install ${WHEEL_PATH}/tf_agents*.whl
 
   # Move away from repo directory so "import tf_agents" refers to the
   # installed wheel and not to the local fs.
