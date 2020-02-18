@@ -72,13 +72,14 @@ class PyTFEagerPolicyBase(py_policy.Base):
 class PyTFEagerPolicy(PyTFEagerPolicyBase):
   """Exposes a numpy API for TF policies in Eager mode."""
 
-  def __init__(self, policy):
+  def __init__(self, policy, use_tf_function=False):
     time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec)
     action_spec = tensor_spec.to_nest_array_spec(policy.action_spec)
     policy_state_spec = tensor_spec.to_nest_array_spec(policy.policy_state_spec)
     info_spec = tensor_spec.to_nest_array_spec(policy.info_spec)
-    super(PyTFEagerPolicy, self).__init__(policy, time_step_spec, action_spec,
-                                          policy_state_spec, info_spec)
+    super(PyTFEagerPolicy,
+          self).__init__(policy, time_step_spec, action_spec, policy_state_spec,
+                         info_spec, use_tf_function)
 
 
 @gin.configurable
