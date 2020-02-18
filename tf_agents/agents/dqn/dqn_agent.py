@@ -422,7 +422,8 @@ class DqnAgent(tf_agent.TFAgent):
     with tf.name_scope('loss'):
       q_values = self._compute_q_values(time_steps, actions, training=training)
 
-      next_q_values = self._compute_next_q_values(next_time_steps)
+      next_q_values = self._compute_next_q_values(
+          next_time_steps, policy_steps.info)
 
       if self._n_step_update == 1:
         # Special case for n = 1 to avoid a loss of performance.
@@ -518,11 +519,13 @@ class DqnAgent(tf_agent.TFAgent):
         tf.cast(actions, dtype=tf.int32),
         multi_dim_actions=multi_dim_actions)
 
-  def _compute_next_q_values(self, next_time_steps):
+  def _compute_next_q_values(self, next_time_steps, info):
     """Compute the q value of the next state for TD error computation.
 
     Args:
       next_time_steps: A batch of next timesteps
+      info: PolicyStep.info that may be used by other agents inherited from
+        dqn_agent.
 
     Returns:
       A tensor of Q values for the given next state.
@@ -564,15 +567,18 @@ class DdqnAgent(DqnAgent):
 
   """
 
-  def _compute_next_q_values(self, next_time_steps):
+  def _compute_next_q_values(self, next_time_steps, info):
     """Compute the q value of the next state for TD error computation.
 
     Args:
       next_time_steps: A batch of next timesteps
+      info: PolicyStep.info that may be used by other agents inherited from
+        dqn_agent.
 
     Returns:
       A tensor of Q values for the given next state.
     """
+    del info
     # TODO(b/117175589): Add binary tests for DDQN.
     network_observation = next_time_steps.observation
 
