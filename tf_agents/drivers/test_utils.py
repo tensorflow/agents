@@ -254,9 +254,10 @@ class NumEpisodesObserver(object):
     self._num_episodes.assign(num_episodes)
 
   def __call__(self, traj):
+    num_episodes = tf.reduce_sum(
+        input_tensor=tf.cast(traj.is_last(), dtype=tf.int32))
     with tf.control_dependencies([
-        self._num_episodes.assign_add(
-            tf.cast(traj.is_last()[0], dtype=tf.int32))
+        self._num_episodes.assign_add(num_episodes)
     ]):
       return tf.nest.map_structure(tf.identity, traj)
 
