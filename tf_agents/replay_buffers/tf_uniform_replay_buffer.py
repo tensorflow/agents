@@ -388,9 +388,8 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
           min_max_frame_range = tf.range(min_frame_offset, max_frame_offset)
 
-          drop_remainder = self._dataset_drop_remainder
           window_shift = self._dataset_window_shift
-          def group_windows(ds_):
+          def group_windows(ds_, drop_remainder=self._dataset_drop_remainder):
             return ds_.batch(num_steps, drop_remainder=drop_remainder)
 
           if sample_batch_size is None:
@@ -415,7 +414,8 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
             indices_ds = (
                 tf.data.Dataset.range(self._batch_size)
-                .batch(sample_batch_size, drop_remainder=drop_remainder)
+                .batch(sample_batch_size,
+                       drop_remainder=self._dataset_drop_remainder)
                 .flat_map(batched_row_ids))
 
             if num_steps is not None:
@@ -424,8 +424,11 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
               # [num_steps, sample_batch_size], then
               # transpose them to get index tensors of shape
               # [sample_batch_size, num_steps].
+              def group_windows_drop_remainder(d):
+                return group_windows(d, drop_remainder=True)
+
               indices_ds = (indices_ds.window(num_steps, shift=window_shift)
-                            .flat_map(group_windows)
+                            .flat_map(group_windows_drop_remainder)
                             .map(tf.transpose))
 
             return indices_ds
