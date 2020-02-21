@@ -507,7 +507,6 @@ class DqnAgent(tf_agent.TFAgent):
 
   def _compute_q_values(self, time_steps, actions, training=False):
     network_observation = time_steps.observation
-    actions = tf.nest.flatten(actions)[0]
 
     if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
@@ -517,7 +516,7 @@ class DqnAgent(tf_agent.TFAgent):
                                   training=training)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.rank > 0
+    multi_dim_actions = self._action_spec.shape.rank > 0
     return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),
@@ -547,8 +546,7 @@ class DqnAgent(tf_agent.TFAgent):
     # action constraints are respected and helps centralize the greedy logic.
     greedy_actions = self._target_greedy_policy.action(
         next_time_steps, dummy_state).action
-    greedy_actions = tf.nest.flatten(greedy_actions)[0]
-    
+
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     multi_dim_actions = tf.nest.flatten(self._action_spec)[0].shape.rank > 0
