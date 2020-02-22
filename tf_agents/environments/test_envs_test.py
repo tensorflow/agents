@@ -47,7 +47,10 @@ class TestEnvsTest(test_utils.TestCase):
     self.assertEqual(4, time_step.observation)
     time_step = env.step(0)
     self.assertTrue(time_step.is_first())
-    self.assertEqual(10, time_step.observation)
+    self.assertEqual(4, time_step.observation)
+    time_step = env.step(0)
+    self.assertTrue(time_step.is_mid())
+    self.assertEqual(5, time_step.observation)
 
   def test_validate_specs(self):
     env = test_envs.CountingEnv(steps_per_episode=15)

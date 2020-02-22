@@ -54,7 +54,8 @@ class CountingEnv(py_environment.PyEnvironment):
 
   def _get_observation(self):
     if self._episodes:
-      return np.array(10**self._episodes + self._current_step, dtype=np.int32)
+      num_steps = self._steps_per_episode**self._episodes + self._current_step
+      return np.array(num_steps, dtype=np.int32)
     return self._current_step
 
   def _reset(self):

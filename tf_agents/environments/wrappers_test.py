@@ -31,8 +31,8 @@ import gym.spaces
 import numpy as np
 
 from tf_agents.environments import gym_wrapper
-from tf_agents.environments import py_environment
 from tf_agents.environments import random_py_environment
+from tf_agents.environments import test_envs
 from tf_agents.environments import wrappers
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
@@ -933,28 +933,6 @@ class GoalReplayEnvWrapperTest(parameterized.TestCase):
                      env.observation_spec().keys())
 
 
-class CountingEnv(py_environment.PyEnvironment):
-
-  def __init__(self):
-    self._count = np.array(0, dtype=np.int32)
-
-  def _reset(self):
-    self._count = np.array(0, dtype=np.int32)
-    return ts.restart(self._count.copy())
-
-  def observation_spec(self):
-    return array_spec.ArraySpec((), np.int32)
-
-  def action_spec(self):
-    return array_spec.ArraySpec((), np.int32)
-
-  def _step(self, action):
-    self._count += 1
-    if self._count < 4:
-      return ts.transition(self._count.copy(), 1)
-    return ts.termination(self._count.copy(), 1)
-
-
 class HistoryWrapperTest(test_utils.TestCase):
 
   def test_observation_spec_changed(self):
@@ -978,7 +956,7 @@ class HistoryWrapperTest(test_utils.TestCase):
                      history_env.observation_spec()['action'].shape)
 
   def test_observation_stacked(self):
-    env = CountingEnv()
+    env = test_envs.CountingEnv()
     history_env = wrappers.HistoryWrapper(env, 3)
     time_step = history_env.reset()
     self.assertEqual([0, 0, 0], time_step.observation.tolist())
@@ -993,7 +971,7 @@ class HistoryWrapperTest(test_utils.TestCase):
     self.assertEqual([1, 2, 3], time_step.observation.tolist())
 
   def test_observation_and_action_stacked(self):
-    env = CountingEnv()
+    env = test_envs.CountingEnv()
     history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
     time_step = history_env.reset()
     self.assertEqual([0, 0, 0], time_step.observation['observation'].tolist())
