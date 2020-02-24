@@ -55,4 +55,4 @@ class TestUtilsTest(parameterized.TestCase, test_utils.TestCase):
 
     observer = driver_test_utils.NumEpisodesObserver()
     observer(traj)
-    assert observer.num_episodes.read_value() == batch_size
+    self.assertEqual(observer.num_episodes, batch_size)
