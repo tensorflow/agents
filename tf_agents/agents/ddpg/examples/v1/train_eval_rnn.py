@@ -185,7 +185,8 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
 
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
@@ -226,8 +227,7 @@ def train_eval(
     trajectories, unused_info = iterator.get_next()
 
     train_fn = common.function(tf_agent.train)
-    train_op = train_fn(
-        experience=trajectories, train_step_counter=global_step)
+    train_op = train_fn(experience=trajectories)
 
     train_checkpointer = common.Checkpointer(
         ckpt_dir=train_dir,

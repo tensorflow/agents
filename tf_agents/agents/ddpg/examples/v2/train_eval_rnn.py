@@ -187,7 +187,8 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
     tf_agent.initialize()
 
     train_metrics = [
@@ -256,7 +257,7 @@ def train_eval(
 
     def train_step():
       experience, _ = next(iterator)
-      return tf_agent.train(experience, train_step_counter=global_step)
+      return tf_agent.train(experience)
 
     if use_tf_functions:
       train_step = common.function(train_step)
