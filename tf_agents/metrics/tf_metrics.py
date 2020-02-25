@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl import logging
-
+import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.metrics import tf_metric
@@ -71,6 +71,7 @@ class TFDeque(object):
     return tf.math.reduce_mean(self._buffer[:self.length])
 
 
+@gin.configurable(module='tf_agents')
 class EnvironmentSteps(tf_metric.TFStepMetric):
   """Counts the number of steps taken in the environment."""
 
@@ -106,6 +107,7 @@ class EnvironmentSteps(tf_metric.TFStepMetric):
     self.environment_steps.assign(0)
 
 
+@gin.configurable(module='tf_agents')
 class NumberOfEpisodes(tf_metric.TFStepMetric):
   """Counts the number of episodes in the environment."""
 
@@ -140,6 +142,7 @@ class NumberOfEpisodes(tf_metric.TFStepMetric):
     self.number_episodes.assign(0)
 
 
+@gin.configurable(module='tf_agents')
 class AverageReturnMetric(tf_metric.TFStepMetric):
   """Metric to compute the average return."""
 
@@ -181,6 +184,7 @@ class AverageReturnMetric(tf_metric.TFStepMetric):
     self._return_accumulator.assign(tf.zeros_like(self._return_accumulator))
 
 
+@gin.configurable(module='tf_agents')
 class AverageEpisodeLengthMetric(tf_metric.TFStepMetric):
   """Metric to compute the average episode length."""
 
@@ -228,6 +232,7 @@ class AverageEpisodeLengthMetric(tf_metric.TFStepMetric):
     self._length_accumulator.assign(tf.zeros_like(self._length_accumulator))
 
 
+@gin.configurable(module='tf_agents')
 class ChosenActionHistogram(tf_metric.TFHistogramStepMetric):
   """Metric to compute the frequency of each action chosen."""
 
