@@ -401,21 +401,28 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       if batch_squash is not None:
         target_distribution = batch_squash.unflatten(target_distribution)
         chosen_action_logits = batch_squash.unflatten(chosen_action_logits)
-        critic_loss = tf.reduce_mean(
-            tf.reduce_sum(
-                tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
-                    labels=target_distribution,
-                    logits=chosen_action_logits),
-                axis=1))
-      else:
-        critic_loss = tf.reduce_mean(
+        critic_loss = tf.reduce_sum(
             tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
                 labels=target_distribution,
-                logits=chosen_action_logits))
+                logits=chosen_action_logits),
+            axis=1)
+      else:
+        critic_loss = tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
+            labels=target_distribution,
+            logits=chosen_action_logits)
 
-      with tf.name_scope('Losses/'):
-        tf.compat.v2.summary.scalar(
-            'critic_loss', critic_loss, step=self.train_step_counter)
+      agg_loss = common.aggregate_losses(
+          per_example_loss=critic_loss,
+          regularization_loss=self._q_network.losses)
+      total_loss = agg_loss.total_loss
+
+      dict_losses = {'critic_loss': agg_loss.weighted,
+                     'reg_loss': agg_loss.regularization,
+                     'total_loss': total_loss}
+
+      common.summarize_scalar_dict(dict_losses,
+                                   step=self.train_step_counter,
+                                   name_scope='Losses/')
 
       if self._debug_summaries:
         distribution_errors = target_distribution - chosen_action_logits
@@ -442,8 +449,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
       # TODO(b/127318640): Give appropriate values for td_loss and td_error for
       # prioritized replay.
-      return tf_agent.LossInfo(critic_loss, dqn_agent.DqnLossInfo(td_loss=(),
-                                                                  td_error=()))
+      return tf_agent.LossInfo(total_loss, dqn_agent.DqnLossInfo(td_loss=(),
+                                                                 td_error=()))
 
   def _next_q_distribution(self, next_time_steps):
     """Compute the q distribution of the next state for TD error computation.

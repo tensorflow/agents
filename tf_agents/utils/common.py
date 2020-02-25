@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections as cs
 import functools
 import importlib
 import os
@@ -1204,3 +1205,58 @@ def maybe_copy_target_network_with_checks(network, target_network=None,
   check_no_shared_variables(network, target_network)
   check_matching_networks(network, target_network)
   return target_network
+
+
+AggregatedLosses = cs.namedtuple(
+    'AggregatedLosses',
+    ['total_loss',  # Total loss = weighted + regularization
+     'weighted',  # Weighted sum of per_example_loss by sample_weight.
+     'regularization',  # Total of regularization losses.
+    ])
+
+
+def aggregate_losses(per_example_loss=None,
+                     sample_weight=None,
+                     global_batch_size=None,
+                     regularization_loss=None):
+  """Aggregates and scales per example loss and regularization losses.
+
+  If `global_batch_size` is given it would be used for scaling, otherwise it
+  would use the batch_dim of per_example_loss and number of replicas.
+
+  Args:
+    per_example_loss: Per-example loss [B].
+    sample_weight: Optional weighting for each example [B].
+    global_batch_size: Optional global batch size value. Defaults to (size of
+    first dimension of `losses`) * (number of replicas).
+    regularization_loss: Regularization loss.
+
+  Returns:
+    An AggregatedLosses named tuple with scalar losses to optimize.
+  """
+  total_loss, weighted_loss, reg_loss = None, None, None
+  # Compute loss that is scaled by global batch size.
+  if per_example_loss is not None:
+    weighted_loss = tf.nn.compute_average_loss(
+        per_example_loss,
+        sample_weight=sample_weight,
+        global_batch_size=global_batch_size)
+    total_loss = weighted_loss
+  # Add scaled regularization losses.
+  if regularization_loss is not None:
+    reg_loss = tf.nn.scale_regularization_loss(regularization_loss)
+    if total_loss is None:
+      total_loss = reg_loss
+    else:
+      total_loss += reg_loss
+  return AggregatedLosses(total_loss, weighted_loss, reg_loss)
+
+
+def summarize_scalar_dict(name_data, step, name_scope='Losses/'):
+  if name_data:
+    with tf.name_scope(name_scope):
+      for name, data in name_data.items():
+        if data is not None:
+          tf.compat.v2.summary.scalar(
+              name=name, data=data, step=step)
+

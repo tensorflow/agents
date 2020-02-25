@@ -341,7 +341,7 @@ class DqnAgent(tf_agent.TFAgent):
           reward_scale_factor=self._reward_scale_factor,
           weights=weights,
           training=True)
-    tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
+    tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
     non_trainable_weights = self._q_network.non_trainable_weights
     assert list(variables_to_train), "No variables in the agent's q_network."
@@ -458,25 +458,27 @@ class DqnAgent(tf_agent.TFAgent):
         # Do a sum over the time dimension.
         td_loss = tf.reduce_sum(input_tensor=td_loss, axis=1)
 
-      if weights is not None:
-        td_loss *= weights
-
-      # Average across the elements of the batch.
+      # Aggregate across the elements of the batch and add regularization loss.
       # Note: We use an element wise loss above to ensure each element is always
       #   weighted by 1/N where N is the batch size, even when some of the
       #   weights are zero due to boundary transitions. Weighting by 1/K where K
       #   is the actual number of non-zero weight would artificially increase
       #   their contribution in the loss. Think about what would happen as
       #   the number of boundary samples increases.
-      loss = tf.reduce_mean(input_tensor=td_loss)
 
-      # Add network loss (such as regularization loss)
-      if self._q_network.losses:
-        loss = loss + tf.reduce_mean(self._q_network.losses)
+      agg_loss = common.aggregate_losses(
+          per_example_loss=td_loss,
+          sample_weight=weights,
+          regularization_loss=self._q_network.losses)
+      total_loss = agg_loss.total_loss
 
-      with tf.name_scope('Losses/'):
-        tf.compat.v2.summary.scalar(
-            name='loss', data=loss, step=self.train_step_counter)
+      losses_dict = {'td_loss': agg_loss.weighted,
+                     'reg_loss': agg_loss.regularization,
+                     'total_loss': total_loss}
+
+      common.summarize_scalar_dict(losses_dict,
+                                   step=self.train_step_counter,
+                                   name_scope='Losses/')
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
@@ -499,8 +501,8 @@ class DqnAgent(tf_agent.TFAgent):
         common.generate_tensor_summaries('diff_q_values', diff_q_values,
                                          self.train_step_counter)
 
-      return tf_agent.LossInfo(loss, DqnLossInfo(td_loss=td_loss,
-                                                 td_error=td_error))
+      return tf_agent.LossInfo(total_loss, DqnLossInfo(td_loss=td_loss,
+                                                       td_error=td_error))
 
   def _compute_q_values(self, time_steps, actions, training=False):
     network_observation = time_steps.observation

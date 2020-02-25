@@ -266,13 +266,20 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       #   is the actual number of non-zero weight would artificially increase
       #   their contribution in the loss. Think about what would happen as
       #   the number of boundary samples increases.
-      if weights is not None:
-        error *= weights
-      loss = tf.reduce_mean(input_tensor=error)
 
-      with tf.name_scope('Losses/'):
-        tf.compat.v2.summary.scalar(
-            name='loss', data=loss, step=self.train_step_counter)
+      agg_loss = common.aggregate_losses(
+          per_example_loss=error,
+          sample_weight=weights,
+          regularization_loss=self._cloning_network.losses)
+      total_loss = agg_loss.total_loss
+
+      dict_losses = {'loss': agg_loss.weighted,
+                     'reg_loss': agg_loss.regularization,
+                     'total_loss': total_loss}
+
+      common.summarize_scalar_dict(dict_losses,
+                                   step=self.train_step_counter,
+                                   name_scope='Losses/')
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
@@ -286,4 +293,5 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         common.generate_tensor_summaries('errors', error,
                                          self.train_step_counter)
 
-      return tf_agent.LossInfo(loss, BehavioralCloningLossInfo(loss=error))
+      return tf_agent.LossInfo(total_loss,
+                               BehavioralCloningLossInfo(loss=error))
