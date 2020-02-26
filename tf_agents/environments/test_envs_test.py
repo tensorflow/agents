@@ -27,7 +27,7 @@ from tf_agents.utils import test_utils
 
 class TestEnvsTest(test_utils.TestCase):
 
-  def test_steps_sequencial(self):
+  def test_steps_sequential(self):
     env = test_envs.CountingEnv(steps_per_episode=4)
 
     time_step = env.reset()
@@ -48,6 +48,9 @@ class TestEnvsTest(test_utils.TestCase):
     time_step = env.step(0)
     self.assertTrue(time_step.is_first())
     self.assertEqual(10, time_step.observation)
+    time_step = env.step(0)
+    self.assertTrue(time_step.is_mid())
+    self.assertEqual(11, time_step.observation)
 
   def test_validate_specs(self):
     env = test_envs.CountingEnv(steps_per_episode=15)

@@ -28,7 +28,12 @@ from tf_agents.trajectories import time_step as ts
 
 
 class CountingEnv(py_environment.PyEnvironment):
-  """Counds up in the observation as steps are taken."""
+  """Counts up in the observation as steps are taken.
+
+  Step observation values are of the form (10 ** episodes + self._current_step)
+  if steps_per_episode is greater than 10 then on reset the value of the
+  observation count may go down.
+  """
 
   def __init__(self, steps_per_episode=10):
     self._steps_per_episode = steps_per_episode
