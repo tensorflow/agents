@@ -19,6 +19,9 @@
 Implements the PPO algorithm from (Schulman, 2017):
 https://arxiv.org/abs/1707.06347
 
+If you do not rely on using a combination of KL penalty and importance ratio
+clipping, use `PPOClipAgent` or `PPOKLPenaltyAgent` instead.
+
 PPO is a simplification of the TRPO algorithm, both of which add stability to
 policy gradient RL, while allowing multiple updates per batch of on-policy data,
 by limiting the KL divergence between the policy that sampled the data and the
@@ -135,51 +138,84 @@ class PPOAgent(tf_agent.TFAgent):
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
-      action_spec: A nest of BoundedTensorSpec representing the actions.
-      optimizer: Optimizer to use for the agent.
-      actor_net: A function actor_net(observations, action_spec) that returns
-        tensor of action distribution params for each observation. Takes nested
-        observation and returns nested action.
-      value_net: A function value_net(time_steps) that returns value tensor from
-        neural net predictions for each observation. Takes nested observation
-        and returns batch of value_preds.
+      action_spec: A nest of `BoundedTensorSpec` representing the actions.
+      optimizer: Optimizer to use for the agent, default to using
+        `tf.compat.v1.train.AdamOptimizer`.
+      actor_net: A `network.DistributionNetwork` which maps observations to
+        action distributions. Commonly, it is set to
+        `actor_distribution_network.ActorDistributionNetwork`.
+      value_net: A `Network` which returns the value prediction for input
+        states, with `call(observation, step_type, network_state)`. Commonly, it
+        is set to `value_network.ValueNetwork`.
       importance_ratio_clipping: Epsilon in clipped, surrogate PPO objective.
         For more detail, see explanation at the top of the doc.
       lambda_value: Lambda parameter for TD-lambda computation.
-      discount_factor: Discount factor for return computation.
+      discount_factor: Discount factor for return computation. Default to `0.99`
+        which is the value used for all environments from (Schulman, 2017).
       entropy_regularization: Coefficient for entropy regularization loss term.
-      policy_l2_reg: Coefficient for l2 regularization of policy weights.
+        Default to `0.0` because no entropy bonus was used in (Schulman, 2017).
+      policy_l2_reg: Coefficient for L2 regularization of actor_net weights.
+        Default to `0.0` because no L2 regularization was applied on the policy
+        network weights in (Schulman, 2017).
       value_function_l2_reg: Coefficient for l2 regularization of value function
-        weights.
+        weights. Default to `0.0` because no L2 regularization was applied on
+        the policy network weights in (Schulman, 2017).
       value_pred_loss_coef: Multiplier for value prediction loss to balance with
-        policy gradient loss.
-      num_epochs: Number of epochs for computing policy updates.
+        policy gradient loss. Default to `0.5`, which was used for all
+        environments in the OpenAI baseline implementation. This parameters is
+        irrelevant unless you are sharing part of actor_net and value_net. In
+        that case, you would want to tune this coeeficient, whose value depends
+        on the network architecture of your choice.
+      num_epochs: Number of epochs for computing policy updates. (Schulman,2017)
+        sets this to 10 for Mujoco, 15 for Roboschool and 3 for Atari.
       use_gae: If True (default False), uses generalized advantage estimation
         for computing per-timestep advantage. Else, just subtracts value
         predictions from empirical return.
       use_td_lambda_return: If True (default False), uses td_lambda_return for
-        training value function. (td_lambda_return = gae_advantage +
-        value_predictions)
+        training value function; here:
+        `td_lambda_return = gae_advantage + value_predictions`.
+        `use_gae` must be set to `True` as well to enable TD -lambda returns. If
+        `use_td_lambda_return` is set to True while `use_gae` is False, the
+        empirical return will be used and a warning will be logged.
       normalize_rewards: If true, keeps moving variance of rewards and
-        normalizes incoming rewards.
+        normalizes incoming rewards. While not mentioned directly in (Schulman,
+        2017), reward normalization was implemented in OpenAI baselines and
+        (Ilyas et al., 2018) pointed out that it largely improves performance.
+        You may refer to Figure 1 of https://arxiv.org/pdf/1811.02553.pdf for a
+        comparison with and without reward scaling.
       reward_norm_clipping: Value above and below to clip normalized reward.
-      normalize_observations: If true, keeps moving mean and variance of
-        observations and normalizes incoming observations.
+        Additional optimization proposed in (Ilyas et al., 2018) set to
+        `5` or `10`.
+      normalize_observations: If `True`, keeps moving mean and
+        variance of observations and normalizes incoming observations.
+        Additional optimization proposed in (Ilyas et al., 2018).
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
-      kl_cutoff_factor: If policy KL changes more than this much for any single
-        timestep, adds a squared KL penalty to loss function.
-      kl_cutoff_coef: Loss coefficient for kl cutoff term.
+      kl_cutoff_factor: Only meaningful when `kl_cutoff_coef > 0.0`. A multipler
+        used for calculating the KL cutoff ( =
+        `kl_cutoff_factor * adaptive_kl_target`). If policy KL averaged across
+        the batch changes more than the cutoff, a squared cutoff loss would
+        be added to the loss function.
+      kl_cutoff_coef: kl_cutoff_coef and kl_cutoff_factor are additional params
+        if one wants to use a KL cutoff loss term in addition to the adaptive KL
+        loss term. Default to 0.0 to disable the KL cutoff loss term as this was
+        not used in the paper.  kl_cutoff_coef is the coefficient to mulitply by
+        the KL cutoff loss term, before adding to the total loss function.
       initial_adaptive_kl_beta: Initial value for beta coefficient of adaptive
-        kl penalty.
-      adaptive_kl_target: Desired kl target for policy updates. If actual kl is
-        far from this target, adaptive_kl_beta will be updated.
-      adaptive_kl_tolerance: A tolerance for adaptive_kl_beta. Mean KL above (1
-        + tol) * adaptive_kl_target, or below (1 - tol) * adaptive_kl_target,
-        will cause adaptive_kl_beta to be updated.
+        KL penalty. This initial value is not important in practice because the
+        algorithm quickly adjusts to it. A common default is 1.0.
+      adaptive_kl_target: Desired KL target for policy updates. If actual KL is
+        far from this target, adaptive_kl_beta will be updated. You should tune
+        this for your environment. 0.01 was found to perform well for Mujoco.
+      adaptive_kl_tolerance: A tolerance for adaptive_kl_beta. Mean KL above
+        `(1 + tol) * adaptive_kl_target`, or below
+        `(1 - tol) * adaptive_kl_target`,
+        will cause `adaptive_kl_beta` to be updated. `0.5` was chosen
+        heuristically in the paper, but the algorithm is not very
+        sensitive to it.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
-      check_numerics: If true, adds tf.debugging.check_numerics to help find NaN
-        / Inf values. For debugging only.
+      check_numerics: If true, adds `tf.debugging.check_numerics` to help find
+        NaN / Inf values. For debugging only.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
