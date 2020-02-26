@@ -35,7 +35,7 @@ implementing the soft constraint: an adaptive KL loss penalty, and
 limiting the objective value based on a clipped version of the policy importance
 ratio. This agent implements the KL penalty version.
 
-Note that PPOKLPenalty is known to have worse performance than PPOClipAgent
+Note that PPOKLPenaltyAgent is known to have worse performance than PPOClipAgent
 (Schulman,2017). We included the implementation as it is an important baseline.
 
 Note that PPOKLPenaltyAgent's behavior can be reproduced by the parent
@@ -57,7 +57,7 @@ from tf_agents.agents.ppo import ppo_agent
 
 
 @gin.configurable
-class PPOKLPenalty(ppo_agent.PPOAgent):
+class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
   """A PPO Agent implementing the KL penalty loss."""
 
   def __init__(self,
@@ -188,7 +188,7 @@ class PPOKLPenalty(ppo_agent.PPOAgent):
       raise ValueError(
           'kl_cutoff_factor needs to be set if kl_cutoff_coef is non-zero.')
 
-    super(PPOKLPenalty, self).__init__(
+    super(PPOKLPenaltyAgent, self).__init__(
         time_step_spec,
         action_spec,
         optimizer=optimizer,
