@@ -85,16 +85,7 @@ class MixturePolicy(tf_policy.Base):
 
   def _variables(self):
     variables = sum([p.variables() for p in self._policies], [])
-    if self._mixture_distribution.probs is None:
-      variables.extend([
-          p for p in self._mixture_distribution.logits
-          if isinstance(p, tf.Variable)
-      ])
-    else:
-      variables.extend([
-          p for p in self._mixture_distribution.probs
-          if isinstance(p, tf.Variable)
-      ])
+    variables.extend(self._mixture_distribution.variables)
     return variables
 
   def _distribution(self, time_step, policy_state):
