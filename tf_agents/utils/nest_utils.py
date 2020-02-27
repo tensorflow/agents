@@ -509,11 +509,8 @@ def unstack_nested_arrays(nested_array):
   """
 
   def _unstack(array):
-    if array.shape[0] == 1:
-      arrays = [array]
-    else:
-      arrays = np.split(array, array.shape[0])
-    return [np.reshape(a, a.shape[1:]) for a in arrays]
+    # Use numpy views instead of np.split, it's 5x+ faster.
+    return [array[i] for i in range(len(array))]
 
   unstacked_arrays_zipped = zip(
       *[_unstack(array) for array in tf.nest.flatten(nested_array)])
