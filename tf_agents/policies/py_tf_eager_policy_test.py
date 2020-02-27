@@ -142,7 +142,6 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
         time_step_tensor_spec, action_tensor_spec, actor_network=actor_net)
 
   def testSavedModel(self):
-
     path = os.path.join(self.get_temp_dir(), 'saved_policy')
     saver = policy_saver.PolicySaver(self.tf_policy)
     saver.save(path)
@@ -183,6 +182,84 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
 
     self.assertEqual(expected_train_step, eager_py_policy.get_train_step())
 
+  def testUpdateFromCheckpoint(self):
+    path = os.path.join(self.get_temp_dir(), 'saved_policy')
+    saver = policy_saver.PolicySaver(self.tf_policy)
+    saver.save(path)
+    self.evaluate(
+        tf.nest.map_structure(lambda v: v.assign(v * 0 + -1),
+                              self.tf_policy.variables()))
+    checkpoint_path = os.path.join(self.get_temp_dir(), 'checkpoint')
+    saver.save_checkpoint(checkpoint_path)
+
+    eager_py_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
+        path, self.time_step_spec, self.action_spec)
+
+    # Use evaluate to force a copy.
+    saved_model_variables = self.evaluate(eager_py_policy.variables())
+
+    checkpoint = tf.train.Checkpoint(policy=eager_py_policy._policy)
+    manager = tf.train.CheckpointManager(
+        checkpoint, directory=checkpoint_path, max_to_keep=None)
+
+    eager_py_policy.update_from_checkpoint(manager.latest_checkpoint)
+
+    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
+    tf.nest.map_structure(assert_np_not_equal, saved_model_variables,
+                          self.evaluate(eager_py_policy.variables()))
+
+    assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
+    tf.nest.map_structure(assert_np_all_equal,
+                          self.evaluate(self.tf_policy.variables()),
+                          self.evaluate(eager_py_policy.variables()))
+
+  def testInferenceFromCheckpoint(self):
+    path = os.path.join(self.get_temp_dir(), 'saved_policy')
+    saver = policy_saver.PolicySaver(self.tf_policy)
+    saver.save(path)
+
+    rng = np.random.RandomState()
+    sample_time_step = array_spec.sample_spec_nest(self.time_step_spec, rng)
+    batched_sample_time_step = nest_utils.batch_nested_array(sample_time_step)
+
+    self.evaluate(
+        tf.nest.map_structure(lambda v: v.assign(v * 0 + -1),
+                              self.tf_policy.variables()))
+    checkpoint_path = os.path.join(self.get_temp_dir(), 'checkpoint')
+    saver.save_checkpoint(checkpoint_path)
+
+    eager_py_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
+        path, self.time_step_spec, self.action_spec)
+
+    # Use evaluate to force a copy.
+    saved_model_variables = self.evaluate(eager_py_policy.variables())
+
+    checkpoint = tf.train.Checkpoint(policy=eager_py_policy._policy)
+    manager = tf.train.CheckpointManager(
+        checkpoint, directory=checkpoint_path, max_to_keep=None)
+
+    eager_py_policy.update_from_checkpoint(manager.latest_checkpoint)
+
+    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
+    tf.nest.map_structure(assert_np_not_equal, saved_model_variables,
+                          self.evaluate(eager_py_policy.variables()))
+
+    assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
+    tf.nest.map_structure(assert_np_all_equal,
+                          self.evaluate(self.tf_policy.variables()),
+                          self.evaluate(eager_py_policy.variables()))
+
+    # Can't check if the action is different as in some cases depending on
+    # variable initialization it will be the same. Checking that they are at
+    # least always the same.
+    checkpoint_action = eager_py_policy.action(sample_time_step)
+
+    current_policy_action = self.tf_policy.action(batched_sample_time_step)
+    current_policy_action = self.evaluate(
+        nest_utils.unbatch_nested_tensors(current_policy_action))
+    tf.nest.map_structure(assert_np_all_equal, current_policy_action,
+                          checkpoint_action)
+
 
 if __name__ == '__main__':
-  tf.test.main()
+  test_utils.main()

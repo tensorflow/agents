@@ -44,6 +44,9 @@ class ConstantPolicy(tf_policy.Base):
         action_spec=action_spec,
         info_spec={'a': tensor_spec.TensorSpec(shape=(), dtype=tf.int32)})
 
+  def _variables(self):
+    return []
+
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
         'This policy outputs an action and not a distribution.')

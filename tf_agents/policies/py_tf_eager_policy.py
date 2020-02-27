@@ -47,6 +47,9 @@ class PyTFEagerPolicyBase(py_policy.Base):
     super(PyTFEagerPolicyBase, self).__init__(time_step_spec, action_spec,
                                               policy_state_spec, info_spec)
 
+  def variables(self):
+    return tf.nest.map_structure(lambda t: t.numpy(), self._policy.variables())
+
   def _get_initial_state(self, batch_size):
     return self._policy.get_initial_state(batch_size=batch_size)
 
@@ -93,6 +96,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
                policy_state_spec=(),
                info_spec=()):
     policy = tf.compat.v2.saved_model.load(model_path)
+    self._checkpoint = tf.train.Checkpoint(policy=policy)
     super(SavedModelPyTFEagerPolicy,
           self).__init__(policy, time_step_spec, action_spec, policy_state_spec,
                          info_spec)
@@ -100,3 +104,15 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
   def get_train_step(self):
     """Returns the training global step of the saved model."""
     return self._policy.train_step().numpy()
+
+  def variables(self):
+    return self._policy.model_variables
+
+  def update_from_checkpoint(self, checkpoint_path):
+    """Allows users to update saved_model variables directly from a checkpoint.
+
+    Args:
+      checkpoint_path: Path to the checkpoint to restore and use to udpate this
+        policy.
+    """
+    self._checkpoint.restore(checkpoint_path).assert_existing_objects_matched()

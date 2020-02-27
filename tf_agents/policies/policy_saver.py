@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import copy
 import functools
+import os
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
@@ -64,8 +65,12 @@ class PolicySaver(object):
   The `save()` method exports a saved model to the requested export location.
   The SavedModel that is exported can be loaded via
   `tf.compat.v2.saved_model.load` (or `tf.saved_model.load` in TF2).  It
-  will have available signatures (concrete functions): `action` and
-  `get_initial_state`.
+  will have available signatures (concrete functions): `action`,
+  `get_initial_state`, `get_train_step.
+
+  The attribute `model_variables` is also available when the saved_model is
+  loaded which gives access to model variables in order to update them if
+  needed.
 
   Usage:
   ```python
@@ -135,11 +140,11 @@ class PolicySaver(object):
         saved will be set at the time `saver.save` is called. If not provided,
         train_step defaults to -1.
       input_fn_and_spec: A `(input_fn, tensor_spec)` tuple where input_fn is a
-        function that takes inputs according to tensor_spec and converts them
-        to the `(time_step, policy_state)` tuple that is used as the input to
-        the action_fn. When `input_fn_and_spec` is set, `tensor_spec` is the
-        input for the action signature. When `input_fn_and_spec is None`, the
-        action signature takes as input `(time_step, policy_state)`.
+        function that takes inputs according to tensor_spec and converts them to
+        the `(time_step, policy_state)` tuple that is used as the input to the
+        action_fn. When `input_fn_and_spec` is set, `tensor_spec` is the input
+        for the action signature. When `input_fn_and_spec is None`, the action
+        signature takes as input `(time_step, policy_state)`.
 
     Raises:
       TypeError: If `policy` is not an instance of TFPolicy.
@@ -289,6 +294,8 @@ class PolicySaver(object):
     policy.action = polymorphic_action_fn
     policy.get_initial_state = get_initial_state_fn
     policy.train_step = train_step_fn
+    # Adding variables as an attribute to facilitate updating them.
+    policy.model_variables = policy.variables()
 
     self._policy = policy
     self._signatures = signatures
@@ -297,6 +304,23 @@ class PolicySaver(object):
     """Save the policy to the given `export_dir`."""
     return tf.saved_model.save(
         self._policy, export_dir, signatures=self._signatures)
+
+  def save_checkpoint(self, export_dir):
+    """Saves the policy as a checkpoint to the given `export_dir.
+
+    **Note**: For the checkpoint to be useful users should first call `save` to
+      generate a saved_model of the policy. Checkpoints can then be used to
+      update the policy without having to reload the saved_model, or saving
+      multiple copies of the saved_model.pb file.
+
+
+    **Note**: This will only work with checkpoints generated in TF2.x
+
+    Args:
+      export_dir: Directory to save the checkpoint to.
+    """
+    checkpoint = tf.train.Checkpoint(policy=self._policy)
+    checkpoint.save(file_prefix=os.path.join(export_dir, 'policy_checkpoint'))
 
 
 def _function_with_flat_signature(function,
