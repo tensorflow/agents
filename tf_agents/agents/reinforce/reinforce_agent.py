@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -76,6 +77,28 @@ def _get_initial_policy_state(policy, time_steps):
       tf.compat.dimension_at_index(time_steps.discount.shape, 0) or
       tf.shape(time_steps.discount)[0])
   return policy.get_initial_state(batch_size=batch_size)
+
+
+class ReinforceAgentLossInfo(
+    collections.namedtuple(
+        'ReinforceAgentLossInfo',
+        ('policy_gradient_loss', 'policy_network_regularization_loss',
+         'entropy_regularization_loss', 'value_estimation_loss',
+         'value_network_regularization_loss'))):
+  """ReinforceAgentLossInfo is stored in the `extras` field of the LossInfo.
+
+  All losses, except for `policy_network_regularization_loss` have a validity
+  mask applied to ensure no loss or error is calculated for episode boundaries.
+
+  policy_gradient_loss: The weighted policy_gradient loss.
+  policy_network_regularization_loss: The regularization loss terms from the
+    policy network used to generate the `policy_gradient_loss`.
+  entropy_regularization_loss: The entropy regularization loss.
+  value_estimation_loss: If value estimation network is being used, the loss
+    associated with that network.
+
+  """
+  pass
 
 
 @gin.configurable
@@ -324,35 +347,45 @@ class ReinforceAgent(tf_agent.TFAgent):
         num_episodes,
         weights,
     )
+
     entropy_regularization_loss = self.entropy_regularization_loss(
         actions_distribution, weights)
 
-    total_loss = policy_gradient_loss + entropy_regularization_loss
+    network_regularization_loss = tf.nn.scale_regularization_loss(
+        self._actor_network.losses)
+
+    total_loss = (policy_gradient_loss +
+                  network_regularization_loss +
+                  entropy_regularization_loss)
+
+    losses_dict = {
+        'policy_gradient_loss': policy_gradient_loss,
+        'policy_network_regularization_loss': network_regularization_loss,
+        'entropy_regularization_loss': entropy_regularization_loss,
+        'value_estimation_loss': 0.0,
+        'value_network_regularization_loss': 0.0,
+    }
 
     value_estimation_loss = None
     if self._baseline:
       value_estimation_loss = self.value_estimation_loss(
           value_preds, returns, num_episodes, weights)
-      total_loss += value_estimation_loss
+      value_network_regularization_loss = tf.nn.scale_regularization_loss(
+          self._value_network.losses)
+      total_loss += value_estimation_loss + value_network_regularization_loss
+      losses_dict['value_estimation_loss'] = value_estimation_loss
+      losses_dict['value_network_regularization_loss'] = (
+          value_network_regularization_loss)
 
-    with tf.name_scope('Losses/'):
-      tf.compat.v2.summary.scalar(
-          name='policy_gradient_loss',
-          data=policy_gradient_loss,
-          step=self.train_step_counter)
-      tf.compat.v2.summary.scalar(
-          name='entropy_regularization_loss',
-          data=entropy_regularization_loss,
-          step=self.train_step_counter)
-      if self._baseline:
-        tf.compat.v2.summary.scalar(
-            name='value_estimation_loss',
-            data=value_estimation_loss,
-            step=self.train_step_counter)
-      tf.compat.v2.summary.scalar(
-          name='total_loss', data=total_loss, step=self.train_step_counter)
+    loss_info_extra = ReinforceAgentLossInfo._make(losses_dict)
 
-    return tf_agent.LossInfo(total_loss, ())
+    losses_dict['total_loss'] = total_loss  # Total loss not in loss_info_extra.
+
+    common.summarize_scalar_dict(losses_dict,
+                                 self.train_step_counter,
+                                 name_scope='Losses/')
+
+    return tf_agent.LossInfo(total_loss, loss_info_extra)
 
   def policy_gradient_loss(self,
                            actions_distribution,
