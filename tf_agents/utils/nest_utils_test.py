@@ -631,6 +631,24 @@ class NestedArraysTest(tf.test.TestCase):
     assert_shapes = lambda a: self.assertEqual(a.shape, shape)
     tf.nest.map_structure(assert_shapes, unbatched_arrays)
 
+  def testUnstackNestedArraysIntoFlatItems(self):
+    shape = (5, 8)
+    batch_size = 3
+
+    specs = self.nest_spec(shape)
+    batched_arrays = self.zeros_from_spec(specs, outer_dims=[batch_size])
+    unbatched_flat_items = nest_utils.unstack_nested_arrays_into_flat_items(
+        batched_arrays)
+    self.assertEqual(batch_size, len(unbatched_flat_items))
+
+    for nested_array, flat_item in zip(
+        nest_utils.unstack_nested_arrays(batched_arrays), unbatched_flat_items):
+      self.assertAllEqual(flat_item, tf.nest.flatten(nested_array))
+      tf.nest.assert_same_structure(specs,
+                                    tf.nest.pack_sequence_as(specs, flat_item))
+    assert_shapes = lambda a: self.assertEqual(a.shape, shape)
+    tf.nest.map_structure(assert_shapes, unbatched_flat_items)
+
   def testUnstackNestedArray(self):
     shape = (5, 8)
     batch_size = 1
