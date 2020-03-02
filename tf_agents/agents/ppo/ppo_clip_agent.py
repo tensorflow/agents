@@ -75,6 +75,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
                entropy_regularization=0.0,
                policy_l2_reg=0.0,
                value_function_l2_reg=0.0,
+               shared_vars_l2_reg=0.0,
                value_pred_loss_coef=0.5,
                num_epochs=25,
                use_gae=False,
@@ -106,9 +107,12 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       lambda_value: Lambda parameter for TD-lambda computation.
       discount_factor: Discount factor for return computation.
       entropy_regularization: Coefficient for entropy regularization loss term.
-      policy_l2_reg: Coefficient for l2 regularization of policy weights.
-      value_function_l2_reg: Coefficient for l2 regularization of value function
+      policy_l2_reg: Coefficient for l2 regularization of unshared policy
         weights.
+      value_function_l2_reg: Coefficient for l2 regularization of unshared value
+       function weights.
+      shared_vars_l2_reg: Coefficient for l2 regularization of weights shared
+        between the policy and value functions.
       value_pred_loss_coef: Multiplier for value prediction loss to balance with
         policy gradient loss.
       num_epochs: Number of epochs for computing policy updates.
@@ -150,6 +154,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         entropy_regularization,
         policy_l2_reg,
         value_function_l2_reg,
+        shared_vars_l2_reg,
         value_pred_loss_coef,
         num_epochs,
         use_gae,

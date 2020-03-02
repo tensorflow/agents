@@ -80,6 +80,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
+from tf_agents.utils import object_identity
 from tf_agents.utils import tensor_normalizer
 from tf_agents.utils import value_ops
 
@@ -115,6 +116,7 @@ class PPOAgent(tf_agent.TFAgent):
                entropy_regularization=0.0,
                policy_l2_reg=0.0,
                value_function_l2_reg=0.0,
+               shared_vars_l2_reg=0.0,
                value_pred_loss_coef=0.5,
                num_epochs=25,
                use_gae=False,
@@ -154,12 +156,16 @@ class PPOAgent(tf_agent.TFAgent):
         which is the value used for all environments from (Schulman, 2017).
       entropy_regularization: Coefficient for entropy regularization loss term.
         Default to `0.0` because no entropy bonus was used in (Schulman, 2017).
-      policy_l2_reg: Coefficient for L2 regularization of actor_net weights.
-        Default to `0.0` because no L2 regularization was applied on the policy
-        network weights in (Schulman, 2017).
-      value_function_l2_reg: Coefficient for l2 regularization of value function
+      policy_l2_reg: Coefficient for L2 regularization of unshared actor_net
         weights. Default to `0.0` because no L2 regularization was applied on
         the policy network weights in (Schulman, 2017).
+      value_function_l2_reg: Coefficient for l2 regularization of unshared value
+        function weights. Default to `0.0` because no L2 regularization was
+        applied on the policy network weights in (Schulman, 2017).
+      shared_vars_l2_reg: Coefficient for l2 regularization of weights shared
+        between actor_net and value_net. Default to `0.0` because no L2
+        regularization was applied on the policy network or value network
+        weights in (Schulman, 2017).
       value_pred_loss_coef: Multiplier for value prediction loss to balance with
         policy gradient loss. Default to `0.5`, which was used for all
         environments in the OpenAI baseline implementation. This parameters is
@@ -231,8 +237,7 @@ class PPOAgent(tf_agent.TFAgent):
       raise ValueError(
           'actor_net must be an instance of a network.DistributionNetwork.')
     if not isinstance(value_net, network.Network):
-      raise ValueError(
-          'value_net must be an instance of a network.Network.')
+      raise ValueError('value_net must be an instance of a network.Network.')
     actor_net.create_variables()
     value_net.create_variables()
 
@@ -247,6 +252,7 @@ class PPOAgent(tf_agent.TFAgent):
     self._entropy_regularization = entropy_regularization
     self._policy_l2_reg = policy_l2_reg
     self._value_function_l2_reg = value_function_l2_reg
+    self._shared_vars_l2_reg = shared_vars_l2_reg
     self._value_pred_loss_coef = value_pred_loss_coef
     self._num_epochs = num_epochs
     self._use_gae = use_gae
@@ -353,9 +359,17 @@ class PPOAgent(tf_agent.TFAgent):
 
     return advantages
 
-  def get_epoch_loss(self, time_steps, actions, act_log_probs, returns,
-                     normalized_advantages, action_distribution_parameters,
-                     weights, train_step, debug_summaries, training=False):
+  def get_epoch_loss(self,
+                     time_steps,
+                     actions,
+                     act_log_probs,
+                     returns,
+                     normalized_advantages,
+                     action_distribution_parameters,
+                     weights,
+                     train_step,
+                     debug_summaries,
+                     training=False):
     """Compute the loss and create optimization op for one training epoch.
 
     All tensors should have a single batch dimension.
@@ -388,7 +402,9 @@ class PPOAgent(tf_agent.TFAgent):
     # We must use _distribution because the distribution API doesn't pass down
     # the training= kwarg.
     distribution_step = self._collect_policy._distribution(  # pylint: disable=protected-access
-        time_steps, policy_state, training=training)
+        time_steps,
+        policy_state,
+        training=training)
     # TODO(eholly): Rename policy distributions to something clear and uniform.
     current_policy_distribution = distribution_step.action
 
@@ -408,7 +424,8 @@ class PPOAgent(tf_agent.TFAgent):
         weights,
         debug_summaries=debug_summaries)
 
-    if self._policy_l2_reg > 0.0 or self._value_function_l2_reg > 0.0:
+    if (self._policy_l2_reg > 0.0 or self._value_function_l2_reg > 0.0 or
+        self._shared_vars_l2_reg > 0.0):
       l2_regularization_loss = self.l2_regularization_loss(debug_summaries)
     else:
       l2_regularization_loss = tf.zeros_like(policy_gradient_loss)
@@ -558,7 +575,9 @@ class PPOAgent(tf_agent.TFAgent):
     value_state = self._collect_policy.get_initial_value_state(batch_size)
 
     value_preds, _ = self._collect_policy.apply_value_network(
-        experience.observation, experience.step_type, value_state=value_state,
+        experience.observation,
+        experience.step_type,
+        value_state=value_state,
         training=False)
     value_preds = tf.stop_gradient(value_preds)
 
@@ -581,6 +600,9 @@ class PPOAgent(tf_agent.TFAgent):
     kl_penalty_losses = []
 
     loss_info = None  # TODO(b/123627451): Remove.
+    variables_to_train = list(
+        object_identity.ObjectIdentitySet(self._actor_net.trainable_weights +
+                                          self._value_net.trainable_weights))
     # For each epoch, create its own train op that depends on the previous one.
     for i_epoch in range(self._num_epochs):
       with tf.name_scope('epoch_%d' % i_epoch):
@@ -591,16 +613,18 @@ class PPOAgent(tf_agent.TFAgent):
 
         # Build one epoch train op.
         with tf.GradientTape() as tape:
-          loss_info = self.get_epoch_loss(time_steps, actions, act_log_probs,
-                                          returns, normalized_advantages,
-                                          action_distribution_parameters,
-                                          weights, self.train_step_counter,
-                                          debug_summaries,
-                                          training=True)
+          loss_info = self.get_epoch_loss(
+              time_steps,
+              actions,
+              act_log_probs,
+              returns,
+              normalized_advantages,
+              action_distribution_parameters,
+              weights,
+              self.train_step_counter,
+              debug_summaries,
+              training=True)
 
-        variables_to_train = (
-            self._actor_net.trainable_weights +
-            self._value_net.trainable_weights)
         grads = tape.gradient(loss_info.loss, variables_to_train)
         # Tuple is used for py3, where zip is a generator producing values once.
         grads_and_vars = tuple(zip(grads, variables_to_train))
@@ -707,27 +731,38 @@ class PPOAgent(tf_agent.TFAgent):
     return loss_info
 
   def l2_regularization_loss(self, debug_summaries=False):
-    if self._policy_l2_reg > 0 or self._value_function_l2_reg > 0:
+    if (self._policy_l2_reg > 0 or self._value_function_l2_reg > 0 or
+        self._shared_vars_l2_reg > 0):
       with tf.name_scope('l2_regularization'):
         # Regularize policy weights.
-        policy_vars_to_l2_regularize = [
-            v for v in self._actor_net.trainable_weights if 'kernel' in v.name
-        ]
+        policy_vars_to_regularize = (
+            v for v in self._actor_net.trainable_weights if 'kernel' in v.name)
+        vf_vars_to_regularize = (
+            v for v in self._value_net.trainable_weights if 'kernel' in v.name)
+
+        (unshared_policy_vars_to_regularize, unshared_vf_vars_to_regularize,
+         shared_vars_to_regularize) = common.extract_shared_variables(
+             policy_vars_to_regularize, vf_vars_to_regularize)
+
+        # Regularize policy weights.
         policy_l2_losses = [
             tf.reduce_sum(input_tensor=tf.square(v)) * self._policy_l2_reg
-            for v in policy_vars_to_l2_regularize
+            for v in unshared_policy_vars_to_regularize
         ]
 
         # Regularize value function weights.
-        vf_vars_to_l2_regularize = [
-            v for v in self._value_net.trainable_weights if 'kernel' in v.name
-        ]
         vf_l2_losses = [
             tf.reduce_sum(input_tensor=tf.square(v)) *
-            self._value_function_l2_reg for v in vf_vars_to_l2_regularize
+            self._value_function_l2_reg for v in unshared_vf_vars_to_regularize
         ]
 
-        l2_losses = policy_l2_losses + vf_l2_losses
+        # Regularize shared weights
+        shared_l2_losses = [
+            tf.reduce_sum(input_tensor=tf.square(v)) * self._shared_vars_l2_reg
+            for v in shared_vars_to_regularize
+        ]
+
+        l2_losses = policy_l2_losses + vf_l2_losses + shared_l2_losses
         total_l2_loss = tf.add_n(l2_losses, name='l2_loss')
 
         if self._check_numerics:
@@ -813,7 +848,9 @@ class PPOAgent(tf_agent.TFAgent):
     value_state = self._collect_policy.get_initial_value_state(batch_size)
 
     value_preds, _ = self._collect_policy.apply_value_network(
-        time_steps.observation, time_steps.step_type, value_state=value_state,
+        time_steps.observation,
+        time_steps.step_type,
+        value_state=value_state,
         training=training)
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
     value_estimation_error *= weights

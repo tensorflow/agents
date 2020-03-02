@@ -53,14 +53,18 @@ FLAGS = flags.FLAGS
 
 class DummyActorNet(network.DistributionNetwork):
 
-  def __init__(self, input_spec, action_spec, name=None):
+  def __init__(self,
+               input_spec,
+               action_spec,
+               preprocessing_layers=None,
+               name=None):
     output_spec = self._get_normal_distribution_spec(action_spec)
     super(DummyActorNet, self).__init__(
         input_spec, (), output_spec=output_spec, name='DummyActorNet')
     self._action_spec = action_spec
     self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
 
-    self._dummy_layers = [
+    self._dummy_layers = (preprocessing_layers or []) + [
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements() * 2,
             kernel_initializer=tf.compat.v1.initializers.constant([[2.0, 1.0],
@@ -110,10 +114,14 @@ class DummyActorNet(network.DistributionNetwork):
 
 class DummyValueNet(network.Network):
 
-  def __init__(self, observation_spec, name=None, outer_rank=1):
+  def __init__(self,
+               observation_spec,
+               preprocessing_layers=None,
+               name=None,
+               outer_rank=1):
     super(DummyValueNet, self).__init__(observation_spec, (), 'DummyValueNet')
     self._outer_rank = outer_rank
-    self._dummy_layers = [
+    self._dummy_layers = (preprocessing_layers or []) + [
         tf.keras.layers.Dense(
             1,
             kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
@@ -138,6 +146,21 @@ def _compute_returns_fn(rewards, discounts, next_state_return=0.0):
     returns[t] = rewards[t] + discounts[t] * next_state_return
     next_state_return = returns[t]
   return returns
+
+
+def _create_joint_actor_value_networks(observation_spec, action_spec):
+  shared_layers = [
+      tf.keras.layers.Dense(
+          tf.nest.flatten(observation_spec)[0].shape.num_elements(),
+          kernel_initializer=tf.compat.v1.initializers.constant([[3.0, 1.0],
+                                                                 [1.0, 1.0]]),
+          bias_initializer=tf.compat.v1.initializers.constant([5.0, 5.0]),
+          activation=None,
+      )
+  ]
+  actor_net = DummyActorNet(observation_spec, action_spec, shared_layers)
+  value_net = DummyValueNet(observation_spec, shared_layers)
+  return actor_net, value_net
 
 
 class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
@@ -386,6 +409,58 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     # Now request L2 regularization loss.
     # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1].
     expected_loss = l2_reg * ((2**2 + 1) + (2**2 + 1 + 1 + 1))
+    # Make sure the network is built before we try to get variables.
+    agent.policy.action(
+        tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
+    loss = agent.l2_regularization_loss()
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  @parameterized.named_parameters([
+      ('IsZero', 0),
+      ('NotZero', 1),
+  ])
+  def testL2RegularizationLossWithSharedVariables(self, not_zero):
+    policy_l2_reg = 4e-4 * not_zero
+    value_function_l2_reg = 2e-4 * not_zero
+    shared_vars_l2_reg = 1e-4 * not_zero
+    actor_net, value_net = _create_joint_actor_value_networks(
+        self._obs_spec, self._action_spec)
+    agent = ppo_agent.PPOAgent(
+        self._time_step_spec,
+        self._action_spec,
+        tf.compat.v1.train.AdamOptimizer(),
+        actor_net=actor_net,
+        value_net=value_net,
+        normalize_observations=False,
+        policy_l2_reg=policy_l2_reg,
+        value_function_l2_reg=value_function_l2_reg,
+        shared_vars_l2_reg=shared_vars_l2_reg,
+    )
+
+    # Call other loss functions to make sure trainable variables are
+    #   constructed.
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=2)
+    actions = tf.constant([[0], [1]], dtype=tf.float32)
+    returns = tf.constant([1.9, 1.0], dtype=tf.float32)
+    sample_action_log_probs = tf.constant([[0.9], [0.3]], dtype=tf.float32)
+    advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
+    current_policy_distribution, unused_network_state = DummyActorNet(
+        self._obs_spec, self._action_spec)(time_steps.observation,
+                                           time_steps.step_type, ())
+    weights = tf.ones_like(advantages)
+    agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
+                               advantages, current_policy_distribution, weights)
+    agent.value_estimation_loss(time_steps, returns, weights)
+
+    # Now request L2 regularization loss.
+    # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1],
+    # shared weights are [3, 1, 1, 1].
+    expected_loss = value_function_l2_reg * (2**2 + 1) + policy_l2_reg * (
+        2**2 + 1 + 1 + 1) + shared_vars_l2_reg * (3**2 + 1 + 1 + 1)
     # Make sure the network is built before we try to get variables.
     agent.policy.action(
         tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))

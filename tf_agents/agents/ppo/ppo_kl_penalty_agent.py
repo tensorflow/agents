@@ -78,6 +78,7 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
                entropy_regularization=0.0,
                policy_l2_reg=0.0,
                value_function_l2_reg=0.0,
+               shared_vars_l2_reg=0.0,
                normalize_observations=False,
                normalize_rewards=True,
                reward_norm_clipping=0.0,
@@ -138,12 +139,15 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         on the network architecture of your choice
       entropy_regularization: Coefficient for entropy regularization loss term.
         Default to `0.0` because no entropy bonus was applied in the PPO paper.
-      policy_l2_reg: Coefficient for L2 regularization of actor_net weights.
-        Default to `0.0` because no L2 regularization was applied on the policy
-        network weights in the PPO paper.
-      value_function_l2_reg: Coefficient for l2 regularization of value function
+      policy_l2_reg: Coefficient for L2 regularization of unshared actor_net
         weights. Default to `0.0` because no L2 regularization was applied on
         the policy network weights in the PPO paper.
+      value_function_l2_reg: Coefficient for l2 regularization of unshared value
+       function weights. Default to `0.0` because no L2 regularization was
+       applied on the policy network weights in the PPO paper.
+      shared_vars_l2_reg: Coefficient for l2 regularization of weights shared
+        between actor_net and value_net. Default to `0.0` because no L2
+        regularization was applied on either network in the PPO paper.
       normalize_observations: If `True` (default `False`), keeps moving mean and
         variance of observations and normalizes incoming observations.
         Additional optimization proposed in (Ilyas et al., 2018).
@@ -199,6 +203,7 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         entropy_regularization=entropy_regularization,
         policy_l2_reg=policy_l2_reg,
         value_function_l2_reg=value_function_l2_reg,
+        shared_vars_l2_reg=shared_vars_l2_reg,
         value_pred_loss_coef=value_pred_loss_coef,
         num_epochs=num_epochs,
         use_gae=use_gae,

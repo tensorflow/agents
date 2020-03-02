@@ -32,6 +32,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
+from tf_agents.utils import object_identity
 
 # pylint:disable=g-direct-tensorflow-import
 from tensorflow.core.protobuf import struct_pb2  # TF internal
@@ -1132,6 +1133,30 @@ def load_spec(file_path):
   return signature_encoder.decode_proto(signature_proto)
 
 
+def extract_shared_variables(variables_1, variables_2):
+  """Separates shared variables from the given collections.
+
+  Args:
+    variables_1: An iterable of Variables
+    variables_2: An iterable of Variables
+
+  Returns:
+    A Tuple of ObjectIdentitySets described by the set operations
+
+    ```
+    (variables_1 - variables_2,
+     variables_2 - variables_1,
+     variables_1 & variables_2)
+    ```
+  """
+  var_refs1 = object_identity.ObjectIdentitySet(variables_1)
+  var_refs2 = object_identity.ObjectIdentitySet(variables_2)
+
+  shared_vars = var_refs1.intersection(var_refs2)
+  return (var_refs1.difference(shared_vars), var_refs2.difference(shared_vars),
+          shared_vars)
+
+
 def check_no_shared_variables(network_1, network_2):
   """Checks that there are no shared trainable variables in the two networks.
 
@@ -1259,4 +1284,3 @@ def summarize_scalar_dict(name_data, step, name_scope='Losses/'):
         if data is not None:
           tf.compat.v2.summary.scalar(
               name=name, data=data, step=step)
-
