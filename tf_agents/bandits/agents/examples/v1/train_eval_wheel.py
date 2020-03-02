@@ -66,7 +66,7 @@ LR = 0.001
 
 
 def main(unused_argv):
-  tf.enable_resource_variables()
+  tf.compat.v1.enable_resource_variables()
 
   with tf.device('/CPU:0'):  # due to b/128333994
     env = wheel_py_environment.WheelPyEnvironment(DELTA, MU_BASE, STD_BASE,

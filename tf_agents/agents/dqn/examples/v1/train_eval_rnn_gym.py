@@ -292,7 +292,7 @@ def train_eval(
 
 def main(_):
   logging.set_verbosity(logging.INFO)
-  tf.enable_resource_variables()
+  tf.compat.v1.enable_resource_variables()
   train_eval(
       FLAGS.root_dir,
       num_iterations=FLAGS.num_iterations,

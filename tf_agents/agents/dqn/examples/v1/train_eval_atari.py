@@ -644,7 +644,7 @@ def get_run_args():
 
 def main(_):
   logging.set_verbosity(logging.INFO)
-  tf.enable_resource_variables()
+  tf.compat.v1.enable_resource_variables()
   environment_name = FLAGS.environment_name
   if environment_name is None:
     environment_name = suite_atari.game(name=FLAGS.game_name)

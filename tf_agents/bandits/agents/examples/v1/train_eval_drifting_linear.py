@@ -56,7 +56,7 @@ AGENT_ALPHA = 10.0
 
 
 def main(unused_argv):
-  tf.enable_resource_variables()
+  tf.compat.v1.enable_resource_variables()
 
   with tf.device('/CPU:0'):  # due to b/128333994
     observation_shape = [CONTEXT_DIM]

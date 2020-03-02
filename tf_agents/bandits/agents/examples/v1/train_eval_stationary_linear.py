@@ -51,7 +51,7 @@ AGENT_ALPHA = 0.1
 
 
 def main(unused_argv):
-  tf.enable_resource_variables()
+  tf.compat.v1.enable_resource_variables()
 
   with tf.device('/CPU:0'):  # due to b/128333994
     action_reward_fns = (
