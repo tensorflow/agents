@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections as cs
+import contextlib
 import functools
 import importlib
 import os
@@ -1284,3 +1285,22 @@ def summarize_scalar_dict(name_data, step, name_scope='Losses/'):
         if data is not None:
           tf.compat.v2.summary.scalar(
               name=name, data=data, step=step)
+
+
+@contextlib.contextmanager
+def soft_device_placement():
+  """Context manager for soft device placement, allowing summaries on CPU.
+
+  Eager and graph contexts have different default device placements. See
+  b/148408921 for details. This context manager should be used whenever using
+  summary writers contexts to make sure summaries work when executing on TPUs.
+
+  Yields:
+    Sets `tf.config.set_soft_device_placement(True)` within the context
+  """
+  original_setting = tf.config.get_soft_device_placement()
+  try:
+    tf.config.set_soft_device_placement(True)
+    yield
+  finally:
+    tf.config.set_soft_device_placement(original_setting)
