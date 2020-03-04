@@ -84,6 +84,34 @@ def sliding_linear_reward_fn_generator(context_dim, num_actions, variance):
 
 
 @gin.configurable
+def normalized_sliding_linear_reward_fn_generator(context_dim, num_actions,
+                                                  variance):
+  """Similar to the function above, but returns smaller-range functions.
+
+  Every linear function has an underlying parameter consisting of `context_dim`
+  floats of equal distance from each other. For example, with `context_dim = 3`,
+  `num_actions = 2`, the parameter of the linear function associated with
+  action 1 is `[1.0 / 5, 2.0 / 5, 3.0/ 5]`.
+
+  Args:
+    context_dim: Number of parameters per function.
+    num_actions: Number of functions returned.
+    variance: Variance of the noisy linear functions.
+
+  Returns:
+    A list of noisy linear functions.
+  """
+
+  def _float_range(begin, end, normalizer=1):
+    return [float(j) / normalizer for j in range(begin, end)]
+
+  return linear_reward_fn_generator([
+      _float_range(i, i + context_dim, normalizer=context_dim + num_actions)
+      for i in range(num_actions)
+  ], variance)
+
+
+@gin.configurable
 def context_sampling_fn(batch_size, context_dim):
   return np.random.randint(
       -10, 10, [batch_size, context_dim]).astype(np.float32)
