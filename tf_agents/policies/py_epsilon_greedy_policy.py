@@ -93,6 +93,11 @@ class EpsilonGreedyPolicy(py_policy.Base):
     # Total times action method has been called.
     self._count = 0
 
+    super(EpsilonGreedyPolicy, self).__init__(greedy_policy.time_step_spec,
+                                              greedy_policy.action_spec,
+                                              greedy_policy.policy_state_spec,
+                                              greedy_policy.info_spec)
+
   def _get_initial_state(self, batch_size):
     self._random_policy.reset(batch_size=batch_size)
     return self._greedy_policy.reset(batch_size=batch_size)
