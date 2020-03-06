@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import tensor_spec
 
@@ -76,6 +77,7 @@ def get_num_actions_from_tensor_spec(action_spec):
   return action_spec.maximum + 1
 
 
+@gin.configurable
 def build_laplacian_over_ordinal_integer_actions(action_spec):
   """Build the unnormalized Laplacian matrix over ordinal integer actions.
 
@@ -132,6 +134,7 @@ def compute_pairwise_distances(input_vecs):
   return tf.cast(pdistance_matrix, dtype=tf.float32)
 
 
+@gin.configurable
 def build_laplacian_nearest_neighbor_graph(input_vecs, k=1):
   """Build the Laplacian matrix of a nearest neighbor graph.
 

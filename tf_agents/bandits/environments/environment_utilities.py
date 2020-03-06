@@ -26,6 +26,7 @@ import numpy as np
 from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.bandits.agents import utils
 from tf_agents.bandits.environments import wheel_py_environment
 
 
@@ -112,9 +113,45 @@ def normalized_sliding_linear_reward_fn_generator(context_dim, num_actions,
 
 
 @gin.configurable
+def structured_linear_reward_fn_generator(context_dim, num_actions, variance,
+                                          drift_coefficient=0.1):
+  """A function that returns `num_actions` noisy linear functions.
+
+  Every linear function is related to its previous one:
+  ```
+  theta_new = theta_previous + a * drift
+  ```
+
+  Args:
+    context_dim: Number of parameters per function.
+    num_actions: Number of functions returned.
+    variance: Variance of the noisy linear functions.
+    drift_coefficient: the amount of drift (see `a` in the formula above).
+
+  Returns:
+    A list of noisy linear functions that are related to each other.
+  """
+  theta_list = []
+  theta_previous = np.random.rand(context_dim)
+  theta_list.append(theta_previous)
+  for _ in range(1, num_actions):
+    drift = np.random.rand(context_dim)
+    theta_new = theta_previous + drift_coefficient * drift
+    theta_previous = theta_new.copy()
+    theta_list.append(theta_new)
+
+  return linear_reward_fn_generator(theta_list, variance)
+
+
+@gin.configurable
 def context_sampling_fn(batch_size, context_dim):
   return np.random.randint(
       -10, 10, [batch_size, context_dim]).astype(np.float32)
+
+
+@gin.configurable
+def build_laplacian_over_ordinal_integer_actions_from_env(env):
+  return utils.build_laplacian_over_ordinal_integer_actions(env.action_spec())
 
 
 @gin.configurable
