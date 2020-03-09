@@ -91,15 +91,15 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         The network will be called as
 
           ```
-          network(observation, step_type, network_state=())
+          network(observation, step_type, network_state=initial_state)
           ```
-        (with `network_state` optional) and must return a 2-tuple with elements
-        `(output, next_network_state)` where `output` will be passed as the
-        first argument to `loss_fn`, and used by a `Policy`.  Input tensors will
-        be shaped `[batch, time, ...]` when training, and they will be shaped
-        `[batch, ...]` when the network is called within a `Policy`.  If
-        `cloning_network` has an empty network state, then for training
-        `time` will always be `1` (individual examples).
+        and must return a 2-tuple with elements `(output, next_network_state)`
+        where `output` will be passed as the first argument to `loss_fn`, and
+        used by a `Policy`.  Input tensors will be shaped `[batch, time, ...]`
+        when training, and they will be shaped `[batch, ...]` when the network
+        is called within a `Policy`.  If `cloning_network` has an empty network
+        state, then for training `time` will always be `1`
+        (individual examples).
       optimizer: The optimizer to use for training.
       num_outer_dims: The number of outer dimensions for the agent. Must be
         either 1 or 2. If 2, training will require both a batch_size and time
@@ -244,10 +244,14 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       else:
         actions = tf.nest.flatten(experience.action)[0]
 
+      batch_size = (
+          tf.compat.dimension_value(experience.step_type.shape[0]) or
+          tf.shape(experience.step_type)[0])
       logits, _ = self._cloning_network(
           experience.observation,
           experience.step_type,
-          training=True)
+          training=True,
+          network_state=self._cloning_network.get_initial_state(batch_size))
 
       error = self._loss_fn(logits, actions)
       error_dtype = tf.nest.flatten(error)[0].dtype
