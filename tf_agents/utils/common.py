@@ -283,7 +283,7 @@ def soft_variables_update(source_variables,
     # batch norm stats) do a regular assign, which will cause a sync and
     # broadcast from replica 0, so will have slower performance but will be
     # correct and not cause a failure.
-    if strategy is not None and v_t.trainable:
+    if tf.distribute.has_strategy() and v_t.trainable:
       # Assignment happens independently on each replica,
       # see b/140690837 #46.
       update = strategy.extended.update(v_t, update_fn, args=(v_s,))
