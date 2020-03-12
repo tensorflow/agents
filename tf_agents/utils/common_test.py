@@ -817,6 +817,32 @@ class FunctionTest(test_utils.TestCase):
     self.assertAllClose(3.0, self.evaluate(z))
 
 
+class DefaultTFFunctionParams(test_utils.TestCase):
+
+  def testAutographRequired(self):
+
+    def inner_fn_requires_autograph(a, b):
+      for v in a:
+        b += v
+      return b
+
+    inner_fn = common.function(inner_fn_requires_autograph)
+    # Using general exception to avoid internal TF import.
+    with self.assertRaises(Exception):
+      inner_fn(tf.convert_to_tensor([1, 2, 3]), tf.constant(0))
+
+  def testAutographEnabling(self):
+
+    @common.set_default_tf_function_parameters(autograph=True)
+    def inner_fn_requires_autograph(a, b):
+      for v in a:
+        b += v
+      return b
+
+    inner_fn = common.function(inner_fn_requires_autograph)
+    inner_fn(tf.convert_to_tensor([1, 2, 3]), tf.constant(0))
+
+
 class SpecSaveTest(tf.test.TestCase, parameterized.TestCase):
 
   def test_save_and_load(self):

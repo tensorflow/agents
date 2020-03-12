@@ -89,6 +89,33 @@ def in_legacy_tf1():
   return _IN_LEGACY_TF1
 
 
+def set_default_tf_function_parameters(*args, **kwargs):
+  """Generates a decorator that sets default parameters for `tf.function`.
+
+  Args:
+    *args: default arguments for the `tf.function`.
+    **kwargs: default keyword arguments for the `tf.function`.
+
+  Returns:
+    Function decorator with preconfigured defaults for `tf.function`.
+  """
+  def maybe_wrap(fn):
+    """Helper function."""
+    wrapped = [None]
+
+    @functools.wraps(fn)
+    def preconfigured_function(*fn_args, **fn_kwargs):
+      if tf.executing_eagerly():
+        return fn(*fn_args, **fn_kwargs)
+      if wrapped[0] is None:
+        wrapped[0] = function(*((fn,) + args), **kwargs)
+      return wrapped[0](*fn_args, **fn_kwargs)  # pylint: disable=not-callable
+
+    return preconfigured_function
+
+  return maybe_wrap
+
+
 def function(*args, **kwargs):
   """Wrapper for tf.function with TF Agents-specific customizations.
 
@@ -147,6 +174,7 @@ def function_in_tf1(*args, **kwargs):
     """Helper function."""
     # We're in TF1 mode and want to wrap in common.function to get autodeps.
     wrapped = [None]
+
     @functools.wraps(fn)
     def with_check_resource_vars(*fn_args, **fn_kwargs):
       """Helper function for calling common.function."""
@@ -158,9 +186,11 @@ def function_in_tf1(*args, **kwargs):
       if not resource_variables_enabled():
         raise RuntimeError(MISSING_RESOURCE_VARIABLES_ERROR)
       if wrapped[0] is None:
-        wrapped[0] = function(*args, **kwargs)(fn)
+        wrapped[0] = function(*((fn,) + args), **kwargs)
       return wrapped[0](*fn_args, **fn_kwargs)  # pylint: disable=not-callable
+
     return with_check_resource_vars
+
   return maybe_wrap
 
 
