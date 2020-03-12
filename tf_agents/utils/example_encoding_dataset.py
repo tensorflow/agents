@@ -31,7 +31,6 @@ from tf_agents.utils import example_encoding
 from tf_agents.utils import nest_utils
 
 from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 # File extension used when saving data specs to file
 _SPEC_FILE_EXTENSION = '.spec'
@@ -45,9 +44,7 @@ def encode_spec_to_file(output_path, tensor_data_spec):
     tensor_data_spec: Nested list/tuple or dict of TensorSpecs, describing the
       shape of the non-batched Tensors.
   """
-  spec = tensor_spec.from_spec(tensor_data_spec)
-  signature_encoder = nested_structure_coder.StructureCoder()
-  spec_proto = signature_encoder.encode_structure(spec)
+  spec_proto = tensor_spec.to_proto(tensor_data_spec)
   with tf.io.TFRecordWriter(output_path) as writer:
     writer.write(spec_proto.SerializeToString())
 
@@ -59,7 +56,7 @@ def parse_encoded_spec_from_file(input_path):
     input_path: The path to the TFRecord file which contains the spec.
 
   Returns:
-    Trajectory spec.
+    `TensorSpec` nested structure parsed from the TFRecord file.
   Raises:
     IOError: File at input path does not exist.
   """
@@ -77,9 +74,7 @@ def parse_encoded_spec_from_file(input_path):
       signature_proto_string_value = sess.run(signature_proto_string)
     signature_proto = struct_pb2.StructuredValue.FromString(
         signature_proto_string_value)
-  signature_encoder = nested_structure_coder.StructureCoder()
-  spec = signature_encoder.decode_proto(signature_proto)
-  return spec
+  return tensor_spec.from_proto(signature_proto)
 
 
 class TFRecordObserver(object):

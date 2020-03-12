@@ -449,6 +449,16 @@ class Base(tf.Module):
     """
     return self._trajectory_spec
 
+  @property
+  def collect_data_spec(self):
+    """Describes the Tensors written when using this policy with an environment.
+
+    Returns:
+      A nest of TensorSpec which describe the shape and dtype of each Tensor
+      required to train the agent which generated this policy.
+    """
+    return self._trajectory_spec
+
   # Subclasses MAY optionally override _action.
   def _action(self, time_step, policy_state, seed):
     """Implementation of `action`.

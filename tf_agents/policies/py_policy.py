@@ -113,6 +113,7 @@ class Base(object):
         info=self._info_spec)
     self._trajectory_spec = trajectory.from_transition(
         self._time_step_spec, self._policy_step_spec, self._time_step_spec)
+    self._collect_data_spec = self._trajectory_spec
 
   @property
   def observation_and_action_constraint_splitter(self):
@@ -210,6 +211,16 @@ class Base(object):
       time_step_spec and policy_step_spec of this policy.
     """
     return self._trajectory_spec
+
+  @property
+  def collect_data_spec(self):
+    """Describes the data collected when using this policy with an environment.
+
+    Returns:
+      A nest of ArraySpecs which describe the shape and dtype of each array
+      required to train the agent which generated this policy.
+    """
+    return self._collect_data_spec
 
   @abc.abstractmethod
   def _action(self, time_step, policy_state):

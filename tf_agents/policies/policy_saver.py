@@ -26,8 +26,11 @@ import os
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
+
+COLLECT_POLICY_SPEC = 'collect_data_spec.pbtxt'
 
 
 def _true_if_missing_or_collision(spec, spec_names):
@@ -302,8 +305,14 @@ class PolicySaver(object):
 
   def save(self, export_dir):
     """Save the policy to the given `export_dir`."""
-    return tf.saved_model.save(
-        self._policy, export_dir, signatures=self._signatures)
+    tf.saved_model.save(self._policy, export_dir, signatures=self._signatures)
+
+    spec_output_path = os.path.join(export_dir, COLLECT_POLICY_SPEC)
+    specs = {
+        'collect_data_spec': self._policy.collect_data_spec,
+        'policy_state_spec': self._policy.policy_state_spec
+    }
+    tensor_spec.to_pbtxt_file(spec_output_path, specs)
 
   def save_checkpoint(self, export_dir):
     """Saves the policy as a checkpoint to the given `export_dir.

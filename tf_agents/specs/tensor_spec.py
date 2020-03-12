@@ -22,10 +22,12 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.specs import array_spec
-# Needed because BoundedTensorSpec is not exported from tensorflow.
+
+from google.protobuf import text_format
+from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import tensor_spec as ts  # TF internal
+from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -419,3 +421,43 @@ def add_outer_dims_nest(specs, outer_dims):
     return TensorSpec(shape, spec.dtype, name=name)
 
   return tf.nest.map_structure(add_outer_dims, specs)
+
+
+def to_proto(spec):
+  """Encodes a nested spec into a struct_pb2.StructuredValue proto.
+
+  *Note* (b/151318119): BoundedSpecs are converted to regular specs when saved
+  into a proto as the `nested_structure_coder` from TF currently doesn't
+  handle BoundedSpecs. Shape and dtypes will still match the original specs.
+
+  Args:
+    spec: Nested list/tuple or dict of TensorSpecs, describing the
+      shape of the non-batched Tensors.
+  Returns:
+    A `struct_pb2.StructuredValue` proto.
+  """
+  # Make sure spec is a tensor_spec.
+  spec = from_spec(spec)
+  signature_encoder = nested_structure_coder.StructureCoder()
+  return signature_encoder.encode_structure(spec)
+
+
+def from_proto(spec_proto):
+  """Decodes a struct_pb2.StructuredValue proto into a nested spec."""
+  signature_encoder = nested_structure_coder.StructureCoder()
+  return signature_encoder.decode_proto(spec_proto)
+
+
+def to_pbtxt_file(output_path, spec):
+  """Saves a spec encoded as a struct_pb2.StructuredValue in a pbtxt file."""
+  spec_proto = to_proto(spec)
+  with tf.io.gfile.GFile(output_path, "wb") as f:
+    f.write(text_format.MessageToString(spec_proto))
+
+
+def load_from_pbtxt_file(spec_path):
+  """Loads a spec encoded as a struct_pb2.StructuredValue from a pbtxt file."""
+  spec_proto = struct_pb2.StructuredValue()
+  with tf.io.gfile.GFile(spec_path, "rb") as f:
+    text_format.MergeLines(f, spec_proto)
+  return from_proto(spec_proto)

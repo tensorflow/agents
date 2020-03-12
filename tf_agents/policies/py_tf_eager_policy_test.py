@@ -164,6 +164,24 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     np.testing.assert_array_almost_equal(original_action_np.action,
                                          saved_policy_action.action)
 
+  def testSavedModelLoadingSpecs(self):
+    path = os.path.join(self.get_temp_dir(), 'saved_policy')
+    saver = policy_saver.PolicySaver(self.tf_policy)
+    saver.save(path)
+
+    eager_py_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
+        path, load_from_proto=True)
+
+    # Bounded specs get converted to regular specs when saved into a proto.
+    def assert_specs_mostly_equal(loaded_spec, expected_spec):
+      self.assertEqual(loaded_spec.shape, expected_spec.shape)
+      self.assertEqual(loaded_spec.dtype, expected_spec.dtype)
+
+    tf.nest.map_structure(assert_specs_mostly_equal,
+                          eager_py_policy.time_step_spec, self.time_step_spec)
+    tf.nest.map_structure(assert_specs_mostly_equal,
+                          eager_py_policy.action_spec, self.action_spec)
+
   @parameterized.parameters(None, 0, 100, 200000)
   def testGetTrainStep(self, train_step):
     path = os.path.join(self.get_temp_dir(), 'saved_policy')
