@@ -111,11 +111,11 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
-      laplacian_matrix: A float `Tensor` shaped `[num_actions, num_actions]`.
-        This holds the Laplacian matrix used to regularize the smoothness of the
-        estimated expected reward function. This only applies to problems where
-        the actions have a graph structure. If `None`, the regularization is not
-        applied.
+      laplacian_matrix: A float `Tensor` or a numpy array shaped
+        `[num_actions, num_actions]`. This holds the Laplacian matrix used to
+        regularize the smoothness of the estimated expected reward function.
+        This only applies to problems where the actions have a graph structure.
+        If `None`, the regularization is not applied.
       laplacian_smoothing_weight: A float that determines the weight of the
         regularization term. Note that this has no effect if `laplacian_matrix`
         above is `None`.
@@ -141,14 +141,16 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._gradient_clipping = gradient_clipping
     self._heteroscedastic = isinstance(
         reward_network, heteroscedastic_q_network.HeteroscedasticQNetwork)
-    self._laplacian_matrix = laplacian_matrix
-    self._laplacian_smoothing_weight = laplacian_smoothing_weight
-    # Check the validity of the laplacian matrix.
+    self._laplacian_matrix = None
     if laplacian_matrix is not None:
+      self._laplacian_matrix = tf.convert_to_tensor(
+          laplacian_matrix, dtype=tf.float32)
+      # Check the validity of the laplacian matrix.
       tf.debugging.assert_near(
-          0.0, tf.norm(tf.reduce_sum(laplacian_matrix, 1)))
+          0.0, tf.norm(tf.reduce_sum(self._laplacian_matrix, 1)))
       tf.debugging.assert_near(
-          0.0, tf.norm(tf.reduce_sum(laplacian_matrix, 0)))
+          0.0, tf.norm(tf.reduce_sum(self._laplacian_matrix, 0)))
+    self._laplacian_smoothing_weight = laplacian_smoothing_weight
 
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
         time_step_spec,
@@ -292,4 +294,3 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
                 name=var.name.replace(':', '_'),
                 data=var,
                 step=self.train_step_counter)
-

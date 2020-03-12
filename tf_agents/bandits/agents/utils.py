@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import tensor_spec
 
@@ -100,16 +101,12 @@ def build_laplacian_over_ordinal_integer_actions(action_spec):
       with minimum 0.
   """
   num_actions = get_num_actions_from_tensor_spec(action_spec)
-  adjacency_matrix = tf.zeros([num_actions, num_actions], dtype=tf.float32)
-  row_indices = tf.reshape(tf.range(num_actions - 1), [-1, 1])
-  full_indices = tf.concat([row_indices, row_indices + 1], axis=1)
-  adjacency_matrix = tf.tensor_scatter_nd_update(
-      tensor=adjacency_matrix,
-      indices=full_indices,
-      updates=tf.ones([num_actions - 1], dtype=tf.float32))
-  adjacency_matrix = adjacency_matrix + tf.transpose(adjacency_matrix)
-  degree_matrix = tf.linalg.tensor_diag(tf.reduce_sum(adjacency_matrix, axis=1))
-  laplacian_matrix = degree_matrix - adjacency_matrix
+  adjacency_matrix = np.zeros([num_actions, num_actions])
+  for i in range(num_actions - 1):
+    adjacency_matrix[i, i + 1] = 1.0
+    adjacency_matrix[i + 1, i] = 1.0
+  laplacian_matrix = np.diag(np.sum(adjacency_matrix,
+                                    axis=0)) - adjacency_matrix
   return laplacian_matrix
 
 

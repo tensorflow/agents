@@ -86,8 +86,9 @@ class UtilsTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=4)
     num_actions = utils.get_num_actions_from_tensor_spec(action_spec)
-    laplacian_matrix = utils.build_laplacian_over_ordinal_integer_actions(
-        action_spec)
+    laplacian_matrix = tf.convert_to_tensor(
+        utils.build_laplacian_over_ordinal_integer_actions(action_spec),
+        dtype=tf.float32)
     res = tf.matmul(
         laplacian_matrix, tf.ones([num_actions, 1], dtype=tf.float32))
     # The vector of ones is in the null space of the Laplacian matrix.
