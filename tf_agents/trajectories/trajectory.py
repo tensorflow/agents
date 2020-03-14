@@ -54,9 +54,9 @@ class Trajectory(
       (tensors) that represents the observation.
     action: An array/a tensor, or a nested dict, list or tuple of actions. This
       represents action generated according to the observation.
-    policy_info: A namedtuple that contains auxiliary information related to the
-      action. Note that this does not include the policy/RNN state which was
-      used to generate the action.
+    policy_info: An arbitrary nest that contains auxiliary information related
+      to the action. Note that this does not include the policy/RNN state which
+      was used to generate the action.
     next_step_type: The `StepType` of the next time step.
     reward: A scalar representing the reward of performing the action in an
       environment.
