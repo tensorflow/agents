@@ -241,6 +241,36 @@ class PyEnvironment(object):
     """
     raise NotImplementedError('No support of get_info for this environment.')
 
+  def get_state(self):
+    """Returns the `state` of the environment.
+
+    The `state` contains everything required to restore the environment to the
+    current configuration. This can contain e.g.
+      - The current time_step.
+      - The number of steps taken in the environment (for finite horizon MDPs).
+      - Hidden state (for POMDPs).
+
+    Callers should not assume anything about the contents or format of the
+    returned `state`. It should be treated as a token that can be passed back to
+    `set_state()` later.
+
+    Returns:
+      state: The current state of the environment.
+    """
+    raise NotImplementedError('This environment has not implemented '
+                              '`get_state()`.')
+
+  def set_state(self, state):
+    """Restores the environment to a given `state`.
+
+    See definition of `state` in the documentation for get_state().
+
+    Args:
+      state: A state to restore the environment to.
+    """
+    raise NotImplementedError('This environment has not implemented '
+                              '`set_state()`.')
+
   #  These methods are to be implemented by subclasses:
 
   @abc.abstractmethod
