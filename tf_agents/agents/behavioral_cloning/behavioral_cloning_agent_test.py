@@ -64,10 +64,10 @@ def create_arbitrary_trajectory():
 
   observation = tf.constant([[1], [2], [3], [4], [5], [6]], dtype=tf.int32)
   action = tf.constant([[1], [1], [1], [2], [2], [2]], dtype=tf.int32)
-  reward = tf.constant([[0], [0], [0], [0], [0], [0]], dtype=tf.int32)
+  reward = tf.constant([[0], [0], [0], [0], [0], [0]], dtype=tf.float32)
   step_type = tf.constant([[0], [1], [2], [0], [1], [2]], dtype=tf.int32)
   next_step_type = tf.constant([[1], [2], [0], [1], [2], [0]], dtype=tf.int32)
-  discount = tf.constant([[1], [1], [1], [1], [1], [1]], dtype=tf.int32)
+  discount = tf.constant([[1], [1], [1], [1], [1], [1]], dtype=tf.float32)
 
   traj = trajectory.Trajectory(
       observation=observation,

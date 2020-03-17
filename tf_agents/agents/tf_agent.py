@@ -25,7 +25,6 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
-from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -48,6 +47,7 @@ class TFAgent(tf.Module):
                collect_policy,
                train_sequence_length,
                num_outer_dims=2,
+               train_argspec=None,
                debug_summaries=False,
                summarize_grads_and_vars=False,
                enable_summaries=True,
@@ -75,6 +75,41 @@ class TFAgent(tf.Module):
         either 1 or 2. If 2, training will require both a batch_size and time
         dimension on every Tensor; if 1, training will require only a batch_size
         outer dimension.
+      train_argspec: (Optional) Describes additional supported arguments
+        to the `train` call.  This must be a `dict` mapping strings to nests
+        of specs.  Overriding the `experience` arg is also supported.
+
+        Some algorithms require additional arguments to the `train()` call, and
+        while TF-Agents encourages most of these to be provided in the
+        `policy_info` / `info` field of `experience`, sometimes the extra
+        information doesn't fit well, i.e., when it doesn't come from the
+        policy.
+
+        **NOTE** kwargs will not have their outer dimensions validated.
+        In particular, `train_sequence_length` is ignored for these inputs,
+        and they may have any, or inconsistent, batch/time dimensions; only
+        their inner shape dimensions are checked against `train_argspec`.
+
+        Below is an example:
+
+        ```python
+        class MyAgent(TFAgent):
+          def __init__(self, counterfactual_training, ...):
+             collect_policy = ...
+             train_argspec = None
+             if counterfactual_training:
+               train_argspec = dict(
+                  counterfactual=collect_policy.trajectory_spec)
+             super(...).__init__(
+               ...
+               train_argspec=train_argspec)
+
+        my_agent = MyAgent(...)
+
+        for ...:
+          experience, counterfactual = next(experience_and_counterfactual_iter)
+          loss_info = my_agent.train(experience, counterfactual=counterfactual)
+        ```
       debug_summaries: A bool; if true, subclasses should gather debug
         summaries.
       summarize_grads_and_vars: A bool; if true, subclasses should additionally
@@ -87,6 +122,10 @@ class TFAgent(tf.Module):
         op is run.  Defaults to the global_step.
 
     Raises:
+      TypeError: If `train_argspec` is not a `dict`.
+      ValueError: If `train_argspec` has the keys `experience` or `weights`.
+      TypeError: If any leaf nodes in `train_argspec` values are not
+        subclasses of `tf.TypeSpec`.
       ValueError: If `time_step_spec` is not an instance of `ts.TimeStep`.
       ValueError: If `num_outer_dims` is not in [1, 2].
     """
@@ -125,6 +164,21 @@ class TFAgent(tf.Module):
     self._debug_summaries = debug_summaries
     self._summarize_grads_and_vars = summarize_grads_and_vars
     self._enable_summaries = enable_summaries
+    if train_argspec is None:
+      train_argspec = {}
+    else:
+      if not isinstance(train_argspec, dict):
+        raise TypeError("train_argspec must be a dict, but saw: {}"
+                        .format(train_argspec))
+      train_argspec = dict(train_argspec)  # Create a local copy.
+      if "weights" in train_argspec or "experience" in train_argspec:
+        raise ValueError("train_argspec must not override 'weights' or "
+                         "'experience' keys, but saw: {}".format(train_argspec))
+      if not all(isinstance(x, tf.TypeSpec)
+                 for x in tf.nest.flatten(train_argspec)):
+        raise TypeError("train_argspec contains non-TensorSpec objects: {}"
+                        .format(train_argspec))
+    self._train_argspec = train_argspec
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
     self._train_step_counter = train_step_counter
@@ -191,7 +245,27 @@ class TFAgent(tf.Module):
 
       tf.nest.map_structure(check_shape, experience)
 
-  def train(self, experience, weights=None):
+  def _check_train_argspec(self, kwargs):
+    """Check that kwargs passed to train match `self.train_argspec`.
+
+    Args:
+      kwargs: The `kwargs` passed to `train()`.
+
+    Raises:
+      AttributeError: If `kwargs` keyset doesn't match `train_argspec`.
+      ValueError: If `kwargs` do not match the specs in `train_argspec`.
+    """
+    if not nest_utils.matching_dtypes_and_inner_shapes(
+        kwargs, self.train_argspec):
+      get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
+      get_shapes = lambda v: tf.nest.map_structure(nest_utils.spec_shape, v)
+      raise ValueError(
+          "Inconsistent dtypes or shapes between `kwargs` and `train_argspec`. "
+          "dtypes:\n{}\nvs.\n{}.  shapes:\n{}\nvs.\n{}"
+          .format(get_dtypes(kwargs), get_dtypes(self.train_argspec),
+                  get_shapes(kwargs), get_shapes(self.train_argspec)))
+
+  def train(self, experience, weights=None, **kwargs):
     """Trains the agent.
 
     Args:
@@ -204,6 +278,7 @@ class TFAgent(tf.Module):
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
         but the implementation is up to the Agent.
+      **kwargs: Any additional data as declared by `self.train_argspec`.
 
     Returns:
         A `LossInfo` loss tuple containing loss and info tensors.
@@ -219,6 +294,8 @@ class TFAgent(tf.Module):
       ValueError: If experience tensors' time axes are not compatible with
         `self.train_sequence_length`.  Or if experience does not match
         `self.collect_data_spec` structure.
+      ValueError: If the user does not pass `**kwargs` matching
+        `self.train_argspec`.
       RuntimeError: If the class was not initialized properly (`super.__init__`
         was not called).
     """
@@ -226,16 +303,15 @@ class TFAgent(tf.Module):
       raise RuntimeError(
           "Cannot find _train_fn.  Did %s.__init__ call super?"
           % type(self).__name__)
-    if not isinstance(experience, trajectory.Trajectory):
-      raise ValueError(
-          "experience must be type Trajectory, saw type: %s" % type(experience))
 
     self._check_trajectory_dimensions(experience)
+    self._check_train_argspec(kwargs)
 
     if self._enable_functions:
-      loss_info = self._train_fn(experience=experience, weights=weights)
+      loss_info = self._train_fn(
+          experience=experience, weights=weights, **kwargs)
     else:
-      loss_info = self._train(experience=experience, weights=weights)
+      loss_info = self._train(experience=experience, weights=weights, **kwargs)
 
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
@@ -262,6 +338,16 @@ class TFAgent(tf.Module):
       dtype of each action Tensor.
     """
     return self._action_spec
+
+  @property
+  def train_argspec(self):
+    """TensorSpec describing extra supported `kwargs` to `train()`.
+
+    Returns:
+       A `dict` mapping kwarg strings to nests of `tf.TypeSpec` objects (or
+       `None` if there is no `train_argspec`).
+    """
+    return self._train_argspec
 
   @property
   def policy(self):

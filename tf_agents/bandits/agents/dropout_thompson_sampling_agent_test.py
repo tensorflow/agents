@@ -126,7 +126,7 @@ class AgentTest(tf.test.TestCase):
         network_layers=(20, 20, 20),
         dropout_only_top_layer=False)
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
-    actions = np.array([0, 1], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps(
         observations, rewards)
@@ -150,7 +150,7 @@ class AgentTest(tf.test.TestCase):
         dropout_rate=0.1,
         network_layers=(20, 20, 20),
         dropout_only_top_layer=False)
-    actions = np.array([0, 1], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
     initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
         2, 2, 3)
     action_step = _get_action_step(actions)
@@ -172,7 +172,7 @@ class AgentTest(tf.test.TestCase):
         dropout_only_top_layer=False,
         heteroscedastic=True)
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
-    actions = np.array([0, 1], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps(
         observations, rewards)
@@ -197,7 +197,7 @@ class AgentTest(tf.test.TestCase):
         network_layers=(20, 20, 20),
         dropout_only_top_layer=False,
         heteroscedastic=True)
-    actions = np.array([0, 1], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
     initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
         2, 2, 3)
     action_step = _get_action_step(actions)

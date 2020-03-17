@@ -297,11 +297,11 @@ def make_random_trajectory():
           action_spec, outer_dims=outer_dims),
       policy_info=tensor_spec.sample_bounded_spec(
           action_spec, outer_dims=outer_dims),
-      reward=tf.fill(outer_dims, tf.constant(0, dtype=tf.int32)),
+      reward=tf.fill(outer_dims, tf.constant(0, dtype=tf.float32)),
       # step_type is F M L F M L.
       step_type=tf.reshape(tf.range(0, 6) % 3, outer_dims),
       # next_step_type is M L F M L F.
       next_step_type=tf.reshape(tf.range(1, 7) % 3, outer_dims),
-      discount=tf.fill(outer_dims, tf.constant(1, dtype=tf.int32)),
+      discount=tf.fill(outer_dims, tf.constant(1, dtype=tf.float32)),
   )
   return traj, time_step_spec, action_spec

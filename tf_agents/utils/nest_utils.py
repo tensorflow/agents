@@ -67,13 +67,49 @@ def has_tensors(*x):
       [tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)])
 
 
+def matching_dtypes_and_inner_shapes(tensors, specs):
+  """Returns `True` if tensors and specs have matching dtypes and inner shapes.
+
+  Args:
+    tensors: A nest of tensor objects.
+    specs: A nest of `tf.TypeSpec` objects.
+
+  Returns:
+    A python `bool`.
+  """
+  tf.nest.assert_same_structure(tensors, specs)
+  tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
+  tensor_dtypes = [t.dtype for t in tf.nest.flatten(tensors)]
+  spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
+  spec_dtypes = [t.dtype for t in tf.nest.flatten(specs)]
+
+  if any(s_dtype != t_dtype
+         for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
+    return False
+
+  for s_shape, t_shape in zip(spec_shapes, tensor_shapes):
+    if s_shape.ndims is None or t_shape.ndims is None:
+      continue
+    if s_shape.ndims > t_shape.ndims:
+      return False
+    if not s_shape.is_compatible_with(t_shape[-s_shape.ndims:]):
+      return False
+
+  return True
+
+
 def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
   """Compares tensors to specs to determine if all tensors are batched or not.
 
-  For each tensor, it checks the dimensions with respect to specs and returns
-  True if all tensors are batched and False if all tensors are unbatched, and
-  raises a ValueError if the shapes are incompatible or a mix of batched and
+  For each tensor, it checks the dimensions and dtypes with respect to specs.
+
+  Returns `True` if all tensors are batched and `False` if all tensors are
+  unbatched.
+
+  Raises a `ValueError` if the shapes are incompatible or a mix of batched and
   unbatched tensors are provided.
+
+  Raises a `TypeError` if tensors' dtypes do not match specs.
 
   Args:
     tensors: Nested list/tuple/dict of Tensors.
@@ -90,34 +126,43 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
       2. The shape of Tensors are not compatible with specs, or
       3. A mix of batched and unbatched tensors are provided.
       4. The tensors are batched but have an incorrect number of outer dims.
+    TypeError: If `dtypes` between tensors and specs are not compatible.
   """
   tf.nest.assert_same_structure(tensors, specs)
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
-  spec_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
+  tensor_dtypes = [t.dtype for t in tf.nest.flatten(tensors)]
+  spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
+  spec_dtypes = [t.dtype for t in tf.nest.flatten(specs)]
 
-  if any(spec_shape.rank is None for spec_shape in spec_shapes):
+  if any(s_shape.rank is None for s_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
                      (tf.nest.pack_sequence_as(specs, spec_shapes),))
 
-  if any(tensor_shape.rank is None for tensor_shape in tensor_shapes):
+  if any(t_shape.rank is None for t_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
                      (tf.nest.pack_sequence_as(tensors, tensor_shapes),))
 
+  if any(s_dtype != t_dtype
+         for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
+    raise TypeError('Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}'
+                    .format(tf.nest.pack_sequence_as(tensors, tensor_dtypes),
+                            tf.nest.pack_sequence_as(specs, spec_dtypes)))
   is_unbatched = [
-      spec_shape.is_compatible_with(tensor_shape)
-      for spec_shape, tensor_shape in zip(spec_shapes, tensor_shapes)
+      s_shape.is_compatible_with(t_shape)
+      for s_shape, t_shape in zip(spec_shapes, tensor_shapes)
   ]
+
   if all(is_unbatched):
     return False
 
   tensor_ndims_discrepancy = [
-      tensor_shape.rank - spec_shape.rank
-      for spec_shape, tensor_shape in zip(spec_shapes, tensor_shapes)
+      t_shape.rank - s_shape.rank
+      for s_shape, t_shape in zip(spec_shapes, tensor_shapes)
   ]
 
   tensor_matches_spec = [
-      spec_shape.is_compatible_with(tensor_shape[discrepancy:])
-      for discrepancy, spec_shape, tensor_shape in zip(
+      s_shape.is_compatible_with(t_shape[discrepancy:])
+      for discrepancy, s_shape, t_shape in zip(
           tensor_ndims_discrepancy, spec_shapes, tensor_shapes)
   ]
 
@@ -145,7 +190,7 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
        tf.nest.pack_sequence_as(specs, spec_shapes)))
 
 
-def _spec_shape(t):
+def spec_shape(t):
   if isinstance(t, tf.SparseTensor):
     rank = tf.dimension_value(t.dense_shape.shape[0])
     return tf.TensorShape([None] * rank)
@@ -179,7 +224,7 @@ def batch_nested_tensors(tensors, specs=None):
   tf.nest.assert_same_structure(tensors, specs)
 
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
+  flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   batched_tensors = []
 
   tensor_rank = lambda tensor: tensor.shape.rank
@@ -201,7 +246,7 @@ def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   """Flatten nested tensors and check their shape for use in other functions."""
   tf.nest.assert_same_structure(tensors, specs)
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
+  flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   for tensor, shape in zip(flat_tensors, flat_shapes):
     if tensor.shape.rank == shape.rank:
       tensor.shape.assert_is_compatible_with(shape)
@@ -365,7 +410,7 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   """
   tf.nest.assert_same_structure(tensors, specs)
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
+  flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   out_tensors = []
   batch_dims = []
   for i, (tensor, shape) in enumerate(zip(flat_tensors, flat_shapes)):
@@ -422,31 +467,31 @@ def get_outer_rank(tensors, specs):
   """
   tf.nest.assert_same_structure(tensors, specs)
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
-  spec_shapes = [_spec_shape(s) for s in tf.nest.flatten(specs)]
+  spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
 
-  if any(spec_shape.rank is None for spec_shape in spec_shapes):
+  if any(s_shape.rank is None for s_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
                      spec_shapes)
 
-  if any(tensor_shape.rank is None for tensor_shape in tensor_shapes):
+  if any(t_shape.rank is None for t_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
                      tensor_shapes)
 
   is_unbatched = [
-      spec_shape.is_compatible_with(tensor_shape)
-      for spec_shape, tensor_shape in zip(spec_shapes, tensor_shapes)
+      s_shape.is_compatible_with(t_shape)
+      for s_shape, t_shape in zip(spec_shapes, tensor_shapes)
   ]
   if all(is_unbatched):
     return 0
 
   tensor_ndims_discrepancy = [
-      tensor_shape.rank - spec_shape.rank
-      for spec_shape, tensor_shape in zip(spec_shapes, tensor_shapes)
+      t_shape.rank - s_shape.rank
+      for s_shape, t_shape in zip(spec_shapes, tensor_shapes)
   ]
 
   tensor_matches_spec = [
-      spec_shape.is_compatible_with(tensor_shape[discrepancy:])
-      for discrepancy, spec_shape, tensor_shape in zip(
+      s_shape.is_compatible_with(t_shape[discrepancy:])
+      for discrepancy, s_shape, t_shape in zip(
           tensor_ndims_discrepancy, spec_shapes, tensor_shapes)
   ]
 
