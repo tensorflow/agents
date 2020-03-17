@@ -361,7 +361,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
                 step=self.train_step_counter)
 
   def _distributed_train_step(self, experience, weights=None):
-    """Distributed train fn to be passed as input to experimental_run_v2()."""
+    """Distributed train fn to be passed as input to run()."""
     del weights  # unused
     reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.reward, self._time_step_spec.reward)
