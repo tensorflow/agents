@@ -155,9 +155,6 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     self._time_step_dtypes = [
         s.dtype for s in tf.nest.flatten(self.time_step_spec())
     ]
-    self._time_step_shapes = [
-        s.shape for s in tf.nest.flatten(self.time_step_spec())
-    ]
 
     self._time_step = None
     self._lock = threading.Lock()
@@ -336,7 +333,8 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     batch_shape = tf.TensorShape(batch_shape)
     if not tf.executing_eagerly():
       # Shapes are not required in eager mode.
-      reward.set_shape(batch_shape.concatenate(self._time_step_shapes[1]))
+      reward.set_shape(batch_shape.concatenate(
+        self.time_step_spec().reward.shape))
       step_type.set_shape(batch_shape)
       discount.set_shape(batch_shape)
     # Give each tensor a meaningful name and set the static shape.
