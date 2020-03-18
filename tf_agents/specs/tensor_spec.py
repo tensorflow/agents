@@ -455,7 +455,7 @@ def to_pbtxt_file(output_path, spec):
     f.write(text_format.MessageToString(spec_proto))
 
 
-def load_from_pbtxt_file(spec_path):
+def from_pbtxt_file(spec_path):
   """Loads a spec encoded as a struct_pb2.StructuredValue from a pbtxt file."""
   spec_proto = struct_pb2.StructuredValue()
   with tf.io.gfile.GFile(spec_path, "rb") as f:

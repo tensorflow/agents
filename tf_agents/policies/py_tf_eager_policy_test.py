@@ -170,7 +170,7 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     saver.save(path)
 
     eager_py_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
-        path, load_from_proto=True)
+        path, load_specs_from_pbtxt=True)
 
     # Bounded specs get converted to regular specs when saved into a proto.
     def assert_specs_mostly_equal(loaded_spec, expected_spec):
