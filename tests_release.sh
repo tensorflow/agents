@@ -44,7 +44,7 @@ run_tests() {
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/
   elif [[ $2 == "stable" ]] ; then
-    pip install tensorflow
+    pip install tensorflow==2.1.0
 
     # Run the tests
     python setup.py test --release
@@ -57,7 +57,8 @@ run_tests() {
     exit
   fi
 
-  pip install ${WHEEL_PATH}/tf_agents_*.whl
+  pip install ${WHEEL_PATH}/tf_agents*.whl
+  cp ${WHEEL_PATH}/tf_agents*.whl ./
 
   # Move away from repo directory so "import tf_agents" refers to the
   # installed wheel and not to the local fs.
