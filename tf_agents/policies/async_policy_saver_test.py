@@ -40,7 +40,7 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     saver.save.assert_called_once_with(save_path)
 
   def testCheckpointSave(self):
-    saver = mock.MagicMock()
+    saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
     async_saver = async_policy_saver.AsyncPolicySaver(saver)
     path = os.path.join(self.get_temp_dir(), 'save_model')
 
@@ -54,7 +54,7 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     saver.save_checkpoint.assert_called_once_with(checkpoint_path)
 
   def testBlockingSave(self):
-    saver = mock.MagicMock()
+    saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
     async_saver = async_policy_saver.AsyncPolicySaver(saver)
     path1 = os.path.join(self.get_temp_dir(), 'save_model')
     path2 = os.path.join(self.get_temp_dir(), 'save_model2')
@@ -66,7 +66,7 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     saver.save.assert_has_calls([mock.call(path1), mock.call(path2)])
 
   def testBlockingCheckpointSave(self):
-    saver = mock.MagicMock()
+    saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
     async_saver = async_policy_saver.AsyncPolicySaver(saver)
     path1 = os.path.join(self.get_temp_dir(), 'save_model')
     path2 = os.path.join(self.get_temp_dir(), 'save_model2')
@@ -78,7 +78,7 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     saver.save_checkpoint.assert_has_calls([mock.call(path1), mock.call(path2)])
 
   def testClose(self):
-    saver = mock.MagicMock()
+    saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
     async_saver = async_policy_saver.AsyncPolicySaver(saver)
     path = os.path.join(self.get_temp_dir(), 'save_model')
 
