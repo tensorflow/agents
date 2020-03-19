@@ -794,6 +794,15 @@ class ReplicateTensorTest(test_utils.TestCase, parameterized.TestCase):
       self.assertEqual(tf.TensorShape(outer_shape + list(value.shape)),
                        replicated_value.shape)
 
+  def testReplicateScalarTensor(self):
+    value = 1
+    outer_shape = [2, 1]
+    expected_replicated_value = np.array([[value], [value]])
+
+    tf_value = tf.constant(value, shape=())
+    replicated_value = self.evaluate(common.replicate(tf_value, outer_shape))
+    self.assertAllEqual(expected_replicated_value, replicated_value)
+
 
 class FunctionTest(test_utils.TestCase):
 

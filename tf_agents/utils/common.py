@@ -1028,12 +1028,18 @@ def replicate(tensor, outer_shape):
   if outer_ndims == 0:
     return tensor
 
+  # Calculate target shape of replicated tensor
+  target_shape = tf.concat([outer_shape, tf.shape(input=tensor)], axis=0)
+
+  # tf.tile expects `tensor` to be at least 1D
+  if tensor_ndims == 0:
+    tensor = tensor[None]
+
   # Replicate tensor "t" along the 1st dimension.
   tiled_tensor = tf.tile(tensor, [tf.reduce_prod(input_tensor=outer_shape)] +
                          [1] * (tensor_ndims - 1))
 
   # Reshape to match outer_shape.
-  target_shape = tf.concat([outer_shape, tf.shape(input=tensor)], axis=0)
   return tf.reshape(tiled_tensor, target_shape)
 
 
