@@ -12,8 +12,13 @@ need an intro to RL (or a quick recap),
 [DQN tutorial](docs/tutorials/1_dqn_tutorial.ipynb) to get an agent up and
 running in the Cartpole environment.
 
-*NOTE:* Current TF-Agents pre-release is under active development and
-interfaces may change at any time. Feel free to provide feedback and comments.
+**NOTE:** On 18-MAR-2020 TF-Agents 0.4.0 RC0 for TensorFlow 2.1.x was released
+and expected to move to stable in 2 weeks. 0.4.0 is only tested with Python3.
+`pip install tf-agents==0.4.0rc0`
+
+
+TF-Agents is under active development and interfaces may change at any time.
+Feedback and comments are welcome.
 
 ## Table of contents
 
@@ -98,9 +103,6 @@ git checkout v0.3.0
 
 ```
 
-Note: TF-Agents 0.3.0 is not compatible with TensorFlow 2.1.0 unless the nightly
-release of `TensorFlow Probability` is installed: `pip install tfp-nightly`
-
 ### Nightly
 
 Nightly builds include newer features, but may be less stable than the versioned
@@ -142,12 +144,19 @@ fine but can have issues to to upstream libraries being in flux. The table below
 lists the stable releases of TF Agents to help users that may be locked into a
 specific version of TensorFlow or other related supporting. TensorFlow version
 are the versions of TensorFlow tested with the build, other version might work
-but were not tested. Nightly releases are only compatible with Python 3. 0.3.0
-was the last release compatible with Python 2.
+but were not tested.
+
+TF Agents does both stable and nightly releases. The nightly releases often are
+fine but can have issues to to upstream libraries being in flux. The table below
+lists the stable releases of TF Agents to help users that may be locked into a
+specific version of TensorFlow or other related supporting. TensorFlow version
+are the versions of TensorFlow tested with the build, other version might work
+but were not tested. 0.3.0 was the last release compatible with Python 2.
 
 | Release  | Branch / Tag      | TensorFlow Version |
 | -------- | ----------- | ------------------ |
 | Nightly  | [master](https://github.com/tensorflow/agents) | tf-nightly         |
+| 0.4.0 RC0 | [v0.4.0](https://github.com/tensorflow/agents/tree/r0.4.0) | 2.1.0 |
 | 0.3.0    | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0   |
 
 Examples of installing nightly, most recent stable, and a specific version of
@@ -161,7 +170,7 @@ pip install tf-agents
 pip install tf-agents-nightly
 
 # Specific version
-pip install tf-agents==0.3.0
+pip install tf-agents==0.4.0rc0
 
 ```
 
