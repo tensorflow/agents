@@ -151,7 +151,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
                                           action_spec,
                                           batch_size)
 
-    # Gather all the dtypes of the elements in time_step.
+    # Gather all the dtypes and shapes of the elements in time_step.
     self._time_step_dtypes = [
         s.dtype for s in tf.nest.flatten(self.time_step_spec())
     ]
@@ -208,7 +208,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     Returns:
       A `TimeStep` tuple of:
         step_type: A scalar int32 tensor representing the `StepType` value.
-        reward: A scalar float32 tensor representing the reward at this
+        reward: A float32 tensor representing the reward at this
           timestep.
         discount: A scalar float32 tensor representing the discount [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
@@ -244,7 +244,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     Returns:
       A `TimeStep` tuple of:
         step_type: A scalar int32 tensor representing the `StepType` value.
-        reward: A scalar float32 tensor representing the reward at this
+        reward: A float32 tensor representing the reward at this
           timestep.
         discount: A scalar float32 tensor representing the discount [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
@@ -280,7 +280,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     Returns:
       A `TimeStep` tuple of:
         step_type: A scalar int32 tensor representing the `StepType` value.
-        reward: A scalar float32 tensor representing the reward at this
+        reward: A float32 tensor representing the reward at this
           time_step.
         discount: A scalar float32 tensor representing the discount [0, 1].
         observation: A Tensor, or a nested dict, list or tuple of Tensors
@@ -333,7 +333,8 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     batch_shape = tf.TensorShape(batch_shape)
     if not tf.executing_eagerly():
       # Shapes are not required in eager mode.
-      reward.set_shape(batch_shape)
+      reward.set_shape(batch_shape.concatenate(
+          self.time_step_spec().reward.shape))
       step_type.set_shape(batch_shape)
       discount.set_shape(batch_shape)
     # Give each tensor a meaningful name and set the static shape.
