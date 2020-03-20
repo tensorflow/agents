@@ -49,18 +49,17 @@ landing_page:
         agent.initialize()
         </pre>
         {% dynamic if request.tld != 'cn' %}
-        <a class="colab-button" target="_blank" href="https://colab.sandbox.google.com/github/tensorflow/agents/blob/master/tf_agents/g3doc/tutorials/1_dqn_tutorial.ipynb">Run in a <span>Notebook</span></a>
+        <a class="colab-button" target="_blank" href="https://colab.sandbox.google.com/github/tensorflow/agents/blob/master/docs/tutorials/1_dqn_tutorial.ipynb">Run in a <span>Notebook</span></a>
         {% dynamic endif %}
 
   - classname: devsite-landing-row-cards
     items:
     - heading: "Reinforcement Learning with TF-Agents"
-      youtube_id: -TTziY7EmUA
+      path: https://www.youtube.com/watch?v=-TTziY7EmUA
       buttons:
       - label: Watch the TF Dev Summit 2019 video
         path: https://www.youtube.com/watch?v=-TTziY7EmUA
     - heading: "TF-Agents on GitHub"
-      image_path: /resources/images/github-card-16x9.png
       path: https://github.com/tensorflow/agents
       buttons:
       - label: "View on GitHub"

@@ -1,4 +1,6 @@
-# TensorFlow Agents: Reinforcement Learning with TensorFlow
+# TensorFlow Agents
+
+**Reinforcement Learning with TensorFlow**
 
 Agents makes designing, implementing and testing new RL algorithms easier, by
 providing well tested modular components that can be modified and extended. It

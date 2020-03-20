@@ -11,13 +11,16 @@ upper_tabs:
   lower_tabs:
     # Subsite tabs
     other:
-    - name: Tutorials
+    - name: Guide & Tutorials
       contents:
-      - title: Intro to Agents
+      - title: Overview and install
         path: /agents/tutorials/
+      - title: Intro to RL
+        path: /agents/tutorials/0_intro_rl
       - title: Train a Deep Q Network
         path: /agents/tutorials/1_dqn_tutorial
-      - title: /agents/Environments
+      - heading: "Guide"
+      - title: Environments
         path: /agents/tutorials/2_environments_tutorial
       - title: Policies
         path: /agents/tutorials/3_policies_tutorial
@@ -25,12 +28,15 @@ upper_tabs:
         path: /agents/tutorials/4_drivers_tutorial
       - title: Replay Buffers
         path: /agents/tutorials/5_replay_buffers_tutorial
+      - title: Networks
+        path: /agents/tutorials/8_networks_tutorial
+      - title: Checkpointer and PolicySaver
+        path: /agents/tutorials/10_checkpointer_policysaver_tutorial.ipynb
+      - heading: "Tutorials"
       - title: REINFORCE Agent
         path: /agents/tutorials/6_reinforce_tutorial
       - title: Soft Actor Critic in Minitaur
         path: /agents/tutorials/7_SAC_minitaur_tutorial
-      - title: Networks
-        path: /agents/tutorials/8_networks_tutorial
       - title: Categorical DQN
         path: /agents/tutorials/9_c51_tutorial
     - name: API
