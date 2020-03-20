@@ -167,7 +167,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
 
   def get_train_step(self):
     """Returns the training global step of the saved model."""
-    return self._policy.train_step().numpy()
+    return self._policy.get_train_step().numpy()
 
   def variables(self):
     return self._policy.model_variables
@@ -179,4 +179,4 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
       checkpoint_path: Path to the checkpoint to restore and use to udpate this
         policy.
     """
-    self._checkpoint.restore(checkpoint_path).assert_existing_objects_matched()
+    self._checkpoint.read(checkpoint_path).assert_existing_objects_matched()

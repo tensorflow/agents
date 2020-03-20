@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """TF-Agents SavedModel API."""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -174,8 +173,16 @@ class PolicySaver(object):
     # Make a shallow copy as we'll be making some changes in-place.
     policy = copy.copy(policy)
     if train_step is None:
-      train_step = tf.constant(-1)
+      if not tf.executing_eagerly():
+        raise ValueError('train_step must be a `tf.Variable`: %s' % train_step)
+      train_step = common.create_variable('train_step', initial_value=-1)
+    elif not isinstance(train_step, tf.Variable):
+      raise ValueError('train_step must be a TensorFlow variable: %s' %
+                       train_step)
     policy.train_step = train_step
+
+    # We will need the train step for the Checkpoint object.
+    self._train_step = train_step
 
     if batch_size is None:
       get_initial_state_fn = policy.get_initial_state
@@ -296,7 +303,7 @@ class PolicySaver(object):
 
     policy.action = polymorphic_action_fn
     policy.get_initial_state = get_initial_state_fn
-    policy.train_step = train_step_fn
+    policy.get_train_step = train_step_fn
     # Adding variables as an attribute to facilitate updating them.
     policy.model_variables = policy.variables()
 
@@ -315,21 +322,32 @@ class PolicySaver(object):
     tensor_spec.to_pbtxt_file(spec_output_path, specs)
 
   def save_checkpoint(self, export_dir):
-    """Saves the policy as a checkpoint to the given `export_dir.
+    """Saves the policy as a checkpoint to the given `export_dir`.
 
-    **Note**: For the checkpoint to be useful users should first call `save` to
-      generate a saved_model of the policy. Checkpoints can then be used to
-      update the policy without having to reload the saved_model, or saving
-      multiple copies of the saved_model.pb file.
+    This will only work with checkpoints generated in TF2.x.
 
+    For the checkpoint to be useful users should first call `save` to generate a
+    saved_model of the policy. Checkpoints can then be used to update the policy
+    without having to reload the saved_model, or saving multiple copies of the
+    `saved_model.pb` file.
 
-    **Note**: This will only work with checkpoints generated in TF2.x
+    The checkpoint is always named 'variables' without a counter added to it.
+    This makes is compatible with the checkpoint part of saved models, which
+    enables you to load a saved model made up from the graph part of a full
+    saved model and the variables part of a checkpoint.
 
     Args:
       export_dir: Directory to save the checkpoint to.
     """
-    checkpoint = tf.train.Checkpoint(policy=self._policy)
-    checkpoint.save(file_prefix=os.path.join(export_dir, 'policy_checkpoint'))
+    # In addition to the policy, also list dependencies on model_variables and
+    # train_step so the checkpoint can be combined with a saved graph from a
+    # full saved model.
+    checkpoint = tf.train.Checkpoint(
+        policy=self._policy, model_variables=self._policy.variables(),
+        train_step=self._train_step)
+    # Use write() to make sure that the file prefix is not modified by appending
+    # a save counter value.
+    checkpoint.write(file_prefix=os.path.join(export_dir, 'variables'))
 
 
 def _function_with_flat_signature(function,

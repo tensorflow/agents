@@ -191,7 +191,9 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
       expected_train_step = -1
     else:
       saver = policy_saver.PolicySaver(
-          self.tf_policy, train_step=tf.constant(train_step))
+          self.tf_policy,
+          train_step=common.create_variable(
+              'train_step', initial_value=train_step))
       expected_train_step = train_step
     saver.save(path)
 
@@ -201,6 +203,9 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     self.assertEqual(expected_train_step, eager_py_policy.get_train_step())
 
   def testUpdateFromCheckpoint(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in TF2.x.')
+
     path = os.path.join(self.get_temp_dir(), 'saved_policy')
     saver = policy_saver.PolicySaver(self.tf_policy)
     saver.save(path)
@@ -216,11 +221,8 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     # Use evaluate to force a copy.
     saved_model_variables = self.evaluate(eager_py_policy.variables())
 
-    checkpoint = tf.train.Checkpoint(policy=eager_py_policy._policy)
-    manager = tf.train.CheckpointManager(
-        checkpoint, directory=checkpoint_path, max_to_keep=None)
-
-    eager_py_policy.update_from_checkpoint(manager.latest_checkpoint)
+    eager_py_policy.update_from_checkpoint(
+        os.path.join(checkpoint_path, 'variables'))
 
     assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_not_equal, saved_model_variables,
@@ -232,6 +234,9 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
                           self.evaluate(eager_py_policy.variables()))
 
   def testInferenceFromCheckpoint(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in TF2.x.')
+
     path = os.path.join(self.get_temp_dir(), 'saved_policy')
     saver = policy_saver.PolicySaver(self.tf_policy)
     saver.save(path)
@@ -252,11 +257,8 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     # Use evaluate to force a copy.
     saved_model_variables = self.evaluate(eager_py_policy.variables())
 
-    checkpoint = tf.train.Checkpoint(policy=eager_py_policy._policy)
-    manager = tf.train.CheckpointManager(
-        checkpoint, directory=checkpoint_path, max_to_keep=None)
-
-    eager_py_policy.update_from_checkpoint(manager.latest_checkpoint)
+    eager_py_policy.update_from_checkpoint(
+        os.path.join(checkpoint_path, 'variables'))
 
     assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_not_equal, saved_model_variables,
