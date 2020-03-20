@@ -31,7 +31,7 @@ upper_tabs:
       - title: Networks
         path: /agents/tutorials/8_networks_tutorial
       - title: Checkpointer and PolicySaver
-        path: /agents/tutorials/10_checkpointer_policysaver_tutorial.ipynb
+        path: /agents/tutorials/10_checkpointer_policysaver_tutorial
       - heading: "Tutorials"
       - title: REINFORCE Agent
         path: /agents/tutorials/6_reinforce_tutorial
