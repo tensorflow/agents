@@ -126,8 +126,8 @@ class Table(tf.Module):
     flattened_slots = tf.nest.flatten(slots)
     flattened_values = tf.nest.flatten(values)
     write_ops = [
-        tf.compat.v1.scatter_update(self._slot2storage_map[slot], rows,
-                                    value).op
+        (self._slot2storage_map[slot].scatter_update(
+          tf.IndexedSlices(value, rows))).op
         for (slot, value) in zip(flattened_slots, flattened_values)
     ]
     return tf.group(*write_ops)
