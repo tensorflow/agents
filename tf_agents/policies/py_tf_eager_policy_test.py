@@ -221,8 +221,7 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     # Use evaluate to force a copy.
     saved_model_variables = self.evaluate(eager_py_policy.variables())
 
-    eager_py_policy.update_from_checkpoint(
-        os.path.join(checkpoint_path, 'variables'))
+    eager_py_policy.update_from_checkpoint(checkpoint_path)
 
     assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_not_equal, saved_model_variables,
@@ -257,8 +256,7 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     # Use evaluate to force a copy.
     saved_model_variables = self.evaluate(eager_py_policy.variables())
 
-    eager_py_policy.update_from_checkpoint(
-        os.path.join(checkpoint_path, 'variables'))
+    eager_py_policy.update_from_checkpoint(checkpoint_path)
 
     assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_not_equal, saved_model_variables,

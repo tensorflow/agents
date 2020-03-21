@@ -175,8 +175,19 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
   def update_from_checkpoint(self, checkpoint_path):
     """Allows users to update saved_model variables directly from a checkpoint.
 
+    `checkpoint_path` is a path that was passed to either `PolicySaver.save()`
+    or `PolicySaver.save_checkpoint()`. The policy looks for set of checkpoint
+    files with the file prefix `<checkpoint_path>/variables/variables'
+
     Args:
       checkpoint_path: Path to the checkpoint to restore and use to udpate this
         policy.
     """
-    self._checkpoint.read(checkpoint_path).assert_existing_objects_matched()
+    file_prefix = os.path.join(checkpoint_path,
+                               tf.saved_model.VARIABLES_DIRECTORY,
+                               tf.saved_model.VARIABLES_FILENAME)
+    status = self._checkpoint.read(file_prefix)
+    # Check that all the variables in the policy were updated, but allow the
+    # checkpoint to have additional variables. This helps sharing checkpoints
+    # across policies.
+    status.assert_existing_objects_matched().expect_partial()

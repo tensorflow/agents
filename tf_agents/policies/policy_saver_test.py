@@ -570,8 +570,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     # Update from checkpoint.
     checkpoint = tf.train.Checkpoint(policy=reloaded_policy)
-    checkpoint.read(os.path.join(
-        checkpoint_path, 'variables')).assert_existing_objects_matched()
+    checkpoint_file_prefix = os.path.join(checkpoint_path, 'variables',
+                                          'variables')
+    checkpoint.read(checkpoint_file_prefix).assert_existing_objects_matched()
 
     self.evaluate(
         tf.compat.v1.initializers.variables(reloaded_policy.model_variables))
@@ -629,8 +630,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     # Update from checkpoint.
     checkpoint = tf.train.Checkpoint(policy=reloaded_policy)
-    checkpoint.read(os.path.join(
-        checkpoint_path, 'variables')).assert_existing_objects_matched()
+    checkpoint_file_prefix = os.path.join(checkpoint_path, 'variables',
+                                          'variables')
+    checkpoint.read(checkpoint_file_prefix).assert_existing_objects_matched()
 
     self.evaluate(
         tf.compat.v1.initializers.variables(reloaded_policy.model_variables))
@@ -707,7 +709,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     # and variables from the checkpoint.
     composite_path = os.path.join(self.get_temp_dir(), 'composite_model')
     self.copy_tree(full_model_path, composite_path, skip_variables=True)
-    self.copy_tree(checkpoint_path, os.path.join(composite_path, 'variables'))
+    self.copy_tree(checkpoint_path, os.path.join(composite_path))
 
     # Reload the composite model and check all variables are 2
     reloaded_policy = tf.compat.v2.saved_model.load(composite_path)

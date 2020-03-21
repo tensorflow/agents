@@ -331,10 +331,15 @@ class PolicySaver(object):
     without having to reload the saved_model, or saving multiple copies of the
     `saved_model.pb` file.
 
-    The checkpoint is always named 'variables' without a counter added to it.
-    This makes is compatible with the checkpoint part of saved models, which
-    enables you to load a saved model made up from the graph part of a full
-    saved model and the variables part of a checkpoint.
+    The checkpoint is always created in the sub-directory 'variables/' and the
+    checkpoint file prefix used is 'variables'. The checkpoint files are as
+    follows:
+       * export_dir/variables/variables.index
+       * export_dir/variables/variables-xxxxx-of-xxxxx
+
+    This makes the files compatible with the checkpoint part of full saved
+    models, which enables you to load a saved model made up from the graph part
+    of a full saved model and the variables part of a checkpoint.
 
     Args:
       export_dir: Directory to save the checkpoint to.
@@ -343,11 +348,14 @@ class PolicySaver(object):
     # train_step so the checkpoint can be combined with a saved graph from a
     # full saved model.
     checkpoint = tf.train.Checkpoint(
-        policy=self._policy, model_variables=self._policy.variables(),
+        policy=self._policy,
+        model_variables=self._policy.variables(),
         train_step=self._train_step)
     # Use write() to make sure that the file prefix is not modified by appending
     # a save counter value.
-    checkpoint.write(file_prefix=os.path.join(export_dir, 'variables'))
+    checkpoint.write(
+        file_prefix=os.path.join(export_dir, tf.saved_model.VARIABLES_DIRECTORY,
+                                 tf.saved_model.VARIABLES_FILENAME))
 
 
 def _function_with_flat_signature(function,
