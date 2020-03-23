@@ -310,6 +310,14 @@ class PolicySaver(object):
     self._policy = policy
     self._signatures = signatures
 
+  def get_train_step(self):
+    """Returns the train step of the policy.
+
+    Returns:
+      An integer.
+    """
+    return self._train_step.numpy()
+
   def save(self, export_dir):
     """Save the policy to the given `export_dir`."""
     tf.saved_model.save(self._policy, export_dir, signatures=self._signatures)

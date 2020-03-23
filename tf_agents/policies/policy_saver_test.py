@@ -445,6 +445,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
       saver = policy_saver.PolicySaver(
           policy, batch_size=None, train_step=train_step)
+      self.assertEqual(7, saver.get_train_step())
       path = os.path.join(self.get_temp_dir(), 'save_model')
       saver.save(path)
 
