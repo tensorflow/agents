@@ -38,6 +38,9 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     async_saver.flush()
 
     saver.save.assert_called_once_with(save_path)
+    # Have to close the saver to avoid hanging threads that will prevent OSS
+    # tests from finishing.
+    async_saver.close()
 
   def testCheckpointSave(self):
     saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
@@ -52,6 +55,9 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     async_saver.flush()
 
     saver.save_checkpoint.assert_called_once_with(checkpoint_path)
+    # Have to close the saver to avoid hanging threads that will prevent OSS
+    # tests from finishing.
+    async_saver.close()
 
   def testBlockingSave(self):
     saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
@@ -64,6 +70,9 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     async_saver.save(path2, blocking=True)
 
     saver.save.assert_has_calls([mock.call(path1), mock.call(path2)])
+    # Have to close the saver to avoid hanging threads that will prevent OSS
+    # tests from finishing.
+    async_saver.close()
 
   def testBlockingCheckpointSave(self):
     saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
@@ -76,6 +85,9 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     async_saver.save_checkpoint(path2, blocking=True)
 
     saver.save_checkpoint.assert_has_calls([mock.call(path1), mock.call(path2)])
+    # Have to close the saver to avoid hanging threads that will prevent OSS
+    # tests from finishing.
+    async_saver.close()
 
   def testClose(self):
     saver = mock.create_autospec(policy_saver.PolicySaver, instance=True)
