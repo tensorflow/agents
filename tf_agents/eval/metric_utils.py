@@ -20,8 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-
 from absl import logging
+import gin
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.drivers import dynamic_episode_driver
@@ -47,6 +47,7 @@ def log_metrics(metrics, prefix=''):
   logging.info('%s \n\t\t %s', prefix, '\n\t\t '.join(log))
 
 
+@gin.configurable
 def compute(metrics,
             environment,
             policy,
@@ -81,6 +82,7 @@ def compute(metrics,
   return collections.OrderedDict(results)
 
 
+@gin.configurable
 def compute_summaries(metrics,
                       environment,
                       policy,
@@ -117,6 +119,7 @@ def compute_summaries(metrics,
 
 
 # TODO(b/130250285): Match compute and compute_summaries signatures.
+@gin.configurable
 def eager_compute(metrics,
                   environment,
                   policy,
