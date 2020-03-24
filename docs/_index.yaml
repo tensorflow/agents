@@ -32,7 +32,6 @@ landing_page:
         from tf_agents.networks import q_network
         from tf_agents.agents.dqn import dqn_agent
 
-        # This is a short code snippet that shows off your project.
         q_net = q_network.QNetwork(
           train_env.observation_spec(),
           train_env.action_spec(),

@@ -14,7 +14,7 @@ upper_tabs:
     - name: Guide & Tutorials
       contents:
       - title: Overview and install
-        path: /agents/tutorials/
+        path: /agents/overview
       - title: Intro to RL
         path: /agents/tutorials/0_intro_rl
       - title: Train a Deep Q Network
