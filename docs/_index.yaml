@@ -18,7 +18,7 @@ description: <!--no description-->
 landing_page:
   custom_css_path: /site-assets/css/style.css
   rows:
-  - heading: Agents is a library for Reinforcment Learning in TensorFlow.
+  - heading: Agents is a library for reinforcement learning in TensorFlow.
     items:
     - classname: devsite-landing-row-50
       description: >
