@@ -139,7 +139,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
           'enable loading from proto.')
     policy_specs = None
     if not time_step_spec and load_specs_from_pbtxt:
-      spec_path = os.path.join(model_path, policy_saver.COLLECT_POLICY_SPEC)
+      spec_path = os.path.join(model_path, policy_saver.POLICY_SPECS_PBTXT)
       policy_specs = policy_saver.specs_from_collect_data_spec(
           tensor_spec.from_pbtxt_file(spec_path))
       time_step_spec = policy_specs['time_step_spec']

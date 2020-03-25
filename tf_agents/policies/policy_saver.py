@@ -30,7 +30,7 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
-COLLECT_POLICY_SPEC = 'collect_data_spec.pbtxt'
+POLICY_SPECS_PBTXT = 'policy_specs.pbtxt'
 
 
 def _true_if_missing_or_collision(spec, spec_names):
@@ -323,7 +323,7 @@ class PolicySaver(object):
     """Save the policy to the given `export_dir`."""
     tf.saved_model.save(self._policy, export_dir, signatures=self._signatures)
 
-    spec_output_path = os.path.join(export_dir, COLLECT_POLICY_SPEC)
+    spec_output_path = os.path.join(export_dir, POLICY_SPECS_PBTXT)
     specs = {
         'collect_data_spec': self._policy.collect_data_spec,
         'policy_state_spec': self._policy.policy_state_spec
