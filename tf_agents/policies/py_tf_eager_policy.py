@@ -27,7 +27,6 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.policies import policy_saver
 from tf_agents.policies import py_policy
 from tf_agents.specs import tensor_spec
-from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -141,9 +140,12 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     policy_specs = None
     if not time_step_spec and load_specs_from_pbtxt:
       spec_path = os.path.join(model_path, policy_saver.COLLECT_POLICY_SPEC)
-      policy_specs = tensor_spec.from_pbtxt_file(spec_path)
-      time_step_spec, action_spec, policy_state_spec, info_spec = (
-          self._specs_from_collect_data_spec(policy_specs))
+      policy_specs = policy_saver.specs_from_collect_data_spec(
+          tensor_spec.from_pbtxt_file(spec_path))
+      time_step_spec = policy_specs['time_step_spec']
+      action_spec = policy_specs['action_spec']
+      policy_state_spec = policy_specs['policy_state_spec']
+      info_spec = policy_specs['info_spec']
     super(SavedModelPyTFEagerPolicy,
           self).__init__(policy, time_step_spec, action_spec, policy_state_spec,
                          info_spec)
@@ -151,19 +153,6 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     # on trajectory_data_spec.
     if policy_specs:
       self._collect_data_spec = policy_specs['collect_data_spec']
-
-  def _specs_from_collect_data_spec(self, policy_specs):
-    policy_specs = tensor_spec.to_nest_array_spec(policy_specs)
-    collect_data_spec = policy_specs['collect_data_spec']
-    policy_state_spec = policy_specs['policy_state_spec']
-    time_step_spec = ts.TimeStep(
-        step_type=collect_data_spec.step_type,
-        reward=collect_data_spec.reward,
-        discount=collect_data_spec.discount,
-        observation=collect_data_spec.observation)
-    action_spec = collect_data_spec.action
-    info_spec = collect_data_spec.policy_info
-    return time_step_spec, action_spec, policy_state_spec, info_spec
 
   def get_train_step(self):
     """Returns the training global step of the saved model."""

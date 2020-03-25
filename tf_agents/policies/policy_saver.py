@@ -26,6 +26,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -412,3 +413,45 @@ def _function_with_flat_signature(function,
     return dict_outputs_
 
   return function_with_signature
+
+
+def specs_from_collect_data_spec(loaded_policy_specs):
+  """Creates policy specs from specs loaded from disk.
+
+  The PolicySaver saves policy specs next to the saved model as
+  a `struct.StructuredValue` proto. This recreates the
+  original specs from the proto.
+
+  Pass the proto loaded from the file with `tensor_spec.from_pbtxt_file()`
+  to this function.
+
+  Args:
+     loaded_policy_specs: `struct.StructuredValue` proto that had been
+       previously created by PolicySaver as a pbtxt.
+
+  Returns:
+    A dict with specs extracted from the proto. The dict contains the following
+    keys and values. Except `time_step_spec` all the specs are nests of
+    `ArraySpecs`.
+       * `collect_data_spec`: Collect data spec for the policy.
+       * `time_step_spec`: `TimeStepSpec` for the policy.
+       * `action_spec`:  Action spec for the policy
+       * `policy_state_spec`: State spec for the policy.
+       * `info_spec`: Info spec for the policy.
+  """
+  policy_specs = tensor_spec.to_nest_array_spec(loaded_policy_specs)
+  collect_data_spec = policy_specs['collect_data_spec']
+  policy_state_spec = policy_specs['policy_state_spec']
+  time_step_spec = ts.TimeStep(
+      step_type=collect_data_spec.step_type,
+      reward=collect_data_spec.reward,
+      discount=collect_data_spec.discount,
+      observation=collect_data_spec.observation)
+  action_spec = collect_data_spec.action
+  info_spec = collect_data_spec.policy_info
+  return dict(
+      collect_data_spec=collect_data_spec,
+      time_step_spec=time_step_spec,
+      action_spec=action_spec,
+      policy_state_spec=policy_state_spec,
+      info_spec=info_spec)
