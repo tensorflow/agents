@@ -200,8 +200,7 @@ class EncodingNetwork(network.Network):
       # to work.
       if not nest.is_sequence(input_tensor_spec):
         input_nest = [input_tensor_spec]
-      nest.assert_shallow_structure(
-          preprocessing_layers, input_nest, check_types=False)
+      nest.assert_shallow_structure(preprocessing_layers, input_nest)
 
     if (len(tf.nest.flatten(input_tensor_spec)) > 1 and
         preprocessing_combiner is None):
@@ -309,8 +308,7 @@ class EncodingNetwork(network.Network):
     else:
       processed = []
       for obs, layer in zip(
-          nest.flatten_up_to(
-              self._preprocessing_nest, observation, check_types=False),
+          nest.flatten_up_to(self._preprocessing_nest, observation),
           self._flat_preprocessing_layers):
         processed.append(layer(obs, training=training))
       if len(processed) == 1 and self._preprocessing_combiner is None:
