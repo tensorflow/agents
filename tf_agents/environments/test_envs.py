@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gin
 import numpy as np
 
 from tf_agents import specs
@@ -27,6 +28,7 @@ from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 
 
+@gin.configurable
 class CountingEnv(py_environment.PyEnvironment):
   """Counts up in the observation as steps are taken.
 
