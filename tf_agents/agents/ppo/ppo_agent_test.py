@@ -278,7 +278,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
     }
 
-    policy_info = action_distribution_parameters
+    policy_info = {'dist_params': action_distribution_parameters}
 
     experience = trajectory.Trajectory(time_steps.step_type, observations,
                                        actions, policy_info,
@@ -871,7 +871,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'd': action_distribution_parameters,
     })
 
-    policy_info = action_distribution_parameters
+    policy_info = {'dist_params': action_distribution_parameters}
 
     experience = trajectory.Trajectory(time_steps.step_type, observations,
                                        actions, policy_info,

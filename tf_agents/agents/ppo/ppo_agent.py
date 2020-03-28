@@ -556,7 +556,7 @@ class PPOAgent(tf_agent.TFAgent):
         tf.compat.v2.summary.histogram(
             name=action_name, data=single_action, step=self.train_step_counter)
 
-    action_distribution_parameters = policy_steps_.info
+    action_distribution_parameters = policy_steps_.info['dist_params']
 
     # Reconstruct per-timestep policy distribution from stored distribution
     #   parameters.

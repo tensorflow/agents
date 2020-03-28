@@ -92,8 +92,11 @@ class PPOPolicy(actor_policy.ActorPolicy):
       else:
         network_output_spec = tf.nest.map_structure(
             distribution_spec.deterministic_distribution_from_spec, action_spec)
-      info_spec = tf.nest.map_structure(lambda spec: spec.input_params_spec,
-                                        network_output_spec)
+      info_spec = {
+          'dist_params':
+              tf.nest.map_structure(lambda spec: spec.input_params_spec,
+                                    network_output_spec)
+      }
 
     super(PPOPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -179,7 +182,9 @@ class PPOPolicy(actor_policy.ActorPolicy):
 
     # Prepare policy_info.
     if self._collect:
-      policy_info = ppo_utils.get_distribution_params(distributions)
+      policy_info = {
+          'dist_params': ppo_utils.get_distribution_params(distributions)
+      }
     else:
       policy_info = ()
 
