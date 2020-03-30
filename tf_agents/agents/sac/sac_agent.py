@@ -452,16 +452,17 @@ class SacAgent(tf_agent.TFAgent):
       critic_loss2 = td_errors_loss_fn(td_targets, pred_td_targets2)
       critic_loss = critic_loss1 + critic_loss2
 
-      if weights is not None:
-        critic_loss *= weights
-
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec, num_outer_dims=2):
         # Sum over the time dimension.
         critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
 
-      # Take the mean across the batch.
-      critic_loss = tf.reduce_mean(input_tensor=critic_loss)
+      agg_loss = common.aggregate_losses(
+          per_example_loss=critic_loss,
+          sample_weight=weights,
+          regularization_loss=(self._critic_network_1.losses +
+                               self._critic_network_2.losses))
+      critic_loss = agg_loss.total_loss
 
       self._critic_loss_debug_summaries(td_targets, pred_td_targets1,
                                         pred_td_targets2)
@@ -494,10 +495,12 @@ class SacAgent(tf_agent.TFAgent):
           time_steps, self.time_step_spec, num_outer_dims=2):
         # Sum over the time dimension.
         actor_loss = tf.reduce_sum(input_tensor=actor_loss, axis=1)
-      if weights is not None:
-        actor_loss *= weights
-      actor_loss = tf.reduce_mean(input_tensor=actor_loss)
-
+      reg_loss = self._actor_network.losses if self._actor_network else None
+      agg_loss = common.aggregate_losses(
+          per_example_loss=actor_loss,
+          sample_weight=weights,
+          regularization_loss=reg_loss)
+      actor_loss = agg_loss.total_loss
       self._actor_loss_debug_summaries(actor_loss, actions, log_pi,
                                        target_q_values, time_steps)
 
@@ -525,11 +528,12 @@ class SacAgent(tf_agent.TFAgent):
           time_steps, self.time_step_spec, num_outer_dims=2):
         # Sum over the time dimension.
         alpha_loss = tf.reduce_sum(input_tensor=alpha_loss, axis=1)
+      else:
+        alpha_loss = tf.expand_dims(alpha_loss, 0)
 
-      if weights is not None:
-        alpha_loss *= weights
-
-      alpha_loss = tf.reduce_mean(input_tensor=alpha_loss)
+      agg_loss = common.aggregate_losses(
+          per_example_loss=alpha_loss, sample_weight=weights)
+      alpha_loss = agg_loss.total_loss
 
       self._alpha_loss_debug_summaries(alpha_loss, entropy_diff)
 

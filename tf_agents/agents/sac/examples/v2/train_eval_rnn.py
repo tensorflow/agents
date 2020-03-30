@@ -202,7 +202,7 @@ def train_eval(
     # Make the replay buffer.
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=tf_agent.collect_data_spec,
-        batch_size=tf_env.batch_size*num_parallel_environments,
+        batch_size=tf_env.batch_size,
         max_length=replay_buffer_capacity)
     replay_observer = [replay_buffer.add_batch]
 
@@ -263,7 +263,7 @@ def train_eval(
     # Collect initial replay data.
     if env_steps.result() == 0 or replay_buffer.num_frames() == 0:
       logging.info(
-          'Initializing replay buffer by collecting experience for %d steps'
+          'Initializing replay buffer by collecting experience for %d episodes '
           'with a random policy.', initial_collect_episodes)
       initial_collect_driver.run()
 
@@ -314,6 +314,7 @@ def train_eval(
           policy_state=policy_state,
       )
       episode_steps = env_steps.result() - start_env_steps
+      # TODO(b/152648849)
       for _ in range(episode_steps):
         for _ in range(train_steps_per_iteration):
           train_step()

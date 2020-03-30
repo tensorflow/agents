@@ -101,7 +101,7 @@ def train_eval(
     actor_learning_rate=3e-4,
     critic_learning_rate=3e-4,
     alpha_learning_rate=3e-4,
-    td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error,
+    td_errors_loss_fn=tf.math.squared_difference,
     gamma=0.99,
     reward_scale_factor=0.1,
     gradient_clipping=None,

@@ -62,8 +62,9 @@ class DummyActorPolicy(object):
     self._action_spec = action_spec
 
   def action(self, time_step):
-    del time_step
-    action = tf.constant(self._action, dtype=tf.float32, shape=[1])
+    observation = time_step.observation
+    batch_size = observation.shape[0]
+    action = tf.constant(self._action, dtype=tf.float32, shape=[batch_size, 1])
     return PolicyStep(action=action)
 
   def distribution(self, time_step, policy_state=()):
@@ -78,32 +79,39 @@ class DummyActorPolicy(object):
 
 class DummyCriticNet(network.Network):
 
-  def __init__(self):
+  def __init__(self, l2_regularization_weight=0.0):
     super(DummyCriticNet, self).__init__(
-        input_tensor_spec=(tensor_spec.TensorSpec([], tf.float32),
-                           tensor_spec.TensorSpec([], tf.float32)),
-        state_spec=(), name=None)
+        input_tensor_spec=(tensor_spec.TensorSpec([2], tf.float32),
+                           tensor_spec.TensorSpec([1], tf.float32)),
+        state_spec=(),
+        name=None)
+    self._value_layer = tf.keras.layers.Dense(
+        1,
+        kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
+        kernel_initializer=tf.compat.v1.initializers.constant([[0], [1]]),
+        bias_initializer=tf.compat.v1.initializers.constant([[0]]))
+    self._action_layer = tf.keras.layers.Dense(
+        1,
+        kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
+        kernel_initializer=tf.compat.v1.initializers.constant([[1]]),
+        bias_initializer=tf.compat.v1.initializers.constant([[0]]))
 
   def copy(self, name=''):
     del name
-    return copy.copy(self)
+    return copy.deepcopy(self)
 
   def call(self, inputs, step_type, network_state=()):
     del step_type
-    del network_state
     observation, actions = inputs
     actions = tf.cast(tf.nest.flatten(actions)[0], tf.float32)
 
     states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
-    # Biggest state is best state.
-    value = tf.reduce_max(input_tensor=states, axis=-1)
-    value = tf.reshape(value, [-1])
 
-    # Biggest action is best action.
-    q_value = tf.reduce_max(input_tensor=actions, axis=-1)
-    q_value = tf.reshape(q_value, [-1])
+    s_value = self._value_layer(states)
+    a_value = self._action_layer(actions)
     # Biggest state is best state.
-    return value + q_value, ()
+    q_value = tf.reshape(s_value + a_value, [-1])
+    return q_value, network_state
 
 
 class SacAgentTest(test_utils.TestCase):
@@ -158,7 +166,40 @@ class SacAgentTest(test_utils.TestCase):
         time_steps,
         actions,
         next_time_steps,
-        td_errors_loss_fn=tf.compat.v1.losses.mean_squared_error)
+        td_errors_loss_fn=tf.math.squared_difference)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
+
+  def testCriticRegLoss(self):
+    agent = sac_agent.SacAgent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=DummyCriticNet(0.5),
+        actor_network=None,
+        actor_optimizer=None,
+        critic_optimizer=None,
+        alpha_optimizer=None,
+        actor_policy_ctor=DummyActorPolicy)
+
+    observations = tf.zeros((2, 2), dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=2)
+    actions = tf.zeros((2, 1), dtype=tf.float32)
+
+    rewards = tf.zeros((2,), dtype=tf.float32)
+    discounts = tf.zeros((2,), dtype=tf.float32)
+    next_observations = tf.zeros((2, 2), dtype=tf.float32)
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
+
+    # Expected loss only regularization loss.
+    expected_loss = 2.0
+
+    loss = agent.critic_loss(
+        time_steps,
+        actions,
+        next_time_steps,
+        td_errors_loss_fn=tf.math.squared_difference)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -218,7 +259,7 @@ class SacAgentTest(test_utils.TestCase):
         alpha_optimizer=None,
         actor_policy_ctor=DummyActorPolicy)
 
-    observations = tf.constant([1, 2], dtype=tf.float32)
+    observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_steps = ts.restart(observations)
     action_step = agent.policy.action(time_steps)
 
@@ -277,14 +318,10 @@ class SacAgentTest(test_utils.TestCase):
 
     # Force variable creation.
     agent.policy.variables()
-    if tf.executing_eagerly():
-      loss = lambda: agent.train(experience)
-    else:
-      loss = agent.train(experience)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual(self.evaluate(counter), 0)
-    self.evaluate(loss)
+    self.evaluate(agent.train(experience))
     self.assertEqual(self.evaluate(counter), 1)
 
 
