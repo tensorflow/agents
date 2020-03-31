@@ -25,6 +25,7 @@ import tensorflow_probability as tfp
 
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import policy_utilities
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -39,6 +40,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
                action_spec=None,
                reward_network=None,
                observation_and_action_constraint_splitter=None,
+               accepts_per_arm_features=False,
                emit_policy_info=(),
                name=None):
     """Builds a GreedyRewardPredictionPolicy given a reward tf_agents.Network.
@@ -59,6 +61,8 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
         `[batch_size, num_actions]`. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
+      accepts_per_arm_features: (bool) Whether the policy accepts per-arm
+        features.
       emit_policy_info: (tuple of strings) what side information we want to get
         as part of the policy info. Allowed values can be found in
         `policy_utilities.PolicyInfo`.
@@ -96,9 +100,20 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     if policy_utilities.InfoFields.BANDIT_POLICY_TYPE in emit_policy_info:
       bandit_policy_type = (
           policy_utilities.create_bandit_policy_type_tensor_spec(shape=[1]))
-    info_spec = policy_utilities.PolicyInfo(
-        predicted_rewards_mean=predicted_rewards_mean,
-        bandit_policy_type=bandit_policy_type)
+    if accepts_per_arm_features:
+      # The features for the chosen arm is saved to policy_info.
+      chosen_action_info = time_step_spec.observation[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY]
+      info_spec = policy_utilities.PerArmPolicyInfo(
+          predicted_rewards_mean=predicted_rewards_mean,
+          bandit_policy_type=bandit_policy_type,
+          chosen_action=chosen_action_info)
+    else:
+      info_spec = policy_utilities.PolicyInfo(
+          predicted_rewards_mean=predicted_rewards_mean,
+          bandit_policy_type=bandit_policy_type)
+
+    self._accepts_per_arm_features = accepts_per_arm_features
 
     super(GreedyRewardPredictionPolicy, self).__init__(
         time_step_spec, action_spec,
@@ -108,6 +123,10 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
         name=name)
+
+  @property
+  def accepts_per_arm_features(self):
+    return self._accepts_per_arm_features
 
   def _variables(self):
     return self._reward_network.variables
@@ -119,10 +138,10 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     if observation_and_action_constraint_splitter is not None:
       observation, mask = observation_and_action_constraint_splitter(
           observation)
-    batch_size = tf.shape(observation)[0]
 
     predictions, policy_state = self._reward_network(
         observation, time_step.step_type, policy_state)
+    batch_size = tf.shape(predictions)[0]
 
     if isinstance(self._reward_network,
                   heteroscedastic_q_network.HeteroscedasticQNetwork):
@@ -135,7 +154,7 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     if predicted_reward_values.shape[-1] != self._expected_num_actions:
       raise ValueError(
           'The number of actions ({}) does not match the reward_network output'
-          ' size ({}.)'.format(self._expected_num_actions,
+          ' size ({}).'.format(self._expected_num_actions,
                                predicted_reward_values.shape[1]))
     if observation_and_action_constraint_splitter is not None:
       actions = policy_utilities.masked_argmax(
@@ -148,15 +167,28 @@ class GreedyRewardPredictionPolicy(tf_policy.Base):
     bandit_policy_values = tf.fill([batch_size, 1],
                                    policy_utilities.BanditPolicyType.GREEDY)
 
-    policy_info = policy_utilities.PolicyInfo(
-        predicted_rewards_mean=(
-            predicted_reward_values if
-            policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
-            self._emit_policy_info else ()),
-        bandit_policy_type=(
-            bandit_policy_values if
-            policy_utilities.InfoFields.BANDIT_POLICY_TYPE in
-            self._emit_policy_info else ()))
+    if self._accepts_per_arm_features:
+      # Saving the features for the chosen action to the policy_info.
+      chosen_action = tf.gather(
+          params=observation[bandit_spec_utils.PER_ARM_FEATURE_KEY],
+          indices=actions,
+          batch_dims=1)
+      policy_info = policy_utilities.PerArmPolicyInfo(
+          predicted_rewards_mean=(
+              predicted_reward_values if policy_utilities.InfoFields
+              .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
+          bandit_policy_type=(bandit_policy_values
+                              if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
+                              in self._emit_policy_info else ()),
+          chosen_action=chosen_action)
+    else:
+      policy_info = policy_utilities.PolicyInfo(
+          predicted_rewards_mean=(
+              predicted_reward_values if policy_utilities.InfoFields
+              .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
+          bandit_policy_type=(bandit_policy_values
+                              if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
+                              in self._emit_policy_info else ()))
 
     return policy_step.PolicyStep(
         tfp.distributions.Deterministic(loc=actions), policy_state, policy_info)

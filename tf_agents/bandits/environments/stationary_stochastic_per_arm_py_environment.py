@@ -18,10 +18,11 @@ import gin
 import numpy as np
 
 from tf_agents.bandits.environments import bandit_py_environment
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.specs import array_spec
 
-GLOBAL_KEY = 'global'
-PER_ARM_KEY = 'per_arm'
+GLOBAL_KEY = bandit_spec_utils.GLOBAL_FEATURE_KEY
+PER_ARM_KEY = bandit_spec_utils.PER_ARM_FEATURE_KEY
 
 
 @gin.configurable

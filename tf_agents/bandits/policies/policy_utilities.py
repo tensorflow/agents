@@ -35,6 +35,8 @@ class InfoFields(object):
   PREDICTED_REWARDS_SAMPLED = 'predicted_rewards_sampled'
   # Type of bandit policy (see enumerations in `BanditPolicyType`).
   BANDIT_POLICY_TYPE = 'bandit_policy_type'
+  # Used to store the chosen action for a per-arm model.
+  CHOSEN_ACTION = 'chosen_action'
 
 
 PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
@@ -45,6 +47,17 @@ PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
      InfoFields.BANDIT_POLICY_TYPE))
 # Set default empty tuple for all fields.
 PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
+
+
+PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
+    'PerArmPolicyInfo',
+    (policy_step.CommonFields.LOG_PROBABILITY,
+     InfoFields.PREDICTED_REWARDS_MEAN,
+     InfoFields.PREDICTED_REWARDS_SAMPLED,
+     InfoFields.BANDIT_POLICY_TYPE,
+     InfoFields.CHOSEN_ACTION))
+# Set default empty tuple for all fields.
+PerArmPolicyInfo.__new__.__defaults__ = ((),) * len(PerArmPolicyInfo._fields)
 
 
 class BanditPolicyType(object):

@@ -22,8 +22,10 @@ import collections
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
@@ -143,7 +145,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     with self.assertRaisesRegexp(
         ValueError,
         r'The number of actions \(11\) does not match the reward_network output'
-        r' size \(3.\)'):
+        r' size \(3\)\.'):
       policy.action(time_step, seed=1)
 
   def testAction(self):
@@ -285,6 +287,49 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     p_info = self.evaluate(action_step.info)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected_array)
+
+  def testPerArmRewards(self):
+    if not tf.executing_eagerly():
+      return
+    tf.compat.v1.set_random_seed(3000)
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 3)
+    reward_network = (
+        global_and_arm_feature_network.create_feed_forward_per_arm_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+
+    policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
+        time_step_spec,
+        action_spec,
+        reward_network=reward_network,
+        accepts_per_arm_features=True,
+        emit_policy_info=('predicted_rewards_mean',))
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            tf.cast(
+                tf.reshape(tf.random.shuffle(tf.range(24)), shape=[2, 4, 3]),
+                dtype=tf.float32)
+    }
+
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    action = self.evaluate(action_step.action)
+    self.assertAllEqual(action.shape, [2])
+    p_info = self.evaluate(action_step.info)
+    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 4])
+    self.assertAllEqual(p_info.chosen_action.shape, [2, 3])
+    first_action = action[0]
+    first_arm_features = observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
+    self.assertAllEqual(p_info.chosen_action[0],
+                        first_arm_features[first_action])
+
 
 if __name__ == '__main__':
   tf.test.main()
