@@ -324,10 +324,10 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.assertAllEqual(action.shape, [2])
     p_info = self.evaluate(action_step.info)
     self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 4])
-    self.assertAllEqual(p_info.chosen_action.shape, [2, 3])
+    self.assertAllEqual(p_info.chosen_arm_features.shape, [2, 3])
     first_action = action[0]
     first_arm_features = observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
-    self.assertAllEqual(p_info.chosen_action[0],
+    self.assertAllEqual(p_info.chosen_arm_features[0],
                         first_arm_features[first_action])
 
 
