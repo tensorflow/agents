@@ -26,7 +26,7 @@ _PATCH_VERSION = '0'
 # release branch, the current version is by default assumed to be a
 # 'development' version, labeled 'dev'.
 _DEV_SUFFIX = 'dev'
-_REL_SUFFIX = 'rc0'
+_REL_SUFFIX = ''
 
 # Example, '0.4.0rc0'
 __version__ = '.'.join([
