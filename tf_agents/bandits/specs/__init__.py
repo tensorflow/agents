@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module importing all networks."""
+"""Module importing all specs modules."""
 
-from tf_agents.bandits.networks import global_and_arm_feature_network
-from tf_agents.bandits.networks import heteroscedastic_q_network
+from tf_agents.bandits.specs import utils

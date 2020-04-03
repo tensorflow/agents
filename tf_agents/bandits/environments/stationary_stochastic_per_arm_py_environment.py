@@ -90,7 +90,7 @@ class StationaryStochasticPerArmPyEnvironment(
         shape=(),
         dtype=np.int32,
         minimum=0,
-        maximum=num_actions,
+        maximum=num_actions - 1,
         name='action')
 
     super(StationaryStochasticPerArmPyEnvironment,

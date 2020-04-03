@@ -45,6 +45,8 @@ class RandomTFPolicy(tf_policy.Base):
   def __init__(self, time_step_spec, action_spec, *args, **kwargs):
     observation_and_action_constraint_splitter = (
         kwargs.get('observation_and_action_constraint_splitter', None))
+    self._accepts_per_arm_features = (
+        kwargs.pop('accepts_per_arm_features', False))
 
     if observation_and_action_constraint_splitter is not None:
       if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
@@ -72,7 +74,7 @@ class RandomTFPolicy(tf_policy.Base):
         self.observation_and_action_constraint_splitter)
 
     if observation_and_action_constraint_splitter is not None:
-      _, mask = observation_and_action_constraint_splitter(
+      observation, mask = observation_and_action_constraint_splitter(
           time_step.observation)
 
       zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
@@ -86,12 +88,18 @@ class RandomTFPolicy(tf_policy.Base):
         action_ = tf.expand_dims(action_, axis=-1)
       policy_info = tensor_spec.sample_spec_nest(self._info_spec)
     else:
+      observation = time_step.observation
       outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)
 
       action_ = tensor_spec.sample_spec_nest(
           self._action_spec, seed=seed, outer_dims=outer_dims)
       policy_info = tensor_spec.sample_spec_nest(
           self._info_spec, outer_dims=outer_dims)
+    if self._accepts_per_arm_features:
+      chosen_arm_features = tf.gather(
+          params=observation['per_arm'], indices=action_, batch_dims=1)
+      policy_info = policy_info._replace(
+          chosen_arm_features=chosen_arm_features)
 
     # TODO(b/78181147): Investigate why this control dependency is required.
     if time_step is not None:

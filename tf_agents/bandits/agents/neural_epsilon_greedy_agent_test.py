@@ -22,6 +22,8 @@ from __future__ import print_function
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
+from tf_agents.bandits.networks import global_and_arm_feature_network
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -107,6 +109,34 @@ class AgentTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions = self.evaluate(action_step.action)
     self.assertAllEqual(actions, [2, 1])
+
+  def testTrainPerArmAgent(self):
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 3)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    reward_net = (
+        global_and_arm_feature_network.create_feed_forward_per_arm_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
+        time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=optimizer,
+        epsilon=0.1,
+        accepts_per_arm_features=True)
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            tf.cast(
+                tf.reshape(tf.range(18), shape=[2, 3, 3]), dtype=tf.float32)
+    }
+    time_steps = ts.restart(observations, batch_size=2)
+    policy = agent.policy
+    action_step = policy.action(time_steps)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    actions = self.evaluate(action_step.action)
+    self.assertAllEqual(actions.shape, (2,))
 
 
 if __name__ == '__main__':
