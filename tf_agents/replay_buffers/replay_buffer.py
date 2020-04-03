@@ -25,6 +25,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.utils import common
 
 from tensorflow.python.data.util import nest as data_nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.util import deprecation   # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class ReplayBuffer(tf.Module):
@@ -196,11 +197,13 @@ class ReplayBuffer(tf.Module):
         ds = ds.with_options(options)
     return ds
 
+  @deprecation.deprecated(
+      date=None,
+      instructions=(
+          'Use `as_dataset(..., single_deterministic_pass=True)` instead.'
+      ))
   def gather_all(self):
     """Returns all the items in buffer.
-
-    **NOTE** This method will soon be deprecated in favor of
-    `as_dataset(..., single_deterministic_pass=True)`.
 
     Returns:
       Returns all the items currently in the buffer. Returns a tensor
