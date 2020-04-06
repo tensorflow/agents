@@ -296,7 +296,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 3)
     reward_network = (
-        global_and_arm_feature_network.create_feed_forward_per_arm_network(
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
             obs_spec, (4, 3), (3, 4), (4, 2)))
 
     policy = greedy_reward_policy.GreedyRewardPredictionPolicy(

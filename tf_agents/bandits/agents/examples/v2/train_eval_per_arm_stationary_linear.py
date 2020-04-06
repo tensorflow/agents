@@ -39,6 +39,11 @@ from tf_agents.environments import tf_py_environment
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 
+flags.DEFINE_enum(
+    'network', 'commontower', ['commontower', 'dotproduct'],
+    'Which network architecture to use. '
+    'Possible values are `commontower` and `dotproduct`.')
+
 FLAGS = flags.FLAGS
 
 BATCH_SIZE = 16
@@ -102,9 +107,14 @@ def main(unused_argv):
   environment = tf_py_environment.TFPyEnvironment(env)
 
   obs_spec = environment.observation_spec()
-  network = (
-      global_and_arm_feature_network.create_feed_forward_per_arm_network(
-          obs_spec, (4, 3), (3, 4), (4, 2)))
+  if FLAGS.network == 'commontower':
+    network = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+  elif FLAGS.network == 'dotproduct':
+    network = (
+        global_and_arm_feature_network.create_feed_forward_dot_product_network(
+            obs_spec, (4, 3, 6), (3, 4, 6)))
   agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
       time_step_spec=environment.time_step_spec(),
       action_spec=environment.action_spec(),

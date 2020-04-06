@@ -114,7 +114,7 @@ class AgentTest(tf.test.TestCase):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 3)
     time_step_spec = ts.time_step_spec(obs_spec)
     reward_net = (
-        global_and_arm_feature_network.create_feed_forward_per_arm_network(
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
             obs_spec, (4, 3), (3, 4), (4, 2)))
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
     agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(

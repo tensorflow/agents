@@ -28,26 +28,42 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
 
 
+parameters = parameterized.named_parameters(
+    {
+        'testcase_name': 'batch2feat4act3',
+        'batch_size': 2,
+        'feature_dim': 4,
+        'num_actions': 3
+    }, {
+        'testcase_name': 'batch1feat7act9',
+        'batch_size': 1,
+        'feature_dim': 7,
+        'num_actions': 9
+    })
+
+
 class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
                                      test_utils.TestCase):
 
-  @parameterized.named_parameters(
-      {
-          'testcase_name': 'batch2feat4act3',
-          'batch_size': 2,
-          'feature_dim': 4,
-          'num_actions': 3
-      }, {
-          'testcase_name': 'batch1feat7act9',
-          'batch_size': 1,
-          'feature_dim': 7,
-          'num_actions': 9
-      })
-  def testCreateFeedForwardNetwork(self, batch_size, feature_dim, num_actions):
+  @parameters
+  def testCreateFeedForwardCommonTowerNetwork(self, batch_size, feature_dim,
+                                              num_actions):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         7, feature_dim, num_actions)
-    net = gafn.create_feed_forward_per_arm_network(obs_spec, (4, 3, 2),
-                                                   (6, 5, 4), (7, 6, 5))
+    net = gafn.create_feed_forward_common_tower_network(obs_spec, (4, 3, 2),
+                                                        (6, 5, 4), (7, 6, 5))
+    input_nest = tensor_spec.sample_spec_nest(
+        obs_spec, outer_dims=(batch_size,))
+    output, _ = self.evaluate(net(input_nest))
+    self.assertAllEqual(output.shape, (batch_size, num_actions))
+
+  @parameters
+  def testCreateFeedForwardDotProductNetwork(self, batch_size, feature_dim,
+                                             num_actions):
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        7, feature_dim, num_actions)
+    net = gafn.create_feed_forward_dot_product_network(obs_spec, (4, 3, 4),
+                                                       (6, 5, 4))
     input_nest = tensor_spec.sample_spec_nest(
         obs_spec, outer_dims=(batch_size,))
     output, _ = self.evaluate(net(input_nest))
