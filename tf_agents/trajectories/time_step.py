@@ -293,24 +293,45 @@ def truncation(observation, reward, discount=1.0):
   return TimeStep(step_type, reward, discount, observation)
 
 
-def time_step_spec(observation_spec=None):
-  """Returns a `TimeStep` spec given the observation_spec."""
+def time_step_spec(observation_spec=None, reward_spec=None):
+  """Returns a `TimeStep` spec given the observation_spec.
+
+  Args:
+    observation_spec: A nest of `tf.TypeSpec` or `ArraySpec` objects.
+    reward_spec: (Optional) A nest of `tf.TypeSpec` or `ArraySpec` objects.
+      Default - a scalar float32 of the same type (Tensor or Array) as
+      `observation_spec`.
+
+  Returns:
+    A `TimeStep` with the same types (`TypeSpec` or `ArraySpec`) as
+    the first entry in `observation_spec`.
+
+  Raises:
+    TypeError: If observation and reward specs aren't both either tensor type
+      specs or array type specs.
+  """
   if observation_spec is None:
     return TimeStep(step_type=(), reward=(), discount=(), observation=())
 
   first_observation_spec = tf.nest.flatten(observation_spec)[0]
-  if isinstance(first_observation_spec,
-                (tf.TypeSpec, tensor_spec.TensorSpec,
-                 tensor_spec.BoundedTensorSpec)):
+  if reward_spec is not None:
+    first_reward_spec = tf.nest.flatten(reward_spec)[0]
+    if (isinstance(first_reward_spec, tf.TypeSpec)
+        != isinstance(first_observation_spec, tf.TypeSpec)):
+      raise TypeError(
+          'Expected observation and reward specs to both be either tensor or '
+          'array specs, but saw spec values {} vs. {}'
+          .format(first_observation_spec, first_reward_spec))
+  if isinstance(first_observation_spec, tf.TypeSpec):
     return TimeStep(
         step_type=tensor_spec.TensorSpec([], tf.int32, name='step_type'),
-        reward=tensor_spec.TensorSpec([], tf.float32, name='reward'),
+        reward=reward_spec or tf.TensorSpec([], tf.float32, name='reward'),
         discount=tensor_spec.BoundedTensorSpec(
             [], tf.float32, minimum=0.0, maximum=1.0, name='discount'),
         observation=observation_spec)
   return TimeStep(
       step_type=array_spec.ArraySpec([], np.int32, name='step_type'),
-      reward=array_spec.ArraySpec([], np.float32, name='reward'),
+      reward=reward_spec or array_spec.ArraySpec([], np.float32, name='reward'),
       discount=array_spec.BoundedArraySpec(
           [], np.float32, minimum=0.0, maximum=1.0, name='discount'),
       observation=observation_spec)

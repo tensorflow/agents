@@ -58,8 +58,9 @@ class Trajectory(
       to the action. Note that this does not include the policy/RNN state which
       was used to generate the action.
     next_step_type: The `StepType` of the next time step.
-    reward: A scalar representing the reward of performing the action in an
-      environment.
+    reward: An array/a tensor, or a nested dict, list, or tuple of rewards.
+      This represents the rewards and/or constraint satisfiability after
+      performing the action in an environment.
     discount: A scalar that representing the discount factor to multiply with
       future rewards.
   """
