@@ -40,9 +40,10 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
   returned by step(action) will contain the reward and the next observation.
   """
 
-  def __init__(self, observation_spec, action_spec):
+  def __init__(self, observation_spec, action_spec, reward_spec=None):
     self._observation_spec = observation_spec
     self._action_spec = action_spec
+    self._reward_spec = reward_spec
     super(BanditPyEnvironment, self).__init__()
 
   def _reset(self):
@@ -77,6 +78,9 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
 
   def observation_spec(self):
     return self._observation_spec
+
+  def reward_spec(self):
+    return self._reward_spec
 
   def _empty_observation(self):
     return tf.nest.map_structure(lambda x: np.zeros(x.shape, x.dtype),

@@ -24,8 +24,10 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+import numpy as np
 import six
 
+from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
@@ -106,6 +108,17 @@ class PyEnvironment(object):
       An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
     """
 
+  def reward_spec(self):
+    """Defines the rewards that are returned by `step()`.
+
+    Override this method to define an environment that uses non-standard reward
+    values, for example an environment with array-valued rewards.
+
+    Returns:
+      An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+    """
+    return array_spec.ArraySpec(shape=(), dtype=np.float32, name='reward')
+
   def time_step_spec(self):
     """Describes the `TimeStep` fields returned by `step()`.
 
@@ -117,7 +130,7 @@ class PyEnvironment(object):
       A `TimeStep` namedtuple containing (possibly nested) `ArraySpec`s defining
       the step_type, reward, discount, and observation structure.
     """
-    return ts.time_step_spec(self.observation_spec())
+    return ts.time_step_spec(self.observation_spec(), self.reward_spec())
 
   def current_time_step(self):
     """Returns the current timestep."""

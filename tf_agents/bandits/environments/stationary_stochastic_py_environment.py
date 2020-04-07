@@ -48,8 +48,8 @@ class StationaryStochasticPyEnvironment(
     Args:
       context_sampling_fn: A function that outputs a random 2d array or list of
         ints or floats, where the first dimension is batch size.
-      reward_fns: A function that generates a reward when called with an
-        observation
+      reward_fns: A function that generates a (perhaps non-scalar) reward when
+        called with an observation.
       batch_size: The batch size. Must match the outer dimension of the output
         of context_sampling_fn.
     """
@@ -71,8 +71,14 @@ class StationaryStochasticPyEnvironment(
       raise ValueError(
           'The outer dimension of the observations should match the batch size.'
       )
+
+    # Figure out the reward spec.
+    example_reward = np.asarray(reward_fns[0](example_observation[0]))
+    reward_spec = array_spec.ArraySpec(
+        example_reward.shape, np.float32, name='reward')
+
     super(StationaryStochasticPyEnvironment, self).__init__(
-        observation_spec, action_spec)
+        observation_spec, action_spec, reward_spec)
 
   def batched(self):
     return True

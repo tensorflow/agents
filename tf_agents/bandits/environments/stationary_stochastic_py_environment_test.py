@@ -33,7 +33,6 @@ def normal_with_sigma_1_sampler(mu):
 
 def check_unbatched_time_step_spec(time_step, time_step_spec, batch_size):
   """Checks if time step conforms array spec, even if batched."""
-  print(batch_size)
   if batch_size is None:
     return array_spec.check_arrays_nest(time_step, time_step_spec)
 
@@ -65,6 +64,15 @@ class LinearDeterministicReward(object):
 
   def __call__(self, x):
     return np.dot(x, self.theta)
+
+
+class LinearDeterministicMultipleRewards(object):
+
+  def __init__(self, thetas):
+    self.thetas = thetas
+
+  def __call__(self, x):
+    return [np.dot(x, theta) for theta in self.thetas]
 
 
 class StationaryStochasticBanditPyEnvironmentTest(tf.test.TestCase):
@@ -144,6 +152,37 @@ class StationaryStochasticBanditPyEnvironmentTest(tf.test.TestCase):
     time_step = env.step([2, 3])
     self.assertAllEqual(time_step.reward, [17, 24])
 
+  def test_non_scalar_rewards(self):
+
+    def _context_sampling_fn():
+      return np.array([[4, 3], [4, 3], [5, 6]])
+
+    # Build a case with 4 arms and 2-dimensional rewards and batch size 3.
+    reward_fns = [
+        LinearDeterministicMultipleRewards(theta)  # pylint: disable=g-complex-comprehension
+        for theta in [np.array([[0, 1], [1, 0]]),
+                      np.array([[1, 2], [2, 1]]),
+                      np.array([[2, 3], [3, 2]]),
+                      np.array([[3, 4], [4, 3]])]
+    ]
+    env = sspe.StationaryStochasticPyEnvironment(
+        _context_sampling_fn, reward_fns, batch_size=3)
+    time_step = env.reset()
+    self.assertAllEqual(time_step.observation, [[4, 3], [4, 3], [5, 6]])
+    time_step = env.step([0, 1, 2])
+    self.assertAllEqual(time_step.reward,
+                        [[3., 4.],
+                         [10., 11.],
+                         [28., 27.]])
+    env.reset()
+    time_step = env.step([2, 3, 0])
+    self.assertAllEqual(time_step.reward,
+                        [[17., 18.],
+                         [24., 25.],
+                         [6., 5.]])
+    # Check that the reward vectors in the reward spec are 2-dimensional.
+    time_step_spec = env.time_step_spec()
+    self.assertEqual(time_step_spec.reward.shape[0], 2)
 
 if __name__ == '__main__':
   tf.test.main()
