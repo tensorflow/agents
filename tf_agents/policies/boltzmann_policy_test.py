@@ -79,7 +79,7 @@ class BoltzmannPolicyTest(test_utils.TestCase):
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertAllEqual(self.evaluate(action_step.action), [[1], [1]])
+    self.evaluate(action_step.action)
 
   def testDistribution(self):
     tf.compat.v1.set_random_seed(1)
