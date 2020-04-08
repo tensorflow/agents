@@ -17,25 +17,21 @@ GitHub clone.
 
 ### Stable
 
-Run the commands below to install the most recent stable release (0.3.0), which
-was tested with TensorFlow 1.15.0 and 2.0.0.
+Run the commands below to install the most recent stable release (0.4.0), which
+was tested with TensorFlow 2.1.x and and Python3. If you want to use TF-Agents
+with TensorFlow 1.15 or 2.0 install version 0.3.0:
+`pip install tf-agents==0.3.0`.
 
 ```bash
 pip install --user tf-agents
-pip install --user tensorflow==2.0.0
-
-# Or For TensorFlow 1.x
-pip install --user tensorflow==1.15.0
+pip install --user tensorflow==2.1.0
 
 # To get the matching examples and colabs
 git clone https://github.com/tensorflow/agents.git
 cd agents
-git checkout v0.3.0
+git checkout v0.4.0
 
 ```
-
-Note: TF-Agents 0.3.0 is not compatible with TensorFlow 2.1.0 unless the nightly
-release of `TensorFlow Probability` is installed: `pip install tfp-nightly`
 
 ### Nightly
 
@@ -82,10 +78,11 @@ specific version of TensorFlow or other related supporting. TensorFlow version
 are the versions of TensorFlow tested with the build, other version might work
 but were not tested.
 
-Release | Branch / Tag                                               | TensorFlow Version
-------- | ---------------------------------------------------------- | ------------------
-Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
-0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0
+| Release  | Branch / Tag      | TensorFlow Version |
+| -------- | ----------- | ------------------ |
+| Nightly  | [master](https://github.com/tensorflow/agents) | tf-nightly         |
+| 0.4.0    | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0 |
+| 0.3.0    | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0   |
 
 Examples of installing nightly, most recent stable, and a specific version of
 TF-Agents:
