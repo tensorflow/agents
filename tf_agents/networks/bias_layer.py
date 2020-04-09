@@ -47,26 +47,27 @@ class BiasLayer(tf.keras.layers.Layer):
     self.bias_initializer = tf.keras.initializers.get(bias_initializer)
 
     self.supports_masking = True
-    self.input_spec = tf.keras.layers.InputSpec(min_ndim=2)
 
   def build(self, input_shape):
     input_shape = tf.TensorShape(input_shape)
-    last_dim = tf.compat.dimension_value(input_shape[-1])
+    if input_shape.rank == 1:
+      shape = (1,)
+    else:
+      shape = (tf.compat.dimension_value(input_shape[-1]),)
 
-    if last_dim is None:
-      raise ValueError('The last dimension of the inputs to `BiasLayer` '
-                       'should be defined. Found `None`.')
-
-    self.input_spec = tf.keras.layers.InputSpec(min_ndim=2, axes={-1: last_dim})
     self.bias = self.add_weight(
         'bias',
-        shape=[input_shape[-1]],
+        shape=shape,
         initializer=self.bias_initializer,
         dtype=self.dtype,
         trainable=True)
     self.built = True
 
   def call(self, inputs):
+    if inputs.shape.rank == 1:
+      expanded_inputs = tf.expand_dims(inputs, -1)
+      with_bias = tf.nn.bias_add(expanded_inputs, self.bias)
+      return with_bias[..., 0]
     return tf.nn.bias_add(inputs, self.bias)
 
   def compute_output_shape(self, input_shape):
