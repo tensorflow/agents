@@ -12,7 +12,7 @@ need an intro to RL (or a quick recap),
 [DQN tutorial](docs/tutorials/1_dqn_tutorial.ipynb) to get an agent up and
 running in the Cartpole environment.
 
-**NOTE:** 0.4.0 is the new stable release (03-APR-2020) is only tested with
+**NOTE:** 0.4.0 is the new stable release (07-APR-2020) and was tested with
 Python3 and TensorFlow 2.1.x. `pip install tf-agents`
 
 TF-Agents is under active development and interfaces may change at any time.
@@ -85,9 +85,7 @@ GitHub clone.
 ### Stable
 
 Run the commands below to install the most recent stable release (0.4.0), which
-was tested with TensorFlow 2.1.x and and Python3. If you want to use TF-Agents
-with TensorFlow 1.15 or 2.0 install version 0.3.0:
-`pip install tf-agents==0.3.0`.
+was tested with TensorFlow 2.1.x and and Python3.
 
 ```bash
 pip install --user tf-agents
@@ -98,6 +96,14 @@ git clone https://github.com/tensorflow/agents.git
 cd agents
 git checkout v0.4.0
 
+```
+
+If you want to use TF-Agents with TensorFlow 1.15 or 2.0, install version 0.3.0:
+
+```bash
+pip install tf-agents==0.3.0
+# Newer versions of tensorflow-probability require newer versions of TensorFlow.
+pip install tensorflow-probability==0.8.0
 ```
 
 ### Nightly
