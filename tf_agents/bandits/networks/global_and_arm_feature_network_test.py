@@ -54,7 +54,9 @@ class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
                                                         (6, 5, 4), (7, 6, 5))
     input_nest = tensor_spec.sample_spec_nest(
         obs_spec, outer_dims=(batch_size,))
-    output, _ = self.evaluate(net(input_nest))
+    output, _ = net(input_nest)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    output = self.evaluate(output)
     self.assertAllEqual(output.shape, (batch_size, num_actions))
 
   @parameters
@@ -66,7 +68,9 @@ class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
                                                        (6, 5, 4))
     input_nest = tensor_spec.sample_spec_nest(
         obs_spec, outer_dims=(batch_size,))
-    output, _ = self.evaluate(net(input_nest))
+    output, _ = net(input_nest)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    output = self.evaluate(output)
     self.assertAllEqual(output.shape, (batch_size, num_actions))
 
 
