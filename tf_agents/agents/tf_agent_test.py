@@ -29,6 +29,7 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.utils import test_utils
 
 
 class LossInfoTest(tf.test.TestCase):
@@ -84,7 +85,7 @@ class TFAgentTest(tf.test.TestCase):
       agent.train(experience, extra=tf.ones(shape=[3, 4], dtype=tf.int32))
 
 
-class AgentSpecTest(tf.test.TestCase):
+class AgentSpecTest(test_utils.TestCase):
 
   def testErrorOnWrongTimeStepSpecWhenCreatingAgent(self):
     wrong_time_step_spec = ts.time_step_spec(
@@ -106,4 +107,4 @@ class AgentSpecTest(tf.test.TestCase):
 
 
 if __name__ == '__main__':
-  tf.test.main()
+  test_utils.main()
