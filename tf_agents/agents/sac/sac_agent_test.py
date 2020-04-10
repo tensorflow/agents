@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import copy
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import critic_rnn_network
@@ -85,6 +84,7 @@ class DummyCriticNet(network.Network):
                            tensor_spec.TensorSpec([1], tf.float32)),
         state_spec=(),
         name=None)
+    self._l2_regularization_weight = l2_regularization_weight
     self._value_layer = tf.keras.layers.Dense(
         1,
         kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
@@ -98,7 +98,8 @@ class DummyCriticNet(network.Network):
 
   def copy(self, name=''):
     del name
-    return copy.deepcopy(self)
+    return DummyCriticNet(
+        l2_regularization_weight=self._l2_regularization_weight)
 
   def call(self, inputs, step_type, network_state=()):
     del step_type
@@ -319,10 +320,19 @@ class SacAgentTest(test_utils.TestCase):
     # Force variable creation.
     agent.policy.variables()
 
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertEqual(self.evaluate(counter), 0)
-    self.evaluate(agent.train(experience))
-    self.assertEqual(self.evaluate(counter), 1)
+    if not tf.executing_eagerly():
+      # Get experience first to make sure optimizer variables are created and
+      # can be initialized.
+      experience = agent.train(experience)
+      with self.cached_session() as sess:
+        common.initialize_uninitialized_variables(sess)
+      self.assertEqual(self.evaluate(counter), 0)
+      self.evaluate(experience)
+      self.assertEqual(self.evaluate(counter), 1)
+    else:
+      self.assertEqual(self.evaluate(counter), 0)
+      self.evaluate(agent.train(experience))
+      self.assertEqual(self.evaluate(counter), 1)
 
 
 if __name__ == '__main__':
