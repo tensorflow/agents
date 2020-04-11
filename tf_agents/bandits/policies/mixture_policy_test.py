@@ -122,6 +122,7 @@ class MixturePolicyTest(test_utils.TestCase):
     ]
     weights = [0, 0, 0.2, 0, 0, 0.3, 0, 0, 0.5, 0]
     dist = tfd.Categorical(probs=weights)
+
     policy = mixture_policy.MixturePolicy(dist, sub_policies)
     batch_size = tf.random.uniform(
         shape=(), minval=10, maxval=15, dtype=tf.int32)
@@ -142,9 +143,16 @@ class MixturePolicyTest(test_utils.TestCase):
     actions, bsize = self.evaluate([action_step.action, batch_size])
     self.assertAllEqual(actions.shape, [bsize])
     self.assertAllInSet(actions, [2, 5, 8])
-    saver = policy_saver.PolicySaver(policy)
+
+    train_step = tf.compat.v1.train.get_or_create_global_step()
+    saver = policy_saver.PolicySaver(policy, train_step=train_step)
     location = os.path.join(self.get_temp_dir(), 'saved_policy')
-    saver.save(location)
+    if not tf.executing_eagerly():
+      with self.cached_session():
+        self.evaluate(tf.compat.v1.global_variables_initializer())
+        saver.save(location)
+    else:
+      saver.save(location)
     loaded_policy = tf.compat.v2.saved_model.load(location)
     new_batch_size = 3
     new_time_step = ts.TimeStep(
