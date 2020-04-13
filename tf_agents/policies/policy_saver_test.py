@@ -75,7 +75,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
-    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    train_step = common.create_variable('train_step', initial_value=0)
+    saver = policy_saver.PolicySaver(policy, train_step=train_step,
+                                     batch_size=None)
     action_signature_names = [
         s.name for s in saver._signatures['action'].input_signature
     ]
@@ -101,7 +103,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
-    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    train_step = common.create_variable('train_step', initial_value=7)
+    saver = policy_saver.PolicySaver(policy, train_step=train_step,
+                                     batch_size=None)
     action_signature_names = [
         s.name for s in saver._signatures['action'].input_signature
     ]
@@ -320,11 +324,22 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
+    train_step = common.create_variable('train_step', initial_value=0)
     saver_nobatch = policy_saver.PolicySaver(
-        policy, batch_size=None, use_nest_path_signatures=False)
+        policy,
+        train_step=train_step,
+        batch_size=None,
+        use_nest_path_signatures=False)
     path = os.path.join(self.get_temp_dir(), 'save_model_initial_state_nobatch')
-    saver_nobatch.save(path)
-    reloaded_nobatch = tf.compat.v2.saved_model.load(path)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    with self.cached_session():
+      saver_nobatch.save(path)
+      reloaded_nobatch = tf.compat.v2.saved_model.load(path)
+      self.evaluate(tf.compat.v1.initializers.variables(
+          reloaded_nobatch.model_variables))
+
     self.assertIn('get_initial_state', reloaded_nobatch.signatures)
     reloaded_get_initial_state = (
         reloaded_nobatch.signatures['get_initial_state'])
@@ -347,10 +362,16 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
                           reloaded_nobatch_initial_state)
 
     saver_batch = policy_saver.PolicySaver(
-        policy, batch_size=3, use_nest_path_signatures=False)
+        policy,
+        train_step=train_step,
+        batch_size=3,
+        use_nest_path_signatures=False)
     path = os.path.join(self.get_temp_dir(), 'save_model_initial_state_batch')
-    saver_batch.save(path)
-    reloaded_batch = tf.compat.v2.saved_model.load(path)
+    with self.cached_session():
+      saver_batch.save(path)
+      reloaded_batch = tf.compat.v2.saved_model.load(path)
+      self.evaluate(tf.compat.v1.initializers.variables(
+          reloaded_batch.model_variables))
     self.assertIn('get_initial_state', reloaded_batch.signatures)
     reloaded_get_initial_state = reloaded_batch.signatures['get_initial_state']
     self._compare_input_output_specs(
@@ -445,7 +466,11 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
       saver = policy_saver.PolicySaver(
           policy, batch_size=None, train_step=train_step)
-      self.assertEqual(7, saver.get_train_step())
+      if tf.executing_eagerly():
+        step = saver.get_train_step()
+      else:
+        step = self.evaluate(saver.get_train_step())
+      self.assertEqual(7, step)
       path = os.path.join(self.get_temp_dir(), 'save_model')
       saver.save(path)
 
@@ -464,6 +489,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
       self.assertEqual(10, train_step_value)
 
   def testTrainStepNotSaved(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in TF2.x. Step is required in TF1.x')
+
     network = q_network.QNetwork(
         input_tensor_spec=self._time_step_spec.observation,
         action_spec=self._action_spec)
@@ -493,11 +521,14 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
-    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    train_step = common.create_variable('train_step', initial_value=0)
+    saver = policy_saver.PolicySaver(policy, train_step=train_step,
+                                     batch_size=None)
     path = os.path.join(self.get_temp_dir(), 'save_model')
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    saver.save(path)
+    with self.cached_session():
+      saver.save(path)
     reloaded = tf.compat.v2.saved_model.load(path)
     self.evaluate(tf.compat.v1.initializers.variables(reloaded.model_variables))
 
@@ -518,13 +549,17 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
-    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    train_step = common.create_variable('train_step', initial_value=0)
+    saver = policy_saver.PolicySaver(policy, train_step=train_step,
+                                     batch_size=None)
     path = os.path.join(self.get_temp_dir(), 'save_model')
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    saver.save(path)
+    with self.cached_session():
+      saver.save(path)
     checkpoint_path = os.path.join(self.get_temp_dir(), 'checkpoint')
-    saver.save_checkpoint(checkpoint_path)
+    with self.cached_session():
+      saver.save_checkpoint(checkpoint_path)
 
     self.assertTrue(tf.compat.v2.io.gfile.exists(checkpoint_path))
 
@@ -677,7 +712,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         action_spec=self._action_spec,
         q_network=network)
 
-    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    train_step = common.create_variable('train_step', initial_value=0)
+    saver = policy_saver.PolicySaver(policy, train_step=train_step,
+                                     batch_size=None)
     full_model_path = os.path.join(self.get_temp_dir(), 'save_model')
 
     def assert_val_equal_var(val, var):
@@ -690,7 +727,8 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         tf.nest.map_structure(lambda v: v.assign(v * 0 + 1), variables))
     for v in self.evaluate(variables):
       assert_val_equal_var(1, v)
-    saver.save(full_model_path)
+    with self.cached_session():
+      saver.save(full_model_path)
 
     # Assign 2 to all variables in the policy. Making checkpoint different than
     # the initial saved_model.
@@ -699,10 +737,13 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     for v in self.evaluate(variables):
       assert_val_equal_var(2, v)
     checkpoint_path = os.path.join(self.get_temp_dir(), 'checkpoint')
-    saver.save_checkpoint(checkpoint_path)
+    with self.cached_session():
+      saver.save_checkpoint(checkpoint_path)
 
     # Reload the full model and check all variables are 1
     reloaded_policy = tf.compat.v2.saved_model.load(full_model_path)
+    self.evaluate(
+        tf.compat.v1.initializers.variables(reloaded_policy.model_variables))
     for v in self.evaluate(reloaded_policy.model_variables):
       assert_val_equal_var(1, v)
 
@@ -714,6 +755,8 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     # Reload the composite model and check all variables are 2
     reloaded_policy = tf.compat.v2.saved_model.load(composite_path)
+    self.evaluate(
+        tf.compat.v1.initializers.variables(reloaded_policy.model_variables))
     for v in self.evaluate(reloaded_policy.model_variables):
       assert_val_equal_var(2, v)
 

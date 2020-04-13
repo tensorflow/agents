@@ -141,7 +141,9 @@ class PolicySaver(object):
         usually be `None`, except for testing).
       train_step: Variable holding the train step for the policy. The value
         saved will be set at the time `saver.save` is called. If not provided,
-        train_step defaults to -1.
+        train_step defaults to -1. Note since the train step must be a variable
+        it is not safe to create it directly in TF1 so in that case this is a
+        required parameter.
       input_fn_and_spec: A `(input_fn, tensor_spec)` tuple where input_fn is a
         function that takes inputs according to tensor_spec and converts them to
         the `(time_step, policy_state)` tuple that is used as the input to the
@@ -174,9 +176,15 @@ class PolicySaver(object):
     # Make a shallow copy as we'll be making some changes in-place.
     policy = copy.copy(policy)
     if train_step is None:
-      if not tf.executing_eagerly():
-        raise ValueError('train_step must be a `tf.Variable`: %s' % train_step)
-      train_step = common.create_variable('train_step', initial_value=-1)
+      if not common.has_eager_been_enabled():
+        raise ValueError('train_step is required in TF1 and must be a '
+                         '`tf.Variable`: %s' % train_step)
+      train_step = tf.Variable(
+          -1,
+          trainable=False,
+          dtype=tf.int64,
+          aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
+          shape=())
     elif not isinstance(train_step, tf.Variable):
       raise ValueError('train_step must be a TensorFlow variable: %s' %
                        train_step)
@@ -207,7 +215,8 @@ class PolicySaver(object):
     # We call get_concrete_function() for its side effect.
     get_initial_state_fn.get_concrete_function(*get_initial_state_input_specs)
 
-    train_step_fn = common.function(lambda: train_step).get_concrete_function()
+    train_step_fn = common.function(
+        lambda: policy.train_step).get_concrete_function()
 
     action_fn = common.function()(action_fn)
 
@@ -317,7 +326,10 @@ class PolicySaver(object):
     Returns:
       An integer.
     """
-    return self._train_step.numpy()
+    if tf.executing_eagerly():
+      return self._train_step.numpy()
+    else:
+      return tf.identity(self._train_step)
 
   def save(self, export_dir):
     """Save the policy to the given `export_dir`."""

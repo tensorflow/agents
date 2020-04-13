@@ -246,19 +246,25 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     self.assertAllEqual(np_mask[action], np.ones([batch_size]))
 
   def testSaver(self):
-    policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, self._action_spec, self._q_network,
-        self._min_q_value, self._max_q_value)
+    policy = categorical_q_policy.CategoricalQPolicy(self._time_step_spec,
+                                                     self._action_spec,
+                                                     self._q_network,
+                                                     self._min_q_value,
+                                                     self._max_q_value)
 
-    saver = policy_saver.PolicySaver(policy)
-
+    train_step = tf.compat.v1.train.get_or_create_global_step()
+    saver = policy_saver.PolicySaver(policy, train_step=train_step)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
     save_path = os.path.join(flags.FLAGS.test_tmpdir,
                              'saved_categorical_q_policy')
-    saver.save(save_path)
+
+    # For TF1 Compatibility we set the cached session as default. This is a
+    # no-op in TF2.
+    with self.cached_session():
+      saver.save(save_path)
 
 
 if __name__ == '__main__':
-  tf.test.main()
+  test_utils.main()
