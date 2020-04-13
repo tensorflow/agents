@@ -12,6 +12,7 @@ set -x
 # Flags
 RELEASE_TYPE=nightly
 USE_PYENV=false
+TEST_COLABS=false
 
 if [[ $# -lt 1 ]] ; then
   echo "Usage:"
@@ -32,6 +33,10 @@ while [[ $# -gt -0 ]]; do
       USE_PYENV="$2"  # true to use pyenv (Being deprecated)
       shift
       ;;
+    --test_colabs)
+      TEST_COLABS="$2"  # true to test colabs after build
+      shift
+      ;;
     *)
       echo "Unknown flag: $key"
       ;;
@@ -43,16 +48,17 @@ run_tests() {
   echo "run_tests:"
   echo "    type:${RELEASE_TYPE}"
   echo "    pyenv:${USE_PYENV}"
+  echo "    test_colabs:${TEST_COLABS}"
 
   if [ "$USE_PYENV" = "true" ]; then
-    # Sets up system to use pyenv.
+    # Sets up system to use pyenv instead of existing python install.
     pyenv install --list
     pyenv install -s 3.6.1
     pyenv global 3.6.1
   fi
 
   TMP=$(mktemp -d)
-  # Creates and activates a virtualenv to run the build and test in.
+  # Creates and activates a virtualenv to run the build and unittests in.
   VENV_PATH=${TMP}/virtualenv/$1
   virtualenv "${VENV_PATH}"
   source ${VENV_PATH}/bin/activate
@@ -60,7 +66,7 @@ run_tests() {
 
   # TensorFlow is not set as a dependency of TF-Agents because there are many
   # different TensorFlow versions a user might want and installed.
-  if [ "$RELEASE_TYPE" == "nightly" ]; then
+  if [ "$RELEASE_TYPE" = "nightly" ]; then
     pip install tf-nightly
 
     # Run the tests
@@ -69,7 +75,7 @@ run_tests() {
     # Install tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/
-  elif [ "$RELEASE_TYPE" == "stable" ]; then
+  elif [ "$RELEASE_TYPE" = "stable" ]; then
     pip install tensorflow==2.1.0
 
     # Run the tests
@@ -84,17 +90,26 @@ run_tests() {
   fi
 
   pip install ${WHEEL_PATH}/tf_agents*.whl
+  # Simple import test. Move away from repo directory so "import tf_agents"
+  # refers to the installed wheel and not to the local fs.
+  (cd $(mktemp -d) && python -c 'import tf_agents')
 
-  # Copies the wheel from tmp to root of repo so it can easily be uploaded
+  # Tests after this run outside the virtual env and depend on packages
+  # installed at the system level.
+  deactivate
+
+  # Copies wheel out of tmp to root of repo so it can be more easily uploaded
   # to pypi as part of the stable release process.
   cp ${WHEEL_PATH}/tf_agents*.whl ./
 
-  # Move away from repo directory so "import tf_agents" refers to the
-  # installed wheel and not to the local fs.
-  (cd $(mktemp -d) && python -c 'import tf_agents')
+  # Testing the Colabs requires packages beyond what is needed to build and
+  # unittest TF-Agents, e.g. Jupiter Notebook. It is assumed the base system
+  # will have these required packages, which are part of the TF-Agents docker.
+  if [ "$TEST_COLABS" = "true" ]; then
+    pip install ${WHEEL_PATH}/tf_agents*.whl
+    python ./tools/test_colabs.py
+  fi
 
-  # Deactivate virtualenv
-  deactivate
 }
 
 if ! which cmake > /dev/null; then
@@ -107,3 +122,4 @@ fi
 
 # Build and run tests.
 run_tests
+
