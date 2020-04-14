@@ -57,6 +57,7 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
                                                name='action')
     self._observation_spec = specs.ArraySpec([], np.int32, name='observation')
     self._final_state = final_state
+    super(PyEnvironmentMock, self).__init__()
 
   @property
   def batched(self):
@@ -70,11 +71,12 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
     if action < self._action_spec.minimum or action > self._action_spec.maximum:
       raise ValueError('Action should be in [{0}, {1}], but saw: {2}'.format(
           self._action_spec.minimum, self._action_spec.maximum, action))
+    if action.shape != ():  # pylint: disable=g-explicit-bool-comparison
+      raise ValueError('Action should be a scalar.')
 
     if self._state >= self._final_state:
       # Start a new episode. Ignore action
-      self._state = np.int32(0)
-      return ts.restart(self._state)
+      return self.reset()
 
     self._state += action
     self._state = np.int32(self._state)
