@@ -96,6 +96,10 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
   def observation_spec(self):
     return specs.ArraySpec([], np.int64, name='observation')
 
+  def render(self, mode):
+    if mode == 'rgb_array':
+      return np.ones((4, 4, 3), dtype=np.uint8)
+
 
 class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
@@ -320,6 +324,29 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       self.assertEqual(init_env_thread, last_env_thread())
       self.evaluate([tf_env.step(tf.constant([1])) for _ in range(16)])
       self.assertEqual(init_env_thread, last_env_thread())
+
+  def testRender(self):
+    py_env = self._get_py_env(False, False, batch_size=None)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env)
+
+    img = self.evaluate(tf_env.render('rgb_array'))
+    self.assertEqual(img.shape, (1, 4, 4, 3))
+    self.assertEqual(img.dtype, np.uint8)
+    img = self.evaluate(tf_env.render('human'))
+    self.assertEqual(img.shape, (1, 4, 4, 3))
+    self.assertEqual(img.dtype, np.uint8)
+
+  def testRenderBatched(self):
+    py_env = self._get_py_env(True, False, batch_size=3)
+    tf_env = tf_py_environment.TFPyEnvironment(py_env)
+
+    img = self.evaluate(tf_env.render('rgb_array'))
+    self.assertEqual(img.shape, (3, 4, 4, 3))
+    self.assertEqual(img.dtype, np.uint8)
+    img = self.evaluate(tf_env.render('human'))
+    self.assertEqual(img.shape, (3, 4, 4, 3))
+    self.assertEqual(img.dtype, np.uint8)
+
 
 if __name__ == '__main__':
   tf.test.main()

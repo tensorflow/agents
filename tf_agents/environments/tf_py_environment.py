@@ -26,6 +26,7 @@ import threading
 from absl import logging
 
 import gin
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import batched_py_environment
@@ -146,6 +147,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     action_spec = tensor_spec.from_spec(self._env.action_spec())
     time_step_spec = tensor_spec.from_spec(self._env.time_step_spec())
     batch_size = self._env.batch_size if self._env.batch_size else 1
+    self._render_shape = None
 
     super(TFPyEnvironment, self).__init__(time_step_spec,
                                           action_spec,
@@ -322,6 +324,53 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
 
       return self._set_names_and_shapes(step_type, reward, discount,
                                         *flat_observations)
+
+  def render(self, mode):
+    """Renders the environment.
+
+    Note for compatibility this will convert the image to uint8.
+
+    Args:
+      mode: One of ['rgb_array', 'human']. Renders to an numpy array, or brings
+        up a window where the environment can be visualized.
+
+    Returns:
+      An ndarray of shape [width, height, 3] denoting an RGB image if mode is
+      `rgb_array`. Otherwise return nothing and render directly to a display
+      window.
+    Raises:
+      NotImplementedError: If the environment does not support rendering.
+    """
+
+    if not self._render_shape:
+      # Make sure the environment has been initialized.
+      self.current_time_step()
+      img = self._env.render('rgb_array')
+      self._render_shape = img.shape
+
+    def _render(mode):
+      """Pywrapper fn to the environments render."""
+      # Mode might be passed down as bytes. If so convert to a str first.
+      if isinstance(mode, bytes):
+        mode = mode.decode('utf-8')
+      if mode == 'rgb_array':
+        img = self._env.render(mode)
+        img = img.astype(np.uint8, copy=False)
+        return img
+      elif mode == 'human':
+        # Generate mock img to keep outputs the same.
+        self._env.render(mode)
+        return np.zeros(self._render_shape, dtype=np.uint8)
+
+    img = tf.numpy_function(
+        lambda mode: self._execute(_render, mode), [mode], [tf.uint8],
+        name='render_py_func')
+
+    if not tf.executing_eagerly():
+      # Extract from list returned from np_function.
+      img = img[0]
+      img.set_shape(tf.TensorShape(self._render_shape))
+    return img
 
   def _set_names_and_shapes(self, step_type, reward, discount,
                             *flat_observations):

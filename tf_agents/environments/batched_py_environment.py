@@ -160,6 +160,14 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
           zip(self._envs, unstacked_actions))
       return nest_utils.stack_nested_arrays(time_steps)
 
+  def render(self, mode="rgb_array"):
+    if self._num_envs == 1:
+      img = self._envs[0].render(mode)
+      return nest_utils.batch_nested_array(img)
+    else:
+      imgs = self._execute(lambda env: env.render(mode), self._envs)
+      return nest_utils.stack_nested_arrays(imgs)
+
   def close(self):
     """Send close messages to the external process and join them."""
     self._execute(lambda env: env.close(), self._envs)
