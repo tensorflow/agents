@@ -14,7 +14,8 @@
 
 book_path: /agents/_book.yaml
 project_path: /agents/_project.yaml
-description: <!--no description-->
+description: A library for reinforcement learning in TensorFlow. TF-Agents makes designing,
+ implementing and testing new RL algorithms easier.
 landing_page:
   custom_css_path: /site-assets/css/style.css
   rows:
