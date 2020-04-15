@@ -132,6 +132,7 @@ class PPOAgent(tf_agent.TFAgent):
                adaptive_kl_tolerance=0.3,
                gradient_clipping=None,
                check_numerics=False,
+               compute_value_and_advantage_in_train=False,
                debug_summaries=False,
                summarize_grads_and_vars=False,
                train_step_counter=None,
@@ -222,6 +223,11 @@ class PPOAgent(tf_agent.TFAgent):
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
       check_numerics: If true, adds `tf.debugging.check_numerics` to help find
         NaN / Inf values. For debugging only.
+      compute_value_and_advantage_in_train: A bool to indicate where value
+        prediction and advantage calculation happen.  If True, both happen in
+        agent.train(). If False, value prediction is computed during data
+        collection. This argument must be set to `False` if mini batch learning
+        is enabled.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
@@ -231,13 +237,14 @@ class PPOAgent(tf_agent.TFAgent):
 
     Raises:
       ValueError: If the actor_net is not a DistributionNetwork or value_net is
-        not a Network..
+        not a Network.
     """
     if not isinstance(actor_net, network.DistributionNetwork):
       raise ValueError(
           'actor_net must be an instance of a network.DistributionNetwork.')
     if not isinstance(value_net, network.Network):
       raise ValueError('value_net must be an instance of a network.Network.')
+
     actor_net.create_variables()
     value_net.create_variables()
 
@@ -265,6 +272,8 @@ class PPOAgent(tf_agent.TFAgent):
     self._adaptive_kl_tolerance = adaptive_kl_tolerance
     self._gradient_clipping = gradient_clipping or 0.0
     self._check_numerics = check_numerics
+    self._compute_value_and_advantage_in_train = (
+        compute_value_and_advantage_in_train)
 
     if initial_adaptive_kl_beta > 0.0:
       # TODO(kbanoop): Rename create_variable.
@@ -301,7 +310,10 @@ class PPOAgent(tf_agent.TFAgent):
         value_network=value_net,
         observation_normalizer=self._observation_normalizer,
         clip=False,
-        collect=True)
+        collect=True,
+        compute_value_and_advantage_in_train=(
+            self._compute_value_and_advantage_in_train),
+    )
 
     self._action_distribution_spec = (self._actor_net.output_spec)
 
@@ -547,6 +559,8 @@ class PPOAgent(tf_agent.TFAgent):
      next_time_steps) = trajectory.to_transition(experience)
     actions = policy_steps_.action
 
+    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
+
     if self._debug_summaries:
       actions_list = tf.nest.flatten(actions)
       show_action_index = len(actions_list) != 1
@@ -569,18 +583,6 @@ class PPOAgent(tf_agent.TFAgent):
     act_log_probs = common.log_probability(old_actions_distribution, actions,
                                            self._action_spec)
 
-    # Compute the value predictions for states using the current value function.
-    # To be used for return & advantage computation.
-    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
-    value_state = self._collect_policy.get_initial_value_state(batch_size)
-
-    value_preds, _ = self._collect_policy.apply_value_network(
-        experience.observation,
-        experience.step_type,
-        value_state=value_state,
-        training=False)
-    value_preds = tf.stop_gradient(value_preds)
-
     valid_mask = ppo_utils.make_timestep_mask(
         next_time_steps, allow_partial_episodes=True)
 
@@ -589,6 +591,17 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       weights *= valid_mask
 
+    if self._compute_value_and_advantage_in_train:
+      value_state = self._collect_policy.get_initial_value_state(batch_size)
+      value_preds, _ = self._collect_policy.apply_value_network(
+          experience.observation,
+          experience.step_type,
+          value_state=value_state,
+          training=False)
+    else:
+      value_preds = experience.policy_info['value_prediction']
+
+    value_preds = tf.stop_gradient(value_preds)
     returns, normalized_advantages = self.compute_return_and_advantage(
         next_time_steps, value_preds)
 
@@ -652,7 +665,6 @@ class PPOAgent(tf_agent.TFAgent):
 
     # After update epochs, update adaptive kl beta, then update observation
     #   normalizer and reward normalizer.
-    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     policy_state = self._collect_policy.get_initial_state(batch_size)
     # Compute the mean kl from previous action distribution.
     kl_divergence = self._kl_divergence(

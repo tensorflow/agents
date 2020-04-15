@@ -277,8 +277,12 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
         'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
     }
-
-    policy_info = {'dist_params': action_distribution_parameters}
+    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
+                              dtype=tf.float32)
+    policy_info = {
+        'dist_params': action_distribution_parameters,
+        'value_prediction': value_preds,
+    }
 
     experience = trajectory.Trajectory(time_steps.step_type, observations,
                                        actions, policy_info,
@@ -746,7 +750,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllClose(expected_advantages,
                         self.evaluate(normalized_advantages))
 
-  def testRNNTrain(self):
+  @parameterized.named_parameters([
+      ('ValueCalculationInTrain', True),
+      ('ValueCalculationInCollect', False),
+  ])
+  def testRNNTrain(self, compute_value_and_advantage_in_train):
     actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
         self._time_step_spec.observation,
         self._action_spec,
@@ -766,7 +774,9 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         actor_net=actor_net,
         value_net=value_net,
         num_epochs=1,
-        train_step_counter=global_step)
+        train_step_counter=global_step,
+        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train
+    )
     # Use a random env, policy, and replay buffer to collect training data.
     random_env = random_tf_environment.RandomTFEnvironment(
         self._time_step_spec, self._action_spec, batch_size=1)
@@ -871,7 +881,12 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'd': action_distribution_parameters,
     })
 
-    policy_info = {'dist_params': action_distribution_parameters}
+    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
+                              dtype=tf.float32)
+    policy_info = {
+        'dist_params': action_distribution_parameters,
+        'value_prediction': value_preds
+    }
 
     experience = trajectory.Trajectory(time_steps.step_type, observations,
                                        actions, policy_info,

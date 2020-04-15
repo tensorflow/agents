@@ -206,6 +206,24 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertTrue(np.all(actions_ >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_ <= self._action_spec.maximum))
 
+  @parameterized.named_parameters(*_test_cases('test_action'))
+  def testValueInPolicyInfo(self, network_cls):
+    actor_network = network_cls(self._action_spec)
+    value_network = DummyValueNet()
+
+    policy = ppo_policy.PPOPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=actor_network,
+        value_network=value_network)
+
+    policy_step = policy.action(self._time_step)
+    self.assertEqual(policy_step.info['value_prediction'].shape.as_list(),
+                     [1, 1])
+    self.assertEqual(policy_step.info['value_prediction'].dtype, tf.float32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(policy_step.info['value_prediction'])
+
   @parameterized.named_parameters(*_test_cases('test_action_list'))
   def testActionList(self, network_cls):
     action_spec = [self._action_spec]

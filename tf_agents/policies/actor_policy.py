@@ -40,6 +40,7 @@ class ActorPolicy(tf_policy.Base):
                time_step_spec,
                action_spec,
                actor_network,
+               policy_state_spec=(),
                info_spec=(),
                observation_normalizer=None,
                clip=True,
@@ -55,6 +56,8 @@ class ActorPolicy(tf_policy.Base):
         used by the policy. The network will be called with `call(observation,
         step_type, policy_state)` and should return `(actions_or_distributions,
         new_state)`.
+      policy_state_spec: A nest of TensorSpec representing the policy_state.
+        If not set, defaults to actor_network.state_spec.
       info_spec: A nest of `TensorSpec` representing the policy info.
       observation_normalizer: An object to use for observation normalization.
       clip: Whether to clip actions to spec before returning them. Default True.
@@ -105,10 +108,13 @@ class ActorPolicy(tf_policy.Base):
             'for a single spec of discrete actions. Got action_spec {}'.format(
                 action_spec))
 
+    if not policy_state_spec:
+      policy_state_spec = actor_network.state_spec
+
     super(ActorPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        policy_state_spec=actor_network.state_spec,
+        policy_state_spec=policy_state_spec,
         info_spec=info_spec,
         clip=clip,
         observation_and_action_constraint_splitter=(
