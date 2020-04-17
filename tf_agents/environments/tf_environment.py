@@ -165,6 +165,15 @@ class TFEnvironment(object):
     """
     return self.time_step_spec().observation
 
+  def reward_spec(self):
+    """Defines the `TensorSpec` of rewards provided by the environment.
+
+    Returns:
+      A `TensorSpec`, or a nested dict, list or tuple of
+      `TensorSpec` objects, which describe the observation.
+    """
+    return self.time_step_spec().reward
+
   @property
   def batched(self):
     return True

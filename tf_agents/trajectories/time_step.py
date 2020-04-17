@@ -95,13 +95,15 @@ class StepType(object):
     raise ValueError('No known conversion for `%r` into a StepType' % value)
 
 
-def restart(observation, batch_size=None):
+def restart(observation, batch_size=None, reward_spec=None):
   """Returns a `TimeStep` with `step_type` set equal to `StepType.FIRST`.
 
   Args:
     observation: A NumPy array, tensor, or a nested dict, list or tuple of
       arrays or tensors.
     batch_size: (Optional) A python or tensorflow integer scalar.
+    reward_spec: If provided, the reward in the returned `TimeStep` will be
+      compatible with the provided `reward_spec`.
 
   Returns:
     A `TimeStep`.
@@ -109,23 +111,42 @@ def restart(observation, batch_size=None):
   first_observation = tf.nest.flatten(observation)[0]
   if not tf.is_tensor(first_observation):
     if batch_size is not None:
-      reward = np.zeros(batch_size, dtype=np.float32)
+      if reward_spec is None:
+        reward = np.zeros(batch_size, dtype=np.float32)
+      else:
+        reward = tf.nest.map_structure(
+            lambda r: np.zeros([batch_size] + list(r.shape), dtype=r.dtype),
+            reward_spec)
       discount = np.ones(batch_size, dtype=np.float32)
       step_type = np.tile(StepType.FIRST, batch_size)
       return TimeStep(step_type, reward, discount, observation)
     else:
-      return TimeStep(
-          StepType.FIRST,
-          _as_float32_array(0.0),
-          _as_float32_array(1.0),
-          observation,
-      )
+      if reward_spec is None:
+        return TimeStep(
+            StepType.FIRST,
+            _as_float32_array(0.0),
+            _as_float32_array(1.0),
+            observation)
+      else:
+        reward = tf.nest.map_structure(
+            lambda r: np.zeros(r.shape, dtype=r.dtype), reward_spec)
+        return TimeStep(
+            StepType.FIRST,
+            reward,
+            _as_float32_array(1.0),
+            observation)
 
   # TODO(b/130244501): Check leading dimension of first_observation
   # against batch_size if all are known statically.
   shape = _as_multi_dim(batch_size)
   step_type = tf.fill(shape, StepType.FIRST, name='step_type')
-  reward = tf.fill(shape, _as_float32_array(0.0), name='reward')
+  if reward_spec is None:
+    reward = tf.fill(shape, _as_float32_array(0.0), name='reward')
+  else:
+    reward = tf.nest.map_structure(
+        # pylint: disable=g-long-lambda
+        lambda r: tf.fill(shape + r.shape, _as_float32_array(0.0),
+                          name='reward'), reward_spec)
   discount = tf.fill(shape, _as_float32_array(1.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
 
@@ -142,6 +163,7 @@ def _as_multi_dim(maybe_scalar):
   return shape
 
 
+# TODO(b/152907905): Update this function.
 def transition(observation, reward, discount=1.0):
   """Returns a `TimeStep` with `step_type` set equal to `StepType.MID`.
 
@@ -204,21 +226,21 @@ def termination(observation, reward):
   Args:
     observation: A NumPy array, tensor, or a nested dict, list or tuple of
       arrays or tensors.
-    reward: A scalar, or 1D NumPy array, or tensor.
+    reward: A NumPy array, tensor, or a nested dict, list or tuple of
+      arrays or tensors.
 
   Returns:
     A `TimeStep`.
 
-  Raises:
-    ValueError: If observations are tensors but reward's statically known rank
-      is not `0` or `1`.
   """
   first_observation = tf.nest.flatten(observation)[0]
   if not tf.is_tensor(first_observation):
-    reward = _as_float32_array(reward)
-    if reward.shape:
-      step_type = np.tile(StepType.LAST, reward.shape)
-      discount = np.zeros_like(reward, dtype=np.float32)
+    reward = tf.nest.map_structure(_as_float32_array, reward)
+    first_reward = tf.nest.flatten(reward)[0]
+    if first_reward.shape:
+      batch_size = first_reward.shape[0]
+      step_type = np.tile(StepType.LAST, batch_size)
+      discount = np.zeros(batch_size, dtype=np.float32)
       return TimeStep(step_type, reward, discount, observation)
     else:
       return TimeStep(StepType.LAST, reward, _as_float32_array(0.0),
@@ -227,22 +249,22 @@ def termination(observation, reward):
   # TODO(b/130245199): If reward.shape.rank == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
-  reward = tf.convert_to_tensor(value=reward, dtype=tf.float32, name='reward')
-  if reward.shape.rank is None or reward.shape.rank > 1:
-    raise ValueError('Expected reward to be a scalar or vector; saw shape: %s' %
-                     reward.shape)
-  if reward.shape.rank == 0:
+  reward = tf.nest.map_structure(
+      # pylint: disable=g-long-lambda
+      lambda r: tf.convert_to_tensor(
+          value=r, dtype=tf.float32, name='reward'), reward)
+  first_reward = tf.nest.flatten(reward)[0]
+  if first_reward.shape.rank == 0:
     shape = []
   else:
-    first_observation.shape[:1].assert_is_compatible_with(reward.shape)
-    shape = [
-        tf.compat.dimension_value(reward.shape[0]) or tf.shape(input=reward)[0]
-    ]
+    shape = [tf.compat.dimension_value(first_reward.shape[0]) or
+             tf.shape(input=first_reward)[0]]
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
   discount = tf.fill(shape, _as_float32_array(0.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
 
 
+# TODO(b/152907905): Update this function.
 def truncation(observation, reward, discount=1.0):
   """Returns a `TimeStep` with `step_type` set to `StepType.LAST`.
 
