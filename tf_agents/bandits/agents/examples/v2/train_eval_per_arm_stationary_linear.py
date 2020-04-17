@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import functools
 import os
 from absl import app
@@ -43,6 +44,9 @@ flags.DEFINE_enum(
     'network', 'commontower', ['commontower', 'dotproduct'],
     'Which network architecture to use. '
     'Possible values are `commontower` and `dotproduct`.')
+
+flags.DEFINE_bool('drop_arm_obs', False, 'Whether to wipe the arm observations '
+                  'from the trajectories.')
 
 FLAGS = flags.FLAGS
 
@@ -115,6 +119,13 @@ def main(unused_argv):
     network = (
         global_and_arm_feature_network.create_feed_forward_dot_product_network(
             obs_spec, (4, 3, 6), (3, 4, 6)))
+  if FLAGS.drop_arm_obs:
+    def drop_arm_feature_fn(traj):
+      transformed_traj = copy.deepcopy(traj)
+      del transformed_traj.observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
+      return transformed_traj
+  else:
+    drop_arm_feature_fn = None
   agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
       time_step_spec=environment.time_step_spec(),
       action_spec=environment.action_spec(),
@@ -122,6 +133,7 @@ def main(unused_argv):
       optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
       epsilon=EPSILON,
       accepts_per_arm_features=True,
+      training_data_spec_transformation_fn=drop_arm_feature_fn,
       emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
 
   optimal_reward_fn = functools.partial(
@@ -138,7 +150,8 @@ def main(unused_argv):
       environment=environment,
       training_loops=TRAINING_LOOPS,
       steps_per_loop=STEPS_PER_LOOP,
-      additional_metrics=[regret_metric, suboptimal_arms_metric])
+      additional_metrics=[regret_metric, suboptimal_arms_metric],
+      training_data_spec_transformation_fn=drop_arm_feature_fn)
 
 
 if __name__ == '__main__':

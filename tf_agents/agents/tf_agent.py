@@ -47,6 +47,7 @@ class TFAgent(tf.Module):
                collect_policy,
                train_sequence_length,
                num_outer_dims=2,
+               training_data_spec=None,
                train_argspec=None,
                debug_summaries=False,
                summarize_grads_and_vars=False,
@@ -75,6 +76,9 @@ class TFAgent(tf.Module):
         either 1 or 2. If 2, training will require both a batch_size and time
         dimension on every Tensor; if 1, training will require only a batch_size
         outer dimension.
+      training_data_spec: A nest of TensorSpec specifying the structure of data
+        the train() function expects. If None, defaults to the trajectory_spec
+        of the collect_policy.
       train_argspec: (Optional) Describes additional supported arguments
         to the `train` call.  This must be a `dict` mapping strings to nests
         of specs.  Overriding the `experience` arg is also supported.
@@ -164,6 +168,7 @@ class TFAgent(tf.Module):
     self._debug_summaries = debug_summaries
     self._summarize_grads_and_vars = summarize_grads_and_vars
     self._enable_summaries = enable_summaries
+    self._training_data_spec = training_data_spec
     if train_argspec is None:
       train_argspec = {}
     else:
@@ -207,11 +212,11 @@ class TFAgent(tf.Module):
   def _check_trajectory_dimensions(self, experience):
     """Checks the given Trajectory for batch and time outer dimensions."""
     if not nest_utils.is_batched_nested_tensors(
-        experience, self.collect_data_spec,
+        experience, self.training_data_spec,
         num_outer_dims=self._num_outer_dims):
       debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
       debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
-                                          self.collect_data_spec)
+                                          self.training_data_spec)
 
       if self._num_outer_dims == 2:
         raise ValueError(
@@ -375,6 +380,14 @@ class TFAgent(tf.Module):
       A `Trajectory` spec.
     """
     return self.collect_policy.trajectory_spec
+
+  @property
+  def training_data_spec(self):
+    """Returns a trajectory spec, as expected by the train() function."""
+    if self._training_data_spec is not None:
+      return self._training_data_spec
+    else:
+      return self.collect_data_spec
 
   @property
   def train_sequence_length(self):

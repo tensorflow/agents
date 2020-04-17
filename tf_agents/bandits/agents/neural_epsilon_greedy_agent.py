@@ -50,6 +50,7 @@ class NeuralEpsilonGreedyAgent(
       epsilon,
       observation_and_action_constraint_splitter=None,
       accepts_per_arm_features=False,
+      training_data_spec_transformation_fn=None,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -90,6 +91,10 @@ class NeuralEpsilonGreedyAgent(
         observation and mask.
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
+      training_data_spec_transformation_fn: An optional function that tranforms
+        the output trajectory of the policy before it gets to the replay buffer.
+        We need this function here to be able to define the training_data_spec,
+        that is in turn used in training.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -129,6 +134,8 @@ class NeuralEpsilonGreedyAgent(
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
         accepts_per_arm_features=accepts_per_arm_features,
+        training_data_spec_transformation_fn=(
+            training_data_spec_transformation_fn),
         error_loss_fn=error_loss_fn,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,

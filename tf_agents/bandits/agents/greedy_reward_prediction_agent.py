@@ -51,6 +51,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       optimizer,
       observation_and_action_constraint_splitter=None,
       accepts_per_arm_features=False,
+      training_data_spec_transformation_fn=None,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -99,6 +100,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         observation and mask.
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
+      training_data_spec_transformation_fn: An optional function that tranforms
+        the output trajectory of the policy before it gets to the replay buffer.
+        We need this function here to be able to define the training_data_spec,
+        that is in turn used in training.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -164,6 +169,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         observation_and_action_constraint_splitter,
         accepts_per_arm_features=accepts_per_arm_features,
         emit_policy_info=emit_policy_info)
+    training_data_spec = None
+    if training_data_spec_transformation_fn is not None:
+      training_data_spec = training_data_spec_transformation_fn(
+          policy.trajectory_spec)
 
     super(GreedyRewardPredictionAgent, self).__init__(
         time_step_spec,
@@ -171,6 +180,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         policy,
         collect_policy=policy,
         train_sequence_length=None,
+        training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
@@ -185,7 +195,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     actions, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.action, self._action_spec)
     observations, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.observation, self._time_step_spec.observation)
+        experience.observation, self.training_data_spec.observation)
     if self._observation_and_action_constraint_splitter is not None:
       observations, _ = self._observation_and_action_constraint_splitter(
           observations)

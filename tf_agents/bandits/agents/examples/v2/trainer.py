@@ -36,10 +36,12 @@ STEP_CHECKPOINT_NAME = 'step'
 CHECKPOINT_FILE_PREFIX = 'ckpt'
 
 
-def get_replay_buffer(agent, batch_size, steps_per_loop):
+def get_replay_buffer(data_spec,
+                      batch_size,
+                      steps_per_loop):
   """Return a `TFUniformReplayBuffer` for the given `agent`."""
   buf = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-      data_spec=agent.policy.trajectory_spec,
+      data_spec=data_spec,
       batch_size=batch_size,
       max_length=steps_per_loop)
   return buf
@@ -104,7 +106,8 @@ def train(root_dir,
           environment,
           training_loops,
           steps_per_loop,
-          additional_metrics=()):
+          additional_metrics=(),
+          training_data_spec_transformation_fn=None):
   """Perform `training_loops` iterations of training.
 
   Checkpoint results.
@@ -128,12 +131,14 @@ def train(root_dir,
     additional_metrics: Tuple of metric objects to log, in addition to default
       metrics `NumberOfEpisodes`, `AverageReturnMetric`, and
       `AverageEpisodeLengthMetric`.
+    training_data_spec_transformation_fn: Optional function that transforms the
+    data items before they get to the replay buffer.
   """
 
   # TODO(b/127641485): create evaluation loop with configurable metrics.
+  replay_buffer = get_replay_buffer(agent.training_data_spec,
+                                    environment.batch_size, steps_per_loop)
 
-  replay_buffer = get_replay_buffer(
-      agent, environment.batch_size, steps_per_loop)
   # `step_metric` records the number of individual rounds of bandit interaction;
   # that is, (number of trajectories) * batch_size.
   step_metric = tf_metrics.EnvironmentSteps()
@@ -143,7 +148,13 @@ def train(root_dir,
       tf_metrics.AverageEpisodeLengthMetric(batch_size=environment.batch_size)
   ] + list(additional_metrics)
 
-  observers = [replay_buffer.add_batch] + [step_metric] + metrics
+  if training_data_spec_transformation_fn is not None:
+    add_batch_fn = lambda data: replay_buffer.add_batch(  # pylint: disable=g-long-lambda
+        training_data_spec_transformation_fn(data))
+  else:
+    add_batch_fn = replay_buffer.add_batch
+
+  observers = [add_batch_fn, step_metric] + metrics
 
   driver = dynamic_step_driver.DynamicStepDriver(
       env=environment,
