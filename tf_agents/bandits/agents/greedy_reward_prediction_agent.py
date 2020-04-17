@@ -216,7 +216,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
                             rewards,
                             weights=weights,
                             training=True)
-    tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
+
     self.compute_summaries(loss_info.loss)
     variables_to_train = self._reward_network.trainable_weights
     if not variables_to_train:
