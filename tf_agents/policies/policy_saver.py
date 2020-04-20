@@ -319,6 +319,57 @@ class PolicySaver(object):
 
     self._policy = policy
     self._signatures = signatures
+    self._action_input_spec = action_input_spec
+    self._policy_step_spec = policy_step_spec
+    self._policy_state_spec = policy_state_spec
+
+  @property
+  def action_input_spec(self):
+    """Tuple `(time_step_spec, policy_state_spec)` for feeding `action`.
+
+    This describes the input of `action` in the SavedModel.
+
+    This may differ from the original policy if `use_nest_path_signatures` was
+    enabled.
+
+    Returns:
+      A nest of specs.
+    """
+    return self._action_input_spec
+
+  @property
+  def policy_step_spec(self):
+    """Spec that describes the output of `action` in the SavedModel.
+
+    This may differ from the original policy if `use_nest_path_signatures` was
+    enabled.
+
+    Returns:
+      A nest of specs.
+    """
+    return self._policy_step_spec
+
+  @property
+  def policy_state_spec(self):
+    """Spec that describes the output of `get_initial_state` in the SavedModel.
+
+    This may differ from the original policy if `use_nest_path_signatures` was
+    enabled.
+
+    Returns:
+      A nest of specs.
+    """
+    return self._policy_state_spec
+
+  @property
+  def signatures(self):
+    """Get the (flat) signatures used when exporting the `SavedModel`.
+
+    Returns:
+      A `dict` mapping each of "action", "get_initial_state", and
+      "get_train_step" to their respective flat signatures.
+    """
+    return self._signatures
 
   def get_train_step(self):
     """Returns the train step of the policy.
