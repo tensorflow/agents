@@ -86,6 +86,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
                log_prob_clipping=0.0,
                gradient_clipping=None,
                check_numerics=False,
+               compute_value_and_advantage_in_train=False,
                debug_summaries=False,
                summarize_grads_and_vars=False,
                train_step_counter=None,
@@ -132,6 +133,11 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
       check_numerics: If true, adds tf.debugging.check_numerics to help find NaN
         / Inf values. For debugging only.
+      compute_value_and_advantage_in_train: A bool to indicate where value
+        prediction and advantage calculation happen.  If True, both happen in
+        agent.train(). If False, value prediction is computed during data
+        collection. This argument must be set to `False` if mini batch learning
+        is enabled.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
@@ -164,6 +170,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         normalize_observations,
         gradient_clipping=gradient_clipping,
         check_numerics=check_numerics,
+        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
