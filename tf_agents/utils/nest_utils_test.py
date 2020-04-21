@@ -19,8 +19,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
@@ -256,6 +258,15 @@ class NestedTensorsTest(tf.test.TestCase):
     tensors = self.zeros_from_spec(specs, batch_size=2)
 
     is_batched = nest_utils.is_batched_nested_tensors(tensors, specs)
+    self.assertTrue(is_batched)
+
+  def testIsBatchedNestedTensorsAllowExtraFields(self):
+    shape = [2, 3]
+    specs = self.nest_spec(shape)
+    tensors = self.zeros_from_spec(specs, batch_size=2)
+    tensors['extra_field'] = tf.constant([1, 2, 3])
+    is_batched = nest_utils.is_batched_nested_tensors(
+        tensors, specs, allow_extra_fields=True)
     self.assertTrue(is_batched)
 
   def testIsBatchedNestedTensorsMixed(self):
@@ -740,6 +751,60 @@ class NestedArraysTest(tf.test.TestCase):
 
     expected = (np.array([1, 4, 1]), np.array([2, 7, 2]))
     self.assertAllEqual(expected, result)
+
+
+class PruneExtraKeysTest(tf.test.TestCase):
+
+  def testPruneExtraKeys(self):
+    self.assertEqual(nest_utils.prune_extra_keys({}, {'a': 1}), {})
+    self.assertEqual(nest_utils.prune_extra_keys(
+        {'a': 1}, {'a': 'a'}), {'a': 'a'})
+    self.assertEqual(
+        nest_utils.prune_extra_keys({'a': 1}, {'a': 'a', 'b': 2}), {'a': 'a'})
+    self.assertEqual(
+        nest_utils.prune_extra_keys([{'a': 1}], [{'a': 'a', 'b': 2}]),
+        [{'a': 'a'}])
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            {'a': {'aa': 1, 'ab': 2}, 'b': {'ba': 1}},
+            {'a': {'aa': 'aa', 'ab': 'ab', 'ac': 'ac'},
+             'b': {'ba': 'ba', 'bb': 'bb'},
+             'c': 'c'}),
+        {'a': {'aa': 'aa', 'ab': 'ab'}, 'b': {'ba': 'ba'}})
+
+  def testInvalidWide(self):
+    self.assertEqual(nest_utils.prune_extra_keys(None, {'a': 1}), {'a': 1})
+    self.assertEqual(nest_utils.prune_extra_keys({'a': 1}, {}), {})
+    self.assertEqual(nest_utils.prune_extra_keys(
+        {'a': 1}, {'c': 'c'}), {'c': 'c'})
+    self.assertEqual(nest_utils.prune_extra_keys([], ['a']), ['a'])
+    self.assertEqual(
+        nest_utils.prune_extra_keys([{}, {}], [{'a': 1}]), [{'a': 1}])
+
+  def testNamedTuple(self):
+
+    class A(collections.namedtuple('A', ('a', 'b'))):
+      pass
+
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            [A(a={'aa': 1}, b=3), {'c': 4}],
+            [A(a={'aa': 'aa', 'ab': 'ab'}, b='b'), {'c': 'c', 'd': 'd'}]),
+        [A(a={'aa': 'aa'}, b='b'), {'c': 'c'}])
+
+  def testOrderedDict(self):
+    OD = collections.OrderedDict  # pylint: disable=invalid-name
+
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            OD([('a', OD([('aa', 1), ('ab', 2)])),
+                ('b', OD([('ba', 1)]))]),
+            OD([('a', OD([('aa', 'aa'), ('ab', 'ab'), ('ac', 'ac')])),
+                ('b', OD([('ba', 'ba'), ('bb', 'bb')])),
+                ('c', 'c')])),
+        OD([('a', OD([('aa', 'aa'), ('ab', 'ab')])),
+            ('b', OD([('ba', 'ba')]))])
+    )
 
 
 if __name__ == '__main__':

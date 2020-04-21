@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import numbers
 
 import numpy as np
@@ -27,8 +28,18 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.utils import composite
 
+
 # TODO(b/128613858): Update to a public facing API.
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
+
+try:
+  # Python 3.3 and above.
+  collections_abc = collections.abc
+except AttributeError:
+  collections_abc = collections
+
+
 flatten_with_tuple_paths = nest.flatten_with_tuple_paths
 
 
@@ -67,21 +78,131 @@ def has_tensors(*x):
       [tf.is_tensor(t) for t in tf.nest.flatten(x, expand_composites=True)])
 
 
-def matching_dtypes_and_inner_shapes(tensors, specs):
+def _is_namedtuple(x):
+  return (isinstance(x, tuple)
+          and isinstance(getattr(x, '_fields', None), collections_abc.Sequence))
+
+
+def _is_attrs(x):
+  return getattr(type(x), '__attrs_attrs__', None) is not None
+
+
+def _attr_items(x):
+  attrs = getattr(type(x), '__attrs_attrs__')
+  attr_names = [a.name for a in attrs]
+  return [(attr_name, getattr(x, attr_name)) for attr_name in attr_names]
+
+
+def prune_extra_keys(narrow, wide):
+  """Recursively prunes keys from `wide` if they don't appear in `narrow`.
+
+  Often used as preprocessing prior to calling `tf.nest.flatten`
+  or `tf.nest.map_structure`.
+
+  This function is more forgiving than the ones in `nest`; if two substructures'
+  types or structures don't agree, we consider it invalid and `prune_extra_keys`
+  will return the `wide` substructure as is.  Typically, additional checking is
+  needed: you will also want to use
+  `nest.assert_same_structure(narrow, prune_extra_keys(narrow, wide))`
+  to ensure the result of pruning is still a correct structure.
+
+  Examples:
+  ```python
+  wide = [{"a": "a", "b": "b"}]
+  # Narrows 'wide'
+  assert prune_extra_keys([{"a": 1}], wide) == [{"a": "a"}]
+  # 'wide' lacks "c", is considered invalid.
+  assert prune_extra_keys([{"c": 1}], wide) == wide
+  # 'wide' contains a different type from 'narrow', is considered invalid
+  assert prune_extra_keys("scalar", wide) == wide
+  # 'wide' substructure for key "d" does not match the one in 'narrow' and
+  # therefore is returned unmodified.
+  assert (prune_extra_keys({"a": {"b": 1}, "d": None},
+                           {"a": {"b": "b", "c": "c"}, "d": [1, 2]})
+          == {"a": {"b": "b"}, "d": [1, 2]})
+  ```
+
+  Args:
+    narrow: A nested structure.
+    wide: A nested structure that may contain dicts with more fields than
+      `narrow`.
+
+  Returns:
+    A structure with the same nested substructures as `wide`, but with
+    dicts whose entries are limited to the keys found in the associated
+    substructures of `narrow`.
+
+    In case of substructure or size mismatches, the returned substructures
+    will be returned as is.
+  """
+  if type(narrow) != type(wide):  # pylint: disable=unidiomatic-typecheck
+    # types are different; return early.
+    return wide
+
+  if isinstance(narrow, collections_abc.Mapping):
+    if len(narrow) > len(wide):
+      # wide lacks a required key from narrow; return early.
+      return wide
+
+    narrow_keys = set(narrow.keys())
+    wide_keys = set(wide.keys())
+    if not wide_keys.issuperset(narrow_keys):
+      # wide lacks a required key from narrow; return early.
+      return wide
+    ordered_items = (
+        (k, prune_extra_keys(v, wide[k]))
+        for k, v in narrow.items())
+    if isinstance(wide, collections.defaultdict):
+      subset = type(wide)(wide.default_factory, ordered_items)
+    else:
+      subset = type(wide)(ordered_items)
+    return subset
+
+  if nest.is_sequence(narrow):
+    if _is_attrs(wide):
+      items = (prune_extra_keys(n, w)
+               for n, w in zip(_attr_items(narrow), _attr_items(wide)))
+      return type(wide)(*items)
+
+    # Not an attrs, so can treat as lists or tuples from here on.
+    if len(narrow) != len(wide):
+      # wide's size is different than narrow; return early.
+      return wide
+
+    items = (prune_extra_keys(n, w) for n, w in zip(narrow, wide))
+    if _is_namedtuple(wide):
+      return type(wide)(*items)
+    elif _is_attrs(wide):
+      return type(wide)
+    return type(wide)(items)
+
+  # narrow is a leaf, just return wide
+  return wide
+
+
+def matching_dtypes_and_inner_shapes(tensors, specs, allow_extra_fields=False):
   """Returns `True` if tensors and specs have matching dtypes and inner shapes.
 
   Args:
     tensors: A nest of tensor objects.
     specs: A nest of `tf.TypeSpec` objects.
+    allow_extra_fields: If `True`, then `tensors` may contain more keys
+      or list fields than strictly required by `specs`.
 
   Returns:
     A python `bool`.
   """
+  if allow_extra_fields:
+    tensors = prune_extra_keys(specs, tensors)
   tf.nest.assert_same_structure(tensors, specs)
-  tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
-  tensor_dtypes = [t.dtype for t in tf.nest.flatten(tensors)]
-  spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
-  spec_dtypes = [t.dtype for t in tf.nest.flatten(specs)]
+
+  flat_tensors = nest.flatten(tensors)
+  flat_specs = tf.nest.flatten(specs)
+
+  tensor_shapes = [t.shape for t in flat_tensors]
+  tensor_dtypes = [t.dtype for t in flat_tensors]
+  spec_shapes = [spec_shape(s) for s in flat_specs]
+  spec_dtypes = [t.dtype for t in flat_specs]
 
   if any(s_dtype != t_dtype
          for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
@@ -98,7 +219,11 @@ def matching_dtypes_and_inner_shapes(tensors, specs):
   return True
 
 
-def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
+def is_batched_nested_tensors(
+    tensors,
+    specs,
+    num_outer_dims=1,
+    allow_extra_fields=False):
   """Compares tensors to specs to determine if all tensors are batched or not.
 
   For each tensor, it checks the dimensions and dtypes with respect to specs.
@@ -117,9 +242,23 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
       shape of unbatched tensors.
     num_outer_dims: The integer number of dimensions that are considered batch
       dimensions.  Default 1.
+    allow_extra_fields: If `True`, then `tensors` may have extra
+      subfields which are not in specs.  In this case, the extra subfields
+      will not be checked.  For example:
+
+      ```python
+      tensors = {"a": tf.zeros((3, 4), dtype=tf.float32),
+                 "b": tf.zeros((5, 6), dtype=tf.float32)}
+      specs = {"a": tf.TensorSpec(shape=(4,), dtype=tf.float32)}
+      assert is_batched_nested_tensors(tensors, specs, allow_extra_fields=True)
+      ```
+
+      The above example would raise a ValueError if `allow_extra_fields`
+      was False.
 
   Returns:
     True if all Tensors are batched and False if all Tensors are unbatched.
+
   Raises:
     ValueError: If
       1. Any of the tensors or specs have shapes with ndims == None, or
@@ -128,11 +267,17 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
       4. The tensors are batched but have an incorrect number of outer dims.
     TypeError: If `dtypes` between tensors and specs are not compatible.
   """
-  tf.nest.assert_same_structure(tensors, specs)
-  tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
-  tensor_dtypes = [t.dtype for t in tf.nest.flatten(tensors)]
-  spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
-  spec_dtypes = [t.dtype for t in tf.nest.flatten(specs)]
+  if allow_extra_fields:
+    tensors = prune_extra_keys(specs, tensors)
+
+  tf.nest.assert_same_structure(specs, tensors)
+  flat_tensors = nest.flatten(tensors)
+  flat_specs = tf.nest.flatten(specs)
+
+  tensor_shapes = [t.shape for t in flat_tensors]
+  tensor_dtypes = [t.dtype for t in flat_tensors]
+  spec_shapes = [spec_shape(s) for s in flat_specs]
+  spec_dtypes = [t.dtype for t in flat_specs]
 
   if any(s_shape.rank is None for s_shape in spec_shapes):
     raise ValueError('All specs should have ndims defined.  Saw shapes: %s' %
@@ -140,12 +285,12 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
 
   if any(t_shape.rank is None for t_shape in tensor_shapes):
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
-                     (tf.nest.pack_sequence_as(tensors, tensor_shapes),))
+                     (tf.nest.pack_sequence_as(specs, tensor_shapes),))
 
   if any(s_dtype != t_dtype
          for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
     raise TypeError('Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}'
-                    .format(tf.nest.pack_sequence_as(tensors, tensor_dtypes),
+                    .format(tf.nest.pack_sequence_as(specs, tensor_dtypes),
                             tf.nest.pack_sequence_as(specs, spec_dtypes)))
   is_unbatched = [
       s_shape.is_compatible_with(t_shape)
@@ -186,7 +331,7 @@ def is_batched_nested_tensors(tensors, specs, num_outer_dims=1):
       ' are not compatible with Specs.  num_outer_dims: %d.\n'
       'Saw tensor_shapes:\n   %s\n'
       'And spec_shapes:\n   %s' %
-      (num_outer_dims, tf.nest.pack_sequence_as(tensors, tensor_shapes),
+      (num_outer_dims, tf.nest.pack_sequence_as(specs, tensor_shapes),
        tf.nest.pack_sequence_as(specs, spec_shapes)))
 
 
