@@ -131,6 +131,7 @@ class PPOAgent(tf_agent.TFAgent):
                adaptive_kl_target=0.01,
                adaptive_kl_tolerance=0.3,
                gradient_clipping=None,
+               value_clipping=None,
                check_numerics=False,
                compute_value_and_advantage_in_train=False,
                debug_summaries=False,
@@ -221,6 +222,9 @@ class PPOAgent(tf_agent.TFAgent):
         heuristically in the paper, but the algorithm is not very
         sensitive to it.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
+      value_clipping: Difference between new and old value predictions are
+        clipped to this threshold. Value clipping could be helpful when training
+        very deep networks. Default: no clipping.
       check_numerics: If true, adds `tf.debugging.check_numerics` to help find
         NaN / Inf values. For debugging only.
       compute_value_and_advantage_in_train: A bool to indicate where value
@@ -271,6 +275,7 @@ class PPOAgent(tf_agent.TFAgent):
     self._adaptive_kl_target = adaptive_kl_target
     self._adaptive_kl_tolerance = adaptive_kl_tolerance
     self._gradient_clipping = gradient_clipping or 0.0
+    self._value_clipping = value_clipping or 0.0
     self._check_numerics = check_numerics
     self._compute_value_and_advantage_in_train = (
         compute_value_and_advantage_in_train)
@@ -865,6 +870,23 @@ class PPOAgent(tf_agent.TFAgent):
         value_state=value_state,
         training=training)
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
+
+    if self._value_clipping > 0:
+      old_value_preds, _ = self._collect_policy.apply_value_network(
+          time_steps.observation,
+          time_steps.step_type,
+          value_state=value_state,
+          training=training)
+      old_value_preds = tf.stop_gradient(old_value_preds)
+
+      clipped_value_preds = old_value_preds + tf.clip_by_value(
+          value_preds - old_value_preds, -self._value_clipping,
+          self._value_clipping)
+      clipped_value_estimation_error = tf.math.squared_difference(
+          returns, clipped_value_preds)
+      value_estimation_error = tf.maximum(value_estimation_error,
+                                          clipped_value_estimation_error)
+
     value_estimation_error *= weights
 
     value_estimation_loss = (

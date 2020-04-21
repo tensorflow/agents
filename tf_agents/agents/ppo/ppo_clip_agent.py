@@ -85,6 +85,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
                normalize_observations=True,
                log_prob_clipping=0.0,
                gradient_clipping=None,
+               value_clipping=None,
                check_numerics=False,
                compute_value_and_advantage_in_train=False,
                debug_summaries=False,
@@ -131,6 +132,9 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
+      value_clipping: Difference between new and old value predictions are
+        clipped to this threshold. Value clipping could be helpful when training
+        very deep networks. Default: no clipping.
       check_numerics: If true, adds tf.debugging.check_numerics to help find NaN
         / Inf values. For debugging only.
       compute_value_and_advantage_in_train: A bool to indicate where value
@@ -169,6 +173,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         reward_norm_clipping,
         normalize_observations,
         gradient_clipping=gradient_clipping,
+        value_clipping=value_clipping,
         check_numerics=check_numerics,
         compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
         debug_summaries=debug_summaries,

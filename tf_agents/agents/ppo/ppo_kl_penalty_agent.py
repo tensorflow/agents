@@ -84,6 +84,7 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
                reward_norm_clipping=0.0,
                log_prob_clipping=0.0,
                gradient_clipping=None,
+               value_clipping=None,
                kl_cutoff_coef=0.0,
                kl_cutoff_factor=None,
                check_numerics=False,
@@ -163,6 +164,9 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
+      value_clipping: Difference between new and old value predictions are
+        clipped to this threshold. Value clipping could be helpful when training
+        very deep networks. Default: no clipping.
       kl_cutoff_coef: kl_cutoff_coef and kl_cutoff_factor are additional params
         if one wants to use a KL cutoff loss term in addition to the adaptive KL
         loss term. Default to 0.0 to disable the KL cutoff loss term as this was
@@ -218,6 +222,7 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         adaptive_kl_target=adaptive_kl_target,
         adaptive_kl_tolerance=adaptive_kl_tolerance,
         gradient_clipping=gradient_clipping,
+        value_clipping=value_clipping,
         check_numerics=check_numerics,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
