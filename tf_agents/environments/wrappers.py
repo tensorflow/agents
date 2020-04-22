@@ -582,7 +582,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     # Compute the observation length after flattening the observation items and
     # nested structure. Observation specs are not batched.
     observation_total_len = sum(
-        np.prod(observation.shape)
+        int(np.prod(observation.shape))
         for observation in self._flatten_nested_observations(
             observations_spec, is_batched=False))
 
