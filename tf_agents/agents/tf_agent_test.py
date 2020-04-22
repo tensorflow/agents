@@ -19,8 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import numpy as np
-import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
@@ -43,7 +43,7 @@ class LossInfoTest(tf.test.TestCase):
 class MyAgent(tf_agent.TFAgent):
 
   def __init__(self):
-    obs_spec = tf.TensorSpec([], tf.float32)
+    obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
     time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = ()
     train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
@@ -57,7 +57,7 @@ class MyAgent(tf_agent.TFAgent):
         train_argspec=train_argspec)
 
   def _train(self, experience, weights=None, extra=None):
-    return tf_agent.LossInfo(loss=(), extra=extra)
+    return tf_agent.LossInfo(loss=(), extra=(experience, extra))
 
 
 class TFAgentTest(tf.test.TestCase):
@@ -68,21 +68,40 @@ class TFAgentTest(tf.test.TestCase):
     experience = tf.nest.map_structure(
         lambda x: x[tf.newaxis, ...],
         trajectory.from_episode(
-            observation=tf.constant([1.0]),
+            observation={'obs': tf.constant([1.0])},
             action=(),
             policy_info=(),
             reward=tf.constant([1.0])))
     loss_info = agent.train(experience, extra=extra)
-    self.assertAllEqual(loss_info.extra, extra)
+    tf.nest.map_structure(
+        self.assertAllEqual, (experience, extra), loss_info.extra)
     extra_newdim = tf.ones(shape=[2, 3, 4], dtype=tf.float32)
     loss_info_newdim = agent.train(experience, extra=extra_newdim)
-    self.assertAllEqual(loss_info_newdim.extra, extra_newdim)
-    with self.assertRaisesRegexp(
-        ValueError, r'Inconsistent dtypes or shapes between'):
+    self.assertAllEqual(loss_info_newdim.extra[1], extra_newdim)
+    with self.assertRaisesRegex(
+        ValueError, 'Inconsistent dtypes or shapes between'):
       agent.train(experience, extra=tf.ones(shape=[3, 5], dtype=tf.float32))
-    with self.assertRaisesRegexp(
-        ValueError, r'Inconsistent dtypes or shapes between'):
+    with self.assertRaisesRegex(
+        ValueError, 'Inconsistent dtypes or shapes between'):
       agent.train(experience, extra=tf.ones(shape=[3, 4], dtype=tf.int32))
+
+  def testTrainIgnoresExtraFields(self):
+    agent = MyAgent()
+    extra = tf.ones(shape=[3, 4], dtype=tf.float32)
+    experience = tf.nest.map_structure(
+        lambda x: x[tf.newaxis, ...],
+        trajectory.from_episode(
+            observation={
+                'obs': tf.constant([1.0]), 'ignored': tf.constant([2.0])},
+            action=(),
+            policy_info=(),
+            reward=tf.constant([1.0])))
+    loss_info = agent.train(experience, extra=extra)
+    reduced_experience = experience._replace(
+        observation=copy.copy(experience.observation))
+    del reduced_experience.observation['ignored']
+    tf.nest.map_structure(
+        self.assertAllEqual, (reduced_experience, extra), loss_info.extra)
 
 
 class AgentSpecTest(test_utils.TestCase):
@@ -91,19 +110,16 @@ class AgentSpecTest(test_utils.TestCase):
     wrong_time_step_spec = ts.time_step_spec(
         array_spec.ArraySpec([2], np.float32))
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
-    with self.assertRaises(TypeError) as cm:
+    with self.assertRaisesRegex(
+        TypeError, 'time_step_spec has to contain TypeSpec'):
       tf_agent.TFAgent(wrong_time_step_spec, action_spec, None, None, None)
-    self.assertStartsWith(
-        six.text_type(cm.exception), 'time_step_spec has to contain TypeSpec')
 
   def testErrorOnWrongActionSpecWhenCreatingAgent(self):
     time_step_spec = ts.time_step_spec(tensor_spec.TensorSpec([2], tf.float32))
     wrong_action_spec = array_spec.BoundedArraySpec([1], np.float32, -1, 1)
-    with self.assertRaises(TypeError) as cm:
+    with self.assertRaisesRegex(
+        TypeError, 'action_spec has to contain BoundedTensorSpec'):
       tf_agent.TFAgent(time_step_spec, wrong_action_spec, None, None, None)
-    self.assertStartsWith(
-        six.text_type(cm.exception),
-        'action_spec has to contain BoundedTensorSpec')
 
 
 if __name__ == '__main__':

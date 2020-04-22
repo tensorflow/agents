@@ -192,6 +192,26 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(2, clipped_action[2])
     self.assertEqual(1, clipped_action[3])
 
+  def testObservationsContainExtraFields(self):
+    action_spec = {
+        "inp": tensor_spec.TensorSpec([1], tf.float32)
+    }
+    time_step_spec = ts.time_step_spec(observation_spec=action_spec)
+
+    policy = TfPassThroughPolicy(time_step_spec, action_spec, clip=True)
+
+    observation = {"inp": tf.constant(1, shape=(1,), dtype=tf.float32),
+                   "extra": tf.constant(1, shape=(1,), dtype=tf.int32)}
+
+    time_step = ts.restart(observation)
+
+    action = policy.action(time_step).action
+    distribution = policy.distribution(time_step).action
+    tf.nest.assert_same_structure(action, action_spec)
+    tf.nest.assert_same_structure(distribution, action_spec)
+    self.assertEqual(1, self.evaluate(action["inp"]))
+    self.assertEqual(1, self.evaluate(distribution["inp"].sample()))
+
   def testMismatchedDtypes(self):
     with self.assertRaisesRegexp(TypeError, ".*dtype that doesn't match.*"):
       policy = TFPolicyMismatchedDtypes()

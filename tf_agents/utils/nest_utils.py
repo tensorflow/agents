@@ -25,8 +25,8 @@ import numbers
 import numpy as np
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.utils import composite
+import wrapt
 
 
 # TODO(b/128613858): Update to a public facing API.
@@ -133,9 +133,16 @@ def prune_extra_keys(narrow, wide):
     substructures of `narrow`.
 
     In case of substructure or size mismatches, the returned substructures
-    will be returned as is.
+    will be returned as is.  Note that ObjectProxy-wrapped objects are
+    considered equivalent to their non-ObjectProxy types.
   """
-  if type(narrow) != type(wide):  # pylint: disable=unidiomatic-typecheck
+  narrow_type = (
+      type(narrow.__wrapped__) if isinstance(narrow, wrapt.ObjectProxy)
+      else type(narrow))
+  wide_type = (
+      type(wide.__wrapped__) if isinstance(wide, wrapt.ObjectProxy)
+      else type(wide))
+  if narrow_type != wide_type:
     # types are different; return early.
     return wide
 
@@ -149,9 +156,9 @@ def prune_extra_keys(narrow, wide):
     if not wide_keys.issuperset(narrow_keys):
       # wide lacks a required key from narrow; return early.
       return wide
-    ordered_items = (
+    ordered_items = [
         (k, prune_extra_keys(v, wide[k]))
-        for k, v in narrow.items())
+        for k, v in narrow.items()]
     if isinstance(wide, collections.defaultdict):
       subset = type(wide)(wide.default_factory, ordered_items)
     else:
@@ -160,8 +167,8 @@ def prune_extra_keys(narrow, wide):
 
   if nest.is_sequence(narrow):
     if _is_attrs(wide):
-      items = (prune_extra_keys(n, w)
-               for n, w in zip(_attr_items(narrow), _attr_items(wide)))
+      items = [prune_extra_keys(n, w)
+               for n, w in zip(_attr_items(narrow), _attr_items(wide))]
       return type(wide)(*items)
 
     # Not an attrs, so can treat as lists or tuples from here on.
@@ -169,7 +176,7 @@ def prune_extra_keys(narrow, wide):
       # wide's size is different than narrow; return early.
       return wide
 
-    items = (prune_extra_keys(n, w) for n, w in zip(narrow, wide))
+    items = [prune_extra_keys(n, w) for n, w in zip(narrow, wide)]
     if _is_namedtuple(wide):
       return type(wide)(*items)
     elif _is_attrs(wide):

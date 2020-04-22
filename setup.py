@@ -140,6 +140,7 @@ REQUIRED_PACKAGES = [
     'numpy >= 1.13.3',
     'six >= 1.10.0',
     'protobuf >= 3.11.3',
+    'wrapt >= 1.11.1',
     # tensorflow-probability added below
 ]
 

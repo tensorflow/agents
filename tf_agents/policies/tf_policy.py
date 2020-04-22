@@ -271,6 +271,9 @@ class Base(tf.Module):
     else:
       action_fn = self._action
 
+    time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
+    policy_state = nest_utils.prune_extra_keys(
+        self._policy_state_spec, policy_state)
     tf.nest.assert_same_structure(time_step, self._time_step_spec)
     tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
 
@@ -322,6 +325,9 @@ class Base(tf.Module):
         `state`: A policy state tensor for the next call to distribution.
         `info`: Optional side information such as action log probabilities.
     """
+    time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
+    policy_state = nest_utils.prune_extra_keys(
+        self._policy_state_spec, policy_state)
     tf.nest.assert_same_structure(time_step, self._time_step_spec)
     tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
     if self._automatic_state_reset:

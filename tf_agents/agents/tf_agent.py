@@ -152,7 +152,7 @@ class TFAgent(tf.Module):
     common.tf_agents_gauge.get_cell("TFAgent").set(True)
     common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
     if not isinstance(time_step_spec, ts.TimeStep):
-      raise ValueError(
+      raise TypeError(
           "The `time_step_spec` must be an instance of `TimeStep`, but is `{}`."
           .format(type(time_step_spec)))
 
@@ -213,7 +213,9 @@ class TFAgent(tf.Module):
     """Checks the given Trajectory for batch and time outer dimensions."""
     if not nest_utils.is_batched_nested_tensors(
         experience, self.training_data_spec,
-        num_outer_dims=self._num_outer_dims):
+        num_outer_dims=self._num_outer_dims,
+        allow_extra_fields=True,
+    ):
       debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, experience)
       debug_str_2 = tf.nest.map_structure(lambda spec: spec.shape,
                                           self.training_data_spec)
@@ -261,7 +263,7 @@ class TFAgent(tf.Module):
       ValueError: If `kwargs` do not match the specs in `train_argspec`.
     """
     if not nest_utils.matching_dtypes_and_inner_shapes(
-        kwargs, self.train_argspec):
+        kwargs, self.train_argspec, allow_extra_fields=True):
       get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
       get_shapes = lambda v: tf.nest.map_structure(nest_utils.spec_shape, v)
       raise ValueError(
@@ -311,6 +313,14 @@ class TFAgent(tf.Module):
 
     self._check_trajectory_dimensions(experience)
     self._check_train_argspec(kwargs)
+
+    # Even though the checks above prune dict keys, we want them to see
+    # the non-pruned versions to provide clearer error messages.
+    # However, from here on out we want to remove dict entries that aren't
+    # requested in the spec.
+    experience = nest_utils.prune_extra_keys(
+        self.training_data_spec, experience)
+    kwargs = nest_utils.prune_extra_keys(self.train_argspec, kwargs)
 
     if self._enable_functions:
       loss_info = self._train_fn(
