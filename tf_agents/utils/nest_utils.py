@@ -136,13 +136,14 @@ def prune_extra_keys(narrow, wide):
     will be returned as is.  Note that ObjectProxy-wrapped objects are
     considered equivalent to their non-ObjectProxy types.
   """
+  if isinstance(wide, wrapt.ObjectProxy):
+    return type(wide)(prune_extra_keys(narrow, wide.__wrapped__))
+
   narrow_type = (
       type(narrow.__wrapped__) if isinstance(narrow, wrapt.ObjectProxy)
       else type(narrow))
-  wide_type = (
-      type(wide.__wrapped__) if isinstance(wide, wrapt.ObjectProxy)
-      else type(wide))
-  if narrow_type != wide_type:
+
+  if narrow_type != type(wide):
     # types are different; return early.
     return wide
 
