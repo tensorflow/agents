@@ -360,9 +360,26 @@ class LinearBanditAgent(tf_agent.TFAgent):
                 data=bias_list[i],
                 step=self.train_step_counter)
 
-  def _distributed_train_step(self, experience, weights=None):
-    """Distributed train fn to be passed as input to run()."""
-    del weights  # unused
+  def _process_experience(self, experience):
+    """Given an experience, returns reward, action, observation, and batch size.
+
+    In the experience coming from the replay buffer, the reward (and all other
+    elements) have two batch dimensions `batch_size` and `time_steps`, where
+    `time_steps` is the number of driver steps executed in each training loop.
+    We flatten the tensors in order to reflect the effective batch size. Then,
+    all the necessary processing on the observation is done, including splitting
+    the action mask if it is present.
+
+    Args:
+      experience: An instance of trajectory. Every element in the trajectory has
+      two batch dimensions.
+
+    Returns:
+      A tuple of reward, action, observation, and batch_size. All the outputs
+        (except `batch_size`) have a single batch dimension of value
+        `batch_size`.
+    """
+
     reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.reward, self._time_step_spec.reward)
     action, _ = nest_utils.flatten_multi_batched_nested_tensors(
@@ -373,13 +390,23 @@ class LinearBanditAgent(tf_agent.TFAgent):
     if self._observation_and_action_constraint_splitter is not None:
       observation, _ = self._observation_and_action_constraint_splitter(
           observation)
-    observation = tf.reshape(observation, [-1, self._context_dim])
-    observation = tf.cast(observation, self._dtype)
-    reward = tf.cast(reward, self._dtype)
-
-    # Increase the step counter.
     batch_size = tf.cast(
         tf.compat.dimension_value(tf.shape(reward)[0]), dtype=tf.int64)
+    observation = tf.cast(observation, self._dtype)
+    if self._add_bias:
+      # The bias is added via a constant 1 feature.
+      observation = tf.concat(
+          [observation, tf.ones([batch_size, 1], dtype=self._dtype)], axis=1)
+    observation = tf.reshape(observation, [-1, self._context_dim])
+    reward = tf.cast(reward, self._dtype)
+
+    return reward, action, observation, batch_size
+
+  def _distributed_train_step(self, experience, weights=None):
+    """Distributed train fn to be passed as input to run()."""
+    del weights  # unused
+    reward, action, observation, batch_size = self._process_experience(
+        experience)
     self._train_step_counter.assign_add(batch_size)
 
     for k in range(self._num_actions):
@@ -435,7 +462,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
           _merge_fn,
           args=(cov_matrix_local_udpate, data_vector_local_update))
 
-    loss = -1. * tf.reduce_sum(experience.reward)
+    loss = -1. * tf.reduce_sum(reward)
     return tf_agent.LossInfo(loss=(loss), extra=())
 
   def _train(self, experience, weights=None):
@@ -461,32 +488,8 @@ class LinearBanditAgent(tf_agent.TFAgent):
 
     del weights  # unused
 
-    # If the experience comes from a replay buffer, the reward has shape:
-    #     [batch_size, time_steps]
-    # where `time_steps` is the number of driver steps executed in each
-    # training loop.
-    # We flatten the tensors below in order to reflect the effective batch size.
-
-    reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._time_step_spec.reward)
-    action, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.action, self._action_spec)
-    observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.observation, self._time_step_spec.observation)
-
-    if self._observation_and_action_constraint_splitter is not None:
-      observation, _ = self._observation_and_action_constraint_splitter(
-          observation)
-
-    batch_size = tf.cast(
-        tf.compat.dimension_value(tf.shape(reward)[0]), dtype=tf.int64)
-    observation = tf.cast(observation, self._dtype)
-    if self._add_bias:
-      # The bias is added via a constant 1 feature.
-      observation = tf.concat(
-          [observation, tf.ones([batch_size, 1], dtype=self._dtype)], axis=1)
-    observation = tf.reshape(observation, [-1, self._context_dim])
-    reward = tf.cast(reward, self._dtype)
+    reward, action, observation, batch_size = self._process_experience(
+        experience)
 
     for k in range(self._num_actions):
       diag_mask = tf.linalg.tensor_diag(
