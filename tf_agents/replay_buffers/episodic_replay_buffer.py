@@ -895,10 +895,8 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
     def _maybe_end_episode_id():
       """Maybe end episode ID."""
       def _end_episode_id():
-        return tf.group(
-          self._episode_completed.scatter_update(tf.IndexedSlices(tf.ones_like(
-            episode_location, dtype=self._episode_completed.dtype),
-            episode_location)))
+        return tf.group(self._episode_completed.scatter_update(
+          tf.IndexedSlices(1, episode_location)))
 
       episode_valid = tf.equal(
           self._episodes_loc_to_id_map.sparse_read(episode_location),
@@ -939,9 +937,8 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
       maybe_end_mask = end_episode & (batch_episode_ids >= 0) & valid_episodes
       episodes_location_ = tf.boolean_mask(
           tensor=episodes_location, mask=maybe_end_mask)
-      self._episode_completed.scatter_update(tf.IndexedSlices(tf.ones_like(
-        episodes_location_, dtype=self._episode_completed.dtype),
-        episodes_location_))
+      self._episode_completed.scatter_update(
+        tf.IndexedSlices(1, episodes_location_))
       return self._episode_completed.sparse_read(episodes_location) > 0
 
     return self._add_episode_critical_section.execute(_execute)
@@ -1057,11 +1054,9 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
       self._episodes_loc_to_id_map.scatter_update(tf.IndexedSlices(
         new_batch_episode_ids, episode_locations))
       self._episode_completed.scatter_update(tf.IndexedSlices(
-        tf.zeros_like(episode_locations, dtype=self._episode_completed.dtype),
-        episode_locations))
+        0, episode_locations))
       self._episode_lengths.scatter_update(tf.IndexedSlices(
-        tf.zeros_like(episode_locations, dtype=self._episode_lengths.dtype),
-        episode_locations))
+        0, episode_locations))
       reset_data = self._data_table.clear_rows(episode_locations)
       with tf.control_dependencies([reset_data]):
         return tf.identity(updated_batch_episode_ids)
@@ -1191,11 +1186,9 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
       if clear_data:
         with tf.control_dependencies(tf.nest.flatten(episodes)):
           clear_rows = self._data_table.clear_rows(locations)
-          self._episode_lengths.scatter_update(tf.IndexedSlices(tf.zeros_like(
-            locations, dtype=self._episode_lengths.dtype), locations))
+          self._episode_lengths.scatter_update(tf.IndexedSlices(0, locations))
           self._episode_completed.scatter_update(tf.IndexedSlices(
-            tf.zeros_like(locations, dtype=self._episode_completed.dtype),
-            locations))
+            0, locations))
         with tf.control_dependencies([clear_rows]):
           episodes = tf.nest.map_structure(tf.identity, episodes)
       return episodes
