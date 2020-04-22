@@ -807,6 +807,60 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.evaluate(agent.train(experience=replay_buffer.gather_all()))
     self.assertEqual(1, self.evaluate(global_step))
 
+  @parameterized.named_parameters([
+      ('ValueCalculationInTrain', True),
+      ('ValueCalculationInCollect', False),
+  ])
+  def testStatelessValueNetTrain(self, compute_value_and_advantage_in_train):
+    actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+        self._time_step_spec.observation,
+        self._action_spec,
+        input_fc_layer_params=None,
+        output_fc_layer_params=None,
+        lstm_size=(20,))
+    value_net = value_network.ValueNetwork(
+        self._time_step_spec.observation, fc_layer_params=None)
+    global_step = tf.compat.v1.train.get_or_create_global_step()
+    agent = ppo_agent.PPOAgent(
+        self._time_step_spec,
+        self._action_spec,
+        optimizer=tf.compat.v1.train.AdamOptimizer(),
+        actor_net=actor_net,
+        value_net=value_net,
+        num_epochs=1,
+        train_step_counter=global_step,
+        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train
+    )
+    # Use a random env, policy, and replay buffer to collect training data.
+    random_env = random_tf_environment.RandomTFEnvironment(
+        self._time_step_spec, self._action_spec, batch_size=1)
+    collection_policy = random_tf_policy.RandomTFPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        info_spec=agent.collect_policy.info_spec)
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+        collection_policy.trajectory_spec, batch_size=1, max_length=7)
+    collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
+        random_env,
+        collection_policy,
+        observers=[replay_buffer.add_batch],
+        num_episodes=1)
+
+    # In graph mode: finish building the graph so the optimizer
+    # variables are created.
+    if not tf.executing_eagerly():
+      _, _ = agent.train(experience=replay_buffer.gather_all())
+
+    # Initialize.
+    self.evaluate(agent.initialize())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Train one step.
+    self.assertEqual(0, self.evaluate(global_step))
+    self.evaluate(collect_driver.run())
+    self.evaluate(agent.train(experience=replay_buffer.gather_all()))
+    self.assertEqual(1, self.evaluate(global_step))
+
   def testAgentDoesNotFailWhenNestedObservationActionAndDebugSummaries(self):
     summary_writer = tf.compat.v2.summary.create_file_writer(
         FLAGS.test_tmpdir, flush_millis=10000)

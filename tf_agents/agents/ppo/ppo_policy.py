@@ -196,6 +196,14 @@ class PPOPolicy(actor_policy.ActorPolicy):
   def _distribution(self, time_step, policy_state, training=False):
     if not policy_state:
       policy_state = {'actor_network_state': (), 'value_network_state': ()}
+    else:
+      policy_state = policy_state.copy()
+
+    if 'actor_network_state' not in policy_state:
+      policy_state['actor_network_state'] = ()
+    if 'value_network_state' not in policy_state:
+      policy_state['value_network_state'] = ()
+
     new_policy_state = {'actor_network_state': (), 'value_network_state': ()}
 
     def _to_distribution(action_or_distribution):
@@ -231,5 +239,7 @@ class PPOPolicy(actor_policy.ActorPolicy):
       new_policy_state = ()
     elif not new_policy_state['value_network_state']:
       new_policy_state.pop('value_network_state', None)
+    elif not new_policy_state['actor_network_state']:
+      new_policy_state.pop('actor_network_state', None)
 
     return policy_step.PolicyStep(distributions, new_policy_state, policy_info)
