@@ -382,9 +382,15 @@ class PolicySaver(object):
     else:
       return tf.identity(self._train_step)
 
-  def save(self, export_dir):
-    """Save the policy to the given `export_dir`."""
-    tf.saved_model.save(self._policy, export_dir, signatures=self._signatures)
+  def save(self, export_dir, options=None):
+    """Save the policy to the given `export_dir`.
+
+    Args:
+      export_dir: Directory to save the policy to.
+      options: Optional `tf.saved_model.SaveOptions` object.
+    """
+    tf.compat.v2.saved_model.save(
+        self._policy, export_dir, signatures=self._signatures, options=options)
 
     spec_output_path = os.path.join(export_dir, POLICY_SPECS_PBTXT)
     specs = {
@@ -393,7 +399,7 @@ class PolicySaver(object):
     }
     tensor_spec.to_pbtxt_file(spec_output_path, specs)
 
-  def save_checkpoint(self, export_dir):
+  def save_checkpoint(self, export_dir, options=None):
     """Saves the policy as a checkpoint to the given `export_dir`.
 
     This will only work with checkpoints generated in TF2.x.
@@ -415,19 +421,20 @@ class PolicySaver(object):
 
     Args:
       export_dir: Directory to save the checkpoint to.
+      options: Optional `tf.train.CheckpointOptions` object.
     """
     # In addition to the policy, also list dependencies on model_variables and
     # train_step so the checkpoint can be combined with a saved graph from a
     # full saved model.
-    checkpoint = tf.train.Checkpoint(
+    checkpoint = tf.compat.v2.train.Checkpoint(
         policy=self._policy,
         model_variables=self._policy.variables(),
         train_step=self._train_step)
     # Use write() to make sure that the file prefix is not modified by appending
     # a save counter value.
-    checkpoint.write(
-        file_prefix=os.path.join(export_dir, tf.saved_model.VARIABLES_DIRECTORY,
-                                 tf.saved_model.VARIABLES_FILENAME))
+    file_prefix = os.path.join(export_dir, tf.saved_model.VARIABLES_DIRECTORY,
+                               tf.saved_model.VARIABLES_FILENAME)
+    checkpoint.write(file_prefix, options=options)
 
 
 def _function_with_flat_signature(function,
