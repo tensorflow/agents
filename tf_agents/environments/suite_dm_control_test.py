@@ -51,6 +51,15 @@ class SuiteDMControlTest(test_utils.TestCase):
     self.assertEqual(np.float32, action_spec.dtype)
     self.assertEqual((2,), action_spec.shape)
 
+  def testPixelObservationSpec(self):
+    render_kwargs = dict(width=100, height=50)
+    env = suite_dm_control.load_pixels('ball_in_cup', 'catch',
+                                       render_kwargs=render_kwargs)
+    obs_spec = env.observation_spec()
+
+    self.assertEqual(np.uint8, obs_spec['pixels'].dtype)
+    self.assertEqual((50, 100, 3), obs_spec['pixels'].shape)
+
 
 if __name__ == '__main__':
   test_utils.main()
