@@ -23,6 +23,7 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.policies import linear_bandit_policy as linear_policy
 from tf_agents.bandits.policies import policy_utilities
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
@@ -90,8 +91,11 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
                                                        tf.float32),
                                 tensor_spec.TensorSpec([self._num_actions],
                                                        tf.int32))
+    self._per_arm_obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        self._obs_dim, 4, self._num_actions)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._time_step_spec_with_mask = ts.time_step_spec(self._obs_spec_with_mask)
+    self._per_arm_time_step_spec = ts.time_step_spec(self._per_arm_obs_spec)
     self._alpha = 1.0
     self._action_spec = tensor_spec.BoundedTensorSpec(
         shape=(),
@@ -139,6 +143,30 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(np.array(range(batch_size * self._obs_dim)),
                     dtype=tf.float32, shape=[batch_size, self._obs_dim],
                     name='observation'))
+
+  def _per_arm_time_step_batch(self, batch_size):
+    return ts.TimeStep(
+        tf.constant(
+            ts.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[batch_size],
+            name='step_type'),
+        tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+        tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+        {
+            bandit_spec_utils.GLOBAL_FEATURE_KEY:
+                tf.constant(
+                    np.array(range(batch_size * self._obs_dim)),
+                    dtype=tf.float32,
+                    shape=[batch_size, self._obs_dim],
+                    name='observation'),
+            bandit_spec_utils.PER_ARM_FEATURE_KEY:
+                tf.constant(
+                    np.array(range(batch_size * self._num_actions * 4)),
+                    dtype=tf.float32,
+                    shape=[batch_size, self._num_actions, 4],
+                    name='observation')
+        })
 
   def _time_step_batch_with_mask(self, batch_size):
     no_mask_observation = tf.constant(
@@ -192,7 +220,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
             shape=[batch_size, self._obs_dim + 1],
             name='observation'))
     with self.assertRaisesRegexp(
-        ValueError, r'Observation shape is expected to be \[None, 2\].'
+        ValueError, r'Global observation shape is expected to be \[None, 2\].'
         r' Got \[%d, 3\].' % batch_size):
       policy.action(current_time_step)
 
@@ -315,6 +343,59 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     actions_, new_actions_ = self.evaluate(
         [action_step.action, new_action_step.action])
     self.assertAllEqual(actions_, new_actions_)
+
+  @test_cases()
+  def testPerArmActionBatchWithVariablesAndPolicyUpdate(self, batch_size,
+                                                        exploration_strategy):
+    a_value = tf.reshape(tf.range(36, dtype=tf.float32), shape=[6, 6])
+    a_list = [tf.compat.v2.Variable(a_value)]
+    a_new_list = [tf.compat.v2.Variable(a_value + _POLICY_VARIABLES_OFFSET)]
+    b_value = tf.constant([2, 2, 2, 2, 2, 2], dtype=tf.float32)
+    b_list = [tf.compat.v2.Variable(b_value)]
+    b_new_list = [tf.compat.v2.Variable(b_value + _POLICY_VARIABLES_OFFSET)]
+    num_samples_list = [
+        tf.compat.v2.Variable(tf.constant([1], dtype=tf.float32))
+    ]
+    num_samples_new_list = [
+        tf.compat.v2.Variable(
+            tf.constant([1 + _POLICY_VARIABLES_OFFSET], dtype=tf.float32))
+    ]
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    policy = linear_policy.LinearBanditPolicy(
+        self._action_spec,
+        a_list,
+        b_list,
+        num_samples_list,
+        self._per_arm_time_step_spec,
+        exploration_strategy,
+        accepts_per_arm_features=True)
+    self.assertLen(policy.variables(), 3)
+
+    new_policy = linear_policy.LinearBanditPolicy(
+        self._action_spec,
+        a_new_list,
+        b_new_list,
+        num_samples_new_list,
+        self._per_arm_time_step_spec,
+        exploration_strategy,
+        accepts_per_arm_features=True)
+    self.assertLen(new_policy.variables(), 3)
+
+    self.evaluate(new_policy.update(policy))
+
+    step_batch = self._per_arm_time_step_batch(batch_size=batch_size)
+    action_step = policy.action(step_batch)
+    new_action_step = new_policy.action(step_batch)
+    self.assertEqual(action_step.action.shape, new_action_step.action.shape)
+    self.assertEqual(action_step.action.dtype, new_action_step.action.dtype)
+    actions_, new_actions_, info = self.evaluate(
+        [action_step.action, new_action_step.action, action_step.info])
+    self.assertAllEqual(actions_, new_actions_)
+    arm_obs = step_batch.observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
+    first_action = actions_[0]
+    first_arm_features = arm_obs[0]
+    self.assertAllEqual(info.chosen_arm_features[0],
+                        first_arm_features[first_action])
 
   @test_cases_with_decomposition()
   def testComparisonWithNumpy(self, batch_size, use_decomposition=False):
