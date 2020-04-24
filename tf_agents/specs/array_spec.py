@@ -232,6 +232,12 @@ class ArraySpec(object):
     """Construct a spec from the given spec."""
     return ArraySpec(spec.shape, spec.dtype, spec.name)
 
+  def replace(self, shape=None, dtype=None, name=None):
+    shape = self.shape if shape is None else shape
+    dtype = self.dtype if dtype is None else dtype
+    name = self.name if name is None else name
+    return ArraySpec(shape, dtype, name)
+
 
 @gin.configurable
 class BoundedArraySpec(ArraySpec):
@@ -353,6 +359,13 @@ class BoundedArraySpec(ArraySpec):
     """Returns a NumPy array specifying the maximum bounds (inclusive)."""
     return self._maximum
 
+  @property
+  def num_values(self):
+    """Returns the number of values for discrete BoundedArraySpec."""
+    if is_discrete(self):
+      return (np.broadcast_to(self.maximum, shape=self.shape) -
+              np.broadcast_to(self.minimum, shape=self.shape) + 1)
+
   def __repr__(self):
     template = ('BoundedArraySpec(shape={}, dtype={}, name={}, '
                 'minimum={}, maximum={})')
@@ -371,6 +384,16 @@ class BoundedArraySpec(ArraySpec):
     return (super(BoundedArraySpec, self).check_array(array) and
             np.all(array >= self.minimum) and np.all(array <= self.maximum))
 
+  def replace(self, shape=None, dtype=None,
+              minimum=None, maximum=None,
+              name=None):
+    shape = self.shape if shape is None else shape
+    dtype = self.dtype if dtype is None else dtype
+    minimum = self.minimum if minimum is None else minimum
+    maximum = self.maximum if maximum is None else maximum
+    name = self.name if name is None else name
+    return BoundedArraySpec(shape, dtype, minimum, maximum, name)
+
 
 def is_bounded(spec):
   return isinstance(spec, BoundedArraySpec)
@@ -382,27 +405,3 @@ def is_discrete(spec):
 
 def is_continuous(spec):
   return np.issubdtype(spec.dtype, np.float)
-
-
-def update_spec_shape(spec, shape):
-  """Returns a copy of the given spec with the new shape."""
-  if is_bounded(spec):
-    return BoundedArraySpec(
-        shape=shape,
-        dtype=spec.dtype,
-        minimum=spec.minimum,
-        maximum=spec.maximum,
-        name=spec.name)
-  return ArraySpec(shape=shape, dtype=spec.dtype, name=spec.name)
-
-
-def update_spec_dtype(spec, dtype):
-  """Returns a copy of the given spec with the new dtype."""
-  if is_bounded(spec):
-    return BoundedArraySpec(
-        shape=spec.shape,
-        dtype=dtype,
-        minimum=spec.minimum,
-        maximum=spec.maximum,
-        name=spec.name)
-  return ArraySpec(shape=spec.shape, dtype=dtype, name=spec.name)

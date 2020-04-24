@@ -245,8 +245,7 @@ class ObservationFilterWrapper(PyEnvironmentBaseWrapper):
       raise ValueError('One of the indexes is out of bounds.')
 
     self._idx = idx
-    self._observation_spec = array_spec.update_spec_shape(
-        env.observation_spec(), idx.shape)
+    self._observation_spec = env.observation_spec().replace(shape=idx.shape)
 
   def _step(self, action):
     time_step = self._env.step(action)
@@ -800,8 +799,7 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
   def _get_observation_spec(self):
 
     def _update_shape(spec):
-      return array_spec.update_spec_shape(spec,
-                                          (self._history_length,) + spec.shape)
+      return spec.replace(shape=(self._history_length,) + spec.shape)
 
     observation_spec = tf.nest.map_structure(_update_shape,
                                              self._env.observation_spec())

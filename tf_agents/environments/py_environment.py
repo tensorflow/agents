@@ -119,6 +119,18 @@ class PyEnvironment(object):
     """
     return array_spec.ArraySpec(shape=(), dtype=np.float32, name='reward')
 
+  def discount_spec(self):
+    """Defines the discount that are returned by `step()`.
+
+    Override this method to define an environment that uses non-standard
+    discount values, for example an environment with array-valued discounts.
+
+    Returns:
+      An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+    """
+    return array_spec.BoundedArraySpec(
+        shape=(), dtype=np.float32, minimum=0., maximum=1., name='discount')
+
   def time_step_spec(self):
     """Describes the `TimeStep` fields returned by `step()`.
 

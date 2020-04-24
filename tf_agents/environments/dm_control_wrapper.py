@@ -61,7 +61,7 @@ def convert_spec(spec):
     tfa_spec = array_spec.ArraySpec.from_spec(spec)
 
   if tfa_spec.dtype == np.float64:
-    tfa_spec = array_spec.update_spec_dtype(tfa_spec, np.float32)
+    tfa_spec = tfa_spec.replace(dtype=np.float32)
   return tfa_spec
 
 

@@ -291,6 +291,22 @@ class ArraySpecTest(parameterized.TestCase):
     spec = array_spec.ArraySpec((2,), np.int64)
     self.assertFalse(spec.check_array(array))
 
+  @parameterized.named_parameters(*TYPE_PARAMETERS)
+  def testReplaceDtype(self, dtype):
+    spec = array_spec.ArraySpec(tuple(), np.double).replace(dtype=dtype)
+    self.assertEqual(spec.dtype, dtype)
+
+  def testReplace(self):
+    spec = array_spec.ArraySpec(tuple(), np.double)
+    new_spec = spec.replace(shape=(2,))
+    self.assertEqual(new_spec.shape, (2,))
+    new_spec = new_spec.replace(dtype=np.int8)
+    self.assertEqual(new_spec.dtype, np.int8)
+    new_spec = new_spec.replace(name="name")
+    self.assertEqual(new_spec.name, "name")
+    exp_spec = array_spec.ArraySpec((2,), np.int8, name="name")
+    self.assertEqual(exp_spec, new_spec)
+
 
 class BoundedArraySpecTest(parameterized.TestCase):
 
@@ -495,6 +511,39 @@ class BoundedArraySpecTest(parameterized.TestCase):
     self.assertFalse(np.any(np.isinf(sample)))
     hist, _ = np.histogram(sample, bins=100, range=(0, 100))
     self.assertTrue(np.all(hist > 0))
+
+  def testReplace(self):
+    spec = array_spec.BoundedArraySpec(tuple(), np.int8, minimum=0, maximum=1)
+    new_spec = spec.replace(shape=(2,))
+    self.assertEqual(new_spec.shape, (2,))
+    new_spec = new_spec.replace(dtype=np.int32)
+    self.assertEqual(new_spec.dtype, np.int32)
+    new_spec = new_spec.replace(name="name")
+    self.assertEqual(new_spec.name, "name")
+    new_spec = new_spec.replace(minimum=-1)
+    self.assertEqual(new_spec.minimum, -1)
+    new_spec = new_spec.replace(maximum=0)
+    self.assertEqual(new_spec.maximum, 0)
+    exp_spec = array_spec.BoundedArraySpec((2,), np.int32,
+                                           minimum=-1, maximum=0, name="name")
+    self.assertEqual(exp_spec, new_spec)
+
+  @parameterized.named_parameters(*TYPE_PARAMETERS)
+  def testNumValues(self, dtype):
+    spec = array_spec.BoundedArraySpec(tuple(), dtype, minimum=0, maximum=9)
+    num_values = spec.num_values
+    if array_spec.is_discrete(spec):
+      self.assertEqual(10, num_values)
+    else:
+      self.assertEqual(None, num_values)
+
+  def testNumValuesVector(self):
+    spec = array_spec.BoundedArraySpec((2,), np.int32, [0, 0], [1, 1])
+    self.assertTrue(np.all([2, 2] == spec.num_values))
+    spec = spec.replace(minimum=1)
+    self.assertTrue(np.all([1, 1] == spec.num_values))
+    spec = spec.replace(maximum=2)
+    self.assertTrue(np.all([2, 2] == spec.num_values))
 
 
 @parameterized.named_parameters(*TYPE_PARAMETERS)
