@@ -104,40 +104,43 @@ def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
 class PPOAgent(tf_agent.TFAgent):
   """A PPO Agent."""
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               optimizer=None,
-               actor_net=None,
-               value_net=None,
-               importance_ratio_clipping=0.0,
-               lambda_value=0.95,
-               discount_factor=0.99,
-               entropy_regularization=0.0,
-               policy_l2_reg=0.0,
-               value_function_l2_reg=0.0,
-               shared_vars_l2_reg=0.0,
-               value_pred_loss_coef=0.5,
-               num_epochs=25,
-               use_gae=False,
-               use_td_lambda_return=False,
-               normalize_rewards=True,
-               reward_norm_clipping=10.0,
-               normalize_observations=True,
-               log_prob_clipping=0.0,
-               kl_cutoff_factor=2.0,
-               kl_cutoff_coef=1000.0,
-               initial_adaptive_kl_beta=1.0,
-               adaptive_kl_target=0.01,
-               adaptive_kl_tolerance=0.3,
-               gradient_clipping=None,
-               value_clipping=None,
-               check_numerics=False,
-               compute_value_and_advantage_in_train=False,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               train_step_counter=None,
-               name=None):
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      optimizer=None,
+      actor_net=None,
+      value_net=None,
+      importance_ratio_clipping=0.0,
+      lambda_value=0.95,
+      discount_factor=0.99,
+      entropy_regularization=0.0,
+      policy_l2_reg=0.0,
+      value_function_l2_reg=0.0,
+      shared_vars_l2_reg=0.0,
+      value_pred_loss_coef=0.5,
+      num_epochs=25,
+      use_gae=False,
+      use_td_lambda_return=False,
+      normalize_rewards=True,
+      reward_norm_clipping=10.0,
+      normalize_observations=True,
+      log_prob_clipping=0.0,
+      kl_cutoff_factor=2.0,
+      kl_cutoff_coef=1000.0,
+      initial_adaptive_kl_beta=1.0,
+      adaptive_kl_target=0.01,
+      adaptive_kl_tolerance=0.3,
+      gradient_clipping=None,
+      value_clipping=None,
+      check_numerics=False,
+      # TODO(b/150244758): Change the default to False once we move
+      # clients onto Reverb.
+      compute_value_and_advantage_in_train=True,
+      debug_summaries=False,
+      summarize_grads_and_vars=False,
+      train_step_counter=None,
+      name=None):
     """Creates a PPO Agent.
 
     Args:
@@ -322,12 +325,30 @@ class PPOAgent(tf_agent.TFAgent):
 
     self._action_distribution_spec = (self._actor_net.output_spec)
 
+    # Set training_data_spec to collect_data_spec with augmented policy info,
+    # iff return and normalized advantage are saved in preprocess_sequence.
+    if self._compute_value_and_advantage_in_train:
+      training_data_spec = None
+    else:
+      training_policy_info = collect_policy.trajectory_spec.policy_info.copy()
+      training_policy_info.update({
+          'value_prediction':
+              collect_policy.trajectory_spec.policy_info['value_prediction'],
+          'return':
+              tensor_spec.TensorSpec(shape=[], dtype=tf.float32),
+          'normalized_advantage':
+              tensor_spec.TensorSpec(shape=[], dtype=tf.float32),
+      })
+      training_data_spec = collect_policy.trajectory_spec.replace(
+          policy_info=training_policy_info)
+
     super(PPOAgent, self).__init__(
         time_step_spec,
         action_spec,
         policy,
         collect_policy,
         train_sequence_length=None,
+        training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
@@ -376,17 +397,17 @@ class PPOAgent(tf_agent.TFAgent):
 
     return advantages
 
-  def get_epoch_loss(self,
-                     time_steps,
-                     actions,
-                     act_log_probs,
-                     returns,
-                     normalized_advantages,
-                     action_distribution_parameters,
-                     weights,
-                     train_step,
-                     debug_summaries,
-                     training=False):
+  def get_loss(self,
+               time_steps,
+               actions,
+               act_log_probs,
+               returns,
+               normalized_advantages,
+               action_distribution_parameters,
+               weights,
+               train_step,
+               debug_summaries,
+               training=False):
     """Compute the loss and create optimization op for one training epoch.
 
     All tensors should have a single batch dimension.
@@ -558,14 +579,134 @@ class PPOAgent(tf_agent.TFAgent):
 
     return returns, normalized_advantages
 
-  def _train(self, experience, weights):
-    # Get individual tensors from transitions.
-    (time_steps, policy_steps_,
-     next_time_steps) = trajectory.to_transition(experience)
-    actions = policy_steps_.action
+  def _preprocess(self, experience):
+    """Performs advantage calculation for the collected experience.
 
+    Args:
+      experience: A (batch of) experience in the form of a `Trajectory`. The
+        structure of `experience` must match that of `self.collect_data_spec`.
+        All tensors in `experience` must be shaped `[batch, time + 1, ...]` or
+        [time + 1, ...]. The "+1" is needed as the last action from the set of
+        trajectories cannot be used for training, as its advantage and returns
+        are unknown.
+
+    Returns:
+      The processed experience which has normalized_advantages and returns
+      filled in its policy info. The advantages and returns for the last
+      transition is filled with 0s as they cannot be calculated.
+    """
+    if self._compute_value_and_advantage_in_train:
+      outer_rank = nest_utils.get_outer_rank(experience,
+                                             self.training_data_spec)
+    else:
+      outer_rank = nest_utils.get_outer_rank(experience,
+                                             self.collect_data_spec)
+    # Add 1 as the batch dimension for inputs that just have the time dimension,
+    # as all utility functions below require the batch dimension.
+    if outer_rank == 1:
+      batched_experience = nest_utils.batch_nested_tensors(experience)
+    else:
+      batched_experience = experience
+    # Get individual tensors from experience.
+    (time_steps, _,
+     next_time_steps) = trajectory.to_transition(batched_experience)
+
+    # Compute the value predictions for states using the current value function.
+    # To be used for return & advantage computation.
+    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
+    if self._compute_value_and_advantage_in_train:
+      value_state = self._collect_policy.get_initial_value_state(batch_size)
+      value_preds, _ = self._collect_policy.apply_value_network(
+          batched_experience.observation,
+          batched_experience.step_type,
+          value_state=value_state,
+          training=False)
+      value_preds = tf.stop_gradient(value_preds)
+    else:
+      value_preds = batched_experience.policy_info['value_prediction']
+    new_policy_info = {
+        'dist_params': batched_experience.policy_info['dist_params'],
+        'value_prediction': value_preds,
+    }
+
+    # Add the calculated advantage and return into the input experience.
+    returns, normalized_advantages = self.compute_return_and_advantage(
+        next_time_steps, value_preds)
+
+    # Pad returns and normalized_advantages in the time dimension so that the
+    # time dimensions are aligned with the input experience's time dimension.
+    # When the output trajectory gets sliced by trajectory.to_transition during
+    # training, the padded last timesteps will be automatically dropped.
+    last_transition_padding = tf.zeros((batch_size, 1), dtype=tf.float32)
+    new_policy_info['return'] = tf.concat([returns, last_transition_padding],
+                                          axis=1)
+    new_policy_info['normalized_advantage'] = tf.concat(
+        [normalized_advantages, last_transition_padding], axis=1)
+
+    # Remove the batch dimension iff the input experience does not have it.
+    if outer_rank == 1:
+      new_policy_info = nest_utils.unbatch_nested_tensors(new_policy_info)
+    # The input experience with its policy info filled with the calculated
+    # advantages and returns for each action.
+    return experience.replace(policy_info=new_policy_info)
+
+  def _preprocess_sequence(self, experience):
+    """Performs advantage calculation for the collected experience.
+
+    This function is a no-op if self._compute_value_and_advantage_in_train is
+    True, which means advantage calculation happens as part of agent.train().
+
+    Args:
+      experience: A (batch of) experience in the form of a `Trajectory`. The
+        structure of `experience` must match that of `self.collect_data_spec`.
+        All tensors in `experience` must be shaped `[batch, time + 1, ...]` or
+        [time + 1, ...]. The "+1" is needed as the last action from the set of
+        trajectories cannot be used for training, as its advantage and returns
+        are unknown.
+
+    Returns:
+      A post processed `Trajectory` with the same shape as the input, with
+        `return` and `normalized_advantage` stored inside of the policy info
+        dictionary. The advantages and returns for the last transition is filled
+        with 0s as they cannot be calculated.
+    """
+    if self._compute_value_and_advantage_in_train:
+      return experience
+
+    return self._preprocess(experience)
+
+  def _train(self, experience, weights):
+    if self._compute_value_and_advantage_in_train:
+      processed_experience = self._preprocess(experience)
+    else:
+      processed_experience = experience
+
+    # Get individual tensors from transitions.
+    (time_steps, policy_steps,
+     next_time_steps) = trajectory.to_transition(processed_experience)
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
 
+    masked_weights = weights
+    valid_mask = ppo_utils.make_timestep_mask(
+        next_time_steps, allow_partial_episodes=True)
+    if masked_weights is None:
+      masked_weights = valid_mask
+    else:
+      masked_weights *= valid_mask
+
+    # Reconstruct per-timestep policy distribution from stored distribution
+    #   parameters.
+    old_action_distribution_parameters = policy_steps.info['dist_params']
+    old_actions_distribution = (
+        distribution_spec.nested_distributions_from_specs(
+            self._action_distribution_spec, old_action_distribution_parameters))
+    # Compute log probability of actions taken during data collection, using the
+    #   collect policy distribution.
+    old_act_log_probs = common.log_probability(old_actions_distribution,
+                                               policy_steps.action,
+                                               self._action_spec)
+
+    actions = policy_steps.action
     if self._debug_summaries:
       actions_list = tf.nest.flatten(actions)
       show_action_index = len(actions_list) != 1
@@ -575,40 +716,9 @@ class PPOAgent(tf_agent.TFAgent):
         tf.compat.v2.summary.histogram(
             name=action_name, data=single_action, step=self.train_step_counter)
 
-    action_distribution_parameters = policy_steps_.info['dist_params']
-
-    # Reconstruct per-timestep policy distribution from stored distribution
-    #   parameters.
-    old_actions_distribution = (
-        distribution_spec.nested_distributions_from_specs(
-            self._action_distribution_spec, action_distribution_parameters))
-
-    # Compute log probability of actions taken during data collection, using the
-    #   collect policy distribution.
-    act_log_probs = common.log_probability(old_actions_distribution, actions,
-                                           self._action_spec)
-
-    valid_mask = ppo_utils.make_timestep_mask(
-        next_time_steps, allow_partial_episodes=True)
-
-    if weights is None:
-      weights = valid_mask
-    else:
-      weights *= valid_mask
-
-    if self._compute_value_and_advantage_in_train:
-      value_state = self._collect_policy.get_initial_value_state(batch_size)
-      value_preds, _ = self._collect_policy.apply_value_network(
-          experience.observation,
-          experience.step_type,
-          value_state=value_state,
-          training=False)
-    else:
-      value_preds = experience.policy_info['value_prediction']
-
-    value_preds = tf.stop_gradient(value_preds)
-    returns, normalized_advantages = self.compute_return_and_advantage(
-        next_time_steps, value_preds)
+    returns = processed_experience.policy_info['return'][:, :-1]
+    normalized_advantages = processed_experience.policy_info[
+        'normalized_advantage'][:, :-1]
 
     # Loss tensors across batches will be aggregated for summaries.
     policy_gradient_losses = []
@@ -621,7 +731,6 @@ class PPOAgent(tf_agent.TFAgent):
     variables_to_train = list(
         object_identity.ObjectIdentitySet(self._actor_net.trainable_weights +
                                           self._value_net.trainable_weights))
-    # For each epoch, create its own train op that depends on the previous one.
     for i_epoch in range(self._num_epochs):
       with tf.name_scope('epoch_%d' % i_epoch):
         # Only save debug summaries for first and last epochs.
@@ -629,16 +738,15 @@ class PPOAgent(tf_agent.TFAgent):
             self._debug_summaries and
             (i_epoch == 0 or i_epoch == self._num_epochs - 1))
 
-        # Build one epoch train op.
         with tf.GradientTape() as tape:
-          loss_info = self.get_epoch_loss(
+          loss_info = self.get_loss(
               time_steps,
               actions,
-              act_log_probs,
+              old_act_log_probs,
               returns,
               normalized_advantages,
-              action_distribution_parameters,
-              weights,
+              old_action_distribution_parameters,
+              masked_weights,
               self.train_step_counter,
               debug_summaries,
               training=True)
@@ -673,7 +781,7 @@ class PPOAgent(tf_agent.TFAgent):
     policy_state = self._collect_policy.get_initial_state(batch_size)
     # Compute the mean kl from previous action distribution.
     kl_divergence = self._kl_divergence(
-        time_steps, action_distribution_parameters,
+        time_steps, old_action_distribution_parameters,
         self._collect_policy.distribution(time_steps, policy_state).action)
     self.update_adaptive_kl_beta(kl_divergence)
 
@@ -691,7 +799,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     # Make summaries for total loss averaged across all epochs.
     # The *_losses lists will have been populated by
-    #   calls to self.get_epoch_loss. Assumes all the losses have same length.
+    #   calls to self.get_loss. Assumes all the losses have same length.
     with tf.name_scope('Losses/'):
       num_epochs = len(policy_gradient_losses)
       total_policy_gradient_loss = tf.add_n(policy_gradient_losses) / num_epochs

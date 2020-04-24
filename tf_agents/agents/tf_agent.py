@@ -189,6 +189,8 @@ class TFAgent(tf.Module):
     self._train_step_counter = train_step_counter
     self._train_fn = common.function_in_tf1()(self._train)
     self._initialize_fn = common.function_in_tf1()(self._initialize)
+    self._preprocess_sequence_fn = common.function_in_tf1()(
+        self._preprocess_sequence)
 
   def initialize(self):
     """Initializes the agent.
@@ -208,6 +210,35 @@ class TFAgent(tf.Module):
       return self._initialize_fn()
     else:
       return self._initialize()
+
+  def preprocess_sequence(self, experience):
+    """Defines preprocess_sequence function to be fed into replay buffers.
+
+    This defines how we preprocess the collected data before training.
+    Defaults to pass through for most agents.
+    Structure of `experience` must match that of `self.collect_data_spec`.
+
+    Args:
+      experience: a `Trajectory` shaped [batch, time, ...] or [time, ...] which
+        represents the collected experience data.
+
+    Returns:
+      A post processed `Trajectory` with the same shape as the input.
+
+    Raises:
+      TypeError: If experience does not match `self.collect_data_spec` structure
+        types.
+    """
+    tf.nest.assert_same_structure(experience, self.collect_data_spec)
+
+    if self._enable_functions:
+      preprocessed_sequence = self._preprocess_sequence_fn(experience)
+    else:
+      preprocessed_sequence = self._preprocess_sequence(experience)
+
+    tf.nest.assert_same_structure(preprocessed_sequence,
+                                  self.training_data_spec)
+    return preprocessed_sequence
 
   def _check_trajectory_dimensions(self, experience):
     """Checks the given Trajectory for batch and time outer dimensions."""
@@ -277,7 +308,7 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.collect_data_spec`.
+        structure of `experience` must match that of `self.training_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.train_step_length` if that
         property is not `None`.
@@ -297,10 +328,10 @@ class TFAgent(tf.Module):
 
     Raises:
       TypeError: If experience is not type `Trajectory`.  Or if experience
-        does not match `self.collect_data_spec` structure types.
+        does not match `self.training_data_spec` structure types.
       ValueError: If experience tensors' time axes are not compatible with
         `self.train_sequence_length`.  Or if experience does not match
-        `self.collect_data_spec` structure.
+        `self.training_data_spec` structure.
       ValueError: If the user does not pass `**kwargs` matching
         `self.train_argspec`.
       RuntimeError: If the class was not initialized properly (`super.__init__`
@@ -440,6 +471,21 @@ class TFAgent(tf.Module):
   def _initialize(self):
     """Returns an op to initialize the agent."""
 
+  def _preprocess_sequence(self, experience):
+    """Defines preprocess_sequence function to be fed into replay buffers.
+
+    This defines how we preprocess the collected data before training.
+    Defaults to pass through for most agents. Subclasses may override this.
+
+    Args:
+      experience: a `Trajectory` shaped [batch, time, ...] or [time, ...] which
+        represents the collected experience data.
+
+    Returns:
+      A post processed `Trajectory` with the same shape as the input.
+    """
+    return experience
+
   @abc.abstractmethod
   def _train(self, experience, weights):
     """Returns an op to train the agent.
@@ -449,7 +495,7 @@ class TFAgent(tf.Module):
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
-        structure of `experience` must match that of `self.collect_data_spec`.
+        structure of `experience` must match that of `self.training_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
         `time` must be equal to `self.train_step_length` if that property is
         not `None`.
