@@ -986,6 +986,11 @@ class Checkpointer(object):
   def checkpoint_exists(self):
     return self._checkpoint_exists
 
+  @property
+  def manager(self):
+    """Returns the underlying tf.train.CheckpointManager."""
+    return self._manager
+
   def initialize_or_restore(self, session=None):
     """Initialize or restore graph (based on checkpoint if exists)."""
     self._load_status.initialize_or_restore(session)
