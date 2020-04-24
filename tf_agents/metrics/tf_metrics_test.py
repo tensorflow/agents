@@ -67,13 +67,15 @@ class TFDequeTest(tf.test.TestCase):
 
     self.evaluate(d.add(2))
     self.evaluate(d.add(4))
-    self.assertEqual(3.0, self.evaluate(d.mean()))
+    self.assertEqual(3, self.evaluate(d.mean()))
+    self.assertEqual(tf.int32, d.mean().dtype)
 
   def test_mean_empty(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual(0, self.evaluate(d.mean()))
+    self.assertEqual(tf.int32, d.mean().dtype)
 
   def test_mean_roll_over(self):
     d = tf_metrics.TFDeque(3, tf.float32)
@@ -93,6 +95,85 @@ class TFDequeTest(tf.test.TestCase):
     self.evaluate(d.extend([1, 2, 3, 4]))
     self.assertEqual(3.0, self.evaluate(d.mean()))
     self.assertEqual(tf.float32, d.mean().dtype)
+
+
+class TFShapedDequeTest(tf.test.TestCase):
+
+  def test_data_is_zero(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    values = self.evaluate(d.data)
+    self.assertAllEqual((0, 2), values.shape)
+
+  def test_rolls_over(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.evaluate(d.add([1, 1]))
+    self.evaluate(d.add([2, 2]))
+    self.evaluate(d.add([3, 3]))
+    self.assertAllEqual([[1, 1], [2, 2], [3, 3]], self.evaluate(d.data))
+
+    self.evaluate(d.add([4, 4]))
+    self.assertAllEqual([[4, 4], [2, 2], [3, 3]], self.evaluate(d.data))
+
+  def test_clear(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.evaluate(d.add([1, 1]))
+
+    self.evaluate(d.clear())
+    self.assertAllEqual((0, 2), self.evaluate(d.data).shape)
+
+    self.evaluate(d.add([2, 2]))
+    self.evaluate(d.add([3, 3]))
+    self.assertAllEqual([[2, 2], [3, 3]], self.evaluate(d.data))
+
+  def test_mean_full(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.evaluate(d.add([1, 1]))
+    self.evaluate(d.add([2, 2]))
+    self.evaluate(d.add([3, 3]))
+    self.assertAllEqual([2, 2], self.evaluate(d.mean()))
+    self.assertEqual(tf.int32, d.mean().dtype)
+
+  def test_mean_not_full(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.evaluate(d.add([1, 1]))
+    self.evaluate(d.add([3, 3]))
+    self.assertAllEqual([2, 2], self.evaluate(d.mean()))
+    self.assertEqual(tf.int32, d.mean().dtype)
+
+  def test_mean_empty(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.assertAllEqual([0, 0], self.evaluate(d.mean()))
+    self.assertEqual(tf.int32, d.mean().dtype)
+
+  def test_mean_roll_over(self):
+    d = tf_metrics.TFDeque(3, tf.float32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.evaluate(d.add([1, 1]))
+    self.evaluate(d.add([2, 2]))
+    self.evaluate(d.add([3, 3]))
+    self.evaluate(d.add([4, 4]))
+    self.assertAllEqual([3.0, 3.0], self.evaluate(d.mean()))
+    self.assertEqual(tf.float32, d.mean().dtype)
+
+  def test_extend(self):
+    d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.evaluate(d.extend([[1, 1], [2, 2], [3, 3], [4, 4]]))
+    self.assertAllEqual([[4, 4], [2, 2], [3, 3]], self.evaluate(d.data))
+    self.assertAllEqual([3, 3], self.evaluate(d.mean()))
 
 
 class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):

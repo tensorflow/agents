@@ -24,25 +24,24 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.metrics import tf_metric
+from tf_agents.replay_buffers import table
 from tf_agents.utils import common
 
 
 class TFDeque(object):
   """Deque backed by tf.Variable storage."""
 
-  def __init__(self, max_len, dtype, name='TFDeque'):
-    shape = (max_len,)
-    self._dtype = dtype
+  def __init__(self, max_len, dtype, shape=(), name='TFDeque'):
     self._max_len = tf.convert_to_tensor(max_len, dtype=tf.int32)
-    self._buffer = common.create_variable(
-        initial_value=0, dtype=dtype, shape=shape, name=name + 'Vars')
+    self._spec = tf.TensorSpec(shape, dtype, name='Buffer')
+    self._buffer = table.Table(self._spec, capacity=max_len)
 
     self._head = common.create_variable(
         initial_value=0, dtype=tf.int32, shape=(), name=name + 'Head')
 
   @property
   def data(self):
-    return self._buffer[:self.length]
+    return self._buffer.read(tf.range(self.length))
 
   @common.function(autograph=True)
   def extend(self, value):
@@ -52,7 +51,7 @@ class TFDeque(object):
   @common.function(autograph=True)
   def add(self, value):
     position = tf.math.mod(self._head, self._max_len)
-    self._buffer.scatter_update(tf.IndexedSlices(value, position))
+    self._buffer.write(position, value)
     self._head.assign_add(1)
 
   @property
@@ -62,13 +61,12 @@ class TFDeque(object):
   @common.function
   def clear(self):
     self._head.assign(0)
-    self._buffer.assign(tf.zeros_like(self._buffer))
 
   @common.function(autograph=True)
   def mean(self):
     if tf.equal(self._head, 0):
-      return tf.zeros((), dtype=self._dtype)
-    return tf.math.reduce_mean(self._buffer[:self.length])
+      return tf.zeros(self._spec.shape, self._spec.dtype)
+    return tf.math.reduce_mean(self.data, axis=0)
 
 
 @gin.configurable(module='tf_agents')
