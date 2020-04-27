@@ -51,6 +51,8 @@ class LinearUCBAgent(lin_agent.LinearBanditAgent):
                emit_policy_info=(),
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
+               accepts_per_arm_features=False,
+               drop_arm_features=False,
                debug_summaries=False,
                summarize_grads_and_vars=False,
                enable_summaries=True,
@@ -83,6 +85,12 @@ class LinearUCBAgent(lin_agent.LinearBanditAgent):
         policy, and 2) the boolean mask. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
+      accepts_per_arm_features: (bool) Whether the agent accepts per-arm
+        features.
+      drop_arm_features: (bool) Whether the trainer expects experience where the
+        arm observations have been removed. If yes, the training_data_spec is
+        modified so that the train function is aware of the trajectory
+        transformation.
       debug_summaries: A Python bool, default False. When True, debug summaries
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
@@ -109,6 +117,8 @@ class LinearUCBAgent(lin_agent.LinearBanditAgent):
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
+        accepts_per_arm_features=accepts_per_arm_features,
+        drop_arm_features=drop_arm_features,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,

@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import copy
 import functools
 import os
 from absl import app
@@ -27,7 +26,8 @@ from absl import flags
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-
+from tf_agents.bandits.agents import lin_ucb_agent
+from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import stationary_stochastic_per_arm_py_environment as sspe
@@ -39,10 +39,14 @@ from tf_agents.environments import tf_py_environment
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_enum(
+    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy'],
+    'Which agent to use. Possible values: `LinUCB`, `LinTS`, `epsGreedy`.'
+)
 
 flags.DEFINE_enum(
     'network', 'commontower', ['commontower', 'dotproduct'],
-    'Which network architecture to use. '
+    'Which network architecture to use for the eps-Greedy agent. '
     'Possible values are `commontower` and `dotproduct`.')
 
 flags.DEFINE_bool('drop_arm_obs', False, 'Whether to wipe the arm observations '
@@ -55,6 +59,8 @@ NUM_ACTIONS = 7
 HIDDEN_PARAM = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 TRAINING_LOOPS = 2000
 STEPS_PER_LOOP = 2
+
+AGENT_ALPHA = 0.1
 
 EPSILON = 0.01
 LR = 0.05
@@ -111,30 +117,46 @@ def main(unused_argv):
   environment = tf_py_environment.TFPyEnvironment(env)
 
   obs_spec = environment.observation_spec()
-  if FLAGS.network == 'commontower':
-    network = (
-        global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            obs_spec, (4, 3), (3, 4), (4, 2)))
-  elif FLAGS.network == 'dotproduct':
-    network = (
-        global_and_arm_feature_network.create_feed_forward_dot_product_network(
-            obs_spec, (4, 3, 6), (3, 4, 6)))
   if FLAGS.drop_arm_obs:
-    def drop_arm_feature_fn(traj):
-      transformed_traj = copy.deepcopy(traj)
-      del transformed_traj.observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
-      return transformed_traj
+    drop_arm_feature_fn = bandit_spec_utils.drop_arm_observation
   else:
     drop_arm_feature_fn = None
-  agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
-      time_step_spec=environment.time_step_spec(),
-      action_spec=environment.action_spec(),
-      reward_network=network,
-      optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
-      epsilon=EPSILON,
-      accepts_per_arm_features=True,
-      training_data_spec_transformation_fn=drop_arm_feature_fn,
-      emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
+  if FLAGS.agent == 'LinUCB':
+    agent = lin_ucb_agent.LinearUCBAgent(
+        time_step_spec=environment.time_step_spec(),
+        action_spec=environment.action_spec(),
+        alpha=AGENT_ALPHA,
+        accepts_per_arm_features=True,
+        drop_arm_features=FLAGS.drop_arm_obs,
+        dtype=tf.float32)
+  elif FLAGS.agent == 'LinTS':
+    agent = lin_ts_agent.LinearThompsonSamplingAgent(
+        time_step_spec=environment.time_step_spec(),
+        action_spec=environment.action_spec(),
+        alpha=AGENT_ALPHA,
+        accepts_per_arm_features=True,
+        drop_arm_features=FLAGS.drop_arm_obs,
+        dtype=tf.float32)
+  elif FLAGS.agent == 'epsGreedy':
+    if FLAGS.network == 'commontower':
+      network = (
+          global_and_arm_feature_network
+          .create_feed_forward_common_tower_network(obs_spec, (4, 3), (3, 4),
+                                                    (4, 2)))
+    elif FLAGS.network == 'dotproduct':
+      network = (
+          global_and_arm_feature_network
+          .create_feed_forward_dot_product_network(obs_spec, (4, 3, 6),
+                                                   (3, 4, 6)))
+    agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
+        time_step_spec=environment.time_step_spec(),
+        action_spec=environment.action_spec(),
+        reward_network=network,
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
+        epsilon=EPSILON,
+        accepts_per_arm_features=True,
+        training_data_spec_transformation_fn=drop_arm_feature_fn,
+        emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
 
   optimal_reward_fn = functools.partial(
       optimal_reward, hidden_param=HIDDEN_PARAM)

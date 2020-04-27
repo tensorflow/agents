@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import tensor_spec
@@ -34,3 +35,10 @@ def create_per_arm_observation_spec(global_dim, per_arm_dim, num_actions):
       GLOBAL_FEATURE_KEY: global_obs_spec,
       PER_ARM_FEATURE_KEY: arm_obs_spec
   }
+
+
+def drop_arm_observation(trajectory):
+  """Drops the per-arm observation from a given trajectory (or trajectory spec)."""
+  transformed_trajectory = copy.deepcopy(trajectory)
+  del transformed_trajectory.observation[PER_ARM_FEATURE_KEY]
+  return transformed_trajectory
