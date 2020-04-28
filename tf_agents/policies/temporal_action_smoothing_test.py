@@ -56,7 +56,8 @@ class TemporalActionSmoothingTest(parameterized.TestCase, test_utils.TestCase):
 
   @property
   def _time_step(self):
-    return ts.transition(tf.constant([[1, 2]], dtype=tf.float32), reward=[1.])
+    return ts.transition(tf.constant([[1, 2]], dtype=tf.float32),
+                         reward=tf.constant([1.]))
 
   def testStateIncrementPolicy(self):
     policy = StateIncrementPolicy(self._time_step_spec, self._action_spec)
