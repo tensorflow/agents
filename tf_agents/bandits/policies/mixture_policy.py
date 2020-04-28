@@ -41,7 +41,7 @@ SUBPOLICY_INFO = 'subpolicy_info'
 
 
 @gin.configurable
-class MixturePolicy(tf_policy.Base):
+class MixturePolicy(tf_policy.TFPolicy):
   """A policy that chooses from a set of policies to decide the action."""
 
   def __init__(self, mixture_distribution, policies, name=None):

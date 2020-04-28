@@ -29,7 +29,7 @@ from tf_agents.trajectories import policy_step
 tfd = tfp.distributions
 
 
-class GaussianPolicy(tf_policy.Base):
+class GaussianPolicy(tf_policy.TFPolicy):
   """Actor Policy with Gaussian exploration noise."""
 
   def __init__(self,

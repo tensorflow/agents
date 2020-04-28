@@ -29,7 +29,7 @@ from tf_agents.utils import common
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Base(object):
+class PyPolicy(object):
   """Abstract base class for Python Policies.
 
   The `action(time_step, policy_state)` method returns a PolicyStep named tuple
@@ -65,39 +65,37 @@ class Base(object):
                policy_state_spec=(),
                info_spec=(),
                observation_and_action_constraint_splitter=None):
-    """Initialization of Base class.
+    """Initialization of PyPolicy class.
 
     Args:
-      time_step_spec: A `TimeStep` ArraySpec of the expected time_steps.
-        Usually provided by the user to the subclass.
-      action_spec: A nest of BoundedArraySpec representing the actions.
-        Usually provided by the user to the subclass.
+      time_step_spec: A `TimeStep` ArraySpec of the expected time_steps. Usually
+        provided by the user to the subclass.
+      action_spec: A nest of BoundedArraySpec representing the actions. Usually
+        provided by the user to the subclass.
       policy_state_spec: A nest of ArraySpec representing the policy state.
         Provided by the subclass, not directly by the user.
-      info_spec: A nest of ArraySpec representing the policy info.
-        Provided by the subclass, not directly by the user.
+      info_spec: A nest of ArraySpec representing the policy info. Provided by
+        the subclass, not directly by the user.
       observation_and_action_constraint_splitter: A function used to process
         observations with action constraints. These constraints can indicate,
         for example, a mask of valid/invalid actions for a given state of the
-        environment.
-        The function takes in a full observation and returns a tuple consisting
-        of 1) the part of the observation intended as input to the network and
-        2) the constraint. An example
-        `observation_and_action_constraint_splitter` could be as simple as:
-        ```
-        def observation_and_action_constraint_splitter(observation):
-          return observation['network_input'], observation['constraint']
-        ```
+        environment. The function takes in a full observation and returns a
+        tuple consisting of 1) the part of the observation intended as input to
+        the network and 2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as: ```
+        def observation_and_action_constraint_splitter(observation): return
+          observation['network_input'], observation['constraint'] ```
         *Note*: when using `observation_and_action_constraint_splitter`, make
-        sure the provided `q_network` is compatible with the network-specific
-        half of the output of the `observation_and_action_constraint_splitter`.
-        In particular, `observation_and_action_constraint_splitter` will be
-        called on the observation before passing to the network.
-        If `observation_and_action_constraint_splitter` is None, action
-        constraints are not applied.
+          sure the provided `q_network` is compatible with the network-specific
+          half of the output of the
+          `observation_and_action_constraint_splitter`. In particular,
+          `observation_and_action_constraint_splitter` will be called on the
+          observation before passing to the network. If
+          `observation_and_action_constraint_splitter` is None, action
+          constraints are not applied.
     """
     common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
-    common.assert_members_are_not_overridden(base_cls=Base, instance=self)
+    common.assert_members_are_not_overridden(base_cls=PyPolicy, instance=self)
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
     # TODO(kbanoop): rename policy_state to state.

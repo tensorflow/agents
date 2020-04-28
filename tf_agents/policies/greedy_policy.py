@@ -36,14 +36,14 @@ class DeterministicWithLogProb(tfp.distributions.Deterministic):
 
 
 @gin.configurable(module='tf_agents', blacklist=['policy'])
-class GreedyPolicy(tf_policy.Base):
+class GreedyPolicy(tf_policy.TFPolicy):
   """Returns greedy samples of a given policy."""
 
   def __init__(self, policy, name=None):
     """Builds a greedy TFPolicy wrapping the given policy.
 
     Args:
-      policy: A policy implementing the tf_policy.Base interface.
+      policy: A policy implementing the tf_policy.TFPolicy interface.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """

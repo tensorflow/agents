@@ -31,7 +31,7 @@ from tf_agents.utils import common
 
 
 @gin.configurable()
-class CategoricalQPolicy(tf_policy.Base):
+class CategoricalQPolicy(tf_policy.TFPolicy):
   """Class to build categorical Q-policies."""
 
   def __init__(self,

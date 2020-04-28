@@ -159,7 +159,7 @@ class PolicySaver(object):
         `policy.policy_state_spec`, `policy.info_spec`.
       ValueError: If `batch_size` is not either `None` or a python integer > 0.
     """
-    if not isinstance(policy, tf_policy.Base):
+    if not isinstance(policy, tf_policy.TFPolicy):
       raise TypeError('policy is not a TFPolicy.  Saw: %s' % type(policy))
     if (batch_size is not None and
         (not isinstance(batch_size, int) or batch_size < 1)):

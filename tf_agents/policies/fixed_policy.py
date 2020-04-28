@@ -30,7 +30,7 @@ from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
-class FixedPolicy(tf_policy.Base):
+class FixedPolicy(tf_policy.TFPolicy):
   """A policy which always returns a fixed action."""
 
   def __init__(self, actions, time_step_spec, action_spec, policy_info=(),

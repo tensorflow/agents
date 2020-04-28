@@ -42,7 +42,7 @@ class TFDriver(driver.Driver):
 
     Args:
       env: A tf_environment.Base environment.
-      policy: A tf_policy.Base policy.
+      policy: A tf_policy.TFPolicy policy.
       observers: A list of observers that are notified after every step
         in the environment. Each observer is a callable(trajectory.Trajectory).
       transition_observers: A list of observers that are updated after every

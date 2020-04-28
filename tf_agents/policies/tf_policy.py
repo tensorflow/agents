@@ -33,7 +33,7 @@ from tf_agents.utils import nest_utils
 tfd = tfp.distributions
 
 
-class Base(tf.Module):
+class TFPolicy(tf.Module):
   """Abstract base class for TF Policies.
 
   Example of simple use in TF:
@@ -121,7 +121,7 @@ class Base(tf.Module):
                automatic_state_reset=True,
                observation_and_action_constraint_splitter=None,
                name=None):
-    """Initialization of Base class.
+    """Initialization of TFPolicy class.
 
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps. Usually
@@ -162,10 +162,10 @@ class Base(tf.Module):
           constraints are not applied.
       name: A name for this module. Defaults to the class name.
     """
-    super(Base, self).__init__(name=name)
+    super(TFPolicy, self).__init__(name=name)
     common.check_tf1_allowed()
     common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
-    common.assert_members_are_not_overridden(base_cls=Base, instance=self)
+    common.assert_members_are_not_overridden(base_cls=TFPolicy, instance=self)
     if not isinstance(time_step_spec, ts.TimeStep):
       raise ValueError(
           'The `time_step_spec` must be an instance of `TimeStep`, but is `{}`.'

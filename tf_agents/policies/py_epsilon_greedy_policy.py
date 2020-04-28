@@ -26,7 +26,7 @@ from tf_agents.policies import random_py_policy
 from tf_agents.trajectories import policy_step
 
 
-class EpsilonGreedyPolicy(py_policy.Base):
+class EpsilonGreedyPolicy(py_policy.PyPolicy):
   """Implementation of the epsilon-greedy policy."""
 
   def __init__(self, greedy_policy,
@@ -38,29 +38,23 @@ class EpsilonGreedyPolicy(py_policy.Base):
     """Initializes the epsilon-greedy policy.
 
     Args:
-
-      greedy_policy: An instance of py_policy.Base to use as the greedy policy.
-
+      greedy_policy: An instance of py_policy.PyPolicy to use as the greedy
+        policy.
       epsilon: The probability 0.0 <= epsilon <= 1.0 with which an
         action will be selected at random.
-
       random_policy: An instance of random_py_policy.RandomPyPolicy to
         use as the random policy, if None is provided, a
         RandomPyPolicy will be automatically created with the
         greedy_policy's action_spec and observation_spec and
         random_seed.
-
       epsilon_decay_end_count: if set, anneal the epislon every time
         this policy is used, until it hits the epsilon_decay_end_value.
-
       epsilon_decay_end_value: the value of epislon to use when the
         policy usage count hits epsilon_decay_end_count.
-
       random_seed: seed used to create numpy.random.RandomState.
         /dev/urandom will be used if it's None.
 
     Raises:
-
       ValueError: If epsilon is not between 0.0 and 1.0. Or if
       epsilon_decay_end_value is invalid when epsilon_decay_end_count is
       set.

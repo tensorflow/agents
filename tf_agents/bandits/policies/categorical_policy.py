@@ -35,7 +35,7 @@ def _validate_weights(weights):
         'Expected a 1D `Tensor` of weights; got {}.'.format(weights))
 
 
-class CategoricalPolicy(tf_policy.Base):
+class CategoricalPolicy(tf_policy.TFPolicy):
   """Policy that chooses an action based on a categorical distribution.
 
   The distribution is specified by a set of weights for each action and an

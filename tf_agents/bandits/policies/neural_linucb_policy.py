@@ -32,7 +32,7 @@ from tf_agents.trajectories import policy_step
 tfd = tfp.distributions
 
 
-class NeuralLinUCBPolicy(tf_policy.Base):
+class NeuralLinUCBPolicy(tf_policy.TFPolicy):
   """Neural LinUCB Policy.
 
   Applies LinUCB on top of an encoding network.

@@ -29,7 +29,7 @@ from tf_agents.utils import common
 tfd = tfp.distributions
 
 
-class OUNoisePolicy(tf_policy.Base):
+class OUNoisePolicy(tf_policy.TFPolicy):
   """Actor Policy with Ornstein Uhlenbeck (OU) exploration noise."""
 
   def __init__(self,

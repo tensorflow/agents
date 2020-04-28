@@ -32,7 +32,7 @@ from tf_agents.utils import common as common
 from tf_agents.utils import test_utils
 
 
-class TfPolicyHoldsVariables(tf_policy.Base):
+class TfPolicyHoldsVariables(tf_policy.TFPolicy):
   """Test tf_policy which contains only trainable variables."""
 
   def __init__(self, init_var_value, var_scope, name=None):
@@ -63,7 +63,7 @@ class TfPolicyHoldsVariables(tf_policy.Base):
     pass
 
 
-class TFPolicyMismatchedDtypes(tf_policy.Base):
+class TFPolicyMismatchedDtypes(tf_policy.TFPolicy):
   """Dummy tf_policy with mismatched dtypes."""
 
   def __init__(self):
@@ -77,7 +77,7 @@ class TFPolicyMismatchedDtypes(tf_policy.Base):
     return policy_step.PolicyStep(action=tf.constant([0], dtype=tf.int64))
 
 
-class TFPolicyMismatchedDtypesListAction(tf_policy.Base):
+class TFPolicyMismatchedDtypesListAction(tf_policy.TFPolicy):
   """Dummy tf_policy with mismatched dtypes and a list action_spec."""
 
   def __init__(self):
@@ -98,7 +98,7 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.Base):
     ])
 
 
-class TfPassThroughPolicy(tf_policy.Base):
+class TfPassThroughPolicy(tf_policy.TFPolicy):
 
   def _action(self, time_step, policy_state, seed):
     distributions = self._distribution(time_step, policy_state)
@@ -112,7 +112,7 @@ class TfPassThroughPolicy(tf_policy.Base):
     return policy_step.PolicyStep(action_distribution, policy_state, ())
 
 
-class TfEmitLogProbsPolicy(tf_policy.Base):
+class TfEmitLogProbsPolicy(tf_policy.TFPolicy):
   """Dummy policy with constant probability distribution."""
 
   def __init__(self, info_spec=()):

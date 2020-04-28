@@ -43,14 +43,14 @@ class TrajectoryReplay(object):
     assuming it saw the observations from the given trajectory.
 
     Args:
-      policy: A tf_policy.Base policy.
+      policy: A tf_policy.TFPolicy policy.
       time_major: If `True`, the tensors in `trajectory` passed to method `run`
         are assumed to have shape `[time, batch, ...]`.  Otherwise (default)
         they are assumed to have shape `[batch, time, ...]`.
 
     Raises:
       ValueError:
-        If policy is not an instance of tf_policy.Base.
+        If policy is not an instance of tf_policy.TFPolicy.
     """
     self._policy = policy
     self._time_major = time_major

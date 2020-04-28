@@ -28,7 +28,7 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import nest_utils
 
 
-class RandomPyPolicy(py_policy.Base):
+class RandomPyPolicy(py_policy.PyPolicy):
   """Returns random samples of the given action_spec."""
 
   def __init__(self,

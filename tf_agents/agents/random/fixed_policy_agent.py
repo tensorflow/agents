@@ -48,7 +48,8 @@ class FixedPolicyAgent(tf_agent.TFAgent):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      policy_class: a tf_policy.Base or py_policy.Base class to use as a policy
+      policy_class: a tf_policy.TFPolicy or py_policy.PyPolicy class to use as a
+        policy.
       debug_summaries: A bool to gather debug summaries. Used to initialize the
         base class
       summarize_grads_and_vars: If true, gradient summaries will be written.

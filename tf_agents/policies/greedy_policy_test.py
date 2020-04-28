@@ -31,7 +31,7 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
 
 
-class DistributionPolicy(tf_policy.Base):
+class DistributionPolicy(tf_policy.TFPolicy):
   """A policy which always returns the configured distribution."""
 
   def __init__(self, distribution, time_step_spec, action_spec, name=None):

@@ -35,7 +35,7 @@ def _uniform_probability(action_spec):
   return 1. / (action_spec.maximum - action_spec.minimum)
 
 
-class RandomTFPolicy(tf_policy.Base):
+class RandomTFPolicy(tf_policy.TFPolicy):
   """Returns random samples of the given action_spec.
 
   Note: the values in the info_spec (except for the log_probability) are random

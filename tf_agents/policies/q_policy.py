@@ -29,7 +29,7 @@ from tf_agents.trajectories import policy_step
 
 
 @gin.configurable
-class QPolicy(tf_policy.Base):
+class QPolicy(tf_policy.TFPolicy):
   """Class to build Q-Policies."""
 
   def __init__(self,

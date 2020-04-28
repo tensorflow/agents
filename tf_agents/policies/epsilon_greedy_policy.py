@@ -37,14 +37,14 @@ tfd = tfp.distributions
 
 
 @gin.configurable(module='tf_agents', blacklist=['policy'])
-class EpsilonGreedyPolicy(tf_policy.Base):
+class EpsilonGreedyPolicy(tf_policy.TFPolicy):
   """Returns epsilon-greedy samples of a given policy."""
 
   def __init__(self, policy, epsilon, name=None):
     """Builds an epsilon-greedy MixturePolicy wrapping the given policy.
 
     Args:
-      policy: A policy implementing the tf_policy.Base interface.
+      policy: A policy implementing the tf_policy.TFPolicy interface.
       epsilon: The probability of taking the random action represented as a
         float scalar, a scalar Tensor of shape=(), or a callable that returns a
         float scalar or Tensor.

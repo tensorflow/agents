@@ -80,7 +80,7 @@ class TFPyPolicyTest(test_utils.TestCase):
     py_policy_state_spec = array_spec.BoundedArraySpec((5,), np.int32, 0, 1)
     py_policy_info_spec = array_spec.BoundedArraySpec((3,), np.int32, 0, 1)
 
-    mock_py_policy = mock.create_autospec(py_policy.Base)
+    mock_py_policy = mock.create_autospec(py_policy.PyPolicy)
     mock_py_policy.time_step_spec = py_time_step_spec
     mock_py_policy.action_spec = py_action_spec
     mock_py_policy.policy_state_spec = py_policy_state_spec
@@ -123,7 +123,7 @@ class TFPyPolicyTest(test_utils.TestCase):
   def testZeroState(self):
     policy_state_length = 5
     batch_size = 3
-    mock_py_policy = mock.create_autospec(py_policy.Base)
+    mock_py_policy = mock.create_autospec(py_policy.PyPolicy)
     observation_spec = array_spec.ArraySpec((3,), np.float32)
     mock_py_policy.time_step_spec = ts.time_step_spec(observation_spec)
     mock_py_policy.action_spec = array_spec.BoundedArraySpec(
@@ -182,7 +182,7 @@ class TFPyPolicyTest(test_utils.TestCase):
     self.assertEqual(action.shape, (batch_size, action_dims))
 
   def _get_mock_py_policy(self):
-    mock_py_policy = mock.create_autospec(py_policy.Base)
+    mock_py_policy = mock.create_autospec(py_policy.PyPolicy)
     observation_spec = tensor_spec.TensorSpec([5], dtype=tf.float32)
     mock_py_policy.time_step_spec = ts.time_step_spec(observation_spec)
     mock_py_policy.action_spec = tensor_spec.BoundedTensorSpec(

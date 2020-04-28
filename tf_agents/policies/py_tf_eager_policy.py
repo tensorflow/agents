@@ -32,7 +32,7 @@ from tf_agents.utils import nest_utils
 
 
 @gin.configurable
-class PyTFEagerPolicyBase(py_policy.Base):
+class PyTFEagerPolicyBase(py_policy.PyPolicy):
   """Base class for py_policy instances of TF policies in Eager mode.
 
   Handles adding and removing batch dimensions from the actions and time_steps.

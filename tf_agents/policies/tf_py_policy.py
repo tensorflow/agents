@@ -32,7 +32,7 @@ def map_tensor_spec_to_dtypes_list(t_spec):
   return [spec.dtype for spec in tf.nest.flatten(t_spec)]
 
 
-class TFPyPolicy(tf_policy.Base):
+class TFPyPolicy(tf_policy.TFPolicy):
   """Exposes a Python policy as an in-graph TensorFlow policy.
 
   # TODO(kbanoop): This class does not seem to handle batching/unbatching when
@@ -43,7 +43,7 @@ class TFPyPolicy(tf_policy.Base):
     """Initializes a new `TFPyPolicy` instance with an Pyton policy .
 
     Args:
-      policy: Python policy implementing `py_policy.Base`.
+      policy: Python policy implementing `py_policy.PyPolicy`.
       py_policy_is_batched: If False, time_steps will be unbatched before
         passing to py_policy.action(), and a batch dimension will be added to
         the returned action. This will only work with time_steps that have a
@@ -55,9 +55,9 @@ class TFPyPolicy(tf_policy.Base):
     Raises:
       TypeError: if a non python policy is passed to constructor.
     """
-    if not isinstance(policy, py_policy.Base):
+    if not isinstance(policy, py_policy.PyPolicy):
       raise TypeError(
-          'Input policy should implement py_policy.Base, but saw %s.' %
+          'Input policy should implement py_policy.PyPolicy, but saw %s.' %
           type(policy).__name__)
 
     self._py_policy = policy
@@ -152,7 +152,6 @@ class TFPyPolicy(tf_policy.Base):
     """Returns default [] representing a policy that has no variables."""
     return []
 
-  # TODO(kewa): revisit when py_policy.Base supports distribution.
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError('%s does not support distribution yet.' %
                               self.__class__.__name__)

@@ -92,7 +92,7 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
     return self._observation_spec
 
 
-class TFPolicyMock(tf_policy.Base):
+class TFPolicyMock(tf_policy.TFPolicy):
   """Mock policy takes actions 1 and 2, alternating."""
 
   def __init__(self,
@@ -151,7 +151,7 @@ class TFPolicyMock(tf_policy.Base):
     return ()
 
 
-class PyPolicyMock(py_policy.Base):
+class PyPolicyMock(py_policy.PyPolicy):
   """Mock policy takes actions 1 and 2, alternating."""
 
   # For batched environments, use a initial policy state of size [batch_size].

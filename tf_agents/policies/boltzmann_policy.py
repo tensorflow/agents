@@ -26,7 +26,7 @@ from tf_agents.policies import tf_policy
 
 
 @gin.configurable
-class BoltzmannPolicy(tf_policy.Base):
+class BoltzmannPolicy(tf_policy.TFPolicy):
   """Returns boltzmann samples of a given policy.
 
   The wrapped policy must expose a distribution parameterized by logits.
@@ -36,7 +36,7 @@ class BoltzmannPolicy(tf_policy.Base):
     """Builds a BoltzmannPolicy wrapping the given policy.
 
     Args:
-      policy: A policy implementing the tf_policy.Base interface, using
+      policy: A policy implementing the tf_policy.TFPolicy interface, using
         a distribution parameterized by logits.
       temperature: Tensor or function that returns the temperature for sampling
         when `action` is called. This parameter applies when the action spec is

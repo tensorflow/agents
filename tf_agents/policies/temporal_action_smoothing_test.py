@@ -32,7 +32,7 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
 
 
-class StateIncrementPolicy(tf_policy.Base):
+class StateIncrementPolicy(tf_policy.TFPolicy):
 
   def __init__(self, time_step_spec, action_spec):
     super(StateIncrementPolicy, self).__init__(

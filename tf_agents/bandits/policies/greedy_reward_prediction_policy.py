@@ -32,7 +32,7 @@ from tf_agents.trajectories import policy_step
 
 
 @gin.configurable
-class GreedyRewardPredictionPolicy(tf_policy.Base):
+class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
   """Class to build GreedyNNPredictionPolicies."""
 
   def __init__(self,

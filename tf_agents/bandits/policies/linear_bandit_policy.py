@@ -59,7 +59,7 @@ class ExplorationStrategy(Enum):
   sampling = 2
 
 
-class LinearBanditPolicy(tf_policy.Base):
+class LinearBanditPolicy(tf_policy.TFPolicy):
   """Linear Bandit Policy to be used by LinUCB, LinTS and possibly others."""
 
   def __init__(self,

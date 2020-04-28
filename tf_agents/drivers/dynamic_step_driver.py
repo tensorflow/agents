@@ -73,7 +73,7 @@ class DynamicStepDriver(driver.Driver):
 
     Args:
       env: A tf_environment.Base environment.
-      policy: A tf_policy.Base policy.
+      policy: A tf_policy.TFPolicy policy.
       observers: A list of observers that are updated after every step in the
         environment. Each observer is a callable(time_step.Trajectory).
       transition_observers: A list of observers that are updated after every
@@ -84,7 +84,7 @@ class DynamicStepDriver(driver.Driver):
     Raises:
       ValueError:
         If env is not a tf_environment.Base or policy is not an instance of
-        tf_policy.Base.
+        tf_policy.TFPolicy.
     """
     super(DynamicStepDriver, self).__init__(env, policy, observers,
                                             transition_observers)

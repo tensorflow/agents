@@ -47,7 +47,7 @@ class MyAgent(tf_agent.TFAgent):
     time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = ()
     train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
-    policy = tf_policy.Base(time_step_spec, action_spec)
+    policy = tf_policy.TFPolicy(time_step_spec, action_spec)
     super(MyAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,

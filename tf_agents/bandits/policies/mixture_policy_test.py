@@ -34,7 +34,7 @@ from tf_agents.utils import test_utils
 tfd = tfp.distributions
 
 
-class ConstantPolicy(tf_policy.Base):
+class ConstantPolicy(tf_policy.TFPolicy):
   """A policy that outputs a constant action, for testing purposes."""
 
   def __init__(self, action_spec, time_step_spec, action):

@@ -38,7 +38,7 @@ class PyDriver(driver.Driver):
 
     Args:
       env: A py_environment.Base environment.
-      policy: A py_policy.Base policy.
+      policy: A py_policy.PyPolicy policy.
       observers: A list of observers that are notified after every step
         in the environment. Each observer is a callable(trajectory.Trajectory).
       transition_observers: A list of observers that are updated after every

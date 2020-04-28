@@ -28,7 +28,7 @@ from tf_agents.trajectories import time_step as ts
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-class ScriptedPyPolicy(py_policy.Base):
+class ScriptedPyPolicy(py_policy.PyPolicy):
   """Returns actions from the given configuration."""
 
   def __init__(self, time_step_spec, action_spec, action_script):
