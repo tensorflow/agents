@@ -114,10 +114,10 @@ class TFAgent(tf.Module):
 
   **NOTE**: For API consistency, subclasses are not allowed to override public
   methods of `TFAgent` class. Instead, they may implement the protected methods
-  including `_initialize`, `_train`, and `_preprocess_instance`. This
+  including `_initialize`, `_train`, and `_preprocess_sequence`. This
   public-calls-private convention allowed this base class to do things like
-  properly add `spec` and shape checks, to provide users an easier experience in
-  debugging their environments and networks.
+  properly add `spec` and shape checks, which provide users an easier experience
+  when debugging their environments and networks.
   """
 
   # TODO(b/127327645) Remove this attribute.
