@@ -33,7 +33,92 @@ LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
 
 
 class TFAgent(tf.Module):
-  """Abstract base class for TF RL agents."""
+  """Abstract base class for TF-based RL and Bandits agents.
+
+  The agent serves the following purposes:
+
+  * Training by reading minibatches of `experience`, and updating some set
+    of network weights (using the `train` method).
+
+  * Exposing `policy` objects which can be used to interact with an environment:
+    either to explore and collect new training data, or to maximize reward
+    in the given task.
+
+  The agents' main training methods and properties are:
+
+  * `initialize`: Perform any self-initialization before training.
+
+  * `train`: This method reads minibatch experience from a replay buffer or
+    logs on disk, and updates some internal networks.
+
+  * `preprocess_sequence`: Some algorithms need to perform sequence
+    preprocessing on logs containing "full episode" or "long subset" sequences,
+    to create intermediate items that can then be used by `train`, even if
+    `train` does not see the full sequences.  In many cases this is just
+    the identity: it passes experience through untouched.  This function
+    is typically passed to the argument
+
+    `ReplayBuffer.as_dataset(..., sequence_preprocess_fn=...)`
+
+  * `training_data_spec`: Property that describes the structure expected of
+    the `experience` argument passed to `train`.
+
+  * `train_sequence_length`: Property that describes the **second** dimension
+    of all tensors in the `experience` argument passed `train`.  All tensors
+    passed to train must have the shape `[batch_size, sequence_length, ...]`,
+    and some Agents require this to be a fixed value.  For example, in regular
+    `DQN`, this second `sequence_length` dimension must be equal to `2` in all
+    `experience`.  In contrast, `n-step DQN` will have this equal to `n + 1` and
+    `DQN` agents constructed with `RNN` networks will have this equal to `None`,
+    meaning any length sequences are allowed.
+
+    This value may be `None`, to mean minibatches containing subsequences of any
+    length are allowed (so long as they're all the same length).  This is
+    typically the case with agents constructed with `RNN` networks.
+
+    This value is typically passed as a ReplayBuffer's
+    `as_dataset(..., num_steps=...)` argument.
+
+  * `train_argspec`: Property that contains a dict describing other arguments
+    that must be passed as `kwargs` to `train` (typically empty).
+
+  * `collect_data_spec`: Property that describes the structure expected of
+    experience collected by `agent.collect_policy`.  This is typically
+    identical to `training_data_spec`, but may be different if
+    `preprocess_sequence` method is not the identity.  In this case,
+    `preprocess_sequence` is expected to read sequences matching
+    `collect_data_spec` and emit sequences matching `training_data_spec`.
+
+  The agent exposes `TFPolicy` objects for interacting with environments:
+
+  * `policy`: Property that returns a policy meant for "exploiting" the
+    environment to its best ability.  This tends to mean the "production" policy
+    that doesn't collect additional info for training.  Works best when
+    the agent is fully trained.
+
+    TODO(b/154870654): Not all agents are properly exporting properly greedy
+    "production" policies yet.  We have to clean this up.  In particular,
+    we have to update PPO and SAC's `policy` objects.
+
+  * `collect_policy`: Property that returns a policy meant for "exploring"
+    the environment to collect more data for training.  This tends to mean
+    a policy involves some level of randomized behavior and additional info
+    logging.
+
+  * `time_step_spec`: Property describing the observation and reward signatures
+    of the environment this agent's policies operate in.
+
+  * `action_spec`: Property describing the action signatures of the environment
+    this agent's policies operate in.
+
+
+  **NOTE**: For API consistency, subclasses are not allowed to override public
+  methods of `TFAgent` class. Instead, they may implement the protected methods
+  including `_initialize`, `_train`, and `_preprocess_instance`. This
+  public-calls-private convention allowed this base class to do things like
+  properly add `spec` and shape checks, to provide users an easier experience in
+  debugging their environments and networks.
+  """
 
   # TODO(b/127327645) Remove this attribute.
   # This attribute allows subclasses to back out of automatic tf.function

@@ -491,6 +491,7 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
   def _as_dataset(self,
                   sample_batch_size=None,
                   num_steps=None,
+                  sequence_preprocess_fn=None,
                   num_parallel_calls=tf.data.experimental.AUTOTUNE):
     """Creates a dataset that returns episodes entries from the buffer.
 
@@ -515,19 +516,27 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
         number of items to return. See as_dataset() documentation.
       num_steps: (Optional.) Scalar int.  How many contiguous frames to get
         per entry. Default is `None`: return full-length episodes.
+      sequence_preprocess_fn: (Optional.) Preprocessing function for sequences
+        before they are sharded into subsequences of length `num_steps` and
+        batched.
       num_parallel_calls: Number of parallel calls to use in the
         dataset pipeline when extracting episodes.  Default is to have
         tensorflow determine the optimal number of calls.
 
     Returns:
       A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
+
         - An item or sequence of items sampled uniformly from the buffer.
         - BufferInfo NamedTuple, containing the episode id.
 
     Raises:
       ValueError: If the data spec contains lists that must be converted to
         tuples.
+      NotImplementedError: If `sequence_preprocess_fn != None` is passed in.
     """
+    if sequence_preprocess_fn is not None:
+      raise NotImplementedError('sequence_preprocess_fn is not supported.')
+
     # data_tf.nest.flatten does not flatten python lists, tf.nest.flatten does.
     if tf.nest.flatten(self._data_spec) != data_nest.flatten(self._data_spec):
       raise ValueError(
@@ -646,6 +655,7 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
       self,
       sample_batch_size=None,
       num_steps=None,
+      sequence_preprocess_fn=None,
       num_parallel_calls=tf.data.experimental.AUTOTUNE):
     """Creates a dataset that returns entries from the buffer in fixed order.
 
@@ -658,12 +668,17 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
       num_steps: (Optional.)  Optional way to specify that sub-episodes are
         desired. See as_dataset() documentation.  Required if
         `sample_batch_size` is provided.
+      sequence_preprocess_fn: (Optional.) Preprocessing function for sequences
+        before they are sharded into subsequences of length `num_steps` and
+        batched.
       num_parallel_calls: (Optional.) Number elements to process in parallel.
         See as_dataset() documentation.  Note, that the parallelism here is
         not "sloppy", in that setting this value does not affect the order
         in which frames are returned.
+
     Returns:
       A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
+
         - An item or sequence of items or batch thereof
         - Auxiliary info for the items (i.e. ids, probs).
 
@@ -671,7 +686,10 @@ class EpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
       ValueError: If `sample_batch_size is not None` but `num_steps is None`.
         When `num_steps is None`, the episodes returned may have different
         lengths, and there is no unique way to batch them.
+      NotImplementedError: If `sequence_preprocess_fn != None` is passed in.
     """
+    if sequence_preprocess_fn is not None:
+      raise NotImplementedError('sequence_preprocess_fn is not supported.')
     if sample_batch_size is not None and num_steps is None:
       raise ValueError(
           'When requesting a batched dataset from EpisodicReplayBuffer, '
@@ -1400,9 +1418,13 @@ class StatefulEpisodicReplayBuffer(replay_buffer_base.ReplayBuffer):
         sample_batch_size, num_steps, time_stacked)
 
   def _as_dataset(
-      self, sample_batch_size=None, num_steps=None, num_parallel_calls=None):
+      self, sample_batch_size=None, num_steps=None,
+      sequence_preprocess_fn=None, num_parallel_calls=None):
     return self._replay_buffer.as_dataset(
-        sample_batch_size, num_steps, num_parallel_calls)
+        sample_batch_size,
+        num_steps,
+        sequence_preprocess_fn=sequence_preprocess_fn,
+        num_parallel_calls=num_parallel_calls)
 
 
 def _valid_range_ids(last_id, capacity):

@@ -82,6 +82,11 @@ class ReplayBuffer(tf.Module):
     """
     return self._add_batch(items)
 
+  @deprecation.deprecated(
+      date=None,
+      instructions=(
+          'Use `as_dataset(..., single_deterministic_pass=False) instead.'
+      ))
   def get_next(self, sample_batch_size=None, num_steps=None, time_stacked=True):
     """Returns an item or batch of items from the buffer.
 
@@ -131,11 +136,40 @@ class ReplayBuffer(tf.Module):
                  sample_batch_size=None,
                  num_steps=None,
                  num_parallel_calls=None,
+                 sequence_preprocess_fn=None,
                  single_deterministic_pass=False):
     """Creates and returns a dataset that returns entries from the buffer.
 
-    A single entry from the dataset is equivalent to one output from
-    `get_next(sample_batch_size=sample_batch_size, num_steps=num_steps)`.
+    A single entry from the dataset is the result of the following pipeline:
+
+      * Sample sequences from the underlying data store
+      * (optionally) Process them with `sequence_preprocess_fn`,
+      * (optionally) Split them into subsequences of length `num_steps`
+      * (optionally) Batch them into batches of size `sample_batch_size`.
+
+    In practice, this pipeline is executed in parallel as much as possible
+    if `num_parallel_calls != 1`.
+
+    Some additional notes:
+
+    If `num_steps is None`, different replay buffers will behave differently.
+    For example, `TFUniformReplayBuffer` will return single time steps without
+    a time dimension.  In contrast, e.g., `EpisodicReplayBuffer` will return
+    full sequences (since each sequence may be an episode of unknown length,
+    the outermost shape dimension will be `None`).
+
+    If `sample_batch_size is None`, no batching is performed; and there is no
+    outer batch dimension in the returned Dataset entries.  This setting
+    is useful with variable episode lengths using e.g. `EpisodicReplayBuffer`,
+    because it allows the user to get full episodes back, and use `tf.data`
+    to build padded or truncated batches themselves.
+
+    If `single_determinsitic_pass == True`, the replay buffer will make
+    every attempt to ensure every time step is visited once and exactly once
+    in a deterministic manner (though true determinism depends on the
+    underlying data store).  Additional work may be done to ensure minibatches
+    do not have multiple rows from the same episode.  In some cases, this
+    may mean arguments like `num_parallel_calls` are ignored.
 
     Args:
       sample_batch_size: (Optional.) An optional batch_size to specify the
@@ -154,14 +188,19 @@ class ReplayBuffer(tf.Module):
       num_parallel_calls: (Optional.) A `tf.int32` scalar `tf.Tensor`,
         representing the number elements to process in parallel. If not
         specified, elements will be processed sequentially.
+      sequence_preprocess_fn: (Optional) fn for preprocessing the collected
+        data before it is split into subsequences of length `num_steps`.
+        Defined in `TFAgent.preprocess_sequence`.  Defaults to pass through.
       single_deterministic_pass: Python boolean.  If `True`, the dataset will
         return a single deterministic pass through its underlying data.
+
         **NOTE**: If the buffer is modified while a Dataset iterator is
-          iterating over this data, the iterator may miss any new data or
-          otherwise have subtly invalid data.
+        iterating over this data, the iterator may miss any new data or
+        otherwise have subtly invalid data.
 
     Returns:
       A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
+
         - An item or sequence of items or batch thereof
         - Auxiliary info for the items (i.e. ids, probs).
 
@@ -183,11 +222,13 @@ class ReplayBuffer(tf.Module):
       ds = self._single_deterministic_pass_dataset(
           sample_batch_size=sample_batch_size,
           num_steps=num_steps,
+          sequence_preprocess_fn=sequence_preprocess_fn,
           num_parallel_calls=num_parallel_calls)
     else:
       ds = self._as_dataset(
           sample_batch_size=sample_batch_size,
           num_steps=num_steps,
+          sequence_preprocess_fn=sequence_preprocess_fn,
           num_parallel_calls=num_parallel_calls)
 
     if self._stateful_dataset:
@@ -237,12 +278,19 @@ class ReplayBuffer(tf.Module):
     raise NotImplementedError
 
   @abc.abstractmethod
-  def _as_dataset(self, sample_batch_size, num_steps, num_parallel_calls):
+  def _as_dataset(self,
+                  sample_batch_size,
+                  num_steps,
+                  sequence_preprocess_fn,
+                  num_parallel_calls):
     """Creates and returns a dataset that returns entries from the buffer."""
     raise NotImplementedError
 
   @abc.abstractmethod
-  def _single_deterministic_pass_dataset(self, sample_batch_size, num_steps,
+  def _single_deterministic_pass_dataset(self,
+                                         sample_batch_size,
+                                         num_steps,
+                                         sequence_preprocess_fn,
                                          num_parallel_calls):
     """Creates and returns a dataset that returns entries from the buffer."""
     raise NotImplementedError

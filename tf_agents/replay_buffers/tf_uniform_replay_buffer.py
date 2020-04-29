@@ -300,6 +300,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
   def _as_dataset(self,
                   sample_batch_size=None,
                   num_steps=None,
+                  sequence_preprocess_fn=None,
                   num_parallel_calls=None):
     """Creates a dataset that returns entries from the buffer in shuffled order.
 
@@ -308,13 +309,24 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         number of items to return. See as_dataset() documentation.
       num_steps: (Optional.)  Optional way to specify that sub-episodes are
         desired. See as_dataset() documentation.
+      sequence_preprocess_fn: (Optional.) Preprocessing function for sequences
+        before they are sharded into subsequences of length `num_steps` and
+        batched.
       num_parallel_calls: (Optional.) Number elements to process in parallel.
         See as_dataset() documentation.
+
     Returns:
       A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
+
         - An item or sequence of items or batch thereof
         - Auxiliary info for the items (i.e. ids, probs).
+
+    Raises:
+      NotImplementedError: If `sequence_preprocess_fn != None` is passed in.
     """
+    if sequence_preprocess_fn is not None:
+      raise NotImplementedError('sequence_preprocess_fn is not supported.')
+
     def get_next(_):
       return self.get_next(sample_batch_size, num_steps, time_stacked=True)
 
@@ -325,6 +337,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
   def _single_deterministic_pass_dataset(self,
                                          sample_batch_size=None,
                                          num_steps=None,
+                                         sequence_preprocess_fn=None,
                                          num_parallel_calls=None):
     """Creates a dataset that returns entries from the buffer in fixed order.
 
@@ -333,10 +346,15 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         number of items to return. See as_dataset() documentation.
       num_steps: (Optional.)  Optional way to specify that sub-episodes are
         desired. See as_dataset() documentation.
+      sequence_preprocess_fn: (Optional.) Preprocessing function for sequences
+        before they are sharded into subsequences of length `num_steps` and
+        batched.
       num_parallel_calls: (Optional.) Number elements to process in parallel.
         See as_dataset() documentation.
+
     Returns:
       A dataset of type tf.data.Dataset, elements of which are 2-tuples of:
+
         - An item or sequence of items or batch thereof
         - Auxiliary info for the items (i.e. ids, probs).
 
@@ -344,7 +362,10 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       ValueError: If `dataset_drop_remainder` is set, and
         `sample_batch_size > self.batch_size`.  In this case all data will
         be dropped.
+      NotImplementedError: If `sequence_preprocess_fn != None` is passed in.
     """
+    if sequence_preprocess_fn is not None:
+      raise NotImplementedError('sequence_preprocess_fn is not supported.')
     static_size = tf.get_static_value(sample_batch_size)
     static_num_steps = tf.get_static_value(num_steps)
     static_self_batch_size = tf.get_static_value(self._batch_size)
