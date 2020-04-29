@@ -53,9 +53,10 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
   def testBadMask(self):
     input_tensor = tf.reshape(tf.range(12, dtype=tf.float32), shape=[3, 4])
     mask = [[1, 0, 0, 1], [0, 0, 0, 0], [1, 0, 1, 1]]
-    with self.assertRaises(tf.errors.InvalidArgumentError):
-      self.evaluate(
-          policy_utilities.masked_argmax(input_tensor, tf.constant(mask)))
+    expected = [3, -1, 3]
+    actual = self.evaluate(
+        policy_utilities.masked_argmax(input_tensor, tf.constant(mask)))
+    self.assertAllEqual(actual, expected)
 
   def testSetBanditPolicyType(self):
     dims = (10, 1)

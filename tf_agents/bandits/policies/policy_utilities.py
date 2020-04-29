@@ -82,6 +82,9 @@ def create_bandit_policy_type_tensor_spec(shape):
 def masked_argmax(input_tensor, mask, output_type=tf.int32):
   """Computes the argmax where the allowed elements are given by a mask.
 
+  If a row of `mask` contains all zeros, then this method will return -1 for the
+  corresponding row of `input_tensor`.
+
   Args:
     input_tensor: Rank-2 Tensor of floats.
     mask: 0-1 valued Tensor of the same shape as input.
@@ -93,11 +96,13 @@ def masked_argmax(input_tensor, mask, output_type=tf.int32):
   """
   input_tensor.shape.assert_is_compatible_with(mask.shape)
   neg_inf = tf.constant(-float('Inf'), input_tensor.dtype)
-  tf.compat.v1.assert_equal(
-      tf.reduce_max(mask, axis=1), tf.constant(1, dtype=mask.dtype))
   modified_input = tf.compat.v2.where(
       tf.cast(mask, tf.bool), input_tensor, neg_inf)
-  return tf.argmax(modified_input, axis=-1, output_type=output_type)
+  argmax_tensor = tf.argmax(modified_input, axis=-1, output_type=output_type)
+  # Replace results for invalid mask rows with -1.
+  reduce_mask = tf.cast(tf.reduce_max(mask, axis=1), tf.bool)
+  neg_one = tf.constant(-1, output_type)
+  return tf.compat.v2.where(reduce_mask, argmax_tensor, neg_one)
 
 
 def has_bandit_policy_type(info, check_for_tensor=False):
