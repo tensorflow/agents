@@ -407,6 +407,7 @@ class PPOAgent(tf_agent.TFAgent):
                weights,
                train_step,
                debug_summaries,
+               old_value_predictions=None,
                training=False):
     """Compute the loss and create optimization op for one training epoch.
 
@@ -426,6 +427,9 @@ class PPOAgent(tf_agent.TFAgent):
       train_step: A train_step variable to increment for each train step.
         Typically the global_step.
       debug_summaries: True if debug summaries should be created.
+      old_value_predictions: (Optional) The saved value predictions, used
+        for calculating the value estimation loss when value clipping is
+        performed.
       training: Whether this loss is being used for training.
 
     Returns:
@@ -450,6 +454,7 @@ class PPOAgent(tf_agent.TFAgent):
     value_estimation_loss = self.value_estimation_loss(
         time_steps=time_steps,
         returns=returns,
+        old_value_predictions=old_value_predictions,
         weights=weights,
         debug_summaries=debug_summaries,
         training=training)
@@ -719,6 +724,8 @@ class PPOAgent(tf_agent.TFAgent):
     returns = processed_experience.policy_info['return'][:, :-1]
     normalized_advantages = processed_experience.policy_info[
         'normalized_advantage'][:, :-1]
+    old_value_predictions = processed_experience.policy_info[
+        'value_prediction'][:, :-1]
 
     # Loss tensors across batches will be aggregated for summaries.
     policy_gradient_losses = []
@@ -749,6 +756,7 @@ class PPOAgent(tf_agent.TFAgent):
               masked_weights,
               self.train_step_counter,
               debug_summaries,
+              old_value_predictions=old_value_predictions,
               training=True)
 
         grads = tape.gradient(loss_info.loss, variables_to_train)
@@ -939,6 +947,7 @@ class PPOAgent(tf_agent.TFAgent):
                             time_steps,
                             returns,
                             weights,
+                            old_value_predictions=None,
                             debug_summaries=False,
                             training=False):
     """Computes the value estimation loss for actor-critic training.
@@ -951,12 +960,19 @@ class PPOAgent(tf_agent.TFAgent):
         from TD-lambda computation.)
       weights: Optional scalar or element-wise (per-batch-entry) importance
         weights.  Includes a mask for invalid timesteps.
+      old_value_predictions: (Optional) The saved value predictions from
+        policy_info, required when self._value_clipping > 0.
       debug_summaries: True if debug summaries should be created.
       training: Whether this loss is going to be used for training.
 
     Returns:
       value_estimation_loss: A scalar value_estimation_loss loss.
+
+    Raises:
+      ValueError: If old_value_predictions was not passed in, but value clipping
+        was performed.
     """
+
     observation = time_steps.observation
     if debug_summaries:
       observation_list = tf.nest.flatten(observation)
@@ -980,15 +996,12 @@ class PPOAgent(tf_agent.TFAgent):
     value_estimation_error = tf.math.squared_difference(returns, value_preds)
 
     if self._value_clipping > 0:
-      old_value_preds, _ = self._collect_policy.apply_value_network(
-          time_steps.observation,
-          time_steps.step_type,
-          value_state=value_state,
-          training=training)
-      old_value_preds = tf.stop_gradient(old_value_preds)
-
-      clipped_value_preds = old_value_preds + tf.clip_by_value(
-          value_preds - old_value_preds, -self._value_clipping,
+      if old_value_predictions is None:
+        raise ValueError(
+            'old_value_predictions is None but needed for value clipping.'
+        )
+      clipped_value_preds = old_value_predictions + tf.clip_by_value(
+          value_preds - old_value_predictions, -self._value_clipping,
           self._value_clipping)
       clipped_value_estimation_error = tf.math.squared_difference(
           returns, clipped_value_preds)
