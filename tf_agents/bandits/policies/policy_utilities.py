@@ -159,6 +159,5 @@ def bandit_policy_uniform_mask(values, mask):
   Returns:
     Tensor containing `BanditPolicyType` enumerations with masked values.
   """
-  tf.compat.v1.assert_equal(tf.shape(mask), tf.shape(values))
   return tf.where(
       mask, tf.fill(tf.shape(values), BanditPolicyType.UNIFORM), values)
