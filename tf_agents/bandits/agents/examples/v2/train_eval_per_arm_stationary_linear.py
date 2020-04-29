@@ -117,10 +117,6 @@ def main(unused_argv):
   environment = tf_py_environment.TFPyEnvironment(env)
 
   obs_spec = environment.observation_spec()
-  if FLAGS.drop_arm_obs:
-    drop_arm_feature_fn = bandit_spec_utils.drop_arm_observation
-  else:
-    drop_arm_feature_fn = None
   if FLAGS.agent == 'LinUCB':
     agent = lin_ucb_agent.LinearUCBAgent(
         time_step_spec=environment.time_step_spec(),
@@ -155,7 +151,7 @@ def main(unused_argv):
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
         epsilon=EPSILON,
         accepts_per_arm_features=True,
-        training_data_spec_transformation_fn=drop_arm_feature_fn,
+        drop_arm_features=FLAGS.drop_arm_obs,
         emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
 
   optimal_reward_fn = functools.partial(
@@ -166,6 +162,10 @@ def main(unused_argv):
   suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
       optimal_action_fn)
 
+  if FLAGS.drop_arm_obs:
+    drop_arm_feature_fn = bandit_spec_utils.drop_arm_observation
+  else:
+    drop_arm_feature_fn = None
   trainer.train(
       root_dir=FLAGS.root_dir,
       agent=agent,
