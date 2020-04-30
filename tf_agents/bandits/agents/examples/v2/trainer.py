@@ -136,8 +136,13 @@ def train(root_dir,
   """
 
   # TODO(b/127641485): create evaluation loop with configurable metrics.
-  replay_buffer = get_replay_buffer(agent.training_data_spec,
-                                    environment.batch_size, steps_per_loop)
+  if training_data_spec_transformation_fn is None:
+    data_spec = agent.policy.trajectory_spec
+  else:
+    data_spec = training_data_spec_transformation_fn(
+        agent.policy.trajectory_spec)
+  replay_buffer = get_replay_buffer(data_spec, environment.batch_size,
+                                    steps_per_loop)
 
   # `step_metric` records the number of individual rounds of bandit interaction;
   # that is, (number of trajectories) * batch_size.

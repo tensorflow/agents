@@ -123,7 +123,6 @@ def main(unused_argv):
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
         accepts_per_arm_features=True,
-        drop_arm_features=FLAGS.drop_arm_obs,
         dtype=tf.float32)
   elif FLAGS.agent == 'LinTS':
     agent = lin_ts_agent.LinearThompsonSamplingAgent(
@@ -131,7 +130,6 @@ def main(unused_argv):
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
         accepts_per_arm_features=True,
-        drop_arm_features=FLAGS.drop_arm_obs,
         dtype=tf.float32)
   elif FLAGS.agent == 'epsGreedy':
     if FLAGS.network == 'commontower':
@@ -151,7 +149,6 @@ def main(unused_argv):
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
         epsilon=EPSILON,
         accepts_per_arm_features=True,
-        drop_arm_features=FLAGS.drop_arm_obs,
         emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
 
   optimal_reward_fn = functools.partial(

@@ -152,7 +152,6 @@ class LinearBanditAgent(tf_agent.TFAgent):
                emit_log_probability=False,
                observation_and_action_constraint_splitter=None,
                accepts_per_arm_features=False,
-               drop_arm_features=False,
                debug_summaries=False,
                summarize_grads_and_vars=False,
                enable_summaries=True,
@@ -193,10 +192,6 @@ class LinearBanditAgent(tf_agent.TFAgent):
         observation and mask.
       accepts_per_arm_features: (bool) Whether the agent accepts per-arm
         features.
-      drop_arm_features: (bool) Whether the trainer expects experience where the
-        arm observations have been removed. If yes, the training_data_spec is
-        modified so that the train function is aware of the trajectory
-        transformation.
       debug_summaries: A Python bool, default False. When True, debug summaries
         are gathered.
       summarize_grads_and_vars: A Python bool, default False. When True,
@@ -289,7 +284,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))
     training_data_spec = None
-    if drop_arm_features:
+    if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
           policy.trajectory_spec)
     super(LinearBanditAgent, self).__init__(

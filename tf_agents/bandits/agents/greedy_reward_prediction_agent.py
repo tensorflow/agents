@@ -51,7 +51,6 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       optimizer,
       observation_and_action_constraint_splitter=None,
       accepts_per_arm_features=False,
-      drop_arm_features=False,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -100,10 +99,6 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         observation and mask.
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
-      drop_arm_features: (bool) Whether the trainer expects experience where the
-        arm observations have been removed. If yes, the training_data_spec is
-        modified so that the train function is aware of the trajectory
-        transformation.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -170,7 +165,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         accepts_per_arm_features=accepts_per_arm_features,
         emit_policy_info=emit_policy_info)
     training_data_spec = None
-    if drop_arm_features:
+    if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
           policy.trajectory_spec)
 
