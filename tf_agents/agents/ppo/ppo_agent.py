@@ -238,7 +238,7 @@ class PPOAgent(tf_agent.TFAgent):
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
-        op is run.  Defaults to the global_step.
+        op is run. Defaults to a new global variable created by this class.
       name: The name of this agent. All variables in this module will fall under
         that name. Defaults to the class name.
 
@@ -341,6 +341,10 @@ class PPOAgent(tf_agent.TFAgent):
       })
       training_data_spec = collect_policy.trajectory_spec.replace(
           policy_info=training_policy_info)
+
+    if train_step_counter is None:
+      train_step_counter = common.create_variable("PPOStepCounter")
+    self._global_step = tf.compat.v1.train.get_or_create_global_step()
 
     super(PPOAgent, self).__init__(
         time_step_spec,
@@ -774,8 +778,8 @@ class PPOAgent(tf_agent.TFAgent):
           eager_utils.add_variables_summaries(grads_and_vars,
                                               self.train_step_counter)
 
-        self._optimizer.apply_gradients(
-            grads_and_vars, global_step=self.train_step_counter)
+        self._optimizer.apply_gradients(grads_and_vars,
+                                        global_step=self._global_step)
 
         policy_gradient_losses.append(loss_info.extra.policy_gradient_loss)
         value_estimation_losses.append(loss_info.extra.value_estimation_loss)
@@ -783,6 +787,8 @@ class PPOAgent(tf_agent.TFAgent):
         entropy_regularization_losses.append(
             loss_info.extra.entropy_regularization_loss)
         kl_penalty_losses.append(loss_info.extra.kl_penalty_loss)
+
+    self._train_step_counter.assign_add(1)
 
     # After update epochs, update adaptive kl beta, then update observation
     #   normalizer and reward normalizer.

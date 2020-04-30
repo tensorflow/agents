@@ -386,7 +386,6 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
   def testTrain(self, num_epochs, use_td_lambda_return,
                 compute_value_and_advantage_in_train):
     # Mock the build_train_op to return an op for incrementing this counter.
-    counter = common.create_variable('test_train_counter')
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -400,8 +399,8 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         num_epochs=num_epochs,
         use_gae=use_td_lambda_return,
         use_td_lambda_return=use_td_lambda_return,
-        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
-        train_step_counter=counter)
+        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train
+    )
     observations = tf.constant([
         [[1, 2], [3, 4], [5, 6]],
         [[1, 2], [3, 4], [5, 6]],
@@ -441,8 +440,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
       loss = agent.train(experience)
 
     # Assert that counter starts out at zero.
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     self.evaluate(tf.compat.v1.initialize_all_variables())
-    self.assertEqual(0, self.evaluate(counter))
+    self.assertEqual(0, self.evaluate(agent.train_step_counter))
+    self.assertEqual(0, global_step)
     loss_type = self.evaluate(loss)
     loss_numpy = loss_type.loss
 
@@ -453,8 +454,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         msg=('Loss is exactly zero, looks like no training '
              'was performed due to incomplete episodes.'))
 
-    # Assert that train_op ran increment_counter num_epochs times.
-    self.assertEqual(num_epochs, self.evaluate(counter))
+    # Assert that train_op ran increment_counter once.
+    self.assertEqual(1, self.evaluate(agent.train_step_counter))
+    # Assert that the policy was updated num_epochs times.
+    self.assertEqual(num_epochs, self.evaluate(global_step))
 
   def testGetEpochLoss(self):
     agent = ppo_agent.PPOAgent(
@@ -484,7 +487,6 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'loc': tf.constant([[9.0], [15.0], [9.0], [15.0]], dtype=tf.float32),
         'scale': tf.constant([[8.0], [12.0], [8.0], [12.0]], dtype=tf.float32),
     }
-    train_step = tf.compat.v1.train.get_or_create_global_step()
 
     loss_info = agent.get_loss(
         time_steps,
@@ -494,7 +496,6 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         advantages,
         sample_action_distribution_parameters,
         weights,
-        train_step,
         debug_summaries=False)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -908,7 +909,6 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         input_fc_layer_params=None,
         output_fc_layer_params=None,
         lstm_size=(10,))
-    global_step = tf.compat.v1.train.get_or_create_global_step()
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -916,7 +916,6 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         actor_net=actor_net,
         value_net=value_net,
         num_epochs=1,
-        train_step_counter=global_step,
     )
     # Use a random env, policy, and replay buffer to collect training data.
     random_env = random_tf_environment.RandomTFEnvironment(
@@ -943,10 +942,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Train one step.
-    self.assertEqual(0, self.evaluate(global_step))
+    self.assertEqual(0, self.evaluate(agent.train_step_counter))
     self.evaluate(collect_driver.run())
     self.evaluate(agent.train(experience=replay_buffer.gather_all()))
-    self.assertEqual(1, self.evaluate(global_step))
+    self.assertEqual(1, self.evaluate(agent.train_step_counter))
 
   @parameterized.named_parameters([
       ('ValueCalculationInTrain', True),
@@ -1110,6 +1109,40 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     experience = agent._preprocess(experience)
 
     agent.train(experience)
+
+  def testTrainStepCounterIncrementByOneIndependentOfNumEpochs(self):
+    agent = ppo_agent.PPOAgent(
+        self._time_step_spec,
+        self._action_spec,
+        tf.compat.v1.train.AdamOptimizer(),
+        actor_net=DummyActorNet(self._obs_spec, self._action_spec),
+        value_net=DummyValueNet(self._obs_spec),
+        num_epochs=25)
+
+    # Use a random env, policy, and replay buffer to collect training data.
+    random_env = random_tf_environment.RandomTFEnvironment(
+        self._time_step_spec, self._action_spec, batch_size=1)
+    collection_policy = random_tf_policy.RandomTFPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        info_spec=agent.collect_policy.info_spec)
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+        collection_policy.trajectory_spec, batch_size=1, max_length=7)
+    collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
+        random_env,
+        collection_policy,
+        observers=[replay_buffer.add_batch],
+        num_episodes=1)
+
+    # Initialize.
+    self.evaluate(agent.initialize())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Train one step.
+    self.assertEqual(0, self.evaluate(agent.train_step_counter))
+    self.evaluate(collect_driver.run())
+    self.evaluate(agent.train(experience=replay_buffer.gather_all()))
+    self.assertEqual(1, self.evaluate(agent.train_step_counter))
 
 
 if __name__ == '__main__':
