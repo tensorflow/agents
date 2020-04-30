@@ -54,7 +54,8 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
     Returns:
       A time step of type FIRST containing an observation.
     """
-    return ts.restart(self._observe(), batch_size=self.batch_size)
+    return ts.restart(self._observe(), batch_size=self.batch_size,
+                      reward_spec=self.reward_spec())
 
   def _step(self, action):
     """Returns a time step containing the reward for the action taken.

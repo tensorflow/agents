@@ -155,6 +155,50 @@ def build_laplacian_over_ordinal_integer_actions_from_env(env):
 
 
 @gin.configurable
+class LinearNormalMultipleRewards(object):
+  """Linear multiple rewards generator."""
+
+  def __init__(self, thetas):
+    self.thetas = thetas
+
+  def __call__(self, x):
+    # `x` is of shape [`batch_size`, 'context_dim']
+    # `theta` is of shape [`context_dim`, 'num_rewards']
+    # The result `predicted_rewards` has shape [`batch_size`, `num_rewards`]
+    predicted_rewards = np.matmul(x, self.thetas)
+    return predicted_rewards
+
+
+@gin.configurable
+def linear_multiple_reward_fn_generator(per_action_theta_list):
+  return [LinearNormalMultipleRewards(theta) for theta in per_action_theta_list]
+
+
+@gin.configurable
+def random_linear_multiple_reward_fn_generator(
+    context_dim, num_actions, num_rewards):
+  """A function that returns `num_actions` linear functions.
+
+  For each action, the corresponding linear function has underlying parameters
+  of shape [`context_dim`, 'num_rewards'].
+
+  Args:
+    context_dim: Number of parameters per function.
+    num_actions: Number of functions returned.
+    num_rewards: Numer of rewards we want to generate.
+
+  Returns:
+    A list of linear functions.
+  """
+
+  def _gen_multiple_rewards_for_action():
+    return np.random.rand(context_dim, num_rewards)
+
+  return linear_multiple_reward_fn_generator(
+      [_gen_multiple_rewards_for_action() for _ in range(num_actions)])
+
+
+@gin.configurable
 def compute_optimal_reward(observation, per_action_reward_fns,
                            enable_noise=False):
   """Computes the optimal reward.
