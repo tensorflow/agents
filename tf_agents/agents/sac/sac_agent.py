@@ -75,6 +75,7 @@ class SacAgent(tf_agent.TFAgent):
                gamma=1.0,
                reward_scale_factor=1.0,
                initial_log_alpha=0.0,
+               use_log_alpha_in_alpha_loss=True,
                target_entropy=None,
                gradient_clipping=None,
                debug_summaries=False,
@@ -125,6 +126,9 @@ class SacAgent(tf_agent.TFAgent):
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       initial_log_alpha: Initial value for log_alpha.
+      use_log_alpha_in_alpha_loss: A boolean, whether using log_alpha or alpha
+        in alpha loss. Certain implementations of SAC use log_alpha as log
+        values are generally nicer to work with.
       target_entropy: The target average policy entropy, for updating alpha. The
         default value is negative of the total number of actions.
       gradient_clipping: Norm length to clip gradients.
@@ -188,6 +192,7 @@ class SacAgent(tf_agent.TFAgent):
     if target_entropy is None:
       target_entropy = self._get_default_target_entropy(action_spec)
 
+    self._use_log_alpha_in_alpha_loss = use_log_alpha_in_alpha_loss
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._actor_optimizer = actor_optimizer
@@ -522,7 +527,10 @@ class SacAgent(tf_agent.TFAgent):
 
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
       entropy_diff = tf.stop_gradient(-log_pi - self._target_entropy)
-      alpha_loss = (self._log_alpha * entropy_diff)
+      if self._use_log_alpha_in_alpha_loss:
+        alpha_loss = (self._log_alpha * entropy_diff)
+      else:
+        alpha_loss = (tf.exp(self._log_alpha) * entropy_diff)
 
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec, num_outer_dims=2):
