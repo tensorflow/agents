@@ -55,12 +55,18 @@ landing_page:
   - classname: devsite-landing-row-cards
     items:
     - heading: "Reinforcement Learning with TF-Agents"
-      path: https://www.youtube.com/watch?v=-TTziY7EmUA
+      youtube_id: -TTziY7EmUA
       buttons:
       - label: Watch the TF Dev Summit 2019 video
         path: https://www.youtube.com/watch?v=-TTziY7EmUA
+    - heading: "Inside TF-Agents"
+      youtube_id: U7g7-Jzj9qo
+      buttons:
+      - label: Watch the video
+        path: https://www.youtube.com/watch?v=U7g7-Jzj9qo
     - heading: "TF-Agents on GitHub"
       path: https://github.com/tensorflow/agents
+      image_path: /resources/images/github-card-16x9.png
       buttons:
       - label: "View on GitHub"
         path: https://github.com/tensorflow/agents
