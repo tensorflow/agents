@@ -222,11 +222,24 @@ class LinearBanditAgent(tf_agent.TFAgent):
     self._time_step_spec = time_step_spec
     self._accepts_per_arm_features = accepts_per_arm_features
     self._add_bias = add_bias
-    self._global_context_dim, self._context_dim = self._get_context_dims()
+    if observation_and_action_constraint_splitter is not None:
+      context_spec, _ = observation_and_action_constraint_splitter(
+          time_step_spec.observation)
+    else:
+      context_spec = time_step_spec.observation
+
+    (self._global_context_dim,
+     self._arm_context_dim) = bandit_spec_utils.get_context_dims_from_spec(
+         context_spec, accepts_per_arm_features)
+    if self._add_bias:
+      # The bias is added via a constant 1 feature.
+      self._global_context_dim += 1
+    self._overall_context_dim = self._global_context_dim + self._arm_context_dim
+
     self._alpha = alpha
     if variable_collection is None:
       variable_collection = LinearBanditVariableCollection(
-          context_dim=self._context_dim,
+          context_dim=self._overall_context_dim,
           num_models=self._num_models,
           use_eigendecomp=use_eigendecomp,
           dtype=dtype)
@@ -334,7 +347,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
           tf.squeeze(
               linalg.conjugate_gradient_solve(
                   self._cov_matrix_list[k] + self._tikhonov_weight *
-                  tf.eye(self._context_dim, dtype=self._dtype),
+                  tf.eye(self._overall_context_dim, dtype=self._dtype),
                   tf.expand_dims(self._data_vector_list[k], axis=-1)),
               axis=-1))
 
@@ -370,28 +383,6 @@ class LinearBanditAgent(tf_agent.TFAgent):
                 name='bias/action_' + str(i),
                 data=bias_list[i],
                 step=self.train_step_counter)
-
-  def _get_context_dims(self):
-    """outputs the global and the overall context dimensions."""
-    if self._observation_and_action_constraint_splitter is not None:
-      obs_spec, _ = self._observation_and_action_constraint_splitter(
-          self._time_step_spec.observation)
-    else:
-      obs_spec = self._time_step_spec.observation
-
-    if self._accepts_per_arm_features:
-      global_context_dim = obs_spec[
-          bandit_spec_utils.GLOBAL_FEATURE_KEY].shape.as_list()[0]
-      arm_context_dim = obs_spec[
-          bandit_spec_utils.PER_ARM_FEATURE_KEY].shape.as_list()[1]
-    else:
-      spec_shape = obs_spec.shape.as_list()
-      global_context_dim = spec_shape[0] if spec_shape else 1
-      arm_context_dim = 0
-    if self._add_bias:
-      global_context_dim += 1
-    context_dim = global_context_dim + arm_context_dim
-    return global_context_dim, context_dim
 
   def _process_experience(self, experience):
     """Given an experience, returns reward, action, observation, and batch size."""

@@ -21,7 +21,9 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.networks import global_and_arm_feature_network as arm_network
 from tf_agents.bandits.policies import neural_linucb_policy
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -64,6 +66,15 @@ def get_reward_layer(num_actions=5, encoding_dim=10):
           np.ones([encoding_dim, num_actions])),
       bias_initializer=tf.compat.v1.initializers.constant(
           np.array(range(num_actions))))
+
+
+def get_per_arm_reward_layer(encoding_dim=10):
+  return tf.keras.layers.Dense(
+      units=1,
+      activation=None,
+      use_bias=False,
+      kernel_initializer=tf.compat.v1.initializers.constant(
+          list(range(encoding_dim))))
 
 
 def test_cases():
@@ -150,6 +161,31 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
         observation_with_mask)
 
+  def _per_arm_time_step_batch(self, batch_size, global_obs_dim, arm_obs_dim):
+    return ts.TimeStep(
+        tf.constant(
+            ts.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[batch_size],
+            name='step_type'),
+        tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
+        tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+        {
+            bandit_spec_utils.GLOBAL_FEATURE_KEY:
+                tf.constant(
+                    np.array(range(batch_size * global_obs_dim)),
+                    dtype=tf.float32,
+                    shape=[batch_size, global_obs_dim],
+                    name='observation'),
+            bandit_spec_utils.PER_ARM_FEATURE_KEY:
+                tf.constant(
+                    np.array(
+                        range(batch_size * self._num_actions * arm_obs_dim)),
+                    dtype=tf.float32,
+                    shape=[batch_size, self._num_actions, arm_obs_dim],
+                    name='observation')
+        })
+
   def _get_predicted_rewards_from_linucb(self, observation_numpy, batch_size):
     """Runs one step of LinUCB using numpy arrays."""
     observation_numpy.reshape([batch_size, self._encoding_dim])
@@ -160,6 +196,23 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
       theta = np.matmul(
           a_inv, self._b_numpy[k].reshape([self._encoding_dim, 1]))
       est_mean_reward = np.matmul(observation_numpy, theta)
+      predicted_rewards.append(est_mean_reward)
+    predicted_rewards_array = np.stack(
+        predicted_rewards, axis=-1).reshape(batch_size, self._num_actions)
+    return predicted_rewards_array
+
+  def _get_predicted_rewards_from_per_arm_linucb(self, observation_numpy,
+                                                 batch_size):
+    """Runs one step of LinUCB using numpy arrays."""
+    observation_numpy.reshape(
+        [batch_size, self._num_actions, self._encoding_dim])
+
+    predicted_rewards = []
+    for k in range(self._num_actions):
+      a_inv = np.linalg.inv(self._a_numpy[0] + np.eye(self._encoding_dim))
+      theta = np.matmul(
+          a_inv, self._b_numpy[0].reshape([self._encoding_dim, 1]))
+      est_mean_reward = np.matmul(observation_numpy[:, k, :], theta)
       predicted_rewards.append(est_mean_reward)
     predicted_rewards_array = np.stack(
         predicted_rewards, axis=-1).reshape(batch_size, self._num_actions)
@@ -372,6 +425,64 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
       observation_numpy = self.evaluate(encoded_observation)
       predicted_rewards_expected = self._get_predicted_rewards_from_linucb(
           observation_numpy, batch_size)
+
+    p_info = self.evaluate(action_step.info)
+    self.assertEqual(p_info.predicted_rewards_mean.dtype, np.float32)
+    self.assertAllClose(p_info.predicted_rewards_mean,
+                        predicted_rewards_expected)
+
+  @test_cases()
+  def testPerArmObservation(
+      self, batch_size, actions_from_reward_layer):
+    global_obs_dim = 7
+    arm_obs_dim = 3
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        global_obs_dim, arm_obs_dim, self._num_actions)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    dummy_net = arm_network.create_feed_forward_common_tower_network(
+        obs_spec,
+        global_layers=(3, 4, 5),
+        arm_layers=(3, 2),
+        common_layers=(4, 3),
+        output_dim=self._encoding_dim)
+    reward_layer = get_per_arm_reward_layer(encoding_dim=self._encoding_dim)
+
+    policy = neural_linucb_policy.NeuralLinUCBPolicy(
+        dummy_net,
+        self._encoding_dim,
+        reward_layer,
+        actions_from_reward_layer=tf.constant(
+            actions_from_reward_layer, dtype=tf.bool),
+        cov_matrix=self._a[0:1],
+        data_vector=self._b[0:1],
+        num_samples=self._num_samples_per_arm[0:1],
+        epsilon_greedy=0.0,
+        time_step_spec=time_step_spec,
+        accepts_per_arm_features=True,
+        emit_policy_info=('predicted_rewards_mean',))
+
+    current_time_step = self._per_arm_time_step_batch(
+        batch_size=batch_size,
+        global_obs_dim=global_obs_dim,
+        arm_obs_dim=arm_obs_dim)
+    action_step = policy.action(current_time_step)
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    action_fn = common.function_in_tf1()(policy.action)
+    action_step = action_fn(current_time_step)
+
+    input_observation = current_time_step.observation
+    encoded_observation, _ = dummy_net(input_observation)
+
+    if actions_from_reward_layer:
+      predicted_rewards_from_reward_layer = reward_layer(encoded_observation)
+      predicted_rewards_expected = self.evaluate(
+          predicted_rewards_from_reward_layer)
+    else:
+      observation_numpy = self.evaluate(encoded_observation)
+      predicted_rewards_expected = (
+          self._get_predicted_rewards_from_per_arm_linucb(
+              observation_numpy, batch_size))
 
     p_info = self.evaluate(action_step.info)
     self.assertEqual(p_info.predicted_rewards_mean.dtype, np.float32)

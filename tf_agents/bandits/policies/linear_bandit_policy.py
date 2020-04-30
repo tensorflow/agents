@@ -169,7 +169,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     else:
       context_spec = time_step_spec.observation
     (self._global_context_dim,
-     self._arm_context_dim) = self._get_context_dim(context_spec)
+     self._arm_context_dim) = bandit_spec_utils.get_context_dims_from_spec(
+         context_spec, accepts_per_arm_features)
     if self._add_bias:
       # The bias is added via a constant 1 feature.
       self._global_context_dim += 1
@@ -177,7 +178,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
     if self._overall_context_dim != cov_matrix_dim:
       raise ValueError('The dimension of matrix `cov_matrix` must match '
-                       'overall context dimension {}.'
+                       'overall context dimension {}. '
                        'Got {} for `cov_matrix`.'.format(
                            self._overall_context_dim, cov_matrix_dim))
 
@@ -240,7 +241,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     for k in range(self._num_actions):
       current_observation = self._get_current_observation(
           global_observation, arm_observations, k)
-      model_index = self._get_model_index(k)
+      model_index = policy_utilities.get_model_index(
+          k, self._accepts_per_arm_features)
       if self._use_eigendecomp:
         q_t_b = tf.matmul(
             self._eig_matrix[model_index],
@@ -291,8 +293,10 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
 
     action_distributions = tfp.distributions.Deterministic(loc=chosen_actions)
 
-    policy_info = self._populate_policy_info(arm_observations, chosen_actions,
-                                             rewards_for_argmax, est_rewards)
+    policy_info = policy_utilities.populate_policy_info(
+        arm_observations, chosen_actions, rewards_for_argmax,
+        tf.stack(est_rewards, axis=-1), self._emit_policy_info,
+        self._accepts_per_arm_features)
 
     return policy_step.PolicyStep(
         action_distributions, policy_state, policy_info)
@@ -349,30 +353,6 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
           predicted_rewards_sampled=predicted_rewards_sampled)
     return info_spec
 
-  def _get_context_dim(self, context_spec):
-    """Returns the global and per-arm context dimensions.
-
-    If the policy accepts per-arm features, this function returns the tuple of
-    the global and per-arm context dimension. Otherwise, it returns the (global)
-    context dim and zero.
-
-    Args:
-      context_spec: A nest of tensor specs, containing the observation spec.
-
-    Returns: A 2-tuple of ints, the global and per-arm context dimension. If the
-      policy does not accept per-arm features, the per-arm context dim is 0.
-    """
-    if self._accepts_per_arm_features:
-      global_context_dim = context_spec[
-          bandit_spec_utils.GLOBAL_FEATURE_KEY].shape.as_list()[0]
-      arm_context_dim = context_spec[
-          bandit_spec_utils.PER_ARM_FEATURE_KEY].shape.as_list()[1]
-    else:
-      spec_shape = context_spec.shape.as_list()
-      global_context_dim = spec_shape[0] if spec_shape else 1
-      arm_context_dim = 0
-    return global_context_dim, arm_context_dim
-
   def _get_current_observation(self, global_observation, arm_observations,
                                arm_index):
     """Helper function to construct the observation for a specific arm.
@@ -401,33 +381,6 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
       return current_observation
     else:
       return global_observation
-
-  def _get_model_index(self, k):
-    return 0 if self._accepts_per_arm_features else k
-
-  def _populate_policy_info(self, arm_observations, chosen_actions,
-                            rewards_for_argmax, est_rewards):
-    if self._accepts_per_arm_features:
-      # Saving the features for the chosen action to the policy_info.
-      chosen_arm_features = tf.gather(
-          params=arm_observations, indices=chosen_actions, batch_dims=1)
-      policy_info = policy_utilities.PerArmPolicyInfo(
-          predicted_rewards_sampled=(
-              rewards_for_argmax if policy_utilities.InfoFields
-              .PREDICTED_REWARDS_SAMPLED in self._emit_policy_info else ()),
-          predicted_rewards_mean=(
-              tf.stack(est_rewards, axis=-1) if policy_utilities.InfoFields
-              .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
-          chosen_arm_features=chosen_arm_features)
-    else:
-      policy_info = policy_utilities.PolicyInfo(
-          predicted_rewards_sampled=(
-              rewards_for_argmax if policy_utilities.InfoFields
-              .PREDICTED_REWARDS_SAMPLED in self._emit_policy_info else ()),
-          predicted_rewards_mean=(
-              tf.stack(est_rewards, axis=-1) if policy_utilities.InfoFields
-              .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()))
-    return policy_info
 
   def _split_observation(self, observation):
     """Splits the observation into global and arm observations."""

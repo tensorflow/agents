@@ -37,6 +37,31 @@ def create_per_arm_observation_spec(global_dim, per_arm_dim, num_actions):
   }
 
 
+def get_context_dims_from_spec(context_spec, accepts_per_arm_features):
+  """Returns the global and per-arm context dimensions.
+
+  If the policy accepts per-arm features, this function returns the tuple of
+  the global and per-arm context dimension. Otherwise, it returns the (global)
+  context dim and zero.
+
+  Args:
+    context_spec: A nest of tensor specs, containing the observation spec.
+    accepts_per_arm_features: (bool) Whether the context_spec is for a policy
+      that accepts per-arm features.
+
+  Returns: A 2-tuple of ints, the global and per-arm context dimension. If the
+    policy does not accept per-arm features, the per-arm context dim is 0.
+  """
+  if accepts_per_arm_features:
+    global_context_dim = context_spec[GLOBAL_FEATURE_KEY].shape.as_list()[0]
+    arm_context_dim = context_spec[PER_ARM_FEATURE_KEY].shape.as_list()[1]
+  else:
+    spec_shape = context_spec.shape.as_list()
+    global_context_dim = spec_shape[0] if spec_shape else 1
+    arm_context_dim = 0
+  return global_context_dim, arm_context_dim
+
+
 def drop_arm_observation(trajectory):
   """Drops the per-arm observation from a given trajectory (or trajectory spec)."""
   transformed_trajectory = copy.deepcopy(trajectory)

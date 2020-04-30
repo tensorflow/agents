@@ -60,6 +60,49 @@ PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
 PerArmPolicyInfo.__new__.__defaults__ = ((),) * len(PerArmPolicyInfo._fields)
 
 
+def populate_policy_info(arm_observations, chosen_actions, rewards_for_argmax,
+                         est_rewards, emit_policy_info,
+                         accepts_per_arm_features):
+  """Populates policy info given all needed input.
+
+  Args:
+    arm_observations: In case the policy accepts per-arm feautures, this is a
+      Tensor with the per-arm features. Otherwise its value is unused.
+    chosen_actions: A Tensor with the indices of the chosen actions.
+    rewards_for_argmax: The sampled or optimistically boosted reward estimates
+      based on which the policy chooses the action greedily.
+    est_rewards: A Tensor with the rewards estimated by the model.
+    emit_policy_info: A set of policy info keys, specifying wich info fields to
+      populate
+    accepts_per_arm_features: (bool) Whether the policy accepts per-arm
+      features.
+
+  Returns:
+    A policy info.
+  """
+  if accepts_per_arm_features:
+    # Saving the features for the chosen action to the policy_info.
+    chosen_arm_features = tf.gather(
+        params=arm_observations, indices=chosen_actions, batch_dims=1)
+    policy_info = PerArmPolicyInfo(
+        predicted_rewards_sampled=(
+            rewards_for_argmax if
+            InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info else ()),
+        predicted_rewards_mean=(
+            est_rewards
+            if InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info else ()),
+        chosen_arm_features=chosen_arm_features)
+  else:
+    policy_info = PolicyInfo(
+        predicted_rewards_sampled=(
+            rewards_for_argmax if
+            InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info else ()),
+        predicted_rewards_mean=(
+            est_rewards
+            if InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info else ()))
+  return policy_info
+
+
 class BanditPolicyType(object):
   """Enumeration of bandit policy types."""
   # No bandit policy type specified.
@@ -161,3 +204,21 @@ def bandit_policy_uniform_mask(values, mask):
   """
   return tf.where(
       mask, tf.fill(tf.shape(values), BanditPolicyType.UNIFORM), values)
+
+
+def get_model_index(arm_index, accepts_per_arm_features):
+  """Returns the model index for a specific arm.
+
+  The number of models depends on the observation format: If the policy accepts
+  per-arm features, there is only one single model used for every arm. Otherwise
+  there is a model for every arm.
+
+  Args:
+    arm_index: The index of the arm for which the model index is needed.
+    accepts_per_arm_features: (bool) Whether the policy works with per-arm
+      features.
+
+  Returns:
+    The index of the model for the arm requested.
+  """
+  return 0 if accepts_per_arm_features else arm_index

@@ -30,8 +30,17 @@ from tf_agents.specs import tensor_spec
 
 
 def create_feed_forward_common_tower_network(observation_spec, global_layers,
-                                             arm_layers, common_layers):
+                                             arm_layers, common_layers,
+                                             output_dim=1):
   """Creates a common tower network with feedforward towers.
+
+  The network produced by this function can be used either in
+  `GreedyRewardPredictionPolicy`, or `NeuralLinUCBPolicy`.
+  In the former case, the network must have `output_dim=1`, it is going to be an
+  instance of `QNetwork`, and used in the policy as a reward prediction network.
+  In the latter case, the network will be an encoding network with its output
+  consumed by a reward layer or a LinUCB method. The specified `output_dim` will
+  be the encoding dimension.
 
   Args:
     observation_spec: A nested tensor spec containing the specs for global as
@@ -39,6 +48,9 @@ def create_feed_forward_common_tower_network(observation_spec, global_layers,
     global_layers: Iterable of ints. Specifies the layers of the global tower.
     arm_layers: Iterable of ints. Specifies the layers of the arm tower.
     common_layers: Iterable of ints. Specifies the layers of the common tower.
+    output_dim: The output dimension of the network. If 1, the common tower will
+      be a QNetwork. Otherwise, the common tower will be an encoding network
+      with the specified output dimension.
 
   Returns:
     A network that takes observations adhering observation_spec and outputs
@@ -57,11 +69,16 @@ def create_feed_forward_common_tower_network(observation_spec, global_layers,
   common_input_dim = global_layers[-1] + arm_layers[-1]
   common_input_spec = tensor_spec.TensorSpec(
       shape=(common_input_dim,), dtype=tf.float32)
-  common_network = q_network.QNetwork(
-      input_tensor_spec=common_input_spec,
-      action_spec=tensor_spec.BoundedTensorSpec(
-          shape=(), minimum=0, maximum=0, dtype=tf.int32),
-      fc_layer_params=common_layers)
+  if output_dim == 1:
+    common_network = q_network.QNetwork(
+        input_tensor_spec=common_input_spec,
+        action_spec=tensor_spec.BoundedTensorSpec(
+            shape=(), minimum=0, maximum=0, dtype=tf.int32),
+        fc_layer_params=common_layers)
+  else:
+    common_network = encoding_network.EncodingNetwork(
+        input_tensor_spec=common_input_spec,
+        fc_layer_params=list(common_layers) + [output_dim])
   return GlobalAndArmCommonTowerNetwork(observation_spec, global_network,
                                         arm_network, common_network)
 
@@ -155,7 +172,9 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
 
     output, state = self._common_network(common_input,
                                          (global_state, arm_state))
-    return tf.squeeze(output, axis=-1), state
+    if isinstance(self._common_network, q_network.QNetwork):
+      output = tf.squeeze(output, axis=-1)
+    return output, state
 
 
 @gin.configurable
