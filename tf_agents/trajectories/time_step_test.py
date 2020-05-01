@@ -179,6 +179,26 @@ class TimeStepTest(tf.test.TestCase):
     self.assertAllEqual(reward[1], time_step.reward[1])
     self.assertItemsEqual([0., 0.], time_step.discount)
 
+    reward = np.array([[2., 2., 2.], [3., 3., 3.]])
+    reward_spec = [array_spec.ArraySpec((3,), np.float32, 'multi_r')]
+    outer_dims = nest_utils.get_outer_array_shape(reward, reward_spec)
+    time_step_batch = ts.termination(observation, reward, outer_dims)
+
+    # Check that passing outer_dims works
+    self.assertItemsEqual([ts.StepType.LAST] * 2, time_step_batch.step_type)
+    self.assertItemsEqual(observation, time_step_batch.observation)
+    self.assertAllEqual(reward[0], time_step_batch.reward[0])
+    self.assertAllEqual(reward[1], time_step_batch.reward[1])
+    self.assertItemsEqual([0., 0.], time_step_batch.discount)
+
+    # Check that it gets a different result with no outer_dims
+    time_step_no_batch = ts.termination(observation, reward, outer_dims=[])
+    self.assertEqual(ts.StepType.LAST, time_step_no_batch.step_type)
+    self.assertItemsEqual(observation, time_step_no_batch.observation)
+    self.assertAllEqual(reward[0], time_step_no_batch.reward[0])
+    self.assertAllEqual(reward[1], time_step_no_batch.reward[1])
+    self.assertEqual(0., time_step_no_batch.discount)
+
   def testTruncationBatched(self):
     observation = np.array([[-1], [-1]])
     reward = np.array([2., 2.])
