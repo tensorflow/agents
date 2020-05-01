@@ -42,7 +42,7 @@ class LossInfoTest(tf.test.TestCase):
 
 class MyAgent(tf_agent.TFAgent):
 
-  def __init__(self):
+  def __init__(self, validate_args=True):
     obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
     time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = ()
@@ -54,7 +54,8 @@ class MyAgent(tf_agent.TFAgent):
         policy=policy,
         collect_policy=policy,
         train_sequence_length=None,
-        train_argspec=train_argspec)
+        train_argspec=train_argspec,
+        validate_args=validate_args)
 
   def _train(self, experience, weights=None, extra=None):
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
@@ -102,6 +103,12 @@ class TFAgentTest(tf.test.TestCase):
     del reduced_experience.observation['ignored']
     tf.nest.map_structure(
         self.assertAllEqual, (reduced_experience, extra), loss_info.extra)
+
+  def testValidateArgsDisabled(self):
+    agent = MyAgent(validate_args=False)
+    loss_info = agent.train(experience='blah', extra=3)
+    tf.nest.map_structure(
+        self.assertAllEqual, loss_info.extra, ('blah', 3))
 
 
 class AgentSpecTest(test_utils.TestCase):

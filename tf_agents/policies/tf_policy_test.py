@@ -212,6 +212,20 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(1, self.evaluate(action["inp"]))
     self.assertEqual(1, self.evaluate(distribution["inp"].sample()))
 
+  def testValidateArgsDisabled(self):
+    action_spec = "blah"
+    time_step_spec = ts.time_step_spec(observation_spec=None)
+    policy = TfPassThroughPolicy(
+        time_step_spec, action_spec, validate_args=False, clip=False)
+    observation = (tf.constant(1, shape=(1,), dtype=tf.float32),
+                   tf.constant(1, shape=(1,), dtype=tf.float32),
+                   tf.constant(1, shape=(1,), dtype=tf.int32),
+                   tf.constant(1, shape=(1,), dtype=tf.int32))
+    time_step = ts.restart(observation)
+
+    action = self.evaluate(policy.action(time_step).action)
+    self.assertAllEqual([[1], [1], [1], [1]], action)
+
   def testMismatchedDtypes(self):
     with self.assertRaisesRegexp(TypeError, ".*dtype that doesn't match.*"):
       policy = TFPolicyMismatchedDtypes()

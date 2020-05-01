@@ -120,6 +120,7 @@ class TFPolicy(tf.Module):
                emit_log_probability=False,
                automatic_state_reset=True,
                observation_and_action_constraint_splitter=None,
+               validate_args=True,
                name=None):
     """Initialization of TFPolicy class.
 
@@ -160,6 +161,15 @@ class TFPolicy(tf.Module):
           observation before passing to the network. If
           `observation_and_action_constraint_splitter` is None, action
           constraints are not applied.
+      validate_args: Python bool.  Whether to verify inputs to, and outputs of,
+        functions like `action` and `distribution` against spec structures,
+        dtypes, and shapes.
+
+        Research code may prefer to set this value to `False` to allow iterating
+        on input and output structures without being hamstrung by overly
+        rigid checking (at the cost of harder-to-debug errors).
+
+        See also `TFAgent.validate_args`.
       name: A name for this module. Defaults to the class name.
     """
     super(TFPolicy, self).__init__(name=name)
@@ -175,6 +185,8 @@ class TFPolicy(tf.Module):
     self._action_spec = action_spec
     self._policy_state_spec = policy_state_spec
     self._emit_log_probability = emit_log_probability
+    self._validate_args = validate_args
+
     if emit_log_probability:
       log_probability_spec = tensor_spec.BoundedTensorSpec(
           shape=(),
@@ -211,6 +223,11 @@ class TFPolicy(tf.Module):
   @property
   def observation_and_action_constraint_splitter(self):
     return self._observation_and_action_constraint_splitter
+
+  @property
+  def validate_args(self):
+    """Whether `action` & `distribution` validate input and output args."""
+    return self._validate_args
 
   def get_initial_state(self, batch_size):
     """Returns an initial state usable by the policy.
@@ -255,12 +272,15 @@ class TFPolicy(tf.Module):
 
     Returns:
       A `PolicyStep` named tuple containing:
-        `action`: An action Tensor matching the `action_spec()`.
+        `action`: An action Tensor matching the `action_spec`.
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
 
     Raises:
       RuntimeError: If subclass __init__ didn't call super().__init__.
+      ValueError or TypeError: If `validate_args is True` and inputs or
+        outputs do not match `time_step_spec`, `policy_state_spec`,
+        or `policy_step_spec`.
     """
     if self._enable_functions and getattr(self, '_action_fn', None) is None:
       raise RuntimeError(
@@ -271,11 +291,12 @@ class TFPolicy(tf.Module):
     else:
       action_fn = self._action
 
-    time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
-    policy_state = nest_utils.prune_extra_keys(
-        self._policy_state_spec, policy_state)
-    tf.nest.assert_same_structure(time_step, self._time_step_spec)
-    tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
+    if self._validate_args:
+      time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
+      policy_state = nest_utils.prune_extra_keys(
+          self._policy_state_spec, policy_state)
+      tf.nest.assert_same_structure(time_step, self._time_step_spec)
+      tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
 
     if self._automatic_state_reset:
       policy_state = self._maybe_reset_state(time_step, policy_state)
@@ -291,22 +312,23 @@ class TFPolicy(tf.Module):
                                               self._action_spec)
       step = step._replace(action=clipped_actions)
 
-    tf.nest.assert_same_structure(step, self._policy_step_spec)
+    if self._validate_args:
+      tf.nest.assert_same_structure(step, self._policy_step_spec)
 
-    def compare_to_spec(value, spec):
-      return value.dtype.is_compatible_with(spec.dtype)
+      def compare_to_spec(value, spec):
+        return value.dtype.is_compatible_with(spec.dtype)
 
-    compatibility = tf.nest.flatten(
-        tf.nest.map_structure(compare_to_spec, step.action, self.action_spec))
+      compatibility = tf.nest.flatten(
+          tf.nest.map_structure(compare_to_spec, step.action, self.action_spec))
 
-    if not all(compatibility):
-      get_dtype = lambda x: x.dtype
-      action_dtypes = tf.nest.map_structure(get_dtype, step.action)
-      spec_dtypes = tf.nest.map_structure(get_dtype, self.action_spec)
+      if not all(compatibility):
+        get_dtype = lambda x: x.dtype
+        action_dtypes = tf.nest.map_structure(get_dtype, step.action)
+        spec_dtypes = tf.nest.map_structure(get_dtype, self.action_spec)
 
-      raise TypeError('Policy produced an action with a dtype that doesn\'t '
-                      'match its action_spec. Got action: %s with '
-                      'action_spec: %s' % (action_dtypes, spec_dtypes))
+        raise TypeError('Policy produced an action with a dtype that doesn\'t '
+                        'match its action_spec. Got action: %s with '
+                        'action_spec: %s' % (action_dtypes, spec_dtypes))
 
     return step
 
@@ -324,12 +346,18 @@ class TFPolicy(tf.Module):
         `action`: A tf.distribution capturing the distribution of next actions.
         `state`: A policy state tensor for the next call to distribution.
         `info`: Optional side information such as action log probabilities.
+
+    Raises:
+      ValueError or TypeError: If `validate_args is True` and inputs or
+        outputs do not match `time_step_spec`, `policy_state_spec`,
+        or `policy_step_spec`.
     """
-    time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
-    policy_state = nest_utils.prune_extra_keys(
-        self._policy_state_spec, policy_state)
-    tf.nest.assert_same_structure(time_step, self._time_step_spec)
-    tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
+    if self._validate_args:
+      time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
+      policy_state = nest_utils.prune_extra_keys(
+          self._policy_state_spec, policy_state)
+      tf.nest.assert_same_structure(time_step, self._time_step_spec)
+      tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
     if self._automatic_state_reset:
       policy_state = self._maybe_reset_state(time_step, policy_state)
     step = self._distribution(time_step=time_step, policy_state=policy_state)
@@ -341,7 +369,8 @@ class TFPolicy(tf.Module):
               lambda _: tf.constant(0., dtype=tf.float32),
               policy_step.get_log_probability(self._info_spec)))
       step = step._replace(info=info)
-    tf.nest.assert_same_structure(step, self._policy_step_spec)
+    if self._validate_args:
+      tf.nest.assert_same_structure(step, self._policy_step_spec)
     return step
 
   def update(self,
@@ -477,7 +506,7 @@ class TFPolicy(tf.Module):
 
     Returns:
       A `PolicyStep` named tuple containing:
-        `action`: An action Tensor matching the `action_spec()`.
+        `action`: An action Tensor matching the `action_spec`.
         `state`: A policy state tensor to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """

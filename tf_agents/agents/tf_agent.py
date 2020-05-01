@@ -118,6 +118,21 @@ class TFAgent(tf.Module):
   public-calls-private convention allowed this base class to do things like
   properly add `spec` and shape checks, which provide users an easier experience
   when debugging their environments and networks.
+
+  For researchers, and those developing new Agents and Policies, both the
+  `TFAgent` and `TFPolicy` base class constructors also accept a
+  `validate_args` parameter.  If `False`, this disables all spec structure,
+  dtype, and shape checks in the public methods of these classes.  It
+  allows algorithm developers to iterate and try different input and output
+  structures without worrying about overly restrictive requirements like
+  experience being a `Trajectory`, or input and output states being in a
+  certain format.  However, *disabling argument validation* can make it very
+  hard to identify structural input or algorithmic errors; and should not
+  be done for final, or production-ready, Agents.  In addition to having
+  implementations that may disagree with specs, this mean that the resulting
+  Agent will no longer interact well with other parts of TF-Agents.  Examples
+  include impedance mismatches with Actor/Learner APIs, replay buffers, and
+  the model export functionality in `PolicySaver`.
   """
 
   # TODO(b/127327645) Remove this attribute.
@@ -137,7 +152,8 @@ class TFAgent(tf.Module):
                debug_summaries=False,
                summarize_grads_and_vars=False,
                enable_summaries=True,
-               train_step_counter=None):
+               train_step_counter=None,
+               validate_args=True):
     """Meant to be called by subclass constructors.
 
     Args:
@@ -209,29 +225,41 @@ class TFAgent(tf.Module):
         `summarize_grads_and_vars` properties.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
+      validate_args: Python bool.  Whether to verify inputs to, and outputs of,
+        functions like `train` and `preprocess_sequence` against spec
+        structures, dtypes, and shapes.
+
+        Research code may prefer to set this value to `False` to allow iterating
+        on input and output structures without being hamstrung by overly
+        rigid checking (at the cost of harder-to-debug errors).
+
+        See also `TFPolicy.validate_args`.
 
     Raises:
-      TypeError: If `train_argspec` is not a `dict`.
-      ValueError: If `train_argspec` has the keys `experience` or `weights`.
-      TypeError: If any leaf nodes in `train_argspec` values are not
-        subclasses of `tf.TypeSpec`.
-      ValueError: If `time_step_spec` is not an instance of `ts.TimeStep`.
-      ValueError: If `num_outer_dims` is not in [1, 2].
+      TypeError: If `validate_args is True` and `train_argspec` is not a `dict`.
+      ValueError: If `validate_args is True` and `train_argspec` has the keys
+        `experience` or `weights`.
+      TypeError: If `validate_args is True` and any leaf nodes in
+        `train_argspec` values are not subclasses of `tf.TypeSpec`.
+      ValueError: If `validate_args is True` and `time_step_spec` is not an
+        instance of `ts.TimeStep`.
+      ValueError: If `num_outer_dims` is not in `[1, 2]`.
     """
+    if validate_args:
+      def _each_isinstance(spec, spec_types):
+        """Checks if each element of `spec` is instance of `spec_types`."""
+        return all([isinstance(s, spec_types) for s in tf.nest.flatten(spec)])
 
-    def _each_isinstance(spec, spec_types):
-      """Checks if each element of `spec` is instance of any of `spec_types`."""
-      return all([isinstance(s, spec_types) for s in tf.nest.flatten(spec)])
+      if not _each_isinstance(time_step_spec, tf.TypeSpec):
+        raise TypeError(
+            "time_step_spec has to contain TypeSpec (TensorSpec, "
+            "SparseTensorSpec, etc) objects, but received: {}"
+            .format(time_step_spec))
 
-    if not _each_isinstance(time_step_spec, tf.TypeSpec):
-      raise TypeError("time_step_spec has to contain TypeSpec (TensorSpec, "
-                      "SparseTensorSpec, etc) objects, but received: {}".format(
-                          time_step_spec))
-
-    if not _each_isinstance(action_spec, tensor_spec.BoundedTensorSpec):
-      raise TypeError(
-          "action_spec has to contain BoundedTensorSpec objects, but received: "
-          "{}".format(action_spec))
+      if not _each_isinstance(action_spec, tensor_spec.BoundedTensorSpec):
+        raise TypeError(
+            "action_spec has to contain BoundedTensorSpec objects, but received: "
+            "{}".format(action_spec))
 
     common.check_tf1_allowed()
     common.tf_agents_gauge.get_cell("TFAgent").set(True)
@@ -254,13 +282,13 @@ class TFAgent(tf.Module):
     self._summarize_grads_and_vars = summarize_grads_and_vars
     self._enable_summaries = enable_summaries
     self._training_data_spec = training_data_spec
+    self._validate_args = validate_args
     if train_argspec is None:
       train_argspec = {}
-    else:
+    elif validate_args:
       if not isinstance(train_argspec, dict):
         raise TypeError("train_argspec must be a dict, but saw: {}"
                         .format(train_argspec))
-      train_argspec = dict(train_argspec)  # Create a local copy.
       if "weights" in train_argspec or "experience" in train_argspec:
         raise ValueError("train_argspec must not override 'weights' or "
                          "'experience' keys, but saw: {}".format(train_argspec))
@@ -268,6 +296,7 @@ class TFAgent(tf.Module):
                  for x in tf.nest.flatten(train_argspec)):
         raise TypeError("train_argspec contains non-TensorSpec objects: {}"
                         .format(train_argspec))
+    train_argspec = dict(train_argspec)  # Create a local copy.
     self._train_argspec = train_argspec
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
@@ -314,15 +343,18 @@ class TFAgent(tf.Module):
       TypeError: If experience does not match `self.collect_data_spec` structure
         types.
     """
-    tf.nest.assert_same_structure(experience, self.collect_data_spec)
+    if self._validate_args:
+      tf.nest.assert_same_structure(experience, self.collect_data_spec)
 
     if self._enable_functions:
       preprocessed_sequence = self._preprocess_sequence_fn(experience)
     else:
       preprocessed_sequence = self._preprocess_sequence(experience)
 
-    tf.nest.assert_same_structure(preprocessed_sequence,
-                                  self.training_data_spec)
+    if self._validate_args:
+      tf.nest.assert_same_structure(
+          preprocessed_sequence, self.training_data_spec)
+
     return preprocessed_sequence
 
   def _check_trajectory_dimensions(self, experience):
@@ -412,13 +444,14 @@ class TFAgent(tf.Module):
           and return the pre-train-step `LossInfo`.
 
     Raises:
-      TypeError: If experience is not type `Trajectory`.  Or if experience
-        does not match `self.training_data_spec` structure types.
-      ValueError: If experience tensors' time axes are not compatible with
-        `self.train_sequence_length`.  Or if experience does not match
-        `self.training_data_spec` structure.
-      ValueError: If the user does not pass `**kwargs` matching
-        `self.train_argspec`.
+      TypeError: If `validate_args is True` and: Experience is not type
+        `Trajectory`; or if `experience`  does not match
+        `self.training_data_spec` structure types.
+      ValueError: If `validate_args is True` and: Experience tensors' time axes
+        are not compatible with `self.train_sequence_length`; or if experience
+        does not match `self.training_data_spec` structure.
+      ValueError: If `validate_args is True` and the user does not pass
+        `**kwargs` matching `self.train_argspec`.
       RuntimeError: If the class was not initialized properly (`super.__init__`
         was not called).
     """
@@ -427,16 +460,17 @@ class TFAgent(tf.Module):
           "Cannot find _train_fn.  Did %s.__init__ call super?"
           % type(self).__name__)
 
-    self._check_trajectory_dimensions(experience)
-    self._check_train_argspec(kwargs)
+    if self._validate_args:
+      self._check_trajectory_dimensions(experience)
+      self._check_train_argspec(kwargs)
 
-    # Even though the checks above prune dict keys, we want them to see
-    # the non-pruned versions to provide clearer error messages.
-    # However, from here on out we want to remove dict entries that aren't
-    # requested in the spec.
-    experience = nest_utils.prune_extra_keys(
-        self.training_data_spec, experience)
-    kwargs = nest_utils.prune_extra_keys(self.train_argspec, kwargs)
+      # Even though the checks above prune dict keys, we want them to see
+      # the non-pruned versions to provide clearer error messages.
+      # However, from here on out we want to remove dict entries that aren't
+      # requested in the spec.
+      experience = nest_utils.prune_extra_keys(
+          self.training_data_spec, experience)
+      kwargs = nest_utils.prune_extra_keys(self.train_argspec, kwargs)
 
     if self._enable_functions:
       loss_info = self._train_fn(
@@ -448,6 +482,11 @@ class TFAgent(tf.Module):
       raise TypeError(
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))
     return loss_info
+
+  @property
+  def validate_args(self):
+    """Whether `train` & `preprocess_sequence` validate input & output args."""
+    return self._validate_args
 
   @property
   def time_step_spec(self):
