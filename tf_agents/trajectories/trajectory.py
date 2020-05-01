@@ -520,15 +520,22 @@ def to_transition(trajectory, next_trajectory=None):
   Notice that reward and discount for time_steps are undefined, therefore filled
   with zero.
 
+  TODO(b/155302755): Update the rank validation check for discount.
+
   Args:
     trajectory: An instance of `Trajectory`. The tensors in Trajectory must have
-      shape `[ B, T, ...]` when next_trajectory is None.
+      shape `[B, T, ...]` when next_trajectory is `None`.  `discount` is assumed
+      to be a scalar float; hence the shape of `trajectory.discount` must
+      be `[B, T]`.
     next_trajectory: (optional) An instance of `Trajectory`.
 
   Returns:
     A tuple `(time_steps, policy_steps, next_time_steps)`.  The `reward` and
     `discount` fields of `time_steps` are filled with zeros because these
     cannot be deduced (please do not use them).
+
+  Raises:
+    ValueError: if `discount` rank is not within the range [1, 2].
   """
   _validate_rank(trajectory.discount, min_rank=1, max_rank=2)
 
