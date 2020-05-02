@@ -128,10 +128,10 @@ class Network(keras_network.Network):
   def create_variables(self, **kwargs):
     if not self.built:
       random_input = tensor_spec.sample_spec_nest(
-          self.input_tensor_spec, outer_dims=(0,))
+          self.input_tensor_spec, outer_dims=(1,))
       random_state = tensor_spec.sample_spec_nest(
-          self.state_spec, outer_dims=(0,))
-      step_type = tf.zeros([time_step.StepType.FIRST], dtype=tf.int32)
+          self.state_spec, outer_dims=(1,))
+      step_type = tf.fill((1,), time_step.StepType.FIRST)
       self.__call__(
           random_input, step_type=step_type, network_state=random_state,
           **kwargs)

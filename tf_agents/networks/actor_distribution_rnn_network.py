@@ -66,12 +66,14 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
                conv_layer_params=None,
                input_fc_layer_params=(200, 100),
                input_dropout_layer_params=None,
-               lstm_size=(40,),
+               lstm_size=None,
                output_fc_layer_params=(200, 100),
                activation_fn=tf.keras.activations.relu,
                dtype=tf.float32,
                discrete_projection_net=_categorical_projection_net,
                continuous_projection_net=_normal_projection_net,
+               rnn_construction_fn=None,
+               rnn_construction_kwargs={},
                name='ActorDistributionRnnNetwork'):
     """Creates an instance of `ActorDistributionRnnNetwork`.
 
@@ -116,6 +118,17 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
       continuous_projection_net: Callable that generates a continuous projection
         network to be called with some hidden state and the outer_rank of the
         state.
+      rnn_construction_fn: (Optional.) Alternate RNN construction function, e.g.
+        tf.keras.layers.LSTM, tf.keras.layers.CuDNNLSTM. It is invalid to
+        provide both rnn_construction_fn and lstm_size.
+      rnn_construction_kwargs: (Optional.) Dictionary or arguments to pass to
+        rnn_construction_fn.
+
+        The RNN will be constructed via:
+
+        ```
+        rnn_layer = rnn_construction_fn(**rnn_construction_kwargs)
+        ```
       name: A string representing name of the network.
 
     Raises:
@@ -133,6 +146,8 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         lstm_size=lstm_size,
         output_fc_layer_params=output_fc_layer_params,
         activation_fn=activation_fn,
+        rnn_construction_fn=rnn_construction_fn,
+        rnn_construction_kwargs=rnn_construction_kwargs,
         dtype=dtype,
         name=name)
 

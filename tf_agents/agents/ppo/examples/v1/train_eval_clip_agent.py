@@ -157,6 +157,7 @@ def train_eval(
           tf_env.observation_spec(),
           tf_env.action_spec(),
           input_fc_layer_params=actor_fc_layers,
+          lstm_size=(40,),
           output_fc_layer_params=None)
       value_net = value_rnn_network.ValueRnnNetwork(
           tf_env.observation_spec(),
