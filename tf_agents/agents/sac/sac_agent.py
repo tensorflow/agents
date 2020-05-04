@@ -495,13 +495,7 @@ class SacAgent(tf_agent.TFAgent):
       target_q_values2, _ = self._critic_network_2(
           target_input, time_steps.step_type, training=False)
       target_q_values = tf.minimum(target_q_values1, target_q_values2)
-      # Stop gradients to avoid updates to shared layers between critic and
-      # actor. They could still be updated through the actor if desired, but we
-      # do not want gradients to flow to shared variables throught the critic.
-      target_q_values = tf.stop_gradient(target_q_values)
-
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
-
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec, num_outer_dims=2):
         # Sum over the time dimension.
