@@ -32,7 +32,6 @@ from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents.utils import training as training_lib
 
 
 @gin.configurable
@@ -231,8 +230,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
 
-    training_lib.apply_gradients(self._optimizer, grads_and_vars,
-                                 global_step=self.train_step_counter)
+    self._optimizer.apply_gradients(grads_and_vars)
+    self.train_step_counter.assign_add(1)
 
     return loss_info
 

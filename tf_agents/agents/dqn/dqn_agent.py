@@ -39,7 +39,6 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents.utils import training as training_lib
 from tf_agents.utils import value_ops
 
 
@@ -359,8 +358,8 @@ class DqnAgent(tf_agent.TFAgent):
                                           self.train_step_counter)
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
-    training_lib.apply_gradients(
-        self._optimizer, grads_and_vars, global_step=self.train_step_counter)
+    self._optimizer.apply_gradients(grads_and_vars)
+    self.train_step_counter.assign_add(1)
 
     self._update_target()
 

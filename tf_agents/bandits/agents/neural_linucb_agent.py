@@ -41,7 +41,6 @@ from tf_agents.bandits.policies import neural_linucb_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
-from tf_agents.utils import training as training_lib
 
 
 class NeuralLinUCBVariableCollection(tf.Module):
@@ -374,8 +373,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         eager_utils.add_gradients_summaries(grads_and_vars,
                                             self.train_step_counter)
 
-    training_lib.apply_gradients(self._optimizer, grads_and_vars,
-                                 global_step=self.train_step_counter)
+    self._optimizer.apply_gradients(grads_and_vars)
+    self.train_step_counter.assign_add(1)
+
     return loss_info
 
   def compute_loss_using_linucb(self, observation, action, reward, weights,
