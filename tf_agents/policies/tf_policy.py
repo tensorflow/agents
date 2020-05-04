@@ -36,74 +36,69 @@ tfd = tfp.distributions
 class TFPolicy(tf.Module):
   """Abstract base class for TF Policies.
 
-  Example of simple use in TF:
+  The Policy represents a mapping from `time_steps` recieved from the
+  environment to `actions` that can be applied to the environment.
 
-    tf_env = SomeTFEnvironment()
-    policy = SomeTFPolicy()
+  Agents expose two policies. A `policy` meant for deployment and evaluation,
+  and a `collect_policy` for collecting data from the environment. The
+  `collect_policy` is usually stochastic for exploring the environment better
+  and may log auxilliary information such as log probabilities required for
+  training as well. `Policy` objects can also be created directly by the users
+  without using an `Agent`.
 
-    time_step, step_state, reset_env = tf_env.reset()
-    policy_state = policy.get_initial_state(batch_size=tf_env.batch_size)
-    action_step = policy.action(time_step, policy_state)
-    next_time_step, _ = env.step(action_step.action, step_state)
+  The main methods of TFPolicy are:
 
-    sess.run([time_step, action, next_time_step])
+  * `action`: Maps a `time_step` from the environment to an action.
+  * `distribution`: Maps a `time_step` to a distribution over actions.
+  * `get_initial_state`: Generates the initial state for stateful policies, e.g.
+      RNN/LSTM policies.
+
+  Example usage:
+
+  ```
+  env = SomeTFEnvironment()
+  policy = TFRandomPolicy(env.time_step_spec(), env.action_spec())
+  # Or policy = agent.policy or agent.collect_policy
+
+  policy_state = policy.get_initial_state(env.batch_size)
+  time_step = env.reset()
+
+  while not time_step.is_last():
+    policy_step = policy.action(time_step, policy_state)
+    time_step = env.step(policy_step.action)
+
+    policy_state = policy_step.state
+    # policy_step.info may contain side info for logging, such as action log
+    # probabilities.
+  ```
+
+  Policies can be saved to disk as SavedModels (see policy_saver.py and
+  policy_loader.py) or as TF Checkpoints.
+
+  A `PyTFEagerPolicy` can be used to wrap a `TFPolicy` so that it works with
+  `PyEnvironment`s.
 
 
-  Example of using the same policy for several steps:
+  **NOTE**: For API consistency, subclasses are not allowed to override public
+  methods of `TFPolicy` class. Instead, they may implement the protected methods
+  including `_get_initial_state`, `_action`, and `_distribution`. This
+  public-calls-private convention allowed this base class to do things like
+  properly add `spec` and shape checks, which provide users an easier experience
+  when debugging their environments and networks.
 
-    tf_env = SomeTFEnvironment()
-    policy = SomeTFPolicy()
-
-    exp_policy = SomeTFPolicy()
-    update_policy = exp_policy.update(policy)
-    policy_state = exp_policy.get_initial_state(tf_env.batch_size)
-
-    time_step, step_state, _ = tf_env.reset()
-    action_step, policy_state, _ = exp_policy.action(time_step, policy_state)
-    next_time_step, step_state = env.step(action_step.action, step_state)
-
-    for j in range(num_episodes):
-      sess.run(update_policy)
-      for i in range(num_steps):
-        sess.run([time_step, action_step, next_time_step])
-
-
-  Example with multiple steps:
-
-    tf_env = SomeTFEnvironment()
-    policy = SomeTFPolicy()
-
-    # reset() creates the initial time_step and step_state, plus a reset_op
-    time_step, step_state, reset_op = tf_env.reset()
-    policy_state = policy.get_initial_state(tf_env.batch_size)
-    n_step = [time_step]
-    for i in range(n):
-      action_step = policy.action(time_step, policy_state)
-      policy_state = action_step.state
-      n_step.append(action_step)
-      time_step, step_state = tf_env.step(action_step.action, step_state)
-      n_step.append(time_step)
-
-    # n_step contains [time_step, action, time_step, action, ...]
-    sess.run(n_step)
-
-  Example with explicit resets:
-
-    tf_env = SomeTFEnvironment()
-    policy = SomeTFPolicy()
-    policy_state = policy.get_initial_state(tf_env.batch_size)
-
-    time_step, step_state, reset_env = tf_env.reset()
-    action_step = policy.action(time_step, policy_state)
-    # It applies the action and returns the new TimeStep.
-    next_time_step, _ = tf_env.step(action_step.action, step_state)
-    next_action_step = policy.action(next_time_step, policy_state)
-
-    # The Environment and the Policy would be reset before starting.
-    sess.run([time_step, action_step, next_time_step, next_action_step])
-    # Will force reset the Environment and the Policy.
-    sess.run([reset_env])
-    sess.run([time_step, action_step, next_time_step, next_action_step])
+  For researchers, and those developing new Policies, the `TFPolicy` base class
+  constructor also accept a `validate_args` parameter.  If `False`, this
+  disables all spec structure, dtype, and shape checks in the public methods of
+  these classes.  It allows algorithm developers to iterate and try different
+  input and output structures without worrying about overly restrictive
+  requirements, or input and output states being in a certain format.  However,
+  *disabling argument validation* can make it very hard to identify structural
+  input or algorithmic errors; and should not be done for final, or
+  production-ready, Policies.  In addition to having implementations that may
+  disagree with specs, this mean that the resulting Policy may no longer
+  interact well with other parts of TF-Agents.  Examples include impedance
+  mismatches with Actor/Learner APIs, replay buffers, and the model export
+  functionality in `PolicySaver.
   """
 
   # TODO(b/127327645) Remove this attribute.
