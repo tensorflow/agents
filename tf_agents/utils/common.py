@@ -1358,3 +1358,15 @@ def soft_device_placement():
     yield
   finally:
     tf.config.set_soft_device_placement(original_setting)
+
+
+def deduped_network_variables(network, *args):
+  """Returns a list of variables in net1 that are not in any other nets.
+
+  Args:
+    network: A Keras network.
+    *args: other networks to check for duplicate variables.
+  """
+  other_vars = object_identity.ObjectIdentitySet(
+      [v for n in args for v in n.variables])  # pylint:disable=g-complex-comprehension
+  return [v for v in network.variables if v not in other_vars]

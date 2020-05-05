@@ -78,7 +78,7 @@ class DummyActorPolicy(object):
 
 class DummyCriticNet(network.Network):
 
-  def __init__(self, l2_regularization_weight=0.0):
+  def __init__(self, l2_regularization_weight=0.0, shared_layer=None):
     super(DummyCriticNet, self).__init__(
         input_tensor_spec=(tensor_spec.TensorSpec([2], tf.float32),
                            tensor_spec.TensorSpec([1], tf.float32)),
@@ -90,6 +90,7 @@ class DummyCriticNet(network.Network):
         kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
         kernel_initializer=tf.compat.v1.initializers.constant([[0], [1]]),
         bias_initializer=tf.compat.v1.initializers.constant([[0]]))
+    self._shared_layer = shared_layer
     self._action_layer = tf.keras.layers.Dense(
         1,
         kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
@@ -99,7 +100,8 @@ class DummyCriticNet(network.Network):
   def copy(self, name=''):
     del name
     return DummyCriticNet(
-        l2_regularization_weight=self._l2_regularization_weight)
+        l2_regularization_weight=self._l2_regularization_weight,
+        shared_layer=self._shared_layer)
 
   def call(self, inputs, step_type, network_state=()):
     del step_type
@@ -109,6 +111,8 @@ class DummyCriticNet(network.Network):
     states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
 
     s_value = self._value_layer(states)
+    if self._shared_layer:
+      s_value = self._shared_layer(s_value)
     a_value = self._action_layer(actions)
     # Biggest state is best state.
     q_value = tf.reshape(s_value + a_value, [-1])
@@ -333,6 +337,56 @@ class SacAgentTest(test_utils.TestCase):
       self.assertEqual(self.evaluate(counter), 0)
       self.evaluate(agent.train(experience))
       self.assertEqual(self.evaluate(counter), 1)
+
+  def testSharedLayer(self):
+    shared_layer = tf.keras.layers.Dense(
+        1,
+        kernel_initializer=tf.compat.v1.initializers.constant([0]),
+        bias_initializer=tf.compat.v1.initializers.constant([0]),
+        name='shared')
+
+    critic_net_1 = DummyCriticNet(shared_layer=shared_layer)
+    critic_net_2 = DummyCriticNet(shared_layer=shared_layer)
+
+    target_shared_layer = tf.keras.layers.Dense(
+        1,
+        kernel_initializer=tf.compat.v1.initializers.constant([0]),
+        bias_initializer=tf.compat.v1.initializers.constant([0]),
+        name='shared_target')
+
+    target_critic_net_1 = DummyCriticNet(shared_layer=target_shared_layer)
+    target_critic_net_2 = DummyCriticNet(shared_layer=target_shared_layer)
+
+    agent = sac_agent.SacAgent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=critic_net_1,
+        critic_network_2=critic_net_2,
+        target_critic_network=target_critic_net_1,
+        target_critic_network_2=target_critic_net_2,
+        actor_network=None,
+        actor_optimizer=None,
+        critic_optimizer=None,
+        alpha_optimizer=None,
+        target_entropy=3.0,
+        initial_log_alpha=4.0,
+        target_update_tau=0.5,
+        actor_policy_ctor=DummyActorPolicy)
+
+    self.evaluate([
+        tf.compat.v1.global_variables_initializer(),
+        tf.compat.v1.local_variables_initializer()
+    ])
+
+    self.evaluate(agent.initialize())
+
+    for v in shared_layer.variables:
+      self.evaluate(v.assign(v * 0 + 1))
+
+    self.evaluate(agent._update_target())
+
+    self.assertEqual(1.0, self.evaluate(shared_layer.variables[0][0][0]))
+    self.assertEqual(0.5, self.evaluate(target_shared_layer.variables[0][0][0]))
 
 
 if __name__ == '__main__':

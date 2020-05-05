@@ -40,6 +40,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
+from tf_agents.utils import object_identity
 
 
 class Td3Info(collections.namedtuple(
@@ -233,10 +234,12 @@ class Td3Agent(tf_agent.TFAgent):
     Args:
       tau: A float scalar in [0, 1]. Default `tau=1.0` means hard update.
       period: Step interval at which the target networks are updated.
+
     Returns:
       A callable that performs a soft update of the target network parameters.
     """
     with tf.name_scope('update_targets'):
+
       def update():  # pylint: disable=missing-docstring
         # TODO(b/124381161): What about observation normalizer variables?
         critic_update_1 = common.soft_variables_update(
@@ -244,14 +247,27 @@ class Td3Agent(tf_agent.TFAgent):
             self._target_critic_network_1.variables,
             tau,
             tau_non_trainable=1.0)
+
+        critic_2_update_vars = common.deduped_network_variables(
+            self._critic_network_2, self._critic_network_1)
+        target_critic_2_update_vars = common.deduped_network_variables(
+            self._target_critic_network_2, self._target_critic_network_1)
+
         critic_update_2 = common.soft_variables_update(
-            self._critic_network_2.variables,
-            self._target_critic_network_2.variables,
+            critic_2_update_vars,
+            target_critic_2_update_vars,
             tau,
             tau_non_trainable=1.0)
+
+        actor_update_vars = common.deduped_network_variables(
+            self._actor_network, self._critic_network_1, self._critic_network_2)
+        target_actor_update_vars = common.deduped_network_variables(
+            self._target_actor_network, self._target_critic_network_1,
+            self._target_critic_network_2)
+
         actor_update = common.soft_variables_update(
-            self._actor_network.variables,
-            self._target_actor_network.variables,
+            actor_update_vars,
+            target_actor_update_vars,
             tau,
             tau_non_trainable=1.0)
         return tf.group(critic_update_1, critic_update_2, actor_update)
@@ -265,9 +281,9 @@ class Td3Agent(tf_agent.TFAgent):
         trajectory.experience_to_transitions(experience, squeeze_time_dim))
     actions = policy_steps.action
 
-    trainable_critic_variables = (
+    trainable_critic_variables = list(object_identity.ObjectIdentitySet(
         self._critic_network_1.trainable_variables +
-        self._critic_network_2.trainable_variables)
+        self._critic_network_2.trainable_variables))
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       assert trainable_critic_variables, ('No trainable critic variables to '
                                           'optimize.')

@@ -37,6 +37,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
+from tf_agents.utils import object_identity
 
 SacLossInfo = collections.namedtuple(
     'SacLossInfo', ('critic_loss', 'actor_loss', 'alpha_loss'))
@@ -279,9 +280,10 @@ class SacAgent(tf_agent.TFAgent):
         trajectory.experience_to_transitions(experience, squeeze_time_dim))
     actions = policy_steps.action
 
-    trainable_critic_variables = (
+    trainable_critic_variables = list(object_identity.ObjectIdentitySet(
         self._critic_network_1.trainable_variables +
-        self._critic_network_2.trainable_variables)
+        self._critic_network_2.trainable_variables))
+
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       assert trainable_critic_variables, ('No trainable critic variables to '
                                           'optimize.')
@@ -379,11 +381,19 @@ class SacAgent(tf_agent.TFAgent):
             self._target_critic_network_1.variables,
             tau,
             tau_non_trainable=1.0)
+
+        critic_2_update_vars = common.deduped_network_variables(
+            self._critic_network_2, self._critic_network_1)
+
+        target_critic_2_update_vars = common.deduped_network_variables(
+            self._target_critic_network_2, self._target_critic_network_1)
+
         critic_update_2 = common.soft_variables_update(
-            self._critic_network_2.variables,
-            self._target_critic_network_2.variables,
+            critic_2_update_vars,
+            target_critic_2_update_vars,
             tau,
             tau_non_trainable=1.0)
+
         return tf.group(critic_update_1, critic_update_2)
 
       return common.Periodically(update, period, 'update_targets')
