@@ -1,6 +1,5 @@
 # TF-Agents: A reliable, scalable and easy to use Reinforcement Learning library for TensorFlow.
 
-
 [TF-Agents](https://github.com/tensorflow/agents) makes designing, implementing
 and testing new RL algorithms easier, by providing well tested modular
 components that can be modified and extended. It enables fast code iteration,
@@ -10,7 +9,9 @@ To get started, we recommend checking out one of our Colab tutorials. If you
 need an intro to RL (or a quick recap),
 [start here](docs/tutorials/0_intro_rl.ipynb). Otherwise, check out our
 [DQN tutorial](docs/tutorials/1_dqn_tutorial.ipynb) to get an agent up and
-running in the Cartpole environment.
+running in the Cartpole environment. API documentation for the current stable
+release is on
+[tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
 **NOTE:** 0.4.0 is the new stable release (07-APR-2020) and was tested with
 Python3 and TensorFlow 2.1.x. `pip install tf-agents`
@@ -85,7 +86,9 @@ GitHub clone.
 ### Stable
 
 Run the commands below to install the most recent stable release (0.4.0), which
-was tested with TensorFlow 2.1.x and and Python3.
+was tested with TensorFlow 2.1.x and and Python3. API documentation for the
+release is on
+[tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
 ```bash
 pip install --user tf-agents
