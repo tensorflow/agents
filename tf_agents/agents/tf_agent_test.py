@@ -42,18 +42,18 @@ class LossInfoTest(tf.test.TestCase):
 
 class MyAgent(tf_agent.TFAgent):
 
-  def __init__(self, validate_args=True):
+  def __init__(self, validate_args=True, train_argspec=None,
+               train_sequence_length=None):
     obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
     time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = ()
-    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
     policy = tf_policy.TFPolicy(time_step_spec, action_spec)
     super(MyAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         policy=policy,
         collect_policy=policy,
-        train_sequence_length=None,
+        train_sequence_length=train_sequence_length,
         train_argspec=train_argspec,
         validate_args=validate_args)
 
@@ -63,8 +63,17 @@ class MyAgent(tf_agent.TFAgent):
 
 class TFAgentTest(tf.test.TestCase):
 
+  def testChecksTrainSequenceLength(self):
+    agent = MyAgent(train_sequence_length=2)
+    experience = tensor_spec.sample_spec_nest(agent.collect_data_spec,
+                                              outer_dims=(2, 20,))
+    with self.assertRaisesRegex(
+        ValueError, 'The agent was configured'):
+      agent.train(experience)
+
   def testTrainArgspec(self):
-    agent = MyAgent()
+    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
+    agent = MyAgent(train_argspec=train_argspec)
     extra = tf.ones(shape=[3, 4], dtype=tf.float32)
     experience = tf.nest.map_structure(
         lambda x: x[tf.newaxis, ...],
@@ -87,7 +96,8 @@ class TFAgentTest(tf.test.TestCase):
       agent.train(experience, extra=tf.ones(shape=[3, 4], dtype=tf.int32))
 
   def testTrainIgnoresExtraFields(self):
-    agent = MyAgent()
+    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
+    agent = MyAgent(train_argspec=train_argspec)
     extra = tf.ones(shape=[3, 4], dtype=tf.float32)
     experience = tf.nest.map_structure(
         lambda x: x[tf.newaxis, ...],
@@ -105,7 +115,8 @@ class TFAgentTest(tf.test.TestCase):
         self.assertAllEqual, (reduced_experience, extra), loss_info.extra)
 
   def testValidateArgsDisabled(self):
-    agent = MyAgent(validate_args=False)
+    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
+    agent = MyAgent(validate_args=False, train_argspec=train_argspec)
     loss_info = agent.train(experience='blah', extra=3)
     tf.nest.map_structure(
         self.assertAllEqual, loss_info.extra, ('blah', 3))

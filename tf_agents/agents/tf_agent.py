@@ -389,16 +389,24 @@ class TFAgent(tf.Module):
     # If we have a time dimension and a train_sequence_length, make sure they
     # match.
     if self._num_outer_dims == 2 and self.train_sequence_length is not None:
-      def check_shape(t):  # pylint: disable=invalid-name
+
+      def check_shape(path, t):  # pylint: disable=invalid-name
         if t.shape[1] != self.train_sequence_length:
           debug_str = tf.nest.map_structure(lambda tp: tp.shape, experience)
           raise ValueError(
-              "One of the Tensors in `experience` has a time axis dim value "
-              "'%s', but we require dim value '%d'. Full shape structure of "
-              "experience:\n%s" %
-              (t.shape[1], self.train_sequence_length, debug_str))
+              "The agent was configured to expect a `train_sequence_length` "
+              "of '{seq_len}'. Experience is expected to be shaped `[Batch x "
+              "Trajectory_sequence_length x spec.shape]` but at least one the "
+              "Tensors in `experience` has a time axis dim value '{t_dim}' vs "
+              "the expected '{seq_len}'.\nFirst such tensor is:\n\t"
+              "experience.{path}. \nFull shape structure of "
+              "experience:\n\t{debug_str}".format(
+                  seq_len=self.train_sequence_length,
+                  t_dim=t.shape[1],
+                  path=path,
+                  debug_str=debug_str))
 
-      tf.nest.map_structure(check_shape, experience)
+      nest_utils.map_structure_with_paths(check_shape, experience)
 
   def _check_train_argspec(self, kwargs):
     """Check that kwargs passed to train match `self.train_argspec`.

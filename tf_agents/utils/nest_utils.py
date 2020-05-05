@@ -41,6 +41,7 @@ except AttributeError:
 
 
 flatten_with_tuple_paths = nest.flatten_with_tuple_paths
+map_structure_with_paths = nest.map_structure_with_paths
 
 
 def flatten_with_joined_paths(structure, expand_composites=False):
