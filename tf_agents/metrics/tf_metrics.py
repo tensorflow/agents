@@ -21,6 +21,7 @@ from __future__ import print_function
 
 from absl import logging
 import gin
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.metrics import tf_metric
@@ -256,6 +257,75 @@ class ChosenActionHistogram(tf_metric.TFHistogramStepMetric):
     self._buffer.clear()
 
 
+@gin.configurable(module='tf_agents')
+class AverageReturnMultiMetric(tf_metric.TFMultiMetricStepMetric):
+  """Metric to compute the average return for multiple metrics."""
+
+  def __init__(self,
+               reward_spec,
+               name='AverageReturnMultiMetric',
+               prefix='Metrics',
+               dtype=tf.float32,
+               batch_size=1,
+               buffer_size=10):
+    self._batch_size = batch_size
+    self._buffer = tf.nest.map_structure(
+        lambda r: TFDeque(buffer_size, r.dtype, r.shape), reward_spec)
+    metric_names = _get_metric_names_from_spec(reward_spec)
+    self._dtype = dtype
+    def create_acc(spec):
+      return common.create_variable(
+          initial_value=np.zeros((batch_size,) + spec.shape),
+          shape=(batch_size,) + spec.shape,
+          dtype=spec.dtype,
+          name='Accumulator/' + spec.name)
+    self._return_accumulator = tf.nest.map_structure(create_acc, reward_spec)
+    self._reward_spec = reward_spec
+    super(AverageReturnMultiMetric, self).__init__(
+        name=name, prefix=prefix, metric_names=metric_names)
+
+  @common.function(autograph=True)
+  def call(self, trajectory):
+    tf.nest.assert_same_structure(trajectory.reward, self._reward_spec)
+    for buf, return_acc, reward in zip(
+        tf.nest.flatten(self._buffer),
+        tf.nest.flatten(self._return_accumulator),
+        tf.nest.flatten(trajectory.reward)):
+      # Zero out batch indices where a new episode is starting.
+      is_start = trajectory.is_first()
+      if reward.shape.rank > 1:
+        is_start = tf.broadcast_to(tf.reshape(trajectory.is_first(), [-1, 1]),
+                                   tf.shape(return_acc))
+      return_acc.assign(
+          tf.where(is_start, tf.zeros_like(return_acc),
+                   return_acc))
+
+      # Update accumulator with received rewards.
+      return_acc.assign_add(reward)
+
+      # Add final returns to buffer.
+      last_episode_indices = tf.squeeze(tf.where(trajectory.is_last()), axis=-1)
+      for indx in last_episode_indices:
+        buf.add(return_acc[indx])
+
+    return trajectory
+
+  def result(self):
+    return tf.nest.map_structure(lambda b: b.mean(), self._buffer)
+
+  @common.function
+  def reset(self):
+    tf.nest.map_structure(lambda b: b.clear(), self._buffer)
+    tf.nest.map_structure(lambda acc: acc.assign(tf.zeros_like(acc)),
+                          self._return_accumulator)
+
+
 def log_metrics(metrics, prefix=''):
   log = ['{0} = {1}'.format(m.name, m.log().numpy()) for m in metrics]
   logging.info('%s', '{0} \n\t\t {1}'.format(prefix, '\n\t\t '.join(log)))
+
+
+def _get_metric_names_from_spec(reward_spec):
+  reward_spec_flat = tf.nest.flatten(reward_spec)
+  metric_names_list = tf.nest.map_structure(lambda r: r.name, reward_spec_flat)
+  return metric_names_list

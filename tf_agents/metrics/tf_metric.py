@@ -167,3 +167,71 @@ class TFHistogramStepMetric(TFStepMetric):
           tf.compat.v2.summary.histogram(
               name=step_tag, data=result, step=step))
     return summaries
+
+
+class TFMultiMetricStepMetric(TFStepMetric):
+  """A TF step metric that emits multiple values per step.
+
+  The only difference between `TFSTepMetric` and `TFMultiMetricStepMetric` is
+  that the latter creates at each step many scalar summaries, one per metric.
+  """
+
+  def __init__(self, name, prefix='Metrics', metric_names=()):
+    super(TFMultiMetricStepMetric, self).__init__(name, prefix)
+    self._metric_names = metric_names
+
+  @property
+  def metric_names(self):
+    return self._metric_names
+
+  def tf_summaries(self, train_step=None, step_metrics=()):
+    """Generates per-metric summaries against `train_step` and `step_metrics`.
+
+    Args:
+      train_step: (Optional) Step counter for training iterations. If None, no
+        metric is generated against the global step.
+      step_metrics: (Optional) Iterable of step metrics to generate summaries
+        against.
+
+    Returns:
+      A list of scalar summaries.
+    """
+    result_list = self.result()
+    prefix = self._prefix
+    single_metric_name = 'Metric'
+    # In case there is a single name (e.g., `Reward`) for all metrics, store it
+    # in `single_metric_name`.
+    if len(self.metric_names) == 1:
+      single_metric_name = self.metric_names[0]
+    summaries = []
+    for metric_index, result in enumerate(result_list):
+      # Common name for all metrics.
+      tag = common.join_scope(prefix, self.name)
+      # The default metric name is the `single_metric_name` followed by the
+      # index.
+      metric_name = single_metric_name + str(metric_index)
+      # In case there is a valid individual name for each metric, use it.
+      if (metric_index < len(self.metric_names) and
+          len(result_list) == len(self.metric_names) and
+          self.metric_names[metric_index] is not None):
+        metric_name = self.metric_names[metric_index]
+      tag = common.join_scope(tag, metric_name)
+      if train_step is not None:
+        summaries.append(
+            tf.compat.v2.summary.scalar(name=tag, data=result, step=train_step))
+    if prefix:
+      prefix += '_'
+    for metric_index, result in enumerate(result_list):
+      for step_metric in step_metrics:
+        # Skip plotting the metrics against itself.
+        if self.name == step_metric.name:
+          continue
+        step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
+        # Summaries expect the step value to be an int64.
+        step = tf.cast(step_metric.result(), tf.int64)
+        summaries.append(tf.compat.v2.summary.scalar(
+            name=step_tag,
+            data=result,
+            step=step))
+
+    return summaries
