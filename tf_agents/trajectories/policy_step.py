@@ -17,9 +17,12 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from tf_agents.typing import types
+from typing import NamedTuple, Optional
 
 
 # Returned with every call to policy.action() and policy.distribution().
@@ -32,8 +35,10 @@ import collections
 #     policies, this will be an empty tuple.
 #   info: Auxiliary information emitted by the policy, e.g. log probabilities of
 #     the actions. For policies without info this will be an empty tuple.
-PolicyStep = collections.namedtuple('PolicyStep',
-                                    ('action', 'state', 'info'))
+PolicyStep = NamedTuple('PolicyStep',
+                        [('action', types.NestedSpecTensorOrArray),
+                         ('state', types.NestedSpecTensorOrArray),
+                         ('info', types.NestedSpecTensorOrArray)])
 
 # Set default empty tuple for PolicyStep.state and PolicyStep.info.
 PolicyStep.__new__.__defaults__ = ((),) * len(PolicyStep._fields)
@@ -54,7 +59,9 @@ PolicyInfo = collections.namedtuple('PolicyInfo',
                                     (CommonFields.LOG_PROBABILITY,))
 
 
-def set_log_probability(info, log_probability):
+def set_log_probability(
+    info: types.NestedTensorOrArray,
+    log_probability: types.Float) -> types.NestedTensorOrArray:
   """Sets the CommonFields.LOG_PROBABILITY on info to be log_probability."""
   if info in ((), None):
     return PolicyInfo(log_probability=log_probability)
@@ -68,7 +75,9 @@ def set_log_probability(info, log_probability):
   return info
 
 
-def get_log_probability(info, default_log_probability=None):
+def get_log_probability(
+    info: types.NestedTensorOrArray,
+    default_log_probability: Optional[types.Float] = None) -> types.Float:
   """Gets the CommonFields.LOG_PROBABILITY from info depending on type."""
   if isinstance(info, PolicyInfo):
     return getattr(info, CommonFields.LOG_PROBABILITY, default_log_probability)

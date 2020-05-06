@@ -17,9 +17,9 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
-import collections
 import functools
 import numpy as np
 
@@ -27,13 +27,17 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.typing import types
+from typing import NamedTuple, Optional
 
 _as_float32_array = functools.partial(np.asarray, dtype=np.float32)
 
 
 class TimeStep(
-    collections.namedtuple('TimeStep',
-                           ['step_type', 'reward', 'discount', 'observation'])):
+    NamedTuple('TimeStep', [('step_type', types.SpecTensorOrArray),
+                            ('reward', types.NestedSpecTensorOrArray),
+                            ('discount', types.SpecTensorOrArray),
+                            ('observation', types.NestedSpecTensorOrArray)])):
   """Returned with every call to `step` and `reset` on an environment.
 
   A `TimeStep` contains the data emitted by an environment at each step of
@@ -53,17 +57,17 @@ class TimeStep(
   """
   __slots__ = ()
 
-  def is_first(self):
+  def is_first(self) -> types.Bool:
     if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.FIRST)
     return np.equal(self.step_type, StepType.FIRST)
 
-  def is_mid(self):
+  def is_mid(self) -> types.Bool:
     if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.MID)
     return np.equal(self.step_type, StepType.MID)
 
-  def is_last(self):
+  def is_last(self) -> types.Bool:
     if tf.is_tensor(self.step_type):
       return tf.equal(self.step_type, StepType.LAST)
     return np.equal(self.step_type, StepType.LAST)
@@ -95,7 +99,9 @@ class StepType(object):
     raise ValueError('No known conversion for `%r` into a StepType' % value)
 
 
-def restart(observation, batch_size=None, reward_spec=None):
+def restart(observation: types.NestedTensorOrArray,
+            batch_size: Optional[types.Int] = None,
+            reward_spec: Optional[types.NestedSpec] = None) -> TimeStep:
   """Returns a `TimeStep` with `step_type` set equal to `StepType.FIRST`.
 
   Args:
@@ -163,7 +169,10 @@ def _as_multi_dim(maybe_scalar):
   return shape
 
 
-def transition(observation, reward, discount=1.0, outer_dims=None):
+def transition(observation: types.NestedTensorOrArray,
+               reward: types.NestedTensorOrArray,
+               discount: types.Float = 1.0,
+               outer_dims: Optional[types.Shape] = None) -> TimeStep:
   """Returns a `TimeStep` with `step_type` set equal to `StepType.MID`.
 
   For TF transitions, the batch size is inferred from the shape of `reward`.
@@ -227,7 +236,9 @@ def transition(observation, reward, discount=1.0, outer_dims=None):
   return TimeStep(step_type, reward, discount, observation)
 
 
-def termination(observation, reward, outer_dims=None):
+def termination(observation: types.NestedTensorOrArray,
+                reward: types.NestedTensorOrArray,
+                outer_dims: Optional[types.Shape] = None) -> TimeStep:
   """Returns a `TimeStep` with `step_type` set to `StepType.LAST`.
 
   Args:
@@ -281,7 +292,11 @@ def termination(observation, reward, outer_dims=None):
   return TimeStep(step_type, reward, discount, observation)
 
 
-def truncation(observation, reward, discount=1.0, outer_dims=None):
+# TODO(b/152907905): Update this function.
+def truncation(observation: types.NestedTensorOrArray,
+               reward: types.NestedTensorOrArray,
+               discount: types.Float = 1.0,
+               outer_dims: Optional[types.Shape] = None)  -> TimeStep:
   """Returns a `TimeStep` with `step_type` set to `StepType.LAST`.
 
   If `discount` is a scalar, and `observation` contains Tensors,
@@ -335,7 +350,9 @@ def truncation(observation, reward, discount=1.0, outer_dims=None):
   return TimeStep(step_type, reward, discount, observation)
 
 
-def time_step_spec(observation_spec=None, reward_spec=None):
+def time_step_spec(
+    observation_spec: Optional[types.NestedSpec] = None,
+    reward_spec: Optional[types.NestedSpec] = None) -> TimeStep:
   """Returns a `TimeStep` spec given the observation_spec.
 
   Args:
