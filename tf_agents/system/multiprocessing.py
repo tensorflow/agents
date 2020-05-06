@@ -13,15 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Environments module."""
+"""Multiprocessing library for TF-Agents."""
 
-# TODO(b/155801943): Bring parallel_py_environment here once we're py3-only.
-from tf_agents.environments import batched_py_environment
-from tf_agents.environments import py_environment
-from tf_agents.environments import random_py_environment
-from tf_agents.environments import random_tf_environment
-from tf_agents.environments import tf_environment
-from tf_agents.environments import tf_py_environment
-from tf_agents.environments import trajectory_replay
-from tf_agents.environments import utils
-from tf_agents.environments import wrappers
+# pylint: disable=wildcard-import
+from tf_agents.system.default.multiprocessing import *

@@ -56,6 +56,7 @@ from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
 from tf_agents.policies import py_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
+from tf_agents.system import multiprocessing
 from tf_agents.utils import common
 
 
@@ -349,4 +350,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  app.run(main)
+  multiprocessing.handle_main(lambda _: app.run(main))

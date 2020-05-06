@@ -32,6 +32,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ppo.examples.v1 import train_eval_clip_agent
 from tf_agents.environments import suite_atari
+from tf_agents.system import multiprocessing
 
 FLAGS = flags.FLAGS
 
@@ -54,4 +55,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  app.run(main)
+  multiprocessing.handle_main(lambda _: app.run(main))

@@ -20,18 +20,23 @@ from __future__ import division
 from __future__ import print_function
 
 import atexit
-import multiprocessing
 import sys
 import traceback
 
 from absl import logging
 
+import cloudpickle
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import py_environment
+from tf_agents.system import multiprocessing
 from tf_agents.utils import nest_utils
+
+
+# Worker polling period in seconds.
+_POLLING_PERIOD = 0.1
 
 
 @gin.configurable
@@ -204,7 +209,12 @@ class ProcessPyEnvironment(object):
       action_spec: The cached action spec of the environment.
       time_step_spec: The cached time step spec of the environment.
     """
-    self._env_constructor = env_constructor
+    # NOTE(ebrevdo): multiprocessing uses the standard py3 pickler which does
+    # not support anonymous lambdas.  Folks usually pass anonymous lambdas as
+    # env constructors.  Here we work around this by manually pickling
+    # the constructor using cloudpickle; which supports these.  In the
+    # new process, we'll unpickle this constructor and run it.
+    self._pickled_env_constructor = cloudpickle.dumps(env_constructor)
     self._flatten = flatten
     self._observation_spec = None
     self._action_spec = None
@@ -216,10 +226,9 @@ class ProcessPyEnvironment(object):
     Args:
       wait_to_start: Whether the call should wait for an env initialization.
     """
-    self._conn, conn = multiprocessing.Pipe()
-    self._process = multiprocessing.Process(
-        target=self._worker,
-        args=(conn, self._env_constructor, self._flatten))
+    mp_context = multiprocessing.get_context()
+    self._conn, conn = mp_context.Pipe()
+    self._process = mp_context.Process(target=self._worker, args=(conn,))
     atexit.register(self.close)
     self._process.start()
     if wait_to_start:
@@ -255,12 +264,20 @@ class ProcessPyEnvironment(object):
     Note that this involves communication with the external process, so it can
     be slow.
 
+    This method is only called if the attribute is not found in the dictionary
+    of `ParallelPyEnvironment`'s definition.
+
     Args:
       name: Attribute to access.
 
     Returns:
       Value of the attribute.
     """
+    # Accessed by multiprocessing Pickler or this function.
+    if name in ('__getstate__', '__setstate__', '_conn', '_ACCESS', '_receive'):
+      return super(ProcessPyEnvironment, self).__getattribute__(name)
+
+    # All other requests get sent to the worker.
     self._conn.send((self._ACCESS, name))
     return self._receive()
 
@@ -287,7 +304,8 @@ class ProcessPyEnvironment(object):
     except IOError:
       # The connection was already closed.
       pass
-    self._process.join(5)
+    if self._process.is_alive():
+      self._process.join(5)
 
   def step(self, action, blocking=True):
     """Step the environment.
@@ -341,26 +359,23 @@ class ProcessPyEnvironment(object):
     self.close()
     raise KeyError('Received message of unexpected type {}'.format(message))
 
-  def _worker(self, conn, env_constructor, flatten=False):
+  def _worker(self, conn):
     """The process waits for actions and sends back environment results.
 
     Args:
       conn: Connection for communication to the main process.
-      env_constructor: env_constructor for the OpenAI Gym environment.
-      flatten: Boolean, whether to assume flattened actions and time_steps
-        during communication to avoid overhead.
 
     Raises:
       KeyError: When receiving a message of unknown type.
     """
     try:
-      env = env_constructor()
+      env = cloudpickle.loads(self._pickled_env_constructor)()
       action_spec = env.action_spec()
       conn.send(self._READY)  # Ready.
       while True:
         try:
           # Only block for short times to have keyboard exceptions be raised.
-          if not conn.poll(0.1):
+          if not conn.poll(_POLLING_PERIOD):
             continue
           message, payload = conn.recv()
         except (EOFError, KeyboardInterrupt):
@@ -372,10 +387,10 @@ class ProcessPyEnvironment(object):
           continue
         if message == self._CALL:
           name, args, kwargs = payload
-          if flatten and name == 'step':
+          if self._flatten and name == 'step':
             args = [tf.nest.pack_sequence_as(action_spec, args[0])]
           result = getattr(env, name)(*args, **kwargs)
-          if flatten and name in ['step', 'reset']:
+          if self._flatten and name in ['step', 'reset']:
             result = tf.nest.flatten(result)
           conn.send((self._RESULT, result))
           continue

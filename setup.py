@@ -128,7 +128,8 @@ class Test(TestCommandBase):
         return 1
 
     # Run inside absl.app.run to ensure flags parsing is done.
-    return app.run(main)
+    from tf_agents.system import multiprocessing  # pylint: disable=g-import-not-at-top
+    return multiprocessing.handle_test_main(lambda: app.run(main))
 
 
 from tf_agents.version import __dev_version__  # pylint: disable=g-import-not-at-top
@@ -136,6 +137,7 @@ from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at
 
 REQUIRED_PACKAGES = [
     'absl-py >= 0.6.1',
+    'cloudpickle',
     'gin-config == 0.1.3',
     'numpy >= 1.13.3',
     'six >= 1.10.0',
