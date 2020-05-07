@@ -423,6 +423,46 @@ def add_outer_dims_nest(specs, outer_dims):
   return tf.nest.map_structure(add_outer_dims, specs)
 
 
+def remove_outer_dims_nest(specs, outer_dims):
+  """Removes the specified number of outer dimensions from the input spec nest.
+
+  Args:
+    specs: Nested list/tuple/dict of TensorSpecs/ArraySpecs, describing the
+      shape of tensors.
+    outer_dims: (int) Number of outer dimensions to remove.
+
+  Returns:
+    Nested TensorSpecs with outer dimensions removed from the input specs.
+
+  Raises:
+    Value error if a spec in the nest has shape rank less than `outer_dims`.
+  """
+
+  def remove_outer_dims(spec):
+    """Removes the outer_dims of a tensor spec."""
+    name = spec.name
+    if len(spec.shape) < outer_dims:
+      raise ValueError("The shape of spec {} has rank lower than the specified "
+                       "outer_dims {}".format(spec, outer_dims))
+    shape = list(spec.shape)[outer_dims:]
+    if hasattr(spec, "minimum") and hasattr(spec, "maximum"):
+      if isinstance(spec.minimum,
+                    (tuple, list)) and len(spec.minimum) == len(spec.shape):
+        minimum = spec.minimum[outer_dims:]
+      else:
+        minimum = spec.minimum
+      if isinstance(spec.maximum,
+                    (tuple, list)) and len(spec.maximum) == len(spec.shape):
+        maximum = spec.maximum[outer_dims:]
+      else:
+        maximum = spec.maximum
+
+      return BoundedTensorSpec(shape, spec.dtype, minimum, maximum, name)
+    return TensorSpec(shape, spec.dtype, name=name)
+
+  return tf.nest.map_structure(remove_outer_dims, specs)
+
+
 def to_proto(spec):
   """Encodes a nested spec into a struct_pb2.StructuredValue proto.
 

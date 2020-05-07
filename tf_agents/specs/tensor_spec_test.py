@@ -176,6 +176,21 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     with self.assertRaises(ValueError):
       tensor_spec.add_outer_dims_nest(1, example_nested_tensor_spec(dtype))
 
+  def testOuterDimsNestRemovesDimensionsFromSpecs(self, dtype):
+    if dtype == tf.string:
+      self.skipTest("Not compatible with string type.")
+    nested_spec = example_nested_tensor_spec(dtype)
+    larger_spec = tensor_spec.add_outer_dims_nest(nested_spec, (3, 4))
+    removed_spec = tensor_spec.remove_outer_dims_nest(larger_spec, 2)
+    self.assertEqual(nested_spec, removed_spec)
+
+  def testOuterDimsNestRemovesDimensionsFromSpecsThrows(self, dtype):
+    if dtype == tf.string:
+      self.skipTest("Not compatible with string type.")
+    nested_spec = example_nested_tensor_spec(dtype)
+    with self.assertRaises(ValueError):
+      tensor_spec.remove_outer_dims_nest(nested_spec, 10)
+
   def testNestSample(self, dtype):
     if dtype == tf.string:
       self.skipTest("Not compatible with string type.")
