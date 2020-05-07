@@ -127,7 +127,8 @@ class PolicySaver(object):
                use_nest_path_signatures=True,
                seed=None,
                train_step=None,
-               input_fn_and_spec=None):
+               input_fn_and_spec=None,
+               metadata=None):
     """Initialize PolicySaver for  TF policy `policy`.
 
     Args:
@@ -150,9 +151,12 @@ class PolicySaver(object):
         action_fn. When `input_fn_and_spec` is set, `tensor_spec` is the input
         for the action signature. When `input_fn_and_spec is None`, the action
         signature takes as input `(time_step, policy_state)`.
+      metadata: A dictionary of `tf.Variables` to be saved along with the
+        policy.
 
     Raises:
       TypeError: If `policy` is not an instance of TFPolicy.
+      TypeError: If `metadata` is not a dictionary of tf.Variables.
       ValueError: If use_nest_path_signatures is not used and any of the
         following `policy` specs are missing names, or the names collide:
         `policy.time_step_spec`, `policy.action_spec`,
@@ -193,6 +197,14 @@ class PolicySaver(object):
     # We will need the train step for the Checkpoint object.
     self._train_step = train_step
 
+    self._metadata = metadata or {}
+    for key, value in self._metadata.items():
+      if not isinstance(key, str):
+        raise TypeError('Keys of metadata must be strings: %s' % key)
+      if not isinstance(value, tf.Variable):
+        raise TypeError('Values of metadata must be tf.Variable: %s' % value)
+    policy.metadata = self._metadata
+
     if batch_size is None:
       get_initial_state_fn = policy.get_initial_state
       get_initial_state_input_specs = (tf.TensorSpec(
@@ -217,6 +229,8 @@ class PolicySaver(object):
 
     train_step_fn = common.function(
         lambda: policy.train_step).get_concrete_function()
+    get_metadata_fn = common.function(
+        lambda: policy.metadata).get_concrete_function()
 
     action_fn = common.function()(action_fn)
 
@@ -309,11 +323,19 @@ class PolicySaver(object):
                 input_specs=(),
                 output_spec=train_step.dtype,
                 include_batch_dimension=False),
+        'get_metadata':
+            _function_with_flat_signature(
+                get_metadata_fn,
+                input_specs=(),
+                output_spec=tf.nest.map_structure(lambda v: v.dtype,
+                                                  self._metadata),
+                include_batch_dimension=False),
     }
 
     policy.action = polymorphic_action_fn
     policy.get_initial_state = get_initial_state_fn
     policy.get_train_step = train_step_fn
+    policy.get_metadata = get_metadata_fn
     # Adding variables as an attribute to facilitate updating them.
     policy.model_variables = policy.variables()
 
@@ -366,8 +388,8 @@ class PolicySaver(object):
     """Get the (flat) signatures used when exporting the `SavedModel`.
 
     Returns:
-      A `dict` mapping each of "action", "get_initial_state", and
-      "get_train_step" to their respective flat signatures.
+      A `dict` mapping each of "action", "get_initial_state",  "get_train_step"
+      and "get_metadata" to their respective flat signatures.
     """
     return self._signatures
 
@@ -381,6 +403,17 @@ class PolicySaver(object):
       return self._train_step.numpy()
     else:
       return tf.identity(self._train_step)
+
+  def get_metadata(self):
+    """Returns the metadata of the policy.
+
+    Returns:
+      An a dictionary of tf.Variable.
+    """
+    if tf.executing_eagerly():
+      return {k: self._metadata[k].numpy() for k in self._metadata}
+    else:
+      return self._metadata
 
   def save(self, export_dir, options=None):
     """Save the policy to the given `export_dir`.

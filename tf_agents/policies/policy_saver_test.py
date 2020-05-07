@@ -524,6 +524,42 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     train_step_value = self.evaluate(reloaded.get_train_step())
     self.assertEqual(-1, train_step_value)
 
+  def testMetadataSaved(self):
+    # We need to use one default session so that self.evaluate and the
+    # SavedModel loader share the same session.
+    with tf.compat.v1.Session().as_default():
+      network = q_network.QNetwork(
+          input_tensor_spec=self._time_step_spec.observation,
+          action_spec=self._action_spec)
+
+      policy = q_policy.QPolicy(
+          time_step_spec=self._time_step_spec,
+          action_spec=self._action_spec,
+          q_network=network)
+      self.evaluate(tf.compat.v1.initializers.variables(policy.variables()))
+
+      train_step = common.create_variable('train_step', initial_value=1)
+      env_step = common.create_variable('env_step', initial_value=7)
+      metadata = {'env_step': env_step}
+      self.evaluate(tf.compat.v1.initializers.variables([train_step, env_step]))
+
+      saver = policy_saver.PolicySaver(
+          policy, batch_size=None, train_step=train_step, metadata=metadata)
+      if tf.executing_eagerly():
+        loaded_metadata = saver.get_metadata()
+      else:
+        loaded_metadata = self.evaluate(saver.get_metadata())
+      self.assertEqual(self.evaluate(metadata), loaded_metadata)
+
+      path = os.path.join(self.get_temp_dir(), 'save_model')
+      saver.save(path)
+
+      reloaded = tf.compat.v2.saved_model.load(path)
+      self.evaluate(tf.compat.v1.global_variables_initializer())
+      self.assertIn('get_metadata', reloaded.signatures)
+      env_step_value = self.evaluate(reloaded.get_metadata())['env_step']
+      self.assertEqual(7, env_step_value)
+
   def testVariablesAccessible(self):
     network = q_network.QNetwork(
         input_tensor_spec=self._time_step_spec.observation,
