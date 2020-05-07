@@ -104,10 +104,7 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
       # The features for the chosen arm is saved to policy_info.
       arm_spec = time_step_spec.observation[
           bandit_spec_utils.PER_ARM_FEATURE_KEY]
-      chosen_arm_features_info = tensor_spec.TensorSpec(
-          dtype=arm_spec.dtype,
-          shape=arm_spec.shape[1:],
-          name='chosen_arm_features')
+      chosen_arm_features_info = tensor_spec.remove_outer_dims_nest(arm_spec, 1)
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
           bandit_policy_type=bandit_policy_type,
@@ -173,10 +170,12 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
 
     if self._accepts_per_arm_features:
       # Saving the features for the chosen action to the policy_info.
-      chosen_arm_features = tf.gather(
-          params=observation[bandit_spec_utils.PER_ARM_FEATURE_KEY],
-          indices=actions,
-          batch_dims=1)
+      def gather_observation(obs):
+        return tf.gather(params=obs, indices=actions, batch_dims=1)
+
+      chosen_arm_features = tf.nest.map_structure(
+          gather_observation,
+          observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
       policy_info = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=(
               predicted_reward_values if policy_utilities.InfoFields
