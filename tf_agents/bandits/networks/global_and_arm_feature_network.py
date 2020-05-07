@@ -31,7 +31,8 @@ from tf_agents.specs import tensor_spec
 
 def create_feed_forward_common_tower_network(observation_spec, global_layers,
                                              arm_layers, common_layers,
-                                             output_dim=1):
+                                             output_dim=1,
+                                             arm_preprocessing_combiner=None):
   """Creates a common tower network with feedforward towers.
 
   The network produced by this function can be used either in
@@ -51,6 +52,7 @@ def create_feed_forward_common_tower_network(observation_spec, global_layers,
     output_dim: The output dimension of the network. If 1, the common tower will
       be a QNetwork. Otherwise, the common tower will be an encoding network
       with the specified output dimension.
+    arm_preprocessing_combiner: preprocessing combiner for the arm features.
 
   Returns:
     A network that takes observations adhering observation_spec and outputs
@@ -60,12 +62,12 @@ def create_feed_forward_common_tower_network(observation_spec, global_layers,
       input_tensor_spec=observation_spec[bandit_spec_utils.GLOBAL_FEATURE_KEY],
       fc_layer_params=global_layers)
 
-  one_dim_per_arm_obs = tensor_spec.TensorSpec(
-      shape=observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[1:],
-      dtype=tf.float32)
+  arm_feature_spec = tensor_spec.remove_outer_dims_nest(
+      observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY], 1)
   arm_network = encoding_network.EncodingNetwork(
-      input_tensor_spec=one_dim_per_arm_obs,
-      fc_layer_params=arm_layers)
+      input_tensor_spec=arm_feature_spec,
+      fc_layer_params=arm_layers,
+      preprocessing_combiner=arm_preprocessing_combiner)
   common_input_dim = global_layers[-1] + arm_layers[-1]
   common_input_spec = tensor_spec.TensorSpec(
       shape=(common_input_dim,), dtype=tf.float32)
@@ -158,15 +160,17 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
 
     global_obs = observation[bandit_spec_utils.GLOBAL_FEATURE_KEY]
     arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
-    num_actions = tf.shape(arm_obs)[1]
+    arm_output, arm_state = self._arm_network(
+        arm_obs, step_type=step_type, network_state=network_state)
+    if arm_output.shape.rank > 3:
+      arm_output = tf.squeeze(arm_output, axis=2)
 
     global_output, global_state = self._global_network(
         global_obs, step_type=step_type, network_state=network_state)
+
+    num_actions = tf.shape(arm_output)[1]
     global_output = tf.tile(
         tf.expand_dims(global_output, axis=1), [1, num_actions, 1])
-
-    arm_output, arm_state = self._arm_network(
-        arm_obs, step_type=step_type, network_state=network_state)
 
     common_input = tf.concat([global_output, arm_output], axis=-1)
 

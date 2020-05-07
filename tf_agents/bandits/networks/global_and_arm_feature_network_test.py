@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.networks import global_and_arm_feature_network as gafn
@@ -70,6 +71,51 @@ class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
         obs_spec, outer_dims=(batch_size,))
     output, _ = net(input_nest)
     self.evaluate(tf.compat.v1.global_variables_initializer())
+    output = self.evaluate(output)
+    self.assertAllEqual(output.shape, (batch_size, num_actions))
+
+  def testCreateFeedForwardCommonTowerNetworkWithFeatureColumns(
+      self, batch_size=2, feature_dim=4, num_actions=3):
+    obs_spec = {
+        'global': tensor_spec.TensorSpec(
+            shape=(feature_dim,), dtype=tf.float32),
+        'per_arm': {
+            'name': tensor_spec.TensorSpec((num_actions,), tf.string),
+            'fruit': tensor_spec.TensorSpec((num_actions,), tf.string)
+        }
+    }
+
+    columns_a = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'name', ['bob', 'george', 'wanda']))
+    columns_b = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'fruit', ['banana', 'kiwi', 'pear']))
+
+    net = gafn.create_feed_forward_common_tower_network(
+        observation_spec=obs_spec,
+        global_layers=(4, 3, 2),
+        arm_layers=(6, 5, 4),
+        common_layers=(7, 6, 5),
+        arm_preprocessing_combiner=tf.compat.v2.keras.layers.DenseFeatures(
+            [columns_a, columns_b]))
+    input_nest = {
+        'global': tf.constant(np.random.rand(batch_size, feature_dim)),
+        'per_arm': {
+            'name': tf.constant([
+                [['george'], ['george'], ['george']],
+                [['bob'], ['bob'], ['bob']]]),
+            'fruit': tf.constant([
+                [['banana'], ['banana'], ['banana']],
+                [['kiwi'], ['kiwi'], ['kiwi']]])
+        }
+    }
+
+    output, _ = net(input_nest)
+    self.evaluate([
+        tf.compat.v1.global_variables_initializer(),
+        tf.compat.v1.tables_initializer()
+    ])
     output = self.evaluate(output)
     self.assertAllEqual(output.shape, (batch_size, num_actions))
 
