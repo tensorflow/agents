@@ -200,8 +200,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       chosen_action, _ = nest_utils.flatten_multi_batched_nested_tensors(
           experience.policy_info.chosen_arm_features,
           self.policy.info_spec.chosen_arm_features)
-      observations[bandit_spec_utils.PER_ARM_FEATURE_KEY] = tf.expand_dims(
-          chosen_action, axis=1)
+      observations[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY] = tf.nest.map_structure(
+              lambda x: tf.expand_dims(x, axis=1), chosen_action)
       actions = tf.zeros_like(actions)
 
     with tf.GradientTape() as tape:
