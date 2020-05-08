@@ -76,7 +76,7 @@ run_tests() {
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/
   elif [ "$RELEASE_TYPE" = "stable" ]; then
-    pip install tensorflow==2.1.0
+    pip install --upgrade tensorflow==2.2.0
 
     # Run the tests
     python setup.py test --release

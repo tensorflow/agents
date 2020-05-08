@@ -152,7 +152,7 @@ TEST_REQUIRED_PACKAGES = [
     'scipy == 1.1.0',
 ]
 
-REQUIRED_TFP_VERSION = '0.8.0'
+REQUIRED_TFP_VERSION = '0.9.0'
 
 if '--release' in sys.argv:
   release = True
