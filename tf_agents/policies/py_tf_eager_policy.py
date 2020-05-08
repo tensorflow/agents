@@ -158,6 +158,10 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     """Returns the training global step of the saved model."""
     return self._policy.get_train_step().numpy()
 
+  def get_metadata(self):
+    """Returns the metadata of the saved model."""
+    return self._policy.get_metadata()
+
   def variables(self):
     return self._policy.model_variables
 
