@@ -466,10 +466,6 @@ def remove_outer_dims_nest(specs, outer_dims):
 def to_proto(spec):
   """Encodes a nested spec into a struct_pb2.StructuredValue proto.
 
-  *Note* (b/151318119): BoundedSpecs are converted to regular specs when saved
-  into a proto as the `nested_structure_coder` from TF currently doesn't
-  handle BoundedSpecs. Shape and dtypes will still match the original specs.
-
   Args:
     spec: Nested list/tuple or dict of TensorSpecs, describing the
       shape of the non-batched Tensors.
