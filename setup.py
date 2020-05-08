@@ -137,7 +137,7 @@ from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at
 
 REQUIRED_PACKAGES = [
     'absl-py >= 0.6.1',
-    'cloudpickle',
+    'cloudpickle == 1.3',  # TODO(b/155109696): Unpin cloudpickle version.
     'gin-config == 0.1.3',
     'numpy >= 1.13.3',
     'six >= 1.10.0',
@@ -155,7 +155,7 @@ TEST_REQUIRED_PACKAGES = [
     'scipy == 1.1.0',
 ]
 
-REQUIRED_TFP_VERSION = '0.8.0'
+REQUIRED_TFP_VERSION = '0.9.0'
 
 if '--release' in sys.argv:
   release = True
