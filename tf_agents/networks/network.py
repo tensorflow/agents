@@ -28,9 +28,10 @@ from tensorflow.keras import layers  # pylint: disable=unused-import
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
 from tf_agents.utils import common
+from tf_agents.utils import object_identity
 
 # pylint:disable=g-direct-tensorflow-import
-from tensorflow.python.keras.engine import network as keras_network  # TF internal
+from tensorflow.python.keras.utils import layer_utils  # TF internal
 from tensorflow.python.training.tracking import base  # TF internal
 from tensorflow.python.util import tf_decorator  # TF internal
 from tensorflow.python.util import tf_inspect  # TF internal
@@ -59,7 +60,7 @@ class _NetworkMeta(abc.ABCMeta):
     Raises:
       RuntimeError: if the class __init__ has *args in its signature.
     """
-    if baseclasses[0] == keras_network.Network:
+    if baseclasses[0] == tf.keras.layers.Layer:
       # This is just Network below.  Return early.
       return abc.ABCMeta.__new__(mcs, classname, baseclasses, attrs)
 
@@ -98,10 +99,10 @@ class _NetworkMeta(abc.ABCMeta):
 
 
 @six.add_metaclass(_NetworkMeta)
-class Network(keras_network.Network):
+class Network(tf.keras.layers.Layer):
   """Base extension to Keras network to simplify copy operations."""
 
-  def __init__(self, input_tensor_spec, state_spec, name):
+  def __init__(self, input_tensor_spec, state_spec, name=None):
     """Creates an instance of `Network`.
 
     Args:
@@ -109,10 +110,14 @@ class Network(keras_network.Network):
         input observations.
       state_spec: A nest of `tensor_spec.TensorSpec` representing the state
         needed by the network. Use () if none.
-      name: A string representing the name of the network.
+      name: (Optional.) A string representing the name of the network.
     """
     super(Network, self).__init__(name=name)
     common.check_tf1_allowed()
+
+    # Required for summary() to work.
+    self._is_graph_network = False
+
     self._input_tensor_spec = input_tensor_spec
     self._state_spec = state_spec
 
@@ -151,6 +156,71 @@ class Network(keras_network.Network):
           "Network has not been built, unable to access variables.  "
           "Please call `create_variables` or apply the network first.")
     return super(Network, self).trainable_variables
+
+  @property
+  def layers(self):
+    """Get the list of all (nested) sub-layers used in this Network."""
+    return list(_filter_empty_layer_containers(self._layers))
+
+  def get_layer(self, name=None, index=None):
+    """Retrieves a layer based on either its name (unique) or index.
+
+    If `name` and `index` are both provided, `index` will take precedence.
+    Indices are based on order of horizontal graph traversal (bottom-up).
+
+    Arguments:
+        name: String, name of layer.
+        index: Integer, index of layer.
+
+    Returns:
+        A layer instance.
+
+    Raises:
+        ValueError: In case of invalid layer name or index.
+    """
+    if index is not None and name is not None:
+      raise ValueError("Provide only a layer name or a layer index.")
+
+    if index is not None:
+      if len(self.layers) <= index:
+        raise ValueError("Was asked to retrieve layer at index " + str(index) +
+                         " but model only has " + str(len(self.layers)) +
+                         " layers.")
+      else:
+        return self.layers[index]
+
+    if name is not None:
+      for layer in self.layers:
+        if layer.name == name:
+          return layer
+      raise ValueError("No such layer: " + name + ".")
+
+  def summary(self, line_length=None, positions=None, print_fn=None):
+    """Prints a string summary of the network.
+
+    Args:
+        line_length: Total length of printed lines
+            (e.g. set this to adapt the display to different
+            terminal window sizes).
+        positions: Relative or absolute positions of log elements
+            in each line. If not provided,
+            defaults to `[.33, .55, .67, 1.]`.
+        print_fn: Print function to use. Defaults to `print`.
+            It will be called on each line of the summary.
+            You can set it to a custom function
+            in order to capture the string summary.
+
+    Raises:
+        ValueError: if `summary()` is called before the model is built.
+    """
+    if not self.built:
+      raise ValueError("This model has not yet been built. "
+                       "Build the model first by calling `build()` or "
+                       "`__call__()` with some data, or `create_variables()`.")
+    layer_utils.print_summary(self,
+                              line_length=line_length,
+                              positions=positions,
+                              print_fn=print_fn)
 
   def copy(self, **kwargs):
     """Create a shallow copy of this network.
@@ -257,3 +327,28 @@ class DistributionNetwork(Network):
   @property
   def output_spec(self):
     return self._output_spec
+
+
+def _is_layer(obj):
+  """Implicit check for Layer-like objects."""
+  # TODO(b/110718070): Replace with isinstance(obj, tf.keras.layers.Layer).
+  return hasattr(obj, "_is_layer") and not isinstance(obj, type)
+
+
+def _filter_empty_layer_containers(layer_list):
+  """Remove empty layer containers."""
+  existing = object_identity.ObjectIdentitySet()
+  to_visit = layer_list[::-1]
+  while to_visit:
+    obj = to_visit.pop()
+    if obj in existing:
+      continue
+    existing.add(obj)
+    if _is_layer(obj):
+      yield obj
+    else:
+      sub_layers = getattr(obj, "layers", None) or []
+
+      # Trackable data structures will not show up in ".layers" lists, but
+      # the layers they contain will.
+      to_visit.extend(sub_layers[::-1])

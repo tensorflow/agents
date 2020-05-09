@@ -57,6 +57,29 @@ class NoInitNetwork(MockNetwork):
   pass
 
 
+class GnarlyNetwork(network.Network):
+
+  def __init__(self):
+    k1 = tf.keras.Sequential([
+        tf.keras.layers.Dense(
+            32,
+            kernel_regularizer=tf.keras.regularizers.l1_l2(l1=1e-5, l2=1e-4),
+            bias_regularizer=tf.keras.regularizers.l2(1e-4),
+        ),
+        tf.keras.layers.Dense(64),
+        tf.keras.layers.BatchNormalization()
+    ], name='a')
+    k2 = tf.keras.layers.Dense(12, name='b')
+    super(GnarlyNetwork, self).__init__(
+        input_tensor_spec=tf.TensorSpec(dtype=tf.float32, shape=(2,)),
+        state_spec=(), name=None)
+    self._k1 = k1
+    self._k2 = k2
+
+  def call(self, observations, step_type, network_state=None):
+    return self._k2(self._k1(observations)), network_state
+
+
 class NetworkTest(tf.test.TestCase):
 
   def test_copy_works(self):
@@ -109,6 +132,35 @@ class NetworkTest(tf.test.TestCase):
     net = MockNetwork(observation_spec, action_spec)
     net.create_variables()
     net.summary()
+
+  def test_access_deep_layers_weights_and_losses(self):
+    net = GnarlyNetwork()
+    net.create_variables(training=True)
+    layer_names = sorted([l.name for l in net.layers])
+    losses = net.losses
+    trainable_weight_names = sorted([w.name for w in net.trainable_weights])
+    non_trainable_weight_names = sorted(
+        [w.name for w in net.non_trainable_weights])
+    self.assertEqual(layer_names, ['a', 'b'])
+    self.assertLen(losses, 2)
+    for loss in losses:
+      self.assertEqual(loss.dtype, tf.float32)
+      self.assertEqual(loss.shape, ())
+    self.assertEqual(
+        [x.lstrip('gnarly_network/') for x in trainable_weight_names],
+        ['batch_normalization/beta:0',
+         'batch_normalization/gamma:0',
+         'dense/bias:0',
+         'dense/kernel:0',
+         'dense_1/bias:0',
+         'dense_1/kernel:0',
+         'b/bias:0',
+         'b/kernel:0'])
+    self.assertEqual(
+        [x.lstrip('gnarly_network/') for x in non_trainable_weight_names],
+        ['batch_normalization/moving_mean:0',
+         'batch_normalization/moving_variance:0'])
+
 
 if __name__ == '__main__':
   tf.test.main()
