@@ -268,7 +268,10 @@ def matching_dtypes_and_inner_shapes(tensors, specs, allow_extra_fields=False):
   """
   if allow_extra_fields:
     tensors = prune_extra_keys(specs, tensors)
-  assert_same_structure(tensors, specs)
+  assert_same_structure(
+      tensors,
+      specs,
+      message='Tensors and specs do not have matching structures')
 
   flat_tensors = nest.flatten(tensors)
   flat_specs = tf.nest.flatten(specs)
@@ -344,7 +347,10 @@ def is_batched_nested_tensors(
   if allow_extra_fields:
     tensors = prune_extra_keys(specs, tensors)
 
-  assert_same_structure(specs, tensors)
+  assert_same_structure(
+      tensors,
+      specs,
+      message='Tensors and specs do not have matching structures')
   flat_tensors = nest.flatten(tensors)
   flat_specs = tf.nest.flatten(specs)
 
@@ -440,7 +446,10 @@ def batch_nested_tensors(tensors, specs=None):
   if specs is None:
     return tf.nest.map_structure(lambda x: composite.expand_dims(x, 0), tensors)
 
-  assert_same_structure(tensors, specs)
+  assert_same_structure(
+      tensors,
+      specs,
+      message='Tensors and specs do not have matching structures')
 
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
@@ -463,7 +472,10 @@ def batch_nested_tensors(tensors, specs=None):
 
 def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   """Flatten nested tensors and check their shape for use in other functions."""
-  assert_same_structure(tensors, specs)
+  assert_same_structure(
+      tensors,
+      specs,
+      message='Tensors and specs do not have matching structures')
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   for tensor, shape in zip(flat_tensors, flat_shapes):
@@ -627,7 +639,10 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   Raises:
     ValueError: if the tensors and specs have incompatible dimensions or shapes.
   """
-  assert_same_structure(tensors, specs)
+  assert_same_structure(
+      tensors,
+      specs,
+      message='Tensors and specs do not have matching structures')
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   out_tensors = []
@@ -649,7 +664,10 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
 
 def get_outer_shape(nested_tensor, spec):
   """Runtime batch dims of tensor's batch dimension `dim`."""
-  assert_same_structure(nested_tensor, spec)
+  assert_same_structure(
+      nested_tensor,
+      spec,
+      message='Tensors and specs do not have matching structures')
   first_tensor = tf.nest.flatten(nested_tensor)[0]
   first_spec = tf.nest.flatten(spec)[0]
 
@@ -684,7 +702,10 @@ def get_outer_rank(tensors, specs):
       3. A mix of batched and unbatched tensors are provided.
       4. The tensors are batched but have an incorrect number of outer dims.
   """
-  assert_same_structure(tensors, specs)
+  assert_same_structure(
+      tensors,
+      specs,
+      message='Tensors and specs do not have matching structures')
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
 
