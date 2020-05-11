@@ -46,6 +46,7 @@ import abc
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -116,7 +117,7 @@ class TensorNormalizer(tf.Module):
     Returns:
       normalized_tensor: Tensor after applying normalization.
     """
-    tf.nest.assert_same_structure(tensor, self._tensor_spec)
+    nest_utils.assert_same_structure(tensor, self._tensor_spec)
     tensor = tf.nest.flatten(tensor)
     tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
 

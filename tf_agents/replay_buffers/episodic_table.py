@@ -26,6 +26,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.utils import nest_utils
+
 from tensorflow.python.ops import list_ops  # TF internal
 
 
@@ -208,7 +210,7 @@ class EpisodicTable(tf.Module):
     Returns:
       Ops for extending the table.
     """
-    tf.nest.assert_same_structure(self.slots, episode_lists)
+    nest_utils.assert_same_structure(self.slots, episode_lists)
 
     rows = tf.convert_to_tensor(value=rows, dtype=tf.int64)
     existing_lists = self.get_episode_lists(rows)

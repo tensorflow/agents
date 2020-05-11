@@ -33,6 +33,7 @@ from tf_agents.policies import greedy_policy
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
+from tf_agents.utils import nest_utils
 from tf_agents.utils import value_ops
 
 
@@ -334,7 +335,7 @@ class ReinforceAgent(tf_agent.TFAgent):
             data=advantages,
             step=self.train_step_counter)
 
-    tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+    nest_utils.assert_same_structure(time_steps, self.time_step_spec)
     policy_state = _get_initial_policy_state(self.collect_policy, time_steps)
     actions_distribution = self.collect_policy.distribution(
         time_steps, policy_state=policy_state).action

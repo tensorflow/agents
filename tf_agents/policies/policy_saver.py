@@ -503,7 +503,7 @@ def _function_with_flat_signature(function,
   flat_input_spec = [_with_batch(spec) for spec in tf.nest.flatten(input_specs)]
 
   def as_dict(outputs, output_spec):
-    tf.nest.assert_same_structure(outputs, output_spec)
+    nest_utils.assert_same_structure(outputs, output_spec)
     flat_outputs = tf.nest.flatten(outputs)
     flat_names = [s.name for s in tf.nest.flatten(output_spec)]
     return dict(zip(flat_names, flat_outputs))

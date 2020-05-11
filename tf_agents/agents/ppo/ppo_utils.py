@@ -22,6 +22,7 @@ from __future__ import print_function
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import trajectory
+from tf_agents.utils import nest_utils
 
 
 def make_timestep_mask(batched_next_time_step, allow_partial_episodes=False):
@@ -81,8 +82,8 @@ def get_distribution_params(nested_distribution):
 def nested_kl_divergence(nested_from_distribution, nested_to_distribution,
                          outer_dims=()):
   """Given two nested distributions, sum the KL divergences of the leaves."""
-  tf.nest.assert_same_structure(nested_from_distribution,
-                                nested_to_distribution)
+  nest_utils.assert_same_structure(nested_from_distribution,
+                                   nested_to_distribution)
 
   # Make list pairs of leaf distributions.
   flat_from_distribution = tf.nest.flatten(nested_from_distribution)

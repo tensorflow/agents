@@ -917,7 +917,7 @@ class PPOAgent(tf_agent.TFAgent):
                                   debug_summaries=False):
     """Create regularization loss tensor based on agent parameters."""
     if self._entropy_regularization > 0:
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(time_steps, self.time_step_spec)
       with tf.name_scope('entropy_regularization'):
         entropy = tf.cast(
             common.entropy(current_policy_distribution, self.action_spec),
@@ -1067,7 +1067,7 @@ class PPOAgent(tf_agent.TFAgent):
       policy_gradient_loss: A tensor that will contain policy gradient loss for
         the on-policy experience.
     """
-    tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+    nest_utils.assert_same_structure(time_steps, self.time_step_spec)
     action_log_prob = common.log_probability(current_policy_distribution,
                                              actions, self._action_spec)
     action_log_prob = tf.cast(action_log_prob, tf.float32)

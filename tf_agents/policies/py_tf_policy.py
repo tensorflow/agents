@@ -197,7 +197,7 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
       # update time_step.
       time_step = nest_utils.batch_nested_array(time_step)
 
-    tf.nest.assert_same_structure(self._time_step, time_step)
+    nest_utils.assert_same_structure(self._time_step, time_step)
     feed_dict = {self._time_step: time_step}
     if policy_state is not None:
       # Flatten policy_state to handle specs that are not hashable due to lists.

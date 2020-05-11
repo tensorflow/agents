@@ -112,8 +112,8 @@ class TrajectoryReplay(object):
     if policy_state is None:
       policy_state = self._policy.get_initial_state(batch_size)
     else:
-      tf.nest.assert_same_structure(policy_state,
-                                    self._policy.policy_state_spec)
+      nest_utils.assert_same_structure(policy_state,
+                                       self._policy.policy_state_spec)
 
     if not self._time_major:
       # Make trajectory time-major.

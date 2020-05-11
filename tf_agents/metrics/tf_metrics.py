@@ -27,6 +27,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.metrics import tf_metric
 from tf_agents.replay_buffers import table
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 
 class TFDeque(object):
@@ -286,7 +287,7 @@ class AverageReturnMultiMetric(tf_metric.TFMultiMetricStepMetric):
 
   @common.function(autograph=True)
   def call(self, trajectory):
-    tf.nest.assert_same_structure(trajectory.reward, self._reward_spec)
+    nest_utils.assert_same_structure(trajectory.reward, self._reward_spec)
     for buf, return_acc, reward in zip(
         tf.nest.flatten(self._buffer),
         tf.nest.flatten(self._return_accumulator),

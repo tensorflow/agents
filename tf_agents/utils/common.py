@@ -668,7 +668,7 @@ def log_probability(distributions, actions, action_spec):
         input_tensor=single_log_prob,
         axis=reduce_dims)
 
-  tf.nest.assert_same_structure(distributions, actions)
+  nest_utils.assert_same_structure(distributions, actions)
   log_probs = [
       _compute_log_prob(dist, action)
       for (dist, action

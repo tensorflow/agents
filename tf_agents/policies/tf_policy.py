@@ -290,8 +290,14 @@ class TFPolicy(tf.Module):
       time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
       policy_state = nest_utils.prune_extra_keys(
           self._policy_state_spec, policy_state)
-      tf.nest.assert_same_structure(time_step, self._time_step_spec)
-      tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
+      nest_utils.assert_same_structure(
+          time_step,
+          self._time_step_spec,
+          message='time_step and time_step_spec structures do not match')
+      nest_utils.assert_same_structure(
+          policy_state,
+          self._policy_state_spec,
+          message='policy_state and policy_state_spec structures do not match')
 
     if self._automatic_state_reset:
       policy_state = self._maybe_reset_state(time_step, policy_state)
@@ -308,7 +314,10 @@ class TFPolicy(tf.Module):
       step = step._replace(action=clipped_actions)
 
     if self._validate_args:
-      tf.nest.assert_same_structure(step, self._policy_step_spec)
+      nest_utils.assert_same_structure(
+          step,
+          self._policy_step_spec,
+          message='action output and policy_step_spec structures do not match')
 
       def compare_to_spec(value, spec):
         return value.dtype.is_compatible_with(spec.dtype)
@@ -351,8 +360,14 @@ class TFPolicy(tf.Module):
       time_step = nest_utils.prune_extra_keys(self._time_step_spec, time_step)
       policy_state = nest_utils.prune_extra_keys(
           self._policy_state_spec, policy_state)
-      tf.nest.assert_same_structure(time_step, self._time_step_spec)
-      tf.nest.assert_same_structure(policy_state, self._policy_state_spec)
+      nest_utils.assert_same_structure(
+          time_step,
+          self._time_step_spec,
+          message='time_step and time_step_spec structures do not match')
+      nest_utils.assert_same_structure(
+          policy_state,
+          self._policy_state_spec,
+          message='policy_state and policy_state_spec structures do not match')
     if self._automatic_state_reset:
       policy_state = self._maybe_reset_state(time_step, policy_state)
     step = self._distribution(time_step=time_step, policy_state=policy_state)
@@ -365,7 +380,11 @@ class TFPolicy(tf.Module):
               policy_step.get_log_probability(self._info_spec)))
       step = step._replace(info=info)
     if self._validate_args:
-      tf.nest.assert_same_structure(step, self._policy_step_spec)
+      nest_utils.assert_same_structure(
+          step,
+          self._policy_step_spec,
+          message=('distribution output and policy_step_spec structures '
+                   'do not match'))
     return step
 
   def update(self,

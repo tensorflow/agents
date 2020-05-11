@@ -289,9 +289,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
               last_two_steps, squeeze_time_dim))
 
     with tf.name_scope('critic_loss'):
-      tf.nest.assert_same_structure(actions, self.action_spec)
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
-      tf.nest.assert_same_structure(next_time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(actions, self.action_spec)
+      nest_utils.assert_same_structure(time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(next_time_steps, self.time_step_spec)
 
       rank = nest_utils.get_outer_rank(time_steps.observation,
                                        self._time_step_spec.observation)

@@ -37,6 +37,7 @@ from tf_agents.replay_buffers import replay_buffer
 from tf_agents.replay_buffers import table
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 
 BufferInfo = collections.namedtuple('BufferInfo',
@@ -189,7 +190,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     Raises:
       ValueError: If called more than once.
     """
-    tf.nest.assert_same_structure(items, self._data_spec)
+    nest_utils.assert_same_structure(items, self._data_spec)
 
     with tf.device(self._device), tf.name_scope(self._scope):
       id_ = self._increment_last_id()

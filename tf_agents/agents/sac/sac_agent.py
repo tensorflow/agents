@@ -440,9 +440,9 @@ class SacAgent(tf_agent.TFAgent):
       critic_loss: A scalar critic loss.
     """
     with tf.name_scope('critic_loss'):
-      tf.nest.assert_same_structure(actions, self.action_spec)
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
-      tf.nest.assert_same_structure(next_time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(actions, self.action_spec)
+      nest_utils.assert_same_structure(time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(next_time_steps, self.time_step_spec)
 
       next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps)
       target_input = (next_time_steps.observation, next_actions)
@@ -496,7 +496,7 @@ class SacAgent(tf_agent.TFAgent):
       actor_loss: A scalar actor loss.
     """
     with tf.name_scope('actor_loss'):
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(time_steps, self.time_step_spec)
 
       actions, log_pi = self._actions_and_log_probs(time_steps)
       target_input = (time_steps.observation, actions)
@@ -533,7 +533,7 @@ class SacAgent(tf_agent.TFAgent):
       alpha_loss: A scalar alpha loss.
     """
     with tf.name_scope('alpha_loss'):
-      tf.nest.assert_same_structure(time_steps, self.time_step_spec)
+      nest_utils.assert_same_structure(time_steps, self.time_step_spec)
 
       unused_actions, log_pi = self._actions_and_log_probs(time_steps)
       entropy_diff = tf.stop_gradient(-log_pi - self._target_entropy)

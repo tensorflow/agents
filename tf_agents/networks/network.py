@@ -28,6 +28,7 @@ from tensorflow.keras import layers  # pylint: disable=unused-import
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
 # pylint:disable=g-direct-tensorflow-import
@@ -268,12 +269,21 @@ class Network(tf.keras.layers.Layer):
     Returns:
       A tuple `(outputs, new_network_state)`.
     """
-    tf.nest.assert_same_structure(inputs, self.input_tensor_spec)
+    nest_utils.assert_same_structure(
+        inputs,
+        self.input_tensor_spec,
+        message="inputs and input_tensor_spec structures do not match")
     network_state = kwargs.get("network_state", None)
     if network_state is not None:
-      tf.nest.assert_same_structure(network_state, self.state_spec)
+      nest_utils.assert_same_structure(
+          network_state,
+          self.state_spec,
+          message="network_state and state_spec structures do not match")
     outputs, new_state = super(Network, self).__call__(inputs, *args, **kwargs)
-    tf.nest.assert_same_structure(new_state, self.state_spec)
+    nest_utils.assert_same_structure(
+        new_state,
+        self.state_spec,
+        message="network output state and state_spec structures do not match")
     return outputs, new_state
 
   def _check_trainable_weights_consistency(self):

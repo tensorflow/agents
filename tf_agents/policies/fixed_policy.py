@@ -50,7 +50,7 @@ class FixedPolicy(tf_policy.TFPolicy):
     super(FixedPolicy, self).__init__(time_step_spec, action_spec, clip=False,
                                       info_spec=info_spec,
                                       name=name)
-    tf.nest.assert_same_structure(self._action_spec, actions)
+    nest_utils.assert_same_structure(self._action_spec, actions)
 
     def convert(action, spec):
       return tf.convert_to_tensor(value=action, dtype=spec.dtype)

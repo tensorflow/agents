@@ -44,6 +44,71 @@ flatten_with_tuple_paths = nest.flatten_with_tuple_paths
 map_structure_with_paths = nest.map_structure_with_paths
 
 
+class _Dot(object):
+  """An object whose representation is a simple '.'."""
+
+  def __repr__(self):
+    return '.'
+
+  def __str__(self):
+    return '.'
+
+
+_DOT = _Dot()
+
+
+def assert_same_structure(nest1,
+                          nest2,
+                          check_types=True,
+                          expand_composites=False,
+                          message=None):
+  """Same as tf.nest.assert_same_structure but with cleaner error messages.
+
+  Args:
+    nest1: an arbitrarily nested structure.
+    nest2: an arbitrarily nested structure.
+    check_types: if `True` (default) types of sequences are checked as well,
+      including the keys of dictionaries. If set to `False`, for example a list
+      and a tuple of objects will look the same if they have the same size. Note
+      that namedtuples with identical name and fields are always considered to
+      have the same shallow structure. Two types will also be considered the
+      same if they are both list subtypes (which allows "list" and
+      "_ListWrapper" from trackable dependency tracking to compare equal).
+    expand_composites: If true, then composite tensors such as `tf.SparseTensor`
+      and `tf.RaggedTensor` are expanded into their component tensors.
+    message: Optional error message to provide in case of failure.
+
+  Raises:
+    ValueError: If the two structures do not have the same number of elements
+      or if the two structures are not nested in the same way.
+    TypeError: If the two structures differ in the type of sequence in any
+      of their substructures. Only possible if `check_types is True`.
+  """
+  if not isinstance(check_types, bool):
+    raise TypeError(
+        'check_types must be a bool but saw: \'{}\''.format(check_types))
+  if not isinstance(expand_composites, bool):
+    raise TypeError('expand_composites must be a bool but saw: \'{}\''.format(
+        expand_composites))
+  message = message or 'The two structures do not match'
+  exception = None
+  try:
+    return tf.nest.assert_same_structure(
+        nest1,
+        nest2,
+        check_types=check_types,
+        expand_composites=expand_composites)
+  except (TypeError, ValueError) as e:
+    exception = type(e)
+
+  if exception:
+    str1 = tf.nest.map_structure(
+        lambda _: _DOT, nest1, expand_composites=expand_composites)
+    str2 = tf.nest.map_structure(
+        lambda _: _DOT, nest2, expand_composites=expand_composites)
+    raise exception('{}:\n  {}\nvs.\n  {}'.format(message, str1, str2))
+
+
 def flatten_with_joined_paths(structure, expand_composites=False):
   flattened = flatten_with_tuple_paths(
       structure, expand_composites=expand_composites)
@@ -203,7 +268,7 @@ def matching_dtypes_and_inner_shapes(tensors, specs, allow_extra_fields=False):
   """
   if allow_extra_fields:
     tensors = prune_extra_keys(specs, tensors)
-  tf.nest.assert_same_structure(tensors, specs)
+  assert_same_structure(tensors, specs)
 
   flat_tensors = nest.flatten(tensors)
   flat_specs = tf.nest.flatten(specs)
@@ -279,7 +344,7 @@ def is_batched_nested_tensors(
   if allow_extra_fields:
     tensors = prune_extra_keys(specs, tensors)
 
-  tf.nest.assert_same_structure(specs, tensors)
+  assert_same_structure(specs, tensors)
   flat_tensors = nest.flatten(tensors)
   flat_specs = tf.nest.flatten(specs)
 
@@ -375,7 +440,7 @@ def batch_nested_tensors(tensors, specs=None):
   if specs is None:
     return tf.nest.map_structure(lambda x: composite.expand_dims(x, 0), tensors)
 
-  tf.nest.assert_same_structure(tensors, specs)
+  assert_same_structure(tensors, specs)
 
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
@@ -398,7 +463,7 @@ def batch_nested_tensors(tensors, specs=None):
 
 def _flatten_and_check_shape_nested_tensors(tensors, specs, num_outer_dims=1):
   """Flatten nested tensors and check their shape for use in other functions."""
-  tf.nest.assert_same_structure(tensors, specs)
+  assert_same_structure(tensors, specs)
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   for tensor, shape in zip(flat_tensors, flat_shapes):
@@ -562,7 +627,7 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
   Raises:
     ValueError: if the tensors and specs have incompatible dimensions or shapes.
   """
-  tf.nest.assert_same_structure(tensors, specs)
+  assert_same_structure(tensors, specs)
   flat_tensors = tf.nest.flatten(tensors)
   flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   out_tensors = []
@@ -584,7 +649,7 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
 
 def get_outer_shape(nested_tensor, spec):
   """Runtime batch dims of tensor's batch dimension `dim`."""
-  tf.nest.assert_same_structure(nested_tensor, spec)
+  assert_same_structure(nested_tensor, spec)
   first_tensor = tf.nest.flatten(nested_tensor)[0]
   first_spec = tf.nest.flatten(spec)[0]
 
@@ -619,7 +684,7 @@ def get_outer_rank(tensors, specs):
       3. A mix of batched and unbatched tensors are provided.
       4. The tensors are batched but have an incorrect number of outer dims.
   """
-  tf.nest.assert_same_structure(tensors, specs)
+  assert_same_structure(tensors, specs)
   tensor_shapes = [t.shape for t in tf.nest.flatten(tensors)]
   spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
 
@@ -792,6 +857,10 @@ def where(condition, true_outputs, false_outputs):
     Interleaved output from `true_outputs` and `false_outputs` based on
     `condition`.
   """
+  assert_same_structure(
+      true_outputs,
+      false_outputs,
+      message='"true_outputs" and "false_outputs" structures do not match')
   if tf.nest.flatten(true_outputs):
     case_rank = tf.rank(tf.nest.flatten(true_outputs)[0])
     rank_difference = case_rank - tf.rank(condition)

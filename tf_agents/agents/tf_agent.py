@@ -344,7 +344,10 @@ class TFAgent(tf.Module):
         types.
     """
     if self._validate_args:
-      tf.nest.assert_same_structure(experience, self.collect_data_spec)
+      nest_utils.assert_same_structure(
+          experience,
+          self.collect_data_spec,
+          message="experience and collect_data_spec structures do not match")
 
     if self._enable_functions:
       preprocessed_sequence = self._preprocess_sequence_fn(experience)
@@ -352,8 +355,11 @@ class TFAgent(tf.Module):
       preprocessed_sequence = self._preprocess_sequence(experience)
 
     if self._validate_args:
-      tf.nest.assert_same_structure(
-          preprocessed_sequence, self.training_data_spec)
+      nest_utils.assert_same_structure(
+          preprocessed_sequence,
+          self.training_data_spec,
+          message=("output of preprocess_sequence and training_data_spec "
+                   "structures do not match"))
 
     return preprocessed_sequence
 
