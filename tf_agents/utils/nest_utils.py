@@ -205,12 +205,18 @@ def prune_extra_keys(narrow, wide):
   if isinstance(wide, wrapt.ObjectProxy):
     return type(wide)(prune_extra_keys(narrow, wide.__wrapped__))
 
-  narrow_type = (
-      type(narrow.__wrapped__) if isinstance(narrow, wrapt.ObjectProxy)
-      else type(narrow))
+  narrow_raw = (narrow.__wrapped__ if isinstance(narrow, wrapt.ObjectProxy)
+                else narrow)
+  wide_raw = (wide.__wrapped__ if isinstance(wide, wrapt.ObjectProxy) else wide)
 
-  if narrow_type != type(wide):
-    # types are different; return early.
+  if ((type(narrow_raw) != type(wide_raw))  # pylint: disable=unidiomatic-typecheck
+      and not (isinstance(narrow_raw, list) and isinstance(wide_raw, list))
+      and not (isinstance(narrow_raw, collections_abc.Mapping)
+               and isinstance(wide_raw, collections_abc.Mapping))):
+    # We return early if the types are different; but we make some exceptions:
+    #  list subtypes are considered the same (e.g. ListWrapper and list())
+    #  Mapping subtypes are considered the same (e.g. DictWrapper and dict())
+    #  (TupleWrapper subtypes are handled by unwrapping ObjectProxy above)
     return wide
 
   if isinstance(narrow, collections_abc.Mapping):

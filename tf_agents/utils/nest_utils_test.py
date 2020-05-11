@@ -27,6 +27,9 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
+# We use this to build {Dict,Tuple,List}Wrappers for testing nesting code.
+from tensorflow.python.training.tracking import data_structures  # pylint: disable=g-direct-tensorflow-import  # TF internal
+
 
 class NestedTensorsTest(tf.test.TestCase):
   """Tests functions related to nested tensors."""
@@ -791,6 +794,35 @@ class PruneExtraKeysTest(tf.test.TestCase):
             [A(a={'aa': 1}, b=3), {'c': 4}],
             [A(a={'aa': 'aa', 'ab': 'ab'}, b='b'), {'c': 'c', 'd': 'd'}]),
         [A(a={'aa': 'aa'}, b='b'), {'c': 'c'}])
+
+  def testSubtypesOfListAndDict(self):
+
+    class A(collections.namedtuple('A', ('a', 'b'))):
+      pass
+
+    # pylint: disable=invalid-name
+    DictWrapper = data_structures.wrap_or_unwrap
+    TupleWrapper = data_structures.wrap_or_unwrap
+    # pylint: enable=invalid-name
+
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            [data_structures.ListWrapper([None, DictWrapper({'a': 3, 'b': 4})]),
+             None,
+             TupleWrapper((DictWrapper({'g': 5}),)),
+             TupleWrapper(A(None, DictWrapper({'h': 6}))),
+            ],
+            [['x', {'a': 'a', 'b': 'b', 'c': 'c'}],
+             'd',
+             ({'g': 'g', 'gg': 'gg'},),
+             A(None, {'h': 'h', 'hh': 'hh'}),
+            ]),
+        [data_structures.ListWrapper([
+            'x', DictWrapper({'a': 'a', 'b': 'b'})]),
+         'd',
+         TupleWrapper((DictWrapper({'g': 'g'}),)),
+         TupleWrapper(A(None, DictWrapper({'h': 'h'}),)),
+        ])
 
   def testOrderedDict(self):
     OD = collections.OrderedDict  # pylint: disable=invalid-name
