@@ -31,7 +31,6 @@ from tf_agents.utils import test_utils
 
 from tensorflow.python.eager import context  # TF internal
 from tensorflow.python.framework import test_util  # TF internal
-from tensorflow.python.keras.engine import network as keras_network  # TF internal
 
 
 def input_fn():
@@ -41,7 +40,7 @@ def input_fn():
   return inputs, labels
 
 
-class Network(keras_network.Network):
+class Network(tf.keras.layers.Layer):
 
   def __init__(self, name=None):
     super(Network, self).__init__(name=name)
