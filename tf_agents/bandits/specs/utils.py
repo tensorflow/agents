@@ -28,13 +28,25 @@ GLOBAL_FEATURE_KEY = 'global'
 PER_ARM_FEATURE_KEY = 'per_arm'
 
 
-def create_per_arm_observation_spec(global_dim, per_arm_dim, num_actions):
+def create_per_arm_observation_spec(global_dim,
+                                    per_arm_dim,
+                                    num_actions,
+                                    apply_mask=False):
+  """Creates an observation spec with per-arm features and possibly action mask."""
   global_obs_spec = tensor_spec.TensorSpec((global_dim,), tf.float32)
   arm_obs_spec = tensor_spec.TensorSpec((num_actions, per_arm_dim), tf.float32)
-  return {
+  obs_spec = {
       GLOBAL_FEATURE_KEY: global_obs_spec,
       PER_ARM_FEATURE_KEY: arm_obs_spec
   }
+  if apply_mask:
+    obs_spec = (obs_spec,
+                tensor_spec.BoundedTensorSpec(
+                    shape=(num_actions,),
+                    minimum=0,
+                    maximum=1,
+                    dtype=tf.float32))
+  return obs_spec
 
 
 def get_context_dims_from_spec(context_spec, accepts_per_arm_features):
@@ -62,8 +74,13 @@ def get_context_dims_from_spec(context_spec, accepts_per_arm_features):
   return global_context_dim, arm_context_dim
 
 
-def drop_arm_observation(trajectory):
+def drop_arm_observation(trajectory,
+                         observation_and_action_constraint_splitter=None):
   """Drops the per-arm observation from a given trajectory (or trajectory spec)."""
   transformed_trajectory = copy.deepcopy(trajectory)
-  del transformed_trajectory.observation[PER_ARM_FEATURE_KEY]
+  if observation_and_action_constraint_splitter is None:
+    del transformed_trajectory.observation[PER_ARM_FEATURE_KEY]
+  else:
+    del observation_and_action_constraint_splitter(
+        transformed_trajectory.observation)[0][PER_ARM_FEATURE_KEY]
   return transformed_trajectory

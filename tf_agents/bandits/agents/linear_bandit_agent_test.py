@@ -126,13 +126,30 @@ def _get_initial_and_final_steps(batch_size, context_dim):
 def _get_initial_and_final_steps_with_per_arm_features(batch_size,
                                                        global_context_dim,
                                                        num_actions,
-                                                       arm_context_dim):
+                                                       arm_context_dim,
+                                                       apply_mask=False):
   global_observation = np.array(range(batch_size * global_context_dim)).reshape(
       [batch_size, global_context_dim])
   arm_observation = np.array(range(
       batch_size * num_actions * arm_context_dim)).reshape(
           [batch_size, num_actions, arm_context_dim])
   reward = np.random.uniform(0.0, 1.0, [batch_size])
+  observation = {
+      'global':
+          tf.constant(
+              global_observation,
+              dtype=tf.float32,
+              shape=[batch_size, global_context_dim],
+              name='global_observation'),
+      'per_arm':
+          tf.constant(
+              arm_observation,
+              dtype=tf.float32,
+              shape=[batch_size, num_actions, arm_context_dim],
+              name='arm_observation')
+  }
+  if apply_mask:
+    observation = (observation, tf.ones([batch_size, num_actions]))
   initial_step = time_step.TimeStep(
       tf.constant(
           time_step.StepType.FIRST,
@@ -140,20 +157,24 @@ def _get_initial_and_final_steps_with_per_arm_features(batch_size,
           shape=[batch_size],
           name='step_type'),
       tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
-      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'), {
-          'global':
-              tf.constant(
-                  global_observation,
-                  dtype=tf.float32,
-                  shape=[batch_size, global_context_dim],
-                  name='global_observation'),
-          'per_arm':
-              tf.constant(
-                  arm_observation,
-                  dtype=tf.float32,
-                  shape=[batch_size, num_actions, arm_context_dim],
-                  name='arm_observation')
-      })
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      observation)
+  observation = {
+      'global':
+          tf.constant(
+              global_observation + 100.0,
+              dtype=tf.float32,
+              shape=[batch_size, global_context_dim],
+              name='global_observation'),
+      'arm':
+          tf.constant(
+              arm_observation + 100.0,
+              dtype=tf.float32,
+              shape=[batch_size, num_actions, arm_context_dim],
+              name='arm_observation')
+  }
+  if apply_mask:
+    observation = (observation, tf.ones([batch_size, num_actions]))
   final_step = time_step.TimeStep(
       tf.constant(
           time_step.StepType.LAST,
@@ -161,20 +182,8 @@ def _get_initial_and_final_steps_with_per_arm_features(batch_size,
           shape=[batch_size],
           name='step_type'),
       tf.constant(reward, dtype=tf.float32, shape=[batch_size], name='reward'),
-      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'), {
-          'global':
-              tf.constant(
-                  global_observation + 100.0,
-                  dtype=tf.float32,
-                  shape=[batch_size, global_context_dim],
-                  name='global_observation'),
-          'arm':
-              tf.constant(
-                  arm_observation + 100.0,
-                  dtype=tf.float32,
-                  shape=[batch_size, num_actions, arm_context_dim],
-                  name='arm_observation')
-      })
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      observation)
   return initial_step, final_step
 
 
@@ -393,6 +402,70 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Compute the expected updated estimates.
     global_observation = experience.observation[
+        bandit_spec_utils.GLOBAL_FEATURE_KEY]
+    arm_observation = experience.policy_info.chosen_arm_features
+    overall_observation = tf.squeeze(
+        tf.concat([global_observation, arm_observation], axis=-1), axis=1)
+    rewards = tf.squeeze(experience.reward, axis=1)
+
+    expected_a_new = tf.matmul(
+        overall_observation, overall_observation, transpose_a=True)
+    expected_b_new = bandit_utils.sum_reward_weighted_observations(
+        rewards, overall_observation)
+    self.assertAllClose(expected_a_new, final_a[0])
+    self.assertAllClose(expected_b_new, final_b[0])
+
+  @test_cases()
+  def testLinearAgentUpdatePerArmFeaturesAndMask(self,
+                                                 batch_size,
+                                                 context_dim,
+                                                 exploration_policy,
+                                                 dtype,
+                                                 use_eigendecomp=False):
+    """Check that the agent updates for specified actions and rewards."""
+
+    # Construct a `Trajectory` for the given action, observation, reward.
+    num_actions = 5
+    global_context_dim = context_dim
+    arm_context_dim = 3
+    initial_step, final_step = (
+        _get_initial_and_final_steps_with_per_arm_features(
+            batch_size,
+            global_context_dim,
+            num_actions,
+            arm_context_dim,
+            apply_mask=True))
+    action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
+    action_step = policy_step.PolicyStep(
+        action=tf.convert_to_tensor(action),
+        info=policy_utilities.PerArmPolicyInfo(
+            chosen_arm_features=np.arange(
+                batch_size * arm_context_dim, dtype=np.float32).reshape(
+                    [batch_size, arm_context_dim])))
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    # Construct an agent and perform the update.
+    observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        context_dim, arm_context_dim, num_actions, apply_mask=True)
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=exploration_policy,
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        use_eigendecomp=use_eigendecomp,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
+        accepts_per_arm_features=True,
+        dtype=dtype)
+    self.evaluate(agent.initialize())
+    loss_info = agent.train(experience)
+    self.evaluate(loss_info)
+    final_a = self.evaluate(agent.cov_matrix)
+    final_b = self.evaluate(agent.data_vector)
+
+    # Compute the expected updated estimates.
+    global_observation = experience.observation[0][
         bandit_spec_utils.GLOBAL_FEATURE_KEY]
     arm_observation = experience.policy_info.chosen_arm_features
     overall_observation = tf.squeeze(

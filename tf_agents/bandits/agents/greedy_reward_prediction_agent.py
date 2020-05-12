@@ -166,7 +166,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     training_data_spec = None
     if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
-          policy.trajectory_spec)
+          policy.trajectory_spec, observation_and_action_constraint_splitter)
 
     super(GreedyRewardPredictionAgent, self).__init__(
         time_step_spec,
