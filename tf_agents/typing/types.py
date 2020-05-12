@@ -13,19 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Common types used in TF-Agents."""
 
-from typing import Iterable, Mapping, Sequence, Union
+from __future__ import absolute_import
+from __future__ import division
+# Using Type Annotations.
+from __future__ import print_function
+
 
 import numpy as np
 import tensorflow as tf
 
 from tf_agents.specs import array_spec
+from typing import Iterable, Mapping, Sequence, Union
 
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
-Array = np.ndarray
+Array = np.ndarray   # pylint: disable=invalid-name
 TensorOrArray = Union[Tensor, Array]
 
 TensorSpec = tf.TypeSpec
