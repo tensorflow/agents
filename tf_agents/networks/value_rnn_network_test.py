@@ -40,8 +40,8 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         lstm_size=(7,),
         output_fc_layer_params=(3,))
 
-    value, state = net(time_step.observation, time_step.step_type,
-                       net.get_initial_state(batch_size=1))
+    value, state = net(time_step.observation, step_type=time_step.step_type,
+                       network_state=net.get_initial_state(batch_size=1))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual((1, 3), value.shape)
@@ -87,8 +87,9 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         lstm_size=(7, 5),
         output_fc_layer_params=(3,))
 
-    _, state = net(time_step.observation, time_step.step_type,
-                   net.get_initial_state(batch_size=1))
+    _, state = net(time_step.observation,
+                   step_type=time_step.step_type,
+                   network_state=net.get_initial_state(batch_size=1))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Assert LSTM cell is created.
@@ -112,8 +113,9 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         lstm_size=(7, 5),
         output_fc_layer_params=(3,))
 
-    value, _ = net(time_step.observation, time_step.step_type,
-                   net.get_initial_state(batch_size=3))
+    value, _ = net(time_step.observation,
+                   step_type=time_step.step_type,
+                   network_state=net.get_initial_state(batch_size=3))
     self.assertEqual([3], value.shape.as_list())
 
   def testHandlePreprocessingLayers(self):
@@ -133,8 +135,9 @@ class ValueRnnNetworkTest(tf.test.TestCase):
         preprocessing_layers=preprocessing_layers,
         preprocessing_combiner=tf.keras.layers.Add())
 
-    value, _ = net(time_step.observation, time_step.step_type,
-                   net.get_initial_state(batch_size=2))
+    value, _ = net(time_step.observation,
+                   step_type=time_step.step_type,
+                   network_state=net.get_initial_state(batch_size=2))
     self.assertEqual([2, 3], value.shape.as_list())
     self.assertGreater(len(net.trainable_variables), 4)
 

@@ -34,6 +34,12 @@ class BaseNetwork(network.Network):
   # pylint: enable=useless-super-delegation
 
 
+class NetworkNoExtraKeywordsInCallSignature(network.Network):
+
+  def call(self, inputs):
+    return inputs, ()
+
+
 class MockNetwork(BaseNetwork):
 
   def __init__(self, param1, param2, kwarg1=2, kwarg2=3):
@@ -160,6 +166,13 @@ class NetworkTest(tf.test.TestCase):
         [x.lstrip('gnarly_network/') for x in non_trainable_weight_names],
         ['batch_normalization/moving_mean:0',
          'batch_normalization/moving_variance:0'])
+
+  def test_dont_complain_if_no_network_state_in_call_signature(self):
+    net = NetworkNoExtraKeywordsInCallSignature()
+    out, _ = net(1, network_state=None)  # This shouldn't complain.
+    self.assertAllEqual(out, 1)
+    out, _ = net(1, step_type=3, network_state=None)  # This shouldn't complain.
+    self.assertAllEqual(out, 1)
 
 
 if __name__ == '__main__':

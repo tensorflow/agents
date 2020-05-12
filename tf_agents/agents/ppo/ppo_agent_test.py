@@ -1050,8 +1050,9 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
             name='NestedActorNet')
         self.dummy_model = dummy_model
 
-      def call(self, *args, **kwargs):
-        dummy_ans, _ = self.dummy_model(*args, **kwargs)
+      def call(self, inputs, network_state, *args, **kwargs):
+        dummy_ans, _ = self.dummy_model(
+            inputs, network_state=network_state, *args, **kwargs)
         return (dummy_ans, {'c': dummy_ans, 'd': dummy_ans}), ()
 
     dummy_model = DummyActorNet(nested_obs_spec, self._action_spec)

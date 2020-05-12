@@ -101,16 +101,53 @@ class _NetworkMeta(abc.ABCMeta):
 
 @six.add_metaclass(_NetworkMeta)
 class Network(tf.keras.layers.Layer):
-  """Base extension to Keras network to simplify copy operations."""
+  """A class used to represent networks used by TF-Agents policies and agents.
 
-  def __init__(self, input_tensor_spec, state_spec, name=None):
+  The main differences between a TF-Agents Network and a Keras Layer include:
+  networks keep track of their underlying layers, explicitly represent RNN-like
+  state in inputs and outputs, and simplify variable creation and clone
+  operations.
+
+  When calling a network `net`, typically one passes data through it via:
+
+  ```python
+  outputs, next_state = net(observation, network_state=...)
+  outputs, next_state = net(observation, step_type=..., network_state=...)
+  outputs, next_state = net(observation)  # net.call must fill an empty state
+  outputs, next_state = net(observation, step_type=...)
+  outputs, next_state = net(
+      observation, step_type=..., network_state=..., learning=...)
+  ```
+
+  etc.
+
+  To force construction of a network's variables:
+  ```python
+  net.create_variables()
+  net.create_variables(input_tensor_spec=...)  # To provide an input spec
+  net.create_variables(training=True)  # Provide extra kwargs
+  net.create_variables(input_tensor_spec, training=True)
+  ```
+
+  To create a copy of the network:
+  ```python
+  cloned_net = net.copy()
+  cloned_net.variables  # Raises ValueError: cloned net does not share weights.
+  cloned_net.create_variables(...)
+  cloned_net.variables  # Now new variables have been created.
+  ```
+  """
+
+  # TODO(b/156314975): Rename input_tensor_spec to input_spec.
+  def __init__(self, input_tensor_spec=None, state_spec=(), name=None):
     """Creates an instance of `Network`.
 
     Args:
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
-        input observations.
+        input observations.  Optional.  If not provided, `create_variables()`
+        will fail unless a spec is provided.
       state_spec: A nest of `tensor_spec.TensorSpec` representing the state
-        needed by the network. Use () if none.
+        needed by the network. Default is `()`, which means no state.
       name: (Optional.) A string representing the name of the network.
     """
     super(Network, self).__init__(name=name)
@@ -131,16 +168,36 @@ class Network(tf.keras.layers.Layer):
     """Returns the spec of the input to the network of type InputSpec."""
     return self._input_tensor_spec
 
-  def create_variables(self, **kwargs):
-    if not self.built:
-      random_input = tensor_spec.sample_spec_nest(
-          self.input_tensor_spec, outer_dims=(1,))
-      random_state = tensor_spec.sample_spec_nest(
-          self.state_spec, outer_dims=(1,))
-      step_type = tf.fill((1,), time_step.StepType.FIRST)
-      self.__call__(
-          random_input, step_type=step_type, network_state=random_state,
-          **kwargs)
+  def create_variables(self, input_tensor_spec=None, **kwargs):
+    """Force creation of the network's variables.
+
+    Args:
+      input_tensor_spec: (Optional).  Override or provide an input tensor spec
+        when creating variables.
+      **kwargs: Other arguments to `network.call()`, e.g. `training=True`.
+
+    Raises:
+      ValueError: If no `input_tensor_spec` is provided, and the network did
+        not provide one during construction.
+    """
+    if self.built:
+      return
+    if self._input_tensor_spec is None:
+      self._input_tensor_spec = input_tensor_spec
+    input_tensor_spec = self._input_tensor_spec
+    if input_tensor_spec is None:
+      raise ValueError(
+          "Unable to create_variables: no input_tensor_spec provided, and "
+          "Network did not define one.")
+
+    random_input = tensor_spec.sample_spec_nest(
+        input_tensor_spec, outer_dims=(1,))
+    initial_state = self.get_initial_state(batch_size=1)
+    step_type = tf.fill((1,), time_step.StepType.FIRST)
+    # TODO(b/156314637): Convert outputs to output_spec and return those.
+    self.__call__(
+        random_input, step_type=step_type, network_state=initial_state,
+        **kwargs)
 
   @property
   def variables(self):
@@ -242,48 +299,78 @@ class Network(tf.keras.layers.Layer):
   def __call__(self, inputs, *args, **kwargs):
     """A wrapper around `Network.call`.
 
-    A typical `call` method in a class subclassing `Network` looks like this:
+    A typical `call` method in a class subclassing `Network` will have a
+    signature that accepts `inputs`, as well as other `*args` and `**kwargs`.
+    `call` can optionally also accept `step_type` and `network_state`
+    (if `state_spec != ()` is not trivial).  e.g.:
 
     ```python
     def call(self,
-             observation,
+             inputs,
              step_type=None,
              network_state=(),
              training=False):
         ...
         return outputs, new_network_state
     ```
-    In this case, we will validate the first argument (`observation`)
-    against `self.input_tensor_spec`.
+
+    We will validate the first argument (`inputs`)
+    against `self.input_tensor_spec` if one is available.
 
     If a `network_state` kwarg is given it is also validated against
-    `self.state_spec`.  Similarly, the return value
-    of the `call` method is expected to be a tuple/list with 2 values:
-    `(output, new_state)`; we validate `new_state` against `self.state_spec`.
+    `self.state_spec`.  Similarly, the return value of the `call` method is
+    expected to be a tuple/list with 2 values:  `(output, new_state)`.
+    We validate `new_state` against `self.state_spec`.
+
+    If no `network_state` kwarg is given (or if empty `network_state = ()` is
+    given, it is up to `call` to assume a proper "empty" state, and to
+    emit an appropriate `output_state`.
 
     Args:
-      inputs: The inputs to `self.call`, matching `self.input_state_spec`.
+      inputs: The input to `self.call`, matching `self.input_tensor_spec`.
       *args: Additional arguments to `self.call`.
       **kwargs: Additional keyword arguments to `self.call`.
+        These can include `network_state` and `step_type`.  `step_type` is
+        required if the network's `call` requires it. `network_state` is
+        required if the underlying network's `call` requires it.
 
     Returns:
       A tuple `(outputs, new_network_state)`.
     """
-    nest_utils.assert_same_structure(
-        inputs,
-        self.input_tensor_spec,
-        message="inputs and input_tensor_spec structures do not match")
-    network_state = kwargs.get("network_state", None)
-    if network_state is not None:
+    if self.input_tensor_spec is not None:
+      nest_utils.assert_same_structure(
+          inputs,
+          self.input_tensor_spec,
+          message="inputs and input_tensor_spec structures do not match")
+    call_argspec = tf_inspect.getargspec(self.call)
+
+    # Convert *args, **kwargs to a canonical kwarg representation.
+    normalized_kwargs = tf_inspect.getcallargs(
+        self.call, inputs, *args, **kwargs)
+    # TODO(b/156315434): Rename network_state to just state.
+    network_state = normalized_kwargs.get("network_state", None)
+    normalized_kwargs.pop("self", None)
+
+    if network_state not in (None, ()):
       nest_utils.assert_same_structure(
           network_state,
           self.state_spec,
           message="network_state and state_spec structures do not match")
-    outputs, new_state = super(Network, self).__call__(inputs, *args, **kwargs)
+
+    if "step_type" not in call_argspec.args and not call_argspec.keywords:
+      normalized_kwargs.pop("step_type", None)
+
+    if (network_state in (None, ())
+        and "network_state" not in call_argspec.args
+        and not call_argspec.keywords):
+      normalized_kwargs.pop("network_state", None)
+
+    outputs, new_state = super(Network, self).__call__(**normalized_kwargs)
     nest_utils.assert_same_structure(
         new_state,
         self.state_spec,
         message="network output state and state_spec structures do not match")
+
     return outputs, new_state
 
   def _check_trainable_weights_consistency(self):

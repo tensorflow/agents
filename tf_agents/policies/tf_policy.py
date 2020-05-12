@@ -308,8 +308,14 @@ class TFPolicy(tf.Module):
         return common.clip_to_spec(action, action_spec)
       return action
 
+    if self._validate_args:
+      nest_utils.assert_same_structure(
+          step.action, self._action_spec,
+          message='action and action_spec structures do not match')
+
     if self._clip:
-      clipped_actions = tf.nest.map_structure(clip_action, step.action,
+      clipped_actions = tf.nest.map_structure(clip_action,
+                                              step.action,
                                               self._action_spec)
       step = step._replace(action=clipped_actions)
 
@@ -322,8 +328,10 @@ class TFPolicy(tf.Module):
       def compare_to_spec(value, spec):
         return value.dtype.is_compatible_with(spec.dtype)
 
-      compatibility = tf.nest.flatten(
-          tf.nest.map_structure(compare_to_spec, step.action, self.action_spec))
+      compatibility = [
+          compare_to_spec(v, s) for (v, s)
+          in zip(tf.nest.flatten(step.action),
+                 tf.nest.flatten(self.action_spec))]
 
       if not all(compatibility):
         get_dtype = lambda x: x.dtype
@@ -331,8 +339,8 @@ class TFPolicy(tf.Module):
         spec_dtypes = tf.nest.map_structure(get_dtype, self.action_spec)
 
         raise TypeError('Policy produced an action with a dtype that doesn\'t '
-                        'match its action_spec. Got action: %s with '
-                        'action_spec: %s' % (action_dtypes, spec_dtypes))
+                        'match its action_spec. Got action:\n  %s\n with '
+                        'action_spec:\n  %s' % (action_dtypes, spec_dtypes))
 
     return step
 
