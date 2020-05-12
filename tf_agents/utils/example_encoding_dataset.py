@@ -99,18 +99,20 @@ class TFRecordObserver(object):
     return within a `tf.group` operation.
   """
 
-  def __init__(self, output_path, tensor_data_spec):
+  def __init__(self, output_path, tensor_data_spec, py_mode=False):
     """Creates observer object.
 
     Args:
       output_path: The path to the TFRecords file.
       tensor_data_spec: Nested list/tuple or dict of TensorSpecs, describing the
         shape of the non-batched Tensors.
+      py_mode: Whether the observer is being used in a py_driver.
 
     Raises:
       ValueError: if the tensors and specs have incompatible dimensions or
       shapes.
     """
+    self._py_mode = py_mode
     self._array_data_spec = tensor_spec.to_nest_array_spec(tensor_data_spec)
     self._encoder = example_encoding.get_example_serializer(
         self._array_data_spec)
@@ -123,13 +125,16 @@ class TFRecordObserver(object):
     encode_spec_to_file(spec_output_path, tensor_data_spec)
 
   def write(self, *data):
-    """Encodes and writes (to file) a batch of tensor data.
+    """Encodes and writes (to file) a batch of data.
 
     Args:
       *data: (unpacked) list/tuple of batched np.arrays.
     """
-    data = nest_utils.unbatch_nested_array(data)
-    structured_data = tf.nest.pack_sequence_as(self._array_data_spec, data)
+    if self._py_mode:
+      structured_data = data
+    else:
+      data = nest_utils.unbatch_nested_array(data)
+      structured_data = tf.nest.pack_sequence_as(self._array_data_spec, data)
     self._writer.write(self._encoder(structured_data))
 
   def flush(self):
@@ -145,13 +150,16 @@ class TFRecordObserver(object):
     self.close()
 
   def __call__(self, data):
-    """Wraps write() function into a TensorFlow op for eager execution."""
-    flat_data = tf.nest.flatten(data)
-    tf.numpy_function(self.write, flat_data, [], name='encoder_observer')
+    """If not in py_mode Wraps write() into a TF op for eager execution."""
+    if self._py_mode:
+      self.write(data)
+    else:
+      flat_data = tf.nest.flatten(data)
+      tf.numpy_function(self.write, flat_data, [], name='encoder_observer')
 
 
 def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
-                          as_trajectories=False):
+                          as_trajectories=False, add_batch_dim=True):
   """Loads a TFRecord dataset from file, sequencing samples as Trajectories.
 
   Args:
@@ -164,6 +172,9 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
     as_trajectories: (bool) Remaps the data into trajectory objects. This should
       be enabled when the resulting types must be trajectories as expected by
       agents.
+    add_batch_dim: (bool) If True the data will have a batch dim of 1 to conform
+      with the expected tensor batch convention. Set to false if you want to
+      batch the data on your own.
 
   Returns:
     A dataset of type tf.data.Dataset. Samples follow the dataset's spec nested
@@ -198,8 +209,10 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
 
   if as_experience:
     dataset = dataset.map(decode_fn).batch(2)
-  else:
+  elif add_batch_dim:
     dataset = dataset.map(decode_and_batch_fn)
+  else:
+    dataset = dataset.map(decode_fn)
 
   if as_trajectories:
     as_trajectories_fn = lambda sample: trajectory.Trajectory(*sample)

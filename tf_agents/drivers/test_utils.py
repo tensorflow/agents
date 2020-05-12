@@ -188,8 +188,10 @@ class PyPolicyMock(py_policy.PyPolicy):
 
     # Take actions 1 and 2 alternating.
     action = (policy_state % 2) + 1
-    policy_info = action * 2
-    return policy_step.PolicyStep(action, policy_state + 1, policy_info)
+    policy_info = np.int32(action * 2)
+    action = np.int32(action)
+    policy_state = np.int32(policy_state + 1)
+    return policy_step.PolicyStep(action, policy_state, policy_info)
 
 
 class NumStepsObserver(object):

@@ -25,6 +25,7 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.drivers import dynamic_step_driver
+from tf_agents.drivers import py_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.drivers import tf_driver
 from tf_agents.environments import tf_py_environment
@@ -123,6 +124,30 @@ class TFRecordsUtilsTest(test_utils.TestCase):
 
     dataset = example_encoding_dataset.load_tfrecord_dataset(
         [self.dataset_path], buffer_size=2, as_trajectories=True)
+    iterator = eager_utils.dataset_iterator(dataset)
+    sample = self.evaluate(eager_utils.get_next(iterator))
+    self.assertIsInstance(sample, trajectory.Trajectory)
+
+  def test_with_py_driver(self):
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    trajectory_spec = trajectory.from_transition(env.time_step_spec(),
+                                                 policy.policy_step_spec,
+                                                 env.time_step_spec())
+    trajectory_spec = tensor_spec.from_spec(trajectory_spec)
+
+    tfrecord_observer = example_encoding_dataset.TFRecordObserver(
+        self.dataset_path, trajectory_spec, py_mode=True)
+
+    driver = py_driver.PyDriver(env, policy, [tfrecord_observer], max_steps=10)
+    time_step = env.reset()
+    driver.run(time_step)
+    tfrecord_observer.flush()
+
+    dataset = example_encoding_dataset.load_tfrecord_dataset(
+        [self.dataset_path], buffer_size=2, as_trajectories=True)
+
     iterator = eager_utils.dataset_iterator(dataset)
     sample = self.evaluate(eager_utils.get_next(iterator))
     self.assertIsInstance(sample, trajectory.Trajectory)
