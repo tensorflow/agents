@@ -13,8 +13,8 @@ running in the Cartpole environment. API documentation for the current stable
 release is on
 [tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
-**NOTE:** 0.4.0 is the new stable release (07-APR-2020) and was tested with
-Python3 and TensorFlow 2.1.x. `pip install tf-agents`
+**NOTE:** 0.5.0 RC0 is now available and was tested with Python3 and TensorFlow
+2.2. `pip install tf-agents==0.5.0rc0`.
 
 TF-Agents is under active development and interfaces may change at any time.
 Feedback and comments are welcome.
@@ -33,25 +33,31 @@ Feedback and comments are welcome.
 <a href='#Disclaimer'>Disclaimer</a><br>
 
 <a id='Agents'></a>
+
 ## Agents
 
-
-In TF-Agents, the core elements of RL algorithms are implemented as `Agents`.
-An agent encompasses two main responsibilities: defining a Policy to interact
-with the Environment, and how to learn/train that Policy from collected
-experience.
+In TF-Agents, the core elements of RL algorithms are implemented as `Agents`. An
+agent encompasses two main responsibilities: defining a Policy to interact with
+the Environment, and how to learn/train that Policy from collected experience.
 
 Currently the following algorithms are available under TF-Agents:
 
-* [DQN: __Human level control through deep reinforcement learning__ Mnih et al., 2015](https://deepmind.com/research/dqn/)
-* [DDQN: __Deep Reinforcement Learning with Double Q-learning__ Hasselt et al., 2015](https://arxiv.org/abs/1509.06461)
-* [DDPG: __Continuous control with deep reinforcement learning__ Lillicrap et al., 2015](https://arxiv.org/abs/1509.02971)
-* [TD3: __Addressing Function Approximation Error in Actor-Critic Methods__ Fujimoto et al., 2018](https://arxiv.org/abs/1802.09477)
-* [REINFORCE: __Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning__ Williams, 1992](http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)
-* [PPO: __Proximal Policy Optimization Algorithms__ Schulman et al., 2017](https://arxiv.org/abs/1707.06347)
-* [SAC: __Soft Actor Critic__ Haarnoja et al., 2018](https://arxiv.org/abs/1812.05905)
+*   [DQN: __Human level control through deep reinforcement learning__ Mnih et
+    al., 2015](https://deepmind.com/research/dqn/)
+*   [DDQN: __Deep Reinforcement Learning with Double Q-learning__ Hasselt et
+    al., 2015](https://arxiv.org/abs/1509.06461)
+*   [DDPG: __Continuous control with deep reinforcement learning__ Lillicrap et
+    al., 2015](https://arxiv.org/abs/1509.02971)
+*   [TD3: __Addressing Function Approximation Error in Actor-Critic Methods__
+    Fujimoto et al., 2018](https://arxiv.org/abs/1802.09477)
+*   [REINFORCE: __Simple Statistical Gradient-Following Algorithms for
+    Connectionist Reinforcement Learning__ Williams,
+    1992](http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)
+*   [PPO: __Proximal Policy Optimization Algorithms__ Schulman et al., 2017](https://arxiv.org/abs/1707.06347)
+*   [SAC: __Soft Actor Critic__ Haarnoja et al., 2018](https://arxiv.org/abs/1812.05905)
 
 <a id='Tutorials'></a>
+
 ## Tutorials
 
 See [`docs/tutorials/`](docs/tutorials) for tutorials on the major components
@@ -69,13 +75,17 @@ For examples ready to run, see
 [`tf_agents/bandits/agents/examples/`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/).
 
 <a id='Examples'></a>
+
 ## Examples
+
 End-to-end examples training agents can be found under each agent directory.
 e.g.:
 
-* DQN: [`tf_agents/agents/dqn/examples/v1/train_eval_gym.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/examples/v1/train_eval_gym.py)
+*   DQN:
+    [`tf_agents/agents/dqn/examples/v1/train_eval_gym.py`](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/dqn/examples/v1/train_eval_gym.py)
 
 <a id='Installation'></a>
+
 ## Installation
 
 TF-Agents publishes nightly and stable builds. For a list of releases read the
@@ -130,11 +140,12 @@ pip install --user --force-reinstall tfp-nightly
 
 ### From GitHub
 
-After cloning the repository, the dependencies can be installed by running
-`pip install -e .[tests]`. TensorFlow needs to be installed independently:
-`pip install --user tf-nightly`.
+After cloning the repository, the dependencies can be installed by running `pip
+install -e .[tests]`. TensorFlow needs to be installed independently: `pip
+install --user tf-nightly`.
 
 <a id='Contributing'></a>
+
 ## Contributing
 
 We're eager to collaborate with you! See [`CONTRIBUTING.md`](CONTRIBUTING.md)
@@ -143,27 +154,20 @@ for a guide on how to contribute. This project adheres to TensorFlow's
 uphold this code.
 
 <a id='Releases'></a>
+
 ## Releases
 
-TF Agents does both stable and nightly releases. The nightly releases often are
-fine but can have issues to to upstream libraries being in flux. The table below
-lists the stable releases of TF Agents to help users that may be locked into a
-specific version of TensorFlow or other related supporting. TensorFlow version
-are the versions of TensorFlow tested with the build, other version might work
-but were not tested.
+TF Agents has stable and nightly releases. The nightly releases are often fine
+but can have issues due to upstream libraries being in flux. The table below
+lists the version(s) of TensorFlow tested with each TF Agents' release to help
+users that may be locked into a specific version of TensorFlow. 0.3.0 was the
+last release compatible with Python 2.
 
-TF Agents does both stable and nightly releases. The nightly releases often are
-fine but can have issues to to upstream libraries being in flux. The table below
-lists the stable releases of TF Agents to help users that may be locked into a
-specific version of TensorFlow or other related supporting. TensorFlow version
-are the versions of TensorFlow tested with the build, other version might work
-but were not tested. 0.3.0 was the last release compatible with Python 2.
-
-| Release  | Branch / Tag      | TensorFlow Version |
-| -------- | ----------- | ------------------ |
-| Nightly  | [master](https://github.com/tensorflow/agents) | tf-nightly         |
-| 0.4.0    | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0 |
-| 0.3.0    | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0   |
+Release | Branch / Tag                                               | TensorFlow Version
+------- | ---------------------------------------------------------- | ------------------
+Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
+0.4.0   | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0
+0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0
 
 Examples of installing nightly, most recent stable, and a specific version of
 TF-Agents:
@@ -180,18 +184,19 @@ pip install tf-agents==0.4.0rc0
 
 ```
 
-
 <a id='Principles'></a>
+
 ## Principles
 
-This project adheres to [Google's AI principles](PRINCIPLES.md).
-By participating, using or contributing to this project you are expected to
-adhere to these principles.
+This project adheres to [Google's AI principles](PRINCIPLES.md). By
+participating, using or contributing to this project you are expected to adhere
+to these principles.
 
 <a id='Citation'></a>
+
 ## Citation
 
-If you use this code please cite it as:
+If you use this code, please cite it as:
 
 ```
 @misc{TFAgents,
@@ -208,6 +213,7 @@ If you use this code please cite it as:
 ```
 
 <a id='Disclaimer'></a>
+
 ## Disclaimer
 
 This is not an official Google product.
