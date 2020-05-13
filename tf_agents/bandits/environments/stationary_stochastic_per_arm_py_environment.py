@@ -33,8 +33,9 @@ class StationaryStochasticPerArmPyEnvironment(
   def __init__(self,
                global_context_sampling_fn,
                arm_context_sampling_fn,
-               num_actions,
+               max_num_actions,
                reward_fn,
+               num_actions_fn=None,
                batch_size=1):
     """Initializes the environment.
 
@@ -53,10 +54,14 @@ class StationaryStochasticPerArmPyEnvironment(
       def reward_fn(x):
         return sum(x)
 
+      def num_actions_fn():
+        return np.random.randint(2, 6)
+
       env = StationaryStochasticPyEnvironment(global_context_sampling_fn,
                                               arm_context_sampling_fn,
                                               5,
-                                              reward_fn)
+                                              reward_fn,
+                                              num_actions_fn)
 
     Args:
       global_context_sampling_fn: A function that outputs a random 1d array or
@@ -66,16 +71,24 @@ class StationaryStochasticPerArmPyEnvironment(
         of ints or floats (same type as the output of
         `global_context_sampling_fn`). This output is the per-arm context. Its
         shape must be consistent accross calls.
-      num_actions: (int) the number of actions in every sample.
+      max_num_actions: (int) the maximum number of actions in every sample. If
+        `num_actions_fn` is not set, this many actions are available in every
+        time step.
       reward_fn: A function that generates a reward when called with an
         observation.
+      num_actions_fn: If set, it should be a function that outputs a single
+        integer specifying the number of actions for a given time step. The
+        value output by this function will be capped between 1 and
+        `max_num_actions`, and a mask '[1 1 ... 1 0 0 ... 0]' will be generated.
       batch_size: The batch size.
     """
     self._global_context_sampling_fn = global_context_sampling_fn
     self._arm_context_sampling_fn = arm_context_sampling_fn
-    self._num_actions = num_actions
+    self._max_num_actions = max_num_actions
     self._reward_fn = reward_fn
     self._batch_size = batch_size
+    self._num_actions_fn = num_actions_fn
+    self._add_mask = num_actions_fn is not None
 
     observation_spec = {
         GLOBAL_KEY:
@@ -83,14 +96,18 @@ class StationaryStochasticPerArmPyEnvironment(
         PER_ARM_KEY:
             array_spec.add_outer_dims_nest(
                 array_spec.ArraySpec.from_array(arm_context_sampling_fn()),
-                (num_actions,))
+                (max_num_actions,))
     }
+    if self._add_mask:
+      mask_spec = array_spec.BoundedArraySpec(
+          shape=(self._max_num_actions,), dtype=np.int32, minimum=0, maximum=1)
+      observation_spec = (observation_spec, mask_spec)
 
     action_spec = array_spec.BoundedArraySpec(
         shape=(),
         dtype=np.int32,
         minimum=0,
-        maximum=num_actions - 1,
+        maximum=max_num_actions - 1,
         name='action')
 
     super(StationaryStochasticPerArmPyEnvironment,
@@ -108,17 +125,26 @@ class StationaryStochasticPerArmPyEnvironment(
         [self._global_context_sampling_fn() for _ in range(self._batch_size)])
     arm_obs = np.reshape([
         self._arm_context_sampling_fn()
-        for _ in range(self._batch_size * self._num_actions)
-    ], (self._batch_size, self._num_actions, -1))
+        for _ in range(self._batch_size * self._max_num_actions)
+    ], (self._batch_size, self._max_num_actions, -1))
     self._observation = {GLOBAL_KEY: global_obs, PER_ARM_KEY: arm_obs}
+    if self._add_mask:
+      num_actions = [[self._num_actions_fn()] for _ in range(self._batch_size)]
+      num_actions = np.maximum(num_actions, 1)
+      mask = np.array(
+          np.less(range(self._max_num_actions), num_actions), dtype=np.int32)
+      self._observation = (self._observation, mask)
     return self._observation
 
   def _apply_action(self, action):
-    if len(action) != self.batch_size:
+    if action.shape[0] != self.batch_size:
       raise ValueError('Number of actions must match batch size.')
-    global_obs = self._observation[GLOBAL_KEY]
+    observation = self._observation
+    if self._add_mask:
+      observation = self._observation[0]
+    global_obs = observation[GLOBAL_KEY]
     batch_size_range = range(self.batch_size)
-    arm_obs = self._observation[PER_ARM_KEY][batch_size_range, action, :]
+    arm_obs = observation[PER_ARM_KEY][batch_size_range, action, :]
     reward = np.stack([
         self._reward_fn(np.concatenate((global_obs[b, :], arm_obs[b, :])))
         for b in batch_size_range
