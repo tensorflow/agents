@@ -273,8 +273,13 @@ class ProcessPyEnvironment(object):
     Returns:
       Value of the attribute.
     """
-    # Accessed by multiprocessing Pickler or this function.
-    if name in ('__getstate__', '__setstate__', '_conn', '_ACCESS', '_receive'):
+    # Private properties are always accessed on this object, not in the
+    # wrapped object in another process.  This includes properties used
+    # for pickling (incl. __getstate__, __setstate__, _conn, _ACCESS, _receive),
+    # as well as private properties and methods created and used by subclasses
+    # of this class.  Allowing arbitrary private attributes to be requested
+    # from the other process can lead to deadlocks.
+    if name.startswith('_'):
       return super(ProcessPyEnvironment, self).__getattribute__(name)
 
     # All other requests get sent to the worker.
@@ -290,11 +295,25 @@ class ProcessPyEnvironment(object):
       **kwargs: Keyword arguments to forward to the method.
 
     Returns:
-      Promise object that blocks and provides the return value when called.
+      The attribute.
     """
     payload = name, args, kwargs
     self._conn.send((self._CALL, payload))
     return self._receive
+
+  def access(self, name):
+    """Access an attribute of the external environment.
+
+    This method blocks.
+
+    Args:
+      name: Name of the attribute to access.
+
+    Returns:
+      The attribute value.
+    """
+    self._conn.send((self._ACCESS, name))
+    return self._receive()
 
   def close(self):
     """Send a close message to the external process and join it."""

@@ -184,11 +184,11 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     env.seed(seeds)
     self.assertEqual(
         np.random.RandomState(0).get_state()[1][-1],
-        env._envs[0]._rng.get_state()[1][-1])
+        env._envs[0].access('_rng').get_state()[1][-1])
 
     self.assertEqual(
         np.random.RandomState(1).get_state()[1][-1],
-        env._envs[1]._rng.get_state()[1][-1])
+        env._envs[1].access('_rng').get_state()[1][-1])
     env.close()
 
 
