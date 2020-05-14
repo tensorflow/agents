@@ -65,12 +65,14 @@ class FixedPolicy(tf_policy.TFPolicy):
   def _action(self, time_step, policy_state, seed):
     del seed
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
-    action = common.replicate(self._action_value, outer_shape)
+    action = tf.nest.map_structure(lambda t: common.replicate(t, outer_shape),
+                                   self._action_value)
     return policy_step.PolicyStep(action, policy_state, self._policy_info)
 
   def _distribution(self, time_step, policy_state):
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
-    action = common.replicate(self._action_value, outer_shape)
+    action = tf.nest.map_structure(lambda t: common.replicate(t, outer_shape),
+                                   self._action_value)
 
     def dist_fn(action):
       """Return a categorical distribution with all density on fixed action."""
