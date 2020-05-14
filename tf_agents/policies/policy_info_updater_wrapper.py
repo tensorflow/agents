@@ -51,6 +51,11 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
       updater_fn: An updater function that updates the `policy_info`. This is a
         callable that receives a `PolicyStep` and will return a dictionary of a
         tf.Tensor or sequence of tf.Tensor`s.
+
+        **NOTE** If `policy.distribution` is called, the `PolicyStep.action`
+        object may contain a `tfp.distributions.Distribution` object instead
+        of a `Tensor`.  The `updater_fn` must be able to handle both cases
+        to be compatible with `PolicySaver`.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """

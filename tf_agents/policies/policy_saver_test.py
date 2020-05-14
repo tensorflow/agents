@@ -25,6 +25,7 @@ import shutil
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow_probability as tfp
 
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import q_network
@@ -32,10 +33,27 @@ from tf_agents.networks import q_rnn_network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_saver
 from tf_agents.policies import q_policy
+from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
+
+
+class PolicyNoDistribution(tf_policy.TFPolicy):
+
+  def __init__(self):
+    super(PolicyNoDistribution, self).__init__(
+        time_step_spec=ts.TimeStep(
+            step_type=(), reward=(), discount=(), observation=()),
+        action_spec=())
+
+  def _action(self, **kwargs):
+    return policy_step.PolicyStep((), ())
+
+  def _distribution(self, **kwargs):
+    raise NotImplementedError('_distribution has not been implemented.')
 
 
 class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
@@ -186,6 +204,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
                                                      action_input_values)
 
         action_output = policy.action(*action_input_tensors, seed=action_seed)
+        distribution_output = policy.distribution(*action_input_tensors)
+        self.assertIsInstance(
+            distribution_output.action, tfp.distributions.Distribution)
 
         self.evaluate(tf.compat.v1.global_variables_initializer())
 
@@ -196,6 +217,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         # Check output of the flattened signature call.
         (action_output_value, action_output_dict) = self.evaluate(
             (action_output, action_output_dict))
+
+        distribution_output_value = self.evaluate(_sample_from_distributions(
+            distribution_output))
 
         input_fn_and_spec = None
         if has_input_fn_and_spec:
@@ -261,6 +285,10 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
               action_input_tensors)
           reloaded_action_output_dict = reloaded_action(action_string_vector)
           reloaded_action_output = reloaded.action(action_string_vector)
+          reloaded_distribution_output = reloaded.distribution(
+              action_string_vector)
+          self.assertIsInstance(reloaded_distribution_output.action,
+                                tfp.distributions.Distribution)
 
         else:
           # This is the flat-signature function.
@@ -268,6 +296,10 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
               **function_action_input_dict)
           # This is the non-flat function.
           reloaded_action_output = reloaded.action(*action_input_tensors)
+          reloaded_distribution_output = reloaded.distribution(
+              *action_input_tensors)
+          self.assertIsInstance(reloaded_distribution_output.action,
+                                tfp.distributions.Distribution)
 
           if not has_state:
             # Try both cases: one with an empty policy_state and one with no
@@ -279,16 +311,30 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
             # after the first call due to randomness.
             reloaded_action_output_no_input_state = reloaded.action(
                 action_input_tensors[0])
+            reloaded_distribution_output_no_input_state = reloaded.distribution(
+                action_input_tensors[0])
             # Even with a seed, multiple calls to action will get different
             # values, so here we just check the signature matches.
+            self.assertIsInstance(
+                reloaded_distribution_output_no_input_state.action,
+                tfp.distributions.Distribution)
             tf.nest.map_structure(match_dtype_shape,
                                   reloaded_action_output_no_input_state,
                                   reloaded_action_output)
+
+            tf.nest.map_structure(
+                match_dtype_shape,
+                _sample_from_distributions(
+                    reloaded_distribution_output_no_input_state),
+                _sample_from_distributions(reloaded_distribution_output))
 
         self.evaluate(tf.compat.v1.global_variables_initializer())
         (reloaded_action_output_dict,
          reloaded_action_output_value) = self.evaluate(
              (reloaded_action_output_dict, reloaded_action_output))
+
+        reloaded_distribution_output_value = self.evaluate(
+            _sample_from_distributions(reloaded_distribution_output))
 
         self.assertAllEqual(action_output_dict.keys(),
                             reloaded_action_output_dict.keys())
@@ -313,6 +359,10 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         else:
           tf.nest.map_structure(match_dtype_shape, action_output_value,
                                 reloaded_action_output_value)
+
+        tf.nest.map_structure(self.assertAllClose,
+                              distribution_output_value,
+                              reloaded_distribution_output_value)
 
   def testSaveGetInitialState(self):
     network = q_rnn_network.QRnnNetwork(
@@ -588,6 +638,31 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     tf.nest.map_structure(assert_np_all_equal, model_variables,
                           reloaded_model_variables)
 
+  def testDistributionNotImplemented(self):
+    policy = PolicyNoDistribution()
+
+    with self.assertRaisesRegex(
+        NotImplementedError, '_distribution has not been implemented'):
+      policy.distribution(
+          ts.TimeStep(step_type=(), reward=(), discount=(), observation=()))
+
+    train_step = common.create_variable('train_step', initial_value=0)
+    saver = policy_saver.PolicySaver(
+        policy, train_step=train_step, batch_size=None)
+    path = os.path.join(self.get_temp_dir(), 'save_model')
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    with self.cached_session():
+      saver.save(path)
+
+    reloaded = tf.compat.v2.saved_model.load(path)
+    with self.assertRaisesRegexp(tf.errors.InvalidArgumentError,
+                                 '_distribution has not been implemented'):
+      self.evaluate(
+          reloaded.distribution(
+              ts.TimeStep(step_type=(), reward=(), discount=(), observation=()))
+      )
+
   def testCheckpointSave(self):
     network = q_network.QNetwork(
         input_tensor_spec=self._time_step_spec.observation,
@@ -843,6 +918,15 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     self.assertEqual(kwargs, expected_input_spec_dict)
     self.assertEqual(function.structured_outputs, expected_output_spec_dict)
+
+
+def _sample_from_distributions(x):
+  def _convert(d):
+    return (d.sample((), seed=1234)
+            if isinstance(d, tfp.distributions.Distribution)
+            else d)
+
+  return tf.nest.map_structure(_convert, x)
 
 
 if __name__ == '__main__':
