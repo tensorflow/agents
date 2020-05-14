@@ -214,10 +214,6 @@ class DynamicUnroll(tf.keras.layers.Layer):
     self.cell.build(input_shape)
     self.built = True
 
-  # TODO(ebrevdo): See if we can reapply Keras masking layers in conjunction
-  # with this Layer.  It would require some redesign in terms of how we use
-  # this layer inside networks, and possibly some additional logic (since
-  # Keras masks are not reset masks).
   def call(self, inputs, reset_mask, initial_state=None, training=False):
     """Perform the computation.
 

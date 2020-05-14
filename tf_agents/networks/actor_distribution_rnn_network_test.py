@@ -20,8 +20,8 @@ from __future__ import print_function
 from absl.testing import parameterized
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.keras_layers import sequential_layer
 from tf_agents.networks import actor_distribution_rnn_network
-from tf_agents.networks import sequential_layer
 from tf_agents.policies import actor_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts

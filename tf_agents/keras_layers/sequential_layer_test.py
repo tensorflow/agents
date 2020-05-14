@@ -22,7 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.networks import sequential_layer
+from tf_agents.keras_layers import sequential_layer
 
 
 class SequentialLayerTest(tf.test.TestCase):

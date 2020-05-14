@@ -22,7 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.networks import bias_layer
+from tf_agents.keras_layers import bias_layer
 
 
 class BiasLayerTest(tf.test.TestCase):

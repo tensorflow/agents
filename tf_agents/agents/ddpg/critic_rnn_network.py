@@ -17,7 +17,7 @@
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-from tf_agents.networks import dynamic_unroll_layer
+from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec

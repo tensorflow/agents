@@ -23,7 +23,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import utils as distribution_utils
-from tf_agents.networks import bias_layer
+from tf_agents.keras_layers import bias_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.specs import distribution_spec

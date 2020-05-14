@@ -33,7 +33,7 @@ from __future__ import print_function
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.networks import dynamic_unroll_layer
+from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
