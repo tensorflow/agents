@@ -22,7 +22,6 @@ from __future__ import print_function
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-import tensorflow_probability as tfp
 
 from tf_agents.distributions import shifted_categorical
 from tf_agents.policies import tf_policy
@@ -146,14 +145,9 @@ class QPolicy(tf_policy.TFPolicy):
       logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
 
     # TODO(kbanoop): Handle distributions over nests.
-    if self._flat_action_spec.minimum != 0:
-      distribution = shifted_categorical.ShiftedCategorical(
-          logits=logits,
-          dtype=self._flat_action_spec.dtype,
-          shift=self._flat_action_spec.minimum)
-    else:
-      distribution = tfp.distributions.Categorical(
-          logits=logits,
-          dtype=self._flat_action_spec.dtype)
+    distribution = shifted_categorical.ShiftedCategorical(
+        logits=logits,
+        dtype=self._flat_action_spec.dtype,
+        shift=self._flat_action_spec.minimum)
     distribution = tf.nest.pack_sequence_as(self._action_spec, [distribution])
     return policy_step.PolicyStep(distribution, policy_state)

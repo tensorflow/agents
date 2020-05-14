@@ -22,9 +22,7 @@ import copy
 import functools
 import os
 
-from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-import tensorflow_probability as tfp
 
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -99,20 +97,6 @@ class PolicySaver(object):
     policy_step = saved_policy.action(time_step, policy_state)
     policy_state = policy_step.state
     time_step = f(policy_step.action)
-    ...
-  ```
-
-  or to use the distributional form, e.g.:
-
-  ```python
-  batch_size = 3
-  saved_policy = tf.compat.v2.saved_model.load('policy_0')
-  policy_state = saved_policy.get_initial_state(batch_size=batch_size)
-  time_step = ...
-  while True:
-    policy_step = saved_policy.distribution(time_step, policy_state)
-    policy_state = policy_step.state
-    time_step = f(policy_step.action.sample(batch_size))
     ...
   ```
 
@@ -240,34 +224,15 @@ class PolicySaver(object):
     else:
       action_fn = original_action_fn
 
-    def distribution_fn(time_step, policy_state):
-      """Wrapper for policy.distribution() in the SavedModel."""
-      try:
-        outs = policy.distribution(
-            time_step=time_step, policy_state=policy_state)
-        return tf.nest.map_structure(_composite_distribution, outs)
-      except (TypeError, NotImplementedError) as e:
-        # TODO(b/156526399): Move this to just the policy.distribution() call
-        # once tfp.experimental.as_composite() properly handles LinearOperator*
-        # components as well as TransformedDistributions.
-        logging.error(
-            'Could not serialize policy.distribution() for policy "%s". '
-            'Calling saved_model.distribution() will raise the '
-            'assertion error: %s', policy, e)
-        @common.function()
-        def _failure(**_):
-          tf.Assert(False, [str(e)])
-          return ()
-        outs = _failure(time_step=time_step, policy_state=policy_state)
-
-    # We call get_concrete_function() for its side effect: to ensure the proper
-    # ConcreteFunction is stored in the SavedModel.
+    # We call get_concrete_function() for its side effect.
     get_initial_state_fn.get_concrete_function(*get_initial_state_input_specs)
 
     train_step_fn = common.function(
         lambda: policy.train_step).get_concrete_function()
     get_metadata_fn = common.function(
         lambda: policy.metadata).get_concrete_function()
+
+    action_fn = common.function()(action_fn)
 
     def add_batch_dim(spec):
       return tf.TensorSpec(
@@ -306,21 +271,10 @@ class PolicySaver(object):
             action_fn_input_spec, action_inputs)
         return action_fn(*action_inputs)
 
-      @common.function()
-      def polymorphic_distribution_fn(example):
-        action_inputs = input_fn_and_spec[0](example)
-        tf.nest.map_structure(
-            lambda spec, t: tf.Assert(spec.is_compatible_with(t[0]), [t]),
-            action_fn_input_spec, action_inputs)
-        return distribution_fn(*action_inputs)
-
       batched_input_spec = tf.nest.map_structure(add_batch_dim,
                                                  input_fn_and_spec[1])
-      # We call get_concrete_function() for its side effect: to ensure the
-      # proper ConcreteFunction is stored in the SavedModel.
+      # We call get_concrete_function() for its side effect.
       polymorphic_action_fn.get_concrete_function(example=batched_input_spec)
-      polymorphic_distribution_fn.get_concrete_function(
-          example=batched_input_spec)
 
       action_input_spec = (input_fn_and_spec[1],)
 
@@ -328,13 +282,8 @@ class PolicySaver(object):
       action_input_spec = action_fn_input_spec
       if batched_policy_state_spec:
         # Store the signature with a required policy state spec
-        polymorphic_action_fn = common.function()(action_fn)
+        polymorphic_action_fn = action_fn
         polymorphic_action_fn.get_concrete_function(
-            time_step=batched_time_step_spec,
-            policy_state=batched_policy_state_spec)
-
-        polymorphic_distribution_fn = common.function()(distribution_fn)
-        polymorphic_distribution_fn.get_concrete_function(
             time_step=batched_time_step_spec,
             policy_state=batched_policy_state_spec)
       else:
@@ -354,20 +303,7 @@ class PolicySaver(object):
         polymorphic_action_fn.get_concrete_function(
             time_step=batched_time_step_spec)
 
-        @common.function()
-        def polymorphic_distribution_fn(time_step,
-                                        policy_state=batched_policy_state_spec):
-          return distribution_fn(time_step, policy_state)
-
-        polymorphic_distribution_fn.get_concrete_function(
-            time_step=batched_time_step_spec,
-            policy_state=batched_policy_state_spec)
-        polymorphic_distribution_fn.get_concrete_function(
-            time_step=batched_time_step_spec)
-
     signatures = {
-        # CompositeTensors aren't well supported by old-style signature
-        # mechanisms, so we do not have a signature for policy.distribution.
         'action':
             _function_with_flat_signature(
                 polymorphic_action_fn,
@@ -397,7 +333,6 @@ class PolicySaver(object):
     }
 
     policy.action = polymorphic_action_fn
-    policy.distribution = polymorphic_distribution_fn
     policy.get_initial_state = get_initial_state_fn
     policy.get_train_step = train_step_fn
     policy.get_metadata = get_metadata_fn
@@ -623,10 +558,3 @@ def specs_from_collect_data_spec(loaded_policy_specs):
       action_spec=action_spec,
       policy_state_spec=policy_state_spec,
       info_spec=info_spec)
-
-
-def _composite_distribution(d):
-  """Converts tfp Distributions to CompositeTensors."""
-  return (tfp.experimental.as_composite(d)
-          if isinstance(d, tfp.distributions.Distribution)
-          else d)
