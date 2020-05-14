@@ -52,6 +52,9 @@ flags.DEFINE_enum(
 flags.DEFINE_bool('drop_arm_obs', False, 'Whether to wipe the arm observations '
                   'from the trajectories.')
 
+flags.DEFINE_bool('add_trivial_mask', False, 'Whether to add action masking '
+                  'that still allows all actions, for testing purposes.')
+
 FLAGS = flags.FLAGS
 
 BATCH_SIZE = 16
@@ -64,28 +67,6 @@ AGENT_ALPHA = 0.1
 
 EPSILON = 0.01
 LR = 0.05
-
-
-def _all_rewards(observation, hidden_param):
-  """Helper function that outputs rewards for all actions, given an observation."""
-  hidden_param = tf.cast(hidden_param, dtype=tf.float32)
-  global_obs = observation[bandit_spec_utils.GLOBAL_FEATURE_KEY]
-  per_arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
-  num_actions = tf.shape(per_arm_obs)[1]
-  tiled_global = tf.tile(
-      tf.expand_dims(global_obs, axis=1), [1, num_actions, 1])
-  concatenated = tf.concat([tiled_global, per_arm_obs], axis=-1)
-  rewards = tf.linalg.matvec(concatenated, hidden_param)
-  return rewards
-
-
-def optimal_reward(observation, hidden_param):
-  return tf.reduce_max(_all_rewards(observation, hidden_param), axis=1)
-
-
-def optimal_action(observation, hidden_param):
-  return tf.argmax(
-      _all_rewards(observation, hidden_param), axis=1, output_type=tf.int32)
 
 
 def main(unused_argv):
@@ -108,20 +89,28 @@ def main(unused_argv):
 
   reward_fn = LinearNormalReward(HIDDEN_PARAM)
 
+  observation_and_action_constraint_splitter = None
+  num_actions_fn = None
+  if FLAGS.add_trivial_mask:
+    num_actions_fn = lambda: NUM_ACTIONS
+    observation_and_action_constraint_splitter = lambda x: (x[0], x[1])
+
   env = sspe.StationaryStochasticPerArmPyEnvironment(
       _global_context_sampling_fn,
       _arm_context_sampling_fn,
       NUM_ACTIONS,
       reward_fn,
+      num_actions_fn,
       batch_size=BATCH_SIZE)
   environment = tf_py_environment.TFPyEnvironment(env)
 
-  obs_spec = environment.observation_spec()
   if FLAGS.agent == 'LinUCB':
     agent = lin_ucb_agent.LinearUCBAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         accepts_per_arm_features=True,
         dtype=tf.float32)
   elif FLAGS.agent == 'LinTS':
@@ -129,9 +118,14 @@ def main(unused_argv):
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         accepts_per_arm_features=True,
         dtype=tf.float32)
   elif FLAGS.agent == 'epsGreedy':
+    obs_spec = environment.observation_spec()
+    if FLAGS.add_trivial_mask:
+      obs_spec = obs_spec[0]
     if FLAGS.network == 'commontower':
       network = (
           global_and_arm_feature_network
@@ -148,8 +142,31 @@ def main(unused_argv):
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
         epsilon=EPSILON,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter),
         accepts_per_arm_features=True,
         emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
+
+  def _all_rewards(observation, hidden_param):
+    """Outputs rewards for all actions, given an observation."""
+    if observation_and_action_constraint_splitter is not None:
+      observation = observation_and_action_constraint_splitter(observation)[0]
+    hidden_param = tf.cast(hidden_param, dtype=tf.float32)
+    global_obs = observation[bandit_spec_utils.GLOBAL_FEATURE_KEY]
+    per_arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
+    num_actions = tf.shape(per_arm_obs)[1]
+    tiled_global = tf.tile(
+        tf.expand_dims(global_obs, axis=1), [1, num_actions, 1])
+    concatenated = tf.concat([tiled_global, per_arm_obs], axis=-1)
+    rewards = tf.linalg.matvec(concatenated, hidden_param)
+    return rewards
+
+  def optimal_reward(observation, hidden_param):
+    return tf.reduce_max(_all_rewards(observation, hidden_param), axis=1)
+
+  def optimal_action(observation, hidden_param):
+    return tf.argmax(
+        _all_rewards(observation, hidden_param), axis=1, output_type=tf.int32)
 
   optimal_reward_fn = functools.partial(
       optimal_reward, hidden_param=HIDDEN_PARAM)
@@ -160,7 +177,10 @@ def main(unused_argv):
       optimal_action_fn)
 
   if FLAGS.drop_arm_obs:
-    drop_arm_feature_fn = bandit_spec_utils.drop_arm_observation
+    drop_arm_feature_fn = functools.partial(
+        bandit_spec_utils.drop_arm_observation,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter))
   else:
     drop_arm_feature_fn = None
   trainer.train(
