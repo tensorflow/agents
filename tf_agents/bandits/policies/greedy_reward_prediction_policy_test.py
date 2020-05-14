@@ -335,8 +335,7 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
       return
     tf.compat.v1.set_random_seed(3000)
     obs_spec = {
-        'global': tensor_spec.TensorSpec(
-            shape=(4,), dtype=tf.float32),
+        'global': {'sport': tensor_spec.TensorSpec((), tf.string)},
         'per_arm': {
             'name': tensor_spec.TensorSpec((3,), tf.string),
             'fruit': tensor_spec.TensorSpec((3,), tf.string)
@@ -348,6 +347,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     columns_b = tf.feature_column.indicator_column(
         tf.feature_column.categorical_column_with_vocabulary_list(
             'fruit', ['banana', 'kiwi', 'pear']))
+    columns_c = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'sport', ['bridge', 'chess', 'snooker']))
 
     reward_network = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
@@ -355,6 +357,8 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
             global_layers=(4, 3, 2),
             arm_layers=(6, 5, 4),
             common_layers=(7, 6, 5),
+            global_preprocessing_combiner=(
+                tf.compat.v2.keras.layers.DenseFeatures([columns_c])),
             arm_preprocessing_combiner=tf.compat.v2.keras.layers.DenseFeatures(
                 [columns_a, columns_b])))
 
@@ -367,14 +371,16 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         accepts_per_arm_features=True,
         emit_policy_info=('predicted_rewards_mean',))
     observations = {
-        'global': tf.constant(np.random.rand(2, 4)),
+        'global': {
+            'sport': tf.constant(['snooker', 'chess'])
+        },
         'per_arm': {
-            'name': tf.constant([
-                ['george', 'george', 'george'],
-                ['bob', 'bob', 'bob']]),
-            'fruit': tf.constant([
-                ['banana', 'banana', 'banana'],
-                ['kiwi', 'kiwi', 'kiwi']])
+            'name':
+                tf.constant([['george', 'george', 'george'],
+                             ['bob', 'bob', 'bob']]),
+            'fruit':
+                tf.constant([['banana', 'banana', 'banana'],
+                             ['kiwi', 'kiwi', 'kiwi']])
         }
     }
 

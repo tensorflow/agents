@@ -77,18 +77,27 @@ class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
   def testCreateFeedForwardCommonTowerNetworkWithFeatureColumns(
       self, batch_size=2, feature_dim=4, num_actions=3):
     obs_spec = {
-        'global': tensor_spec.TensorSpec(
-            shape=(feature_dim,), dtype=tf.float32),
+        'global': {
+            'dense':
+                tensor_spec.TensorSpec(shape=(feature_dim,), dtype=tf.float32),
+            'composer':
+                tensor_spec.TensorSpec((), tf.string)
+        },
         'per_arm': {
             'name': tensor_spec.TensorSpec((num_actions,), tf.string),
             'fruit': tensor_spec.TensorSpec((num_actions,), tf.string)
         }
     }
+    columns_dense = tf.feature_column.numeric_column(
+        'dense', shape=(feature_dim,))
+    columns_composer = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'composer', ['wolfgang', 'amadeus', 'mozart']))
 
-    columns_a = tf.feature_column.indicator_column(
+    columns_name = tf.feature_column.indicator_column(
         tf.feature_column.categorical_column_with_vocabulary_list(
             'name', ['bob', 'george', 'wanda']))
-    columns_b = tf.feature_column.indicator_column(
+    columns_fruit = tf.feature_column.indicator_column(
         tf.feature_column.categorical_column_with_vocabulary_list(
             'fruit', ['banana', 'kiwi', 'pear']))
 
@@ -97,17 +106,22 @@ class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
         global_layers=(4, 3, 2),
         arm_layers=(6, 5, 4),
         common_layers=(7, 6, 5),
+        global_preprocessing_combiner=tf.compat.v2.keras.layers.DenseFeatures(
+            [columns_dense, columns_composer]),
         arm_preprocessing_combiner=tf.compat.v2.keras.layers.DenseFeatures(
-            [columns_a, columns_b]))
+            [columns_name, columns_fruit]))
     input_nest = {
-        'global': tf.constant(np.random.rand(batch_size, feature_dim)),
+        'global': {
+            'dense': tf.constant(np.random.rand(batch_size, feature_dim)),
+            'composer': tf.constant(['wolfgang', 'mozart'])
+        },
         'per_arm': {
-            'name': tf.constant([
-                [['george'], ['george'], ['george']],
-                [['bob'], ['bob'], ['bob']]]),
-            'fruit': tf.constant([
-                [['banana'], ['banana'], ['banana']],
-                [['kiwi'], ['kiwi'], ['kiwi']]])
+            'name':
+                tf.constant([[['george'], ['george'], ['george']],
+                             [['bob'], ['bob'], ['bob']]]),
+            'fruit':
+                tf.constant([[['banana'], ['banana'], ['banana']],
+                             [['kiwi'], ['kiwi'], ['kiwi']]])
         }
     }
 
