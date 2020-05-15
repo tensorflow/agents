@@ -203,9 +203,12 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         name=name)
 
   def _variables(self):
-    all_vars = (self._cov_matrix + self._data_vector + self._num_samples +
-                list(self._eig_matrix) + list(self._eig_vals))
-    return [v for v in all_vars if isinstance(v, tf.Variable)]
+    all_vars = [self._cov_matrix,
+                self._data_vector,
+                self._num_samples,
+                self._eig_matrix,
+                self._eig_vals]
+    return [v for v in tf.nest.flatten(all_vars) if isinstance(v, tf.Variable)]
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation

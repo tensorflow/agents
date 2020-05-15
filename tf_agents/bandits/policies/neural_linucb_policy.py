@@ -215,10 +215,12 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
         name=name)
 
   def _variables(self):
-    all_variables = (self._cov_matrix + self._data_vector +
-                     self._num_samples + self._encoding_network.variables +
-                     self._reward_layer.variables)
-    return [v for v in all_variables if isinstance(v, tf.Variable)]
+    all_variables = [self._cov_matrix, self._data_vector,
+                     self._num_samples, self._actions_from_reward_layer,
+                     self._encoding_network.variables,
+                     self._reward_layer.variables]
+    return [v for v in tf.nest.flatten(all_variables)
+            if isinstance(v, tf.Variable)]
 
   def _get_actions_from_reward_layer(self, encoded_observation, mask):
     # Get the predicted expected reward.
