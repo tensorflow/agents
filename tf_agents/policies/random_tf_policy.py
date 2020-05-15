@@ -73,6 +73,7 @@ class RandomTFPolicy(tf_policy.TFPolicy):
     observation_and_action_constraint_splitter = (
         self.observation_and_action_constraint_splitter)
 
+    outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)
     if observation_and_action_constraint_splitter is not None:
       observation, mask = observation_and_action_constraint_splitter(
           time_step.observation)
@@ -86,18 +87,21 @@ class RandomTFPolicy(tf_policy.TFPolicy):
       # dimension so the final shape is (B, 1) rather than (B,).
       if self.action_spec.shape.rank == 1:
         action_ = tf.expand_dims(action_, axis=-1)
-      policy_info = tensor_spec.sample_spec_nest(self._info_spec)
+      policy_info = tensor_spec.sample_spec_nest(
+          self._info_spec, outer_dims=outer_dims)
     else:
       observation = time_step.observation
-      outer_dims = nest_utils.get_outer_shape(time_step, self._time_step_spec)
 
       action_ = tensor_spec.sample_spec_nest(
           self._action_spec, seed=seed, outer_dims=outer_dims)
       policy_info = tensor_spec.sample_spec_nest(
           self._info_spec, outer_dims=outer_dims)
     if self._accepts_per_arm_features:
-      chosen_arm_features = tf.gather(
-          params=observation['per_arm'], indices=action_, batch_dims=1)
+      def _gather_fn(t):
+        return tf.gather(params=t, indices=action_, batch_dims=1)
+
+      chosen_arm_features = tf.nest.map_structure(_gather_fn,
+                                                  observation['per_arm'])
       policy_info = policy_info._replace(
           chosen_arm_features=chosen_arm_features)
 
