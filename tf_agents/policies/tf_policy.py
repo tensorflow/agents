@@ -213,7 +213,8 @@ class TFPolicy(tf.Module):
 
   def variables(self):
     """Returns the list of Variables that belong to the policy."""
-    return self._variables()
+    # Ignore self._variables() in favor of using tf.Module's tracking.
+    return super(TFPolicy, self).variables
 
   @property
   def observation_and_action_constraint_splitter(self):
@@ -568,11 +569,6 @@ class TFPolicy(tf.Module):
         `state`: A policy state tensor for the next call to distribution.
         `info`: Optional side information such as action log probabilities.
     """
-    pass
-
-  @abc.abstractmethod
-  def _variables(self):
-    """Returns an iterable of `tf.Variable` objects used by this policy."""
     pass
 
   # Subclasses MAY optionally overwrite _get_initial_state.

@@ -230,7 +230,8 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_all_equal,
                           self.evaluate(self.tf_policy.variables()),
-                          self.evaluate(eager_py_policy.variables()))
+                          self.evaluate(eager_py_policy.variables()),
+                          check_types=False)
 
   def testInferenceFromCheckpoint(self):
     if not common.has_eager_been_enabled():
@@ -265,7 +266,8 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_all_equal,
                           self.evaluate(self.tf_policy.variables()),
-                          self.evaluate(eager_py_policy.variables()))
+                          self.evaluate(eager_py_policy.variables()),
+                          check_types=False)
 
     # Can't check if the action is different as in some cases depending on
     # variable initialization it will be the same. Checking that they are at

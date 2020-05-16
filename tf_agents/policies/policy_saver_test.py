@@ -636,7 +636,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_all_equal, model_variables,
-                          reloaded_model_variables)
+                          reloaded_model_variables, check_types=False)
 
   def testDistributionNotImplemented(self):
     policy = PolicyNoDistribution()
@@ -731,9 +731,11 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     model_variables = self.evaluate(policy.variables())
     reloaded_model_variables = self.evaluate(reloaded_policy.model_variables)
 
-    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).any())
-    tf.nest.map_structure(assert_np_not_equal, model_variables,
-                          reloaded_model_variables)
+    any_not_equal = lambda a, b: np.not_equal(a, b).any()
+    self.assertTrue(
+        any(any_not_equal(a, b)
+            for a, b in zip(tf.nest.flatten(model_variables),
+                            tf.nest.flatten(reloaded_model_variables))))
 
     # Update from checkpoint.
     checkpoint = tf.train.Checkpoint(policy=reloaded_policy)
@@ -749,8 +751,10 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     reloaded_model_variables = self.evaluate(reloaded_policy.model_variables)
 
     assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
-    tf.nest.map_structure(assert_np_all_equal, model_variables,
-                          reloaded_model_variables)
+    tf.nest.map_structure(assert_np_all_equal,
+                          model_variables,
+                          reloaded_model_variables,
+                          check_types=False)
 
   def testInferenceWithCheckpoint(self):
     if not common.has_eager_been_enabled():
@@ -791,9 +795,11 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     model_variables = self.evaluate(policy.variables())
     reloaded_model_variables = self.evaluate(reloaded_policy.model_variables)
 
-    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).any())
-    tf.nest.map_structure(assert_np_not_equal, model_variables,
-                          reloaded_model_variables)
+    any_not_equal = lambda a, b: np.not_equal(a, b).any()
+    self.assertTrue(
+        any([any_not_equal(a, b)
+             for a, b in zip(tf.nest.flatten(model_variables),
+                             tf.nest.flatten(reloaded_model_variables))]))
 
     # Update from checkpoint.
     checkpoint = tf.train.Checkpoint(policy=reloaded_policy)
@@ -808,11 +814,14 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     model_variables = self.evaluate(policy.variables())
     reloaded_model_variables = self.evaluate(reloaded_policy.model_variables)
 
-    assert_np_all_equal = lambda a, b: self.assertTrue(np.equal(a, b).all())
-    tf.nest.map_structure(assert_np_all_equal, model_variables,
-                          reloaded_model_variables)
+    all_equal = lambda a, b: np.equal(a, b).all()
+    self.assertTrue(
+        all([all_equal(a, b)
+             for a, b in zip(tf.nest.flatten(model_variables),
+                             tf.nest.flatten(reloaded_model_variables))]))
 
     # Verify variable update affects inference.
+    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).any())
     reloaded_eval = self.evaluate(reloaded_policy.action(sample_input))
     tf.nest.map_structure(assert_np_not_equal, original_eval, reloaded_eval)
     current_eval = self.evaluate(policy.action(sample_input))
