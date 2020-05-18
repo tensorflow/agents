@@ -226,7 +226,17 @@ class TFMultiMetricStepMetric(TFStepMetric):
         # Skip plotting the metrics against itself.
         if self.name == step_metric.name:
           continue
-        step_tag = '{}vs_{}/{}'.format(prefix, step_metric.name, self.name)
+
+        # The default metric name is the `single_metric_name` followed by the
+        # index.
+        metric_name = single_metric_name + str(metric_index)
+        # In case there is a valid individual name for each metric, use it.
+        if (metric_index < len(self.metric_names) and
+            len(result_list) == len(self.metric_names) and
+            self.metric_names[metric_index] is not None):
+          metric_name = self.metric_names[metric_index]
+        step_tag = '{}vs_{}/{}/{}'.format(prefix, step_metric.name,
+                                          self.name, metric_name)
         # Summaries expect the step value to be an int64.
         step = tf.cast(step_metric.result(), tf.int64)
         summaries.append(tf.compat.v2.summary.scalar(
