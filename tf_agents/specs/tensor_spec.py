@@ -484,6 +484,13 @@ def from_proto(spec_proto):
   return signature_encoder.decode_proto(spec_proto)
 
 
+def from_packed_proto(spec_packed_proto):
+  """Decodes a packed Any proto containing the structured value for the spec."""
+  spec_proto = struct_pb2.StructuredValue()
+  spec_packed_proto.Unpack(spec_proto)
+  return from_proto(spec_proto)
+
+
 def to_pbtxt_file(output_path, spec):
   """Saves a spec encoded as a struct_pb2.StructuredValue in a pbtxt file."""
   spec_proto = to_proto(spec)
