@@ -28,4 +28,5 @@ from tf_agents.bandits.environments import piecewise_stochastic_environment
 from tf_agents.bandits.environments import random_bandit_environment
 from tf_agents.bandits.environments import stationary_stochastic_per_arm_py_environment
 from tf_agents.bandits.environments import stationary_stochastic_py_environment
+from tf_agents.bandits.environments import stationary_stochastic_structured_py_environment
 from tf_agents.bandits.environments import wheel_py_environment
