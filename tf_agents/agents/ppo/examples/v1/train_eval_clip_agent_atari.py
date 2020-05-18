@@ -32,7 +32,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ppo.examples.v1 import train_eval_clip_agent
 from tf_agents.environments import suite_atari
-from tf_agents.system import multiprocessing
+from tf_agents.system import system_multiprocessing as multiprocessing
 
 FLAGS = flags.FLAGS
 

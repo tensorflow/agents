@@ -31,7 +31,7 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import py_environment
-from tf_agents.system import multiprocessing
+from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.utils import nest_utils
 
 

@@ -1,4 +1,6 @@
 environments.parallel_py_environment_test
+# Needs custom multiprocessing state savers.
+system.multiprocessing_test
 # TODO(b/135926163): random_??_environment_tests time out when inside
 # TestSuite.
 environments.random_py_environment_test

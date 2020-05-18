@@ -53,7 +53,7 @@ from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
 from tf_agents.policies import policy_saver
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
-from tf_agents.system import multiprocessing
+from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.utils import common
 
 
