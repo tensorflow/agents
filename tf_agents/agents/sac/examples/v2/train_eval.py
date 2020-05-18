@@ -237,11 +237,12 @@ def train_eval(
       collect_driver.run = common.function(collect_driver.run)
       tf_agent.train = common.function(tf_agent.train)
 
-    # Collect initial replay data.
-    logging.info(
-        'Initializing replay buffer by collecting experience for %d steps with '
-        'a random policy.', initial_collect_steps)
-    initial_collect_driver.run()
+    if replay_buffer.num_frames() == 0:
+      # Collect initial replay data.
+      logging.info(
+          'Initializing replay buffer by collecting experience for %d steps '
+          'with a random policy.', initial_collect_steps)
+      initial_collect_driver.run()
 
     results = metric_utils.eager_compute(
         eval_metrics,
