@@ -408,6 +408,19 @@ class PolicySaver(object):
     # Adding variables as an attribute to facilitate updating them.
     saved_policy.model_variables = policy.variables()
 
+    # TODO(b/156779400): Move to a public API for accessing all trackable leaf
+    # objects (once it's available).  For now, we have no other way of tracking
+    # objects like Tables, Vocabulary files, etc.
+    try:
+      saved_policy._all_assets = policy._unconditional_checkpoint_dependencies  # pylint: disable=protected-access
+    except AttributeError as e:
+      if '_self_unconditional' in str(e):
+        logging.warn(
+            'Unable to capture all trackable objects in policy "%s".  This '
+            'may be okay.  Error: %s', policy, e)
+      else:
+        raise e
+
     self._policy = saved_policy
     self._signatures = signatures
     self._action_input_spec = action_input_spec
