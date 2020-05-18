@@ -39,7 +39,7 @@ _UNIFORM = policy_utilities.BanditPolicyType.UNIFORM
 
 class SimpleConstraint(constraints.BaseConstraint):
 
-  def compute_action_feasibility(self, observation, actions=None):
+  def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     batch_size = tf.shape(observation)[0]
     num_actions = self._action_spec.maximum - self._action_spec.minimum + 1

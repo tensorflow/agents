@@ -35,7 +35,7 @@ tf.compat.v1.enable_v2_behavior()
 
 class GreaterThan2Constraint(constraints.BaseConstraint):
 
-  def compute_action_feasibility(self, observation, actions=None):
+  def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     if actions is None:
       actions = tf.range(self._action_spec.minimum, self._action_spec.maximum)
@@ -51,7 +51,7 @@ class BaseConstraintTest(tf.test.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=5)
     gt2c = GreaterThan2Constraint(time_step_spec, action_spec)
-    feasibility_prob = gt2c.compute_action_feasibility(observation=None)
+    feasibility_prob = gt2c(observation=None)
     self.assertAllEqual([0, 0, 0, 1, 1], self.evaluate(feasibility_prob))
 
 
@@ -183,8 +183,7 @@ class NeuralConstraintTest(tf.test.TestCase):
         self.assertIsNone(sess.run(init_op))
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    feasibility_prob = neural_constraint.compute_action_feasibility(
-        observation)
+    feasibility_prob = neural_constraint(observation)
     self.assertAllClose(self.evaluate(feasibility_prob), np.ones([2, 3]))
 
 
@@ -220,8 +219,7 @@ class QuantileConstraintTest(tf.test.TestCase):
         self.assertIsNone(sess.run(init_op))
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    feasibility_prob = quantile_constraint.compute_action_feasibility(
-        observation)
+    feasibility_prob = quantile_constraint(observation)
     self.assertAllGreaterEqual(self.evaluate(feasibility_prob), 0.0)
     self.assertAllLessEqual(self.evaluate(feasibility_prob), 1.0)
 

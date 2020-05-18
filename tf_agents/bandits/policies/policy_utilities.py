@@ -232,6 +232,6 @@ def compute_feasibility_probability(observation, constraints, batch_size,
     feasibility_prob = tf.cast(action_mask, tf.float32)
   for c in constraints:
     # We assume the constraints are independent.
-    action_feasibility = c.compute_action_feasibility(observation)
+    action_feasibility = c(observation)
     feasibility_prob *= action_feasibility
   return feasibility_prob

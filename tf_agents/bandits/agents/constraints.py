@@ -61,7 +61,7 @@ class BaseConstraint(tf.Module):
 
   # Subclasses must implement these methods.
   @abc.abstractmethod
-  def compute_action_feasibility(self, observation, actions=None):
+  def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
 
 
@@ -141,7 +141,7 @@ class NeuralConstraint(BaseConstraint):
       return loss
 
   # Subclasses can override this function.
-  def compute_action_feasibility(self, observation, actions=None):
+  def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     batch_dims = nest_utils.get_outer_shape(
         observation, self._time_step_spec.observation)
@@ -200,7 +200,7 @@ class QuantileConstraint(NeuralConstraint):
         error_loss_fn=self._error_loss_fn,
         name=name)
 
-  def compute_action_feasibility(self, observation, actions=None):
+  def __call__(self, observation, actions=None):
     """Returns the probability of input actions being feasible."""
     predicted_quantiles, _ = self._constraint_network(
         observation, training=False)
