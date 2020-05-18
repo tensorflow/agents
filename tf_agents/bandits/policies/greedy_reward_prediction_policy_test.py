@@ -306,15 +306,14 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         reward_network=reward_network,
         accepts_per_arm_features=True,
         emit_policy_info=('predicted_rewards_mean',))
+    action_feature = tf.cast(
+        tf.reshape(tf.random.shuffle(tf.range(24)), shape=[2, 4, 3]),
+        dtype=tf.float32)
     observations = {
         bandit_spec_utils.GLOBAL_FEATURE_KEY:
             tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
-        bandit_spec_utils.PER_ARM_FEATURE_KEY:
-            tf.cast(
-                tf.reshape(tf.random.shuffle(tf.range(24)), shape=[2, 4, 3]),
-                dtype=tf.float32)
+        bandit_spec_utils.PER_ARM_FEATURE_KEY: action_feature
     }
-
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
     self.assertEqual(action_step.action.shape.as_list(), [2])
@@ -330,6 +329,25 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     first_arm_features = observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
     self.assertAllEqual(p_info.chosen_arm_features[0],
                         first_arm_features[first_action])
+
+    # Check that zeroing out some of the actions does not affect the predicted
+    # rewards for unchanged actions. This is to make sure that action feature
+    # padding does not influence the behavior.
+
+    padded_action_feature = tf.concat(
+        [action_feature[:, 0:1, :],
+         tf.zeros(shape=[2, 3, 3], dtype=tf.float32)],
+        axis=1)
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY: padded_action_feature
+    }
+    time_step = ts.restart(observations, batch_size=2)
+    padded_action_step = policy.action(time_step, seed=1)
+    padded_p_info = self.evaluate(padded_action_step.info)
+    self.assertAllEqual(p_info.predicted_rewards_mean[:, 0],
+                        padded_p_info.predicted_rewards_mean[:, 0])
 
   def testPerArmRewardsSparseObs(self):
     if not tf.executing_eagerly():
