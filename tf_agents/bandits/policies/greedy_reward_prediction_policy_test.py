@@ -22,6 +22,7 @@ import collections
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.bandits.agents import constraints
 from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
@@ -401,6 +402,37 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         bandit_spec_utils.PER_ARM_FEATURE_KEY]['name'][0]
     self.assertAllEqual(p_info.chosen_arm_features['name'][0],
                         first_arm_name_feature[first_action])
+
+  def testPolicyWithConstraints(self):
+    constraint_net = DummyNet(self._obs_spec)
+    neural_constraint = constraints.NeuralConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net)
+
+    tf.compat.v1.set_random_seed(1)
+    policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec),
+        constraints=[neural_constraint],
+        emit_policy_info=('predicted_rewards_mean',))
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [1, 2])
+    # The expected values are obtained by passing the observation through the
+    # Keras dense layer of the DummyNet (defined above).
+    predicted_rewards_expected_array = np.array([[4.0, 5.5, 0.0],
+                                                 [8.0, 11.5, 12.0]])
+    p_info = self.evaluate(action_step.info)
+    self.assertAllClose(p_info.predicted_rewards_mean,
+                        predicted_rewards_expected_array)
+
 
 if __name__ == '__main__':
   tf.test.main()

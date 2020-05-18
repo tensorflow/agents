@@ -222,3 +222,16 @@ def get_model_index(arm_index, accepts_per_arm_features):
     The index of the model for the arm requested.
   """
   return 0 if accepts_per_arm_features else arm_index
+
+
+def compute_feasibility_probability(observation, constraints, batch_size,
+                                    num_actions, action_mask=None):
+  """Helper function to compute the action feasibility probability."""
+  feasibility_prob = tf.ones([batch_size, num_actions])
+  if action_mask is not None:
+    feasibility_prob = tf.cast(action_mask, tf.float32)
+  for c in constraints:
+    # We assume the constraints are independent.
+    action_feasibility = c.compute_action_feasibility(observation)
+    feasibility_prob *= action_feasibility
+  return feasibility_prob

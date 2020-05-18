@@ -41,6 +41,7 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
                reward_network=None,
                observation_and_action_constraint_splitter=None,
                accepts_per_arm_features=False,
+               constraints=(),
                emit_policy_info=(),
                name=None):
     """Builds a GreedyRewardPredictionPolicy given a reward tf_agents.Network.
@@ -63,6 +64,8 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
         observation and mask.
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
+      constraints: iterable of constraints objects that are instances of
+        `tf_agents.bandits.agents.NeuralConstraint`.
       emit_policy_info: (tuple of strings) what side information we want to get
         as part of the policy info. Allowed values can be found in
         `policy_utilities.PolicyInfo`.
@@ -90,6 +93,7 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
     self._action_offset = action_spec.minimum
     reward_network.create_variables()
     self._reward_network = reward_network
+    self._constraints = constraints
 
     self._emit_policy_info = emit_policy_info
     predicted_rewards_mean = ()
@@ -132,10 +136,14 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
     return self._accepts_per_arm_features
 
   def _variables(self):
-    return self._reward_network.variables
+    policy_variables = self._reward_network.variables
+    for c in self._constraints:
+      policy_variables.append(c.variables)
+    return policy_variables
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
+    mask = None
     observation_and_action_constraint_splitter = (
         self.observation_and_action_constraint_splitter)
     if observation_and_action_constraint_splitter is not None:
@@ -159,12 +167,24 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
           'The number of actions ({}) does not match the reward_network output'
           ' size ({}).'.format(self._expected_num_actions,
                                predicted_reward_values.shape[1]))
-    if observation_and_action_constraint_splitter is not None:
+
+    if self._constraints:
+      # Action feasibility computation.
+      feasibility_prob = policy_utilities.compute_feasibility_probability(
+          observation, self._constraints, batch_size,
+          self._expected_num_actions, mask)
+      # Probabilistic masking.
+      mask = tfp.distributions.Bernoulli(probs=feasibility_prob).sample()
+
+    # Argmax.
+    if self._constraints or (observation_and_action_constraint_splitter
+                             is not None):
       actions = policy_utilities.masked_argmax(
           predicted_reward_values, mask, output_type=self.action_spec.dtype)
     else:
       actions = tf.argmax(
           predicted_reward_values, axis=-1, output_type=self.action_spec.dtype)
+
     actions += self._action_offset
 
     bandit_policy_values = tf.fill([batch_size, 1],
