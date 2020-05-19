@@ -25,37 +25,48 @@ from tf_agents.environments import utils as env_utils
 from tf_agents.utils import test_utils
 
 
-class TestEnvsTest(test_utils.TestCase):
+class CountingEnvTest(test_utils.TestCase):
 
-  def test_steps_sequential(self):
-    env = test_envs.CountingEnv(steps_per_episode=4)
+  def test_sequential(self):
+    num_episodes = 3
+    steps_per_episode = 4
+    env = test_envs.CountingEnv(steps_per_episode)
 
-    time_step = env.reset()
-    self.assertTrue(time_step.is_first())
-    self.assertEqual(0, time_step.observation)
-    time_step = env.step(0)
-    self.assertTrue(time_step.is_mid())
-    self.assertEqual(1, time_step.observation)
-    time_step = env.step(0)
-    self.assertTrue(time_step.is_mid())
-    self.assertEqual(2, time_step.observation)
-    time_step = env.step(0)
-    self.assertTrue(time_step.is_mid())
-    self.assertEqual(3, time_step.observation)
-    time_step = env.step(0)
-    self.assertTrue(time_step.is_last())
-    self.assertEqual(4, time_step.observation)
-    time_step = env.step(0)
-    self.assertTrue(time_step.is_first())
-    self.assertEqual(10, time_step.observation)
-    time_step = env.step(0)
-    self.assertTrue(time_step.is_mid())
-    self.assertEqual(11, time_step.observation)
+    for episode in range(num_episodes):
+      step = 0
+      time_step = env.reset()
+      self.assertEqual(episode * 10 + step, time_step.observation)
+      while not time_step.is_last():
+        time_step = env.step(0)
+        step += 1
+        self.assertEqual(episode * 10 + step, time_step.observation)
+      self.assertEqual(episode * 10 + steps_per_episode, time_step.observation)
 
   def test_validate_specs(self):
     env = test_envs.CountingEnv(steps_per_episode=15)
     env_utils.validate_py_environment(env, episodes=10)
 
+
+class EpisodeCountingEnvTest(test_utils.TestCase):
+
+  def test_sequential(self):
+    num_episodes = 3
+    steps_per_episode = 4
+    env = test_envs.EpisodeCountingEnv(steps_per_episode=steps_per_episode)
+
+    for episode in range(num_episodes):
+      step = 0
+      time_step = env.reset()
+      self.assertAllEqual((episode, step), time_step.observation)
+      while not time_step.is_last():
+        time_step = env.step(0)
+        step += 1
+        self.assertAllEqual((episode, step), time_step.observation)
+      self.assertAllEqual((episode, steps_per_episode), time_step.observation)
+
+  def test_validate_specs(self):
+    env = test_envs.EpisodeCountingEnv(steps_per_episode=15)
+    env_utils.validate_py_environment(env, episodes=10)
 
 if __name__ == '__main__':
   test_utils.main()
