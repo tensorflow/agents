@@ -53,6 +53,7 @@ class DropoutThompsonSamplingAgent(
       network_layers,
       dropout_only_top_layer=True,
       observation_and_action_constraint_splitter=None,
+      constraints=(),
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -86,6 +87,8 @@ class DropoutThompsonSamplingAgent(
         policy, and 2) the boolean mask. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
+      constraints: iterable of constraints objects that are instances of
+        `tf_agents.bandits.agents.NeuralConstraint`.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -152,6 +155,7 @@ class DropoutThompsonSamplingAgent(
         optimizer=optimizer,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
+        constraints=constraints,
         error_loss_fn=error_loss_fn,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,

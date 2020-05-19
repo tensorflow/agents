@@ -22,6 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.bandits.agents import constraints
 from tf_agents.bandits.agents import greedy_reward_prediction_agent as greedy_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.networks import global_and_arm_feature_network
@@ -249,6 +250,38 @@ class AgentTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(loss_before), 42.25)
     self.assertAllClose(self.evaluate(loss_after), 93.46)
 
+  def testTrainAgentWithConstraint(self):
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+
+    constraint_net = DummyNet(self._observation_spec, self._action_spec)
+    neural_constraint = constraints.NeuralConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net)
+
+    reward_spec = tensor_spec.TensorSpec(
+        shape=(2,), dtype=tf.float32, name='reward')
+    self._time_step_spec = ts.time_step_spec(self._obs_spec, reward_spec)
+
+    agent = greedy_agent.GreedyRewardPredictionAgent(
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=optimizer,
+        constraints=[neural_constraint])
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
+    rewards = np.array([[0.5, 6.0], [3.0, 4.0]], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+    loss_before, _ = agent.train(experience, None)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    # The loss is the sum of the reward loss and the constraint loss.
+    self.assertAllClose(self.evaluate(loss_before), 42.25 + 30.125)
+
   def testTrainAgentWithMask(self):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
@@ -273,6 +306,41 @@ class AgentTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss_before), 42.25)
     self.assertAllClose(self.evaluate(loss_after), 93.46)
+
+  def testTrainAgentWithMaskAndConstraint(self):
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    reward_spec = tensor_spec.TensorSpec(
+        shape=(2,), dtype=tf.float32, name='reward')
+    observation_and_mask_spec = (tensor_spec.TensorSpec([2], tf.float32),
+                                 tensor_spec.TensorSpec([3], tf.int32))
+    time_step_spec = ts.time_step_spec(observation_and_mask_spec, reward_spec)
+
+    constraint_net = DummyNet(self._observation_spec, self._action_spec)
+    neural_constraint = constraints.NeuralConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net)
+
+    agent = greedy_agent.GreedyRewardPredictionAgent(
+        time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=optimizer,
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
+        constraints=[neural_constraint])
+    observations = (np.array([[1, 2], [3, 4]], dtype=np.float32),
+                    np.array([[1, 0, 0], [1, 1, 0]], dtype=np.int32))
+    actions = np.array([0, 1], dtype=np.int32)
+    rewards = np.array([[0.5, 6.0], [3.0, 4.0]], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+    loss_before, _ = agent.train(experience, None)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    # The loss is the sum of the reward loss and the constraint loss.
+    self.assertAllClose(self.evaluate(loss_before), 42.25 + 30.125)
 
   def testTrainAgentWithLaplacianSmoothing(self):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
@@ -350,6 +418,50 @@ class AgentTest(tf.test.TestCase):
     }
     actions = np.array([0, 3], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, rewards)
+    action_step = policy_step.PolicyStep(
+        action=tf.convert_to_tensor(actions),
+        info=policy_utilities.PerArmPolicyInfo(
+            chosen_arm_features=np.array([[1, 2, 3], [3, 2, 1]],
+                                         dtype=np.float32)))
+    experience = _get_experience(initial_step, action_step, final_step)
+    agent.train(experience, None)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+
+  def testTrainPerArmAgentWithConstraint(self):
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
+    reward_spec = tensor_spec.TensorSpec(
+        shape=(2,), dtype=tf.float32, name='reward')
+    time_step_spec = ts.time_step_spec(obs_spec, reward_spec)
+    reward_net = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    constraint_net = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+    neural_constraint = constraints.NeuralConstraint(
+        time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net)
+
+    agent = greedy_agent.GreedyRewardPredictionAgent(
+        time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        accepts_per_arm_features=True,
+        optimizer=optimizer,
+        constraints=[neural_constraint])
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            tf.cast(
+                tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32)
+    }
+    actions = np.array([0, 3], dtype=np.int32)
+    rewards = np.array([[0.5, 6.0], [3.0, 4.0]], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps(
         observations, rewards)
     action_step = policy_step.PolicyStep(
