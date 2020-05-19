@@ -27,6 +27,7 @@ from tf_agents.trajectories import policy_step
 
 
 # TODO(b/131405384): Remove this once Deterministic does casting internally.
+@tfp.experimental.register_composite
 class DeterministicWithLogProb(tfp.distributions.Deterministic):
   """Thin wrapper around Deterministic that supports taking log_prob."""
 
