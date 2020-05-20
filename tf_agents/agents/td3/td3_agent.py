@@ -337,7 +337,6 @@ class Td3Agent(tf_agent.TFAgent):
 
     return optimizer.apply_gradients(grads_and_vars)
 
-  @common.function
   def critic_loss(self, time_steps, actions, next_time_steps, weights=None,
                   training=False):
     """Computes the critic loss for TD3 training.
@@ -466,7 +465,6 @@ class Td3Agent(tf_agent.TFAgent):
 
       return tf.reduce_mean(input_tensor=critic_loss)
 
-  @common.function
   def actor_loss(self, time_steps, weights=None, training=False):
     """Computes the actor_loss for TD3 training.
 
