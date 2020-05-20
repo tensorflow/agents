@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
 from absl import logging
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -60,7 +59,7 @@ def parse_encoded_spec_from_file(input_path):
   Raises:
     IOError: File at input path does not exist.
   """
-  if not os.path.exists(input_path):
+  if not tf.io.gfile.exists(input_path):
     raise IOError('Could not find spec file at %s.' % input_path)
   dataset = tf.data.TFRecordDataset(input_path, buffer_size=1)
   dataset_iterator = eager_utils.dataset_iterator(dataset)
