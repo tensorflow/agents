@@ -29,6 +29,7 @@ class TicTacToeEnvironmentTest(test_utils.TestCase):
 
   def setUp(self):
     super(TicTacToeEnvironmentTest, self).setUp()
+    np.random.seed(0)
     self.discount = np.asarray(1., dtype=np.float32)
     self.env = TicTacToeEnvironment()
     ts = self.env.reset()
@@ -111,6 +112,27 @@ class TicTacToeEnvironmentTest(test_utils.TestCase):
                                   ts.observation)
     self.assertEqual(StepType.LAST, ts.step_type)
     self.assertEqual(-1., ts.reward)
+
+    # Reset if an action is taken after final state is reached.
+    ts = self.env.step(np.array([2, 0]))
+    self.assertEqual(StepType.FIRST, ts.step_type)
+    self.assertEqual(0., ts.reward)
+
+  def test_step_illegal_move(self):
+    self.env.set_state(
+        TimeStep(StepType.MID, TicTacToeEnvironment.REWARD_DRAW_OR_NOT_FINAL,
+                 self.discount, np.array([[2, 2, 0], [0, 1, 1], [0, 0, 0]])))
+
+    current_time_step = self.env.current_time_step()
+    self.assertEqual(StepType.MID, current_time_step.step_type)
+
+    # Taking an illegal move.
+    ts = self.env.step(np.array([0, 0]))
+
+    np.testing.assert_array_equal([[2, 2, 0], [0, 1, 1], [0, 0, 0]],
+                                  ts.observation)
+    self.assertEqual(StepType.LAST, ts.step_type)
+    self.assertEqual(TicTacToeEnvironment.REWARD_ILLEGAL_MOVE, ts.reward)
 
     # Reset if an action is taken after final state is reached.
     ts = self.env.step(np.array([2, 0]))

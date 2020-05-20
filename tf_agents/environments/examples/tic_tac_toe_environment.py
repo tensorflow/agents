@@ -16,6 +16,7 @@
 # Lint as: python3
 """A state-settable environment for Tic-Tac-Toe game."""
 
+import copy
 import numpy as np
 
 from tf_agents.environments import py_environment
@@ -37,6 +38,8 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
   REWARD_WIN = np.asarray(1., dtype=np.float32)
   REWARD_LOSS = np.asarray(-1., dtype=np.float32)
   REWARD_DRAW_OR_NOT_FINAL = np.asarray(0., dtype=np.float32)
+  # A very small number such that it does not affect the value calculation.
+  REWARD_ILLEGAL_MOVE = np.asarray(-.001, dtype=np.float32)
 
   REWARD_WIN.setflags(write=False)
   REWARD_LOSS.setflags(write=False)
@@ -83,7 +86,8 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
     return actions[i]
 
   def get_state(self) -> TimeStep:
-    return self._current_time_step
+    # Returning an unmodifiable copy of the state.
+    return copy.deepcopy(self._current_time_step)
 
   def set_state(self, time_step: TimeStep):
     self._current_time_step = time_step
@@ -95,7 +99,7 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
 
     action = tuple(action)
     if self._states[action] != 0:
-      return TimeStep(StepType.LAST, TicTacToeEnvironment.REWARD_LOSS,
+      return TimeStep(StepType.LAST, TicTacToeEnvironment.REWARD_ILLEGAL_MOVE,
                       self._discount, self._states)
 
     self._states[action] = 1
@@ -111,8 +115,14 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
     self._states[opponent_action] = 2
 
     is_final, reward = self._check_states(self._states)
-    return TimeStep(StepType.LAST if is_final else StepType.MID, reward,
-                    self._discount, self._states)
+
+    step_type = StepType.MID
+    if np.all(self._states == 0):
+      step_type = StepType.FIRST
+    elif is_final:
+      step_type = StepType.LAST
+
+    return TimeStep(step_type, reward, self._discount, self._states)
 
   def _check_states(self, states: np.ndarray):
     """Check if the given states are final and calculate reward.

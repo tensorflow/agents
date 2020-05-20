@@ -279,6 +279,10 @@ class PyEnvironment(object):
     returned `state`. It should be treated as a token that can be passed back to
     `set_state()` later.
 
+    Note that the returned `state` handle should not be modified by the
+    environment later on, and ensuring this (e.g. using copy.deepcopy) is the
+    responsibility of the environment.
+
     Returns:
       state: The current state of the environment.
     """
