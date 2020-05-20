@@ -88,8 +88,8 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
     self.input_distribution = distribution
 
     bijectors = [
-        tfp.bijectors.AffineScalar(
-            shift=self.action_means, scale=self.action_magnitudes),
+        tfp.bijectors.Shift(self.action_means)(
+            tfp.bijectors.Scale(self.action_magnitudes)),
         tanh_bijector_stable.Tanh()
     ]
     bijector_chain = tfp.bijectors.Chain(bijectors)

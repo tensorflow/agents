@@ -129,8 +129,12 @@ def mushroom_reward_distribution(r_noeat, r_eat_safe, r_eat_poison_bad,
   # to the desired values.
 
   distr = tfd.Bernoulli(probs=[[0, prob_poison_bad], [0, 0]], dtype=tf.float32)
-  reward_distr = tfp.bijectors.AffineScalar(
-      shift=[[r_noeat, r_eat_poison_bad], [r_noeat, r_eat_safe]],
-      scale=[[1, r_eat_poison_good - r_eat_poison_bad], [1, 1]])(
-          distr)
+  reward_distr = (
+      tfp.bijectors.Shift(
+          [[r_noeat, r_eat_poison_bad],
+           [r_noeat, r_eat_safe]])
+      (tfp.bijectors.Scale(
+          [[1, r_eat_poison_good - r_eat_poison_bad],
+           [1, 1]])
+       (distr)))
   return tfd.Independent(reward_distr, reinterpreted_batch_ndims=2)
