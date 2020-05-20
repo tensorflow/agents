@@ -16,6 +16,7 @@
 """Implementation of various python metrics."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
@@ -25,14 +26,18 @@ import numpy as np
 import six
 
 from tf_agents.metrics import py_metric
+from tf_agents.trajectories import trajectory as traj
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 from tf_agents.utils import numpy_storage
+
+from typing import Any, Iterable, Optional, Text
 
 
 class NumpyDeque(numpy_storage.NumpyState):
   """Deque implementation using a numpy array as a circular buffer."""
 
-  def __init__(self, maxlen, dtype):
+  def __init__(self, maxlen: types.Int, dtype: np.dtype):
     """Deque using a numpy array as a circular buffer, with FIFO evictions.
 
     Args:
@@ -51,7 +56,7 @@ class NumpyDeque(numpy_storage.NumpyState):
     self._start_index = np.int64(0)
     self._len = np.int64(0)
 
-  def add(self, value):
+  def add(self, value: Any):
     insert_idx = int((self._start_index + self._len) % self._maxlen)
 
     # Increase buffer size if necessary.
@@ -64,14 +69,14 @@ class NumpyDeque(numpy_storage.NumpyState):
     else:
       self._start_index = np.mod(self._start_index + 1, self._maxlen)
 
-  def extend(self, values):
+  def extend(self, values: Iterable[Any]):
     for value in values:
       self.add(value)
 
-  def __len__(self):
+  def __len__(self) -> types.Int:
     return self._len
 
-  def mean(self, dtype=None):
+  def mean(self, dtype: Optional[np.dtype] = None):
     if self._len == self._buffer.shape[0]:
       return np.mean(self._buffer, dtype=dtype)
 
@@ -88,7 +93,10 @@ class StreamingMetric(py_metric.PyStepMetric):
   items in the buffer.
   """
 
-  def __init__(self, name='StreamingMetric', buffer_size=10, batch_size=None):
+  def __init__(self,
+               name: Text = 'StreamingMetric',
+               buffer_size: types.Int = 10,
+               batch_size: Optional[types.Int] = None):
     super(StreamingMetric, self).__init__(name)
     self._buffer = NumpyDeque(maxlen=buffer_size, dtype=np.float64)
     self._batch_size = batch_size
@@ -100,24 +108,24 @@ class StreamingMetric(py_metric.PyStepMetric):
       self._reset(self._batch_size)
 
   @abc.abstractmethod
-  def _reset(self, batch_size):
+  def _reset(self, batch_size: types.Int):
     """Reset stat gathering variables in child classes."""
 
-  def add_to_buffer(self, values):
+  def add_to_buffer(self, values: Iterable[Any]):
     """Appends new values to the buffer."""
     self._buffer.extend(values)
 
-  def result(self):
+  def result(self) -> np.float32:
     """Returns the value of this metric."""
     if self._buffer:
       return self._buffer.mean(dtype=np.float32)
     return np.array(0.0, dtype=np.float32)
 
   @abc.abstractmethod
-  def _batched_call(self, trajectory):
+  def _batched_call(self, trajectory: traj.Trajectory):
     """Call with trajectory always batched."""
 
-  def call(self, trajectory):
+  def call(self, trajectory: traj.Trajectory):
     if not self._batch_size:
       if trajectory.step_type.ndim == 0:
         self._batch_size = 1
@@ -134,7 +142,10 @@ class StreamingMetric(py_metric.PyStepMetric):
 class AverageReturnMetric(StreamingMetric):
   """Computes the average undiscounted reward."""
 
-  def __init__(self, name='AverageReturn', buffer_size=10, batch_size=None):
+  def __init__(self,
+               name: Text = 'AverageReturn',
+               buffer_size: types.Int = 10,
+               batch_size: Optional[types.Int] = None):
     """Creates an AverageReturnMetric."""
     self._np_state = numpy_storage.NumpyState()
     # Set a dummy value on self._np_state.episode_return so it gets included in
@@ -169,8 +180,10 @@ class AverageReturnMetric(StreamingMetric):
 class AverageEpisodeLengthMetric(StreamingMetric):
   """Computes the average episode length."""
 
-  def __init__(self, name='AverageEpisodeLength', buffer_size=10,
-               batch_size=None):
+  def __init__(self,
+               name: Text = 'AverageEpisodeLength',
+               buffer_size: types.Int = 10,
+               batch_size: Optional[types.Int] = None):
     """Creates an AverageEpisodeLengthMetric."""
     self._np_state = numpy_storage.NumpyState()
     # Set a dummy value on self._np_state.episode_return so it gets included in
@@ -202,7 +215,7 @@ class AverageEpisodeLengthMetric(StreamingMetric):
 class EnvironmentSteps(py_metric.PyStepMetric):
   """Counts the number of steps taken in the environment."""
 
-  def __init__(self, name='EnvironmentSteps'):
+  def __init__(self, name: Text = 'EnvironmentSteps'):
     super(EnvironmentSteps, self).__init__(name)
     self._np_state = numpy_storage.NumpyState()
     self.reset()
@@ -210,10 +223,10 @@ class EnvironmentSteps(py_metric.PyStepMetric):
   def reset(self):
     self._np_state.environment_steps = np.int64(0)
 
-  def result(self):
+  def result(self) -> np.int64:
     return self._np_state.environment_steps
 
-  def call(self, trajectory):
+  def call(self, trajectory: traj.Trajectory):
     if trajectory.step_type.ndim == 0:
       trajectory = nest_utils.batch_nested_array(trajectory)
 
@@ -225,7 +238,7 @@ class EnvironmentSteps(py_metric.PyStepMetric):
 class NumberOfEpisodes(py_metric.PyStepMetric):
   """Counts the number of episodes in the environment."""
 
-  def __init__(self, name='NumberOfEpisodes'):
+  def __init__(self, name: Text = 'NumberOfEpisodes'):
     super(NumberOfEpisodes, self).__init__(name)
     self._np_state = numpy_storage.NumpyState()
     self.reset()
@@ -233,10 +246,10 @@ class NumberOfEpisodes(py_metric.PyStepMetric):
   def reset(self):
     self._np_state.number_episodes = np.int64(0)
 
-  def result(self):
+  def result(self) -> np.int64:
     return self._np_state.number_episodes
 
-  def call(self, trajectory):
+  def call(self, trajectory: traj.Trajectory):
     if trajectory.step_type.ndim == 0:
       trajectory = nest_utils.batch_nested_array(trajectory)
 
@@ -253,7 +266,7 @@ class CounterMetric(py_metric.PyMetric):
   To increment the counter, you can __call__ it (e.g. metric_obj()).
   """
 
-  def __init__(self, name='Counter'):
+  def __init__(self, name: Text = 'Counter'):
     super(CounterMetric, self).__init__(name)
     self._np_state = numpy_storage.NumpyState()
     self.reset()
@@ -264,5 +277,5 @@ class CounterMetric(py_metric.PyMetric):
   def call(self):
     self._np_state.count += 1
 
-  def result(self):
+  def result(self) -> np.int64:
     return self._np_state.count
