@@ -17,23 +17,32 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import numpy as np
 from tf_agents.drivers import driver
+from tf_agents.environments import py_environment
+from tf_agents.policies import py_policy
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+
+from tf_agents.typing import types
+from typing import Any, Callable, Optional, Sequence, Tuple
 
 
 class PyDriver(driver.Driver):
   """A driver that runs a python policy in a python environment."""
 
-  def __init__(self,
-               env,
-               policy,
-               observers,
-               transition_observers=None,
-               max_steps=None,
-               max_episodes=None):
+  def __init__(
+      self,
+      env: py_environment.PyEnvironment,
+      policy: py_policy.PyPolicy,
+      observers: Sequence[Callable[[trajectory.Trajectory], Any]],
+      transition_observers: Optional[Sequence[Callable[[types.Transition],
+                                                       Any]]] = None,
+      max_steps: Optional[types.Int] = None,
+      max_episodes: Optional[types.Int] = None):
     """A driver that runs a python policy in a python environment.
 
     Args:
@@ -65,7 +74,11 @@ class PyDriver(driver.Driver):
     self._max_steps = max_steps or np.inf
     self._max_episodes = max_episodes or np.inf
 
-  def run(self, time_step, policy_state=()):
+  def run(
+      self,
+      time_step: ts.TimeStep,
+      policy_state: types.NestedArray = ()
+  ) -> Tuple[ts.TimeStep, types.NestedArray]:
     """Run policy in environment given initial time_step and policy_state.
 
     Args:

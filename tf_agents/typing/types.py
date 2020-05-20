@@ -25,7 +25,10 @@ import numpy as np
 import tensorflow as tf
 
 from tf_agents.specs import array_spec
-from typing import Iterable, Mapping, Sequence, Union
+
+import typing
+from typing import Iterable, Mapping, Sequence, Union, Tuple
+ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
 
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
@@ -58,3 +61,7 @@ Float = Union[float, np.float16, np.float32, np.float64, Tensor, Array]
 Bool = Union[bool, np.bool, Tensor, Array]
 
 Shape = Union[TensorOrArray, Sequence[int], tf.TensorShape]
+
+TimeStep = ForwardRef('tf_agents.trajectories.TimeStep')  # pylint: disable=invalid-name
+PolicyStep = ForwardRef('tf_agents.trajectories.PolicyStep')  # pylint: disable=invalid-name
+Transition = Tuple[TimeStep, PolicyStep, TimeStep]

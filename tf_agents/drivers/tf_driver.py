@@ -17,27 +17,36 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.drivers import driver
+from tf_agents.environments import tf_environment
+from tf_agents.policies import tf_policy
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import common
+
+from typing import Any, Callable, Optional, Sequence, Tuple
 
 
 class TFDriver(driver.Driver):
   """A driver that runs a TF policy in a TF environment."""
 
-  def __init__(self,
-               env,
-               policy,
-               observers,
-               transition_observers=None,
-               max_steps=None,
-               max_episodes=None,
-               disable_tf_function=False):
+  def __init__(
+      self,
+      env: tf_environment.TFEnvironment,
+      policy: tf_policy.TFPolicy,
+      observers: Sequence[Callable[[trajectory.Trajectory], Any]],
+      transition_observers: Optional[Sequence[Callable[[types.Transition],
+                                                       Any]]] = None,
+      max_steps: Optional[types.Int] = None,
+      max_episodes: Optional[types.Int] = None,
+      disable_tf_function: bool = False):
     """A driver that runs a TF policy in a TF environment.
 
     Args:
@@ -76,7 +85,10 @@ class TFDriver(driver.Driver):
     if not disable_tf_function:
       self.run = common.function(self.run, autograph=True)
 
-  def run(self, time_step, policy_state=()):
+  def run(
+      self, time_step: ts.TimeStep,
+      policy_state: types.NestedTensor = ()
+  ) -> Tuple[ts.TimeStep, types.NestedTensor]:
     """Run policy in environment given initial time_step and policy_state.
 
     Args:
