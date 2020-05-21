@@ -18,7 +18,7 @@
 #      --build-arg tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl  \
 #      -f ubuntu_1804_tf_agents .
 #
-FROM tensorflow/tensorflow:2.1.0-gpu-py3 as base
+FROM tensorflow/tensorflow:nightly-gpu as base
 
 LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
 ARG tf_agents_pip_spec="tf-agents"
