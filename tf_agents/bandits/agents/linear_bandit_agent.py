@@ -512,33 +512,24 @@ class LinearBanditAgent(tf_agent.TFAgent):
                     per_replica_data_vector_update):
         """Merge the per-replica-updates."""
         # Reduce the per-replica-updates using SUM.
-        reduced_cov_matrix_updates = strategy.reduce(
-            tf.distribute.ReduceOp.SUM,
-            per_replica_cov_matrix_update, axis=None)
-        reduced_data_vector_updates = strategy.reduce(
-            tf.distribute.ReduceOp.SUM, per_replica_data_vector_update,
-            axis=None)
+        # pylint: disable=cell-var-from-loop
+        updates_and_vars = [
+            (per_replica_cov_matrix_update, self._cov_matrix_list[k]),
+            (per_replica_data_vector_update, self._data_vector_list[k])
+        ]
 
-        def update_fn(v, t):
-          v.assign(v + t)
-        def assign_fn(v, t):
-          v.assign(t)
+        reduced_updates = strategy.extended.batch_reduce_to(
+            tf.distribute.ReduceOp.SUM, updates_and_vars)
 
         # Update the model variables.
-        # pylint: disable=cell-var-from-loop
-        strategy.extended.update(
-            self._cov_matrix_list[k], update_fn,
-            args=(reduced_cov_matrix_updates,))
-        strategy.extended.update(
-            self._data_vector_list[k], update_fn,
-            args=(reduced_data_vector_updates,))
+        self._cov_matrix_list[k].assign_add(reduced_updates[0])
+        self._data_vector_list[k].assign_add(reduced_updates[1])
+
         # Compute the eigendecomposition, if needed.
         if self._use_eigendecomp:
           eig_vals, eig_matrix = tf.linalg.eigh(self._cov_matrix_list[k])
-          strategy.extended.update(
-              self._eig_vals_list[k], assign_fn, args=(eig_vals,))
-          strategy.extended.update(
-              self._eig_matrix_list[k], assign_fn, args=(eig_matrix,))
+          self._eig_vals_list[k].assign(eig_vals)
+          self._eig_matrix_list[k].assign(eig_matrix)
 
       # Passes the local_updates to the _merge_fn() above that performs custom
       # computation on the per-replica values.
