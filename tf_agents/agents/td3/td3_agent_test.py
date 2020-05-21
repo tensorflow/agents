@@ -195,8 +195,6 @@ class TD3AgentTest(test_utils.TestCase):
     self.assertTrue(all(py_action >= self._action_spec[0].minimum))
 
   def testPolicyAndCollectPolicyProducesDifferentActions(self):
-    self.skipTest('b/125913845')
-
     agent = td3_agent.Td3Agent(
         self._time_step_spec,
         self._action_spec,
