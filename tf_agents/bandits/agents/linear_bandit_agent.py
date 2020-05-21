@@ -569,8 +569,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
         have been calculated with the weights.  Note that each Agent chooses
         its own method of applying weights.
     """
-    strategy = tf.distribute.get_strategy()
-    if isinstance(strategy, tf.distribute.MirroredStrategy):
+    if tf.distribute.has_strategy():
       return self._distributed_train_step(experience)
 
     del weights  # unused
