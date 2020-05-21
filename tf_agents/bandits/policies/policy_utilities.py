@@ -29,6 +29,7 @@ from tf_agents.utils import common
 
 class InfoFields(object):
   """Strings which can be used in the policy info fields."""
+  LOG_PROBABILITY = policy_step.CommonFields.LOG_PROBABILITY
   # Mean of predicted rewards (per arm).
   PREDICTED_REWARDS_MEAN = 'predicted_rewards_mean'
   # Samples of predicted rewards (per arm).
@@ -41,7 +42,7 @@ class InfoFields(object):
 
 PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PolicyInfo',
-    (policy_step.CommonFields.LOG_PROBABILITY,
+    (InfoFields.LOG_PROBABILITY,
      InfoFields.PREDICTED_REWARDS_MEAN,
      InfoFields.PREDICTED_REWARDS_SAMPLED,
      InfoFields.BANDIT_POLICY_TYPE))
@@ -51,7 +52,7 @@ PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
 PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PerArmPolicyInfo',
-    (policy_step.CommonFields.LOG_PROBABILITY,
+    (InfoFields.LOG_PROBABILITY,
      InfoFields.PREDICTED_REWARDS_MEAN,
      InfoFields.PREDICTED_REWARDS_SAMPLED,
      InfoFields.BANDIT_POLICY_TYPE,
