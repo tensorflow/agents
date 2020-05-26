@@ -83,8 +83,9 @@ def populate_policy_info(arm_observations, chosen_actions, rewards_for_argmax,
   """
   if accepts_per_arm_features:
     # Saving the features for the chosen action to the policy_info.
-    chosen_arm_features = tf.gather(
-        params=arm_observations, indices=chosen_actions, batch_dims=1)
+    chosen_arm_features = tf.nest.map_structure(
+        lambda t: tf.gather(params=t, indices=chosen_actions, batch_dims=1),
+        arm_observations)
     policy_info = PerArmPolicyInfo(
         predicted_rewards_sampled=(
             rewards_for_argmax if

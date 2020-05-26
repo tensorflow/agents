@@ -159,15 +159,12 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     else:
       context_spec = time_step_spec.observation
     if accepts_per_arm_features:
-      self._num_actions = context_spec[
-          bandit_spec_utils.PER_ARM_FEATURE_KEY].shape.as_list()[0]
+      self._num_actions = tf.nest.flatten(context_spec[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY])[0].shape.as_list()[0]
       self._num_models = 1
     else:
       self._num_actions = len(cov_matrix)
       self._num_models = self._num_actions
-    (self._global_context_dim,
-     self._arm_context_dim) = bandit_spec_utils.get_context_dims_from_spec(
-         context_spec, accepts_per_arm_features)
     cov_matrix_dim = tf.compat.dimension_value(cov_matrix[0].shape[0])
     if self._encoding_dim != cov_matrix_dim:
       raise ValueError('The dimension of matrix `cov_matrix` must match '
@@ -194,13 +191,12 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
           [self._num_actions],
           dtype=tf.float32)
     if accepts_per_arm_features:
-      chosen_arm_features_info = tensor_spec.TensorSpec(
-          dtype=tf.float32,
-          shape=[self._arm_context_dim],
-          name='chosen_arm_features')
+      arm_spec = context_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
+      chosen_arm_features_info_spec = tensor_spec.remove_outer_dims_nest(
+          arm_spec, 1)
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
-          chosen_arm_features=chosen_arm_features_info)
+          chosen_arm_features=chosen_arm_features_info_spec)
     else:
       info_spec = policy_utilities.PolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean)
@@ -224,7 +220,8 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
 
   def _get_actions_from_reward_layer(self, encoded_observation, mask):
     # Get the predicted expected reward.
-    est_mean_reward = self._reward_layer(encoded_observation)
+    est_mean_reward = tf.reshape(self._reward_layer(encoded_observation),
+                                 shape=[-1, self._num_actions])
     if mask is None:
       greedy_actions = tf.argmax(est_mean_reward, axis=-1, output_type=tf.int32)
     else:
@@ -302,12 +299,9 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     if observation_and_action_constraint_splitter is not None:
       observation, mask = observation_and_action_constraint_splitter(
           observation)
-    self._check_observation_shape(observation)
-    observation = tf.nest.map_structure(lambda t: tf.cast(t, dtype=self._dtype),
-                                        observation)
-
     # Pass the observations through the encoding network.
     encoded_observation, _ = self._encoding_network(observation)
+    encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
     chosen_actions, est_mean_rewards = tf.cond(
         self._actions_from_reward_layer,
@@ -321,30 +315,6 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
         arm_observations, chosen_actions, (), est_mean_rewards,
         self._emit_policy_info, self._accepts_per_arm_features)
     return policy_step.PolicyStep(chosen_actions, policy_state, policy_info)
-
-  def _check_observation_shape(self, observation):
-    if self._accepts_per_arm_features:
-      if not observation[
-          bandit_spec_utils.GLOBAL_FEATURE_KEY].shape.is_compatible_with(
-              [None, self._global_context_dim]):
-        raise ValueError(
-            'Global observation shape is expected to be {}. Got {}.'.format(
-                [None, self._global_context_dim], observation[
-                    bandit_spec_utils.GLOBAL_FEATURE_KEY].shape.as_list()))
-      if not observation[
-          bandit_spec_utils.PER_ARM_FEATURE_KEY].shape.is_compatible_with(
-              [None, self._num_actions, self._arm_context_dim]):
-        raise ValueError(
-            'Arm observation shape is expected to be {}. Got {}.'.format(
-                [None, self._num_actions, self._arm_context_dim],
-                observation[
-                    bandit_spec_utils.PER_ARM_FEATURE_KEY].shape.as_list()))
-    else:
-      if not observation.shape.is_compatible_with(
-          [None, self._global_context_dim]):
-        raise ValueError(
-            'Observation shape is expected to be {}. Got {}.'.format(
-                [None, self._global_context_dim], observation.shape.as_list()))
 
   def _get_encoded_observation_for_arm(self, encoded_observation, arm_index):
     if self._accepts_per_arm_features:

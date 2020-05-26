@@ -38,6 +38,7 @@ from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import neural_linucb_policy
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 
@@ -96,6 +97,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       gamma=1.0,
       epsilon_greedy=0.0,
       observation_and_action_constraint_splitter=None,
+      accepts_per_arm_features=False,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -136,6 +138,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         policy, and 2) the boolean mask. This function should also work with a
         `TensorSpec` as input, and should output `TensorSpec` objects for the
         observation and mask.
+      accepts_per_arm_features: (bool) Whether the policy accepts per-arm
+        features.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -166,19 +170,14 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
         action_spec)
+    self._num_models = 1 if accepts_per_arm_features else self._num_actions
     self._observation_and_action_constraint_splitter = (
         observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter is not None:
-      context_shape = observation_and_action_constraint_splitter(
-          time_step_spec.observation)[0].shape.as_list()
-    else:
-      context_shape = time_step_spec.observation.shape.as_list()
-    self._context_dim = (
-        tf.compat.dimension_value(context_shape[0]) if context_shape else 1)
+    self._accepts_per_arm_features = accepts_per_arm_features
     self._alpha = alpha
     if variable_collection is None:
       variable_collection = NeuralLinUCBVariableCollection(
-          self._num_actions, encoding_dim, dtype)
+          self._num_models, encoding_dim, dtype)
     elif not isinstance(variable_collection, NeuralLinUCBVariableCollection):
       raise TypeError('Parameter `variable_collection` should be '
                       'of type `NeuralLinUCBVariableCollection`.')
@@ -193,7 +192,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     self._epsilon_greedy = epsilon_greedy
 
     reward_layer = tf.keras.layers.Dense(
-        self._num_actions,
+        self._num_models,
         kernel_initializer=tf.compat.v1.initializers.random_uniform(
             minval=-0.03, maxval=0.03),
         use_bias=False,
@@ -223,15 +222,21 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         alpha=alpha,
         emit_policy_info=emit_policy_info,
         emit_log_probability=emit_log_probability,
+        accepts_per_arm_features=accepts_per_arm_features,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))
 
+    training_data_spec = None
+    if accepts_per_arm_features:
+      training_data_spec = bandit_spec_utils.drop_arm_observation(
+          policy.trajectory_spec, observation_and_action_constraint_splitter)
     super(NeuralLinUCBAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=policy.action_spec,
         policy=policy,
         collect_policy=policy,
         train_sequence_length=None,
+        training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
@@ -307,6 +312,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     with tf.name_scope('loss'):
       encoded_observation, _ = self._encoding_network(
           observations, training=training)
+      encoded_observation = tf.reshape(
+          encoded_observation,
+          shape=[-1, self._encoding_dim])
       predicted_rewards = self._reward_layer(
           encoded_observation, training=training)
       chosen_actions_predicted_rewards = common.index_with_actions(
@@ -318,7 +326,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
                                  weights if weights else 1)
       if self._summarize_grads_and_vars:
         with tf.name_scope('Per_arm_loss/'):
-          for k in range(self._num_actions):
+          for k in range(self._num_models):
             loss_mask_for_arm = tf.cast(tf.equal(actions, k), tf.float32)
             loss_for_arm = self._error_loss_fn(
                 rewards,
@@ -397,8 +405,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     encoded_observation, _ = self._encoding_network(
         observation, training=training)
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
-
-    for k in range(self._num_actions):
+    encoded_observation = tf.reshape(
+        encoded_observation, shape=[-1, self._encoding_dim])
+    for k in range(self._num_models):
       diag_mask = tf.linalg.tensor_diag(
           tf.cast(tf.equal(action, k), self._dtype))
       observations_for_arm = tf.matmul(diag_mask, encoded_observation)
@@ -419,7 +428,6 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
           tf.squeeze(num_samples_for_arm_total) > 0,
           lambda: update(self.cov_matrix[k], self.data_vector[k]),
           lambda: (self.cov_matrix[k], self.data_vector[k]))
-
       tf.compat.v1.assign(self.cov_matrix[k], a_new)
       tf.compat.v1.assign(self.data_vector[k], b_new)
 
@@ -447,8 +455,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     """
     (observation, action,
      reward) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._observation_and_action_constraint_splitter, False,
-         self.training_data_spec)
+         experience, self._observation_and_action_constraint_splitter,
+         self._accepts_per_arm_features, self.training_data_spec)
     reward = tf.cast(reward, self._dtype)
 
     tf.compat.v1.assign(

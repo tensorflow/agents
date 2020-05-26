@@ -215,7 +215,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
       est_mean_reward = np.matmul(observation_numpy[:, k, :], theta)
       predicted_rewards.append(est_mean_reward)
     predicted_rewards_array = np.stack(
-        predicted_rewards, axis=-1).reshape(batch_size, self._num_actions)
+        predicted_rewards, axis=-1).reshape((batch_size, self._num_actions))
     return predicted_rewards_array
 
   @test_cases()
@@ -255,9 +255,13 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(np.array(range(batch_size * (self._obs_dim + 1))),
                     dtype=tf.float32, shape=[batch_size, self._obs_dim + 1],
                     name='observation'))
-    with self.assertRaisesRegexp(
-        ValueError, r'Observation shape is expected to be \[None, 2\].'
-        r' Got \[%d, 3\].' % batch_size):
+    if tf.executing_eagerly():
+      error_type = tf.errors.InvalidArgumentError
+      regexp = r'Matrix size-incompatible: In\[0\]: \[%d,3\]' % batch_size
+    else:
+      error_type = ValueError
+      regexp = r'with shape \[%d, 3\]' % batch_size
+    with self.assertRaisesRegex(error_type, regexp):
       policy.action(current_time_step)
 
   @test_cases()
@@ -417,7 +421,6 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     input_observation = current_time_step.observation
     encoded_observation, _ = dummy_net(input_observation)
     predicted_rewards_from_reward_layer = reward_layer(encoded_observation)
-
     if actions_from_reward_layer:
       predicted_rewards_expected = self.evaluate(
           predicted_rewards_from_reward_layer)
@@ -432,8 +435,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
                         predicted_rewards_expected)
 
   @test_cases()
-  def testPerArmObservation(
-      self, batch_size, actions_from_reward_layer):
+  def testPerArmObservation(self, batch_size, actions_from_reward_layer):
     global_obs_dim = 7
     arm_obs_dim = 3
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
@@ -477,7 +479,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     if actions_from_reward_layer:
       predicted_rewards_from_reward_layer = reward_layer(encoded_observation)
       predicted_rewards_expected = self.evaluate(
-          predicted_rewards_from_reward_layer)
+          predicted_rewards_from_reward_layer).reshape((-1, self._num_actions))
     else:
       observation_numpy = self.evaluate(encoded_observation)
       predicted_rewards_expected = (
@@ -488,6 +490,83 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertEqual(p_info.predicted_rewards_mean.dtype, np.float32)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected)
+
+  @test_cases()
+  def testSparseObs(self, batch_size, actions_from_reward_layer):
+    obs_spec = {
+        'global': {'sport': tensor_spec.TensorSpec((), tf.string)},
+        'per_arm': {
+            'name': tensor_spec.TensorSpec((3,), tf.string),
+            'fruit': tensor_spec.TensorSpec((3,), tf.string)
+        }
+    }
+    columns_a = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'name', ['bob', 'george', 'wanda']))
+    columns_b = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'fruit', ['banana', 'kiwi', 'pear']))
+    columns_c = tf.feature_column.indicator_column(
+        tf.feature_column.categorical_column_with_vocabulary_list(
+            'sport', ['bridge', 'chess', 'snooker']))
+
+    dummy_net = arm_network.create_feed_forward_common_tower_network(
+        obs_spec,
+        global_layers=(3, 4, 5),
+        arm_layers=(3, 2),
+        common_layers=(4, 3),
+        output_dim=self._encoding_dim,
+        global_preprocessing_combiner=(tf.compat.v2.keras.layers.DenseFeatures(
+            [columns_c])),
+        arm_preprocessing_combiner=tf.compat.v2.keras.layers.DenseFeatures(
+            [columns_a, columns_b]))
+    time_step_spec = ts.time_step_spec(obs_spec)
+    reward_layer = get_per_arm_reward_layer(encoding_dim=self._encoding_dim)
+    policy = neural_linucb_policy.NeuralLinUCBPolicy(
+        dummy_net,
+        self._encoding_dim,
+        reward_layer,
+        actions_from_reward_layer=tf.constant(
+            actions_from_reward_layer, dtype=tf.bool),
+        cov_matrix=self._a[0:1],
+        data_vector=self._b[0:1],
+        num_samples=self._num_samples_per_arm[0:1],
+        epsilon_greedy=0.0,
+        time_step_spec=time_step_spec,
+        accepts_per_arm_features=True,
+        emit_policy_info=('predicted_rewards_mean',))
+    observations = {
+        'global': {
+            'sport': tf.constant(['snooker', 'chess'])
+        },
+        'per_arm': {
+            'name':
+                tf.constant([['george', 'george', 'george'],
+                             ['bob', 'bob', 'bob']]),
+            'fruit':
+                tf.constant([['banana', 'banana', 'banana'],
+                             ['kiwi', 'kiwi', 'kiwi']])
+        }
+    }
+
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate([tf.compat.v1.global_variables_initializer(),
+                   tf.compat.v1.tables_initializer()])
+    action = self.evaluate(action_step.action)
+    self.assertAllEqual(action.shape, [2])
+    p_info = self.evaluate(action_step.info)
+    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3])
+    self.assertAllEqual(p_info.chosen_arm_features['name'].shape, [2])
+    self.assertAllEqual(p_info.chosen_arm_features['fruit'].shape, [2])
+    first_action = action[0]
+    first_arm_name_feature = observations[
+        bandit_spec_utils.PER_ARM_FEATURE_KEY]['name'][0]
+    self.assertAllEqual(p_info.chosen_arm_features['name'][0],
+                        first_arm_name_feature[first_action])
 
 if __name__ == '__main__':
   tf.test.main()
