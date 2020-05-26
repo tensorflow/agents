@@ -22,7 +22,9 @@ from __future__ import print_function
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.specs import tensor_spec
+from tf_agents.utils import nest_utils
 
 
 def sum_reward_weighted_observations(r, x):
@@ -168,3 +170,48 @@ def build_laplacian_nearest_neighbor_graph(input_vecs, k=1):
   degree_matrix = tf.linalg.tensor_diag(tf.reduce_sum(adjacency_matrix, axis=1))
   laplacian_matrix = degree_matrix - adjacency_matrix
   return laplacian_matrix
+
+
+def process_experience_for_neural_agents(
+    experience,
+    observation_and_action_constraint_splitter,
+    accepts_per_arm_features,
+    training_data_spec):
+  """Processes the experience and prepares it for the network of the agent.
+
+  First the reward, the action, and the observation are flattened to have only
+  one batch dimension. Then the action mask is removed if it is there. Finally,
+  if the experience includes chosen action features in the policy info, it gets
+  copied in place of the per-arm observation.
+
+  Args:
+    experience: The experience coming from the replay buffer.
+    observation_and_action_constraint_splitter: If the agent accepts action
+      masks, this function splits the mask from the observation.
+    accepts_per_arm_features: Whether the agent accepts per-arm features.
+    training_data_spec: The data spec describing what the agent expects.
+
+  Returns:
+    A tuple of (reward, action, observation) tensors to be consumed by the train
+      function of the neural agent.
+  """
+  flattened_experience, _ = nest_utils.flatten_multi_batched_nested_tensors(
+      experience, training_data_spec)
+
+  observation = flattened_experience.observation
+  action = flattened_experience.action
+  reward = flattened_experience.reward
+
+  if observation_and_action_constraint_splitter is not None:
+    observation, _ = observation_and_action_constraint_splitter(
+        observation)
+  if accepts_per_arm_features:
+    # The arm observation we train on needs to be copied from the respective
+    # policy info field to the per arm observation field. Pretending there was
+    # only one action, we fill the action field with zeros.
+    chosen_arm_features = flattened_experience.policy_info.chosen_arm_features
+    observation[bandit_spec_utils.PER_ARM_FEATURE_KEY] = tf.nest.map_structure(
+        lambda t: tf.expand_dims(t, axis=1), chosen_arm_features)
+    action = tf.zeros_like(action)
+
+  return observation, action, reward

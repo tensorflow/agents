@@ -40,7 +40,6 @@ from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import neural_linucb_policy
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
-from tf_agents.utils import nest_utils
 
 
 class NeuralLinUCBVariableCollection(tf.Module):
@@ -446,30 +445,17 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         have been calculated with the weights.  Note that each Agent chooses
         its own method of applying weights.
     """
-
-    # If the experience comes from a replay buffer, the reward has shape:
-    #     [batch_size, time_steps]
-    # where `time_steps` is the number of driver steps executed in each
-    # training loop.
-    # We flatten the tensors below in order to reflect the effective batch size.
-
-    reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._time_step_spec.reward)
-    action, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.action, self._action_spec)
-    observation, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.observation, self._time_step_spec.observation)
-
-    if self._observation_and_action_constraint_splitter is not None:
-      observation, _ = self._observation_and_action_constraint_splitter(
-          observation)
-    observation = tf.cast(observation, self._dtype)
+    (observation, action,
+     reward) = bandit_utils.process_experience_for_neural_agents(
+         experience, self._observation_and_action_constraint_splitter, False,
+         self.training_data_spec)
     reward = tf.cast(reward, self._dtype)
 
     tf.compat.v1.assign(
         self.actions_from_reward_layer,
         tf.less(self._train_step_counter,
                 self._encoding_network_num_train_steps))
+
     def use_actions_from_reward_layer():
       return self.compute_loss_using_reward_layer(
           observation, action, reward, weights, training=True)

@@ -31,7 +31,6 @@ from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
-from tf_agents.utils import nest_utils
 
 
 @gin.configurable
@@ -195,26 +194,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     return variables_to_train
 
   def _train(self, experience, weights):
-    rewards, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._time_step_spec.reward)
-    actions, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.action, self._action_spec)
-    observations, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.observation, self.training_data_spec.observation)
-    if self._observation_and_action_constraint_splitter is not None:
-      observations, _ = self._observation_and_action_constraint_splitter(
-          observations)
-    if self._accepts_per_arm_features:
-      # The arm observation we train on needs to be copied from the respective
-      # policy info field to the per arm observation field. Pretending there was
-      # only one action, we fill the action field with zeros.
-      chosen_action, _ = nest_utils.flatten_multi_batched_nested_tensors(
-          experience.policy_info.chosen_arm_features,
-          self.policy.info_spec.chosen_arm_features)
-      observations[
-          bandit_spec_utils.PER_ARM_FEATURE_KEY] = tf.nest.map_structure(
-              lambda x: tf.expand_dims(x, axis=1), chosen_action)
-      actions = tf.zeros_like(actions)
+    (observations, actions,
+     rewards) = bandit_utils.process_experience_for_neural_agents(
+         experience, self._observation_and_action_constraint_splitter,
+         self._accepts_per_arm_features, self.training_data_spec)
 
     with tf.GradientTape() as tape:
       loss_info = self.loss(observations,
