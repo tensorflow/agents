@@ -76,6 +76,7 @@ from tf_agents.networks import network
 from tf_agents.policies import greedy_policy
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
@@ -612,7 +613,13 @@ class PPOAgent(tf_agent.TFAgent):
       batched_experience = nest_utils.batch_nested_tensors(experience)
     else:
       batched_experience = experience
+
     # Get individual tensors from experience.
+    num_steps = batched_experience.step_type.shape[1]
+    if num_steps and num_steps <= 1:
+      raise ValueError(
+          'Experience used for advantage calculation must have >1 num_steps.')
+
     (time_steps, _,
      next_time_steps) = trajectory.to_transition(batched_experience)
 
@@ -686,34 +693,28 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       processed_experience = experience
 
-    # Get individual tensors from transitions.
-    (time_steps, policy_steps,
-     next_time_steps) = trajectory.to_transition(processed_experience)
-    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
-
-    masked_weights = weights
-    valid_mask = ppo_utils.make_timestep_mask(
-        next_time_steps, allow_partial_episodes=True)
-    if masked_weights is None:
+    # Mask trajectories that cannot be used for training.
+    valid_mask = ppo_utils.make_trajectory_mask(processed_experience)
+    if weights is None:
       masked_weights = valid_mask
     else:
-      masked_weights *= valid_mask
+      masked_weights = weights * valid_mask
 
     # Reconstruct per-timestep policy distribution from stored distribution
     #   parameters.
-    old_action_distribution_parameters = policy_steps.info['dist_params']
+    old_action_distribution_parameters = processed_experience.policy_info[
+        'dist_params']
     old_actions_distribution = (
         distribution_spec.nested_distributions_from_specs(
             self._action_distribution_spec, old_action_distribution_parameters))
     # Compute log probability of actions taken during data collection, using the
     #   collect policy distribution.
     old_act_log_probs = common.log_probability(old_actions_distribution,
-                                               policy_steps.action,
+                                               processed_experience.action,
                                                self._action_spec)
 
-    actions = policy_steps.action
     if self._debug_summaries:
-      actions_list = tf.nest.flatten(actions)
+      actions_list = tf.nest.flatten(processed_experience.action)
       show_action_index = len(actions_list) != 1
       for i, single_action in enumerate(actions_list):
         action_name = ('actions_{}'.format(i)
@@ -721,12 +722,18 @@ class PPOAgent(tf_agent.TFAgent):
         tf.compat.v2.summary.histogram(
             name=action_name, data=single_action, step=self.train_step_counter)
 
-    returns = processed_experience.policy_info['return'][:, :-1]
+    time_steps = time_step.TimeStep(
+        step_type=processed_experience.step_type,
+        reward=processed_experience.reward,
+        discount=processed_experience.discount,
+        observation=processed_experience.observation)
+    actions = processed_experience.action
+    returns = processed_experience.policy_info['return']
     normalized_advantages = processed_experience.policy_info[
-        'normalized_advantage'][:, :-1]
-    old_value_predictions = processed_experience.policy_info[
-        'value_prediction'][:, :-1]
+        'normalized_advantage']
+    old_value_predictions = processed_experience.policy_info['value_prediction']
 
+    batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     # Loss tensors across batches will be aggregated for summaries.
     policy_gradient_losses = []
     value_estimation_losses = []
@@ -801,7 +808,7 @@ class PPOAgent(tf_agent.TFAgent):
       #                    not normalized
       if self._reward_normalizer:
         self._reward_normalizer.update(
-            next_time_steps.reward, outer_dims=[0, 1])
+            processed_experience.reward, outer_dims=[0, 1])
 
     loss_info = tf.nest.map_structure(tf.identity, loss_info)
 

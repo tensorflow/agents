@@ -25,6 +25,32 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import nest_utils
 
 
+def make_trajectory_mask(batched_traj):
+  """Mask boundary trajectories and those with invalid returns and advantages.
+
+  Args:
+    batched_traj: Trajectory, doubly-batched [batch_dim, time_dim,...]. It must
+      be preprocessed already.
+
+  Returns:
+    A mask, type tf.float32, that is 0.0 for all between-episode Trajectory
+      (batched_traj.step_type is LAST) and 0.0 if the return value is
+      unavailable.
+  """
+  # 1.0 for all valid trajectories. 0.0 where between episodes.
+  not_between_episodes = ~batched_traj.is_boundary()
+
+  # 1.0 for trajectories with valid return values. 0.0 where return and
+  # advantage are both 0. This happens to the last item when the experience gets
+  # preprocessed, as insufficient information was available for calculating
+  # advantages.
+  valid_return_value = ~(
+      tf.equal(batched_traj.policy_info['return'], 0)
+      & tf.equal(batched_traj.policy_info['normalized_advantage'], 0))
+
+  return tf.cast(not_between_episodes & valid_return_value, tf.float32)
+
+
 def make_timestep_mask(batched_next_time_step, allow_partial_episodes=False):
   """Create a mask for transitions and optionally final incomplete episodes.
 
