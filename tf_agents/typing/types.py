@@ -20,6 +20,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
+import sys
 
 import numpy as np
 import tensorflow as tf
@@ -28,7 +29,11 @@ from tf_agents.specs import array_spec
 
 import typing
 from typing import Iterable, Mapping, Sequence, Union, Tuple
-ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
+
+if sys.version_info < (3, 7):
+  ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
+else:
+  ForwardRef = typing.ForwardRef
 
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
