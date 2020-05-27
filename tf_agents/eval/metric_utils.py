@@ -166,7 +166,7 @@ def eager_compute(metrics,
 
   results = [(metric.name, metric.result()) for metric in metrics]
   # TODO(b/120301678) remove the summaries and merge with compute
-  if train_step and summary_writer:
+  if train_step is not None and summary_writer:
     with summary_writer.as_default():
       for m in metrics:
         tag = common.join_scope(summary_prefix, m.name)
