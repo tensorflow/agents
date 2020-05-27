@@ -27,6 +27,11 @@ from tf_agents.specs import tensor_spec
 GLOBAL_FEATURE_KEY = 'global'
 PER_ARM_FEATURE_KEY = 'per_arm'
 
+# For constrained optimization, the reward spec is expected to be a dictionary
+# with the following keys that split the reward spec and the constraints spec.
+REWARD_SPEC_KEY = 'reward'
+CONSTRAINTS_SPEC_KEY = 'constraint'
+
 
 def create_per_arm_observation_spec(global_dim,
                                     per_arm_dim,

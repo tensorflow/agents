@@ -184,5 +184,51 @@ class StationaryStochasticBanditPyEnvironmentTest(tf.test.TestCase):
     time_step_spec = env.time_step_spec()
     self.assertEqual(time_step_spec.reward.shape[0], 2)
 
+  def test_non_scalar_rewards_and_constraints(self):
+
+    def _context_sampling_fn():
+      return np.array([[4, 3], [4, 3], [5, 6]])
+
+    # Build a case with 4 arms and 2-dimensional rewards and batch size 3.
+    reward_fns = [
+        LinearDeterministicMultipleRewards(theta)  # pylint: disable=g-complex-comprehension
+        for theta in [np.array([[0, 1], [1, 0]]),
+                      np.array([[1, 2], [2, 1]]),
+                      np.array([[2, 3], [3, 2]]),
+                      np.array([[3, 4], [4, 3]])]
+    ]
+    constraint_fns = reward_fns
+    env = sspe.StationaryStochasticPyEnvironment(
+        _context_sampling_fn, reward_fns, constraint_fns, batch_size=3)
+    time_step = env.reset()
+    self.assertAllEqual(time_step.observation, [[4, 3], [4, 3], [5, 6]])
+    time_step = env.step([0, 1, 2])
+
+    self.assertAllEqual(time_step.reward['reward'],
+                        [[3., 4.],
+                         [10., 11.],
+                         [28., 27.]])
+    self.assertAllEqual(time_step.reward['constraint'],
+                        [[3., 4.],
+                         [10., 11.],
+                         [28., 27.]])
+
+    env.reset()
+    time_step = env.step([2, 3, 0])
+    self.assertAllEqual(time_step.reward['reward'],
+                        [[17., 18.],
+                         [24., 25.],
+                         [6., 5.]])
+    self.assertAllEqual(time_step.reward['constraint'],
+                        [[17., 18.],
+                         [24., 25.],
+                         [6., 5.]])
+    # Check that the reward vectors in the reward spec and in the
+    # constraint_spec are 2-dimensional.
+    time_step_spec = env.time_step_spec()
+    self.assertEqual(time_step_spec.reward['reward'].shape[0], 2)
+    self.assertEqual(time_step_spec.reward['constraint'].shape[0], 2)
+
+
 if __name__ == '__main__':
   tf.test.main()
