@@ -54,6 +54,25 @@ class ActorDistributionNetworkTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual([1, 3], action_distributions[1].mode().shape.as_list())
 
   @test_util.run_in_graph_and_eager_modes()
+  def testBuildsScalarContinuousActionSpace(self):
+    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
+                                                     1)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
+
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.float32, 2, 3)
+
+    net = actor_distribution_network.ActorDistributionNetwork(
+        observation_spec,
+        action_spec
+    )
+
+    action_distributions, _ = net(time_step.observation, time_step.step_type,
+                                  ())
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertEqual([1], action_distributions.mode().shape.as_list())
+
+  @test_util.run_in_graph_and_eager_modes()
   def testHandlesExtraOuterDims(self):
     observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
                                                      1)
