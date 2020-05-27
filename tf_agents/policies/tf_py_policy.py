@@ -65,7 +65,7 @@ class TFPyPolicy(tf_policy.TFPolicy):
 
     (time_step_spec, action_spec,
      policy_state_spec, info_spec) = tf.nest.map_structure(
-         tensor_spec.BoundedTensorSpec.from_spec,
+         tensor_spec.from_spec,
          (policy.time_step_spec, policy.action_spec, policy.policy_state_spec,
           policy.info_spec))
 
