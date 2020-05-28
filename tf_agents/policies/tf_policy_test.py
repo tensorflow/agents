@@ -28,7 +28,7 @@ from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
-from tf_agents.utils import common as common
+from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
 
@@ -57,10 +57,10 @@ class TfPolicyHoldsVariables(tf_policy.TFPolicy):
     return self._variables_list
 
   def _action(self, time_step, policy_state, seed):
-    pass
+    return policy_step.PolicyStep(())
 
   def _distribution(self, time_step, policy_state):
-    pass
+    return policy_step.PolicyStep(())
 
 
 class TFPolicyMismatchedDtypes(tf_policy.TFPolicy):
@@ -75,6 +75,9 @@ class TFPolicyMismatchedDtypes(tf_policy.TFPolicy):
   def _action(self, time_step, policy_state, seed):
     # This action's dtype intentionally doesn't match action_spec's dtype.
     return policy_step.PolicyStep(action=tf.constant([0], dtype=tf.int64))
+
+  def _distribution(self, time_step, policy_state):
+    return policy_step.PolicyStep(())
 
 
 class TFPolicyMismatchedDtypesListAction(tf_policy.TFPolicy):
@@ -96,6 +99,9 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.TFPolicy):
         tf.constant([0], dtype=tf.int64),
         tf.constant([0], dtype=tf.int64)
     ])
+
+  def _distribution(self, time_step, policy_state):
+    return policy_step.PolicyStep(())
 
 
 class TfPassThroughPolicy(tf_policy.TFPolicy):

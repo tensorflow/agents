@@ -16,7 +16,10 @@
 """Policy implementation that generates random actions."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Sequence
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -25,6 +28,7 @@ from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 
@@ -32,11 +36,12 @@ class RandomPyPolicy(py_policy.PyPolicy):
   """Returns random samples of the given action_spec."""
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               seed=None,
-               outer_dims=None,
-               observation_and_action_constraint_splitter=None):
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedArraySpec,
+               seed: Optional[types.Seed] = None,
+               outer_dims: Optional[Sequence[int]] = None,
+               observation_and_action_constraint_splitter: Optional[
+                   types.Splitter] = None):
     """Initializes the RandomPyPolicy.
 
     Args:

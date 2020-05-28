@@ -15,6 +15,7 @@
 
 """Common types used in TF-Agents."""
 
+
 from __future__ import absolute_import
 from __future__ import division
 # Using Type Annotations.
@@ -22,7 +23,7 @@ from __future__ import print_function
 
 import sys
 import typing
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Union, Tuple
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Union, Text, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -49,36 +50,45 @@ Spec = Union[TensorSpec, ArraySpec]
 SpecTensorOrArray = Union[Spec, Tensor, Array]
 
 # Note that this is effectively treated as `Any`; see b/109648354.
-NestedTensor = Union[Tensor, Iterable['NestedTensor'],
-                     Mapping[str, 'NestedTensor']]  # pytype: disable=not-supported-yet
 
+# pytype: disable=not-supported-yet
+NestedTensor = Union[Tensor, Iterable['NestedTensor'],
+                     Mapping[str, 'NestedTensor']]
 NestedArray = Union[Array, Iterable['NestedArray'],
-                    Mapping[str, 'NestedArray']]  # pytype: disable=not-supported-yet
-NestedTensorSpec = Union[TensorSpec, Iterable['NestedTensorSpec'],
-                         Mapping[str, 'NestedTensorSpec']]  # pytype: disable=not-supported-yet
-NestedArraySpec = Union[array_spec.ArraySpec, Iterable['NestedArraySpec'],
-                        Mapping[str, 'NestedArraySpec']]  # pytype: disable=not-supported-yet
-NestedDistribution = Union[Distribution,
+                    Mapping[str, 'NestedArray']]
+NestedDistribution = Union[tfp.distributions.Distribution,
                            Iterable['NestedDistribution'],
-                           Mapping[str, 'NestedDistribution']]  # pytype: disable=not-supported-yet
+                           Mapping[str, 'NestedDistribution']]
+NestedPlaceHolder = Union[tf.compat.v1.placeholder,
+                          Iterable['NestedPlaceHolder'],
+                          Mapping[Text, 'NestedPlaceHolder']]
+
+NestedTensorSpec = Union[TensorSpec, Iterable['NestedTensorSpec'],
+                         Mapping[str, 'NestedTensorSpec']]
+NestedArraySpec = Union[array_spec.ArraySpec, Iterable['NestedArraySpec'],
+                        Mapping[str, 'NestedArraySpec']]
+# pytype: enable=not-supported-yet
 
 NestedSpec = Union[NestedTensorSpec, NestedArraySpec]
 NestedTensorOrArray = Union[NestedTensor, NestedArray]
 NestedSpecTensorOrArray = Union[NestedSpec, NestedTensor, NestedArray]
 
 Int = Union[int, np.int16, np.int32, np.int64, Tensor, Array]
-Float = Union[float, np.float16, np.float32, np.float64, Tensor, Array]
 Bool = Union[bool, np.bool, Tensor, Array]
 
+Float = Union[float, np.float16, np.float32, np.float64, Tensor, Array]
+FloatOrReturningFloat = Union[Float, Callable[[], Float]]
+
 Shape = Union[TensorOrArray, Sequence[int], tf.TensorShape]
+
+Splitter = Optional[Callable[
+    [NestedSpecTensorOrArray], Iterable[NestedSpecTensorOrArray]]]
+Seed = Union[int, Tensor]
 
 TimeStep = ForwardRef('tf_agents.trajectories.TimeStep')  # pylint: disable=invalid-name
 PolicyStep = ForwardRef('tf_agents.trajectories.PolicyStep')  # pylint: disable=invalid-name
 Transition = Tuple[TimeStep, PolicyStep, TimeStep]
 
 LossFn = Callable[[Tensor, Tensor], Tensor]
-
-Splitter = Optional[Callable[[NestedSpecTensorOrArray],
-                             Iterable[NestedSpecTensorOrArray]]]
 
 Optimizer = Union[tf.keras.optimizers.Optimizer, tf.compat.v1.train.Optimizer]

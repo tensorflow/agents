@@ -60,8 +60,10 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
         self.greedy_policy, 0.5, random_policy=self.random_policy)
     policy.get_initial_state()
-    self.greedy_policy.reset.assert_called_once_with(batch_size=None)
-    self.random_policy.reset.assert_called_once_with(batch_size=None)
+    self.greedy_policy.get_initial_state.assert_called_once_with(
+        batch_size=None)
+    self.random_policy.get_initial_state.assert_called_once_with(
+        batch_size=None)
 
   def testActionAlwaysRandom(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(

@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -40,7 +43,7 @@ class DeterministicWithLogProb(tfp.distributions.Deterministic):
 class GreedyPolicy(tf_policy.TFPolicy):
   """Returns greedy samples of a given policy."""
 
-  def __init__(self, policy, name=None):
+  def __init__(self, policy: tf_policy.TFPolicy, name: Optional[Text] = None):
     """Builds a greedy TFPolicy wrapping the given policy.
 
     Args:
@@ -58,7 +61,7 @@ class GreedyPolicy(tf_policy.TFPolicy):
     self._wrapped_policy = policy
 
   @property
-  def wrapped_policy(self):
+  def wrapped_policy(self) -> tf_policy.TFPolicy:
     return self._wrapped_policy
 
   def _variables(self):

@@ -45,6 +45,9 @@ class StateIncrementPolicy(tf_policy.TFPolicy):
     actions = tf.nest.map_structure(lambda t: t + 1, policy_state)
     return policy_step.PolicyStep(actions, actions, ())
 
+  def _distribution(self):
+    return policy_step.PolicyStep(())
+
 
 class TemporalActionSmoothingTest(parameterized.TestCase, test_utils.TestCase):
 

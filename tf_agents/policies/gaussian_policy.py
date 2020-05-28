@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
@@ -25,6 +28,7 @@ import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 
 tfd = tfp.distributions
 
@@ -33,10 +37,10 @@ class GaussianPolicy(tf_policy.TFPolicy):
   """Actor Policy with Gaussian exploration noise."""
 
   def __init__(self,
-               wrapped_policy,
-               scale=1,
-               clip=True,
-               name=None):
+               wrapped_policy: tf_policy.TFPolicy,
+               scale: types.Float = 1.,
+               clip: bool = True,
+               name: Optional[Text] = None):
     """Builds an GaussianPolicy wrapping wrapped_policy.
 
     Args:

@@ -19,10 +19,18 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from typing import Callable, Text, Dict, Union, Sequence
+
+from typing import Callable, Text, Dict, Union, Sequence, Optional
+
 import tensorflow.compat.v2 as tf
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
+
+# A callable that receives a `PolicyStep` and returns a dictionary of a
+# tf.Tensor or a sequence of tf.Tensor`s used to update the policy_info.
+UpdaterFnType = Callable[[policy_step.PolicyStep],
+                         Dict[Text, Union[tf.Tensor, Sequence[tf.Tensor]]]]
 
 
 class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
@@ -31,12 +39,9 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
 
   def __init__(self,
                policy: tf_policy.TFPolicy,
-               info_spec: Dict[Text, Union[tf.TensorSpec,
-                                           Sequence[tf.TensorSpec]]],
-               updater_fn: Callable[[policy_step.PolicyStep],
-                                    Dict[Text, Union[tf.Tensor,
-                                                     Sequence[tf.Tensor]]]],
-               name: Text = None):
+               info_spec: types.NestedTensorSpec,
+               updater_fn: UpdaterFnType,
+               name: Optional[Text] = None):
     """Builds a TFPolicy wrapping the given policy.
 
     PolicyInfoUpdaterWrapper class updates `policy_info` using a user-defined

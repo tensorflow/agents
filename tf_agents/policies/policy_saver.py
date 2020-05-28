@@ -16,11 +16,13 @@
 """TF-Agents SavedModel API."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import copy
 import functools
 import os
+from typing import Callable, Dict, Tuple, Optional, Text
 
 from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -29,8 +31,10 @@ import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
+
 
 POLICY_SPECS_PBTXT = 'policy_specs.pbtxt'
 
@@ -62,6 +66,11 @@ def _check_spec(spec):
         'Specs contain either a missing name or a name collision.\n  '
         'Spec names: %s\n' %
         (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),))
+
+
+InputFnType = Callable[[types.NestedTensor], Tuple[types.NestedTensor,
+                                                   types.NestedTensor]]
+InputFnAndSpecType = Tuple[InputFnType, types.NestedTensorSpec]
 
 
 class PolicySaver(object):
@@ -137,14 +146,16 @@ class PolicySaver(object):
   ```
   """
 
-  def __init__(self,
-               policy,
-               batch_size=None,
-               use_nest_path_signatures=True,
-               seed=None,
-               train_step=None,
-               input_fn_and_spec=None,
-               metadata=None):
+  def __init__(
+      self,
+      policy: tf_policy.TFPolicy,
+      batch_size: Optional[int] = None,
+      use_nest_path_signatures: bool = True,
+      seed: Optional[types.Seed] = None,
+      train_step: Optional[tf.Variable] = None,
+      input_fn_and_spec: Optional[InputFnAndSpecType] = None,
+      metadata: Optional[Dict[Text, tf.Variable]] = None
+      ):
     """Initialize PolicySaver for  TF policy `policy`.
 
     Args:
@@ -428,7 +439,7 @@ class PolicySaver(object):
     self._policy_state_spec = policy_state_spec
 
   @property
-  def action_input_spec(self):
+  def action_input_spec(self) -> types.NestedTensorSpec:
     """Tuple `(time_step_spec, policy_state_spec)` for feeding `action`.
 
     This describes the input of `action` in the SavedModel.
@@ -442,7 +453,7 @@ class PolicySaver(object):
     return self._action_input_spec
 
   @property
-  def policy_step_spec(self):
+  def policy_step_spec(self) -> types.NestedTensorSpec:
     """Spec that describes the output of `action` in the SavedModel.
 
     This may differ from the original policy if `use_nest_path_signatures` was
@@ -454,7 +465,7 @@ class PolicySaver(object):
     return self._policy_step_spec
 
   @property
-  def policy_state_spec(self):
+  def policy_state_spec(self) -> types.NestedTensorSpec:
     """Spec that describes the output of `get_initial_state` in the SavedModel.
 
     This may differ from the original policy if `use_nest_path_signatures` was
@@ -466,7 +477,7 @@ class PolicySaver(object):
     return self._policy_state_spec
 
   @property
-  def signatures(self):
+  def signatures(self) -> Dict[Text, Callable]:  # pylint: disable=g-bare-generic
     """Get the (flat) signatures used when exporting the `SavedModel`.
 
     Returns:
@@ -475,7 +486,7 @@ class PolicySaver(object):
     """
     return self._signatures
 
-  def get_train_step(self):
+  def get_train_step(self) -> types.Int:
     """Returns the train step of the policy.
 
     Returns:
@@ -486,7 +497,7 @@ class PolicySaver(object):
     else:
       return tf.identity(self._train_step)
 
-  def get_metadata(self):
+  def get_metadata(self) -> Dict[Text, tf.Variable]:
     """Returns the metadata of the policy.
 
     Returns:
@@ -497,7 +508,9 @@ class PolicySaver(object):
     else:
       return self._metadata
 
-  def save(self, export_dir, options=None):
+  def save(self,
+           export_dir: Text,
+           options: Optional[tf.saved_model.SaveOptions] = None):
     """Save the policy to the given `export_dir`.
 
     Args:
@@ -514,7 +527,9 @@ class PolicySaver(object):
     }
     tensor_spec.to_pbtxt_file(spec_output_path, specs)
 
-  def save_checkpoint(self, export_dir, options=None):
+  def save_checkpoint(self,
+                      export_dir: Text,
+                      options: Optional[tf.train.CheckpointOptions] = None):
     """Saves the policy as a checkpoint to the given `export_dir`.
 
     This will only work with checkpoints generated in TF2.x.
@@ -600,7 +615,9 @@ def _function_with_flat_signature(function,
   return function_with_signature
 
 
-def specs_from_collect_data_spec(loaded_policy_specs):
+def specs_from_collect_data_spec(
+    loaded_policy_specs: types.NestedTensorSpec
+) -> Dict[types.NestedSpec, types.NestedSpec]:
   """Creates policy specs from specs loaded from disk.
 
   The PolicySaver saves policy specs next to the saved model as

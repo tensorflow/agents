@@ -16,8 +16,10 @@
 """Policy implementation that steps over a given configuration."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
+from typing import Sequence, Tuple
 from absl import logging
 
 import numpy as np
@@ -25,13 +27,17 @@ from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
+
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class ScriptedPyPolicy(py_policy.PyPolicy):
   """Returns actions from the given configuration."""
 
-  def __init__(self, time_step_spec, action_spec, action_script):
+  def __init__(self, time_step_spec: ts.TimeStep,
+               action_spec: types.NestedArraySpec,
+               action_script: Sequence[Tuple[int, types.NestedArray]]):
     """Instantiates the scripted policy.
 
     The Action  script can be configured through gin. e.g:

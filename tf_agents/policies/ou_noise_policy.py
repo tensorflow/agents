@@ -17,13 +17,17 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 tfd = tfp.distributions
@@ -33,11 +37,11 @@ class OUNoisePolicy(tf_policy.TFPolicy):
   """Actor Policy with Ornstein Uhlenbeck (OU) exploration noise."""
 
   def __init__(self,
-               wrapped_policy,
-               ou_stddev=1.0,
-               ou_damping=1.0,
-               clip=True,
-               name=None):
+               wrapped_policy: tf_policy.TFPolicy,
+               ou_stddev: types.Float = 1.0,
+               ou_damping: types.Float = 1.0,
+               clip: bool = True,
+               name: Optional[Text] = None):
     """Builds an OUNoisePolicy wrapping wrapped_policy.
 
     Args:

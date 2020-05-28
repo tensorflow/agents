@@ -20,7 +20,10 @@ TODO(kbanoop): Make policy state optional in the action method.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -31,6 +34,7 @@ from tf_agents.policies import greedy_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 tfd = tfp.distributions
@@ -40,7 +44,10 @@ tfd = tfp.distributions
 class EpsilonGreedyPolicy(tf_policy.TFPolicy):
   """Returns epsilon-greedy samples of a given policy."""
 
-  def __init__(self, policy, epsilon, name=None):
+  def __init__(self,
+               policy: tf_policy.TFPolicy,
+               epsilon: types.FloatOrReturningFloat,
+               name: Optional[Text] = None):
     """Builds an epsilon-greedy MixturePolicy wrapping the given policy.
 
     Args:
@@ -78,7 +85,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
         name=name)
 
   @property
-  def wrapped_policy(self):
+  def wrapped_policy(self) -> tf_policy.TFPolicy:
     return self._greedy_policy.wrapped_policy
 
   def _variables(self):

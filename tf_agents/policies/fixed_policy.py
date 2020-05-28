@@ -20,12 +20,17 @@ Mainly used for unit tests.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -33,8 +38,13 @@ from tf_agents.utils import nest_utils
 class FixedPolicy(tf_policy.TFPolicy):
   """A policy which always returns a fixed action."""
 
-  def __init__(self, actions, time_step_spec, action_spec, policy_info=(),
-               info_spec=(), name=None):
+  def __init__(self,
+               actions: types.NestedTensor,
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensorSpec,
+               policy_info: types.NestedTensorSpec = (),
+               info_spec: types.NestedTensorSpec = (),
+               name: Optional[Text] = None):
     """A policy which always returns a fixed action.
 
     Args:

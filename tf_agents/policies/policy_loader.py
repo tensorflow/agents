@@ -16,13 +16,14 @@
 # Lint as: python3
 """Helper function to load policies from disk."""
 import os
+from typing import Optional, Text
 
 import tensorflow.compat.v2 as tf
 from tf_agents.policies import policy_saver
 from tf_agents.policies import py_tf_eager_policy
 
 
-def load(saved_model_path, checkpoint_path=None):
+def load(saved_model_path: Text, checkpoint_path: Optional[Text] = None):
   """Loads a policy.
 
   The argument `saved_model_path` is the path of a directory containing a full
@@ -77,7 +78,8 @@ def _copy_dir(from_dir, name, to_dir):
     _copy_file(from_dir_name, file_name, to_dir_name)
 
 
-def materialize_saved_model(saved_model_path, checkpoint_path, output_path):
+def materialize_saved_model(saved_model_path: Text, checkpoint_path: Text,
+                            output_path: Text):
   """Materializes a full saved model for a policy.
 
   Some training processes generate a full saved model only at step 0, and then

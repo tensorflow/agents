@@ -16,7 +16,10 @@
 """A TFPolicy wrapper that applies exponential moving averaging to actions."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
@@ -28,9 +31,9 @@ class TemporalActionSmoothing(tf_policy.TFPolicy):
   """A wrapper that applies exponential moving averaging to action outputs."""
 
   def __init__(self,
-               policy,
-               smoothing_coefficient,
-               name='TemporalActionSmoothing'):
+               policy: tf_policy.TFPolicy,
+               smoothing_coefficient: float,
+               name: Optional[Text] = None):
     """Adds TemporalActionSmoothing to the given policy.
 
     smoothed_action = previous_action * smoothing_coefficient +

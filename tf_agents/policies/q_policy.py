@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import gin
 import numpy as np
@@ -25,21 +28,26 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import shifted_categorical
+from tf_agents.networks import network
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
 
 @gin.configurable
 class QPolicy(tf_policy.TFPolicy):
   """Class to build Q-Policies."""
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               q_network,
-               emit_log_probability=False,
-               observation_and_action_constraint_splitter=None,
-               name=None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      q_network: network.Network,
+      emit_log_probability: bool = False,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter] = None,
+      name: Optional[Text] = None):
     """Builds a Q-Policy given a q_network.
 
     Args:

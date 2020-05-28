@@ -17,8 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
+from typing import Optional, Text
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.policies import py_policy
@@ -39,7 +41,10 @@ class TFPyPolicy(tf_policy.TFPolicy):
   # converting between TF and Py policies.
   """
 
-  def __init__(self, policy, py_policy_is_batched=False, name=None):
+  def __init__(self,
+               policy: py_policy.PyPolicy,
+               py_policy_is_batched: bool = False,
+               name: Optional[Text] = None):
     """Initializes a new `TFPyPolicy` instance with an Pyton policy .
 
     Args:

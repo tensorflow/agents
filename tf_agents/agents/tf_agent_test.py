@@ -24,7 +24,7 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
-from tf_agents.policies import tf_policy
+from tf_agents.policies import random_tf_policy
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -52,7 +52,7 @@ class MyAgent(tf_agent.TFAgent):
       obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
       time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = action_spec or ()
-    policy = tf_policy.TFPolicy(time_step_spec, action_spec)
+    policy = random_tf_policy.RandomTFPolicy(time_step_spec, action_spec)
     super(MyAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,

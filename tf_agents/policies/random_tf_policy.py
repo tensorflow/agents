@@ -16,6 +16,7 @@
 """Policy implementation that generates random actions."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -23,6 +24,8 @@ from tf_agents.distributions import masked
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 
@@ -42,7 +45,8 @@ class RandomTFPolicy(tf_policy.TFPolicy):
     values that have nothing to do with the emitted actions.
   """
 
-  def __init__(self, time_step_spec, action_spec, *args, **kwargs):
+  def __init__(self, time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensorSpec, *args, **kwargs):
     observation_and_action_constraint_splitter = (
         kwargs.get('observation_and_action_constraint_splitter', None))
     self._accepts_per_arm_features = (

@@ -28,15 +28,21 @@ from tf_agents.utils import test_utils
 
 class RandomPyPolicyTest(test_utils.TestCase):
 
+  def setUp(self):
+    super(RandomPyPolicyTest, self).setUp()
+    self._time_step_spec = time_step.time_step_spec(
+        observation_spec=array_spec.ArraySpec((1,), np.int32))
+    self._time_step = time_step.restart(observation=np.array([1]))
+
   def testGeneratesActions(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10),
         array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
     ]
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=None, action_spec=action_spec)
+        time_step_spec=self._time_step_spec, action_spec=action_spec)
 
-    action_step = policy.action(None)
+    action_step = policy.action(self._time_step)
     tf.nest.assert_same_structure(action_spec, action_step.action)
 
     self.assertTrue(np.all(action_step.action[0] >= -10))
@@ -50,9 +56,11 @@ class RandomPyPolicyTest(test_utils.TestCase):
         array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
     ]
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=None, action_spec=action_spec, outer_dims=(3,))
+        time_step_spec=self._time_step_spec,
+        action_spec=action_spec,
+        outer_dims=(3,))
 
-    action_step = policy.action(None)
+    action_step = policy.action(self._time_step)
     tf.nest.assert_same_structure(action_spec, action_step.action)
     self.assertEqual((3, 2, 3), action_step.action[0].shape)
     self.assertEqual((3, 1, 2), action_step.action[1].shape)
@@ -85,7 +93,7 @@ class RandomPyPolicyTest(test_utils.TestCase):
 
   def testPolicyStateSpecIsEmpty(self):
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=None, action_spec=[])
+        time_step_spec=self._time_step_spec, action_spec=[])
     self.assertEqual(policy.policy_state_spec, ())
 
   def testMasking(self):

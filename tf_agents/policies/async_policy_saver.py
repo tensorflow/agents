@@ -17,13 +17,16 @@
 """Async helper for the policy saver."""
 
 import threading
+from typing import Text
 from absl import logging
+
+from tf_agents.policies import policy_saver as policy_saver_module
 
 
 class AsyncPolicySaver(object):
   """Triggers `policy_saver` save calls in a separate thread asynchronously."""
 
-  def __init__(self, policy_saver):
+  def __init__(self, policy_saver: policy_saver_module.PolicySaver):
     """Initialize an AsyncPolicySaver.
 
     Args:
@@ -65,7 +68,7 @@ class AsyncPolicySaver(object):
                        "an exception has occured while saving, or the saver "
                        "was closed.")
 
-  def save(self, export_dir, blocking=False):
+  def save(self, export_dir: Text, blocking: bool = False):
     """Triggers an async save of the policy to the given `export_dir`.
 
     Only one save can be triggered at a time. If `save` or `save_checkpoint`
@@ -83,7 +86,7 @@ class AsyncPolicySaver(object):
     """
     self._save(export_dir, saving_checkpoint=False, blocking=blocking)
 
-  def save_checkpoint(self, export_dir, blocking=False):
+  def save_checkpoint(self, export_dir: Text, blocking: bool = False):
     """Triggers an async save of the policy checkpoint.
 
     Only one save can be triggered at a time. If `save` or `save_checkpoint`

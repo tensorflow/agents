@@ -20,7 +20,10 @@ This is used in e.g. actor-critic algorithms like DDPG.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -30,6 +33,9 @@ from tf_agents.networks import network
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
+from tf_agents.utils import tensor_normalizer
 
 
 @gin.configurable
@@ -37,16 +43,18 @@ class ActorPolicy(tf_policy.TFPolicy):
   """Class to build Actor Policies."""
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               actor_network,
-               policy_state_spec=(),
-               info_spec=(),
-               observation_normalizer=None,
-               clip=True,
-               training=False,
-               observation_and_action_constraint_splitter=None,
-               name=None):
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensorSpec,
+               actor_network: network.Network,
+               policy_state_spec: types.NestedTensorSpec = (),
+               info_spec: types.NestedTensorSpec = (),
+               observation_normalizer: Optional[
+                   tensor_normalizer.TensorNormalizer] = None,
+               clip: bool = True,
+               training: bool = False,
+               observation_and_action_constraint_splitter: Optional[
+                   types.Splitter] = None,
+               name: Optional[Text] = None):
     """Builds an Actor Policy given an actor network.
 
     Args:
@@ -134,7 +142,8 @@ class ActorPolicy(tf_policy.TFPolicy):
           mask=mask)
 
   @property
-  def observation_normalizer(self):
+  def observation_normalizer(
+      self) -> Optional[tensor_normalizer.TensorNormalizer]:
     return self._observation_normalizer
 
   def _variables(self):

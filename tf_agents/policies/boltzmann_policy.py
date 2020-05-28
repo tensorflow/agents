@@ -17,12 +17,16 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.policies import tf_policy
+from tf_agents.typing import types
 
 
 @gin.configurable
@@ -32,7 +36,10 @@ class BoltzmannPolicy(tf_policy.TFPolicy):
   The wrapped policy must expose a distribution parameterized by logits.
   """
 
-  def __init__(self, policy, temperature=1.0, name=None):
+  def __init__(self,
+               policy: tf_policy.TFPolicy,
+               temperature: types.FloatOrReturningFloat = 1.0,
+               name: Optional[Text] = None):
     """Builds a BoltzmannPolicy wrapping the given policy.
 
     Args:

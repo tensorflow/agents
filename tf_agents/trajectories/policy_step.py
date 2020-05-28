@@ -21,9 +21,11 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+from typing import NamedTuple, Optional, Union
 from tf_agents.typing import types
-from typing import NamedTuple, Optional
 
+
+ActionType = Union[types.NestedSpecTensorOrArray, types.NestedDistribution]
 
 # Returned with every call to policy.action() and policy.distribution().
 #
@@ -36,7 +38,7 @@ from typing import NamedTuple, Optional
 #   info: Auxiliary information emitted by the policy, e.g. log probabilities of
 #     the actions. For policies without info this will be an empty tuple.
 PolicyStep = NamedTuple('PolicyStep',
-                        [('action', types.NestedSpecTensorOrArray),
+                        [('action', ActionType),
                          ('state', types.NestedSpecTensorOrArray),
                          ('info', types.NestedSpecTensorOrArray)])
 

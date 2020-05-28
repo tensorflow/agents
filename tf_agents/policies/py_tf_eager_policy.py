@@ -17,16 +17,21 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import os
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.policies import policy_saver
 from tf_agents.policies import py_policy
+from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -41,12 +46,12 @@ class PyTFEagerPolicyBase(py_policy.PyPolicy):
   """
 
   def __init__(self,
-               policy,
-               time_step_spec,
-               action_spec,
-               policy_state_spec,
-               info_spec,
-               use_tf_function=False):
+               policy: tf_policy.TFPolicy,
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedArraySpec,
+               policy_state_spec: types.NestedArraySpec,
+               info_spec: types.NestedArraySpec,
+               use_tf_function: bool = False):
     self._policy = policy
     if use_tf_function:
       self._policy_action_fn = common.function(policy.action)
@@ -83,7 +88,7 @@ class PyTFEagerPolicyBase(py_policy.PyPolicy):
 class PyTFEagerPolicy(PyTFEagerPolicyBase):
   """Exposes a numpy API for TF policies in Eager mode."""
 
-  def __init__(self, policy, use_tf_function=False):
+  def __init__(self, policy: tf_policy.TFPolicy, use_tf_function: bool = False):
     time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec)
     action_spec = tensor_spec.to_nest_array_spec(policy.action_spec)
     policy_state_spec = tensor_spec.to_nest_array_spec(policy.policy_state_spec)
@@ -98,12 +103,12 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
   """Exposes a numpy API for saved_model policies in Eager mode."""
 
   def __init__(self,
-               model_path,
-               time_step_spec=None,
-               action_spec=None,
-               policy_state_spec=(),
-               info_spec=(),
-               load_specs_from_pbtxt=False):
+               model_path: Text,
+               time_step_spec: Optional[ts.TimeStep] = None,
+               action_spec: Optional[types.NestedTensorSpec] = None,
+               policy_state_spec: types.NestedTensorSpec = (),
+               info_spec: types.NestedTensorSpec = (),
+               load_specs_from_pbtxt: bool = False):
     """Initializes a PyPolicy from a saved_model.
 
     *Note* (b/151318119): BoundedSpecs are converted to regular specs when saved
@@ -154,7 +159,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     if policy_specs:
       self._collect_data_spec = policy_specs['collect_data_spec']
 
-  def get_train_step(self):
+  def get_train_step(self) -> types.Int:
     """Returns the training global step of the saved model."""
     return self._policy.get_train_step().numpy()
 
@@ -165,7 +170,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
   def variables(self):
     return self._policy.model_variables
 
-  def update_from_checkpoint(self, checkpoint_path):
+  def update_from_checkpoint(self, checkpoint_path: Text):
     """Allows users to update saved_model variables directly from a checkpoint.
 
     `checkpoint_path` is a path that was passed to either `PolicySaver.save()`

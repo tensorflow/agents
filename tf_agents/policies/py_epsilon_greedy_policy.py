@@ -18,23 +18,28 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional
 
 import numpy as np
 from tf_agents.policies import py_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 
 
 class EpsilonGreedyPolicy(py_policy.PyPolicy):
   """Implementation of the epsilon-greedy policy."""
 
-  def __init__(self, greedy_policy,
-               epsilon,
-               random_policy=None,
-               epsilon_decay_end_count=None,
-               epsilon_decay_end_value=None,
-               random_seed=None):
+  def __init__(self,
+               greedy_policy: py_policy.PyPolicy,
+               epsilon: types.Float,
+               random_policy: Optional[random_py_policy.RandomPyPolicy] = None,
+               epsilon_decay_end_count: Optional[types.Float] = None,
+               epsilon_decay_end_value: Optional[types.Float] = None,
+               random_seed: Optional[types.Seed] = None):
     """Initializes the epsilon-greedy policy.
 
     Args:
@@ -93,8 +98,8 @@ class EpsilonGreedyPolicy(py_policy.PyPolicy):
                                               greedy_policy.info_spec)
 
   def _get_initial_state(self, batch_size):
-    self._random_policy.reset(batch_size=batch_size)
-    return self._greedy_policy.reset(batch_size=batch_size)
+    self._random_policy.get_initial_state(batch_size=batch_size)
+    return self._greedy_policy.get_initial_state(batch_size=batch_size)
 
   def _get_epsilon(self):
     if self._epsilon_decay_end_count is not None:

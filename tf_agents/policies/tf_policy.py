@@ -17,22 +17,30 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
+from typing import Optional, Text, Sequence
+
+import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
+
 from tf_agents.distributions import reparameterized_sampling
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
+
 
 tfd = tfp.distributions
 
 
+@six.add_metaclass(abc.ABCMeta)
 class TFPolicy(tf.Module):
   """Abstract base class for TF Policies.
 
@@ -106,17 +114,19 @@ class TFPolicy(tf.Module):
   # attribute inside TF1 (for autodeps).
   _enable_functions = True
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               policy_state_spec=(),
-               info_spec=(),
-               clip=True,
-               emit_log_probability=False,
-               automatic_state_reset=True,
-               observation_and_action_constraint_splitter=None,
-               validate_args=True,
-               name=None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      policy_state_spec: types.NestedTensorSpec = (),
+      info_spec: types.NestedTensorSpec = (),
+      clip: bool = True,
+      emit_log_probability: bool = False,
+      automatic_state_reset: bool = True,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter] = None,
+      validate_args: bool = True,
+      name: Optional[Text] = None):
     """Initialization of TFPolicy class.
 
     Args:
@@ -211,26 +221,27 @@ class TFPolicy(tf.Module):
                                                        self._policy_step_spec,
                                                        self._time_step_spec)
 
-  def variables(self):
+  def variables(self) -> Sequence[tf.Variable]:
     """Returns the list of Variables that belong to the policy."""
     # Ignore self._variables() in favor of using tf.Module's tracking.
     return super(TFPolicy, self).variables
 
   @property
-  def observation_and_action_constraint_splitter(self):
+  def observation_and_action_constraint_splitter(self) -> types.Splitter:
     return self._observation_and_action_constraint_splitter
 
   @property
-  def validate_args(self):
+  def validate_args(self) -> bool:
     """Whether `action` & `distribution` validate input and output args."""
     return self._validate_args
 
-  def get_initial_state(self, batch_size):
+  def get_initial_state(self,
+                        batch_size: Optional[types.Int]) -> types.NestedTensor:
     """Returns an initial state usable by the policy.
 
     Args:
       batch_size: Tensor or constant: size of the batch dimension. Can be None
-        in which case not dimensions gets added.
+        in which case no dimensions gets added.
 
     Returns:
       A nested object of type `policy_state` containing properly
@@ -257,7 +268,10 @@ class TFPolicy(tf.Module):
       condition = time_step.is_first()[:, 0, ...]
     return nest_utils.where(condition, zero_state, policy_state)
 
-  def action(self, time_step, policy_state=(), seed=None):
+  def action(self,
+             time_step: ts.TimeStep,
+             policy_state: types.NestedTensor = (),
+             seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
     """Generates next action given the time_step and policy_state.
 
     Args:
@@ -345,7 +359,9 @@ class TFPolicy(tf.Module):
 
     return step
 
-  def distribution(self, time_step, policy_state=()):
+  def distribution(
+      self, time_step: ts.TimeStep, policy_state: types.NestedTensor = ()
+  ) -> policy_step.PolicyStep:
     """Generates the distribution over next actions given the time_step.
 
     Args:
@@ -398,9 +414,9 @@ class TFPolicy(tf.Module):
 
   def update(self,
              policy,
-             tau=1.0,
-             tau_non_trainable=None,
-             sort_variables_by_name=False):
+             tau: float = 1.0,
+             tau_non_trainable: Optional[float] = None,
+             sort_variables_by_name: bool = False) -> tf.Operation:
     """Update the current policy with another policy.
 
     This would include copying the variables from the other policy.
@@ -428,12 +444,12 @@ class TFPolicy(tf.Module):
       return tf.no_op()
 
   @property
-  def emit_log_probability(self):
+  def emit_log_probability(self) -> bool:
     """Whether this policy instance emits log probabilities or not."""
     return self._emit_log_probability
 
   @property
-  def time_step_spec(self):
+  def time_step_spec(self) -> ts.TimeStep:
     """Describes the `TimeStep` tensors returned by `step()`.
 
     Returns:
@@ -444,7 +460,7 @@ class TFPolicy(tf.Module):
     return self._time_step_spec
 
   @property
-  def action_spec(self):
+  def action_spec(self) -> types.NestedTensorSpec:
     """Describes the TensorSpecs of the Tensors expected by `step(action)`.
 
     `action` can be a single Tensor, or a nested dict, list or tuple of
@@ -458,7 +474,7 @@ class TFPolicy(tf.Module):
     return self._action_spec
 
   @property
-  def policy_state_spec(self):
+  def policy_state_spec(self) -> types.NestedTensorSpec:
     """Describes the Tensors expected by `step(_, policy_state)`.
 
     `policy_state` can be an empty tuple, a single Tensor, or a nested dict,
@@ -472,7 +488,7 @@ class TFPolicy(tf.Module):
     return self._policy_state_spec
 
   @property
-  def info_spec(self):
+  def info_spec(self) -> types.NestedTensorSpec:
     """Describes the Tensors emitted as info by `action` and `distribution`.
 
     `info` can be an empty tuple, a single Tensor, or a nested dict,
@@ -486,7 +502,7 @@ class TFPolicy(tf.Module):
     return self._info_spec
 
   @property
-  def policy_step_spec(self):
+  def policy_step_spec(self) -> policy_step.PolicyStep:
     """Describes the output of `action()`.
 
     Returns:
@@ -497,7 +513,7 @@ class TFPolicy(tf.Module):
 
   # TODO(kbanoop, ebrevdo): Should this be collect_data_spec to mirror agents?
   @property
-  def trajectory_spec(self):
+  def trajectory_spec(self) -> trajectory.Trajectory:
     """Describes the Tensors written when using this policy with an environment.
 
     Returns:
@@ -508,7 +524,7 @@ class TFPolicy(tf.Module):
     return self._trajectory_spec
 
   @property
-  def collect_data_spec(self):
+  def collect_data_spec(self) -> trajectory.Trajectory:
     """Describes the Tensors written when using this policy with an environment.
 
     Returns:
@@ -518,7 +534,9 @@ class TFPolicy(tf.Module):
     return self._trajectory_spec
 
   # Subclasses MAY optionally override _action.
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step: ts.TimeStep,
+              policy_state: types.NestedTensor,
+              seed: Optional[types.Seed]) -> policy_step.PolicyStep:
     """Implementation of `action`.
 
     Args:
@@ -552,9 +570,9 @@ class TFPolicy(tf.Module):
     return distribution_step._replace(action=actions, info=info)
 
   ## Subclasses MUST implement these.
-
-  @abc.abstractmethod
-  def _distribution(self, time_step, policy_state):
+  def _distribution(
+      self, time_step: ts.TimeStep,
+      policy_state: types.NestedTensorSpec) -> policy_step.PolicyStep:
     """Implementation of `distribution`.
 
     Args:
@@ -569,10 +587,10 @@ class TFPolicy(tf.Module):
         `state`: A policy state tensor for the next call to distribution.
         `info`: Optional side information such as action log probabilities.
     """
-    pass
+    raise NotImplementedError()
 
   # Subclasses MAY optionally overwrite _get_initial_state.
-  def _get_initial_state(self, batch_size):
+  def _get_initial_state(self, batch_size: int) -> types.NestedTensor:
     """Returns the initial state of the policy network.
 
     Args:
