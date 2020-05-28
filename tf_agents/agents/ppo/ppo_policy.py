@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -29,6 +32,10 @@ from tf_agents.policies import actor_policy
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
+from tf_agents.utils import tensor_normalizer
+
 
 tfd = tfp.distributions
 
@@ -48,14 +55,15 @@ class PPOPolicy(actor_policy.ActorPolicy):
   """
 
   def __init__(self,
-               time_step_spec=None,
-               action_spec=None,
-               actor_network=None,
-               value_network=None,
-               observation_normalizer=None,
-               clip=True,
-               collect=True,
-               compute_value_and_advantage_in_train=False):
+               time_step_spec: Optional[ts.TimeStep] = None,
+               action_spec: Optional[types.NestedTensorSpec] = None,
+               actor_network: Optional[network.Network] = None,
+               value_network: Optional[network.Network] = None,
+               observation_normalizer: Optional[
+                   tensor_normalizer.TensorNormalizer] = None,
+               clip: bool = True,
+               collect: bool = True,
+               compute_value_and_advantage_in_train: bool = False):
     """Builds a PPO Policy given network Templates or functions.
 
     Args:
@@ -135,7 +143,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
       value_network.create_variables()
     self._value_network = value_network
 
-  def get_initial_value_state(self, batch_size):
+  def get_initial_value_state(self,
+                              batch_size: types.Int) -> types.NestedTensor:
     """Returns the initial state of the value network.
 
     Args:
@@ -149,8 +158,11 @@ class PPOPolicy(actor_policy.ActorPolicy):
         self._value_network.state_spec,
         outer_dims=None if batch_size is None else [batch_size])
 
-  def apply_value_network(self, observations, step_types, value_state=None,
-                          training=False):
+  def apply_value_network(self,
+                          observations: types.NestedTensor,
+                          step_types: types.Tensor,
+                          value_state: Optional[types.NestedTensor] = None,
+                          training: bool = False) -> types.NestedTensor:
     """Apply value network to time_step, potentially a sequence.
 
     If observation_normalizer is not None, applies observation normalization.

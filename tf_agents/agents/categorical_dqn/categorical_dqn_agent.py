@@ -24,19 +24,25 @@ Implements the Categorical DQN agent from
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
 from tf_agents.agents.dqn import dqn_agent
+from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import categorical_q_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import value_ops
@@ -46,31 +52,33 @@ from tf_agents.utils import value_ops
 class CategoricalDqnAgent(dqn_agent.DqnAgent):
   """A Categorical DQN Agent based on the DQN Agent."""
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               categorical_q_network,
-               optimizer,
-               observation_and_action_constraint_splitter=None,
-               min_q_value=-10.0,
-               max_q_value=10.0,
-               epsilon_greedy=0.1,
-               n_step_update=1,
-               boltzmann_temperature=None,
-               # Params for target network updates
-               target_categorical_q_network=None,
-               target_update_tau=1.0,
-               target_update_period=1,
-               # Params for training.
-               td_errors_loss_fn=None,
-               gamma=1.0,
-               reward_scale_factor=1.0,
-               gradient_clipping=None,
-               # Params for debugging
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               train_step_counter=None,
-               name=None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      categorical_q_network: network.Network,
+      optimizer: types.Optimizer,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter] = None,
+      min_q_value: types.Float = -10.0,
+      max_q_value: types.Float = 10.0,
+      epsilon_greedy: types.Float = 0.1,
+      n_step_update: int = 1,
+      boltzmann_temperature: Optional[types.Float] = None,
+      # Params for target network updates
+      target_categorical_q_network: Optional[network.Network] = None,
+      target_update_tau: types.Float = 1.0,
+      target_update_period: types.Int = 1,
+      # Params for training.
+      td_errors_loss_fn: Optional[types.LossFn] = None,
+      gamma: types.Float = 1.0,
+      reward_scale_factor: types.Float = 1.0,
+      gradient_clipping: Optional[types.Float] = None,
+      # Params for debugging
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      train_step_counter: Optional[tf.Variable] = None,
+      name: Optional[Text] = None):
     """Creates a Categorical DQN Agent.
 
     Args:
@@ -489,8 +497,10 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 # The following method is copied from the Dopamine codebase with permission
 # (https://github.com/google/dopamine). Thanks to Marc Bellemare and also to
 # Pablo Castro, who wrote the original version of this method.
-def project_distribution(supports, weights, target_support,
-                         validate_args=False):
+def project_distribution(supports: types.Tensor,
+                         weights: types.Tensor,
+                         target_support: types.Tensor,
+                         validate_args: bool = False) -> types.Tensor:
   """Projects a batch of (support, weights) onto target_support.
 
   Based on equation (7) in (Bellemare et al., 2017):

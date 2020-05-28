@@ -24,18 +24,23 @@ Implements the DQN algorithm from
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents import tf_agent
+from tf_agents.networks import network
 from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
@@ -65,7 +70,9 @@ class DqnLossInfo(collections.namedtuple('DqnLossInfo',
   pass
 
 
-def compute_td_targets(next_q_values, rewards, discounts):
+def compute_td_targets(next_q_values: types.Tensor,
+                       rewards: types.Tensor,
+                       discounts: types.Tensor) -> types.Tensor:
   return tf.stop_gradient(rewards + discounts * next_q_values)
 
 
@@ -86,29 +93,30 @@ class DqnAgent(tf_agent.TFAgent):
 
   def __init__(
       self,
-      time_step_spec,
-      action_spec,
-      q_network,
-      optimizer,
-      observation_and_action_constraint_splitter=None,
-      epsilon_greedy=0.1,
-      n_step_update=1,
-      boltzmann_temperature=None,
-      emit_log_probability=False,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      q_network: network.Network,
+      optimizer: types.Optimizer,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter] = None,
+      epsilon_greedy: types.Float = 0.1,
+      n_step_update: int = 1,
+      boltzmann_temperature: Optional[types.Int] = None,
+      emit_log_probability: bool = False,
       # Params for target network updates
-      target_q_network=None,
-      target_update_tau=1.0,
-      target_update_period=1,
+      target_q_network: Optional[network.Network] = None,
+      target_update_tau: types.Float = 1.0,
+      target_update_period: int = 1,
       # Params for training.
-      td_errors_loss_fn=None,
-      gamma=1.0,
-      reward_scale_factor=1.0,
-      gradient_clipping=None,
+      td_errors_loss_fn: Optional[types.LossFn] = None,
+      gamma: types.Float = 1.0,
+      reward_scale_factor: types.Float = 1.0,
+      gradient_clipping: Optional[types.Float] = None,
       # Params for debugging
-      debug_summaries=False,
-      summarize_grads_and_vars=False,
-      train_step_counter=None,
-      name=None):
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      train_step_counter: Optional[tf.Variable] = None,
+      name: Optional[Text] = None):
     """Creates a DQN Agent.
 
     Args:

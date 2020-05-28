@@ -17,15 +17,20 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Sequence
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 
-def make_trajectory_mask(batched_traj):
+def make_trajectory_mask(batched_traj: trajectory.Trajectory) -> types.Tensor:
   """Mask boundary trajectories and those with invalid returns and advantages.
 
   Args:
@@ -51,7 +56,8 @@ def make_trajectory_mask(batched_traj):
   return tf.cast(not_between_episodes & valid_return_value, tf.float32)
 
 
-def make_timestep_mask(batched_next_time_step, allow_partial_episodes=False):
+def make_timestep_mask(batched_next_time_step: ts.TimeStep,
+                       allow_partial_episodes: bool = False) -> types.Tensor:
   """Create a mask for transitions and optionally final incomplete episodes.
 
   Args:
@@ -84,7 +90,8 @@ def make_timestep_mask(batched_next_time_step, allow_partial_episodes=False):
     return tf.cast(episode_is_complete & not_between_episodes, tf.float32)
 
 
-def get_distribution_params(nested_distribution):
+def get_distribution_params(
+    nested_distribution: types.NestedDistribution) -> types.NestedTensor:
   """Get the params for an optionally nested action distribution.
 
   Only returns parameters that have tf.Tensor values.
@@ -105,8 +112,9 @@ def get_distribution_params(nested_distribution):
       nested_distribution)
 
 
-def nested_kl_divergence(nested_from_distribution, nested_to_distribution,
-                         outer_dims=()):
+def nested_kl_divergence(nested_from_distribution: types.NestedDistribution,
+                         nested_to_distribution: types.NestedDistribution,
+                         outer_dims: Sequence[int] = ()) -> types.Tensor:
   """Given two nested distributions, sum the KL divergences of the leaves."""
   nest_utils.assert_same_structure(nested_from_distribution,
                                    nested_to_distribution)

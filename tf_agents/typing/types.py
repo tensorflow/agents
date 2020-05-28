@@ -21,14 +21,15 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
+import typing
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Union, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.specs import array_spec
 
-import typing
-from typing import Iterable, Mapping, Sequence, Union, Tuple
 
 if sys.version_info < (3, 7):
   ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
@@ -39,6 +40,7 @@ else:
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
 Array = np.ndarray   # pylint: disable=invalid-name
 TensorOrArray = Union[Tensor, Array]
+Distribution = tfp.distributions.Distribution
 
 TensorSpec = tf.TypeSpec
 ArraySpec = array_spec.ArraySpec
@@ -56,6 +58,9 @@ NestedTensorSpec = Union[TensorSpec, Iterable['NestedTensorSpec'],
                          Mapping[str, 'NestedTensorSpec']]  # pytype: disable=not-supported-yet
 NestedArraySpec = Union[array_spec.ArraySpec, Iterable['NestedArraySpec'],
                         Mapping[str, 'NestedArraySpec']]  # pytype: disable=not-supported-yet
+NestedDistribution = Union[Distribution,
+                           Iterable['NestedDistribution'],
+                           Mapping[str, 'NestedDistribution']]  # pytype: disable=not-supported-yet
 
 NestedSpec = Union[NestedTensorSpec, NestedArraySpec]
 NestedTensorOrArray = Union[NestedTensor, NestedArray]
@@ -70,3 +75,10 @@ Shape = Union[TensorOrArray, Sequence[int], tf.TensorShape]
 TimeStep = ForwardRef('tf_agents.trajectories.TimeStep')  # pylint: disable=invalid-name
 PolicyStep = ForwardRef('tf_agents.trajectories.PolicyStep')  # pylint: disable=invalid-name
 Transition = Tuple[TimeStep, PolicyStep, TimeStep]
+
+LossFn = Callable[[Tensor, Tensor], Tensor]
+
+Splitter = Optional[Callable[[NestedSpecTensorOrArray],
+                             Iterable[NestedSpecTensorOrArray]]]
+
+Optimizer = Union[tf.keras.optimizers.Optimizer, tf.compat.v1.train.Optimizer]

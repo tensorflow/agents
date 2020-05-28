@@ -26,17 +26,23 @@ For the full paper, see https://arxiv.org/abs/1802.09477.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Optional, Text
+
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.agents import tf_agent
+from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import gaussian_policy
+from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
@@ -53,31 +59,31 @@ class Td3Agent(tf_agent.TFAgent):
   """A TD3 Agent."""
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               actor_network,
-               critic_network,
-               actor_optimizer,
-               critic_optimizer,
-               exploration_noise_std=0.1,
-               critic_network_2=None,
-               target_actor_network=None,
-               target_critic_network=None,
-               target_critic_network_2=None,
-               target_update_tau=1.0,
-               target_update_period=1,
-               actor_update_period=1,
-               dqda_clipping=None,
-               td_errors_loss_fn=None,
-               gamma=1.0,
-               reward_scale_factor=1.0,
-               target_policy_noise=0.2,
-               target_policy_noise_clip=0.5,
-               gradient_clipping=None,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               train_step_counter=None,
-               name=None):
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensor,
+               actor_network: network.Network,
+               critic_network: network.Network,
+               actor_optimizer: types.Optimizer,
+               critic_optimizer: types.Optimizer,
+               exploration_noise_std: types.Float = 0.1,
+               critic_network_2: Optional[network.Network] = None,
+               target_actor_network: Optional[network.Network] = None,
+               target_critic_network: Optional[network.Network] = None,
+               target_critic_network_2: Optional[network.Network] = None,
+               target_update_tau: types.Float = 1.0,
+               target_update_period: types.Int = 1,
+               actor_update_period: types.Int = 1,
+               dqda_clipping: Optional[types.Float] = None,
+               td_errors_loss_fn: Optional[types.LossFn] = None,
+               gamma: types.Float = 1.0,
+               reward_scale_factor: types.Float = 1.0,
+               target_policy_noise: types.Float = 0.2,
+               target_policy_noise_clip: types.Float = 0.5,
+               gradient_clipping: Optional[types.Float] = None,
+               debug_summaries: bool = False,
+               summarize_grads_and_vars: bool = False,
+               train_step_counter: Optional[tf.Variable] = None,
+               name: Text = None):
     """Creates a Td3Agent Agent.
 
     Args:
@@ -337,8 +343,12 @@ class Td3Agent(tf_agent.TFAgent):
 
     return optimizer.apply_gradients(grads_and_vars)
 
-  def critic_loss(self, time_steps, actions, next_time_steps, weights=None,
-                  training=False):
+  def critic_loss(self,
+                  time_steps: ts.TimeStep,
+                  actions: types.Tensor,
+                  next_time_steps: ts.TimeStep,
+                  weights: Optional[types.Tensor] = None,
+                  training: bool = False) -> types.Tensor:
     """Computes the critic loss for TD3 training.
 
     Args:
@@ -465,7 +475,10 @@ class Td3Agent(tf_agent.TFAgent):
 
       return tf.reduce_mean(input_tensor=critic_loss)
 
-  def actor_loss(self, time_steps, weights=None, training=False):
+  def actor_loss(self,
+                 time_steps: ts.TimeStep,
+                 weights: types.Tensor = None,
+                 training: bool = False) -> types.Tensor:
     """Computes the actor_loss for TD3 training.
 
     Args:

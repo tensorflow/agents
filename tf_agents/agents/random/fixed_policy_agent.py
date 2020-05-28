@@ -20,14 +20,21 @@ An agent following one specific policy, without training.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
-from absl import flags
+from typing import Callable, Union, Optional, Text
+
 import gin
 import tensorflow.compat.v2 as tf
 import tf_agents.agents.tf_agent as tf_agent
+from tf_agents.policies import py_policy
+from tf_agents.policies import tf_policy
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
-FLAGS = flags.FLAGS
+
+PolicyClassType = Callable[..., Union[tf_policy.TFPolicy, py_policy.PyPolicy]]
 
 
 @gin.configurable
@@ -35,14 +42,14 @@ class FixedPolicyAgent(tf_agent.TFAgent):
   """An agent with a fixed policy and no learning."""
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               policy_class,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               train_step_counter=None,
-               num_outer_dims=1,
-               name=None):
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensorSpec,
+               policy_class: PolicyClassType,
+               debug_summaries: bool = False,
+               summarize_grads_and_vars: bool = False,
+               train_step_counter: Optional[tf.Variable] = None,
+               num_outer_dims: int = 1,
+               name: Optional[Text] = None):
     """Creates a fixed-policy agent with no-op for training.
 
     Args:

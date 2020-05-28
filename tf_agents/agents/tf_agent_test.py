@@ -42,11 +42,16 @@ class LossInfoTest(tf.test.TestCase):
 
 class MyAgent(tf_agent.TFAgent):
 
-  def __init__(self, validate_args=True, train_argspec=None,
+  def __init__(self,
+               time_step_spec=None,
+               action_spec=None,
+               validate_args=True,
+               train_argspec=None,
                train_sequence_length=None):
-    obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
-    time_step_spec = ts.time_step_spec(obs_spec)
-    action_spec = ()
+    if time_step_spec is None:
+      obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
+      time_step_spec = ts.time_step_spec(obs_spec)
+    action_spec = action_spec or ()
     policy = tf_policy.TFPolicy(time_step_spec, action_spec)
     super(MyAgent, self).__init__(
         time_step_spec=time_step_spec,
@@ -59,6 +64,9 @@ class MyAgent(tf_agent.TFAgent):
 
   def _train(self, experience, weights=None, extra=None):
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
+
+  def _initialize(self):
+    pass
 
 
 class TFAgentTest(tf.test.TestCase):
@@ -130,14 +138,14 @@ class AgentSpecTest(test_utils.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
     with self.assertRaisesRegex(
         TypeError, 'time_step_spec has to contain TypeSpec'):
-      tf_agent.TFAgent(wrong_time_step_spec, action_spec, None, None, None)
+      MyAgent(time_step_spec=wrong_time_step_spec, action_spec=action_spec)
 
   def testErrorOnWrongActionSpecWhenCreatingAgent(self):
     time_step_spec = ts.time_step_spec(tensor_spec.TensorSpec([2], tf.float32))
     wrong_action_spec = array_spec.BoundedArraySpec([1], np.float32, -1, 1)
     with self.assertRaisesRegex(
         TypeError, 'action_spec has to contain BoundedTensorSpec'):
-      tf_agent.TFAgent(time_step_spec, wrong_action_spec, None, None, None)
+      MyAgent(time_step_spec=time_step_spec, action_spec=wrong_action_spec)
 
 
 if __name__ == '__main__':

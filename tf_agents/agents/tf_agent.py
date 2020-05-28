@@ -17,14 +17,21 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
 import collections
+from typing import Dict, Optional, Text
+
+import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
+
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -32,6 +39,7 @@ from tf_agents.utils import nest_utils
 LossInfo = collections.namedtuple("LossInfo", ("loss", "extra"))
 
 
+@six.add_metaclass(abc.ABCMeta)
 class TFAgent(tf.Module):
   """Abstract base class for TF-based RL and Bandits agents.
 
@@ -140,20 +148,21 @@ class TFAgent(tf.Module):
   # attribute inside TF1 (for autodeps).
   _enable_functions = True
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               policy,
-               collect_policy,
-               train_sequence_length,
-               num_outer_dims=2,
-               training_data_spec=None,
-               train_argspec=None,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               enable_summaries=True,
-               train_step_counter=None,
-               validate_args=True):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      policy: tf_policy.TFPolicy,
+      collect_policy: tf_policy.TFPolicy,
+      train_sequence_length: Optional[int],
+      num_outer_dims: int = 2,
+      training_data_spec: Optional[types.NestedTensorSpec] = None,
+      train_argspec: Optional[Dict[Text, types.NestedTensorSpec]] = None,
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      enable_summaries: bool = True,
+      train_step_counter: Optional[tf.Variable] = None,
+      validate_args: bool = True):
     """Meant to be called by subclass constructors.
 
     Args:
@@ -306,7 +315,7 @@ class TFAgent(tf.Module):
     self._preprocess_sequence_fn = common.function_in_tf1()(
         self._preprocess_sequence)
 
-  def initialize(self):
+  def initialize(self) -> Optional[tf.Operation]:
     """Initializes the agent.
 
     Returns:
@@ -325,7 +334,8 @@ class TFAgent(tf.Module):
     else:
       return self._initialize()
 
-  def preprocess_sequence(self, experience):
+  def preprocess_sequence(self,
+                          experience: types.NestedTensor) -> types.NestedTensor:
     """Defines preprocess_sequence function to be fed into replay buffers.
 
     This defines how we preprocess the collected data before training.
@@ -434,7 +444,10 @@ class TFAgent(tf.Module):
           .format(get_dtypes(kwargs), get_dtypes(self.train_argspec),
                   get_shapes(kwargs), get_shapes(self.train_argspec)))
 
-  def train(self, experience, weights=None, **kwargs):
+  def train(self,
+            experience: types.NestedTensor,
+            weights: Optional[types.Tensor] = None,
+            **kwargs) -> LossInfo:
     """Trains the agent.
 
     Args:
@@ -498,12 +511,12 @@ class TFAgent(tf.Module):
     return loss_info
 
   @property
-  def validate_args(self):
+  def validate_args(self) -> bool:
     """Whether `train` & `preprocess_sequence` validate input & output args."""
     return self._validate_args
 
   @property
-  def time_step_spec(self):
+  def time_step_spec(self) -> ts.TimeStep:
     """Describes the `TimeStep` tensors expected by the agent.
 
     Returns:
@@ -513,7 +526,7 @@ class TFAgent(tf.Module):
     return self._time_step_spec
 
   @property
-  def action_spec(self):
+  def action_spec(self) -> types.NestedTensorSpec:
     """TensorSpec describing the action produced by the agent.
 
     Returns:
@@ -524,7 +537,7 @@ class TFAgent(tf.Module):
     return self._action_spec
 
   @property
-  def train_argspec(self):
+  def train_argspec(self) -> Optional[Dict[Text, types.NestedTensorSpec]]:
     """TensorSpec describing extra supported `kwargs` to `train()`.
 
     Returns:
@@ -534,7 +547,7 @@ class TFAgent(tf.Module):
     return self._train_argspec
 
   @property
-  def policy(self):
+  def policy(self) -> tf_policy.TFPolicy:
     """Return the current policy held by the agent.
 
     Returns:
@@ -543,7 +556,7 @@ class TFAgent(tf.Module):
     return self._policy
 
   @property
-  def collect_policy(self):
+  def collect_policy(self) -> tf_policy.TFPolicy:
     """Return a policy that can be used to collect data from the environment.
 
     Returns:
@@ -552,7 +565,7 @@ class TFAgent(tf.Module):
     return self._collect_policy
 
   @property
-  def collect_data_spec(self):
+  def collect_data_spec(self) -> types.NestedTensorSpec:
     """Returns a `Trajectory` spec, as expected by the `collect_policy`.
 
     Returns:
@@ -561,7 +574,7 @@ class TFAgent(tf.Module):
     return self.collect_policy.trajectory_spec
 
   @property
-  def training_data_spec(self):
+  def training_data_spec(self) -> types.NestedTensorSpec:
     """Returns a trajectory spec, as expected by the train() function."""
     if self._training_data_spec is not None:
       return self._training_data_spec
@@ -569,7 +582,7 @@ class TFAgent(tf.Module):
       return self.collect_data_spec
 
   @property
-  def train_sequence_length(self):
+  def train_sequence_length(self) -> int:
     """The number of time steps needed in experience tensors passed to `train`.
 
     Train requires experience to be a `Trajectory` containing tensors shaped
@@ -589,27 +602,27 @@ class TFAgent(tf.Module):
     return self._train_sequence_length
 
   @property
-  def summaries_enabled(self):
+  def summaries_enabled(self) -> bool:
     return self._enable_summaries
 
   @property
-  def debug_summaries(self):
+  def debug_summaries(self) -> bool:
     return self._debug_summaries and self.summaries_enabled
 
   @property
-  def summarize_grads_and_vars(self):
+  def summarize_grads_and_vars(self) -> bool:
     return self._summarize_grads_and_vars and self.summaries_enabled
 
   @property
-  def train_step_counter(self):
+  def train_step_counter(self) -> tf.Variable:
     return self._train_step_counter
 
-  # Subclasses must implement these methods.
-  @abc.abstractmethod
-  def _initialize(self):
+  def _initialize(self) -> Optional[tf.Operation]:
     """Returns an op to initialize the agent."""
+    pass
 
-  def _preprocess_sequence(self, experience):
+  def _preprocess_sequence(
+      self, experience: types.NestedTensor) -> types.NestedTensor:
     """Defines preprocess_sequence function to be fed into replay buffers.
 
     This defines how we preprocess the collected data before training.
@@ -624,8 +637,10 @@ class TFAgent(tf.Module):
     """
     return experience
 
+  # Subclasses must implement these methods.
   @abc.abstractmethod
-  def _train(self, experience, weights):
+  def _train(self, experience: types.NestedTensor,
+             weights: types.Tensor) -> LossInfo:
     """Returns an op to train the agent.
 
     This method *must* increment self.train_step_counter exactly once.

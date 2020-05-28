@@ -22,16 +22,22 @@ Users must provide their own loss functions.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Optional, Text
+
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
+from tf_agents.networks import network
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
@@ -68,20 +74,20 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
   def __init__(
       self,
-      time_step_spec,
-      action_spec,
-      cloning_network,
-      optimizer,
-      num_outer_dims=1,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      cloning_network: network.Network,
+      optimizer: types.Optimizer,
+      num_outer_dims: int = 1,
       # Params for training.
-      epsilon_greedy=0.1,
-      loss_fn=None,
-      gradient_clipping=None,
+      epsilon_greedy: types.Float = 0.1,
+      loss_fn: types.LossFn = None,
+      gradient_clipping: Optional[types.Float] = None,
       # Params for debugging.
-      debug_summaries=False,
-      summarize_grads_and_vars=False,
-      train_step_counter=None,
-      name=None):
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      train_step_counter: Optional[tf.Variable] = None,
+      name: Optional[Text] = None):
     """Creates an behavioral cloning Agent.
 
     Args:

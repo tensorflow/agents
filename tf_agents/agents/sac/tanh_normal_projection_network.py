@@ -20,7 +20,10 @@ https://github.com/rail-berkeley/softlearning/
 """
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Callable, Optional, Text
 
 import gin
 import tensorflow as tf
@@ -32,8 +35,11 @@ from tf_agents.networks import utils as network_utils
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 
+from tf_agents.typing import types
 
-def tanh_squash_to_spec(inputs, spec):
+
+def tanh_squash_to_spec(inputs: types.Tensor,
+                        spec: types.TensorSpec) -> types.Tensor:
   """Maps inputs with arbitrary range to range defined by spec using `tanh`."""
   means = (spec.maximum + spec.minimum) / 2.0
   magnitudes = (spec.maximum - spec.minimum) / 2.0
@@ -51,10 +57,12 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
   """
 
   def __init__(self,
-               sample_spec,
-               activation_fn=None,
-               std_transform=tf.exp,
-               name='TanhNormalProjectionNetwork'):
+               sample_spec: types.TensorSpec,
+               activation_fn: Optional[Callable[[types.Tensor],
+                                                types.Tensor]] = None,
+               std_transform: Optional[Callable[[types.Tensor],
+                                                types.Tensor]] = tf.exp,
+               name: Text = 'TanhNormalProjectionNetwork'):
     """Creates an instance of TanhNormalProjectionNetwork.
 
     Args:
@@ -104,7 +112,11 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
     return distribution_spec.DistributionSpec(
         distribution_builder, input_param_spec, sample_spec=sample_spec)
 
-  def call(self, inputs, outer_rank, training=False, mask=None):
+  def call(self,
+           inputs: types.NestedTensor,
+           outer_rank: int,
+           training: bool = False,
+           mask: Optional[types.NestedTensor] = None) -> types.NestedTensor:
     if inputs.dtype != self._sample_spec.dtype:
       raise ValueError('Inputs to TanhNormalProjectionNetwork must match the '
                        'sample_spec.dtype.')

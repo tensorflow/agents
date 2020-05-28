@@ -20,21 +20,30 @@ http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 """
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Callable, Optional, Text
+
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
+from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory as traj
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 from tf_agents.utils import value_ops
+
+# A function `advantage(returns, value_predictions) -> advantages.
+AdvantageFnType = Callable[[types.Tensor, types.Tensor], types.Tensor]
 
 
 def _standard_normalize(values, axes=(0,)):
@@ -140,22 +149,22 @@ class ReinforceAgent(tf_agent.TFAgent):
   """
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               actor_network,
-               optimizer,
-               value_network=None,
-               value_estimation_loss_coef=0.2,
-               advantage_fn=None,
-               use_advantage_loss=True,
-               gamma=1.0,
-               normalize_returns=True,
-               gradient_clipping=None,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               entropy_regularization=None,
-               train_step_counter=None,
-               name=None):
+               time_step_spec: ts.TimeStep,
+               action_spec: types.TensorSpec,
+               actor_network: network.Network,
+               optimizer: types.Optimizer,
+               value_network: Optional[network.Network] = None,
+               value_estimation_loss_coef: types.Float = 0.2,
+               advantage_fn: Optional[AdvantageFnType] = None,
+               use_advantage_loss: bool = True,
+               gamma: types.Float = 1.0,
+               normalize_returns: bool = True,
+               gradient_clipping: Optional[types.Float] = None,
+               debug_summaries: bool = False,
+               summarize_grads_and_vars: bool = False,
+               entropy_regularization: Optional[types.Float] = None,
+               train_step_counter: Optional[tf.Variable] = None,
+               name: Optional[Text] = None):
     """Creates a REINFORCE Agent.
 
     Args:
@@ -281,7 +290,11 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return tf.nest.map_structure(tf.identity, loss_info)
 
-  def total_loss(self, experience, returns, weights, training=False):
+  def total_loss(self,
+                 experience: traj.Trajectory,
+                 returns: types.Tensor,
+                 weights: types.Tensor,
+                 training: bool = False) -> tf_agent.LossInfo:
     # Ensure we see at least one full episode.
     time_steps = ts.TimeStep(experience.step_type,
                              tf.zeros_like(experience.reward),
@@ -388,13 +401,14 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return tf_agent.LossInfo(total_loss, loss_info_extra)
 
-  def policy_gradient_loss(self,
-                           actions_distribution,
-                           actions,
-                           is_boundary,
-                           returns,
-                           num_episodes,
-                           weights=None):
+  def policy_gradient_loss(
+      self,
+      actions_distribution: types.NestedDistribution,
+      actions: types.NestedTensor,
+      is_boundary: types.Tensor,
+      returns: types.Tensor,
+      num_episodes: types.Int,
+      weights: Optional[types.Tensor] = None) -> types.Tensor:
     """Computes the policy gradient loss.
 
     Args:
@@ -448,7 +462,10 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return policy_gradient_loss
 
-  def entropy_regularization_loss(self, actions_distribution, weights=None):
+  def entropy_regularization_loss(
+      self,
+      actions_distribution: types.NestedDistribution,
+      weights: Optional[types.Tensor] = None) -> types.Tensor:
     """Computes the optional entropy regularization loss.
 
     Extending REINFORCE by entropy regularization was originally proposed in
@@ -472,11 +489,12 @@ class ReinforceAgent(tf_agent.TFAgent):
 
     return loss
 
-  def value_estimation_loss(self,
-                            value_preds,
-                            returns,
-                            num_episodes,
-                            weights=None):
+  def value_estimation_loss(
+      self,
+      value_preds: types.Tensor,
+      returns: types.Tensor,
+      num_episodes: types.Int,
+      weights: Optional[types.Tensor] = None) -> types.Tensor:
     """Computes the value estimation loss.
 
     Args:

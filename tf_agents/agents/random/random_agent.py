@@ -21,15 +21,17 @@ when comparing to other agents.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
-from absl import flags
+from typing import Optional, Text
+
 import gin
 import tensorflow.compat.v2 as tf
 from tf_agents.agents.random import fixed_policy_agent
 import tf_agents.policies.random_tf_policy as random_tf_policy
-
-FLAGS = flags.FLAGS
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
 
 @gin.configurable
@@ -37,13 +39,13 @@ class RandomAgent(fixed_policy_agent.FixedPolicyAgent):
   """An agent with a random policy and no learning."""
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               train_step_counter=None,
-               num_outer_dims=1,
-               name=None):
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensorSpec,
+               debug_summaries: bool = False,
+               summarize_grads_and_vars: bool = False,
+               train_step_counter: Optional[tf.Variable] = None,
+               num_outer_dims: int = 1,
+               name: Optional[Text] = None):
     """Creates a random agent.
 
     Args:
