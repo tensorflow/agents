@@ -33,10 +33,22 @@ from tf_agents.environments import batched_py_environment
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
 from tf_agents.specs import tensor_spec
-from tf_agents.trajectories import time_step as ts
 # TODO(b/123022201): Use tf.autograph instead.
 from tensorflow.python.autograph.impl import api as autograph  # pylint:disable=g-direct-tensorflow-import  # TF internal
 from tensorflow.python.framework import tensor_shape  # pylint:disable=g-direct-tensorflow-import  # TF internal
+
+
+def _pack_named_sequence(flat_inputs, input_spec, batch_shape):
+  """Assembles back a nested structure that has been flattened."""
+  named_inputs = []
+  for flat_input, spec in zip(flat_inputs, tf.nest.flatten(input_spec)):
+    named_input = tf.identity(flat_input, name=spec.name)
+    if not tf.executing_eagerly():
+      named_input.set_shape(batch_shape.concatenate(spec.shape))
+    named_inputs.append(named_input)
+
+  nested_inputs = tf.nest.pack_sequence_as(input_spec, named_inputs)
+  return nested_inputs
 
 
 @contextlib.contextmanager
@@ -232,10 +244,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
           [],  # No inputs.
           self._time_step_dtypes,
           name='current_time_step_py_func')
-      step_type, reward, discount = outputs[0:3]
-      flat_observations = outputs[3:]
-      return self._set_names_and_shapes(step_type, reward, discount,
-                                        *flat_observations)
+      return self._time_step_from_numpy_function_outputs(outputs)
 
   # Make sure this is called without conversion from tf.function.
   # TODO(b/123600776): Remove override.
@@ -319,11 +328,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
           flat_actions,
           self._time_step_dtypes,
           name='step_py_func')
-      step_type, reward, discount = outputs[0:3]
-      flat_observations = outputs[3:]
-
-      return self._set_names_and_shapes(step_type, reward, discount,
-                                        *flat_observations)
+      return self._time_step_from_numpy_function_outputs(outputs)
 
   def render(self, mode):
     """Renders the environment.
@@ -372,30 +377,11 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
       img.set_shape(tf.TensorShape(self._render_shape))
     return img
 
-  def _set_names_and_shapes(self, step_type, reward, discount,
-                            *flat_observations):
-    """Returns a `TimeStep` namedtuple."""
-    step_type = tf.identity(step_type, name='step_type')
-    reward = tf.identity(reward, name='reward')
-    discount = tf.identity(discount, name='discount')
+  def _time_step_from_numpy_function_outputs(self, outputs):
+    """Forms a `TimeStep` from the output of the numpy_function outputs."""
     batch_shape = () if not self.batched else (self.batch_size,)
     batch_shape = tf.TensorShape(batch_shape)
-    if not tf.executing_eagerly():
-      # Shapes are not required in eager mode.
-      reward.set_shape(batch_shape.concatenate(
-          self.time_step_spec().reward.shape))
-      step_type.set_shape(batch_shape)
-      discount.set_shape(batch_shape)
-    # Give each tensor a meaningful name and set the static shape.
-    named_observations = []
-    for obs, spec in zip(flat_observations,
-                         tf.nest.flatten(self.observation_spec())):
-      named_observation = tf.identity(obs, name=spec.name)
-      if not tf.executing_eagerly():
-        named_observation.set_shape(batch_shape.concatenate(spec.shape))
-      named_observations.append(named_observation)
-
-    observations = tf.nest.pack_sequence_as(self.observation_spec(),
-                                            named_observations)
-
-    return ts.TimeStep(step_type, reward, discount, observations)
+    time_step = _pack_named_sequence(outputs,
+                                     self.time_step_spec(),
+                                     batch_shape)
+    return time_step
