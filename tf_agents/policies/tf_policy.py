@@ -239,7 +239,7 @@ class TFPolicy(tf.Module):
     return self._get_initial_state(batch_size)
 
   def _maybe_reset_state(self, time_step, policy_state):
-    if policy_state is ():  # pylint: disable=literal-comparison
+    if policy_state == ():
       return policy_state
 
     batch_size = tf.compat.dimension_value(time_step.discount.shape[0])
