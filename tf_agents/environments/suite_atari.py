@@ -16,7 +16,10 @@
 """Suite for loading Atari Gym environments."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Dict, Optional, Sequence, Text
 
 import atari_py  # pylint: disable=unused-import
 import gin
@@ -25,7 +28,10 @@ import numpy as np
 
 from tf_agents.environments import atari_preprocessing
 from tf_agents.environments import atari_wrappers
+from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
+
+from tf_agents.typing import types
 
 
 # Typical Atari 2600 Gym environment with some basic preprocessing.
@@ -39,7 +45,10 @@ DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = DEFAULT_ATARI_GYM_WRAPPERS + (
 
 
 @gin.configurable
-def game(name='Pong', obs_type='image', mode='NoFrameskip', version='v0'):
+def game(name: Text = 'Pong',
+         obs_type: Text = 'image',
+         mode: Text = 'NoFrameskip',
+         version: Text = 'v0') -> Text:
   """Generates the full name for the game.
 
   Args:
@@ -60,12 +69,15 @@ def game(name='Pong', obs_type='image', mode='NoFrameskip', version='v0'):
 
 
 @gin.configurable
-def load(environment_name,
-         discount=1.0,
-         max_episode_steps=None,
-         gym_env_wrappers=DEFAULT_ATARI_GYM_WRAPPERS,
-         env_wrappers=(),
-         spec_dtype_map=None):
+def load(
+    environment_name: Text,
+    discount: types.Int = 1.0,
+    max_episode_steps: Optional[types.Int] = None,
+    gym_env_wrappers: Sequence[
+        types.GymEnvWrapper] = DEFAULT_ATARI_GYM_WRAPPERS,
+    env_wrappers: Sequence[types.PyEnvWrapper] = (),
+    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None
+) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers."""
   if spec_dtype_map is None:
     spec_dtype_map = {gym.spaces.Box: np.uint8}

@@ -17,9 +17,12 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Any, Dict, Optional, Text
+
 import gym
 import gym.spaces
 import numpy as np
@@ -28,13 +31,15 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents import specs
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
+
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-def spec_from_gym_space(space,
-                        dtype_map=None,
-                        simplify_box_bounds=True,
-                        name=None):
+def spec_from_gym_space(space: gym.Space,
+                        dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
+                        simplify_box_bounds: bool = True,
+                        name: Optional[Text] = None) -> specs.BoundedArraySpec:
   """Converts gym spaces into array specs.
 
   Gym does not properly define dtypes for spaces. By default all spaces set
@@ -50,7 +55,7 @@ def spec_from_gym_space(space,
 
   Args:
     space: gym.Space to turn into a spec.
-    dtype_map: A dict from specs to dtypes to use as the default dtype.
+    dtype_map: A dict from spaces to dtypes to use as the default dtype.
     simplify_box_bounds: Whether to replace bounds of Box space that are arrays
       with identical values with one number and rely on broadcasting.
     name: Name of the spec.
@@ -134,12 +139,12 @@ class GymWrapper(py_environment.PyEnvironment):
   """
 
   def __init__(self,
-               gym_env,
-               discount=1.0,
-               spec_dtype_map=None,
-               match_obs_space_dtype=True,
-               auto_reset=True,
-               simplify_box_bounds=True):
+               gym_env: gym.Env,
+               discount: types.Float = 1.0,
+               spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
+               match_obs_space_dtype: bool = True,
+               auto_reset: bool = True,
+               simplify_box_bounds: bool = True):
     super(GymWrapper, self).__init__()
 
     self._gym_env = gym_env
@@ -160,15 +165,15 @@ class GymWrapper(py_environment.PyEnvironment):
     self._done = True
 
   @property
-  def gym(self):
+  def gym(self) -> gym.Env:
     return self._gym_env
 
-  def __getattr__(self, name):
+  def __getattr__(self, name: Text) -> Any:
     """Forward all other calls to the base environment."""
     gym_env = super(GymWrapper, self).__getattribute__('_gym_env')
     return getattr(gym_env, name)
 
-  def get_info(self):
+  def get_info(self) -> Any:
     """Returns the gym environment info returned on the last step."""
     return self._info
 
@@ -184,7 +189,7 @@ class GymWrapper(py_environment.PyEnvironment):
     return ts.restart(observation)
 
   @property
-  def done(self):
+  def done(self) -> bool:
     return self._done
 
   def _step(self, action):
@@ -234,17 +239,17 @@ class GymWrapper(py_environment.PyEnvironment):
     return tf.nest.pack_sequence_as(self._observation_spec,
                                     matched_observations)
 
-  def observation_spec(self):
+  def observation_spec(self) -> types.NestedArraySpec:
     return self._observation_spec
 
-  def action_spec(self):
+  def action_spec(self) -> types.NestedArraySpec:
     return self._action_spec
 
-  def close(self):
+  def close(self) -> None:
     return self._gym_env.close()
 
-  def seed(self, seed):
+  def seed(self, seed: types.Seed) -> types.Seed:
     return self._gym_env.seed(seed)
 
-  def render(self, mode='rgb_array'):
+  def render(self, mode: Text = 'rgb_array') -> Any:
     return self._gym_env.render(mode)

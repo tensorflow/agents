@@ -35,7 +35,7 @@ class MockALE(object):
   """Mock internal ALE for testing."""
 
   def __init__(self):
-    pass
+    self.screen_value = 0
 
   def lives(self):
     return 1

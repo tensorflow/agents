@@ -18,6 +18,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import gin
@@ -26,6 +27,8 @@ import numpy as np
 from tf_agents import specs
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
+
+from tf_agents.typing import types
 
 
 # TODO(b/156832202) Replace with EpisodeCountingEnv
@@ -38,17 +41,17 @@ class CountingEnv(py_environment.PyEnvironment):
   observation count may go down.
   """
 
-  def __init__(self, steps_per_episode=10):
+  def __init__(self, steps_per_episode: types.Int = 10):
     self._steps_per_episode = steps_per_episode
 
     self._episodes = 0
     self._current_step = np.array(0, dtype=np.int32)
     super(CountingEnv, self).__init__()
 
-  def observation_spec(self):
+  def observation_spec(self) -> types.NestedArraySpec:
     return specs.BoundedArraySpec((), dtype=np.int32)
 
-  def action_spec(self):
+  def action_spec(self) -> types.NestedArraySpec:
     return specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
 
   def _step(self, action):

@@ -15,7 +15,6 @@
 
 """Common types used in TF-Agents."""
 
-
 from __future__ import absolute_import
 from __future__ import division
 # Using Type Annotations.
@@ -23,7 +22,7 @@ from __future__ import print_function
 
 import sys
 import typing
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Union, Text, Tuple
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -31,12 +30,10 @@ import tensorflow_probability as tfp
 
 from tf_agents.specs import array_spec
 
-
 if sys.version_info < (3, 7):
   ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
 else:
   ForwardRef = typing.ForwardRef
-
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
 Array = np.ndarray   # pylint: disable=invalid-name
@@ -83,11 +80,17 @@ Shape = Union[TensorOrArray, Sequence[int], tf.TensorShape]
 
 Splitter = Optional[Callable[
     [NestedSpecTensorOrArray], Iterable[NestedSpecTensorOrArray]]]
-Seed = Union[int, Tensor]
+Seed = Union[int, Sequence[int], Tensor, Array]
 
 TimeStep = ForwardRef('tf_agents.trajectories.TimeStep')  # pylint: disable=invalid-name
 PolicyStep = ForwardRef('tf_agents.trajectories.PolicyStep')  # pylint: disable=invalid-name
 Transition = Tuple[TimeStep, PolicyStep, TimeStep]
+
+GymEnv = ForwardRef('gym.Env')  # pylint: disable=invalid-name
+GymEnvWrapper = Callable[[GymEnv], GymEnv]
+
+PyEnv = ForwardRef('tf_agents.environments.PyEnvironment')  # pylint: disable=invalid-name
+PyEnvWrapper = Callable[[PyEnv], PyEnv]
 
 LossFn = Callable[[Tensor, Tensor], Tensor]
 

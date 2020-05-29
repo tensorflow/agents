@@ -27,6 +27,7 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import parallel_py_environment
+from tf_agents.environments import py_environment
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
 from tf_agents.system import system_multiprocessing as multiprocessing
@@ -249,27 +250,42 @@ class ProcessPyEnvironmentTest(tf.test.TestCase):
       env.step(array_spec.sample_bounded_spec(action_spec, rng))
 
 
-class MockEnvironmentCrashInInit(object):
+class MockEnvironmentCrashInInit(py_environment.PyEnvironment):
   """Raise an error when instantiated."""
 
   def __init__(self, *unused_args, **unused_kwargs):
     raise RuntimeError()
 
+  def observation_spec(self):
+    return []
+
   def action_spec(self):
     return []
 
+  def _reset(self):
+    return ()
 
-class MockEnvironmentCrashInReset(object):
+  def _step(self, action):
+    return ()
+
+
+class MockEnvironmentCrashInReset(py_environment.PyEnvironment):
   """Raise an error when instantiated."""
 
   def __init__(self, *unused_args, **unused_kwargs):
     pass
+
+  def observation_spec(self):
+    return []
 
   def action_spec(self):
     return []
 
   def _reset(self):
     raise RuntimeError()
+
+  def _step(self, action):
+    return ()
 
 
 class MockEnvironmentCrashInStep(random_py_environment.RandomPyEnvironment):

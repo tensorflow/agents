@@ -16,6 +16,7 @@
 """Test for tf_agents.environments.wrappers."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
@@ -894,19 +895,6 @@ class GoalReplayEnvWrapperTest(parameterized.TestCase):
     self.assertEqual(time_step.observation.keys(),
                      env.observation_spec().keys())
 
-  def test_not_implemented_functions(self):
-    """Wrapper contains functions which need to be implemented in child."""
-    obs_spec = collections.OrderedDict({
-        'obs1': array_spec.ArraySpec((1,), np.int32),
-        'obs2': array_spec.ArraySpec((2,), np.int32),
-    })
-    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
-
-    env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
-    with self.assertRaises(TypeError):
-      env = wrappers.GoalReplayEnvWrapper(env)
-
   def test_batch_env(self):
     """Test batched version of the environment."""
     obs_spec = collections.OrderedDict({
@@ -1008,7 +996,7 @@ class PerformanceProfilerWrapperTest(test_utils.TestCase):
 
     # Resets are also profiled.
     s = pstats.Stats(env._profile)
-    self.assertGreater(s.total_calls, 0)
+    self.assertGreater(s.total_calls, 0)  # pytype: disable=attribute-error
 
     for _ in range(2):
       env.step(np.array(1, dtype=np.int32))
@@ -1017,7 +1005,7 @@ class PerformanceProfilerWrapperTest(test_utils.TestCase):
     previous_profile = profile[0]
 
     updated_s = pstats.Stats(profile[0])
-    self.assertGreater(updated_s.total_calls, s.total_calls)
+    self.assertGreater(updated_s.total_calls, s.total_calls)  # pytype: disable=attribute-error
 
     for _ in range(2):
       env.step(np.array(1, dtype=np.int32))

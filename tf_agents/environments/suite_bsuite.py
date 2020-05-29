@@ -20,6 +20,15 @@ https://github.com/deepmind/bsuite/
 
 Follow https://github.com/deepmind/bsuite#getting-started to install bsuite
 """
+from __future__ import absolute_import
+from __future__ import division
+# Using Type Annotations.
+from __future__ import print_function
+
+from typing import Optional, Text
+import gin
+from tf_agents.environments import py_environment
+from tf_agents.environments import suite_gym
 
 _TRY_IMPORT = True  # pylint: disable=g-statement-before-imports
 
@@ -35,20 +44,17 @@ else:
   from bsuite.utils import gym_wrapper
 # pylint: enable=g-import-not-at-top
 
-import gin
-from tf_agents.environments import suite_gym
 
-
-def is_available():
+def is_available() -> bool:
   return bsuite is not None
 
 
 @gin.configurable
-def load(bsuite_id,
-         record=True,
-         save_path=None,
-         logging_mode='csv',
-         overwrite=False):
+def load(bsuite_id: Text,
+         record: bool = True,
+         save_path: Optional[Text] = None,
+         logging_mode: Text = 'csv',
+         overwrite: bool = False) -> py_environment.PyEnvironment:
   """Loads the selected environment.
 
   Args:

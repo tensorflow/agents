@@ -16,14 +16,20 @@
 """Environment implementation that generates random observations."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
+from typing import Callable, Optional, Sequence, Text
 import numpy as np
 
 from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
+
+RewardFn = Callable[[np.ndarray, types.NestedArray, types.NestedArray],
+                    types.NestedArray]
 
 
 class RandomPyEnvironment(py_environment.PyEnvironment):
@@ -34,16 +40,16 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
   """
 
   def __init__(self,
-               observation_spec,
-               action_spec=None,
-               episode_end_probability=0.1,
-               discount=1.0,
-               reward_fn=None,
-               batch_size=None,
-               seed=42,
-               render_size=(2, 2, 3),
-               min_duration=0,
-               max_duration=None):
+               observation_spec: types.NestedArray,
+               action_spec: Optional[types.NestedArray] = None,
+               episode_end_probability: types.Float = 0.1,
+               discount: types.Float = 1.0,
+               reward_fn: Optional[RewardFn] = None,
+               batch_size: Optional[types.Int] = None,
+               seed: types.Seed = 42,
+               render_size: Sequence[int] = (2, 2, 3),
+               min_duration: types.Int = 0,
+               max_duration: Optional[types.Int] = None):
     """Initializes the environment.
 
     Args:
@@ -104,18 +110,18 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
     self._render_size = render_size
     super(RandomPyEnvironment, self).__init__()
 
-  def observation_spec(self):
+  def observation_spec(self) -> types.NestedArraySpec:
     return self._observation_spec
 
-  def action_spec(self):
+  def action_spec(self) -> types.NestedArraySpec:
     return self._action_spec
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> Optional[types.Int]:
     return self._batch_size
 
   @property
-  def batched(self):
+  def batched(self) -> bool:
     return False if self._batch_size is None else True
 
   def _get_observation(self):
@@ -162,7 +168,7 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
 
     return time_step
 
-  def render(self, mode='rgb_array'):
+  def render(self, mode: Text = 'rgb_array') -> np.ndarray:
     if mode != 'rgb_array':
       raise ValueError(
           "Only rendering mode supported is 'rgb_array', got {} instead.".
@@ -170,5 +176,5 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
 
     return self._rng.randint(0, 256, size=self._render_size, dtype=np.uint8)
 
-  def seed(self, seed):
+  def seed(self, seed: types.Seed) -> None:
     self._rng.seed(seed)

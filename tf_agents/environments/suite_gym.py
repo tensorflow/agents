@@ -22,21 +22,35 @@ agent behaviour. This prevents us from setting the appropriate discount value
 for the final step of an episode. To prevent that we extract the step limit
 from the environment specs and utilize our TimeLimit wrapper.
 """
+from __future__ import absolute_import
+from __future__ import division
+# Using Type Annotations.
+from __future__ import print_function
+
+from typing import Callable, Dict, Optional, Sequence, Text
+
 import gin
 import gym
+import numpy as np
 
 from tf_agents.environments import gym_wrapper
+from tf_agents.environments import py_environment
 from tf_agents.environments import wrappers
+from tf_agents.typing import types
+
+TimeLimitWrapperType = Callable[[py_environment.PyEnvironment, int],
+                                py_environment.PyEnvironment]
 
 
 @gin.configurable
-def load(environment_name,
-         discount=1.0,
-         max_episode_steps=None,
-         gym_env_wrappers=(),
-         env_wrappers=(),
-         spec_dtype_map=None,
-         gym_kwargs=None):
+def load(
+    environment_name: Text,
+    discount: types.Float = 1.0,
+    max_episode_steps: Optional[types.Int] = None,
+    gym_env_wrappers: Sequence[types.GymEnvWrapper] = (),
+    env_wrappers: Sequence[types.PyEnvWrapper] = (),
+    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
+    gym_kwargs=None) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -52,8 +66,8 @@ def load(environment_name,
       directly on the gym environment.
     env_wrappers: Iterable with references to wrapper classes to use on the
       gym_wrapped environment.
-    spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
-      default dtype for the tensors. An easy way how to configure a custom
+    spec_dtype_map: A dict that maps gym spaces to np dtypes to use as the
+      default dtype for the arrays. An easy way how to configure a custom
       mapping through Gin is to define a gin-configurable function that returns
       desired mapping and call it in your Gin congif file, for example:
       `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
@@ -79,14 +93,15 @@ def load(environment_name,
 
 
 @gin.configurable
-def wrap_env(gym_env,
-             discount=1.0,
-             max_episode_steps=None,
-             gym_env_wrappers=(),
-             time_limit_wrapper=wrappers.TimeLimit,
-             env_wrappers=(),
-             spec_dtype_map=None,
-             auto_reset=True):
+def wrap_env(
+    gym_env: gym.Env,
+    discount: types.Float = 1.0,
+    max_episode_steps: Optional[types.Int] = None,
+    gym_env_wrappers: Sequence[types.GymEnvWrapper] = (),
+    time_limit_wrapper: TimeLimitWrapperType = wrappers.TimeLimit,
+    env_wrappers: Sequence[types.PyEnvWrapper] = (),
+    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
+    auto_reset: bool = True) -> py_environment.PyEnvironment:
   """Wraps given gym environment with TF Agent's GymWrapper.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths

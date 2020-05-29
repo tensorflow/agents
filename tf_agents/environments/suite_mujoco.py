@@ -22,6 +22,20 @@ Follow the instructions at:
 https://github.com/openai/mujoco-py
 
 """
+from __future__ import absolute_import
+from __future__ import division
+# Using Type Annotations.
+from __future__ import print_function
+
+from typing import Dict, Optional, Sequence, Text
+
+import gin
+import gym
+import numpy as np
+
+from tf_agents.environments import py_environment
+from tf_agents.environments import suite_gym
+from tf_agents.typing import types
 
 _TRY_IMPORT = True  # pylint: disable=g-statement-before-imports
 
@@ -33,21 +47,20 @@ if _TRY_IMPORT:
 else:
   import mujoco_py  # pylint: disable=g-import-not-at-top
 
-import gin
-from tf_agents.environments import suite_gym
 
-
-def is_available():
+def is_available() -> bool:
   return mujoco_py is not None
 
 
 @gin.configurable
-def load(environment_name,
-         discount=1.0,
-         max_episode_steps=None,
-         gym_env_wrappers=(),
-         env_wrappers=(),
-         spec_dtype_map=None):
+def load(
+    environment_name: Text,
+    discount: types.Float = 1.0,
+    max_episode_steps: Optional[types.Int] = None,
+    gym_env_wrappers: Sequence[types.GymEnvWrapper] = (),
+    env_wrappers: Sequence[types.PyEnvWrapper] = (),
+    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None
+) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths

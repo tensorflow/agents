@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Union
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
@@ -26,7 +29,10 @@ from tf_agents.policies import random_py_policy
 from tf_agents.specs import array_spec
 
 
-def get_tf_env(environment):
+def get_tf_env(
+    environment: Union[py_environment.PyEnvironment,
+                       tf_environment.TFEnvironment]
+) -> tf_environment.TFEnvironment:
   """Ensures output is a tf_environment, wrapping py_environments if needed."""
   if environment is None:
     raise ValueError('`environment` cannot be None')
@@ -42,7 +48,8 @@ def get_tf_env(environment):
   return tf_env
 
 
-def validate_py_environment(environment, episodes=5):
+def validate_py_environment(environment: py_environment.PyEnvironment,
+                            episodes: int = 5):
   """Validates the environment follows the defined specs."""
   time_step_spec = environment.time_step_spec()
   action_spec = environment.action_spec()

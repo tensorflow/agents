@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 # pylint: disable=line-too-long
@@ -24,12 +25,16 @@ from __future__ import print_function
 # in both python2 and python3 (concurrent.futures isn't available in python2).
 #   https://docs.python.org/2/library/multiprocessing.html#module-multiprocessing.dummy
 from multiprocessing import dummy as mp_threads
+from multiprocessing import pool
 # pylint: enable=line-too-long
+from typing import Sequence, Optional
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import py_environment
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 
@@ -40,8 +45,19 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
   The environments should only access shared python variables using
   shared mutex locks (from the threading module).
   """
+  # These declarations are required because their types could not be inferred
+  # in Python 2.
+  _envs = ...  # type: Sequence[py_environment.PyEnvironment]
+  _num_envs = ...  # type: int
+  _parallel_execution = ...  # type: bool
+  _observation_spec = ...  # type: types.NestedArraySpec
+  _action_spec = ...  # type: types.NestedArraySpec
+  _time_step_spec = ...  # type: ts.TimeStep
+  _pool = ...  # type: pool.ThreadPool
 
-  def __init__(self, envs, multithreading=True):
+  def __init__(self,
+               envs: Sequence[py_environment.PyEnvironment],
+               multithreading: bool = True):
     """Batch together multiple (non-batched) py environments.
 
     The environments can be different but must use the same action and
@@ -93,27 +109,27 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       return [fn(x) for x in iterable]
 
   @property
-  def batched(self):
+  def batched(self) -> bool:
     return True
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> Optional[int]:
     return len(self._envs)
 
   @property
-  def envs(self):
+  def envs(self) -> Sequence[py_environment.PyEnvironment]:
     return self._envs
 
-  def observation_spec(self):
+  def observation_spec(self) -> types.NestedArraySpec:
     return self._observation_spec
 
-  def action_spec(self):
+  def action_spec(self) -> types.NestedArraySpec:
     return self._action_spec
 
-  def time_step_spec(self):
+  def time_step_spec(self) -> ts.TimeStep:
     return self._time_step_spec
 
-  def get_info(self):
+  def get_info(self) -> types.NestedArray:
     if self._num_envs == 1:
       return nest_utils.batch_nested_array(self._envs[0].get_info())
     else:
@@ -160,7 +176,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
           zip(self._envs, unstacked_actions))
       return nest_utils.stack_nested_arrays(time_steps)
 
-  def render(self, mode="rgb_array"):
+  def render(self, mode="rgb_array") -> Optional[types.NestedArray]:
     if self._num_envs == 1:
       img = self._envs[0].render(mode)
       return nest_utils.batch_nested_array(img)
@@ -168,7 +184,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       imgs = self._execute(lambda env: env.render(mode), self._envs)
       return nest_utils.stack_nested_arrays(imgs)
 
-  def close(self):
+  def close(self) -> None:
     """Send close messages to the external process and join them."""
     self._execute(lambda env: env.close(), self._envs)
     if self._parallel_execution:
@@ -176,7 +192,7 @@ class BatchedPyEnvironment(py_environment.PyEnvironment):
       self._pool.join()
 
 
-def unstack_actions(batched_actions):
+def unstack_actions(batched_actions: types.NestedArray) -> types.NestedArray:
   """Returns a list of actions from potentially nested batch of actions."""
   flattened_actions = tf.nest.flatten(batched_actions)
   unstacked_actions = [

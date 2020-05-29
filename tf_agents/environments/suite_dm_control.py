@@ -20,6 +20,17 @@ Follow these instructions to install it:
 https://github.com/deepmind/dm_control#installation-and-requirements
 
 """
+from __future__ import absolute_import
+from __future__ import division
+# Using Type Annotations.
+from __future__ import print_function
+
+from typing import Sequence, Text
+
+import gin
+from tf_agents.environments import dm_control_wrapper
+from tf_agents.environments import py_environment
+from tf_agents.typing import types
 
 _TRY_IMPORT = True  # pylint: disable=g-statement-before-imports
 
@@ -33,19 +44,16 @@ else:
   from dm_control import suite  # pylint: disable=g-import-not-at-top
   from dm_control.suite.wrappers import pixels  # pylint: disable=g-import-not-at-top
 
-import gin
-from tf_agents.environments import dm_control_wrapper
 
-
-def is_available():
+def is_available() -> bool:
   return suite is not None
 
 
-def _load_env(domain_name,
-              task_name,
+def _load_env(domain_name: Text,
+              task_name: Text,
               task_kwargs=None,
               environment_kwargs=None,
-              visualize_reward=False):
+              visualize_reward: bool = False):
   """Loads a DM environment.
 
   Args:
@@ -75,13 +83,15 @@ def _load_env(domain_name,
 
 
 @gin.configurable
-def load(domain_name,
-         task_name,
-         task_kwargs=None,
-         environment_kwargs=None,
-         visualize_reward=False,
-         render_kwargs=None,
-         env_wrappers=()):
+def load(
+    domain_name: Text,
+    task_name: Text,
+    task_kwargs=None,
+    environment_kwargs=None,
+    visualize_reward: bool = False,
+    render_kwargs=None,
+    env_wrappers: Sequence[types.PyEnvWrapper] = ()
+) -> py_environment.PyEnvironment:
   """Returns an environment from a domain name, task name and optional settings.
 
   Args:
@@ -118,15 +128,17 @@ def load(domain_name,
 
 
 @gin.configurable
-def load_pixels(domain_name,
-                task_name,
-                observation_key='pixels',
-                pixels_only=True,
-                task_kwargs=None,
-                environment_kwargs=None,
-                visualize_reward=False,
-                render_kwargs=None,
-                env_wrappers=()):
+def load_pixels(
+    domain_name: Text,
+    task_name: Text,
+    observation_key: Text = 'pixels',
+    pixels_only: bool = True,
+    task_kwargs=None,
+    environment_kwargs=None,
+    visualize_reward: bool = False,
+    render_kwargs=None,
+    env_wrappers: Sequence[types.PyEnvWrapper] = ()
+) -> py_environment.PyEnvironment:
   """Returns an environment from a domain name, task name and optional settings.
 
   Args:

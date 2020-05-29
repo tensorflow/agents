@@ -25,12 +25,13 @@ This includes:
   . Resizing the image before it is provided to the agent.
 
 """
-
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import gin
+import gym
 from gym import core as gym_core
 from gym.spaces import box
 import numpy as np
@@ -55,10 +56,10 @@ class AtariPreprocessing(gym_core.Wrapper):
   """
 
   def __init__(self,
-               env,
-               frame_skip=4,
-               terminal_on_life_loss=False,
-               screen_size=84):
+               env: gym.Env,
+               frame_skip: int = 4,
+               terminal_on_life_loss: bool = False,
+               screen_size: int = 84):
     """Constructor for an Atari 2600 preprocessor.
 
     Args:
@@ -103,7 +104,7 @@ class AtariPreprocessing(gym_core.Wrapper):
     self.game_over = False
     self.lives = 0  # Will need to be set by reset().
 
-  def reset(self):
+  def reset(self) -> np.ndarray:
     """Resets the environment.
 
     Returns:
@@ -117,7 +118,7 @@ class AtariPreprocessing(gym_core.Wrapper):
     self.screen_buffer[1].fill(0)
     return self._pool_and_resize()
 
-  def step(self, action):
+  def step(self, action: np.ndarray) -> np.ndarray:
     """Applies the given action in the environment.
 
     Remarks:
