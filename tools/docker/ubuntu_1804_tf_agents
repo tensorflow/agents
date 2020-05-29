@@ -1,0 +1,85 @@
+# Multipurpose docker for building and running TF-Agents. This docker is
+# designed for flexibility.
+#
+# Example usage:
+#
+#  Build a docker with the most recent stable version of TF-Agents.
+#    docker build -t tf_agents/release_test \
+#      -f ubuntu_1804_tf_agents .
+#
+#  Build a docker without TF-Agents to use to build TF-Agents.
+#    docker build -t tf_agents/release_build \
+#      --build-arg tf_agents_pip_spec=noop  \
+#      -f tools/docker/ubuntu_1804_tf_agents .
+#
+#  Build a docker with a local TF-Agents .whl file.
+#    docker build -t tf_agents/release_test \
+#      --build-arg local_tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl \
+#      --build-arg tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl  \
+#      -f ubuntu_1804_tf_agents .
+#
+FROM tensorflow/tensorflow:2.2.0-gpu as base
+
+LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
+ARG tf_agents_pip_spec="tf-agents-nightly"
+ARG local_tf_agents_pip_spec=""
+COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
+
+RUN pip install ${tf_agents_pip_spec}
+
+# Needs to run before installing tzdata and other apps below.
+RUN apt-get update
+
+# See http://bugs.python.org/issue19846
+ENV LANG C.UTF-8
+
+# Resolves tzdata asking for the timezone. python-opencv depends on tzdata.
+RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+# Pick up some TF dependencies
+RUN apt-get install -y --no-install-recommends \
+      cmake \
+      zlib1g-dev \
+      libpng-dev \
+      lsb-core \
+      vim \
+      less \
+      git \
+      ca-certificates \
+      wget \
+      zip \
+      xvfb \
+      freeglut3-dev \
+      ffmpeg \
+      python-opencv
+
+
+# Upgrade pip, need to use pip3 and then pip after this or an error
+# is thrown for no main found.
+RUN pip install --upgrade pip setuptools
+RUN pip install wheel \
+      opencv-python \
+      gym \
+      atari-py \
+      pybullet \
+      gin-config \
+      virtualenv \
+      matplot \
+      absl-py \
+      mock
+
+# Avoids constant errors of "No module named 'keyring.util.escape'"."
+# Not needed when installing jupyter does not throw the error/warning.
+RUN pip install --upgrade keyrings.alt
+
+
+######################################################
+# Jupyter notebook ipykernel downgrade is needed due to
+# https://github.com/ipython/ipykernel/issues/422
+######################################################
+RUN pip install jupyter
+RUN pip install ipykernel==5.1.1
+
+RUN pip freeze
