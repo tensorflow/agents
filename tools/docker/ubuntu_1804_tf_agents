@@ -21,7 +21,7 @@
 FROM tensorflow/tensorflow:nightly-gpu as base
 
 LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
-ARG tf_agents_pip_spec="tf-agents"
+ARG tf_agents_pip_spec="tf-agents-nightly"
 ARG local_tf_agents_pip_spec=""
 COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
 
