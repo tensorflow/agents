@@ -21,8 +21,9 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-from absl import logging
+from typing import Any, Optional, Sequence, Text, Union
 
+from absl import logging
 import numpy as np
 import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -32,11 +33,8 @@ from tf_agents.trajectories import trajectory as traj
 from tf_agents.typing import types
 from tf_agents.utils import common
 
-import typing
-from typing import Any, Optional, Sequence, Text, Union
 
-ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
-PyMetricType = ForwardRef('PyMetric')  # pylint: disable=invalid-name
+PyMetricType = types.ForwardRef('PyMetric')  # pylint: disable=invalid-name
 MetricType = Union[tf_metric.TFStepMetric, PyMetricType]
 
 
