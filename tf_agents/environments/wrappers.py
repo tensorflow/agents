@@ -89,6 +89,12 @@ class PyEnvironmentBaseWrapper(py_environment.PyEnvironment):
   def wrapped_env(self) -> Any:
     return self._env
 
+  def set_state(self, state: Any) -> None:
+    self._env.set_state(state)
+
+  def get_state(self) -> Any:
+    return self._env.get_state()
+
 
 @gin.configurable
 class TimeLimit(PyEnvironmentBaseWrapper):

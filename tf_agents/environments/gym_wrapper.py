@@ -253,3 +253,11 @@ class GymWrapper(py_environment.PyEnvironment):
 
   def render(self, mode: Text = 'rgb_array') -> Any:
     return self._gym_env.render(mode)
+
+  # pytype: disable=attribute-error
+  def set_state(self, state: Any) -> None:
+    return self._gym_env.set_state(state)
+
+  def get_state(self) -> Any:
+    return self._gym.get_state()
+  # pytype: enable=attribute-error
