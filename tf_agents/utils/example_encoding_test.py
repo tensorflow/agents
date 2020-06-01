@@ -20,9 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
+import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import array_spec
+from tf_agents.utils import common
 from tf_agents.utils import example_encoding
 
 
@@ -128,6 +130,27 @@ class NestExampleEncodeUtilsTest(tf.test.TestCase, parameterized.TestCase):
     with self.assertRaisesRegexp(ValueError, "is invalid"):
       example_encoding._validate_shape([1, 2.3, 3])
 
+  def test_compress_image(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest("Image compression only supported in TF2.x")
+
+    gin.parse_config_files_and_bindings([], """
+    _get_feature_encoder.compress_image=True
+    _get_feature_parser.compress_image=True
+    """)
+    spec = {
+        "image": array_spec.ArraySpec((128, 128, 3), np.uint8)
+    }
+    serializer = example_encoding.get_example_serializer(spec)
+    decoder = example_encoding.get_example_decoder(spec)
+
+    sample = {
+        "image": 128 * np.ones([128, 128, 3], dtype=np.uint8)
+    }
+    example_proto = serializer(sample)
+
+    recovered = self.evaluate(decoder(example_proto))
+    tf.nest.map_structure(np.testing.assert_almost_equal, sample, recovered)
 
 if __name__ == "__main__":
   tf.test.main()
