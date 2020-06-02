@@ -96,7 +96,7 @@ GitHub clone.
 ### Stable
 
 Run the commands below to install the most recent stable release (0.4.0), which
-was tested with TensorFlow 2.1.x and and Python3. API documentation for the
+was tested with TensorFlow 2.1.x and Python3. API documentation for the
 release is on
 [tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
