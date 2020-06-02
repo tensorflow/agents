@@ -461,7 +461,8 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         epsilon_greedy=0.0,
         time_step_spec=time_step_spec,
         accepts_per_arm_features=True,
-        emit_policy_info=('predicted_rewards_mean',))
+        emit_policy_info=('predicted_rewards_mean',
+                          'predicted_rewards_optimistic'))
 
     current_time_step = self._per_arm_time_step_batch(
         batch_size=batch_size,
@@ -490,6 +491,8 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertEqual(p_info.predicted_rewards_mean.dtype, np.float32)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected)
+    self.assertAllGreaterEqual(
+        p_info.predicted_rewards_optimistic - predicted_rewards_expected, 0)
 
   @test_cases()
   def testSparseObs(self, batch_size, actions_from_reward_layer):

@@ -32,6 +32,8 @@ class InfoFields(object):
   LOG_PROBABILITY = policy_step.CommonFields.LOG_PROBABILITY
   # Mean of predicted rewards (per arm).
   PREDICTED_REWARDS_MEAN = 'predicted_rewards_mean'
+  # Optimistic estimates of predicted rewards (per arm).
+  PREDICTED_REWARDS_OPTIMISTIC = 'predicted_rewards_optimistic'
   # Samples of predicted rewards (per arm).
   PREDICTED_REWARDS_SAMPLED = 'predicted_rewards_sampled'
   # Type of bandit policy (see enumerations in `BanditPolicyType`).
@@ -44,6 +46,7 @@ PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PolicyInfo',
     (InfoFields.LOG_PROBABILITY,
      InfoFields.PREDICTED_REWARDS_MEAN,
+     InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
      InfoFields.PREDICTED_REWARDS_SAMPLED,
      InfoFields.BANDIT_POLICY_TYPE))
 # Set default empty tuple for all fields.
@@ -54,6 +57,7 @@ PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PerArmPolicyInfo',
     (InfoFields.LOG_PROBABILITY,
      InfoFields.PREDICTED_REWARDS_MEAN,
+     InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
      InfoFields.PREDICTED_REWARDS_SAMPLED,
      InfoFields.BANDIT_POLICY_TYPE,
      InfoFields.CHOSEN_ARM_FEATURES))
@@ -87,6 +91,10 @@ def populate_policy_info(arm_observations, chosen_actions, rewards_for_argmax,
         lambda t: tf.gather(params=t, indices=chosen_actions, batch_dims=1),
         arm_observations)
     policy_info = PerArmPolicyInfo(
+        predicted_rewards_optimistic=(
+            rewards_for_argmax
+            if InfoFields.PREDICTED_REWARDS_OPTIMISTIC in emit_policy_info else
+            ()),
         predicted_rewards_sampled=(
             rewards_for_argmax if
             InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info else ()),
@@ -96,6 +104,10 @@ def populate_policy_info(arm_observations, chosen_actions, rewards_for_argmax,
         chosen_arm_features=chosen_arm_features)
   else:
     policy_info = PolicyInfo(
+        predicted_rewards_optimistic=(
+            rewards_for_argmax
+            if InfoFields.PREDICTED_REWARDS_OPTIMISTIC in emit_policy_info else
+            ()),
         predicted_rewards_sampled=(
             rewards_for_argmax if
             InfoFields.PREDICTED_REWARDS_SAMPLED in emit_policy_info else ()),

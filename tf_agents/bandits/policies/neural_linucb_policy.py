@@ -190,16 +190,24 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
       predicted_rewards_mean = tensor_spec.TensorSpec(
           [self._num_actions],
           dtype=tf.float32)
+    predicted_rewards_optimistic = ()
+    if (policy_utilities.InfoFields.PREDICTED_REWARDS_OPTIMISTIC in
+        emit_policy_info):
+      predicted_rewards_optimistic = tensor_spec.TensorSpec(
+          [self._num_actions],
+          dtype=tf.float32)
     if accepts_per_arm_features:
       arm_spec = context_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
       chosen_arm_features_info_spec = tensor_spec.remove_outer_dims_nest(
           arm_spec, 1)
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
+          predicted_rewards_optimistic=predicted_rewards_optimistic,
           chosen_arm_features=chosen_arm_features_info_spec)
     else:
       info_spec = policy_utilities.PolicyInfo(
-          predicted_rewards_mean=predicted_rewards_mean)
+          predicted_rewards_mean=predicted_rewards_mean,
+          predicted_rewards_optimistic=predicted_rewards_optimistic)
 
     super(NeuralLinUCBPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -248,7 +256,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     else:
       chosen_actions = greedy_actions
 
-    return chosen_actions, est_mean_reward
+    return chosen_actions, est_mean_reward, est_mean_reward
 
   def _get_actions_from_linucb(self, encoded_observation, mask):
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
@@ -285,7 +293,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
           stacked_p_values, mask, output_type=tf.int32)
 
     est_mean_reward = tf.cast(tf.stack(est_rewards, axis=-1), tf.float32)
-    return chosen_actions, est_mean_reward
+    return chosen_actions, est_mean_reward, stacked_p_values
 
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
@@ -303,7 +311,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     encoded_observation, _ = self._encoding_network(observation)
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
-    chosen_actions, est_mean_rewards = tf.cond(
+    chosen_actions, est_mean_rewards, est_rewards_optimistic = tf.cond(
         self._actions_from_reward_layer,
         lambda: self._get_actions_from_reward_layer(encoded_observation, mask),
         lambda: self._get_actions_from_linucb(encoded_observation, mask))
@@ -312,8 +320,9 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     if self._accepts_per_arm_features:
       arm_observations = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
     policy_info = policy_utilities.populate_policy_info(
-        arm_observations, chosen_actions, (), est_mean_rewards,
-        self._emit_policy_info, self._accepts_per_arm_features)
+        arm_observations, chosen_actions, est_rewards_optimistic,
+        est_mean_rewards, self._emit_policy_info,
+        self._accepts_per_arm_features)
     return policy_step.PolicyStep(chosen_actions, policy_state, policy_info)
 
   def _get_encoded_observation_for_arm(self, encoded_observation, arm_index):
