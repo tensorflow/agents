@@ -51,6 +51,8 @@ SpecTensorOrArray = Union[Spec, Tensor, Array]
 # pytype: disable=not-supported-yet
 NestedTensor = Union[Tensor, Iterable['NestedTensor'],
                      Mapping[str, 'NestedTensor']]
+NestedVariable = Union[tf.Variable, Iterable['NestedVariable'],
+                       Mapping[str, 'NestedVariable']]
 NestedArray = Union[Array, Iterable['NestedArray'],
                     Mapping[str, 'NestedArray']]
 NestedDistribution = Union[tfp.distributions.Distribution,
