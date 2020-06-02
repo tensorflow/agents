@@ -27,6 +27,9 @@ COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
 
 RUN pip install ${tf_agents_pip_spec}
 
+# Needs to run before installing tzdata and other apps below.
+RUN apt-get update
+
 # See http://bugs.python.org/issue19846
 ENV LANG C.UTF-8
 
@@ -36,7 +39,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
 # Pick up some TF dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get install -y --no-install-recommends \
       cmake \
       zlib1g-dev \
       libpng-dev \
