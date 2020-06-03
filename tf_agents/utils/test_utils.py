@@ -82,6 +82,10 @@ class TestCase(tf.test.TestCase):
     gin.clear_config()
     super(TestCase, self).tearDown()
 
+  def initialize_v1_variables(self):
+    variables = tf.compat.v1.global_variables() + tf.compat.v1.local_variables()
+    self.evaluate(tf.compat.v1.variables_initializer(variables))
+
 
 # Main function so that users of `test_utils.TestCase` can also call
 # `test_utils.main()`.

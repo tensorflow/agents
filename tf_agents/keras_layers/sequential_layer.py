@@ -127,18 +127,19 @@ class SequentialLayer(tf.keras.layers.Layer):
     return outputs
 
   def get_config(self):
-    config = [
-        {'class_name': layer.__class__.__name__,
-         'config': copy.deepcopy(layer.get_config())}
-        for layer in self.layers
-    ]
+    config = {}
+    for i, layer in enumerate(self.layers):
+      config[i] = {
+          'class_name': layer.__class__.__name__,
+          'config': copy.deepcopy(layer.get_config())
+      }
     return config
 
   @classmethod
   def from_config(cls, config, custom_objects=None):
     layers = [
         tf.keras.layers.deserialize(conf, custom_objects=custom_objects)
-        for conf in config
+        for conf in config.values()
     ]
     return cls(layers)
 
