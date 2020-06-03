@@ -52,11 +52,13 @@ class MockNetwork(BaseNetwork):
                                       name='mock')
 
   def build(self, *args, **kwargs):
-    self.var1 = common.create_variable('variable', trainable=False)
-    self.var2 = common.create_variable('trainable_variable', trainable=True)
+    self.var1 = common.create_variable(
+        'variable', dtype=tf.float32, trainable=False)
+    self.var2 = common.create_variable(
+        'trainable_variable', dtype=tf.float32, trainable=True)
 
   def call(self, observations, step_type, network_state=None):
-    return self.var1 + self.var2, ()
+    return self.var1 + self.var2 + observations, ()
 
 
 class NoInitNetwork(MockNetwork):
@@ -126,7 +128,9 @@ class NetworkTest(tf.test.TestCase):
     self.assertFalse(net.built)
     with self.assertRaises(ValueError):
       net.variables  # pylint: disable=pointless-statement
-    net.create_variables()
+    output_spec = net.create_variables()
+    # MockNetwork adds some variables to observation, which has shape [bs, 1]
+    self.assertEqual(output_spec, tf.TensorSpec([1], dtype=tf.float32))
     self.assertTrue(net.built)
     self.assertLen(net.variables, 2)
     self.assertLen(net.trainable_variables, 1)

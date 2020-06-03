@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
@@ -899,3 +900,29 @@ def where(condition, true_outputs, false_outputs):
   return tf.nest.map_structure(
       lambda t, f: tf.compat.v2.where(condition, t, f), true_outputs,
       false_outputs)
+
+
+def remove_singleton_batch_spec_dim(spec: tf.TypeSpec) -> tf.TypeSpec:
+  """Look for `spec`'s shape, check that outer dim is 1, and remove it.
+
+  Args:
+    spec: A `tf.TypeSpec`.
+
+  Returns:
+    A `tf.TypeSpec`, the spec without its outer batch dimension.
+
+  Raises:
+    ValueError: If `spec` lacks a `shape` property, or if `spec.shape[0] != 1`.
+  """
+  shape = getattr(spec, 'shape', None)
+  if shape is None:
+    shape = getattr(spec, '_shape', None)
+  if shape is None:
+    raise ValueError(
+        'Could not remove singleton batch dim from spec; it lacks a shape: {}'
+        .format(spec))
+  if tf.compat.dimension_value(shape[0]) != 1:
+    raise ValueError(
+        'Could not remove singleton batch dim from spec; shape[0] != 1: {} '
+        '(shape: {})'.format(spec, shape))
+  return spec._unbatch()  # pylint: disable=protected-access

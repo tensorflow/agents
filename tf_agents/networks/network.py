@@ -17,16 +17,21 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
+import typing
+
 import six
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tensorflow.keras import layers  # pylint: disable=unused-import
+import tensorflow_probability as tfp
+
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
@@ -157,6 +162,9 @@ class Network(tf.keras.layers.Layer):
     self._is_graph_network = False
 
     self._input_tensor_spec = input_tensor_spec
+    # NOTE(ebrevdo): Would have preferred to call this output_tensor_spec, but
+    # looks like keras.Layer already reserves that one.
+    self._network_output_spec = None
     self._state_spec = state_spec
 
   @property
@@ -171,17 +179,24 @@ class Network(tf.keras.layers.Layer):
   def create_variables(self, input_tensor_spec=None, **kwargs):
     """Force creation of the network's variables.
 
+    Return output specs.
+
     Args:
       input_tensor_spec: (Optional).  Override or provide an input tensor spec
         when creating variables.
       **kwargs: Other arguments to `network.call()`, e.g. `training=True`.
 
+    Returns:
+      Output specs - a nested spec calculated from the outputs (excluding any
+      batch dimensions).  If any of the output elements is a tfp `Distribution`,
+      the associated spec entry returned is `None`.
+
     Raises:
       ValueError: If no `input_tensor_spec` is provided, and the network did
         not provide one during construction.
     """
-    if self.built:
-      return
+    if self._network_output_spec is not None:
+      return self._network_output_spec
     if self._input_tensor_spec is None:
       self._input_tensor_spec = input_tensor_spec
     input_tensor_spec = self._input_tensor_spec
@@ -194,10 +209,22 @@ class Network(tf.keras.layers.Layer):
         input_tensor_spec, outer_dims=(1,))
     initial_state = self.get_initial_state(batch_size=1)
     step_type = tf.fill((1,), time_step.StepType.FIRST)
-    # TODO(b/156314637): Convert outputs to output_spec and return those.
-    self.__call__(
-        random_input, step_type=step_type, network_state=initial_state,
+    outputs = self.__call__(
+        random_input,
+        step_type=step_type,
+        network_state=initial_state,
         **kwargs)
+
+    def _calc_unbatched_spec(x):
+      if isinstance(x, tfp.distributions.Distribution):
+        return None
+      else:
+        return nest_utils.remove_singleton_batch_spec_dim(
+            tf.type_spec_from_value(x))
+
+    self._network_output_spec = tf.nest.map_structure(
+        _calc_unbatched_spec, outputs[0])
+    return self._network_output_spec
 
   @property
   def variables(self):
@@ -449,3 +476,22 @@ def _filter_empty_layer_containers(layer_list):
       # Trackable data structures will not show up in ".layers" lists, but
       # the layers they contain will.
       to_visit.extend(sub_layers[::-1])
+
+
+def create_variables(module: Network,
+                     input_spec: types.NestedTensorSpec,
+                     **kwargs: typing.Any) -> types.NestedTensorSpec:
+  """Create variables in `module` given `input_spec`; return `output_spec`.
+
+  Here `module` can be a `Network`, and we will soon also support Keras
+  layers (and possibly Sonnet layers).
+
+  Args:
+    module: The instance we would like to create layers on.
+    input_spec: The input spec (excluding batch dimensions).
+    **kwargs: Extra arguments to `module.__call__`, e.g. `training=True`.
+
+  Returns:
+    Output specs, a nested `tf.TypeSpec` describing the output signature.
+  """
+  return module.create_variables(input_spec, **kwargs)
