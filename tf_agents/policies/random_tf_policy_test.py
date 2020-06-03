@@ -19,9 +19,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
+
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 from tf_agents.policies import random_tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -117,6 +119,9 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
         tensor_spec.BoundedTensorSpec((1, 2), dtype, -10, 10)
     ]
     time_step_spec, time_step = self.create_time_step()
+    batch_size = 3
+    time_step = self.create_batch(time_step, batch_size)
+
     policy = random_tf_policy.RandomTFPolicy(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
@@ -131,7 +136,10 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     p = 1. / 21 if dtype.is_integer else 1. / 20
     np.testing.assert_allclose(
         np.array(step.info.log_probability, dtype=np.float32),
-        np.array(np.log([p, p], dtype=np.float32)),
+        np.array(
+            np.log([[math.pow(p, 6) for _ in range(3)],
+                    [math.pow(p, 2) for _ in range(3)]]),
+            dtype=np.float32),
         rtol=1e-5)
     self.assertTrue(np.all(action_[0] >= -10))
     self.assertTrue(np.all(action_[0] <= 10))
