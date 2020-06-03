@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents import specs
@@ -177,6 +178,63 @@ class NetworkTest(tf.test.TestCase):
     self.assertAllEqual(out, 1)
     out, _ = net(1, step_type=3, network_state=None)  # This shouldn't complain.
     self.assertAllEqual(out, 1)
+
+
+class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
+
+  def testNetworkCreate(self):
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    action_spec = specs.TensorSpec([2], tf.float32, 'action')
+    net = MockNetwork(observation_spec, action_spec)
+    self.assertFalse(net.built)
+    with self.assertRaises(ValueError):
+      net.variables  # pylint: disable=pointless-statement
+    output_spec = network.create_variables(net)
+    # MockNetwork adds some variables to observation, which has shape [bs, 1]
+    self.assertEqual(output_spec, tf.TensorSpec([1], dtype=tf.float32))
+    self.assertTrue(net.built)
+    self.assertLen(net.variables, 2)
+    self.assertLen(net.trainable_variables, 1)
+
+  @parameterized.named_parameters(
+      ('Dense',
+       lambda: tf.keras.layers.Dense(3),
+       tf.TensorSpec((5,), tf.float32),
+       tf.TensorSpec((3,), tf.float32)),
+      ('LSTMCell',
+       lambda: tf.keras.layers.LSTMCell(3),
+       tf.TensorSpec((5,), tf.float32),
+       tf.TensorSpec((3,), tf.float32)),
+      ('LSTMCellInRNN',
+       lambda: tf.keras.layers.RNN(tf.keras.layers.LSTMCell(3)),
+       tf.TensorSpec((5,), tf.float32),
+       tf.TensorSpec((3,), tf.float32)),
+      ('LSTM',
+       lambda: tf.keras.layers.LSTM(3),
+       tf.TensorSpec((5,), tf.float32),
+       tf.TensorSpec((3,), tf.float32)),
+      ('TimeDistributed',
+       lambda: tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(3)),
+       tf.TensorSpec((5,), tf.float32),
+       tf.TensorSpec((3,), tf.float32)),
+      ('Conv2D',
+       lambda: tf.keras.layers.Conv2D(2, 3),
+       tf.TensorSpec((28, 28, 5), tf.float32),
+       tf.TensorSpec((26, 26, 2), tf.float32)),
+      ('SequentialOfDense',
+       lambda: tf.keras.Sequential([tf.keras.layers.Dense(3)] * 2),
+       tf.TensorSpec((5,), tf.float32),
+       tf.TensorSpec((3,), tf.float32)),
+  )
+  def testKerasLayerCreate(self, layer_fn, input_spec, expected_output_spec):
+    layer = layer_fn()
+    with self.assertRaisesRegex(ValueError, 'an input_spec is required'):
+      network.create_variables(layer)
+    output_spec = network.create_variables(layer, input_spec)
+    self.assertTrue(layer.built)
+    self.assertEqual(output_spec, expected_output_spec)
+    output_spec_2 = network.create_variables(layer, input_spec)
+    self.assertEqual(output_spec_2, expected_output_spec)
 
 
 if __name__ == '__main__':

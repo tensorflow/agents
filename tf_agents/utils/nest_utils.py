@@ -23,6 +23,7 @@ from __future__ import print_function
 import collections
 import numbers
 
+from absl import logging
 import numpy as np
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -902,17 +903,26 @@ def where(condition, true_outputs, false_outputs):
       false_outputs)
 
 
-def remove_singleton_batch_spec_dim(spec: tf.TypeSpec) -> tf.TypeSpec:
+def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,
+                                    outer_ndim: int) -> tf.TypeSpec:
   """Look for `spec`'s shape, check that outer dim is 1, and remove it.
+
+  If `spec.shape[i] != 1` for any `i in range(outer_ndim)`, we stop removing
+  singleton batch dimensions at `i` and return what's left.  This is necessary
+  to handle the outputs of inconsistent layers like `tf.keras.layers.LSTM()`
+  which may take as input `(batch, time, dim) = (1, 1, Nin)` and emits only the
+  batch entry if `time == 1`: output shape is `(1, Nout)`.  We log an error
+  in these cases.
 
   Args:
     spec: A `tf.TypeSpec`.
+    outer_ndim: The maximum number of outer singleton dims to remove.
 
   Returns:
-    A `tf.TypeSpec`, the spec without its outer batch dimension.
+    A `tf.TypeSpec`, the spec without its outer batch dimension(s).
 
   Raises:
-    ValueError: If `spec` lacks a `shape` property, or if `spec.shape[0] != 1`.
+    ValueError: If `spec` lacks a `shape` property.
   """
   shape = getattr(spec, 'shape', None)
   if shape is None:
@@ -921,8 +931,11 @@ def remove_singleton_batch_spec_dim(spec: tf.TypeSpec) -> tf.TypeSpec:
     raise ValueError(
         'Could not remove singleton batch dim from spec; it lacks a shape: {}'
         .format(spec))
-  if tf.compat.dimension_value(shape[0]) != 1:
-    raise ValueError(
-        'Could not remove singleton batch dim from spec; shape[0] != 1: {} '
-        '(shape: {})'.format(spec, shape))
-  return spec._unbatch()  # pylint: disable=protected-access
+  for i in range(outer_ndim):
+    if tf.compat.dimension_value(shape[i]) != 1:
+      logging.error(
+          'Could not remove singleton batch dim from spec; shape[%d] != 1: %s '
+          '(shape: %s).  Skipping.', i, spec, shape)
+      break
+    spec = spec._unbatch()  # pylint: disable=protected-access
+  return spec

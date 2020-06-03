@@ -29,6 +29,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tensorflow.keras import layers  # pylint: disable=unused-import
 import tensorflow_probability as tfp
 
+from tf_agents.keras_layers import sequential_layer
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
 from tf_agents.typing import types
@@ -220,7 +221,7 @@ class Network(tf.keras.layers.Layer):
         return None
       else:
         return nest_utils.remove_singleton_batch_spec_dim(
-            tf.type_spec_from_value(x))
+            tf.type_spec_from_value(x), outer_ndim=1)
 
     self._network_output_spec = tf.nest.map_structure(
         _calc_unbatched_spec, outputs[0])
@@ -478,8 +479,8 @@ def _filter_empty_layer_containers(layer_list):
       to_visit.extend(sub_layers[::-1])
 
 
-def create_variables(module: Network,
-                     input_spec: types.NestedTensorSpec,
+def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
+                     input_spec: typing.Optional[types.NestedTensorSpec] = None,
                      **kwargs: typing.Any) -> types.NestedTensorSpec:
   """Create variables in `module` given `input_spec`; return `output_spec`.
 
@@ -494,4 +495,86 @@ def create_variables(module: Network,
   Returns:
     Output specs, a nested `tf.TypeSpec` describing the output signature.
   """
-  return module.create_variables(input_spec, **kwargs)
+  if isinstance(module, Network):
+    return module.create_variables(input_spec, **kwargs)
+
+  # Keras layer
+  if input_spec is None:
+    raise ValueError(
+        "Module is a Keras layer; an input_spec is required but saw "
+        "None: {}".format(module))
+
+  maybe_spec = getattr(module, "_network_output_spec", None)
+  if maybe_spec is not None:
+    return maybe_spec
+
+  # Has state outputs - so expect that a state input is required,
+  # and output[1:] are output states.
+  recurrent_layer = getattr(module, "get_initial_state", None) is not None
+
+  # Required input rank
+  outer_ndim = _get_input_outer_ndim(module, input_spec)
+
+  random_input = tensor_spec.sample_spec_nest(
+      input_spec, outer_dims=(1,) * outer_ndim)
+
+  if recurrent_layer:
+    state = module.get_initial_state(random_input)
+    outputs = module(random_input, state, **kwargs)
+  else:
+    outputs = module(random_input, **kwargs)
+
+  if isinstance(outputs, (list, tuple)):
+    output = outputs[0]
+  else:
+    output = outputs
+
+  def _calc_unbatched_spec(x):
+    if isinstance(x, tfp.distributions.Distribution):
+      return None
+    else:
+      return nest_utils.remove_singleton_batch_spec_dim(
+          tf.type_spec_from_value(x), outer_ndim=outer_ndim)
+
+  # pylint: disable=protected-access
+  module._network_output_spec = tf.nest.map_structure(_calc_unbatched_spec,
+                                                      output)
+
+  return module._network_output_spec
+  # pylint: disable=protected-access
+
+
+def _get_input_outer_ndim(layer: tf.keras.layers.Layer,
+                          input_spec: types.NestedTensorSpec) -> int:
+  """Calculate or guess the number of batch (outer) ndims in `layer`."""
+  if isinstance(layer, tf.keras.layers.TimeDistributed):
+    return 1 + _get_input_outer_ndim(layer.layer, input_spec)
+  if isinstance(layer, tf.keras.layers.RNN):
+    return 1 + _get_input_outer_ndim(layer.cell, input_spec)
+  if isinstance(layer, (sequential_layer.SequentialLayer, tf.keras.Sequential)):
+    # We don't trust Sequential to give us the right thing if the first layer
+    # is e.g. a TimeDistributed.
+    return _get_input_outer_ndim(layer.layers[0], input_spec)
+
+  layer_input_spec = layer.input_spec
+
+  if layer_input_spec is None:
+    return 1
+
+  outer_ndim = layer_input_spec.ndim
+  if outer_ndim is None:
+    outer_ndim = layer_input_spec.min_ndim
+
+  if outer_ndim is None:
+    return 1
+
+  if input_spec:
+    input_spec = tf.nest.flatten(input_spec)[0]
+    if outer_ndim >= input_spec.shape.ndims:
+      # We can capture the "outer batch size" as the diff between the
+      # expected input rank and the rank of the non-batched spec passed in the
+      # input_spec.
+      return outer_ndim - input_spec.shape.ndims
+
+  # Empty input_spec.
+  return 1
