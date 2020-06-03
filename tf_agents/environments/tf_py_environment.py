@@ -190,10 +190,11 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     return getattr(self._env, name)
 
   def close(self):
-    """Send close messages to the isolation pool and join it.
+    """Send close to wrapped env & also to the isolation pool + join it.
 
-    Only has an effect when `isolation` was provided at init time.
+    Only closes pool when `isolation` was provided at init time.
     """
+    self._env.close()
     if self._pool:
       self._pool.join()
       self._pool.close()
