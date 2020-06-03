@@ -520,12 +520,18 @@ class PolicySaver(object):
     tf.compat.v2.saved_model.save(
         self._policy, export_dir, signatures=self._signatures, options=options)
 
-    spec_output_path = os.path.join(export_dir, POLICY_SPECS_PBTXT)
+    temp_spec_file_name = '{}_temp'.format(POLICY_SPECS_PBTXT)
+    temp_spec_output_path = os.path.join(export_dir, temp_spec_file_name)
     specs = {
         'collect_data_spec': self._policy.collect_data_spec,
         'policy_state_spec': self._policy.policy_state_spec
     }
-    tensor_spec.to_pbtxt_file(spec_output_path, specs)
+    tensor_spec.to_pbtxt_file(temp_spec_output_path, specs)
+    spec_output_path = os.path.join(export_dir, POLICY_SPECS_PBTXT)
+    # By moving the file to its final location makes it safer to wait for the
+    # file (e.g. from a separate binary). The parameter `overwrite=True`
+    # reproduces the exact previous behavior.
+    tf.io.gfile.rename(temp_spec_output_path, spec_output_path, overwrite=True)
 
   def save_checkpoint(self,
                       export_dir: Text,
