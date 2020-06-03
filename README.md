@@ -13,8 +13,8 @@ running in the Cartpole environment. API documentation for the current stable
 release is on
 [tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
-**NOTE:** 0.5.0 RC0 is now available and was tested with Python3 and TensorFlow
-2.2. `pip install tf-agents==0.5.0rc0`.
+**NOTE:** 0.5.0 is now available and was tested with Python3 and TensorFlow 2.2.
+`pip install --upgrade tf-agents`.
 
 TF-Agents is under active development and interfaces may change at any time.
 Feedback and comments are welcome.
@@ -95,19 +95,19 @@ GitHub clone.
 
 ### Stable
 
-Run the commands below to install the most recent stable release (0.4.0), which
-was tested with TensorFlow 2.1.x and and Python3. API documentation for the
+Run the commands below to install the most recent stable release (0.5.0), which
+was tested with TensorFlow 2.2.x and and Python3. API documentation for the
 release is on
 [tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
 ```bash
 pip install --user tf-agents
-pip install --user tensorflow==2.1.0
+pip install --user tensorflow==2.2.0
 
 # To get the matching examples and colabs
 git clone https://github.com/tensorflow/agents.git
 cd agents
-git checkout v0.4.0
+git checkout v0.5.0
 
 ```
 
@@ -166,6 +166,7 @@ last release compatible with Python 2.
 Release | Branch / Tag                                               | TensorFlow Version
 ------- | ---------------------------------------------------------- | ------------------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
+0.5.0   | [v0.5.0](https://github.com/tensorflow/agents/tree/v0.5.0) | 2.2.0
 0.4.0   | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0
 0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0
 
@@ -180,7 +181,7 @@ pip install tf-agents
 pip install tf-agents-nightly
 
 # Specific version
-pip install tf-agents==0.4.0rc0
+pip install tf-agents==0.4.0
 
 ```
 

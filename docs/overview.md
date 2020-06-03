@@ -17,17 +17,17 @@ GitHub clone.
 
 ### Stable
 
-Run the commands below to install the most recent stable release (0.4.0), which
-was tested with TensorFlow 2.1.x and Python3.
+Run the commands below to install the most recent stable release (0.5.0), which
+was tested with TensorFlow 2.2.x and Python3.
 
 ```bash
 pip install --user tf-agents
-pip install --user tensorflow==2.1.0
+pip install --user tensorflow==2.2.0
 
 # To get the matching examples and colabs
 git clone https://github.com/tensorflow/agents.git
 cd agents
-git checkout v0.4.0
+git checkout v0.5.0
 
 ```
 
@@ -82,11 +82,12 @@ but can have issues due to upstream libraries being in flux. The table below
 lists the version(s) of TensorFlow tested with each TF Agents' release to help
 users that may be locked into a specific version of TensorFlow.
 
-| Release  | Branch / Tag      | TensorFlow Version |
-| -------- | ----------- | ------------------ |
-| Nightly  | [master](https://github.com/tensorflow/agents) | tf-nightly         |
-| 0.4.0    | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0 |
-| 0.3.0    | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0   |
+Release | Branch / Tag                                               | TensorFlow Version
+------- | ---------------------------------------------------------- | ------------------
+Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
+0.5.0   | [v0.5.0](https://github.com/tensorflow/agents/tree/v0.5.0) | 2.2.0
+0.4.0   | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0
+0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0
 
 Examples of installing nightly, most recent stable, and a specific version of
 TF-Agents:
