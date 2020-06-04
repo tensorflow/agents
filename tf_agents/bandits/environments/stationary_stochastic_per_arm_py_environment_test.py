@@ -88,7 +88,50 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase):
       self.assertAllLess(action, 6)
       time_step = env.step(action)
 
-  def test_with_variable_num_actions(self):
+  def test_with_variable_num_actions_masking(self):
+
+    def _global_context_sampling_fn():
+      return np.random.randint(-10, 10, [4])
+
+    def _arm_context_sampling_fn():
+      return np.random.randint(-2, 3, [5])
+
+    def _num_actions_fn():
+      return np.random.randint(0, 7)
+
+    reward_fn = LinearNormalReward([0, 1, 2, 3, 4, 5, 6, 7, 8])
+
+    env = sspe.StationaryStochasticPerArmPyEnvironment(
+        _global_context_sampling_fn,
+        _arm_context_sampling_fn,
+        6,
+        reward_fn,
+        _num_actions_fn,
+        batch_size=2,
+        add_num_actions_feature=False)
+    time_step_spec = env.time_step_spec()
+    self.assertAllEqual(time_step_spec.observation[1].shape, [6])
+    action_spec = array_spec.BoundedArraySpec(
+        shape=(), minimum=0, maximum=5, dtype=np.int32)
+
+    random_policy = random_py_policy.RandomPyPolicy(
+        time_step_spec=time_step_spec, action_spec=action_spec)
+
+    for _ in range(5):
+      time_step = env.reset()
+      self.assertTrue(
+          check_unbatched_time_step_spec(
+              time_step=time_step,
+              time_step_spec=time_step_spec,
+              batch_size=env.batch_size))
+
+      action = random_policy.action(time_step).action
+      self.assertAllEqual(action.shape, [2])
+      self.assertAllGreaterEqual(action, 0)
+      self.assertAllLess(action, 6)
+      time_step = env.step(action)
+
+  def test_with_variable_num_actions_featurized(self):
 
     def _global_context_sampling_fn():
       return np.random.randint(-10, 10, [4])

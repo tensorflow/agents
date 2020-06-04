@@ -26,6 +26,7 @@ from tf_agents.specs import tensor_spec
 
 GLOBAL_FEATURE_KEY = 'global'
 PER_ARM_FEATURE_KEY = 'per_arm'
+NUM_ACTIONS_FEATURE_KEY = 'num_actions'
 
 # For constrained optimization, the reward spec is expected to be a dictionary
 # with the following keys that split the reward spec and the constraints spec.
