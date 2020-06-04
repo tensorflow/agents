@@ -553,7 +553,8 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     }
 
     time_step = ts.restart(observations, batch_size=2)
-    action_step = policy.action(time_step, seed=1)
+    action_fn = common.function_in_tf1()(policy.action)
+    action_step = action_fn(time_step, seed=1)
     self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
