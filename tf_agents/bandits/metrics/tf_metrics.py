@@ -22,6 +22,7 @@ from __future__ import print_function
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.metrics import tf_metric
 from tf_agents.utils import common
 
@@ -60,7 +61,10 @@ class RegretMetric(tf_metric.TFStepMetric):
       The arguments, for easy chaining.
     """
     baseline_reward = self._baseline_reward_fn(trajectory.observation)
-    trajectory_regret = baseline_reward - trajectory.reward
+    trajectory_reward = trajectory.reward
+    if isinstance(trajectory.reward, dict):
+      trajectory_reward = trajectory.reward[bandit_spec_utils.REWARD_SPEC_KEY]
+    trajectory_regret = baseline_reward - trajectory_reward
     self.regret.assign(tf.reduce_mean(trajectory_regret))
     return trajectory
 

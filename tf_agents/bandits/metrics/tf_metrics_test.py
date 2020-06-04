@@ -24,6 +24,7 @@ from tf_agents.bandits.metrics import tf_metrics
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tensorflow.python.eager import context  # pylint: disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 
 def compute_optimal_reward(unused_observation):
@@ -50,6 +51,19 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
                                  action=tf.range(batch_size, dtype=tf.int32),
                                  policy_info=(),
                                  reward=tf.range(batch_size, dtype=tf.float32),
+                                 discount=tf.ones(batch_size),
+                                 step_type=ts.StepType.FIRST,
+                                 next_step_type=ts.StepType.LAST)
+
+  def _create_batched_trajectory_with_reward_dict(self, batch_size):
+    reward_dict = {
+        'reward': tf.range(batch_size, dtype=tf.float32),
+        'constraint': tf.range(batch_size, dtype=tf.float32),
+    }
+    return trajectory.Trajectory(observation=(),
+                                 action=tf.range(batch_size, dtype=tf.int32),
+                                 policy_info=(),
+                                 reward=reward_dict,
                                  discount=tf.ones(batch_size),
                                  step_type=ts.StepType.FIRST,
                                  next_step_type=ts.StepType.LAST)
@@ -108,6 +122,20 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         result = metric.result()
       result_ = self.evaluate(result)
       self.assertEqual(result_, expected_result)
+
+  @test_util.run_in_graph_and_eager_modes
+  def testRegretMetricWithRewardDict(
+      self, metric_class=tf_metrics.RegretMetric, fn=compute_optimal_reward,
+      batch_size=8, expected_result=6.5):
+    traj = self._create_batched_trajectory_with_reward_dict(batch_size)
+    metric = metric_class(fn)
+    self.evaluate(metric.init_variables())
+    traj_out = metric(traj)
+    deps = tf.nest.flatten(traj_out)
+    with tf.control_dependencies(deps):
+      result = metric.result()
+    result_ = self.evaluate(result)
+    self.assertEqual(result_, expected_result)
 
 
 if __name__ == '__main__':
