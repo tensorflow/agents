@@ -70,6 +70,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
                emit_policy_info=(),
                emit_log_probability=False,
                accepts_per_arm_features=False,
+               distributed_use_reward_layer=False,
                observation_and_action_constraint_splitter=None,
                name=None):
     """Initializes `NeuralLinUCBPolicy`.
@@ -85,8 +86,8 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
         treated as a batch dimension in the reward layer.
       epsilon_greedy: (float) representing the probability of choosing a random
         action instead of the greedy action.
-      actions_from_reward_layer: (bool) whether to get actions from the reward
-        layer or from LinUCB.
+      actions_from_reward_layer: (boolean variable) whether to get actions from
+        the reward layer or from LinUCB.
       cov_matrix: list of the covariance matrices. There exists one covariance
         matrix per arm, unless the policy accepts per-arm features, in which
         case this list must have a single element.
@@ -105,6 +106,10 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
       emit_log_probability: (bool) whether to emit log probabilities.
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
+      distributed_use_reward_layer: (bool) Whether to pick the actions using
+        the network or use LinUCB. This applies only in distributed training
+        setting and has a similar role to the `actions_from_reward_layer`
+        mentioned above.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -140,6 +145,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     self._actions_from_reward_layer = actions_from_reward_layer
     self._epsilon_greedy = epsilon_greedy
     self._dtype = self._data_vector[0].dtype
+    self._distributed_use_reward_layer = distributed_use_reward_layer
 
     if len(cov_matrix) != len(data_vector):
       raise ValueError('The size of list cov_matrix must match the size of '
@@ -312,10 +318,20 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     encoded_observation, _ = self._encoding_network(observation)
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
-    chosen_actions, est_mean_rewards, est_rewards_optimistic = tf.cond(
-        self._actions_from_reward_layer,
-        lambda: self._get_actions_from_reward_layer(encoded_observation, mask),
-        lambda: self._get_actions_from_linucb(encoded_observation, mask))
+    if tf.distribute.has_strategy():
+      if self._distributed_use_reward_layer:
+        chosen_actions, est_mean_rewards, est_rewards_optimistic = (
+            self._get_actions_from_reward_layer(encoded_observation, mask))
+      else:
+        chosen_actions, est_mean_rewards, est_rewards_optimistic = (
+            self._get_actions_from_linucb(encoded_observation, mask))
+    else:
+      chosen_actions, est_mean_rewards, est_rewards_optimistic = tf.cond(
+          self._actions_from_reward_layer,
+          # pylint: disable=g-long-lambda
+          lambda: self._get_actions_from_reward_layer(
+              encoded_observation, mask),
+          lambda: self._get_actions_from_linucb(encoded_observation, mask))
 
     arm_observations = ()
     if self._accepts_per_arm_features:

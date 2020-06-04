@@ -98,6 +98,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       epsilon_greedy=0.0,
       observation_and_action_constraint_splitter=None,
       accepts_per_arm_features=False,
+      distributed_train_encoding_network=False,
       # Params for training.
       error_loss_fn=tf.compat.v1.losses.mean_squared_error,
       gradient_clipping=None,
@@ -140,6 +141,11 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         observation and mask.
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
+      distributed_train_encoding_network: (bool) whether to train the encoding
+        network or not. This applies only in distributed training setting. When
+        set to true this agent will train the encoding network. Otherwise, it
+        will assume the encoding network is already trained and will train
+        LinUCB on top of it.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
@@ -201,6 +207,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
 
     encoding_network.create_variables()
     self._encoding_network = encoding_network
+    reward_layer.build(input_shape=tf.TensorShape([None, encoding_dim]))
     self._reward_layer = reward_layer
     self._encoding_network_num_train_steps = encoding_network_num_train_steps
     self._encoding_dim = encoding_dim
@@ -208,6 +215,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     self._error_loss_fn = error_loss_fn
     self._gradient_clipping = gradient_clipping
     train_step_counter = tf.compat.v1.train.get_or_create_global_step()
+    self._distributed_train_encoding_network = (
+        distributed_train_encoding_network)
 
     policy = neural_linucb_policy.NeuralLinUCBPolicy(
         encoding_network=self._encoding_network,
@@ -223,6 +232,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         emit_policy_info=emit_policy_info,
         emit_log_probability=emit_log_probability,
         accepts_per_arm_features=accepts_per_arm_features,
+        distributed_use_reward_layer=distributed_train_encoding_network,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))
 
@@ -436,6 +446,74 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     self.train_step_counter.assign_add(1)
     return loss_info
 
+  def compute_loss_using_linucb_distributed(
+      self, observation, action, reward, weights, training=False):
+    """Computes the loss using LinUCB distributively.
+
+    Args:
+      observation: A batch of observations.
+      action: A batch of actions.
+      reward: A batch of rewards.
+      weights: unused weights.
+      training: Whether the loss is being used to train.
+
+    Returns:
+      loss: A `LossInfo` containing the loss for the training step.
+    """
+    del weights  # unused
+
+    # The network is trained now. Update the covariance matrix.
+    encoded_observation, _ = self._encoding_network(
+        observation, training=training)
+    encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
+    encoded_observation = tf.reshape(
+        encoded_observation, shape=[-1, self._encoding_dim])
+
+    self._train_step_counter.assign_add(1)
+
+    for k in range(self._num_models):
+      diag_mask = tf.linalg.tensor_diag(
+          tf.cast(tf.equal(action, k), self._dtype))
+      observations_for_arm = tf.matmul(diag_mask, encoded_observation)
+      rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
+
+      # Compute local updates for the matrix A and b of this arm.
+      cov_matrix_local_udpate = tf.matmul(
+          observations_for_arm, observations_for_arm, transpose_a=True)
+      data_vector_local_update = bandit_utils.sum_reward_weighted_observations(
+          rewards_for_arm, observations_for_arm)
+
+      def _merge_fn(strategy, per_replica_cov_matrix_update,
+                    per_replica_data_vector_update):
+        """Merge the per-replica-updates."""
+        # Reduce the per-replica-updates using SUM.
+        # pylint: disable=cell-var-from-loop
+        updates_and_vars = [
+            (per_replica_cov_matrix_update, self.cov_matrix[k]),
+            (per_replica_data_vector_update, self.data_vector[k])
+        ]
+
+        reduced_updates = strategy.extended.batch_reduce_to(
+            tf.distribute.ReduceOp.SUM, updates_and_vars)
+
+        # Update the model variables.
+        self.cov_matrix[k].assign(
+            self._gamma * self.cov_matrix[k] + reduced_updates[0])
+        self.data_vector[k].assign(
+            self._gamma * self.data_vector[k] + reduced_updates[1])
+
+      # Passes the local_updates to the _merge_fn() above that performs custom
+      # computation on the per-replica values.
+      # All replicas pause their execution until merge_call() is done and then,
+      # execution is resumed.
+      replica_context = tf.distribute.get_replica_context()
+      replica_context.merge_call(
+          _merge_fn,
+          args=(cov_matrix_local_udpate, data_vector_local_update))
+
+    loss = -1. * tf.reduce_sum(reward)
+    return tf_agent.LossInfo(loss=(loss), extra=())
+
   def _train(self, experience, weights=None):
     """Updates the policy based on the data in `experience`.
 
@@ -458,6 +536,15 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
          experience, self._observation_and_action_constraint_splitter,
          self._accepts_per_arm_features, self.training_data_spec)
     reward = tf.cast(reward, self._dtype)
+
+    if tf.distribute.has_strategy():
+      if self._distributed_train_encoding_network:
+        loss_info = self.compute_loss_using_reward_layer(
+            observation, action, reward, weights, training=True)
+      else:
+        loss_info = self.compute_loss_using_linucb_distributed(
+            observation, action, reward, weights, training=True)
+      return loss_info
 
     tf.compat.v1.assign(
         self.actions_from_reward_layer,
