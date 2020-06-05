@@ -213,5 +213,12 @@ def process_experience_for_neural_agents(
     observation[bandit_spec_utils.PER_ARM_FEATURE_KEY] = tf.nest.map_structure(
         lambda t: tf.expand_dims(t, axis=1), chosen_arm_features)
     action = tf.zeros_like(action)
+    if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation:
+      # This change is not crucial but since in training there will be only one
+      # action per sample, it's good to follow the convention that the feature
+      # value for `num_actions` be less than or equal to the maximum available
+      # number of actions.
+      observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY] = tf.ones_like(
+          observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY])
 
   return observation, action, reward

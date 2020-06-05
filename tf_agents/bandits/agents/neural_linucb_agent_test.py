@@ -451,7 +451,7 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(
         self.evaluate(variable_collection.actions_from_reward_layer), True)
 
-  def testTrainPerArmAgent(self):
+  def testTrainPerArmAgentWithMask(self):
     num_actions = 5
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         2, 3, num_actions, add_action_mask=True)
@@ -478,6 +478,65 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
             tf.cast(
                 tf.reshape(tf.range(30), shape=[2, 5, 3]), dtype=tf.float32)
     }, tf.ones(shape=(2, num_actions), dtype=tf.int32))
+    actions = np.array([0, 3], dtype=np.int32)
+    rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step = time_step.TimeStep(
+        tf.constant(
+            time_step.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[2],
+            name='step_type'),
+        tf.constant(0.0, dtype=tf.float32, shape=[2], name='reward'),
+        tf.constant(1.0, dtype=tf.float32, shape=[2], name='discount'),
+        observations)
+    final_step = time_step.TimeStep(
+        tf.constant(
+            time_step.StepType.LAST,
+            dtype=tf.int32,
+            shape=[2],
+            name='step_type'),
+        tf.constant(rewards, dtype=tf.float32, name='reward'),
+        tf.constant(1.0, dtype=tf.float32, shape=[2], name='discount'),
+        observations)
+    action_step = policy_step.PolicyStep(
+        action=tf.convert_to_tensor(actions),
+        info=policy_utilities.PerArmPolicyInfo(
+            chosen_arm_features=np.array([[1, 2, 3], [3, 2, 1]],
+                                         dtype=np.float32)))
+    experience = _get_experience(initial_step, action_step, final_step)
+    loss_info, _ = agent.train(experience, None)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    loss_value = self.evaluate(loss_info)
+    self.assertGreater(loss_value, 0.0)
+
+  def testTrainPerArmAgentVariableActions(self):
+    num_actions = 5
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        2, 3, num_actions, add_num_actions_feature=True)
+    time_step_spec = time_step.time_step_spec(obs_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    encoding_dim = 10
+    encoder = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            obs_spec, (4, 3), (3, 4), (4, 2), encoding_dim))
+    agent = neural_linucb_agent.NeuralLinUCBAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        encoding_network=encoder,
+        encoding_network_num_train_steps=10,
+        encoding_dim=encoding_dim,
+        accepts_per_arm_features=True,
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001))
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            tf.cast(
+                tf.reshape(tf.range(30), shape=[2, 5, 3]), dtype=tf.float32),
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+            tf.constant([3, 4], dtype=tf.int32)
+    }
     actions = np.array([0, 3], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
     initial_step = time_step.TimeStep(

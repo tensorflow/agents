@@ -397,7 +397,8 @@ class AgentTest(tf.test.TestCase):
       self.evaluate(loss_before)
 
   def testTrainPerArmAgent(self):
-    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        2, 3, 4, add_num_actions_feature=True)
     time_step_spec = ts.time_step_spec(obs_spec)
     reward_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
@@ -414,7 +415,9 @@ class AgentTest(tf.test.TestCase):
             tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
         bandit_spec_utils.PER_ARM_FEATURE_KEY:
             tf.cast(
-                tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32)
+                tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32),
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+            tf.ones([2], dtype=tf.int32)
     }
     actions = np.array([0, 3], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
@@ -476,16 +479,11 @@ class AgentTest(tf.test.TestCase):
   def testTrainPerArmAgentWithMask(self):
     num_actions = 4
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        2, 3, num_actions)
-    mask_obs_spec = (
-        obs_spec,
-        tensor_spec.BoundedTensorSpec(
-            shape=[num_actions], minimum=0, maximum=1, dtype=tf.float32)
-        )
-    time_step_spec = ts.time_step_spec(mask_obs_spec)
+        2, 3, num_actions, add_action_mask=True)
+    time_step_spec = ts.time_step_spec(obs_spec)
     reward_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            obs_spec, (4, 3), (3, 4), (4, 2)))
+            obs_spec[0], (4, 3), (3, 4), (4, 2)))
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
     agent = greedy_agent.GreedyRewardPredictionAgent(
         time_step_spec,
@@ -494,16 +492,13 @@ class AgentTest(tf.test.TestCase):
         observation_and_action_constraint_splitter=lambda x: [x[0], x[1]],
         accepts_per_arm_features=True,
         optimizer=optimizer)
-    observations = (
-        {
-            bandit_spec_utils.GLOBAL_FEATURE_KEY:
-                tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
-            bandit_spec_utils.PER_ARM_FEATURE_KEY:
-                tf.cast(
-                    tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32)
-        },
-        tf.ones([2, num_actions])
-        )
+    observations = ({
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            tf.cast(
+                tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32)
+    }, tf.ones([2, num_actions], dtype=tf.int32))
     actions = np.array([0, 3], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps_with_action_mask(

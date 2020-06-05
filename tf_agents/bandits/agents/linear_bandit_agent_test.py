@@ -123,11 +123,13 @@ def _get_initial_and_final_steps(batch_size, context_dim):
   return initial_step, final_step
 
 
-def _get_initial_and_final_steps_with_per_arm_features(batch_size,
-                                                       global_context_dim,
-                                                       num_actions,
-                                                       arm_context_dim,
-                                                       apply_mask=False):
+def _get_initial_and_final_steps_with_per_arm_features(
+    batch_size,
+    global_context_dim,
+    num_actions,
+    arm_context_dim,
+    apply_action_mask=False,
+    num_actions_feature=False):
   global_observation = np.array(range(batch_size * global_context_dim)).reshape(
       [batch_size, global_context_dim])
   arm_observation = np.array(range(
@@ -148,7 +150,11 @@ def _get_initial_and_final_steps_with_per_arm_features(batch_size,
               shape=[batch_size, num_actions, arm_context_dim],
               name='arm_observation')
   }
-  if apply_mask:
+  if num_actions_feature:
+    observation.update({
+        'num_actions': tf.ones([batch_size], dtype=tf.int32) * (num_actions - 1)
+    })
+  if apply_action_mask:
     observation = (observation,
                    tf.ones([batch_size, num_actions], dtype=tf.int32))
   initial_step = time_step.TimeStep(
@@ -174,7 +180,10 @@ def _get_initial_and_final_steps_with_per_arm_features(batch_size,
               shape=[batch_size, num_actions, arm_context_dim],
               name='arm_observation')
   }
-  if apply_mask:
+  if num_actions_feature:
+    observation.update(
+        {'num_actions': tf.ones([batch_size], dtype=tf.int32) * num_actions})
+  if apply_action_mask:
     observation = (observation,
                    tf.ones([batch_size, num_actions], dtype=tf.int32))
   final_step = time_step.TimeStep(
@@ -373,7 +382,11 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     arm_context_dim = 3
     initial_step, final_step = (
         _get_initial_and_final_steps_with_per_arm_features(
-            batch_size, global_context_dim, num_actions, arm_context_dim))
+            batch_size,
+            global_context_dim,
+            num_actions,
+            arm_context_dim,
+            num_actions_feature=True))
     action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
     action_step = policy_step.PolicyStep(
         action=tf.convert_to_tensor(action),
@@ -385,7 +398,7 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Construct an agent and perform the update.
     observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        context_dim, arm_context_dim, num_actions)
+        context_dim, arm_context_dim, num_actions, add_num_actions_feature=True)
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
@@ -436,7 +449,7 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
             global_context_dim,
             num_actions,
             arm_context_dim,
-            apply_mask=True))
+            apply_action_mask=True))
     action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
     action_step = policy_step.PolicyStep(
         action=tf.convert_to_tensor(action),

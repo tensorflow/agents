@@ -54,8 +54,8 @@ flags.DEFINE_enum(
 flags.DEFINE_bool('drop_arm_obs', False, 'Whether to wipe the arm observations '
                   'from the trajectories.')
 
-flags.DEFINE_bool('add_trivial_mask', False, 'Whether to add action masking '
-                  'that still allows all actions, for testing purposes.')
+flags.DEFINE_bool('add_num_actions_feature', False,
+                  'Whether to add a `num_actions` feature key.')
 
 FLAGS = flags.FLAGS
 
@@ -108,9 +108,8 @@ def main(unused_argv):
 
   observation_and_action_constraint_splitter = None
   num_actions_fn = None
-  if FLAGS.add_trivial_mask:
+  if FLAGS.add_num_actions_feature:
     num_actions_fn = lambda: NUM_ACTIONS
-    observation_and_action_constraint_splitter = lambda x: (x[0], x[1])
 
   env = sspe.StationaryStochasticPerArmPyEnvironment(
       _global_context_sampling_fn,
@@ -126,8 +125,6 @@ def main(unused_argv):
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
-        observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
         accepts_per_arm_features=True,
         dtype=tf.float32)
   elif FLAGS.agent == 'LinTS':
@@ -141,8 +138,6 @@ def main(unused_argv):
         dtype=tf.float32)
   elif FLAGS.agent == 'epsGreedy':
     obs_spec = environment.observation_spec()
-    if FLAGS.add_trivial_mask:
-      obs_spec = obs_spec[0]
     if FLAGS.network == 'commontower':
       network = (
           global_and_arm_feature_network
@@ -165,8 +160,6 @@ def main(unused_argv):
         emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
   elif FLAGS.agent == 'NeuralLinUCB':
     obs_spec = environment.observation_spec()
-    if FLAGS.add_trivial_mask:
-      obs_spec = obs_spec[0]
     network = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
             obs_spec, (40, 30), (30, 40), (40, 20), ENCODING_DIM))
@@ -180,8 +173,6 @@ def main(unused_argv):
         alpha=1.0,
         gamma=1.0,
         epsilon_greedy=EPSILON,
-        observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
         accepts_per_arm_features=True,
         debug_summaries=True,
         summarize_grads_and_vars=True,
@@ -189,8 +180,6 @@ def main(unused_argv):
 
   def _all_rewards(observation, hidden_param):
     """Outputs rewards for all actions, given an observation."""
-    if observation_and_action_constraint_splitter is not None:
-      observation = observation_and_action_constraint_splitter(observation)[0]
     hidden_param = tf.cast(hidden_param, dtype=tf.float32)
     global_obs = observation[bandit_spec_utils.GLOBAL_FEATURE_KEY]
     per_arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
@@ -218,9 +207,7 @@ def main(unused_argv):
 
   if FLAGS.drop_arm_obs:
     drop_arm_feature_fn = functools.partial(
-        bandit_spec_utils.drop_arm_observation,
-        observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter))
+        bandit_spec_utils.drop_arm_observation)
   else:
     drop_arm_feature_fn = None
   trainer.train(
