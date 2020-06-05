@@ -66,37 +66,13 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       self.assertLessEqual(action_counts[i], expected_counts[i]+delta)
       self.assertGreaterEqual(action_counts[i], expected_counts[i]-delta)
 
-  @parameterized.parameters({'epsilon': 0.0},
-                            {'epsilon': 0.2},
-                            {'epsilon': 0.7},
-                            {'epsilon': 1.0})
-  def testFixedEpsilon(self, epsilon):
-    if tf.executing_eagerly():
-      self.skipTest('b/123935683')
-
-    policy = epsilon_greedy_policy.EpsilonGreedyPolicy(self._policy,
-                                                       epsilon=epsilon)
-    self.assertEqual(policy.time_step_spec, self._time_step_spec)
-    self.assertEqual(policy.action_spec, self._action_spec)
-
-    policy_state = policy.get_initial_state(batch_size=2)
-    action_step = policy.action(self._time_step, policy_state, seed=54)
-    tf.nest.assert_same_structure(self._action_spec, action_step.action)
-
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    # Collect 100 steps with the current value of epsilon.
-    actions = []
-    num_steps = 100
-    for _ in range(num_steps):
-      action_ = self.evaluate(action_step.action)[0]
-      self.assertIn(action_, [0, 1, 2])
-      actions.append(action_)
-
-    self.checkActionDistribution(actions, epsilon, num_steps)
-
-  @parameterized.parameters({'epsilon': 0.0}, {'epsilon': 0.2},
-                            {'epsilon': 0.7}, {'epsilon': 1.0})
-  def testTensorEpsilon(self, epsilon):
+  @parameterized.named_parameters(
+      ('Tensor0.0', 0.0, True), ('Tensor0.2', 0.2, True),
+      ('Tensor0.7', 0.7, True), ('Tensor1.0', 1.0, True),
+      ('Fixed0.0', 0.0, False), ('Fixed0.2', 0.2, False),
+      ('Fixed0.7', 0.7, False), ('Fixed1.0', 1.0, False))
+  def testEpsilon(self, float_epsilon, is_tensor):
+    epsilon = tf.constant(float_epsilon) if is_tensor else float_epsilon
     policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         self._policy, epsilon=epsilon)
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
@@ -127,7 +103,7 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       actions.append(action_)
 
     # Verify that action distribution changes as we vary epsilon.
-    self.checkActionDistribution(actions, epsilon, num_steps)
+    self.checkActionDistribution(actions, float_epsilon, num_steps)
 
   def checkBanditPolicyTypeShape(self, bandit_policy_type, batch_size):
     self.assertAllEqual(bandit_policy_type.shape, [batch_size, 1])
