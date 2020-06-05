@@ -149,7 +149,8 @@ def _get_initial_and_final_steps_with_per_arm_features(batch_size,
               name='arm_observation')
   }
   if apply_mask:
-    observation = (observation, tf.ones([batch_size, num_actions]))
+    observation = (observation,
+                   tf.ones([batch_size, num_actions], dtype=tf.int32))
   initial_step = time_step.TimeStep(
       tf.constant(
           time_step.StepType.FIRST,
@@ -174,7 +175,8 @@ def _get_initial_and_final_steps_with_per_arm_features(batch_size,
               name='arm_observation')
   }
   if apply_mask:
-    observation = (observation, tf.ones([batch_size, num_actions]))
+    observation = (observation,
+                   tf.ones([batch_size, num_actions], dtype=tf.int32))
   final_step = time_step.TimeStep(
       tf.constant(
           time_step.StepType.LAST,
@@ -446,7 +448,7 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Construct an agent and perform the update.
     observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        context_dim, arm_context_dim, num_actions, apply_mask=True)
+        context_dim, arm_context_dim, num_actions, add_action_mask=True)
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)

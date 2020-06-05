@@ -453,10 +453,8 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def testTrainPerArmAgent(self):
     num_actions = 5
-    mask_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(num_actions,), minimum=0, maximum=1)
-    obs_spec = (bandit_spec_utils.create_per_arm_observation_spec(
-        2, 3, num_actions), mask_spec)
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        2, 3, num_actions, add_action_mask=True)
     time_step_spec = time_step.time_step_spec(obs_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)

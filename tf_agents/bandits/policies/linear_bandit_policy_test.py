@@ -92,7 +92,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
                                 tensor_spec.TensorSpec([self._num_actions],
                                                        tf.int32))
     self._per_arm_obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        self._obs_dim, 4, self._num_actions)
+        self._obs_dim, 4, self._num_actions, add_num_actions_feature=True)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._time_step_spec_with_mask = ts.time_step_spec(self._obs_spec_with_mask)
     self._per_arm_time_step_spec = ts.time_step_spec(self._per_arm_obs_spec)
@@ -165,7 +165,10 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
                     np.array(range(batch_size * self._num_actions * 4)),
                     dtype=tf.float32,
                     shape=[batch_size, self._num_actions, 4],
-                    name='observation')
+                    name='observation'),
+            bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+                tf.ones([batch_size], dtype=tf.int32) * 2
+
         })
 
   def _time_step_batch_with_mask(self, batch_size):
@@ -219,7 +222,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
             dtype=tf.float32,
             shape=[batch_size, self._obs_dim + 1],
             name='observation'))
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, r'Global observation shape is expected to be \[None, 2\].'
         r' Got \[%d, 3\].' % batch_size):
       policy.action(current_time_step)

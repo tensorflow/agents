@@ -20,8 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.specs import tensor_spec
 
 GLOBAL_FEATURE_KEY = 'global'
@@ -36,23 +36,53 @@ CONSTRAINTS_SPEC_KEY = 'constraint'
 
 def create_per_arm_observation_spec(global_dim,
                                     per_arm_dim,
-                                    num_actions,
-                                    apply_mask=False):
-  """Creates an observation spec with per-arm features and possibly action mask."""
+                                    max_num_actions=None,
+                                    add_num_actions_feature=False,
+                                    add_action_mask=False):
+  """Creates an observation spec with per-arm features and possibly action mask.
+
+  Args:
+    global_dim: (int) The global feature dimension.
+    per_arm_dim: (int) The per-arm feature dimension.
+    max_num_actions: If specified (int), this is the maximum number of actions
+      in any sample, and the num_actions dimension of the per-arm features
+      will be set to this number. The actual number of actions for a given
+      sample can be lower than this parameter: it can be specified via the
+      NUM_ACTIONS_FEATURE_KEY, or an action mask.
+    add_num_actions_feature: (bool) whether to use the `num_actions` feature key
+      to encode the number of actions per sample.
+    add_action_mask: (bool) whether to use an action mask to encode the number
+      of actions per sample. This option is discouraged for problems with per-
+      arm features, as the `num_actions` feature key is more natural. Using the
+      feature and the mask together is prohibited.
+
+  Returns:
+    A nested structure of observation spec.
+  """
+  assert not (
+      add_num_actions_feature and add_action_mask
+  ), 'Action mask and `num_actions` feature key can not be used together.'
   global_obs_spec = tensor_spec.TensorSpec((global_dim,), tf.float32)
-  arm_obs_spec = tensor_spec.TensorSpec((num_actions, per_arm_dim), tf.float32)
-  obs_spec = {
-      GLOBAL_FEATURE_KEY: global_obs_spec,
-      PER_ARM_FEATURE_KEY: arm_obs_spec
-  }
-  if apply_mask:
-    obs_spec = (obs_spec,
-                tensor_spec.BoundedTensorSpec(
-                    shape=(num_actions,),
-                    minimum=0,
-                    maximum=1,
-                    dtype=tf.float32))
-  return obs_spec
+  arm_obs_spec = tensor_spec.TensorSpec((max_num_actions, per_arm_dim),
+                                        tf.float32)
+  observation_spec = {GLOBAL_FEATURE_KEY: global_obs_spec,
+                      PER_ARM_FEATURE_KEY: arm_obs_spec}
+  if add_num_actions_feature:
+    observation_spec.update({
+        NUM_ACTIONS_FEATURE_KEY:
+            tensor_spec.BoundedTensorSpec((),
+                                          minimum=1,
+                                          maximum=max_num_actions,
+                                          dtype=tf.int32)
+    })
+  elif add_action_mask:
+    logging.warning('Action masking with per-arm features is discouraged. '
+                    'Instead, use variable number of actions via the `%s` '
+                    'feature key.', NUM_ACTIONS_FEATURE_KEY)
+    mask_spec = tensor_spec.BoundedTensorSpec(
+        shape=(max_num_actions,), minimum=0, maximum=1, dtype=tf.int32)
+    observation_spec = (observation_spec, mask_spec)
+  return observation_spec
 
 
 def get_context_dims_from_spec(context_spec, accepts_per_arm_features):

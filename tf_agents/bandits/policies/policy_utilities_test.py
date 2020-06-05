@@ -24,7 +24,9 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.agents import constraints
+from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.policies import policy_utilities
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -163,6 +165,50 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
         action_mask=action_mask)
     self.assertAllEqual(self.evaluate(tf.cast(action_mask, tf.float32)),
                         self.evaluate(feasibility_prob))
+
+  def testComputeMaskFromMultipleSourcesNumActionsFeature(self):
+    observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        4, 5, 6, add_num_actions_feature=True)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 5)
+    constraint_net = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            observation_spec, (3, 4), (4, 3), (2, 3)))
+    neural_constraint = constraints.NeuralConstraint(
+        time_step_spec,
+        action_spec,
+        constraint_network=constraint_net)
+
+    observations = {
+        'global': tf.constant([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32),
+        'per_arm': tf.reshape(tf.range(60, dtype=tf.float32), shape=[2, 6, 5]),
+        'num_actions': tf.constant([4, 3], dtype=tf.int32)
+    }
+    mask = policy_utilities.construct_mask_from_multiple_sources(
+        observations, None, [neural_constraint], 6)
+    implied_mask = [[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]]
+    self.assertAllGreaterEqual(implied_mask - mask, 0)
+
+  def testComputeMaskFromMultipleSourcesMask(self):
+    observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        4, 5, 6)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 5)
+    constraint_net = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            observation_spec, (3, 4), (4, 3), (2, 3)))
+    neural_constraint = constraints.NeuralConstraint(
+        time_step_spec,
+        action_spec,
+        constraint_network=constraint_net)
+    original_mask = [[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]]
+    observations = ({
+        'global': tf.constant([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32),
+        'per_arm': tf.reshape(tf.range(60, dtype=tf.float32), shape=[2, 6, 5]),
+    }, original_mask)
+    mask = policy_utilities.construct_mask_from_multiple_sources(
+        observations, lambda x: (x[0], x[1]), [neural_constraint], 6)
+    self.assertAllGreaterEqual(original_mask - mask, 0)
 
 
 if __name__ == '__main__':

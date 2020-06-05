@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.policies import linalg
@@ -203,9 +202,10 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
           [self._num_actions],
           dtype=tf.float32)
     if accepts_per_arm_features:
-      arm_spec = context_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
-      chosen_arm_features_info_spec = tensor_spec.remove_outer_dims_nest(
-          arm_spec, 1)
+      chosen_arm_features_info_spec = (
+          policy_utilities.create_chosen_arm_features_info_spec(
+              time_step_spec.observation,
+              observation_and_action_constraint_splitter))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
           predicted_rewards_optimistic=predicted_rewards_optimistic,
@@ -308,12 +308,12 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
 
   def _action(self, time_step, policy_state, seed):
     observation = time_step.observation
-    mask = None
-    observation_and_action_constraint_splitter = (
-        self.observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter is not None:
-      observation, mask = observation_and_action_constraint_splitter(
+    if self.observation_and_action_constraint_splitter is not None:
+      observation, _ = self.observation_and_action_constraint_splitter(
           observation)
+    mask = policy_utilities.construct_mask_from_multiple_sources(
+        time_step.observation, self._observation_and_action_constraint_splitter,
+        (), self._num_actions)
     # Pass the observations through the encoding network.
     encoded_observation, _ = self._encoding_network(observation)
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)

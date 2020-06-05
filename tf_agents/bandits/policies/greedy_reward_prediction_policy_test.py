@@ -290,8 +290,6 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
                         predicted_rewards_expected_array)
 
   def testPerArmRewards(self):
-    if not tf.executing_eagerly():
-      return
     tf.compat.v1.set_random_seed(3000)
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
     time_step_spec = ts.time_step_spec(obs_spec)
@@ -320,13 +318,14 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    action = self.evaluate(action_step.action)
+    action, p_info, first_arm_features = self.evaluate([
+        action_step.action, action_step.info,
+        observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
+    ])
     self.assertAllEqual(action.shape, [2])
-    p_info = self.evaluate(action_step.info)
     self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 4])
     self.assertAllEqual(p_info.chosen_arm_features.shape, [2, 3])
     first_action = action[0]
-    first_arm_features = observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
     self.assertAllEqual(p_info.chosen_arm_features[0],
                         first_arm_features[first_action])
 
@@ -334,6 +333,10 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     # rewards for unchanged actions. This is to make sure that action feature
     # padding does not influence the behavior.
 
+    if not tf.executing_eagerly():
+      # The below comparison will only work in tf2 because of the random per-arm
+      # observations get re-drawn in tf1.
+      return
     padded_action_feature = tf.concat(
         [action_feature[:, 0:1, :],
          tf.zeros(shape=[2, 3, 3], dtype=tf.float32)],
@@ -349,9 +352,51 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.assertAllEqual(p_info.predicted_rewards_mean[:, 0],
                         padded_p_info.predicted_rewards_mean[:, 0])
 
+  def testPerArmRewardsVariableNumActions(self):
+    tf.compat.v1.set_random_seed(3000)
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        2, 3, 4, add_num_actions_feature=True)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 3)
+    reward_network = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+
+    policy = greedy_reward_policy.GreedyRewardPredictionPolicy(
+        time_step_spec,
+        action_spec,
+        reward_network=reward_network,
+        accepts_per_arm_features=True,
+        emit_policy_info=('predicted_rewards_mean',))
+    action_feature = tf.cast(
+        tf.reshape(tf.random.shuffle(tf.range(24)), shape=[2, 4, 3]),
+        dtype=tf.float32)
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            action_feature,
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+            tf.constant([2, 3], dtype=tf.int32)
+    }
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    action, p_info, first_arm_features = self.evaluate([
+        action_step.action, action_step.info,
+        observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
+    ])
+    self.assertAllEqual(action.shape, [2])
+    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 4])
+    self.assertAllEqual(p_info.chosen_arm_features.shape, [2, 3])
+    first_action = action[0]
+    self.assertAllEqual(p_info.chosen_arm_features[0],
+                        first_arm_features[first_action])
+
   def testPerArmRewardsSparseObs(self):
-    if not tf.executing_eagerly():
-      return
     tf.compat.v1.set_random_seed(3000)
     obs_spec = {
         'global': {'sport': tensor_spec.TensorSpec((), tf.string)},
@@ -408,16 +453,19 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    action = self.evaluate(action_step.action)
+    self.evaluate([
+        tf.compat.v1.global_variables_initializer(),
+        tf.compat.v1.tables_initializer()
+    ])
+    action, p_info, first_arm_name_feature = self.evaluate([
+        action_step.action, action_step.info,
+        observations[bandit_spec_utils.PER_ARM_FEATURE_KEY]['name'][0]
+    ])
     self.assertAllEqual(action.shape, [2])
-    p_info = self.evaluate(action_step.info)
     self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3])
     self.assertAllEqual(p_info.chosen_arm_features['name'].shape, [2])
     self.assertAllEqual(p_info.chosen_arm_features['fruit'].shape, [2])
     first_action = action[0]
-    first_arm_name_feature = observations[
-        bandit_spec_utils.PER_ARM_FEATURE_KEY]['name'][0]
     self.assertAllEqual(p_info.chosen_arm_features['name'][0],
                         first_arm_name_feature[first_action])
 

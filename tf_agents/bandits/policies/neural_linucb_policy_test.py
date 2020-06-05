@@ -183,7 +183,9 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
                         range(batch_size * self._num_actions * arm_obs_dim)),
                     dtype=tf.float32,
                     shape=[batch_size, self._num_actions, arm_obs_dim],
-                    name='observation')
+                    name='observation'),
+            bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+                tf.ones([batch_size], dtype=tf.int32) * (self._num_actions - 1)
         })
 
   def _get_predicted_rewards_from_linucb(self, observation_numpy, batch_size):
@@ -439,7 +441,10 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
     global_obs_dim = 7
     arm_obs_dim = 3
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        global_obs_dim, arm_obs_dim, self._num_actions)
+        global_obs_dim,
+        arm_obs_dim,
+        self._num_actions,
+        add_num_actions_feature=True)
     time_step_spec = ts.time_step_spec(obs_spec)
     dummy_net = arm_network.create_feed_forward_common_tower_network(
         obs_spec,

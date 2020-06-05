@@ -157,7 +157,6 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     self._tikhonov_weight = tikhonov_weight
     self._add_bias = add_bias
     self._accepts_per_arm_features = accepts_per_arm_features
-
     if tf.nest.is_nested(action_spec):
       raise ValueError('Nested `action_spec` is not supported.')
 
@@ -171,6 +170,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     (self._global_context_dim,
      self._arm_context_dim) = bandit_spec_utils.get_context_dims_from_spec(
          context_spec, accepts_per_arm_features)
+
     if self._add_bias:
       # The bias is added via a constant 1 feature.
       self._global_context_dim += 1
@@ -191,7 +191,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
 
     self._dtype = self._data_vector[0].dtype
     self._emit_policy_info = emit_policy_info
-    info_spec = self._populate_policy_info_spec(context_spec)
+    info_spec = self._populate_policy_info_spec(
+        time_step_spec.observation, observation_and_action_constraint_splitter)
 
     super(LinearBanditPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -212,10 +213,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
-    observation_and_action_constraint_splitter = (
-        self.observation_and_action_constraint_splitter)
-    if observation_and_action_constraint_splitter is not None:
-      observation, mask = observation_and_action_constraint_splitter(
+    if self.observation_and_action_constraint_splitter is not None:
+      observation, _ = self.observation_and_action_constraint_splitter(
           observation)
     observation = tf.nest.map_structure(lambda o: tf.cast(o, dtype=self._dtype),
                                         observation)
@@ -287,7 +286,11 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     else:
       raise ValueError('Exploraton strategy %s not implemented.' %
                        self._exploration_strategy)
-    if observation_and_action_constraint_splitter is not None:
+
+    mask = policy_utilities.construct_mask_from_multiple_sources(
+        time_step.observation, self._observation_and_action_constraint_splitter,
+        (), self._num_actions)
+    if mask is not None:
       chosen_actions = policy_utilities.masked_argmax(
           rewards_for_argmax, mask, output_type=self._action_spec.dtype)
     else:
@@ -328,7 +331,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
             'the number of actions derived from `action_spec` ({}).'.format(
                 len(self._cov_matrix), self._num_actions))
 
-  def _populate_policy_info_spec(self, context_spec):
+  def _populate_policy_info_spec(self, observation_spec,
+                                 observation_and_action_constraint_splitter):
     predicted_rewards_mean = ()
     if (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
         self._emit_policy_info):
@@ -341,11 +345,9 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
                                                          dtype=self._dtype)
     if self._accepts_per_arm_features:
       # The features for the chosen arm is saved to policy_info.
-      arm_spec = context_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
-      chosen_arm_features_info = tensor_spec.TensorSpec(
-          dtype=arm_spec.dtype,
-          shape=arm_spec.shape[1:],
-          name='chosen_arm_features')
+      chosen_arm_features_info = (
+          policy_utilities.create_chosen_arm_features_info_spec(
+              observation_spec, observation_and_action_constraint_splitter))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
           predicted_rewards_sampled=predicted_rewards_sampled,

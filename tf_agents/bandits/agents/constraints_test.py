@@ -135,7 +135,7 @@ class NeuralConstraintTest(tf.test.TestCase):
 
   def testComputeLossWithArmFeatures(self):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        global_dim=2, per_arm_dim=3, num_actions=3)
+        global_dim=2, per_arm_dim=3, max_num_actions=3)
     time_step_spec = ts.time_step_spec(obs_spec)
     constraint_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
