@@ -214,20 +214,30 @@ class DynamicUnroll(tf.keras.layers.Layer):
     self.cell.build(input_shape)
     self.built = True
 
-  def call(self, inputs, reset_mask, initial_state=None, training=False):
+  def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
+    if inputs is not None:
+      return self.cell.get_initial_state(inputs)
+    else:
+      return self.cell.get_initial_state(
+          batch_size=batch_size, dtype=dtype or self.dtype)
+
+  def call(self, inputs, initial_state=None, reset_mask=None, training=False):
     """Perform the computation.
 
     Args:
       inputs: A tuple containing tensors in batch-major format,
         each shaped `[batch_size, n, ...]`.
-      reset_mask: A `bool` matrix shaped `[batch_size, n]`, describing the
-        locations for which the state will be reset to zeros.  Typically this is
-        the value `time_steps.is_first()` where `time_steps` is a `TimeStep`
-        containing tensors of the shape `[batch_size, n, ...]`.
+      initial_state: (Optional) An initial state for `cell`.  If not provided,
+        `dtype` must be set and `cell.get_initial_state()` is used instead.
+      reset_mask (Optional): A `bool` matrix shaped `[batch_size, n]`,
+        describing the locations for which the state will be reset to zeros.
+        Typically this is the value `time_steps.is_first()` where `time_steps`
+        is a `TimeStep` containing tensors of the shape `[batch_size, n, ...]`.
         The `zero_state` of the cell will be used whenever `reset` is `True`,
         instead of either the current state or the `initial_state`.
-      initial_state: (optional) An initial state for `cell`.  If not provided,
-        `dtype` must be set and `cell.get_initial_state()` is used instead.
+
+        If this argument is not provided, state resetting is not performed
+        (this tends to speed up the computation by a non-negligible amount).
       training: Whether the output is being used for training.
 
     Returns:
@@ -255,7 +265,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
     const_batch_size = tensor_shape.dimension_value(inputs_static_shapes[0][1])
 
     # reset_mask is batch major.  Convert to time major.
-    reset_mask = tf.transpose(a=reset_mask)
+    if reset_mask is not None:
+      reset_mask = tf.transpose(a=reset_mask)
 
     for shape in inputs_static_shapes:
       got_batch_size = tensor_shape.dimension_value(shape[1])
@@ -326,11 +337,11 @@ def _static_unroll_single_step(cell,
 
   # Remove time dimension.
   inputs = tf.nest.map_structure(_squeeze, inputs)
-  reset_mask = _squeeze(reset_mask)
-
-  state = tf.nest.map_structure(
-      lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s), state,
-      zero_state)
+  if reset_mask is not None:
+    reset_mask = _squeeze(reset_mask)
+    state = tf.nest.map_structure(
+        lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s), state,
+        zero_state)
 
   outputs, final_state = cell(inputs, state, training=training)
   outputs = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1), outputs)
@@ -359,7 +370,10 @@ def _dynamic_unroll_multi_step(cell,
             .unstack(x))
 
   inputs_tas = tf.nest.map_structure(ta_and_unstack, inputs)
-  reset_mask_ta = ta_and_unstack(reset_mask)
+  if reset_mask is None:
+    reset_mask_ta = None
+  else:
+    reset_mask_ta = ta_and_unstack(reset_mask)
 
   # Create a TensorArray for each output
   def create_output_ta(s):
@@ -389,10 +403,11 @@ def _dynamic_unroll_multi_step(cell,
       - masks_ta: optional mask tensorarray with mask written @ time
     """
     input_ = tf.nest.map_structure(lambda ta: ta.read(time), inputs_tas)
-    is_reset = reset_mask_ta.read(time)
-    state = tf.nest.map_structure(
-        lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s), zero_state,
-        state)
+    if reset_mask_ta is not None:
+      is_reset = reset_mask_ta.read(time)
+      state = tf.nest.map_structure(
+          lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s), zero_state,
+          state)
 
     outputs, next_state = cell(input_, state, training=training)
 

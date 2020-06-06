@@ -150,7 +150,7 @@ class ActorRnnNetwork(network.Network):
     # Unroll over the time sequence.
     states, network_state = self._dynamic_unroll(
         states,
-        reset_mask,
+        reset_mask=reset_mask,
         initial_state=network_state,
         training=training)
 
