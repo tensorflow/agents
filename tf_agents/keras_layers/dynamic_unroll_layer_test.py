@@ -25,7 +25,6 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.keras_layers import dynamic_unroll_layer
-from tensorflow.python.framework import test_util  # TF internal
 
 
 class AddInputAndStateKerasRNNCell(tf.keras.layers.Layer):
@@ -100,7 +99,23 @@ class DynamicUnrollTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllClose(outputs_dun, outputs_drnn)
     self.assertAllClose(final_state_dun, final_state_drnn)
 
-  @test_util.run_in_graph_and_eager_modes()
+  def testNoTimeDimensionMatchesSingleStep(self):
+    cell = tf.keras.layers.LSTMCell(3)
+    batch_size = 4
+    max_time = 1
+    inputs = tf.random.uniform((batch_size, max_time, 2), dtype=tf.float32)
+    inputs_no_time = tf.squeeze(inputs, axis=1)
+    layer = dynamic_unroll_layer.DynamicUnroll(cell, dtype=tf.float32)
+    outputs, next_state = layer(inputs)
+    outputs_squeezed_time = tf.squeeze(outputs, axis=1)
+    outputs_no_time, next_state_no_time = layer(inputs_no_time)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    outputs_squeezed_time, next_state, outputs_no_time, next_state_no_time = (
+        self.evaluate((outputs_squeezed_time, next_state,
+                       outputs_no_time, next_state_no_time)))
+    self.assertAllEqual(outputs_squeezed_time, outputs_no_time)
+    self.assertAllEqual(next_state, next_state_no_time)
+
   def testDynamicUnrollResetsStateOnReset(self):
     if hasattr(tf, 'contrib'):
       class AddInputAndStateRNNCell(tf.contrib.rnn.LayerRNNCell):
