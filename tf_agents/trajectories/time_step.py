@@ -20,7 +20,6 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-import functools
 import numpy as np
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -30,7 +29,14 @@ from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
 from typing import NamedTuple, Optional
 
-_as_float32_array = functools.partial(np.asarray, dtype=np.float32)
+
+def _as_float32_array(a):
+  r = np.asarray(a, dtype=np.float32)
+  if np.isnan(np.sum(r)):
+    raise ValueError('Received a time_step input that converted to a nan array.'
+                     ' Did you accidentally set some input value to None?.\n'
+                     'Got:\n{}'.format(a))
+  return r
 
 
 class TimeStep(
