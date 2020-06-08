@@ -207,3 +207,80 @@ class QuantileConstraint(NeuralConstraint):
     is_satisfied = self._comparator_fn(
         predicted_quantiles, self._quantile_value)
     return tf.cast(is_satisfied, tf.float32)
+
+
+class RelativeQuantileConstraint(NeuralConstraint):
+  """Class for representing a trainable relative quantile constraint.
+
+  This constraint class implements a relative quantile constraint such as
+  ```
+  Q_tau(action) >= Q_tau(baseline_action)
+  ```
+  or
+  ```
+  Q_tau(action) <= Q_tau(baseline_action)
+  ```
+  """
+
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      constraint_network,
+      quantile=0.5,
+      comparator_fn=tf.greater,
+      baseline_action_fn=None,
+      name='RelativeQuantileConstraint'):
+    """Creates a trainable relative quantile constraint using a neural network.
+
+    Args:
+      time_step_spec: A `TimeStep` spec of the expected time_steps.
+      action_spec: A nest of `BoundedTensorSpec` representing the actions.
+      constraint_network: An instance of `tf_agents.network.Network` used to
+        provide estimates of action feasibility.  The input structure should be
+        consistent with the `observation_spec`.
+      quantile: A float between 0. and 1., the quantile we want to regress.
+      comparator_fn: a comparator function, such as tf.greater or tf.less.
+      baseline_action_fn: a callable that given the observation returns the
+         baseline action. If None, the baseline action is set to 0.
+      name: Python str name of this agent. All variables in this module will
+        fall under that name. Defaults to the class name.
+    """
+    self._baseline_action_fn = baseline_action_fn
+    self._comparator_fn = comparator_fn
+    self._error_loss_fn = functools.partial(
+        loss_utils.pinball_loss,
+        quantile=quantile)
+
+    super(RelativeQuantileConstraint, self).__init__(
+        time_step_spec,
+        action_spec,
+        constraint_network,
+        error_loss_fn=self._error_loss_fn,
+        name=name)
+
+  def _reshape_tensor(self, input_tensor, to_shape):
+    input_tensor = tf.reshape(input_tensor, [-1, 1])
+    return tf.broadcast_to(input_tensor, to_shape)
+
+  def __call__(self, observation, actions=None):
+    """Returns the probability of input actions being feasible."""
+    predicted_quantiles, _ = self._constraint_network(
+        observation, training=False)
+    batch_dims = nest_utils.get_outer_shape(
+        observation, self._time_step_spec.observation)
+
+    if self._baseline_action_fn is not None:
+      baseline_action = self._baseline_action_fn(observation)
+      baseline_action.shape.assert_is_compatible_with(batch_dims)
+    else:
+      baseline_action = tf.zeros(batch_dims, dtype=tf.int32)
+
+    predicted_quantiles_for_baseline_actions = common.index_with_actions(
+        predicted_quantiles,
+        tf.cast(baseline_action, dtype=tf.int32))
+    predicted_quantiles_for_baseline_actions = self._reshape_tensor(
+        predicted_quantiles_for_baseline_actions, tf.shape(predicted_quantiles))
+    is_satisfied = self._comparator_fn(
+        predicted_quantiles, predicted_quantiles_for_baseline_actions)
+    return tf.cast(is_satisfied, tf.float32)
