@@ -20,7 +20,9 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.agents import constraints
 from tf_agents.bandits.metrics import tf_metrics
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tensorflow.python.eager import context  # pylint: disable=g-direct-tensorflow-import  # TF internal
@@ -33,6 +35,26 @@ def compute_optimal_reward(unused_observation):
 
 def compute_optimal_action(unused_observation):
   return tf.constant(5, dtype=tf.int32)
+
+
+class SimpleThresholdConstraint(constraints.BaseConstraint):
+
+  def __init__(self, time_step_spec, action_spec, batch_size, threshold,
+               name=None):
+    self.batch_size = batch_size
+    self.threshold = threshold
+    super(SimpleThresholdConstraint, self).__init__(
+        time_step_spec, action_spec, name='SimpleThresholdConstraint')
+
+  def __call__(self, observation, actions=None):
+    """Returns the probability of input actions being feasible."""
+    if actions is None:
+      actions = tf.range(
+          self._action_spec.minimum, self._action_spec.maximum + 1)
+      actions = tf.reshape(actions, [1, -1])
+      actions = tf.tile(actions, [self.batch_size, 1])
+    feasibility_prob = tf.cast(tf.greater(actions, self.threshold), tf.float32)
+    return feasibility_prob
 
 
 class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
@@ -49,6 +71,19 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
   def _create_batched_trajectory(self, batch_size):
     return trajectory.Trajectory(observation=(),
                                  action=tf.range(batch_size, dtype=tf.int32),
+                                 policy_info=(),
+                                 reward=tf.range(batch_size, dtype=tf.float32),
+                                 discount=tf.ones(batch_size),
+                                 step_type=ts.StepType.FIRST,
+                                 next_step_type=ts.StepType.LAST)
+
+  def _create_test_trajectory(self, batch_size):
+    num_actions = tf.cast(batch_size / 2, dtype=tf.int32)
+    action_tensor = tf.concat([
+        tf.range(num_actions, dtype=tf.int32),
+        tf.range(num_actions, dtype=tf.int32)], axis=-1)
+    return trajectory.Trajectory(observation=tf.ones(batch_size),
+                                 action=action_tensor,
                                  policy_info=(),
                                  reward=tf.range(batch_size, dtype=tf.float32),
                                  discount=tf.ones(batch_size),
@@ -129,6 +164,31 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       batch_size=8, expected_result=6.5):
     traj = self._create_batched_trajectory_with_reward_dict(batch_size)
     metric = metric_class(fn)
+    self.evaluate(metric.init_variables())
+    traj_out = metric(traj)
+    deps = tf.nest.flatten(traj_out)
+    with tf.control_dependencies(deps):
+      result = metric.result()
+    result_ = self.evaluate(result)
+    self.assertEqual(result_, expected_result)
+
+  @parameterized.named_parameters([
+      ('TestConstraintViolationTh1', 8, 1, 0.5),
+      ('TestConstraintViolationTh2', 8, 2, 0.75),
+  ])
+  def testConstraintViolationMetric(
+      self, batch_size, threshold, expected_result):
+    traj = self._create_test_trajectory(batch_size)
+    num_actions = batch_size / 2
+
+    obs_spec = tensor_spec.TensorSpec([], tf.float32)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions-1)
+    stc = SimpleThresholdConstraint(
+        time_step_spec, action_spec, batch_size=batch_size,
+        threshold=threshold)
+    metric = tf_metrics.ConstraintViolationsMetric(constraint=stc)
     self.evaluate(metric.init_variables())
     traj_out = metric(traj)
     deps = tf.nest.flatten(traj_out)

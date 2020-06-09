@@ -111,3 +111,51 @@ class SuboptimalArmsMetric(tf_metric.TFStepMetric):
   def result(self):
     return tf.identity(
         self.suboptimal_arms, name=self.name)
+
+
+@gin.configurable
+class ConstraintViolationsMetric(tf_metric.TFStepMetric):
+  """Computes the violations of a certain constraint."""
+
+  def __init__(self,
+               constraint,
+               name='ConstraintViolationMetric',
+               dtype=tf.float32):
+    """Computes the constraint violations given an input constraint.
+
+    Given a certain constraint, this metric computes how often the selected
+    actions in the trajectory violate the constraint.
+
+    Args:
+      constraint: an instance of `tf_agents.bandits.agents.BaseConstraint`.
+      name: (str) name of the metric
+      dtype: dtype of the metric value.
+    """
+    self._constraint = constraint
+    self.dtype = dtype
+    self.constraint_violations = common.create_variable(
+        initial_value=0.0,
+        dtype=self.dtype,
+        shape=(),
+        name='constraint_violations')
+    super(ConstraintViolationsMetric, self).__init__(name=name)
+
+  def call(self, trajectory):
+    """Update the constraint violations metric.
+
+    Args:
+      trajectory: A tf_agents.trajectory.Trajectory
+
+    Returns:
+      The arguments, for easy chaining.
+    """
+    feasibility_prob_all_actions = self._constraint(trajectory.observation)
+    feasibility_prob_selected_actions = common.index_with_actions(
+        feasibility_prob_all_actions,
+        tf.cast(trajectory.action, dtype=tf.int32))
+    self.constraint_violations.assign(tf.reduce_mean(
+        1.0 - feasibility_prob_selected_actions))
+    return trajectory
+
+  def result(self):
+    return tf.identity(self.constraint_violations, name=self.name)
