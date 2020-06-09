@@ -15,10 +15,6 @@
 
 """Base class for drivers that takes steps in an environment."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import abc
 import six
 

@@ -15,10 +15,6 @@
 
 """Tests for tf_agents.bandits.agents.loss_utils."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.agents import loss_utils

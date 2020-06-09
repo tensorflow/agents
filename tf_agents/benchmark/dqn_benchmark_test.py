@@ -16,10 +16,6 @@
 # Lint as: python2, python3
 """Benchmarks for DqnAgent."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import unittest
 
 import numpy as np

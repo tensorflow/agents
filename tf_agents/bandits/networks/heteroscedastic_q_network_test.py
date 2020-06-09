@@ -15,10 +15,6 @@
 
 """Tests for tf_agents.network.heteroscedastic_q_network."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import math
 
 import gin

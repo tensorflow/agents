@@ -15,10 +15,6 @@
 
 """Tests for tf_agents.bandits.agents.examples.v1.trainer."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import tempfile
 import unittest

@@ -19,10 +19,6 @@ Note: The training samples are *not* drawn at random from the replay buffer.
 Hence, this setup is not ideal for DQN.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import os
 from absl import app

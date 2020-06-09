@@ -17,10 +17,6 @@
 """Helper function to do reparameterized sampling if the distributions supports it.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import gumbel_softmax

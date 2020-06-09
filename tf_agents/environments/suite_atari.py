@@ -14,11 +14,6 @@
 # limitations under the License.
 
 """Suite for loading Atari Gym environments."""
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 from typing import Dict, Optional, Sequence, Text
 
 import atari_py  # pylint: disable=unused-import

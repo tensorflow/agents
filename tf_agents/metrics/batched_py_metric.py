@@ -15,11 +15,6 @@
 
 """A python metric that can be called with batches of trajectories."""
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import numpy as np
 from tf_agents.metrics import py_metric
 from tf_agents.trajectories import trajectory as traj

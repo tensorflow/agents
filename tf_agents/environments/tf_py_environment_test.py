@@ -15,10 +15,6 @@
 
 """Tests for reinforment_learning.environment.tf_py_environment."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import threading
 
 from absl.testing import parameterized

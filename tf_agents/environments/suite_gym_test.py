@@ -15,10 +15,6 @@
 
 """Test for tf_agents.environments.suite_gym."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 
 import gin

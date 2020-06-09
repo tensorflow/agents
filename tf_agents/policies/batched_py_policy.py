@@ -16,11 +16,6 @@
 # Lint as: python3
 """Treat multiple non-batch policies as a single batch policy."""
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 # pylint: disable=line-too-long
 # multiprocessing.dummy provides a pure *multithreaded* threadpool that works
 # in both python2 and python3 (concurrent.futures isn't available in python2).

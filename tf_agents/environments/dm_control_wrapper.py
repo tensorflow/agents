@@ -15,10 +15,6 @@
 
 """Wrapper providing a PyEnvironmentBase adapter for Gym environments."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import

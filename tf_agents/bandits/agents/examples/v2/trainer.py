@@ -15,10 +15,6 @@
 
 r"""Generic TF-Agents training function for bandits."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 from absl import logging
 

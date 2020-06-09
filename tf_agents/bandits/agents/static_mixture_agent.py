@@ -14,10 +14,6 @@
 # limitations under the License.
 
 """An agent that mixes a list of agents with a constant mixture distribution."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gin
 
 from tf_agents.bandits.agents import mixture_agent

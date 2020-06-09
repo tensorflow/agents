@@ -16,10 +16,6 @@
 # Lint as: python3
 """Policy wrapper that updates `policy_info` from wrapped policy."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from typing import Callable, Text, Dict, Union, Sequence, Optional
 
 import tensorflow.compat.v2 as tf

@@ -25,11 +25,6 @@ This includes:
   . Resizing the image before it is provided to the agent.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import gin
 import gym
 from gym import core as gym_core

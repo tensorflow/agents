@@ -14,10 +14,6 @@
 # limitations under the License.
 
 """Base class for Bandit Python environments."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import abc
 import numpy as np
 

@@ -14,10 +14,6 @@
 # limitations under the License.
 
 """Policy implementation that generates random actions."""
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.distributions import masked
 from tf_agents.policies import tf_policy

@@ -35,10 +35,6 @@ Shipra Agrawal, Navin Goyal, ICML 2013
 (http://proceedings.mlr.press/v28/agrawal13-supp.pdf).
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from enum import Enum
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import

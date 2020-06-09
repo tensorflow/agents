@@ -15,9 +15,6 @@
 
 """Tests for utils/test_utils."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import numpy as np
 from tf_agents.utils import test_utils
 

@@ -26,10 +26,6 @@ python tf_agents/agents/ppo/examples/v2/train_eval_clip_agent.py \
 ```
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import time
 

@@ -15,10 +15,6 @@
 
 """Tests for tf_agents.keras_layers.dynamic_unroll_layer."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from absl.testing import parameterized
 
 import numpy as np

@@ -15,9 +15,6 @@
 
 """Tests for tf_agents.policies.scripted_py_policy."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import numpy as np
 
 from tf_agents.policies import scripted_py_policy

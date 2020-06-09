@@ -24,10 +24,6 @@ environmet if needed. Only needed in graph mode.
 - The step(action) method applies the action and returns the new time_step.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import abc
 import six
 

@@ -14,10 +14,6 @@
 # limitations under the License.
 
 """Project inputs to a categorical distribution object."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import

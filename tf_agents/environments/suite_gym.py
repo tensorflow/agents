@@ -22,11 +22,6 @@ agent behaviour. This prevents us from setting the appropriate discount value
 for the final step of an episode. To prevent that we extract the step limit
 from the environment specs and utilize our TimeLimit wrapper.
 """
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 from typing import Callable, Dict, Optional, Sequence, Text
 
 import gin

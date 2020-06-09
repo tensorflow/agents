@@ -14,8 +14,6 @@
 # limitations under the License.
 
 """Class implementation of Python Wheel Bandit environment."""
-from __future__ import absolute_import
-
 import gin
 import numpy as np
 from tf_agents.bandits.environments import bandit_py_environment

@@ -16,11 +16,6 @@
 # Lint as: python3
 """Initialization code for colab test."""
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import glob
 import logging
 import os

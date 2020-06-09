@@ -14,11 +14,6 @@
 # limitations under the License.
 
 """Policy implementation that generates random actions."""
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 from typing import Optional, Sequence
 
 import numpy as np

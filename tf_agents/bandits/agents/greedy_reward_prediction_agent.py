@@ -15,10 +15,6 @@
 
 """An agent that uses and trains a greedy reward prediction policy."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from absl import logging
 
 import gin

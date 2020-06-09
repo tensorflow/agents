@@ -16,11 +16,6 @@
 # Lint as: python3
 """Collection of simple environments useful for testing."""
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import gin
 import numpy as np
 

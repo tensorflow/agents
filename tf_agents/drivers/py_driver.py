@@ -15,11 +15,6 @@
 
 """A Driver that steps a python environment using a python policy."""
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import numpy as np
 from tf_agents.drivers import driver
 from tf_agents.environments import py_environment

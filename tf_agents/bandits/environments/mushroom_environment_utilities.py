@@ -21,10 +21,6 @@ other columns represent features. All features, as well as the label, are string
 features that will be used for one-hot embeddings.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gin
 import numpy as np
 

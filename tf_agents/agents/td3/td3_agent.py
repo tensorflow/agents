@@ -24,11 +24,6 @@ by Fujimoto et al.
 For the full paper, see https://arxiv.org/abs/1802.09477.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import collections
 from typing import Optional, Text
 

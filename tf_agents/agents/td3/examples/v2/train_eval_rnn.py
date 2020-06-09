@@ -27,10 +27,6 @@ python tf_agents/agents/td3/examples/v2/train_eval_rnn.py \
 ```
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import os
 import time

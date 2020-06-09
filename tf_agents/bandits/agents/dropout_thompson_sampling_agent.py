@@ -19,10 +19,6 @@ Implements an agent based on a neural network that predicts arm rewards.
 The neural network internally uses dropout to approximate Thompson sampling.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 

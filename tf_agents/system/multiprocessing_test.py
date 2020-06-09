@@ -14,10 +14,6 @@
 # limitations under the License.
 
 """Tests for tf_agents.system.multiprocessing."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pickle
 
 from tf_agents.system import system_multiprocessing as multiprocessing

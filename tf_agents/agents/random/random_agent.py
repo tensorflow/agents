@@ -19,11 +19,6 @@ An agent implementing a random policy without training. Useful as a baseline
 when comparing to other agents.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 from typing import Optional, Text
 
 import gin

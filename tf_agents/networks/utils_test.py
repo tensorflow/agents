@@ -15,10 +15,6 @@
 
 """Tests tf_agents.utils.network_utils."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.networks import utils

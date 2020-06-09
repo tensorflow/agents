@@ -15,10 +15,6 @@
 
 """Tests for learning.reinforcement_learning.policies.categorical_q_policy."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 from absl import flags
 

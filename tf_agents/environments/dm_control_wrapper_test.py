@@ -15,9 +15,6 @@
 
 """Tests for tf_agents.google.environments.dm_control_wrapper."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import numpy as np
 
 from tf_agents.environments import suite_dm_control

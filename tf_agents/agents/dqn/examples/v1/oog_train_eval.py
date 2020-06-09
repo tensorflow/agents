@@ -31,10 +31,6 @@ python tf_agents/agents/dqn/examples/v1/oog_train_eval.py \
   --alsologtostderr
 ```
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import time
 

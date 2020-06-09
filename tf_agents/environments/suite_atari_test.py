@@ -15,10 +15,6 @@
 
 """Tests for third_party.py.tf_agents.environments.suite_atari."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from absl import flags
 import numpy as np
 

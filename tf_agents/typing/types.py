@@ -15,11 +15,6 @@
 
 """Common types used in TF-Agents."""
 
-from __future__ import absolute_import
-from __future__ import division
-# Using Type Annotations.
-from __future__ import print_function
-
 import sys
 import typing
 from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, Tuple, Union

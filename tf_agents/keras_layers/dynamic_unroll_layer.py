@@ -32,10 +32,6 @@ episode tensors in the form of `inputs`.
 See the unit tests in `rnn_utils_test.py` for more details.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.utils import common

@@ -16,10 +16,6 @@
 # Lint as: python2, python3
 """Utility functions for configuring environments with Gin."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import gin
 import numpy as np

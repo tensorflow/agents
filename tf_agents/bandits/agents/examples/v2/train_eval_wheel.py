@@ -15,10 +15,6 @@
 
 """End-to-end test for bandit training under the wheel bandit environment."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import os
 from absl import app

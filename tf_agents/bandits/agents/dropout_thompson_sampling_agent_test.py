@@ -15,10 +15,6 @@
 
 """Tests for dropout_thompson_sampling_agent.py."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 

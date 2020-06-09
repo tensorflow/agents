@@ -28,10 +28,6 @@ python tf_agents/agents/ddpg/examples/v2/train_eval_rnn.py \
 ```
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import os
 import time

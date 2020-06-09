@@ -14,10 +14,6 @@
 # limitations under the License.
 
 """A class to describe the shape and dtype of numpy arrays."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numbers
 
 import gin

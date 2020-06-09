@@ -24,10 +24,6 @@ needed for the batched replay buffer, but is returned to be consistent with
 the API for a priority replay buffer, which needs the ids to update priorities.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 import gin
 import numpy as np

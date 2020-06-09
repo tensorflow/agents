@@ -15,10 +15,6 @@
 
 """Tests for the Stationary Stochastic Per-Arm Bandit environment."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.environments import stationary_stochastic_per_arm_py_environment as sspe

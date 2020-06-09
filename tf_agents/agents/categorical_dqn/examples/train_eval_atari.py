@@ -45,10 +45,6 @@ Additional flags are available such as `--replay_buffer_capacity` and
 `--n_step_update`.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 
 from absl import app

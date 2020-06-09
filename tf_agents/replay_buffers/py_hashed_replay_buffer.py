@@ -19,10 +19,6 @@ PyHashedReplayBuffer is a flavor of the base class which
 compresses the observations when the observations have some partial overlap
 (e.g. when using frame stacking).
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pickle
 import threading
 

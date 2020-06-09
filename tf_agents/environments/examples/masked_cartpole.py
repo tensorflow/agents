@@ -18,10 +18,6 @@
 See agents/dqn/examples/train_eval_gym_rnn.py for usage.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gym
 from gym.envs.classic_control import cartpole
 from gym.envs.registration import register

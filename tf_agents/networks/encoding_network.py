@@ -25,10 +25,6 @@ Implements a network that will generate the following layers:
   [optional]: Dense  # fc_layer_params
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from absl import logging
 import gin
 from six.moves import zip

@@ -15,10 +15,6 @@
 
 """Tests for tf_agents.bandits.agents.neural_linucb_agent."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 
 from absl.testing import parameterized

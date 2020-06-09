@@ -15,10 +15,6 @@
 
 """Test for tf_agents.environments.tf_wrappers."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from absl.testing.absltest import mock
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import

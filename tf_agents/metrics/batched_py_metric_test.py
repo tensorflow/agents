@@ -15,10 +15,6 @@
 
 """Tests for tf_agents.metrics.batched_py_metric."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.metrics import batched_py_metric
 from tf_agents.metrics import py_metrics

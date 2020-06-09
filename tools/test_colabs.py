@@ -14,8 +14,6 @@
 # limitations under the License.
 
 """Tests colabs using Jupyter notebook."""
-from __future__ import print_function
-
 import os
 import sys
 

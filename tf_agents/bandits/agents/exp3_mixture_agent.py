@@ -19,10 +19,6 @@ For a reference on EXP3, see `Bandit Algorithms` by Tor Lattimore and Csaba
 Szepesvari (https://tor-lattimore.com/downloads/book/book.pdf).
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp

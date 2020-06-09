@@ -15,9 +15,6 @@
 
 """Unit tests for PyUniformReplayBuffer and PyHashedReplayBuffer."""
 
-from __future__ import division
-from __future__ import unicode_literals
-
 import os
 
 from absl.testing import parameterized
