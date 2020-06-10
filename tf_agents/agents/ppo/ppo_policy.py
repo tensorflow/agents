@@ -99,7 +99,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
     if not isinstance(value_network, network.Network):
       raise ValueError('value_network is not of type network.Network')
 
-    self._compute_value_and_advantage_in_train = compute_value_and_advantage_in_train
+    self._compute_value_and_advantage_in_train = (
+        compute_value_and_advantage_in_train)
 
     if collect:
       # TODO(oars): Cleanup how we handle non distribution networks.
