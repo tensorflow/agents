@@ -29,6 +29,23 @@ from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
 
+def _remove_num_actions_dim_from_spec(observation_spec):
+  """Removes the extra `num_actions` dimension from the observation spec."""
+  obs_spec_no_num_actions = {
+      bandit_spec_utils.GLOBAL_FEATURE_KEY:
+          observation_spec[bandit_spec_utils.GLOBAL_FEATURE_KEY],
+      bandit_spec_utils.PER_ARM_FEATURE_KEY:
+          tensor_spec.remove_outer_dims_nest(
+              observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY], 1)
+  }
+  if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation_spec:
+    obs_spec_no_num_actions.update({
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+            observation_spec[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
+    })
+  return obs_spec_no_num_actions
+
+
 def create_feed_forward_common_tower_network(observation_spec, global_layers,
                                              arm_layers, common_layers,
                                              output_dim=1,
@@ -60,15 +77,16 @@ def create_feed_forward_common_tower_network(observation_spec, global_layers,
     A network that takes observations adhering observation_spec and outputs
     reward estimates for every action.
   """
+  obs_spec_no_num_actions = _remove_num_actions_dim_from_spec(observation_spec)
   global_network = encoding_network.EncodingNetwork(
-      input_tensor_spec=observation_spec[bandit_spec_utils.GLOBAL_FEATURE_KEY],
+      input_tensor_spec=obs_spec_no_num_actions[
+          bandit_spec_utils.GLOBAL_FEATURE_KEY],
       fc_layer_params=global_layers,
       preprocessing_combiner=global_preprocessing_combiner)
 
-  arm_feature_spec = tensor_spec.remove_outer_dims_nest(
-      observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY], 1)
   arm_network = encoding_network.EncodingNetwork(
-      input_tensor_spec=arm_feature_spec,
+      input_tensor_spec=obs_spec_no_num_actions[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY],
       fc_layer_params=arm_layers,
       preprocessing_combiner=arm_preprocessing_combiner)
   common_input_dim = global_layers[-1] + arm_layers[-1]
@@ -84,7 +102,7 @@ def create_feed_forward_common_tower_network(observation_spec, global_layers,
     common_network = encoding_network.EncodingNetwork(
         input_tensor_spec=common_input_spec,
         fc_layer_params=list(common_layers) + [output_dim])
-  return GlobalAndArmCommonTowerNetwork(observation_spec, global_network,
+  return GlobalAndArmCommonTowerNetwork(obs_spec_no_num_actions, global_network,
                                         arm_network, common_network)
 
 
@@ -110,16 +128,16 @@ def create_feed_forward_dot_product_network(observation_spec, global_layers,
   if arm_layers[-1] != global_layers[-1]:
     raise ValueError('Last layer size of global and arm layers should match.')
 
+  obs_spec_no_num_actions = _remove_num_actions_dim_from_spec(observation_spec)
   global_network = encoding_network.EncodingNetwork(
-      input_tensor_spec=observation_spec[bandit_spec_utils.GLOBAL_FEATURE_KEY],
+      input_tensor_spec=obs_spec_no_num_actions[
+          bandit_spec_utils.GLOBAL_FEATURE_KEY],
       fc_layer_params=global_layers)
-  one_dim_per_arm_obs = tensor_spec.TensorSpec(
-      shape=observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[1:],
-      dtype=tf.float32)
   arm_network = encoding_network.EncodingNetwork(
-      input_tensor_spec=one_dim_per_arm_obs,
+      input_tensor_spec=obs_spec_no_num_actions[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY],
       fc_layer_params=arm_layers)
-  return GlobalAndArmDotProductNetwork(observation_spec, global_network,
+  return GlobalAndArmDotProductNetwork(obs_spec_no_num_actions, global_network,
                                        arm_network)
 
 
@@ -165,8 +183,9 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
     arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
     arm_output, arm_state = self._arm_network(
         arm_obs, step_type=step_type, network_state=network_state)
-    if arm_output.shape.rank > 3:
-      arm_output = tf.squeeze(arm_output, axis=2)
+    arm_output_shape = tf.shape(arm_output)
+    arm_output = tf.reshape(
+        arm_output, shape=[arm_output_shape[0], -1, arm_output_shape[-1]])
 
     global_output, global_state = self._global_network(
         global_obs, step_type=step_type, network_state=network_state)

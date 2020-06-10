@@ -112,8 +112,11 @@ class GlobalAndArmFeatureNetworkTest(parameterized.TestCase,
             [columns_name, columns_fruit]))
     input_nest = {
         'global': {
-            'dense': tf.constant(np.random.rand(batch_size, feature_dim)),
-            'composer': tf.constant(['wolfgang', 'mozart'])
+            'dense':
+                tf.constant(
+                    np.random.rand(batch_size, feature_dim).astype(np.float32)),
+            'composer':
+                tf.constant(['wolfgang', 'mozart'])
         },
         'per_arm': {
             'name':
