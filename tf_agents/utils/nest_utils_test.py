@@ -839,5 +839,17 @@ class PruneExtraKeysTest(tf.test.TestCase):
     )
 
 
+class TileBatchTest(tf.test.TestCase):
+
+  def test_tile_batch(self):
+    t = tf.constant([[1., 2., 3.], [4., 5., 6.]])
+    t_tile_batched = nest_utils.tile_batch(t, 2)
+
+    expected_t_tile_batched = tf.constant(
+        [[1., 2., 3.], [1., 2., 3.], [4., 5., 6.], [4., 5., 6.]])
+    self.assertAllEqual(
+        self.evaluate(expected_t_tile_batched), self.evaluate(t_tile_batched))
+
+
 if __name__ == '__main__':
   tf.test.main()

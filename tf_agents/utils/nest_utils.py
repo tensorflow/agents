@@ -95,7 +95,7 @@ def assert_same_structure(nest1,
   message = message or 'The two structures do not match'
   exception = None
   try:
-    return tf.nest.assert_same_structure(
+    tf.nest.assert_same_structure(
         nest1,
         nest2,
         check_types=check_types,
@@ -939,3 +939,51 @@ def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,
       break
     spec = spec._unbatch()  # pylint: disable=protected-access
   return spec
+
+
+def _tile_batch(t, multiplier):
+  """Core single-tensor implementation of tile_batch."""
+  t = tf.convert_to_tensor(t, name='t')
+  shape_t = tf.shape(t)
+  if t.shape.ndims is None or t.shape.ndims < 1:
+    raise ValueError('t must have statically known rank')
+  tiling = [1] * (t.shape.ndims + 1)
+  tiling[1] = multiplier
+  tiled_static_batch_size = (
+      t.shape.dims[0].value * multiplier
+      if t.shape.dims[0].value is not None else None)
+  tiled = tf.tile(tf.expand_dims(t, 1), tiling)
+  tiled = tf.reshape(tiled,
+                     tf.concat(
+                         ([shape_t[0] * multiplier], shape_t[1:]), 0))
+  tiled.set_shape(
+      tf.TensorShape([tiled_static_batch_size]).concatenate(
+          t.shape[1:]))
+  return tiled
+
+
+def tile_batch(tensors, multiplier):
+  """Tile the batch dimension of a (possibly nested structure of) tensor(s).
+
+  Copied from tensorflow/contrib/seq2seq/python/ops/beam_search_decoder.py
+
+  For each tensor t in a (possibly nested structure) of tensors,
+  this function takes a tensor t shaped `[batch_size, s0, s1, ...]` composed of
+  minibatch entries `t[0], ..., t[batch_size - 1]` and tiles it to have a shape
+  `[batch_size * multiplier, s0, s1, ...]` composed of minibatch entries
+  `t[0], t[0], ..., t[1], t[1], ...` where each minibatch entry is repeated
+  `multiplier` times.
+
+  Args:
+    tensors: A nested structure of `Tensor` shaped `[batch_size, ...]`.
+    multiplier: Python int.
+
+  Returns:
+    A (possibly nested structure of) `Tensor` shaped
+    `[batch_size * multiplier, ...]`.
+
+  Raises:
+    ValueError: if tensor(s) `t` do not have a statically known rank or
+    the rank is < 1.
+  """
+  return tf.nest.map_structure(lambda t_: _tile_batch(t_, multiplier), tensors)
