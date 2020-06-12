@@ -191,6 +191,12 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       ValueError: If called more than once.
     """
     nest_utils.assert_same_structure(items, self._data_spec)
+    # Calling get_outer_rank here will validate that all items have the same
+    # outer rank. This was not usually an issue, but now that it's easier to
+    # call this from an eager context it's easy to make the mistake.
+    nest_utils.get_outer_rank(
+        tf.nest.map_structure(tf.convert_to_tensor, items),
+        self._data_spec)
 
     with tf.device(self._device), tf.name_scope(self._scope):
       id_ = self._increment_last_id()
