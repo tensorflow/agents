@@ -226,12 +226,11 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Compute the expected updated estimates.
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(tf.cast(experience.observation, tf.float64),
-                        [batch_size, context_dim]),
+        data=tf.reshape(experience.observation, [batch_size, context_dim]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(tf.cast(experience.reward, tf.float64), [batch_size]),
+        data=tf.reshape(experience.reward, [batch_size]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []
@@ -240,11 +239,8 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         observations_list, rewards_list)):
 
       encoded_observations_for_arm, _ = encoder(observations_for_arm)
-      encoded_observations_for_arm = tf.cast(
-          encoded_observations_for_arm, dtype=tf.float64)
 
-      num_samples_for_arm_current = tf.cast(
-          tf.shape(rewards_for_arm)[0], tf.float64)
+      num_samples_for_arm_current = tf.shape(rewards_for_arm)[0]
       num_samples_for_arm_total = num_samples_for_arm_current
 
       # pylint: disable=cell-var-from-loop
@@ -257,8 +253,9 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
             rewards_for_arm, encoded_observations_for_arm)
         return a_new, b_new
       def false_fn():
-        return (tf.zeros([encoding_dim, encoding_dim], dtype=tf.float64),
-                tf.zeros([encoding_dim], dtype=tf.float64))
+        return (tf.zeros([encoding_dim, encoding_dim], dtype=tf.float32),
+                tf.zeros([encoding_dim], dtype=tf.float32))
+
       a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0,
           true_fn,
@@ -312,12 +309,11 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Compute the expected updated estimates.
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(tf.cast(experience.observation, tf.float64),
-                        [batch_size, context_dim]),
+        data=tf.reshape(experience.observation, [batch_size, context_dim]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(tf.cast(experience.reward, tf.float64), [batch_size]),
+        data=tf.reshape(experience.reward, [batch_size]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []
@@ -326,11 +322,9 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
         observations_list, rewards_list)):
 
       encoded_observations_for_arm, _ = encoder(observations_for_arm)
-      encoded_observations_for_arm = tf.cast(
-          encoded_observations_for_arm, dtype=tf.float64)
 
       num_samples_for_arm_current = tf.cast(
-          tf.shape(rewards_for_arm)[0], tf.float64)
+          tf.shape(rewards_for_arm)[0], tf.float32)
       num_samples_for_arm_total = num_samples_for_arm_current
 
       # pylint: disable=cell-var-from-loop
@@ -343,8 +337,9 @@ class NeuralLinUCBAgentTest(tf.test.TestCase, parameterized.TestCase):
             rewards_for_arm, encoded_observations_for_arm)
         return a_new, b_new
       def false_fn():
-        return (tf.zeros([encoding_dim, encoding_dim], dtype=tf.float64),
-                tf.zeros([encoding_dim], dtype=tf.float64))
+        return (tf.zeros([encoding_dim, encoding_dim], dtype=tf.float32),
+                tf.zeros([encoding_dim], dtype=tf.float32))
+
       a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0,
           true_fn,

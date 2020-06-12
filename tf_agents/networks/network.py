@@ -38,6 +38,7 @@ from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
 # pylint:disable=g-direct-tensorflow-import
+from tensorflow.python.keras.layers import recurrent  # TF internal
 from tensorflow.python.keras.utils import layer_utils  # TF internal
 from tensorflow.python.training.tracking import base  # TF internal
 from tensorflow.python.util import tf_decorator  # TF internal
@@ -149,14 +150,16 @@ class Network(tf.keras.layers.Layer):
     """Creates an instance of `Network`.
 
     Args:
-      input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
+      input_tensor_spec: A nest of `tf.TypeSpec` representing the
         input observations.  Optional.  If not provided, `create_variables()`
         will fail unless a spec is provided.
       state_spec: A nest of `tensor_spec.TensorSpec` representing the state
         needed by the network. Default is `()`, which means no state.
       name: (Optional.) A string representing the name of the network.
     """
-    super(Network, self).__init__(name=name)
+    # Disable autocast because it may convert bfloats to other types, breaking
+    # our spec checks.
+    super(Network, self).__init__(name=name, autocast=False)
     common.check_tf1_allowed()
 
     # Required for summary() to work.
@@ -366,10 +369,14 @@ class Network(tf.keras.layers.Layer):
       A tuple `(outputs, new_network_state)`.
     """
     if self.input_tensor_spec is not None:
-      nest_utils.assert_same_structure(
+      nest_utils.assert_matching_dtypes_and_inner_shapes(
           inputs,
           self.input_tensor_spec,
-          message="inputs and input_tensor_spec structures do not match")
+          allow_extra_fields=True,
+          caller=self,
+          tensors_name="`inputs`",
+          specs_name="`input_tensor_spec`")
+
     call_argspec = tf_inspect.getargspec(self.call)
 
     # Convert *args, **kwargs to a canonical kwarg representation.
@@ -379,11 +386,14 @@ class Network(tf.keras.layers.Layer):
     network_state = normalized_kwargs.get("network_state", None)
     normalized_kwargs.pop("self", None)
 
-    if network_state not in (None, ()):
-      nest_utils.assert_same_structure(
+    if network_state not in (None, (), []):
+      nest_utils.assert_matching_dtypes_and_inner_shapes(
           network_state,
           self.state_spec,
-          message="network_state and state_spec structures do not match")
+          allow_extra_fields=True,
+          caller=self,
+          tensors_name="`network_state`",
+          specs_name="`state_spec`")
 
     if "step_type" not in call_argspec.args and not call_argspec.keywords:
       normalized_kwargs.pop("step_type", None)
@@ -394,10 +404,14 @@ class Network(tf.keras.layers.Layer):
       normalized_kwargs.pop("network_state", None)
 
     outputs, new_state = super(Network, self).__call__(**normalized_kwargs)
-    nest_utils.assert_same_structure(
+
+    nest_utils.assert_matching_dtypes_and_inner_shapes(
         new_state,
         self.state_spec,
-        message="network output state and state_spec structures do not match")
+        allow_extra_fields=True,
+        caller=self,
+        tensors_name="`new_state`",
+        specs_name="`state_spec`")
 
     return outputs, new_state
 
@@ -495,10 +509,14 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
   Returns:
     Output specs, a nested `tf.TypeSpec` describing the output signature.
   """
+  # NOTE(ebrevdo): As a side effect, for generic keras Layers (not Networks)
+  # this method stores new hidden properties in `module`:
+  # `_network_output_spec`, `_network_state_spec`, `_merged_output_and_state`
+  # - which internal TF-Agents libraries make use of.
   if isinstance(module, Network):
     return module.create_variables(input_spec, **kwargs)
 
-  # Keras layer
+  # Generic keras layer
   if input_spec is None:
     raise ValueError(
         "Module is a Keras layer; an input_spec is required but saw "
@@ -520,14 +538,35 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
 
   if recurrent_layer:
     state = module.get_initial_state(random_input)
+    state_spec = tf.nest.map_structure(
+        lambda s: nest_utils.remove_singleton_batch_spec_dim(  # pylint: disable=g-long-lambda
+            tf.type_spec_from_value(s),
+            outer_ndim=1),
+        state)
     outputs = module(random_input, state, **kwargs)
-  else:
-    outputs = module(random_input, **kwargs)
-
-  if isinstance(outputs, (list, tuple)):
+    # tf.keras.layers.{LSTM,RNN,GRU} with this return_state==True
+    # return outputs of the form [output, state1, state2, ...]
+    #
+    # While tf.keras.layers.{LSTMCell, ...} return
+    # (output, [state1, state2,...]).
+    layer_config = module.get_config()
+    merged_output_and_state = layer_config.get("return_state", False)
+    if isinstance(module, recurrent.RNN):
+      if not merged_output_and_state:
+        # This is an RNN layer that doesn't return state.  Excludes individual
+        # cells.
+        raise ValueError(
+            "Provided a Keras RNN layer with return_state==False. "
+            "This configuration is not supported.  Layer: {}".format(module))
+      if not layer_config.get("return_sequences", False):
+        raise ValueError(
+            "Provided a Keras RNN layer with return_sequences==False. "
+            "This configuration is not supported.  Layer: {}".format(module))
     output = outputs[0]
   else:
-    output = outputs
+    output = module(random_input, **kwargs)
+    state_spec = ()
+    merged_output_and_state = False
 
   def _calc_unbatched_spec(x):
     if isinstance(x, tfp.distributions.Distribution):
@@ -539,9 +578,11 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
   # pylint: disable=protected-access
   module._network_output_spec = tf.nest.map_structure(_calc_unbatched_spec,
                                                       output)
+  module._network_state_spec = state_spec
+  module._merged_output_and_state = merged_output_and_state
 
   return module._network_output_spec
-  # pylint: disable=protected-access
+  # pylint: enable=protected-access
 
 
 def _get_input_outer_ndim(layer: tf.keras.layers.Layer,

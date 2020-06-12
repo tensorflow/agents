@@ -61,7 +61,7 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     num_obs_dims = 5
     num_actions_dims = 2
 
-    obs_spec = tensor_spec.TensorSpec([3, 3, num_obs_dims], tf.float32)
+    obs_spec = tensor_spec.TensorSpec([3, num_obs_dims], tf.float32)
     action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec), observation_fc_layer_params=[20, 10])

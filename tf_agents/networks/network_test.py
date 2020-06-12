@@ -196,37 +196,58 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
     self.assertLen(net.variables, 2)
     self.assertLen(net.trainable_variables, 1)
 
+  # pylint: disable=g-long-lambda
   @parameterized.named_parameters(
-      ('Dense',
-       lambda: tf.keras.layers.Dense(3),
-       tf.TensorSpec((5,), tf.float32),
-       tf.TensorSpec((3,), tf.float32)),
-      ('LSTMCell',
-       lambda: tf.keras.layers.LSTMCell(3),
-       tf.TensorSpec((5,), tf.float32),
-       tf.TensorSpec((3,), tf.float32)),
-      ('LSTMCellInRNN',
-       lambda: tf.keras.layers.RNN(tf.keras.layers.LSTMCell(3)),
-       tf.TensorSpec((5,), tf.float32),
-       tf.TensorSpec((3,), tf.float32)),
-      ('LSTM',
-       lambda: tf.keras.layers.LSTM(3),
-       tf.TensorSpec((5,), tf.float32),
-       tf.TensorSpec((3,), tf.float32)),
+      (
+          'Dense',
+          lambda: tf.keras.layers.Dense(3),
+          tf.TensorSpec((5,), tf.float32),  # input_spec
+          tf.TensorSpec((3,), tf.float32),  # expected_output_spec
+          (),  # expected_state_spec
+      ),
+      (
+          'LSTMCell',
+          lambda: tf.keras.layers.LSTMCell(3),
+          tf.TensorSpec((5,), tf.float32),
+          tf.TensorSpec((3,), tf.float32),
+          [tf.TensorSpec((3,), tf.float32),
+           tf.TensorSpec((3,), tf.float32)],
+      ),
+      (
+          'LSTMCellInRNN',
+          lambda: tf.keras.layers.RNN(
+              tf.keras.layers.LSTMCell(3),
+              return_state=True,
+              return_sequences=True),
+          tf.TensorSpec((5,), tf.float32),
+          tf.TensorSpec((3,), tf.float32),
+          [tf.TensorSpec((3,), tf.float32),
+           tf.TensorSpec((3,), tf.float32)],
+      ),
+      (
+          'LSTM',
+          lambda: tf.keras.layers.LSTM(
+              3,
+              return_state=True,
+              return_sequences=True),
+          tf.TensorSpec((5,), tf.float32),
+          tf.TensorSpec((3,), tf.float32),
+          [tf.TensorSpec((3,), tf.float32),
+           tf.TensorSpec((3,), tf.float32)],
+      ),
       ('TimeDistributed',
        lambda: tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(3)),
-       tf.TensorSpec((5,), tf.float32),
-       tf.TensorSpec((3,), tf.float32)),
-      ('Conv2D',
-       lambda: tf.keras.layers.Conv2D(2, 3),
+       tf.TensorSpec((5,), tf.float32), tf.TensorSpec((3,), tf.float32), ()),
+      ('Conv2D', lambda: tf.keras.layers.Conv2D(2, 3),
        tf.TensorSpec((28, 28, 5), tf.float32),
-       tf.TensorSpec((26, 26, 2), tf.float32)),
+       tf.TensorSpec((26, 26, 2), tf.float32), ()),
       ('SequentialOfDense',
        lambda: tf.keras.Sequential([tf.keras.layers.Dense(3)] * 2),
-       tf.TensorSpec((5,), tf.float32),
-       tf.TensorSpec((3,), tf.float32)),
+       tf.TensorSpec((5,), tf.float32), tf.TensorSpec((3,), tf.float32), ()),
   )
-  def testKerasLayerCreate(self, layer_fn, input_spec, expected_output_spec):
+  # pylint: enable=g-long-λ
+  def testKerasLayerCreate(self, layer_fn, input_spec, expected_output_spec,
+                           expected_state_spec):
     layer = layer_fn()
     with self.assertRaisesRegex(ValueError, 'an input_spec is required'):
       network.create_variables(layer)
@@ -235,6 +256,19 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(output_spec, expected_output_spec)
     output_spec_2 = network.create_variables(layer, input_spec)
     self.assertEqual(output_spec_2, expected_output_spec)
+    state_spec = getattr(layer, '_network_state_spec', None)
+    self.assertEqual(state_spec, expected_state_spec)
+
+  def testKerasLayerFailsIfRecurrentDoesNotReturnState(self):
+    with self.assertRaisesRegex(ValueError, 'with return_state==False'):
+      network.create_variables(
+          tf.keras.layers.LSTM(3, return_sequences=True),
+          input_spec=tf.TensorSpec((3,), tf.float32))
+
+    with self.assertRaisesRegex(ValueError, 'with return_sequences==False'):
+      network.create_variables(
+          tf.keras.layers.LSTM(3, return_state=True),
+          input_spec=tf.TensorSpec((3,), tf.float32))
 
 
 if __name__ == '__main__':

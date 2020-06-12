@@ -434,15 +434,13 @@ class TFAgent(tf.Module):
       AttributeError: If `kwargs` keyset doesn't match `train_argspec`.
       ValueError: If `kwargs` do not match the specs in `train_argspec`.
     """
-    if not nest_utils.matching_dtypes_and_inner_shapes(
-        kwargs, self.train_argspec, allow_extra_fields=True):
-      get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
-      get_shapes = lambda v: tf.nest.map_structure(nest_utils.spec_shape, v)
-      raise ValueError(
-          "Inconsistent dtypes or shapes between `kwargs` and `train_argspec`. "
-          "dtypes:\n{}\nvs.\n{}.  shapes:\n{}\nvs.\n{}"
-          .format(get_dtypes(kwargs), get_dtypes(self.train_argspec),
-                  get_shapes(kwargs), get_shapes(self.train_argspec)))
+    nest_utils.assert_matching_dtypes_and_inner_shapes(
+        kwargs,
+        self.train_argspec,
+        allow_extra_fields=True,
+        caller=self,
+        tensors_name="`kwargs`",
+        specs_name="`train_argspec`")
 
   def train(self,
             experience: types.NestedTensor,

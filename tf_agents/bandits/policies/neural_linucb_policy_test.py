@@ -257,13 +257,7 @@ class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
         tf.constant(np.array(range(batch_size * (self._obs_dim + 1))),
                     dtype=tf.float32, shape=[batch_size, self._obs_dim + 1],
                     name='observation'))
-    if tf.executing_eagerly():
-      error_type = tf.errors.InvalidArgumentError
-      regexp = r'Matrix size-incompatible: In\[0\]: \[%d,3\]' % batch_size
-    else:
-      error_type = ValueError
-      regexp = r'with shape \[%d, 3\]' % batch_size
-    with self.assertRaisesRegex(error_type, regexp):
+    with self.assertRaisesRegex(ValueError, r'\(%d, 3\)' % batch_size):
       policy.action(current_time_step)
 
   @test_cases()

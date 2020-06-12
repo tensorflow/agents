@@ -262,46 +262,76 @@ def prune_extra_keys(narrow, wide):
   return wide
 
 
-def matching_dtypes_and_inner_shapes(tensors, specs, allow_extra_fields=False):
+def assert_matching_dtypes_and_inner_shapes(tensors,
+                                            specs,
+                                            caller,
+                                            tensors_name,
+                                            specs_name,
+                                            allow_extra_fields=False):
   """Returns `True` if tensors and specs have matching dtypes and inner shapes.
 
   Args:
     tensors: A nest of tensor objects.
     specs: A nest of `tf.TypeSpec` objects.
-    allow_extra_fields: If `True`, then `tensors` may contain more keys
-      or list fields than strictly required by `specs`.
+    caller: The object calling `assert...`.
+    tensors_name: (str) Name to use for the tensors in case of an error.
+    specs_name: (str) Name to use for the specs in case of an error.
+    allow_extra_fields: If `True`, then `tensors` may contain more keys or list
+      fields than strictly required by `specs`.
 
-  Returns:
-    A python `bool`.
+  Raises:
+    ValueError: If the tensors do not match the specs' dtypes or their inner
+      shapes do not match the specs' shapes.
   """
   if allow_extra_fields:
     tensors = prune_extra_keys(specs, tensors)
   assert_same_structure(
       tensors,
       specs,
-      message='Tensors and specs do not have matching structures')
+      message=('{}: {} and {} do not have matching structures'.format(
+          caller, tensors_name, specs_name)))
 
   flat_tensors = nest.flatten(tensors)
   flat_specs = tf.nest.flatten(specs)
+  flat_tensors = [
+      tf.convert_to_tensor(t, dtype_hint=s.dtype) if not tf.is_tensor(t) else t
+      for (t, s) in zip(flat_tensors, flat_specs)
+  ]
 
   tensor_shapes = [t.shape for t in flat_tensors]
   tensor_dtypes = [t.dtype for t in flat_tensors]
   spec_shapes = [spec_shape(s) for s in flat_specs]
   spec_dtypes = [t.dtype for t in flat_specs]
 
+  compatible = True
+
   if any(s_dtype != t_dtype
          for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
-    return False
+    compatible = False
+  else:
+    for s_shape, t_shape in zip(spec_shapes, tensor_shapes):
+      if s_shape.ndims in (0, None) or t_shape.ndims is None:
+        continue
+      if s_shape.ndims > t_shape.ndims:
+        compatible = False
+        break
+      if not s_shape.is_compatible_with(t_shape[-s_shape.ndims:]):
+        compatible = False
+        break
 
-  for s_shape, t_shape in zip(spec_shapes, tensor_shapes):
-    if s_shape.ndims is None or t_shape.ndims is None:
-      continue
-    if s_shape.ndims > t_shape.ndims:
-      return False
-    if not s_shape.is_compatible_with(t_shape[-s_shape.ndims:]):
-      return False
-
-  return True
+  if not compatible:
+    get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
+    get_shapes = lambda v: tf.nest.map_structure(spec_shape, v)
+    raise ValueError('{}: Inconsistent dtypes or shapes between {} and {}.\n'
+                     'dtypes:\n{}\nvs.\n{}.\n'
+                     'shapes:\n{}\nvs.\n{}.'.format(
+                         caller,
+                         tensors_name,
+                         specs_name,
+                         get_dtypes(tensors),
+                         get_dtypes(specs),
+                         get_shapes(tensors),
+                         get_shapes(specs)))
 
 
 def is_batched_nested_tensors(
@@ -932,6 +962,11 @@ def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,
         'Could not remove singleton batch dim from spec; it lacks a shape: {}'
         .format(spec))
   for i in range(outer_ndim):
+    if len(shape) <= i:
+      logging.error(
+          'Could not remove singleton batch dim from spec; len(shape) < %d.  '
+          'Shape: %s.  Skipping.', i + 1, shape)
+      break
     if tf.compat.dimension_value(shape[i]) != 1:
       logging.error(
           'Could not remove singleton batch dim from spec; shape[%d] != 1: %s '
