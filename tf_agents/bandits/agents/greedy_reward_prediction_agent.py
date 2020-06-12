@@ -307,9 +307,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       observations: A batch of observations.
       actions: A batch of actions.
       rewards: A batch of rewards. In the case we have constraints, we assume
-        that rewards is a 2-rank tensor where the first column corresponds to
-        the reward signal and the following columns correspond to the
-        constraint signals.
+        that reward is a dict of tensors with 'reward' and 'constraint' keys
+        defined in 'bandit_spec_utils'. In case of many constraint signals, the
+        constraint tensor has many columns; one column per constraint signal.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output batch loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
@@ -321,18 +321,23 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       ValueError:
         if the number of actions is greater than 1.
     """
-    # We assume that the first column is the reward signal followed by the
-    # constraint signals.
-    rewards_tensor = rewards
     if self._constraints:
-      rewards_tensor = rewards[:, 0]
+      rewards_tensor = rewards[bandit_spec_utils.REWARD_SPEC_KEY]
+    else:
+      rewards_tensor = rewards
     reward_loss = self.reward_loss(
         observations, actions, rewards_tensor, weights, training)
 
     constraint_loss = tf.constant(0.0)
-    for i, c in enumerate(self._constraints, 1):
+    for i, c in enumerate(self._constraints, 0):
+      if self._time_step_spec.reward[
+          bandit_spec_utils.CONSTRAINTS_SPEC_KEY].shape.rank > 1:
+        constraint_targets = rewards[
+            bandit_spec_utils.CONSTRAINTS_SPEC_KEY][:, i]
+      else:
+        constraint_targets = rewards[bandit_spec_utils.CONSTRAINTS_SPEC_KEY]
       constraint_loss += c.compute_loss(
-          observations, actions, rewards[:, i], weights, training)
+          observations, actions, constraint_targets, weights, training)
 
     self.compute_summaries(reward_loss, constraint_loss=(
         constraint_loss if self._constraints else None))

@@ -149,9 +149,16 @@ def train(root_dir,
   step_metric = tf_metrics.EnvironmentSteps()
   metrics = [
       tf_metrics.NumberOfEpisodes(),
-      tf_metrics.AverageReturnMetric(batch_size=environment.batch_size),
       tf_metrics.AverageEpisodeLengthMetric(batch_size=environment.batch_size)
   ] + list(additional_metrics)
+
+  if isinstance(environment.reward_spec(), dict):
+    metrics += [tf_metrics.AverageReturnMultiMetric(
+        reward_spec=environment.reward_spec(),
+        batch_size=environment.batch_size)]
+  else:
+    metrics += [
+        tf_metrics.AverageReturnMetric(batch_size=environment.batch_size)]
 
   if training_data_spec_transformation_fn is not None:
     add_batch_fn = lambda data: replay_buffer.add_batch(  # pylint: disable=g-long-lambda
@@ -179,7 +186,6 @@ def train(root_dir,
     training_loop()
     metric_utils.log_metrics(metrics)
     for metric in metrics:
-      tf.summary.scalar(
-          metric.name, metric.result(), step=step_metric.result())
+      metric.tf_summaries(train_step=step_metric.result())
     checkpoint_manager.save()
     saver.save(os.path.join(root_dir, 'policy_%d' % step_metric.result()))

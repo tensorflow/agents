@@ -91,6 +91,38 @@ def _get_initial_and_final_steps(observations, rewards):
   return initial_step, final_step
 
 
+def _get_initial_and_final_steps_nested_rewards(observations, rewards):
+  batch_size = tf.nest.flatten(observations)[0].shape[0]
+  if isinstance(observations, np.ndarray):
+    observations = tf.constant(
+        observations, dtype=tf.float32, name='observation')
+  zero_rewards = {
+      'reward': tf.constant(0.0, dtype=tf.float32, shape=[batch_size]),
+      'constraint': tf.constant(0.0, dtype=tf.float32, shape=[batch_size])
+  }
+  initial_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.FIRST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      zero_rewards,
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      observations)
+  rewards_nest = tf.nest.map_structure(
+      lambda t: tf.convert_to_tensor(t, dtype=tf.float32), rewards)
+  final_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.LAST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      rewards_nest,
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      observations)
+  return initial_step, final_step
+
+
 def _get_initial_and_final_steps_with_action_mask(observations, rewards):
   batch_size = tf.nest.flatten(observations)[0].shape[0]
   initial_step = ts.TimeStep(
@@ -109,6 +141,37 @@ def _get_initial_and_final_steps_with_action_mask(observations, rewards):
           shape=[batch_size],
           name='step_type'),
       tf.constant(rewards, dtype=tf.float32, name='reward'),
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size],
+                  name='discount'), (tf.nest.map_structure(
+                      lambda x: x + 100., observations[0]), observations[1]))
+  return initial_step, final_step
+
+
+def _get_initial_and_final_steps_action_mask_nested_rewards(
+    observations, rewards):
+  batch_size = tf.nest.flatten(observations)[0].shape[0]
+  zero_rewards = {
+      'reward': tf.constant(0.0, dtype=tf.float32, shape=[batch_size]),
+      'constraint': tf.constant(0.0, dtype=tf.float32, shape=[batch_size])
+  }
+  initial_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.FIRST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      zero_rewards,
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (observations[0], observations[1]))
+  rewards_nest = tf.nest.map_structure(
+      lambda t: tf.convert_to_tensor(t, dtype=tf.float32), rewards)
+  final_step = ts.TimeStep(
+      tf.constant(
+          ts.StepType.LAST,
+          dtype=tf.int32,
+          shape=[batch_size],
+          name='step_type'),
+      rewards_nest,
       tf.constant(1.0, dtype=tf.float32, shape=[batch_size],
                   name='discount'), (tf.nest.map_structure(
                       lambda x: x + 100., observations[0]), observations[1]))
@@ -260,8 +323,12 @@ class AgentTest(tf.test.TestCase):
         self._action_spec,
         constraint_network=constraint_net)
 
-    reward_spec = tensor_spec.TensorSpec(
-        shape=(2,), dtype=tf.float32, name='reward')
+    reward_spec = {
+        'reward': tensor_spec.TensorSpec(
+            shape=(), dtype=tf.float32, name='reward'),
+        'constraint': tensor_spec.TensorSpec(
+            shape=(), dtype=tf.float32, name='constraint')
+    }
     self._time_step_spec = ts.time_step_spec(self._obs_spec, reward_spec)
 
     agent = greedy_agent.GreedyRewardPredictionAgent(
@@ -272,8 +339,11 @@ class AgentTest(tf.test.TestCase):
         constraints=[neural_constraint])
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
     actions = np.array([0, 1], dtype=np.int32)
-    rewards = np.array([[0.5, 6.0], [3.0, 4.0]], dtype=np.float32)
-    initial_step, final_step = _get_initial_and_final_steps(
+    rewards = {
+        'reward': np.array([0.5, 3.0], dtype=np.float32),
+        'constraint': np.array([6.0, 4.0], dtype=np.float32)
+    }
+    initial_step, final_step = _get_initial_and_final_steps_nested_rewards(
         observations, rewards)
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
@@ -310,8 +380,12 @@ class AgentTest(tf.test.TestCase):
   def testTrainAgentWithMaskAndConstraint(self):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
-    reward_spec = tensor_spec.TensorSpec(
-        shape=(2,), dtype=tf.float32, name='reward')
+    reward_spec = {
+        'reward': tensor_spec.TensorSpec(
+            shape=(), dtype=tf.float32, name='reward'),
+        'constraint': tensor_spec.TensorSpec(
+            shape=(), dtype=tf.float32, name='constraint')
+    }
     observation_and_mask_spec = (tensor_spec.TensorSpec([2], tf.float32),
                                  tensor_spec.TensorSpec([3], tf.int32))
     time_step_spec = ts.time_step_spec(observation_and_mask_spec, reward_spec)
@@ -332,9 +406,13 @@ class AgentTest(tf.test.TestCase):
     observations = (np.array([[1, 2], [3, 4]], dtype=np.float32),
                     np.array([[1, 0, 0], [1, 1, 0]], dtype=np.int32))
     actions = np.array([0, 1], dtype=np.int32)
-    rewards = np.array([[0.5, 6.0], [3.0, 4.0]], dtype=np.float32)
-    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
-        observations, rewards)
+    rewards = {
+        'reward': np.array([0.5, 3.0], dtype=np.float32),
+        'constraint': np.array([6.0, 4.0], dtype=np.float32)
+    }
+    initial_step, final_step = (
+        _get_initial_and_final_steps_action_mask_nested_rewards(
+            observations, rewards))
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
     loss_before, _ = agent.train(experience, None)
@@ -434,8 +512,12 @@ class AgentTest(tf.test.TestCase):
 
   def testTrainPerArmAgentWithConstraint(self):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
-    reward_spec = tensor_spec.TensorSpec(
-        shape=(2,), dtype=tf.float32, name='reward')
+    reward_spec = {
+        'reward': tensor_spec.TensorSpec(
+            shape=(), dtype=tf.float32, name='reward'),
+        'constraint': tensor_spec.TensorSpec(
+            shape=(), dtype=tf.float32, name='constraint')
+    }
     time_step_spec = ts.time_step_spec(obs_spec, reward_spec)
     reward_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
@@ -464,8 +546,11 @@ class AgentTest(tf.test.TestCase):
                 tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32)
     }
     actions = np.array([0, 3], dtype=np.int32)
-    rewards = np.array([[0.5, 6.0], [3.0, 4.0]], dtype=np.float32)
-    initial_step, final_step = _get_initial_and_final_steps(
+    rewards = {
+        'reward': np.array([0.5, 3.0], dtype=np.float32),
+        'constraint': np.array([6.0, 4.0], dtype=np.float32)
+    }
+    initial_step, final_step = _get_initial_and_final_steps_nested_rewards(
         observations, rewards)
     action_step = policy_step.PolicyStep(
         action=tf.convert_to_tensor(actions),

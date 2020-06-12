@@ -161,7 +161,7 @@ class LinearNormalMultipleRewards(object):
   def __init__(self, thetas):
     self.thetas = thetas
 
-  def __call__(self, x):
+  def __call__(self, x, enable_noise=False):
     # `x` is of shape [`batch_size`, 'context_dim']
     # `theta` is of shape [`context_dim`, 'num_rewards']
     # The result `predicted_rewards` has shape [`batch_size`, `num_rewards`]
@@ -176,23 +176,28 @@ def linear_multiple_reward_fn_generator(per_action_theta_list):
 
 @gin.configurable
 def random_linear_multiple_reward_fn_generator(
-    context_dim, num_actions, num_rewards):
+    context_dim, num_actions, num_rewards, squeeze_dims=True):
   """A function that returns `num_actions` linear functions.
 
   For each action, the corresponding linear function has underlying parameters
-  of shape [`context_dim`, 'num_rewards'].
+  of shape [`context_dim`, 'num_rewards']. Optionally, squeeze can be applied.
 
   Args:
     context_dim: Number of parameters per function.
     num_actions: Number of functions returned.
     num_rewards: Numer of rewards we want to generate.
+    squeeze_dims: whether to apply squeeze or not.
 
   Returns:
     A list of linear functions.
   """
 
   def _gen_multiple_rewards_for_action():
-    return np.random.rand(context_dim, num_rewards)
+    params = np.random.rand(context_dim, num_rewards)
+    if squeeze_dims:
+      return np.squeeze(params)
+    else:
+      return params
 
   return linear_multiple_reward_fn_generator(
       [_gen_multiple_rewards_for_action() for _ in range(num_actions)])
