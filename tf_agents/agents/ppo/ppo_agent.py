@@ -814,12 +814,10 @@ class PPOAgent(tf_agent.TFAgent):
     if self._observation_normalizer:
       self._observation_normalizer.update(
           time_steps.observation, outer_dims=[0, 1])
-    else:
-      # TODO(b/127661780): Verify performance of reward_normalizer when obs are
-      #                    not normalized
-      if self._reward_normalizer:
-        self._reward_normalizer.update(
-            processed_experience.reward, outer_dims=[0, 1])
+
+    if self._reward_normalizer:
+      self._reward_normalizer.update(
+          processed_experience.reward, outer_dims=[0, 1])
 
     loss_info = tf.nest.map_structure(tf.identity, loss_info)
 
