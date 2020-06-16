@@ -40,15 +40,15 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._num_actions = 3
     self._greedy_action = 1
-    self._action_spec = tensor_spec.BoundedTensorSpec((1,), tf.int32, 0,
+    self._action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0,
                                                       self._num_actions-1)
     self._policy = fixed_policy.FixedPolicy(
-        np.asarray([self._greedy_action], dtype=np.int32),
+        np.asarray(self._greedy_action, dtype=np.int32),
         self._time_step_spec,
         self._action_spec)
-    self._bandit_policy_type = tf.constant([[1], [1]])
+    self._bandit_policy_type = tf.constant([1, 1])
     self._bandit_policy_type_spec = (
-        policy_util.create_bandit_policy_type_tensor_spec(shape=(1,)))
+        policy_util.create_bandit_policy_type_tensor_spec(shape=()))
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     self._time_step = ts.restart(observations, batch_size=2)
 
@@ -56,15 +56,15 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # Check that the distribution of sampled actions is aligned with the epsilon
     # values.
     action_counts = np.bincount(np.hstack(actions), minlength=self._num_actions)
-    greedy_prob = 1.0-epsilon
-    expected_counts = [(epsilon*num_steps)/self._num_actions
+    greedy_prob = 1.0 - epsilon
+    expected_counts = [(epsilon * num_steps) / self._num_actions
                        for _ in range(self._num_actions)]
-    expected_counts[self._greedy_action] += greedy_prob*num_steps
-    delta = num_steps*0.1
+    expected_counts[self._greedy_action] += greedy_prob * num_steps
+    delta = num_steps * 0.1
     # Check that action_counts[i] \in [expected-delta, expected+delta]
     for i in range(self._num_actions):
-      self.assertLessEqual(action_counts[i], expected_counts[i]+delta)
-      self.assertGreaterEqual(action_counts[i], expected_counts[i]-delta)
+      self.assertLessEqual(action_counts[i], expected_counts[i] + delta)
+      self.assertGreaterEqual(action_counts[i], expected_counts[i] - delta)
 
   @parameterized.named_parameters(
       ('Tensor0.0', 0.0, True), ('Tensor0.2', 0.2, True),
@@ -106,7 +106,7 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.checkActionDistribution(actions, float_epsilon, num_steps)
 
   def checkBanditPolicyTypeShape(self, bandit_policy_type, batch_size):
-    self.assertAllEqual(bandit_policy_type.shape, [batch_size, 1])
+    self.assertAllEqual(bandit_policy_type.shape, [batch_size])
 
   def testInfoSpec(self):
     PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
@@ -118,7 +118,7 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     info_spec = PolicyInfo(bandit_policy_type=self._bandit_policy_type_spec)
 
     policy_with_info_spec = fixed_policy.FixedPolicy(
-        np.asarray([self._greedy_action], dtype=np.int32),
+        np.asarray(self._greedy_action, dtype=np.int32),
         self._time_step_spec,
         self._action_spec,
         policy_info=PolicyInfo(bandit_policy_type=self._bandit_policy_type),
