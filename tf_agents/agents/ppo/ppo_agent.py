@@ -136,7 +136,7 @@ class PPOAgent(tf_agent.TFAgent):
       initial_adaptive_kl_beta: types.Float = 1.0,
       adaptive_kl_target: types.Float = 0.01,
       adaptive_kl_tolerance: types.Float = 0.3,
-      gradient_clipping: bool = None,
+      gradient_clipping: Optional[types.Float] = None,
       value_clipping: Optional[types.Float] = None,
       check_numerics: bool = False,
       # TODO(b/150244758): Change the default to False once we move
@@ -287,6 +287,10 @@ class PPOAgent(tf_agent.TFAgent):
     self._check_numerics = check_numerics
     self._compute_value_and_advantage_in_train = (
         compute_value_and_advantage_in_train)
+    if not isinstance(self._optimizer, tf.keras.optimizers.Optimizer):
+      logging.warning(
+          'Only tf.keras.optimizers.Optimiers are well supported, got a '
+          'non-TF2 optimizer: %s', self._optimizer)
 
     if initial_adaptive_kl_beta > 0.0:
       # TODO(kbanoop): Rename create_variable.
@@ -778,6 +782,7 @@ class PPOAgent(tf_agent.TFAgent):
               training=True)
 
         grads = tape.gradient(loss_info.loss, variables_to_train)
+
         # Tuple is used for py3, where zip is a generator producing values once.
         grads_and_vars = tuple(zip(grads, variables_to_train))
         if self._gradient_clipping > 0:
@@ -792,8 +797,8 @@ class PPOAgent(tf_agent.TFAgent):
           eager_utils.add_variables_summaries(grads_and_vars,
                                               self.train_step_counter)
 
-        self._optimizer.apply_gradients(
-            grads_and_vars, global_step=self.train_step_counter)
+        self._optimizer.apply_gradients(grads_and_vars)
+        self.train_step_counter.assign_add(1)
 
         policy_gradient_losses.append(loss_info.extra.policy_gradient_loss)
         value_estimation_losses.append(loss_info.extra.value_estimation_loss)
@@ -896,18 +901,21 @@ class PPOAgent(tf_agent.TFAgent):
 
         # Regularize policy weights.
         policy_l2_losses = [
+            # TODO(b/158462888): Use aggregete losses that works with replicas.
             tf.reduce_sum(input_tensor=tf.square(v)) * self._policy_l2_reg
             for v in unshared_policy_vars_to_regularize
         ]
 
         # Regularize value function weights.
         vf_l2_losses = [
+            # TODO(b/158462888): Use aggregete losses that works with replicas.
             tf.reduce_sum(input_tensor=tf.square(v)) *
             self._value_function_l2_reg for v in unshared_vf_vars_to_regularize
         ]
 
         # Regularize shared weights
         shared_l2_losses = [
+            # TODO(b/158462888): Use aggregete losses that works with replicas.
             tf.reduce_sum(input_tensor=tf.square(v)) * self._shared_vars_l2_reg
             for v in shared_vars_to_regularize
         ]
@@ -941,11 +949,10 @@ class PPOAgent(tf_agent.TFAgent):
             common.entropy(current_policy_distribution, self.action_spec),
             tf.float32)
 
-        entropy *= weights
+        entropy_reg_loss = common.aggregate_losses(
+            per_example_loss=-entropy,
+            sample_weight=weights).total_loss * self._entropy_regularization
 
-        entropy_reg_loss = (
-            tf.reduce_mean(input_tensor=-entropy) *
-            self._entropy_regularization)
         if self._check_numerics:
           entropy_reg_loss = tf.debugging.check_numerics(
               entropy_reg_loss, 'entropy_reg_loss')
@@ -1017,8 +1024,7 @@ class PPOAgent(tf_agent.TFAgent):
     if self._value_clipping > 0:
       if old_value_predictions is None:
         raise ValueError(
-            'old_value_predictions is None but needed for value clipping.'
-        )
+            'old_value_predictions is None but needed for value clipping.')
       clipped_value_preds = old_value_predictions + tf.clip_by_value(
           value_preds - old_value_predictions, -self._value_clipping,
           self._value_clipping)
@@ -1027,11 +1033,10 @@ class PPOAgent(tf_agent.TFAgent):
       value_estimation_error = tf.maximum(value_estimation_error,
                                           clipped_value_estimation_error)
 
-    value_estimation_error *= weights
-
     value_estimation_loss = (
-        tf.reduce_mean(input_tensor=value_estimation_error) *
-        self._value_pred_loss_coef)
+        common.aggregate_losses(
+            per_example_loss=value_estimation_error,
+            sample_weight=weights).total_loss * self._value_pred_loss_coef)
     if debug_summaries:
       tf.compat.v2.summary.scalar(
           name='value_pred_avg',
@@ -1124,8 +1129,8 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       policy_gradient_loss = -per_timestep_objective
 
-    policy_gradient_loss = tf.reduce_mean(input_tensor=policy_gradient_loss *
-                                          weights)
+    policy_gradient_loss = common.aggregate_losses(
+        per_example_loss=policy_gradient_loss, sample_weight=weights).total_loss
 
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
