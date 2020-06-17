@@ -87,5 +87,22 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllEqual([[[2]], [[2], [2]]],
                         [[d[k].shape.as_list() for k in d] for d in params])
 
+  def test_get_learning_rate(self):
+    optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=0.1)
+    learning_rate = ppo_utils.get_learning_rate(optimizer)
+    expected_learning_rate = 0.1
+    self.assertAlmostEqual(expected_learning_rate, learning_rate)
+
+  def test_get_learning_rate_with_fn(self):
+    learning_rate_var = tf.Variable(0.1, dtype=tf.float64)
+    def learning_rate_fn():
+      return learning_rate_var
+
+    optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate_fn)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    learning_rate = ppo_utils.get_learning_rate(optimizer)
+    expected_learning_rate = 0.1
+    self.assertAlmostEqual(expected_learning_rate, self.evaluate(learning_rate))
+
 if __name__ == '__main__':
   tf.test.main()

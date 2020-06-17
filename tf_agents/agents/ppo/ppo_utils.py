@@ -149,3 +149,24 @@ def get_metric_observers(metrics):
       return metric(traj)
     return metric_observer
   return [get_metric_observer(m) for m in metrics]
+
+
+def get_learning_rate(optimizer):
+  """Gets the current learning rate from an optimizer to be graphed."""
+  # Adam optimizers store their learning rate in `_lr`.
+  if hasattr(optimizer, '_lr'):
+    if callable(optimizer._lr):  # pylint: disable=protected-access
+      learning_rate = optimizer._lr()  # pylint: disable=protected-access
+    else:
+      learning_rate = optimizer._lr  # pylint: disable=protected-access
+  # Non Adam optimizers store their learning rate in `_learning_rate`.
+  elif hasattr(optimizer, '_learning_rate'):
+    if callable(optimizer._learning_rate):  # pylint: disable=protected-access
+      learning_rate = optimizer._learning_rate()  # pylint: disable=protected-access
+    else:
+      learning_rate = optimizer._learning_rate  # pylint: disable=protected-access
+  else:
+    # -1 is returned when the learning rate cannot be inferred.
+    return -1
+
+  return learning_rate

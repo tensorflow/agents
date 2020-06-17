@@ -871,6 +871,13 @@ class PPOAgent(tf_agent.TFAgent):
           data=total_abs_loss,
           step=self.train_step_counter)
 
+    with tf.name_scope('LearningRate/'):
+      learning_rate = ppo_utils.get_learning_rate(self._optimizer)
+      tf.compat.v2.summary.scalar(
+          name='learning_rate',
+          data=learning_rate,
+          step=self.train_step_counter)
+
     if self._summarize_grads_and_vars:
       with tf.name_scope('Variables/'):
         all_vars = (
