@@ -158,7 +158,9 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
 
     predicted_reward_values.shape.with_rank_at_least(2)
     predicted_reward_values.shape.with_rank_at_most(3)
-    if predicted_reward_values.shape[-1] != self._expected_num_actions:
+    if predicted_reward_values.shape[
+        -1] is not None and predicted_reward_values.shape[
+            -1] != self._expected_num_actions:
       raise ValueError(
           'The number of actions ({}) does not match the reward_network output'
           ' size ({}).'.format(self._expected_num_actions,
