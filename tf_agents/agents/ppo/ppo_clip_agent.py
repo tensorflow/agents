@@ -98,6 +98,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       # TODO(b/150244758): Change the default to False once we move
       # clients onto Reverb.
       compute_value_and_advantage_in_train: bool = True,
+      update_normalizers_in_train: bool = True,
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
@@ -152,6 +153,13 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         agent.train(). If False, value prediction is computed during data
         collection. This argument must be set to `False` if mini batch learning
         is enabled.
+      update_normalizers_in_train: A bool to indicate whether normalizers are
+        updated at the end of the `train` method. Set to `False` if mini batch
+        learning is enabled, or if `train` is called on multiple iterations of
+        the same trajectories. In that case, you would need to call the
+        `update_reward_normalizer` and `update_observation_normalizer` methods
+        after all iterations of the same trajectory are done. This ensures that
+        normalizers are updated in the same way as (Schulman, 2017).
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
@@ -186,6 +194,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         value_clipping=value_clipping,
         check_numerics=check_numerics,
         compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
+        update_normalizers_in_train=update_normalizers_in_train,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,

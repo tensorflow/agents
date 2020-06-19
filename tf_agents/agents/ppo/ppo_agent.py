@@ -142,6 +142,7 @@ class PPOAgent(tf_agent.TFAgent):
       # TODO(b/150244758): Change the default to False once we move
       # clients onto Reverb.
       compute_value_and_advantage_in_train: bool = True,
+      update_normalizers_in_train: bool = True,
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
@@ -240,6 +241,13 @@ class PPOAgent(tf_agent.TFAgent):
         agent.train(). If False, value prediction is computed during data
         collection. This argument must be set to `False` if mini batch learning
         is enabled.
+      update_normalizers_in_train: A bool to indicate whether normalizers are
+        updated at the end of the `train` method. Set to `False` if mini batch
+        learning is enabled, or if `train` is called on multiple iterations of
+        the same trajectories. In that case, you would need to call the
+        `update_reward_normalizer` and `update_observation_normalizer` methods
+        after all iterations of the same trajectory are done. This ensures that
+        normalizers are updated in the same way as (Schulman, 2017).
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
@@ -287,6 +295,7 @@ class PPOAgent(tf_agent.TFAgent):
     self._check_numerics = check_numerics
     self._compute_value_and_advantage_in_train = (
         compute_value_and_advantage_in_train)
+    self._update_normalizers_in_train = update_normalizers_in_train
     if not isinstance(self._optimizer, tf.keras.optimizers.Optimizer):
       logging.warning(
           'Only tf.keras.optimizers.Optimiers are well supported, got a '
@@ -816,13 +825,9 @@ class PPOAgent(tf_agent.TFAgent):
         self._collect_policy.distribution(time_steps, policy_state).action)
     self.update_adaptive_kl_beta(kl_divergence)
 
-    if self._observation_normalizer:
-      self._observation_normalizer.update(
-          time_steps.observation, outer_dims=[0, 1])
-
-    if self._reward_normalizer:
-      self._reward_normalizer.update(
-          processed_experience.reward, outer_dims=[0, 1])
+    if self._update_normalizers_in_train:
+      self.update_observation_normalizer(time_steps.observation)
+      self.update_reward_normalizer(processed_experience.reward)
 
     loss_info = tf.nest.map_structure(tf.identity, loss_info)
 
@@ -890,6 +895,15 @@ class PPOAgent(tf_agent.TFAgent):
               step=self.train_step_counter)
 
     return loss_info
+
+  def update_observation_normalizer(self, batched_observations):
+    if self._observation_normalizer:
+      self._observation_normalizer.update(
+          batched_observations, outer_dims=[0, 1])
+
+  def update_reward_normalizer(self, batched_rewards):
+    if self._reward_normalizer:
+      self._reward_normalizer.update(batched_rewards, outer_dims=[0, 1])
 
   def l2_regularization_loss(self,
                              debug_summaries: bool = False) -> types.Tensor:
