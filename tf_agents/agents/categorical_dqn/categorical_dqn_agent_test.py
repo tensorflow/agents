@@ -98,6 +98,13 @@ class KerasLayersNet(network.Network):
     del step_type
     return self._layer(inputs), network_state
 
+  def create_variables(self, input_spec=None):
+    output_spec = network.create_variables(
+        self._layer, input_spec or self._input_tensor_spec)
+    self._network_output_spec = output_spec
+    self.built = True
+    return output_spec
+
 
 class DummyCategoricalQRnnNetwork(q_rnn_network.QRnnNetwork):
 
@@ -156,8 +163,7 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
     ]
 
-    with self.assertRaisesRegexp(
-        ValueError, '.*Only one dimensional actions.*'):
+    with self.assertRaisesRegex(ValueError, 'Only scalar actions'):
       categorical_dqn_agent.CategoricalDqnAgent(
           self._time_step_spec,
           action_spec,
@@ -165,10 +171,9 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
           self._optimizer)
 
   def testCreateAgentDimChecks(self):
-    action_spec = [tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)]
+    action_spec = tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)
 
-    with self.assertRaisesRegexp(
-        ValueError, '.*Only one dimensional actions.*'):
+    with self.assertRaisesRegex(ValueError, 'Only scalar actions'):
       categorical_dqn_agent.CategoricalDqnAgent(
           self._time_step_spec,
           action_spec,
@@ -183,7 +188,11 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._optimizer)
 
   def testCreateAgentWithPrebuiltPreprocessingLayers(self):
-    dense_layer = tf.keras.layers.Dense(3)
+    dense_layer = tf.keras.Sequential([
+        tf.keras.layers.Dense(10),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Reshape([2, 5]),
+    ])
     q_net = KerasLayersNet(
         self._time_step_spec.observation, self._action_spec, dense_layer)
     with self.assertRaisesRegexp(
@@ -208,10 +217,17 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
           target_categorical_q_network=q_target_net)
 
   def testCreateAgentWithPrebuiltPreprocessingLayersDiffAtoms(self):
-    dense_layer = tf.keras.layers.Dense(3)
+    dense_layer = tf.keras.Sequential([
+        tf.keras.layers.Dense(10),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Reshape([2, 5]),
+    ])
     q_net = KerasLayersNet(
         self._time_step_spec.observation, self._action_spec, dense_layer)
-    dense_layer_target = tf.keras.layers.Dense(3)
+    dense_layer_target = tf.keras.Sequential([
+        tf.keras.layers.Dense(10),
+        tf.keras.layers.Reshape([2, 5]),
+    ])
     q_bad_target_net = KerasLayersNet(
         self._time_step_spec.observation, self._action_spec, dense_layer_target,
         num_atoms=3)
@@ -453,12 +469,12 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     self.assertAllClose(evaluated_loss, expected_loss, atol=1e-4)
 
   def testTrainWithRnn(self):
-    action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
 
     batch_size = 5
     observations = tf.constant(
         [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
-    actions = tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.int32)
+    actions = tf.constant([[0, 1, 1]] * batch_size, dtype=tf.int32)
     time_steps = ts.TimeStep(
         step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),

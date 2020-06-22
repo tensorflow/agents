@@ -197,7 +197,12 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
   def _get_policies(self, time_step_spec, action_spec, cloning_network):
     policy = q_policy.QPolicy(
-        time_step_spec, action_spec, q_network=self._cloning_network)
+        time_step_spec, action_spec, q_network=self._cloning_network,
+        # Unlike DQN, we support continuous action spaces - in which case
+        # the policy just emits the network output.  In that case, we
+        # don't care if the action_spec is a scalar integer value.
+        validate_action_spec_and_network=False,
+    )
     collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         policy, epsilon=self._epsilon_greedy)
     policy = greedy_policy.GreedyPolicy(policy)

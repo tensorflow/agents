@@ -16,10 +16,28 @@
 """Network utilities."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
+import typing
+
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.typing import types
 from tf_agents.utils import composite
+
+
+def check_single_floating_network_output(
+    output_spec: types.NestedSpec,
+    expected_output_shape: typing.Tuple[int, ...],
+    label: typing.Text):
+  expected_output_shape = tuple(int(x) for x in expected_output_shape)
+  if not (isinstance(output_spec, tf.TensorSpec)
+          and output_spec.shape == expected_output_shape
+          and output_spec.dtype.is_floating):
+    raise ValueError(
+        'Expected {} to emit a floating point tensor with inner dims '
+        '{}; but saw network output spec: {}'
+        .format(label, expected_output_shape, output_spec))
 
 
 def maybe_permanent_dropout(rate, noise_shape=None, seed=None, permanent=False):

@@ -35,13 +35,15 @@ class AddNet(network.Network):
   """Small model used for tests."""
 
   def __init__(self):
-    super(AddNet,
-          self).__init__(tensor_spec.TensorSpec((), tf.float32), (), 'add_net')
+    super(AddNet, self).__init__(
+        tensor_spec.TensorSpec((), tf.float32), (), 'add_net')
     self.var = tf.Variable(0.0, dtype=tf.float32)
 
   def call(self, observation, step_type=None, network_state=(), training=False):
     del step_type, network_state, training
-    return observation + self.var, ()
+    # The action spec is BoundedTensorSpec(min=0, max=3) which means this
+    # Network should emit a 4-logit.
+    return tf.stack(4 * [observation + self.var], axis=-1), ()
 
 
 class PolicyLoaderTest(test_utils.TestCase):
@@ -52,7 +54,7 @@ class PolicyLoaderTest(test_utils.TestCase):
     self.root_dir = self.get_temp_dir()
     tf_observation_spec = tensor_spec.TensorSpec((), np.float32)
     tf_time_step_spec = ts.time_step_spec(tf_observation_spec)
-    tf_action_spec = tensor_spec.BoundedTensorSpec((), np.float32, 0.0, 3.0)
+    tf_action_spec = tensor_spec.BoundedTensorSpec((), np.float32, 0, 3)
     self.net = AddNet()
     self.policy = greedy_policy.GreedyPolicy(
         q_policy.QPolicy(tf_time_step_spec, tf_action_spec, self.net))

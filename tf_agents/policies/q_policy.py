@@ -29,6 +29,7 @@ import tensorflow_probability as tfp
 
 from tf_agents.distributions import shifted_categorical
 from tf_agents.networks import network
+from tf_agents.networks import utils as network_utils
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
@@ -47,6 +48,7 @@ class QPolicy(tf_policy.TFPolicy):
       emit_log_probability: bool = False,
       observation_and_action_constraint_splitter: Optional[
           types.Splitter] = None,
+      validate_action_spec_and_network: bool = True,
       name: Optional[Text] = None):
     """Builds a Q-Policy given a q_network.
 
@@ -75,6 +77,10 @@ class QPolicy(tf_policy.TFPolicy):
         called on the observation before passing to the network.
         If `observation_and_action_constraint_splitter` is None, action
         constraints are not applied.
+      validate_action_spec_and_network: If `True` (default),
+        action_spec is checked to make sure it is a single scalar spec
+        with a minimum of zero.  Also validates that the network's output
+        matches the spec.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -95,11 +101,27 @@ class QPolicy(tf_policy.TFPolicy):
 
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
-      raise NotImplementedError(
-          'action_spec can only contain a single BoundedTensorSpec.')
+      raise ValueError(
+          'Only scalar actions are supported now, but action spec is: {}'
+          .format(action_spec))
+    if validate_action_spec_and_network:
+      spec = flat_action_spec[0]
+      if spec.shape.rank > 0:
+        raise ValueError(
+            'Only scalar actions are supported now, but action spec is: {}'
+            .format(action_spec))
+
+      if spec.minimum != 0:
+        raise ValueError(
+            'Action specs should have minimum of 0, but saw: {0}'.format(spec))
+
+      num_actions = spec.maximum - spec.minimum + 1
+      network_utils.check_single_floating_network_output(
+          q_network.create_variables(), (num_actions,), str(q_network))
+
     # We need to maintain the flat action spec for dtype, shape and range.
     self._flat_action_spec = flat_action_spec[0]
-    q_network.create_variables()
+
     self._q_network = q_network
     super(QPolicy, self).__init__(
         time_step_spec,
@@ -131,29 +153,13 @@ class QPolicy(tf_policy.TFPolicy):
     q_values, policy_state = self._q_network(
         network_observation, time_step.step_type, policy_state)
 
-    # TODO(b/122314058): Validate and enforce that sampling distributions
-    # created with the q_network logits generate the right action shapes. This
-    # is curretly patching the problem.
-
-    # If the action spec says each action should be shaped (1,), add another
-    # dimension so the final shape is (B, 1, A), where A is the number of
-    # actions. This will make Categorical emit events shaped (B, 1) rather than
-    # (B,). Using axis -2 to allow for (B, T, 1, A) shaped q_values.
-    if self._flat_action_spec.shape.rank == 1:
-      q_values = tf.expand_dims(q_values, -2)
-
     logits = q_values
 
     if observation_and_action_constraint_splitter is not None:
-      # Expand the mask as needed in the same way as q_values above.
-      if self._flat_action_spec.shape.rank == 1:
-        mask = tf.expand_dims(mask, -2)
-
       # Overwrite the logits for invalid actions to -inf.
       neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
       logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
 
-    # TODO(kbanoop): Handle distributions over nests.
     if self._flat_action_spec.minimum != 0:
       distribution = shifted_categorical.ShiftedCategorical(
           logits=logits,
@@ -163,5 +169,6 @@ class QPolicy(tf_policy.TFPolicy):
       distribution = tfp.distributions.Categorical(
           logits=logits,
           dtype=self._flat_action_spec.dtype)
+
     distribution = tf.nest.pack_sequence_as(self._action_spec, [distribution])
     return policy_step.PolicyStep(distribution, policy_state)

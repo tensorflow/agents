@@ -35,7 +35,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents import tf_agent
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.networks import network
-from tf_agents.networks import utils
+from tf_agents.networks import utils as network_utils
 from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import categorical_q_policy
 from tf_agents.policies import epsilon_greedy_policy
@@ -169,7 +169,36 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
     Raises:
       TypeError: If the action spec contains more than one action.
+      TypeError: If the q network(s) lack a `num_atoms` property.
     """
+    def check_atoms(net, label):
+      try:
+        num_atoms = net.num_atoms
+      except AttributeError:
+        raise TypeError('Expected {} to have property `num_atoms`, but it '
+                        'doesn\'t. (Note: you likely want to use a '
+                        'CategoricalQNetwork.) Network is: {}'.format(
+                            label, net))
+      return num_atoms
+
+    self._num_atoms = check_atoms(
+        categorical_q_network, 'categorical_q_network')
+
+    if target_categorical_q_network is not None:
+      target_num_atoms = check_atoms(
+          target_categorical_q_network, 'target_categorical_q_network')
+      if self._num_atoms != target_num_atoms:
+        raise ValueError(
+            'categorical_q_network and target_categorical_q_network have '
+            'different numbers of atoms: {} vs. {}'.format(
+                self._num_atoms, target_num_atoms))
+
+    self._min_q_value = min_q_value
+    self._max_q_value = max_q_value
+    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
+    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
+    self._support = tf.linspace(min_q_value, max_q_value, self._num_atoms)
+
     super(CategoricalDqnAgent, self).__init__(
         time_step_spec,
         action_spec,
@@ -192,55 +221,42 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         train_step_counter=train_step_counter,
         name=name)
 
-    def check_atoms(net, label):
-      num_atoms = getattr(net, 'num_atoms', None)
-      if num_atoms is None:
-        raise TypeError('Expected {} to have property `num_atoms`, but it '
-                        'doesn\'t. (Note: you likely want to use a '
-                        'CategoricalQNetwork.) Network is: {}'.format(
-                            label, net))
-      return num_atoms
-
-    num_atoms = check_atoms(self._q_network, 'categorical_q_network')
-    target_num_atoms = check_atoms(
-        self._target_q_network, 'target_categorical_q_network')
-    if num_atoms != target_num_atoms:
-      raise ValueError(
-          'categorical_q_network and target_categorical_q_network have '
-          'different numbers of atoms: {} vs. {}'.format(
-              num_atoms, target_num_atoms))
-    self._num_atoms = num_atoms
-
+  def _setup_policy(self, time_step_spec, action_spec,
+                    boltzmann_temperature, emit_log_probability):
     policy = categorical_q_policy.CategoricalQPolicy(
         time_step_spec,
-        self._action_spec,
+        action_spec,
         self._q_network,
-        min_q_value,
-        max_q_value,
+        self._min_q_value,
+        self._max_q_value,
         observation_and_action_constraint_splitter=(
             self._observation_and_action_constraint_splitter))
 
     if boltzmann_temperature is not None:
-      self._collect_policy = boltzmann_policy.BoltzmannPolicy(
-          policy, temperature=self._boltzmann_temperature)
+      collect_policy = boltzmann_policy.BoltzmannPolicy(
+          policy, temperature=boltzmann_temperature)
     else:
-      self._collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+      collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
           policy, epsilon=self._epsilon_greedy)
-    self._policy = greedy_policy.GreedyPolicy(policy)
+    policy = greedy_policy.GreedyPolicy(policy)
 
     target_policy = categorical_q_policy.CategoricalQPolicy(
         time_step_spec,
-        self._action_spec,
+        action_spec,
         self._target_q_network,
-        min_q_value,
-        max_q_value,
+        self._min_q_value,
+        self._max_q_value,
         observation_and_action_constraint_splitter=(
             self._observation_and_action_constraint_splitter))
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
-    min_q_value = tf.convert_to_tensor(min_q_value, dtype_hint=tf.float32)
-    max_q_value = tf.convert_to_tensor(max_q_value, dtype_hint=tf.float32)
-    self._support = tf.linspace(min_q_value, max_q_value, num_atoms)
+    return policy, collect_policy
+
+  def _check_network_output(self, net, label):
+    network_utils.check_single_floating_network_output(
+        net.create_variables(),
+        expected_output_shape=(self._num_actions, self._num_atoms),
+        label=label)
 
   def _loss(self,
             experience,
@@ -308,7 +324,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       # combine the batch and time dimension.
       batch_squash = (None
                       if rank <= 1 or self._q_network.state_spec in ((), None)
-                      else utils.BatchSquash(rank))
+                      else network_utils.BatchSquash(rank))
 
       network_observation = time_steps.observation
 

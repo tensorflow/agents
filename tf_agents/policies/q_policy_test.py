@@ -68,7 +68,7 @@ class QPolicyTest(test_utils.TestCase):
     super(QPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+    self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
 
   def testBuild(self):
     policy = q_policy.QPolicy(
@@ -78,10 +78,8 @@ class QPolicyTest(test_utils.TestCase):
     self.assertEqual(policy.action_spec, self._action_spec)
 
   def testMultipleActionsRaiseError(self):
-    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)] * 2
-    with self.assertRaisesRegexp(
-        NotImplementedError,
-        'action_spec can only contain a single BoundedTensorSpec'):
+    action_spec = [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)] * 2
+    with self.assertRaisesRegexp(ValueError, 'Only scalar actions'):
       q_policy.QPolicy(
           self._time_step_spec, action_spec, q_network=DummyNet())
 
@@ -92,7 +90,7 @@ class QPolicyTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -100,22 +98,14 @@ class QPolicyTest(test_utils.TestCase):
     self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionWithinBounds(self):
-    bounded_action_spec = tensor_spec.BoundedTensorSpec([1],
+    bounded_action_spec = tensor_spec.BoundedTensorSpec([],
                                                         tf.int32,
                                                         minimum=-6,
                                                         maximum=-5)
-    policy = q_policy.QPolicy(
-        self._time_step_spec, bounded_action_spec, q_network=DummyNet())
 
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observations, batch_size=2)
-    action_step = policy.action(time_step)
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
-    self.assertEqual(action_step.action.dtype, tf.int32)
-    # Initialize all variables
-    self.evaluate(tf.compat.v1.global_variables_initializer())
-    action = self.evaluate(action_step.action)
-    self.assertTrue(np.all(action <= -5) and np.all(action >= -6))
+    with self.assertRaisesRegex(ValueError, 'minimum of 0'):
+      q_policy.QPolicy(
+          self._time_step_spec, bounded_action_spec, q_network=DummyNet())
 
   def testActionScalarSpec(self):
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
@@ -133,7 +123,7 @@ class QPolicyTest(test_utils.TestCase):
     self.assertTrue(np.all(action >= 0) and np.all(action <= 1))
 
   def testActionList(self):
-    action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)]
+    action_spec = [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)]
     policy = q_policy.QPolicy(
         self._time_step_spec, action_spec, q_network=DummyNet())
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
@@ -158,7 +148,7 @@ class QPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     # The weights of index 0 are all 1 and the weights of index 1 are all 1.5,
     # so the Q values of index 1 will be higher.
-    self.assertAllEqual([[1]], self.evaluate(mode))
+    self.assertAllEqual([1], self.evaluate(mode))
 
   def testUpdate(self):
     policy = q_policy.QPolicy(
@@ -201,7 +191,7 @@ class QPolicyTest(test_utils.TestCase):
     time_step = ts.restart(observations, batch_size=batch_size)
     input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
     action_spec = tensor_spec.BoundedTensorSpec(
-        [1], tf.int32, 0, num_actions - 1)
+        [], tf.int32, 0, num_actions - 1)
 
     # We create a fixed mask here for testing purposes. Normally the mask would
     # be part of the observation.
@@ -222,8 +212,8 @@ class QPolicyTest(test_utils.TestCase):
     # invalid according to the mask are never chosen.
     action_step = policy.action(time_step)
     action = self.evaluate(action_step.action)
-    self.assertEqual(action.shape, (batch_size, 1))
-    self.assertAllEqual(np_mask[action], np.ones([batch_size, 1]))
+    self.assertEqual(action.shape, (batch_size,))
+    self.assertAllEqual(np_mask[action], np.ones([batch_size]))
 
 
 if __name__ == '__main__':

@@ -56,7 +56,7 @@ class BoltzmannPolicyTest(test_utils.TestCase):
     super(BoltzmannPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+    self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
 
   def testBuild(self):
     wrapped = q_policy.QPolicy(
@@ -75,7 +75,7 @@ class BoltzmannPolicyTest(test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -94,7 +94,7 @@ class BoltzmannPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     # The weights of index 0 are all 1 and the weights of index 1 are all 1.5,
     # so the Q values of index 1 will be higher.
-    self.assertAllEqual([[1]], self.evaluate(mode))
+    self.assertAllEqual([1], self.evaluate(mode))
 
   def testLogits(self):
     tf.compat.v1.set_random_seed(1)
@@ -111,8 +111,8 @@ class BoltzmannPolicyTest(test_utils.TestCase):
     # The un-temperature'd logits would be 4 and 5.5, because it is (1 2) . (1
     # 1) + 1 and (1 2) . (1.5 1.5) + 1. The temperature'd logits will be double
     # that.
-    self.assertAllEqual([[[4., 5.5]]], self.evaluate(original_logits))
-    self.assertAllEqual([[[8., 11.]]], self.evaluate(logits))
+    self.assertAllEqual([[4., 5.5]], self.evaluate(original_logits))
+    self.assertAllEqual([[8., 11.]], self.evaluate(logits))
 
 
 if __name__ == '__main__':

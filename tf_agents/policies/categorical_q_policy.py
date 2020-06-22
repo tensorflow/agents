@@ -28,6 +28,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.networks import network
+from tf_agents.networks import utils as network_utils
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -97,11 +98,24 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
       raise TypeError('action_spec must be a BoundedTensorSpec. Got: %s' % (
           action_spec,))
 
-    num_atoms = getattr(q_network, 'num_atoms', None)
-    if num_atoms is None:
+    if action_spec.minimum != 0:
+      raise ValueError(
+          'Action specs should have minimum of 0, but saw: {0}.  If collecting '
+          'from a python environment, consider using '
+          'tf_agents.environments.wrappers.ActionOffsetWrapper.'
+          .format(action_spec))
+
+    num_actions = action_spec.maximum - action_spec.minimum + 1
+    try:
+      num_atoms = q_network.num_atoms
+    except AttributeError:
       raise ValueError('Expected q_network to have property `num_atoms`, but '
                        'it doesn\'t. (Note: you likely want to use a '
                        'CategoricalQNetwork.) Network is: %s' % q_network)
+    self._num_atoms = num_atoms
+
+    network_utils.check_single_floating_network_output(
+        q_network.create_variables(), (num_actions, num_atoms), str(q_network))
 
     super(CategoricalQPolicy, self).__init__(
         time_step_spec,
@@ -111,8 +125,6 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
             observation_and_action_constraint_splitter))
 
     self._temperature = tf.convert_to_tensor(temperature, dtype=tf.float32)
-    self._num_atoms = q_network.num_atoms
-    q_network.create_variables()
     self._q_network = q_network
 
     # Generate support in numpy so that we can assign it to a constant and avoid
