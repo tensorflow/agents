@@ -111,6 +111,10 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
   def batch_size(self) -> int:
     return self._num_envs
 
+  @property
+  def envs(self):
+    return self._envs
+
   def observation_spec(self) -> types.NestedArraySpec:
     return self._observation_spec
 
