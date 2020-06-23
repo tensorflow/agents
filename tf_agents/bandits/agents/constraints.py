@@ -150,6 +150,87 @@ class NeuralConstraint(BaseConstraint):
     return tf.ones(shape)
 
 
+class RelativeConstraint(NeuralConstraint):
+  """Class for representing a trainable relative constraint.
+
+  This constraint class implements a relative constraint such as
+  ```
+  expected_value(action) >= (1 - margin) * expected_value(baseline_action)
+  ```
+  or
+  ```
+  expected_value(action) <= (1 - margin) * expected_value(baseline_action)
+  ```
+  """
+
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      constraint_network,
+      error_loss_fn=tf.compat.v1.losses.mean_squared_error,
+      comparator_fn=tf.greater,
+      margin=0.0,
+      baseline_action_fn=None,
+      name='RelativeConstraint'):
+    """Creates a trainable relative constraint using a neural network.
+
+    Args:
+      time_step_spec: A `TimeStep` spec of the expected time_steps.
+      action_spec: A nest of `BoundedTensorSpec` representing the actions.
+      constraint_network: An instance of `tf_agents.network.Network` used to
+        provide estimates of action feasibility. The input structure should be
+        consistent with the `observation_spec`.
+      error_loss_fn: A function for computing the loss used to train the
+        constraint network. The default is `tf.losses.mean_squared_error`.
+      comparator_fn: A comparator function, such as tf.greater or tf.less.
+      margin: A float in (0,1] that determines how strongly we want to enforce
+        the constraint.
+      baseline_action_fn: a callable that given the observation returns the
+         baseline action. If None, the baseline action is set to 0.
+      name: Python str name of this agent. All variables in this module will
+        fall under that name. Defaults to the class name.
+    """
+    self._baseline_action_fn = baseline_action_fn
+    self._comparator_fn = comparator_fn
+    self._error_loss_fn = error_loss_fn
+    self._margin = margin
+
+    super(RelativeConstraint, self).__init__(
+        time_step_spec,
+        action_spec,
+        constraint_network,
+        error_loss_fn=self._error_loss_fn,
+        name=name)
+
+  def _reshape_and_broadcast(self, input_tensor, to_shape):
+    input_tensor = tf.reshape(input_tensor, [-1, 1])
+    return tf.broadcast_to(input_tensor, to_shape)
+
+  def __call__(self, observation, actions=None):
+    """Returns the probability of input actions being feasible."""
+    predicted_values, _ = self._constraint_network(
+        observation, training=False)
+
+    batch_dims = nest_utils.get_outer_shape(
+        observation, self._time_step_spec.observation)
+    if self._baseline_action_fn is not None:
+      baseline_action = self._baseline_action_fn(observation)
+      baseline_action.shape.assert_is_compatible_with(batch_dims)
+    else:
+      baseline_action = tf.zeros(batch_dims, dtype=tf.int32)
+
+    predicted_values_for_baseline_actions = common.index_with_actions(
+        predicted_values,
+        tf.cast(baseline_action, dtype=tf.int32))
+    predicted_values_for_baseline_actions = self._reshape_and_broadcast(
+        predicted_values_for_baseline_actions, tf.shape(predicted_values))
+    is_satisfied = self._comparator_fn(
+        predicted_values,
+        (1 - self._margin) * predicted_values_for_baseline_actions)
+    return tf.cast(is_satisfied, tf.float32)
+
+
 class QuantileConstraint(NeuralConstraint):
   """Class for representing a trainable quantile constraint.
 

@@ -187,6 +187,48 @@ class NeuralConstraintTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(feasibility_prob), np.ones([2, 3]))
 
 
+class RelativeConstraintTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(RelativeConstraintTest, self).setUp()
+    tf.compat.v1.enable_resource_variables()
+    self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
+    self._time_step_spec = ts.time_step_spec(self._obs_spec)
+    self._action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+
+  def testComputeActionFeasibilityNoBaselineActionFn(self):
+    constraint_net = DummyNet(self._obs_spec, self._action_spec)
+    relative_constraint = constraints.RelativeConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net,
+        baseline_action_fn=None)
+    init_op = relative_constraint.initialize()
+    self.evaluate(init_op)
+
+    observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    feasibility_prob = relative_constraint(observation)
+    self.assertAllEqual(self.evaluate(feasibility_prob),
+                        np.array([[0.0, 1.0, 0.0], [0.0, 1.0, 1.0]]))
+
+  def testComputeActionFeasibility(self):
+    constraint_net = DummyNet(self._obs_spec, self._action_spec)
+    baseline_action_fn = lambda _: tf.constant([1, 1], dtype=tf.int32)
+    relative_constraint = constraints.RelativeConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net,
+        baseline_action_fn=baseline_action_fn)
+    init_op = relative_constraint.initialize()
+    self.evaluate(init_op)
+
+    observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    feasibility_prob = relative_constraint(observation)
+    self.assertAllEqual(self.evaluate(feasibility_prob),
+                        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]))
+
+
 class QuantileConstraintTest(tf.test.TestCase):
 
   def setUp(self):
