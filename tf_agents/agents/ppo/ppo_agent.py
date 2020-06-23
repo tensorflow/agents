@@ -791,12 +791,11 @@ class PPOAgent(tf_agent.TFAgent):
               training=True)
 
         grads = tape.gradient(loss_info.loss, variables_to_train)
+        if self._gradient_clipping > 0:
+          grads, _ = tf.clip_by_global_norm(grads, self._gradient_clipping)
 
         # Tuple is used for py3, where zip is a generator producing values once.
         grads_and_vars = tuple(zip(grads, variables_to_train))
-        if self._gradient_clipping > 0:
-          grads_and_vars = eager_utils.clip_gradient_norms(
-              grads_and_vars, self._gradient_clipping)
 
         # If summarize_gradients, create functions for summarizing both
         # gradients and variables.
