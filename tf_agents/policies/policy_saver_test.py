@@ -181,7 +181,8 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
           if has_state:
             network = q_rnn_network.QRnnNetwork(
                 input_tensor_spec=self._time_step_spec.observation,
-                action_spec=self._action_spec)
+                action_spec=self._action_spec,
+                lstm_size=(40,))
           else:
             network = q_network.QNetwork(
                 input_tensor_spec=self._time_step_spec.observation,
@@ -367,7 +368,8 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
   def testSaveGetInitialState(self):
     network = q_rnn_network.QRnnNetwork(
         input_tensor_spec=self._time_step_spec.observation,
-        action_spec=self._action_spec)
+        action_spec=self._action_spec,
+        lstm_size=(40,))
 
     policy = q_policy.QPolicy(
         time_step_spec=self._time_step_spec,
