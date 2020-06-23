@@ -922,23 +922,23 @@ class PPOAgent(tf_agent.TFAgent):
 
         # Regularize policy weights.
         policy_l2_losses = [
-            # TODO(b/158462888): Use aggregete losses that works with replicas.
-            tf.reduce_sum(input_tensor=tf.square(v)) * self._policy_l2_reg
-            for v in unshared_policy_vars_to_regularize
+            common.aggregate_losses(
+                regularization_loss=tf.square(v)).regularization *
+            self._policy_l2_reg for v in unshared_policy_vars_to_regularize
         ]
 
         # Regularize value function weights.
         vf_l2_losses = [
-            # TODO(b/158462888): Use aggregete losses that works with replicas.
-            tf.reduce_sum(input_tensor=tf.square(v)) *
+            common.aggregate_losses(
+                regularization_loss=tf.square(v)).regularization *
             self._value_function_l2_reg for v in unshared_vf_vars_to_regularize
         ]
 
         # Regularize shared weights
         shared_l2_losses = [
-            # TODO(b/158462888): Use aggregete losses that works with replicas.
-            tf.reduce_sum(input_tensor=tf.square(v)) * self._shared_vars_l2_reg
-            for v in shared_vars_to_regularize
+            common.aggregate_losses(
+                regularization_loss=tf.square(v)).regularization *
+            self._shared_vars_l2_reg for v in shared_vars_to_regularize
         ]
 
         l2_losses = policy_l2_losses + vf_l2_losses + shared_l2_losses
