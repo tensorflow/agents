@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import math
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -52,7 +53,7 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     self._time_step = ts.restart(observations, batch_size=2)
 
-  def checkActionDistribution(self, actions, epsilon, num_steps):
+  def checkActionDistribution(self, actions, epsilon, num_steps, log_probs):
     # Check that the distribution of sampled actions is aligned with the epsilon
     # values.
     action_counts = np.bincount(np.hstack(actions), minlength=self._num_actions)
@@ -65,6 +66,14 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     for i in range(self._num_actions):
       self.assertLessEqual(action_counts[i], expected_counts[i] + delta)
       self.assertGreaterEqual(action_counts[i], expected_counts[i] - delta)
+
+    # Check that the log probs are correct.
+    explore_prob = epsilon / self._num_actions
+    for action, log_prob in zip(actions, log_probs):
+      if not np.allclose([math.exp(log_prob)], [explore_prob]):
+        # If it's not exploring, it must be taking the greedy action.
+        self.assertEqual(self._greedy_action, action)
+        self.assertAlmostEqual(math.exp(log_prob), greedy_prob)
 
   @parameterized.named_parameters(
       ('Tensor0.0', 0.0, True), ('Tensor0.2', 0.2, True),
@@ -95,15 +104,19 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
       action_step = action_step_fn()
 
     actions = []
+    log_probs = []
 
     num_steps = 1000
     for _ in range(num_steps):
-      action_ = self.evaluate(action_step).action[0]
+      step = self.evaluate(action_step)
+      action_ = step.action[0]
+      log_prob_ = step.info.log_probability[0]
       self.assertIn(action_, [0, 1, 2])
       actions.append(action_)
+      log_probs.append(log_prob_)
 
     # Verify that action distribution changes as we vary epsilon.
-    self.checkActionDistribution(actions, float_epsilon, num_steps)
+    self.checkActionDistribution(actions, float_epsilon, num_steps, log_probs)
 
   def checkBanditPolicyTypeShape(self, bandit_policy_type, batch_size):
     self.assertAllEqual(bandit_policy_type.shape, [batch_size])
@@ -115,7 +128,14 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # Set default empty tuple for all fields.
     PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
-    info_spec = PolicyInfo(bandit_policy_type=self._bandit_policy_type_spec)
+    info_spec = PolicyInfo(
+        bandit_policy_type=self._bandit_policy_type_spec,
+        log_probability=tensor_spec.BoundedTensorSpec(
+            shape=(),
+            dtype=tf.float32,
+            maximum=0,
+            minimum=-float('inf'),
+            name='log_probability'))
 
     policy_with_info_spec = fixed_policy.FixedPolicy(
         np.asarray(self._greedy_action, dtype=np.int32),

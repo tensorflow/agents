@@ -55,7 +55,8 @@ def _calculate_log_probability(outer_dims, action_spec):
   # adjust by the number of times that vector is repeated in action_spec.
   log_prob = tf.reduce_sum(log_prob) * (
       action_spec.shape.num_elements() / log_prob.shape.num_elements())
-  return tf.fill(outer_dims, log_prob)
+  # Regardless of the type of the action, the log_prob should be float32.
+  return tf.cast(tf.fill(outer_dims, log_prob), tf.float32)
 
 
 class RandomTFPolicy(tf_policy.TFPolicy):

@@ -122,7 +122,27 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
     if greedy_action.info:
       if not random_action.info:
         raise ValueError('Incompatible info field')
-      info = nest_utils.where(cond, greedy_action.info, random_action.info)
+      # Note that the objects in PolicyInfo may have different shapes, so we
+      # need to call nest_utils.where() on each type of object.
+      info = tf.nest.map_structure(lambda x, y: nest_utils.where(cond, x, y),
+                                   greedy_action.info, random_action.info)
+      if self._emit_log_probability:
+        # At this point, info.log_probability contains the log prob of the
+        # action chosen, conditioned on the policy that was chosen. We want to
+        # emit the full log probability of the action, so we'll add in the log
+        # probability of choosing the policy.
+        random_log_prob = tf.nest.map_structure(
+            lambda t: tf.math.log(tf.zeros_like(t) + self._get_epsilon()),
+            info.log_probability)
+        greedy_log_prob = tf.nest.map_structure(
+            lambda t: tf.math.log(tf.ones_like(t) - self._get_epsilon()),
+            random_log_prob)
+        log_prob_of_chosen_policy = nest_utils.where(cond, greedy_log_prob,
+                                                     random_log_prob)
+        log_prob = tf.nest.map_structure(lambda a, b: a + b,
+                                         log_prob_of_chosen_policy,
+                                         info.log_probability)
+        info = policy_step.set_log_probability(info, log_prob)
       # Overwrite bandit policy info type.
       if policy_utilities.has_bandit_policy_type(info, check_for_tensor=True):
         # Generate mask of the same shape as bandit_policy_type (batch_size, 1).

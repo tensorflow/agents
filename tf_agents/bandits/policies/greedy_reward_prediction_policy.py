@@ -126,6 +126,7 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
         policy_state_spec=reward_network.state_spec,
         clip=False,
         info_spec=info_spec,
+        emit_log_probability='log_probability' in emit_policy_info,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
         name=name)
@@ -192,6 +193,9 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
           gather_observation,
           observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
       policy_info = policy_utilities.PerArmPolicyInfo(
+          log_probability=tf.zeros([batch_size], tf.float32) if
+          policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info
+          else (),
           predicted_rewards_mean=(
               predicted_reward_values if policy_utilities.InfoFields
               .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
@@ -201,6 +205,9 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
           chosen_arm_features=chosen_arm_features)
     else:
       policy_info = policy_utilities.PolicyInfo(
+          log_probability=tf.zeros([batch_size], tf.float32) if
+          policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info
+          else (),
           predicted_rewards_mean=(
               predicted_reward_values if policy_utilities.InfoFields
               .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
