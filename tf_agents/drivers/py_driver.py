@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
+from typing import Any, Callable, Optional, Sequence, Tuple
 
 import numpy as np
 from tf_agents.drivers import driver
@@ -28,7 +29,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 
 from tf_agents.typing import types
-from typing import Any, Callable, Optional, Sequence, Tuple
 
 
 class PyDriver(driver.Driver):
@@ -54,11 +54,14 @@ class PyDriver(driver.Driver):
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as
         trajectories are for regular observers.
-      max_steps: Optional maximum number of steps for each run() call.
-        Also see below.  Default: 0.
-      max_episodes: Optional maximum number of episodes for each run() call.
-        At least one of max_steps or max_episodes must be provided. If both
-        are set, run() terminates when at least one of the conditions is
+      max_steps: Optional maximum number of steps for each run() call. For
+        batched or parallel environments, this is the maximum total number of
+        steps summed across all environments. Also see below.  Default: 0.
+      max_episodes: Optional maximum number of episodes for each run() call. For
+        batched or parallel environments, this is the maximum total number of
+        episodes summed across all environments. At least one of max_steps or
+        max_episodes must be provided. If both are set, run() terminates when at
+        least one of the conditions is
         satisfied.  Default: 0.
 
     Raises:

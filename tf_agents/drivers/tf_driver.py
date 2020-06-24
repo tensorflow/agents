@@ -58,11 +58,14 @@ class TFDriver(driver.Driver):
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as
         trajectories are for regular observers.
-      max_steps: Optional maximum number of steps for each run() call.
-        Also see below.  Default: 0.
-      max_episodes: Optional maximum number of episodes for each run() call.
-        At least one of max_steps or max_episodes must be provided. If both
-        are set, run() terminates when at least one of the conditions is
+      max_steps: Optional maximum number of steps for each run() call. For
+        batched or parallel environments, this is the maximum total number of
+        steps summed across all environments. Also see below.  Default: 0.
+      max_episodes: Optional maximum number of episodes for each run() call. For
+        batched or parallel environments, this is the maximum total number of
+        episodes summed across all environments. At least one of max_steps or
+        max_episodes must be provided. If both are set, run() terminates when at
+        least one of the conditions is
         satisfied.  Default: 0.
       disable_tf_function: If True the use of tf.function for the run method is
         disabled.

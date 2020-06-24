@@ -79,7 +79,9 @@ class DynamicStepDriver(driver.Driver):
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)).
-      num_steps: The number of steps to take in the environment.
+      num_steps: The number of steps to take in the environment. For batched
+        or parallel environments, this is the total number of steps taken
+        summed across all environments.
 
     Raises:
       ValueError:

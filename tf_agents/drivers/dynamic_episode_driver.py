@@ -72,7 +72,9 @@ class DynamicEpisodeDriver(driver.Driver):
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)).
-      num_episodes: The number of episodes to take in the environment.
+      num_episodes: The number of episodes to take in the environment. For
+        batched or parallel environments, this is the total number of episodes
+        summed across all environments.
 
     Raises:
       ValueError:
