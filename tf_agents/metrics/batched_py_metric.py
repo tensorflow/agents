@@ -41,7 +41,8 @@ class BatchedPyMetric(py_metric.PyStepMetric):
                metric_args: Optional[Any] = None,
                name: Optional[Text] = None,
                batch_size: Optional[types.Int] = None,
-               dtype: np.dtype = np.float32):
+               dtype: np.dtype = np.float32,
+               prefix: Text = 'Metrics'):
     """Creates a BatchedPyMetric metric."""
     self._metric_class = metric_class
     if metric_args is None:
@@ -51,7 +52,7 @@ class BatchedPyMetric(py_metric.PyStepMetric):
 
     if not name:
       name = self._metric_class(**self._metric_args).name
-    super(BatchedPyMetric, self).__init__(name)
+    super(BatchedPyMetric, self).__init__(name, prefix=prefix)
 
     self._built = False
     self._dtype = dtype

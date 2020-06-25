@@ -83,6 +83,14 @@ class BatchedPyMetricTest(parameterized.TestCase, tf.test.TestCase):
     result_ = self.evaluate(result)
     self.assertEqual(result_, expected_reward)
 
+  def testMetricPrefix(self):
+    batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
+        py_metrics.AverageReturnMetric, prefix='CustomPrefix')
+    self.assertEqual(batched_avg_return_metric.prefix, 'CustomPrefix')
+
+    tf_avg_return_metric = tf_py_metric.TFPyMetric(batched_avg_return_metric)
+    self.assertEqual(tf_avg_return_metric._prefix, 'CustomPrefix')
+
   def testReset(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
         py_metrics.AverageReturnMetric)

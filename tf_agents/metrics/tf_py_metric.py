@@ -50,7 +50,7 @@ class TFPyMetric(tf_metric.TFStepMetric):
       dtype: Data type of the metric.
     """
     name = name or py_metric.name
-    super(TFPyMetric, self).__init__(name=name)
+    super(TFPyMetric, self).__init__(name=name, prefix=py_metric.prefix)
     self._py_metric = py_metric
     self._dtype = dtype
     self._lock = threading.Lock()
