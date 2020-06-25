@@ -25,7 +25,7 @@ import typing
 
 import six
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow.compat.v2 as tf
 from tensorflow.keras import layers  # pylint: disable=unused-import
 import tensorflow_probability as tfp
 
@@ -38,7 +38,6 @@ from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
 # pylint:disable=g-direct-tensorflow-import
-from tensorflow.python.keras.layers import recurrent  # TF internal
 from tensorflow.python.keras.utils import layer_utils  # TF internal
 from tensorflow.python.training.tracking import base  # TF internal
 from tensorflow.python.util import tf_decorator  # TF internal
@@ -508,10 +507,15 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
 
   Returns:
     Output specs, a nested `tf.TypeSpec` describing the output signature.
+
+  Raises:
+    ValueError: If `module` is a generic Keras layer but `input_spec is None`.
+    TypeError: If `module` is a `tf.keras.layers.{RNN,LSTM,GRU,...}`.  These
+      must be wrapped in `tf_agents.keras_layers.RNNWrapper`.
   """
   # NOTE(ebrevdo): As a side effect, for generic keras Layers (not Networks)
   # this method stores new hidden properties in `module`:
-  # `_network_output_spec`, `_network_state_spec`, `_merged_output_and_state`
+  # `_network_output_spec`, `_network_state_spec`,
   # - which internal TF-Agents libraries make use of.
   if isinstance(module, Network):
     return module.create_variables(input_spec, **kwargs)
@@ -522,12 +526,16 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
         "Module is a Keras layer; an input_spec is required but saw "
         "None: {}".format(module))
 
+  if isinstance(module, tf.keras.layers.RNN):
+    raise TypeError(
+        "Keras RNN layers (non-cell layers) must be wrapped in "
+        "tf_agents.keras_layers.RNNWrapper.  Layer: {}".format(module))
+
   maybe_spec = getattr(module, "_network_output_spec", None)
   if maybe_spec is not None:
     return maybe_spec
 
-  # Has state outputs - so expect that a state input is required,
-  # and output[1:] are output states.
+  # Has state outputs.
   recurrent_layer = getattr(module, "get_initial_state", None) is not None
 
   # Required input rank
@@ -538,35 +546,20 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
 
   if recurrent_layer:
     state = module.get_initial_state(random_input)
-    state_spec = tf.nest.map_structure(
-        lambda s: nest_utils.remove_singleton_batch_spec_dim(  # pylint: disable=g-long-lambda
-            tf.type_spec_from_value(s),
-            outer_ndim=1),
-        state)
+
+    def remove_singleton_batch_spec_dim(t):
+      # Convert tensor to its type-spec, and remove the batch dimension
+      # from the spec.
+      spec = tf.type_spec_from_value(t)
+      return nest_utils.remove_singleton_batch_spec_dim(spec, outer_ndim=1)
+    state_spec = tf.nest.map_structure(remove_singleton_batch_spec_dim, state)
+
     outputs = module(random_input, state, **kwargs)
-    # tf.keras.layers.{LSTM,RNN,GRU} with this return_state==True
-    # return outputs of the form [output, state1, state2, ...]
-    #
-    # While tf.keras.layers.{LSTMCell, ...} return
-    # (output, [state1, state2,...]).
-    layer_config = module.get_config()
-    merged_output_and_state = layer_config.get("return_state", False)
-    if isinstance(module, recurrent.RNN):
-      if not merged_output_and_state:
-        # This is an RNN layer that doesn't return state.  Excludes individual
-        # cells.
-        raise ValueError(
-            "Provided a Keras RNN layer with return_state==False. "
-            "This configuration is not supported.  Layer: {}".format(module))
-      if not layer_config.get("return_sequences", False):
-        raise ValueError(
-            "Provided a Keras RNN layer with return_sequences==False. "
-            "This configuration is not supported.  Layer: {}".format(module))
+    # tf.keras.layers.{LSTMCell, ...} return (output, [state1, state2,...]).
     output = outputs[0]
   else:
     output = module(random_input, **kwargs)
     state_spec = ()
-    merged_output_and_state = False
 
   def _calc_unbatched_spec(x):
     if isinstance(x, tfp.distributions.Distribution):
@@ -579,7 +572,6 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
   module._network_output_spec = tf.nest.map_structure(_calc_unbatched_spec,
                                                       output)
   module._network_state_spec = state_spec
-  module._merged_output_and_state = merged_output_and_state
 
   return module._network_output_spec
   # pylint: enable=protected-access
@@ -588,10 +580,14 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
 def _get_input_outer_ndim(layer: tf.keras.layers.Layer,
                           input_spec: types.NestedTensorSpec) -> int:
   """Calculate or guess the number of batch (outer) ndims in `layer`."""
+  if isinstance(layer, tf.keras.layers.RNN):
+    raise TypeError(
+        "Saw a tf.keras.layers.RNN layer nested inside e.g. a keras Sequential "
+        "layer.  This is not directly supported.  Please wrap your layer "
+        "inside a `tf_agents.keras_layers.RNNWrapper` or use "
+        "`tf_agents.networks.Sequential`.  Layer: {}".format(layer))
   if isinstance(layer, tf.keras.layers.TimeDistributed):
     return 1 + _get_input_outer_ndim(layer.layer, input_spec)
-  if isinstance(layer, tf.keras.layers.RNN):
-    return 1 + _get_input_outer_ndim(layer.cell, input_spec)
   if isinstance(layer, (sequential_layer.SequentialLayer, tf.keras.Sequential)):
     # We don't trust Sequential to give us the right thing if the first layer
     # is e.g. a TimeDistributed.
@@ -619,3 +615,30 @@ def _get_input_outer_ndim(layer: tf.keras.layers.Layer,
 
   # Empty input_spec.
   return 1
+
+
+def get_state_spec(layer: tf.keras.layers.Layer) -> types.NestedTensorSpec:
+  """Extracts the state spec from a layer.
+
+  Args:
+    layer: The layer to extract from; can be a `Network`.
+
+  Returns:
+    The state spec.
+
+  Raises:
+    ValueError: If `layer` is a Keras layer and `create_variables` has
+      not been called on it.
+  """
+  if isinstance(layer, Network):
+    return layer.state_spec
+
+  # create_variables creates _network_state_spec for generic Keras layers.
+  empty = object()
+  state_spec = getattr(layer, "_network_state_spec", empty)
+  if state_spec is empty:
+    raise ValueError(
+        "Cannot extract state spec from layer.  Perhaps you forgot to call "
+        "tf_agents.network.create_variables() on it?  Layer: {}"
+        .format(layer))
+  return state_spec

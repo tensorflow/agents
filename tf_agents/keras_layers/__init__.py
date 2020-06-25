@@ -17,4 +17,5 @@
 
 from tf_agents.keras_layers import bias_layer
 from tf_agents.keras_layers import dynamic_unroll_layer
+from tf_agents.keras_layers import rnn_wrapper
 from tf_agents.keras_layers import sequential_layer

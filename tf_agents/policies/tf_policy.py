@@ -309,10 +309,15 @@ class TFPolicy(tf.Module):
           time_step,
           self._time_step_spec,
           message='time_step and time_step_spec structures do not match')
-      nest_utils.assert_same_structure(
-          policy_state,
-          self._policy_state_spec,
-          message='policy_state and policy_state_spec structures do not match')
+      # TODO(b/158804957): Use literal comparison because in some strange cases
+      # (tf.function? autograph?) the expression "x not in (None, (), [])" gets
+      # converted to a tensor.
+      if not (policy_state is None or policy_state is () or policy_state is []):  # pylint: disable=literal-comparison
+        nest_utils.assert_same_structure(
+            policy_state,
+            self._policy_state_spec,
+            message=('policy_state and policy_state_spec '
+                     'structures do not match'))
 
     if self._automatic_state_reset:
       policy_state = self._maybe_reset_state(time_step, policy_state)

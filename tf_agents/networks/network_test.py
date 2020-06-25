@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents import specs
+from tf_agents.keras_layers import rnn_wrapper
 from tf_agents.networks import network
 from tf_agents.utils import common
 
@@ -215,10 +216,12 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
       ),
       (
           'LSTMCellInRNN',
-          lambda: tf.keras.layers.RNN(
-              tf.keras.layers.LSTMCell(3),
-              return_state=True,
-              return_sequences=True),
+          lambda: rnn_wrapper.RNNWrapper(
+              tf.keras.layers.RNN(
+                  tf.keras.layers.LSTMCell(3),
+                  return_state=True,
+                  return_sequences=True)
+          ),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
           [tf.TensorSpec((3,), tf.float32),
@@ -226,10 +229,12 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
       ),
       (
           'LSTM',
-          lambda: tf.keras.layers.LSTM(
-              3,
-              return_state=True,
-              return_sequences=True),
+          lambda: rnn_wrapper.RNNWrapper(
+              tf.keras.layers.LSTM(
+                  3,
+                  return_state=True,
+                  return_sequences=True)
+          ),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
           [tf.TensorSpec((3,), tf.float32),
@@ -258,17 +263,6 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(output_spec_2, expected_output_spec)
     state_spec = getattr(layer, '_network_state_spec', None)
     self.assertEqual(state_spec, expected_state_spec)
-
-  def testKerasLayerFailsIfRecurrentDoesNotReturnState(self):
-    with self.assertRaisesRegex(ValueError, 'with return_state==False'):
-      network.create_variables(
-          tf.keras.layers.LSTM(3, return_sequences=True),
-          input_spec=tf.TensorSpec((3,), tf.float32))
-
-    with self.assertRaisesRegex(ValueError, 'with return_sequences==False'):
-      network.create_variables(
-          tf.keras.layers.LSTM(3, return_state=True),
-          input_spec=tf.TensorSpec((3,), tf.float32))
 
 
 if __name__ == '__main__':
