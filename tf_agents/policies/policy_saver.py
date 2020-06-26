@@ -265,9 +265,9 @@ class PolicySaver(object):
         # TODO(b/156526399): Move this to just the policy.distribution() call
         # once tfp.experimental.as_composite() properly handles LinearOperator*
         # components as well as TransformedDistributions.
-        logging.error(
-            'Could not serialize policy.distribution() for policy "%s". '
-            'Calling saved_model.distribution() will raise the '
+        logging.warn(
+            'WARNING: Could not serialize policy.distribution() for policy '
+            '"%s". Calling saved_model.distribution() will raise the following '
             'assertion error: %s', policy, e)
         @common.function()
         def _raise():
