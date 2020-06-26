@@ -22,7 +22,7 @@ from __future__ import print_function
 import copy
 import tensorflow.compat.v2 as tf
 
-from tf_agents.bandits.agents import multi_objective_scalarizer
+from tf_agents.bandits.multi_objective import multi_objective_scalarizer
 
 
 class DummyScalarizer(multi_objective_scalarizer.Scalarizer):
