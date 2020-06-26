@@ -69,6 +69,14 @@ class CreateCounterTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(var), [1, 2])
 
+  def testInitializerDType(self):
+    var = common.create_variable(
+      'var', dtype=tf.int64,
+      initializer=tf.random_uniform_initializer(minval=0, maxval=1)
+    )
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertEqual(var.dtype, tf.int64)
+
 
 class SoftVariablesUpdateTest(test_utils.TestCase, parameterized.TestCase):
 
