@@ -229,6 +229,43 @@ class RelativeConstraintTest(tf.test.TestCase):
                         np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]))
 
 
+class AbsoluteConstraintTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(AbsoluteConstraintTest, self).setUp()
+    tf.compat.v1.enable_resource_variables()
+    self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
+    self._time_step_spec = ts.time_step_spec(self._obs_spec)
+    self._action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+    self._observation_spec = self._time_step_spec.observation
+
+  def testCreateConstraint(self):
+    constraint_net = DummyNet(self._observation_spec, self._action_spec)
+    constraints.AbsoluteConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net)
+
+  def testComputeActionFeasibility(self):
+    constraint_net = DummyNet(self._observation_spec, self._action_spec)
+
+    absolute_constraint = constraints.AbsoluteConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=constraint_net)
+    init_op = absolute_constraint.initialize()
+    if not tf.executing_eagerly():
+      with self.cached_session() as sess:
+        common.initialize_uninitialized_variables(sess)
+        self.assertIsNone(sess.run(init_op))
+
+    observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    feasibility_prob = absolute_constraint(observation)
+    self.assertAllGreaterEqual(self.evaluate(feasibility_prob), 0.0)
+    self.assertAllLessEqual(self.evaluate(feasibility_prob), 1.0)
+
+
 class QuantileConstraintTest(tf.test.TestCase):
 
   def setUp(self):

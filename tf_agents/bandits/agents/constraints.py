@@ -231,6 +231,63 @@ class RelativeConstraint(NeuralConstraint):
     return tf.cast(is_satisfied, tf.float32)
 
 
+class AbsoluteConstraint(NeuralConstraint):
+  """Class for representing a trainable absolute value constraint.
+
+  This constraint class implements an absolute value constraint such as
+  ```
+  expected_value(action) >= absolute_value
+  ```
+  or
+  ```
+  expected_value(action) <= absolute_value
+  ```
+  """
+
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      constraint_network,
+      error_loss_fn=tf.compat.v1.losses.mean_squared_error,
+      comparator_fn=tf.greater,
+      absolute_value=0.0,
+      name='AbsoluteConstraint'):
+    """Creates a trainable absolute constraint using a neural network.
+
+    Args:
+      time_step_spec: A `TimeStep` spec of the expected time_steps.
+      action_spec: A nest of `BoundedTensorSpec` representing the actions.
+      constraint_network: An instance of `tf_agents.network.Network` used to
+        provide estimates of action feasibility.  The input structure should be
+        consistent with the `observation_spec`.
+      error_loss_fn: A function for computing the loss used to train the
+        constraint network. The default is `tf.losses.mean_squared_error`.
+      comparator_fn: a comparator function, such as tf.greater or tf.less.
+      absolute_value: the threshold value we want to use in the constraint.
+      name: Python str name of this agent. All variables in this module will
+        fall under that name. Defaults to the class name.
+    """
+    self._absolute_value = absolute_value
+    self._comparator_fn = comparator_fn
+    self._error_loss_fn = error_loss_fn
+
+    super(AbsoluteConstraint, self).__init__(
+        time_step_spec,
+        action_spec,
+        constraint_network,
+        error_loss_fn=self._error_loss_fn,
+        name=name)
+
+  def __call__(self, observation, actions=None):
+    """Returns the probability of input actions being feasible."""
+    predicted_values, _ = self._constraint_network(
+        observation, training=False)
+    is_satisfied = self._comparator_fn(
+        predicted_values, self._absolute_value)
+    return tf.cast(is_satisfied, tf.float32)
+
+
 class QuantileConstraint(NeuralConstraint):
   """Class for representing a trainable quantile constraint.
 
