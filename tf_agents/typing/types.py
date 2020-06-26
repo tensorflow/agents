@@ -22,7 +22,7 @@ from __future__ import print_function
 
 import sys
 import typing
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, Tuple, Union
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, Tuple, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -47,26 +47,16 @@ Spec = Union[TensorSpec, ArraySpec]
 SpecTensorOrArray = Union[Spec, Tensor, Array]
 
 # Note that this is effectively treated as `Any`; see b/109648354.
-
-# pytype: disable=not-supported-yet
-NestedTensor = Union[Tensor, Iterable['NestedTensor'],
-                     Mapping[str, 'NestedTensor']]
-NestedVariable = Union[tf.Variable, Iterable['NestedVariable'],
-                       Mapping[str, 'NestedVariable']]
-NestedArray = Union[Array, Iterable['NestedArray'],
-                    Mapping[str, 'NestedArray']]
-NestedDistribution = Union[tfp.distributions.Distribution,
-                           Iterable['NestedDistribution'],
-                           Mapping[str, 'NestedDistribution']]
-NestedPlaceHolder = Union[tf.compat.v1.placeholder,
-                          Iterable['NestedPlaceHolder'],
-                          Mapping[Text, 'NestedPlaceHolder']]
-
-NestedTensorSpec = Union[TensorSpec, Iterable['NestedTensorSpec'],
-                         Mapping[str, 'NestedTensorSpec']]
-NestedArraySpec = Union[array_spec.ArraySpec, Iterable['NestedArraySpec'],
-                        Mapping[str, 'NestedArraySpec']]
-# pytype: enable=not-supported-yet
+Tnest = TypeVar('Tnest')
+Nested = Union[Tnest, Iterable[Tnest], Mapping[Text, Tnest]]
+NestedTensor = Nested[Tensor]
+NestedVariable = Nested[tf.Variable]
+NestedArray = Nested[Array]
+NestedDistribution = Nested[tfp.distributions.Distribution]
+NestedPlaceHolder = Nested[tf.compat.v1.placeholder]
+NestedTensorSpec = Nested[TensorSpec]
+NestedArraySpec = Nested[array_spec.ArraySpec]
+NestedLayer = Nested[tf.keras.layers.Layer]
 
 NestedSpec = Union[NestedTensorSpec, NestedArraySpec]
 NestedTensorOrArray = Union[NestedTensor, NestedArray]

@@ -213,6 +213,10 @@ class DynamicUnroll(tf.keras.layers.Layer):
     updates = self.cell.updates
     return updates + self._updates
 
+  @property
+  def state_size(self):
+    return self.cell.state_size
+
   def build(self, input_shape):
     self.cell.build(input_shape)
     self.built = True

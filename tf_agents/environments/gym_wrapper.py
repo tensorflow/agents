@@ -249,7 +249,10 @@ class GymWrapper(py_environment.PyEnvironment):
     return self._gym_env.close()
 
   def seed(self, seed: types.Seed) -> types.Seed:
-    return self._gym_env.seed(seed)
+    seed_value = self._gym_env.seed(seed)
+    if seed_value is None:
+      return 0
+    return seed_value
 
   def render(self, mode: Text = 'rgb_array') -> Any:
     return self._gym_env.render(mode)

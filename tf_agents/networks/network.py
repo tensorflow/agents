@@ -627,18 +627,27 @@ def get_state_spec(layer: tf.keras.layers.Layer) -> types.NestedTensorSpec:
     The state spec.
 
   Raises:
+    TypeError: If `layer` is a subclass of `tf.keras.layers.RNN` (it must
+      be wrapped by an `RNNWrapper` object).
     ValueError: If `layer` is a Keras layer and `create_variables` has
       not been called on it.
   """
   if isinstance(layer, Network):
     return layer.state_spec
 
-  # create_variables creates _network_state_spec for generic Keras layers.
-  empty = object()
-  state_spec = getattr(layer, "_network_state_spec", empty)
-  if state_spec is empty:
+  if isinstance(layer, tf.keras.layers.RNN):
+    raise TypeError("RNN Layer must be wrapped inside "
+                    "`tf_agents.keras_layers.RNNWrapper`: {}".format(layer))
+
+  initial_state = getattr(layer, "get_initial_state", None)
+  state_size = getattr(layer, "state_size", None)
+  if initial_state is not None and state_size is None:
     raise ValueError(
-        "Cannot extract state spec from layer.  Perhaps you forgot to call "
-        "tf_agents.network.create_variables() on it?  Layer: {}"
-        .format(layer))
+        "Layer lacks a `state_size` property.  Unable to extract state "
+        "spec: {}".format(layer))
+  state_spec = ()
+  if state_size is not None:
+    state_spec = tf.nest.map_structure(
+        lambda s: tf.TensorSpec(dtype=layer.dtype, shape=s), state_size)
+
   return state_spec

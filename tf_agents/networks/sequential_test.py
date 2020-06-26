@@ -83,30 +83,34 @@ class SequentialTest(test_utils.TestCase):
     self.assertAllClose(expected, out)
 
   def testMixOfNonRecurrentAndRecurrent(self):
-    sequential = sequential_lib.Sequential(
-        [
-            tf.keras.layers.Dense(2),
-            tf.keras.layers.LSTM(
-                2, return_state=True, return_sequences=True),
-            tf.keras.layers.RNN(
-                tf.keras.layers.StackedRNNCells(
-                    [
-                        tf.keras.layers.LSTMCell(1),
-                        tf.keras.layers.LSTMCell(32),
-                    ],
-                ),
-                return_state=True,
-                return_sequences=True,
-            ),
-            tf.keras.layers.Reshape((-1, 4, 4, 2)),
-            tf.keras.layers.Conv2D(2, 3),
-            tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten()),
-            tf.keras.layers.GRU(
-                2, return_state=True, return_sequences=True),
-            dynamic_unroll_layer.DynamicUnroll(
-                tf.keras.layers.LSTMCell(2)),
-        ],
-        input_spec=tf.TensorSpec((3,), tf.float32))
+
+    def reshape_inner_dims(tensor, ndims, new_inner_shape):
+      """Reshapes tensor to: shape(tensor)[:-ndims] + new_inner_shape."""
+      tensor_shape = tf.shape(tensor)
+      new_shape = tf.concat((tensor_shape[:-ndims], new_inner_shape), axis=0)
+      new_tensor = tf.reshape(tensor, new_shape)
+      new_tensor.set_shape(tensor.shape[:-ndims] + new_inner_shape)
+      return new_tensor
+
+    sequential = sequential_lib.Sequential([
+        tf.keras.layers.Dense(2),
+        tf.keras.layers.LSTM(2, return_state=True, return_sequences=True),
+        tf.keras.layers.RNN(
+            tf.keras.layers.StackedRNNCells([
+                tf.keras.layers.LSTMCell(1),
+                tf.keras.layers.LSTMCell(32),
+            ],),
+            return_state=True,
+            return_sequences=True,
+        ),
+        tf.keras.layers.Lambda(lambda t: reshape_inner_dims(t, 1, [4, 4, 2])),
+        tf.keras.layers.Conv2D(2, 3),
+        tf.keras.layers.Lambda(lambda t: reshape_inner_dims(t, 3, [8])),
+        tf.keras.layers.GRU(2, return_state=True, return_sequences=True),
+        dynamic_unroll_layer.DynamicUnroll(tf.keras.layers.LSTMCell(2)),
+    ],
+                                           input_spec=tf.TensorSpec((3,),
+                                                                    tf.float32))
     self.assertEqual(
         sequential.input_tensor_spec, tf.TensorSpec((3,), tf.float32))
 
@@ -121,7 +125,7 @@ class SequentialTest(test_utils.TestCase):
                 tf.TensorSpec((2,), tf.float32),
                 tf.TensorSpec((2,), tf.float32),
             ],
-            [  # RNN(StackedRNNCells)
+            (  # RNN(StackedRNNCells)
                 [
                     tf.TensorSpec((1,), tf.float32),
                     tf.TensorSpec((1,), tf.float32),
@@ -130,15 +134,13 @@ class SequentialTest(test_utils.TestCase):
                     tf.TensorSpec((32,), tf.float32),
                     tf.TensorSpec((32,), tf.float32),
                 ],
-            ],
-            [  # GRU
-                tf.TensorSpec((2,), tf.float32),
-            ],
+            ),
+            # GRU
+            tf.TensorSpec((2,), tf.float32),
             [  # DynamicUnroll
                 tf.TensorSpec((2,), tf.float32),
                 tf.TensorSpec((2,), tf.float32),
-            ]
-        ))
+            ]))
 
     inputs = tf.ones((8, 10, 3), dtype=tf.float32)
     outputs, _ = sequential(inputs)

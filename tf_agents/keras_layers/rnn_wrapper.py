@@ -69,7 +69,18 @@ class RNNWrapper(tf.keras.layers.Layer):
     return self._layer.dtype
 
   @property
+  def cell(self) -> tf.keras.layers.Layer:
+    """Return the `cell` underlying the RNN layer."""
+    return self._layer.cell
+
+  @property
+  def state_size(self):
+    """Return the `state_size` of the cell underlying the RNN layer."""
+    return self._layer.cell.state_size
+
+  @property
   def wrapped_layer(self) -> tf.keras.layers.RNN:
+    """Return the wrapped RNN layer."""
     return self._layer
 
   def get_config(self):
@@ -161,13 +172,21 @@ class RNNWrapper(tf.keras.layers.Layer):
       inputs_flat = [tf.expand_dims(t, axis=1) for t in inputs_flat]
     inputs = tf.nest.pack_sequence_as(inputs, inputs_flat)
 
-    if not initial_state:
+    # TODO(b/158804957): tf.function changes "if tensor:" to tensor bool expr.
+    # pylint: disable=literal-comparison
+    if initial_state is None or initial_state is () or initial_state is []:
       initial_state = self._layer.get_initial_state(inputs)
+    # pylint: enable=literal-comparison
 
     outputs = self._layer(
         inputs, initial_state=initial_state, mask=mask, training=training)
 
     output, new_state = outputs[0], outputs[1:]
+
+    # Keras RNN's outputs[1:] does not match the nest structure of its cells'
+    # state_size property.  Restructure the output state to match.
+    new_state = tf.nest.pack_sequence_as(
+        self.state_size, tf.nest.flatten(new_state))
 
     if not has_time_axis:
       output = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=1), output)

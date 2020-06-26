@@ -30,48 +30,29 @@ from tf_agents.networks import network
 from tf_agents.typing import types
 
 
-def _infer_specs(
-    layers: typing.Sequence[tf.keras.layers.Layer],
-    input_spec: types.NestedTensorSpec
-) -> typing.Tuple[
-    types.NestedTensorSpec,
-    types.NestedTensorSpec
-]:
+def _infer_state_specs(
+    layers: typing.Sequence[tf.keras.layers.Layer]) -> types.NestedTensorSpec:
   """Infer the state spec of a sequence of keras Layers and Networks.
-
-  This runs `create_variables` on each layer, and identifies the
-  state spec from each.  Running `create_variables` is necessary
-  because this creates a `_network_state_spec` property on each
-  generic (non-Network) Keras layer.
 
   Args:
     layers: A list of Keras layers and Network.
-    input_spec: The input to the first laayer.
 
   Returns:
-    A tuple `(output_spec, state_spec)` where `output_spec` is the output spec
-    from the final layer and `state_spec` is a tuple of the state specs.
+    `state_spec`, a tuple of the state specs of length `len(layers)`.
   """
-  state_specs = []
-
-  output_spec = input_spec
-  for layer in layers:
-    output_spec = network.create_variables(layer, output_spec)
-    state_spec = network.get_state_spec(layer)
-    state_specs.append(state_spec)
-
-  state_specs = tuple(state_specs)
-  return output_spec, state_specs
+  state_specs = tuple(network.get_state_spec(layer) for layer in layers)
+  return state_specs
 
 
 class Sequential(network.Network):
-  """The Sequential represents a sequence of Keras layers.
+  """The Sequential Network represents a sequence of Keras layers.
 
-  It is a Keras Layer that can be used instead of tf.keras.layers.Sequential.
-  In contrast to keras Sequential, this layer can be used as a pure Layer in
-  tf.functions and when exporting SavedModels, without having to pre-declare
-  input and output shapes. In turn, this layer is usable as a preprocessing
-  layer for TF Agents Networks, and can be exported via PolicySaver.
+  It is a TF-Agents network that should be used instead of
+  tf.keras.layers.Sequential. In contrast to keras Sequential, this layer can be
+  used as a pure Layer in tf.functions and when exporting SavedModels, without
+  having to pre-declare input and output shapes. In turn, this layer is usable
+  as a preprocessing layer for TF Agents Networks, and can be exported via
+  PolicySaver.
 
   Stateful Keras layers (e.g. LSTMCell, RNN, LSTM, TF-Agents DynamicUnroll)
   are all supported.  The `state_spec` of `Sequential` is a tuple whose
@@ -95,10 +76,8 @@ class Sequential(network.Network):
       layers: A list or tuple of layers to compose.  Any layers that
         are subclasses of `tf.keras.layers.{RNN,LSTM,GRU,...}` are
         wrapped in `tf_agents.keras_layers.RNNWrapper`.
-      input_spec: A nest of `tf.TypeSpec` representing the
-        input observations.  Optional.  If not provided, this class will
-        perform a best effort to identify the input spec based on the first
-        `Layer` or `Network` in `layers`; but `create_variables()` may fail.
+      input_spec: (Optional.) A nest of `tf.TypeSpec` representing the
+        input observations.
       name: (Optional.) Network name.
 
     Raises:
@@ -122,15 +101,12 @@ class Sequential(network.Network):
             ': \'{}\''.format(layer))
 
     layers = [
-        rnn_wrapper.RNNWrapper(layer)
-        if isinstance(layer, tf.keras.layers.RNN) else layer
+        rnn_wrapper.RNNWrapper(layer) if isinstance(layer, tf.keras.layers.RNN)
+        else layer
         for layer in layers
     ]
 
-    # Note: _infer_specs also builds the layers.  If `input_spec` is None and
-    # the first layer is a generic Keras layer (not a TF-Agents Network), an
-    # error will be raised.
-    output_spec, state_spec = _infer_specs(layers, input_spec)
+    state_spec = _infer_state_specs(layers)
 
     # Now we remove all of the empty state specs so if there are no RNN layers,
     # our state spec is empty.  layer_has_state is a list of bools telling us
@@ -145,7 +121,6 @@ class Sequential(network.Network):
                                      name=name)
     self._sequential_layers = layers
     self._layer_has_state = layer_has_state
-    self._network_output_spec = output_spec
 
   @property
   def layers(self) -> typing.List[tf.keras.layers.Layer]:
@@ -197,8 +172,10 @@ class Sequential(network.Network):
         if self._layer_has_state[i]:
           # The layer maintains state.  If a state was provided at input to
           # `call`, then use it.  Otherwise ask for an initial state.
-          input_state = (network_state[stateful_layer_idx]
-                         or layer.get_initial_state(inputs))
+          maybe_network_state = network_state[stateful_layer_idx]
+          input_state = (maybe_network_state
+                         if maybe_network_state is not None
+                         else layer.get_initial_state(inputs))
           outputs = layer(inputs, input_state, **layer_kwargs)
           inputs, next_network_state[stateful_layer_idx] = outputs
           stateful_layer_idx += 1
