@@ -1291,8 +1291,12 @@ def aggregate_losses(per_example_loss=None,
   If `global_batch_size` is given it would be used for scaling, otherwise it
   would use the batch_dim of per_example_loss and number of replicas.
 
+  TODO(b/159999606): Return per step average loss if per_example_loss'rank >= 2.
+
   Args:
-    per_example_loss: Per-example loss [B].
+    per_example_loss: Per-example loss [B]. Note that if [B, T, ...] is passed,
+      in, this calculates the per batch average loss summed across the time
+      and other dimensions.
     sample_weight: Optional weighting for each example [B].
     global_batch_size: Optional global batch size value. Defaults to (size of
     first dimension of `losses`) * (number of replicas).

@@ -976,6 +976,21 @@ class NetworkVariableChecks(tf.test.TestCase):
       common.check_matching_networks(q_net_1, q_net_2)
 
 
+class AggregateLossTest(test_utils.TestCase):
+
+  def test_aggregate_losses_without_batch_dimension(self):
+    per_example_loss = tf.constant([4., 2., 3.])
+    aggregated_losses = common.aggregate_losses(per_example_loss)
+    self.assertAlmostEqual(self.evaluate(aggregated_losses.total_loss), 3)
+
+  def test_aggregate_losses_with_time_dimension(self):
+    per_example_loss = tf.constant([[4., 2., 3.], [1, 1, 1]])
+    aggregated_losses = common.aggregate_losses(per_example_loss)
+    expected_per_example_loss = (4 + 2 + 3 + 1 + 1 + 1) / 2
+    self.assertAlmostEqual(
+        self.evaluate(aggregated_losses.total_loss), expected_per_example_loss)
+
+
 class LegacyTF1Test(test_utils.TestCase):
 
   def test_in_legacy_tf1(self):

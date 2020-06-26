@@ -475,10 +475,10 @@ class SacAgent(tf_agent.TFAgent):
       critic_loss2 = td_errors_loss_fn(td_targets, pred_td_targets2)
       critic_loss = critic_loss1 + critic_loss2
 
-      if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec, num_outer_dims=2):
+      if critic_loss.shape.rank > 1:
         # Sum over the time dimension.
-        critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
+        critic_loss = tf.reduce_sum(
+            critic_loss, axis=range(1, critic_loss.shape.rank))
 
       agg_loss = common.aggregate_losses(
           per_example_loss=critic_loss,
@@ -516,10 +516,10 @@ class SacAgent(tf_agent.TFAgent):
           target_input, time_steps.step_type, training=False)
       target_q_values = tf.minimum(target_q_values1, target_q_values2)
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
-      if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec, num_outer_dims=2):
+      if actor_loss.shape.rank > 1:
         # Sum over the time dimension.
-        actor_loss = tf.reduce_sum(input_tensor=actor_loss, axis=1)
+        actor_loss = tf.reduce_sum(
+            actor_loss, axis=range(1, actor_loss.shape.rank))
       reg_loss = self._actor_network.losses if self._actor_network else None
       agg_loss = common.aggregate_losses(
           per_example_loss=actor_loss,
@@ -554,12 +554,10 @@ class SacAgent(tf_agent.TFAgent):
       else:
         alpha_loss = (tf.exp(self._log_alpha) * entropy_diff)
 
-      if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec, num_outer_dims=2):
+      if alpha_loss.shape.rank > 1:
         # Sum over the time dimension.
-        alpha_loss = tf.reduce_sum(input_tensor=alpha_loss, axis=1)
-      else:
-        alpha_loss = tf.expand_dims(alpha_loss, 0)
+        alpha_loss = tf.reduce_sum(
+            alpha_loss, axis=range(1, alpha_loss.shape.rank))
 
       agg_loss = common.aggregate_losses(
           per_example_loss=alpha_loss, sample_weight=weights)
