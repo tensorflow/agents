@@ -247,7 +247,6 @@ class Td3Agent(tf_agent.TFAgent):
     with tf.name_scope('update_targets'):
 
       def update():  # pylint: disable=missing-docstring
-        # TODO(b/124381161): What about observation normalizer variables?
         critic_update_1 = common.soft_variables_update(
             self._critic_network_1.variables,
             self._target_critic_network_1.variables,
