@@ -1291,13 +1291,9 @@ def aggregate_losses(per_example_loss=None,
   If `global_batch_size` is given it would be used for scaling, otherwise it
   would use the batch_dim of per_example_loss and number of replicas.
 
-  TODO(b/159999606): Return per step average loss if per_example_loss'rank >= 2.
-
   Args:
-    per_example_loss: Per-example loss [B]. Note that if [B, T, ...] is passed,
-      in, this calculates the per batch average loss summed across the time
-      and other dimensions.
-    sample_weight: Optional weighting for each example [B].
+    per_example_loss: Per-example loss [B] or [B, T, ...].
+    sample_weight: Optional weighting for each example [B] or [B, T, ...].
     global_batch_size: Optional global batch size value. Defaults to (size of
     first dimension of `losses`) * (number of replicas).
     regularization_loss: Regularization loss.
@@ -1308,6 +1304,9 @@ def aggregate_losses(per_example_loss=None,
   total_loss, weighted_loss, reg_loss = None, None, None
   # Compute loss that is scaled by global batch size.
   if per_example_loss is not None:
+    if sample_weight is not None:
+      per_example_loss = tf.math.multiply(per_example_loss, sample_weight)
+
     loss_rank = per_example_loss.shape.rank
     if loss_rank is not None and loss_rank == 0:
       err_msg = (
@@ -1321,9 +1320,15 @@ def aggregate_losses(per_example_loss=None,
         logging.warning(err_msg)
         # Add extra dimension to prevent error in compute_average_loss.
         per_example_loss = tf.expand_dims(per_example_loss, 0)
+    elif loss_rank > 1:
+      # If per_example_loss is shaped [B, T, ...], we need to compute the mean
+      # across the extra dimensions, ex. time, as well.
+      per_example_loss = tf.reduce_mean(per_example_loss, range(1, loss_rank))
+
+    global_batch_size = global_batch_size and tf.cast(global_batch_size,
+                                                      per_example_loss.dtype)
     weighted_loss = tf.nn.compute_average_loss(
         per_example_loss,
-        sample_weight=sample_weight,
         global_batch_size=global_batch_size)
     total_loss = weighted_loss
   # Add scaled regularization losses.
