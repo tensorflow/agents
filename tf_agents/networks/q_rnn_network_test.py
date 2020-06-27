@@ -29,13 +29,18 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
 
 
+def rnn_keras_fn(lstm_size):
+  cell = tf.keras.layers.SimpleRNNCell(lstm_size)
+  return tf.keras.layers.RNN(cell, return_state=True, return_sequences=True)
+
+
 class QRnnNetworkTest(tf.test.TestCase):
 
   def test_network_builds(self):
     env = suite_gym.load('CartPole-v0')
     tf_env = tf_py_environment.TFPyEnvironment(env)
-    rnn_network = q_rnn_network.QRnnNetwork(tf_env.observation_spec(),
-                                            tf_env.action_spec())
+    rnn_network = q_rnn_network.QRnnNetwork(
+        tf_env.observation_spec(), tf_env.action_spec(), lstm_size=(40,))
 
     first_time_step = tf_env.current_time_step()
     q_values, state = rnn_network(
@@ -127,6 +132,24 @@ class QRnnNetworkTest(tf.test.TestCase):
     self.assertEqual((1, 10), state[0][1].shape)
     self.assertEqual((1, 5), state[1][0].shape)
     self.assertEqual((1, 5), state[1][1].shape)
+
+  def test_network_builds_rnn_construction_fn(self):
+    env = suite_gym.load('CartPole-v0')
+    tf_env = tf_py_environment.TFPyEnvironment(env)
+    rnn_network = q_rnn_network.QRnnNetwork(
+        tf_env.observation_spec(),
+        tf_env.action_spec(),
+        rnn_construction_fn=rnn_keras_fn,
+        rnn_construction_kwargs={'lstm_size': 3})
+
+    first_time_step = tf_env.current_time_step()
+    q_values, state = rnn_network(
+        first_time_step.observation,
+        first_time_step.step_type,
+        network_state=rnn_network.get_initial_state(batch_size=1),
+    )
+    self.assertEqual((1, 2), q_values.shape)
+    self.assertEqual((3,), state[0].shape)
 
 
 if __name__ == '__main__':

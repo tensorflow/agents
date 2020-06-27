@@ -283,7 +283,7 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
     # Hard code a trajectory shaped (time=6, batch=1, ...).
     traj, time_step_spec, action_spec = create_arbitrary_trajectory()
     cloning_net = q_rnn_network.QRnnNetwork(
-        time_step_spec.observation, action_spec)
+        time_step_spec.observation, action_spec, lstm_size=(40,))
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
         time_step_spec,
         action_spec,
