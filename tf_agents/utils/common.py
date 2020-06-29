@@ -1304,10 +1304,16 @@ def aggregate_losses(per_example_loss=None,
   total_loss, weighted_loss, reg_loss = None, None, None
   # Compute loss that is scaled by global batch size.
   if per_example_loss is not None:
+    loss_rank = per_example_loss.shape.rank
     if sample_weight is not None:
+      weight_rank = sample_weight.shape.rank
+      # Expand `sample_weight` to be broadcastable to the shape of
+      # `per_example_loss`, to ensure that multiplication works properly.
+      if weight_rank > 0 and loss_rank > weight_rank:
+        for dim in range(weight_rank, loss_rank):
+          sample_weight = tf.expand_dims(sample_weight, dim)
       per_example_loss = tf.math.multiply(per_example_loss, sample_weight)
 
-    loss_rank = per_example_loss.shape.rank
     if loss_rank is not None and loss_rank == 0:
       err_msg = (
           'Need to use a loss function that computes losses per sample, ex: '
