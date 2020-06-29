@@ -46,7 +46,7 @@ or, if using absl.app:
 
 if __name__ == '__main__':
   tf_agents.system.multiprocessing.handle_main(
-      lambda _: absl.app.run(main), extra_state_savers=...)
+      functools.partial(absl.app.run, main), extra_state_savers=...)
 
 
 For unit tests, this also means wrapping your test.main using handle_test_main:
