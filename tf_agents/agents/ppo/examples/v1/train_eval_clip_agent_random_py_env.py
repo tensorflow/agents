@@ -24,6 +24,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import functools
+
 from absl import app
 from absl import flags
 from absl import logging
@@ -69,4 +71,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  multiprocessing.handle_main(lambda _: app.run(main))
+  multiprocessing.handle_main(functools.partial(app.run, main))
