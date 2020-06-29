@@ -1293,7 +1293,8 @@ def aggregate_losses(per_example_loss=None,
 
   Args:
     per_example_loss: Per-example loss [B] or [B, T, ...].
-    sample_weight: Optional weighting for each example [B] or [B, T, ...].
+    sample_weight: Optional weighting for each example, Tensor shaped [B] or
+      [B, T, ...], or a scalar float.
     global_batch_size: Optional global batch size value. Defaults to (size of
     first dimension of `losses`) * (number of replicas).
     regularization_loss: Regularization loss.
@@ -1302,6 +1303,9 @@ def aggregate_losses(per_example_loss=None,
     An AggregatedLosses named tuple with scalar losses to optimize.
   """
   total_loss, weighted_loss, reg_loss = None, None, None
+  if sample_weight is not None and not isinstance(sample_weight, tf.Tensor):
+    sample_weight = tf.convert_to_tensor(sample_weight, dtype=tf.float32)
+
   # Compute loss that is scaled by global batch size.
   if per_example_loss is not None:
     loss_rank = per_example_loss.shape.rank

@@ -1027,6 +1027,15 @@ class AggregateLossTest(test_utils.TestCase):
     self.assertAlmostEqual(
         self.evaluate(aggregated_losses.total_loss), expected_per_example_loss)
 
+  def test_aggregate_losses_with_time_dim_and_float_weights(self):
+    per_example_loss = tf.constant([[4., 2., 3.], [1, 1, 1]])
+    sample_weights = 0.5
+    aggregated_losses = common.aggregate_losses(per_example_loss,
+                                                sample_weights)
+    expected_per_example_loss = 0.5 * (4 + 2 + 3 + 1 + 1 + 1) / 6
+    self.assertAlmostEqual(
+        self.evaluate(aggregated_losses.total_loss), expected_per_example_loss)
+
   def test_aggregate_losses_three_dimensions(self):
     per_example_loss = tf.constant([[[4., 2., 3.], [1, 1, 1]],
                                     [[8., 4., 6.], [2, 2, 2]]])
