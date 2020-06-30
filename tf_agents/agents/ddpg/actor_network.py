@@ -39,6 +39,8 @@ class ActorNetwork(network.Network):
                dropout_layer_params=None,
                conv_layer_params=None,
                activation_fn=tf.keras.activations.relu,
+               kernel_initializer=None,
+               last_kernel_initializer=None,
                name='ActorNetwork'):
     """Creates an instance of `ActorNetwork`.
 
@@ -61,6 +63,10 @@ class ActorNetwork(network.Network):
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
+      kernel_initializer: kernel initializer for all layers except for the value
+        regression layer. If None, a VarianceScaling initializer will be used.
+      last_kernel_initializer: kernel initializer for the value regression
+         layer. If None, a RandomUniform initializer will be used.
       name: A string representing name of the network.
 
     Raises:
@@ -84,22 +90,27 @@ class ActorNetwork(network.Network):
     if self._single_action_spec.dtype not in [tf.float32, tf.float64]:
       raise ValueError('Only float actions are supported by this network.')
 
+    if kernel_initializer is None:
+      kernel_initializer = tf.compat.v1.keras.initializers.VarianceScaling(
+          scale=1. / 3., mode='fan_in', distribution='uniform')
+    if last_kernel_initializer is None:
+      last_kernel_initializer = tf.keras.initializers.RandomUniform(
+          minval=-0.003, maxval=0.003)
+
     # TODO(kbanoop): Replace mlp_layers with encoding networks.
     self._mlp_layers = utils.mlp_layers(
         conv_layer_params,
         fc_layer_params,
         dropout_layer_params,
         activation_fn=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=1. / 3., mode='fan_in', distribution='uniform'),
+        kernel_initializer=kernel_initializer,
         name='input_mlp')
 
     self._mlp_layers.append(
         tf.keras.layers.Dense(
             flat_action_spec[0].shape.num_elements(),
             activation=tf.keras.activations.tanh,
-            kernel_initializer=tf.keras.initializers.RandomUniform(
-                minval=-0.003, maxval=0.003),
+            kernel_initializer=last_kernel_initializer,
             name='action'))
 
     self._output_tensor_spec = output_tensor_spec
