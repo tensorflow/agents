@@ -163,7 +163,33 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         regularization was applied on either network in the PPO paper.
       normalize_observations: If `True` (default `False`), keeps moving mean and
         variance of observations and normalizes incoming observations.
-        Additional optimization proposed in (Ilyas et al., 2018).
+        Additional optimization proposed in (Ilyas et al., 2018). If true, and
+        the observation spec is not tf.float32 (such as Atari), please manually
+        convert the observation spec received from the environment to tf.float32
+        before creating the networks. Otherwise, the normalized input to the
+        network (float32) will have a different dtype as what the network
+        expects, resulting in a mismatch error.
+
+        Example usage:
+          ```python
+          observation_tensor_spec, action_spec, time_step_tensor_spec = (
+            spec_utils.get_tensor_specs(env))
+          normalized_observation_tensor_spec = tf.nest.map_structure(
+            lambda s: tf.TensorSpec(
+              dtype=tf.float32, shape=s.shape, name=s.name
+            ),
+            observation_tensor_spec
+          )
+
+          actor_net = actor_distribution_network.ActorDistributionNetwork(
+            normalized_observation_tensor_spec, ...)
+          value_net = value_network.ValueNetwork(
+            normalized_observation_tensor_spec, ...)
+          # Note that the agent still uses the original time_step_tensor_spec
+          # from the environment.
+          agent = ppo_clip_agent.PPOClipAgent(
+            time_step_tensor_spec, action_spec, actor_net, value_net, ...)
+          ```
       normalize_rewards: If `True`, keeps moving variance of rewards and
         normalizes incoming rewards. While not mentioned directly in the PPO
         paper, reward normalization was implemented in OpenAI baselines and

@@ -139,7 +139,33 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         normalizes incoming rewards.
       reward_norm_clipping: Value above and below to clip normalized reward.
       normalize_observations: If true, keeps moving mean and variance of
-        observations and normalizes incoming observations.
+        observations and normalizes incoming observations. If true, and the
+        observation spec is not tf.float32 (such as Atari), please manually
+        convert the observation spec received from the environment to tf.float32
+        before creating the networks. Otherwise, the normalized input to the
+        network (float32) will have a different dtype as what the network
+        expects, resulting in a mismatch error.
+
+        Example usage:
+          ```python
+          observation_tensor_spec, action_spec, time_step_tensor_spec = (
+            spec_utils.get_tensor_specs(env))
+          normalized_observation_tensor_spec = tf.nest.map_structure(
+            lambda s: tf.TensorSpec(
+              dtype=tf.float32, shape=s.shape, name=s.name
+            ),
+            observation_tensor_spec
+          )
+
+          actor_net = actor_distribution_network.ActorDistributionNetwork(
+            normalized_observation_tensor_spec, ...)
+          value_net = value_network.ValueNetwork(
+            normalized_observation_tensor_spec, ...)
+          # Note that the agent still uses the original time_step_tensor_spec
+          # from the environment.
+          agent = ppo_clip_agent.PPOClipAgent(
+            time_step_tensor_spec, action_spec, actor_net, value_net, ...)
+          ```
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
