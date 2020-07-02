@@ -15,7 +15,8 @@
 
 """Keras Layers Module."""
 
-from tf_agents.keras_layers import bias_layer
-from tf_agents.keras_layers import dynamic_unroll_layer
-from tf_agents.keras_layers import rnn_wrapper
-from tf_agents.keras_layers import sequential_layer
+from tf_agents.keras_layers.bias_layer import BiasLayer
+from tf_agents.keras_layers.dynamic_unroll_layer import DynamicUnroll
+from tf_agents.keras_layers.inner_reshape import InnerReshape
+from tf_agents.keras_layers.rnn_wrapper import RNNWrapper
+from tf_agents.keras_layers.sequential_layer import SequentialLayer

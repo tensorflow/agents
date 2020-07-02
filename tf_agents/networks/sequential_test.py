@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.keras_layers.sequential_layer."""
+"""Tests for tf_agents.networks.sequential."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -28,6 +28,7 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.keras_layers import dynamic_unroll_layer
+from tf_agents.keras_layers import inner_reshape
 from tf_agents.networks import network
 from tf_agents.networks import sequential as sequential_lib
 from tf_agents.policies import actor_policy
@@ -83,34 +84,27 @@ class SequentialTest(test_utils.TestCase):
     self.assertAllClose(expected, out)
 
   def testMixOfNonRecurrentAndRecurrent(self):
-
-    def reshape_inner_dims(tensor, ndims, new_inner_shape):
-      """Reshapes tensor to: shape(tensor)[:-ndims] + new_inner_shape."""
-      tensor_shape = tf.shape(tensor)
-      new_shape = tf.concat((tensor_shape[:-ndims], new_inner_shape), axis=0)
-      new_tensor = tf.reshape(tensor, new_shape)
-      new_tensor.set_shape(tensor.shape[:-ndims] + new_inner_shape)
-      return new_tensor
-
-    sequential = sequential_lib.Sequential([
-        tf.keras.layers.Dense(2),
-        tf.keras.layers.LSTM(2, return_state=True, return_sequences=True),
-        tf.keras.layers.RNN(
-            tf.keras.layers.StackedRNNCells([
-                tf.keras.layers.LSTMCell(1),
-                tf.keras.layers.LSTMCell(32),
-            ],),
-            return_state=True,
-            return_sequences=True,
-        ),
-        tf.keras.layers.Lambda(lambda t: reshape_inner_dims(t, 1, [4, 4, 2])),
-        tf.keras.layers.Conv2D(2, 3),
-        tf.keras.layers.Lambda(lambda t: reshape_inner_dims(t, 3, [8])),
-        tf.keras.layers.GRU(2, return_state=True, return_sequences=True),
-        dynamic_unroll_layer.DynamicUnroll(tf.keras.layers.LSTMCell(2)),
-    ],
-                                           input_spec=tf.TensorSpec((3,),
-                                                                    tf.float32))
+    sequential = sequential_lib.Sequential(
+        [
+            tf.keras.layers.Dense(2),
+            tf.keras.layers.LSTM(2, return_state=True, return_sequences=True),
+            tf.keras.layers.RNN(
+                tf.keras.layers.StackedRNNCells([
+                    tf.keras.layers.LSTMCell(1),
+                    tf.keras.layers.LSTMCell(32),
+                ],),
+                return_state=True,
+                return_sequences=True,
+            ),
+            # Convert inner dimension to [4, 4, 2] for convolution.
+            inner_reshape.InnerReshape([32], [4, 4, 2]),
+            tf.keras.layers.Conv2D(2, 3),
+            # Convert 3 inner dimensions to [?] for RNN.
+            inner_reshape.InnerReshape([None] * 3, [-1]),
+            tf.keras.layers.GRU(2, return_state=True, return_sequences=True),
+            dynamic_unroll_layer.DynamicUnroll(tf.keras.layers.LSTMCell(2)),
+        ],
+        input_spec=tf.TensorSpec((3,), tf.float32))
     self.assertEqual(
         sequential.input_tensor_spec, tf.TensorSpec((3,), tf.float32))
 

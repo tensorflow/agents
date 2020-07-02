@@ -77,7 +77,7 @@ class Sequential(network.Network):
         are subclasses of `tf.keras.layers.{RNN,LSTM,GRU,...}` are
         wrapped in `tf_agents.keras_layers.RNNWrapper`.
       input_spec: (Optional.) A nest of `tf.TypeSpec` representing the
-        input observations.
+        input observations to the first layer.
       name: (Optional.) Network name.
 
     Raises:
