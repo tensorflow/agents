@@ -44,6 +44,8 @@ while [[ $# -gt -0 ]]; do
   shift # past argument or value
 done
 
+PYTHON_VERSION="3.6.1"
+
 run_tests() {
   echo "run_tests:"
   echo "    type:${RELEASE_TYPE}"
@@ -52,9 +54,13 @@ run_tests() {
 
   if [ "$USE_PYENV" = "true" ]; then
     # Sets up system to use pyenv instead of existing python install.
-    pyenv install --list
-    pyenv install -s 3.6.1
-    pyenv global 3.6.1
+    if ! stat -t ~/.pyenv/versions/${PYTHON_VERSION}/lib/libpython*m.so > /dev/null 2>&1; then
+      # Uninstall current version if there's no libpython file.
+      yes | pyenv uninstall $PYTHON_VERSION
+    fi
+    # We need pyenv to build/install a libpython3.Xm.so file for reverb.
+    PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s $PYTHON_VERSION
+    pyenv global $PYTHON_VERSION
   fi
 
   TMP=$(mktemp -d)
