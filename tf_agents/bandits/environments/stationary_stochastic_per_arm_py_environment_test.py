@@ -63,7 +63,7 @@ class StationaryStochasticPerArmBanditPyEnvironmentTest(tf.test.TestCase,
     if (variable_action_method ==
         bandit_spec_utils.VariableActionMethod.IN_BATCH_DIM):
       self.assertEqual(obs_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY].shape,
-                       (arm_dim,))
+                       (1, arm_dim))
       return
     self.assertEqual(obs_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY].shape,
                      (num_actions, arm_dim))

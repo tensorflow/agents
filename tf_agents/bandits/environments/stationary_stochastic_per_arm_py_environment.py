@@ -70,9 +70,11 @@ class StationaryStochasticPerArmPyEnvironment(
        `[batch_size, max_num_actions, arm_feature_dim]`.
     -- `IN_BATCH_DIM`: The number of actions is folded into the batch dimension.
        In this case, the actual batch size should be 1, and the batch dimension
-       is used to list all the actions for a sample. The global observation will
-       internally be tiled to match this induced batch size. Also note that in
-       this case, the `max_num_actions` parameter is ignored.
+       is used to list all the actions for a sample. The shape of the per-arm
+       spec is `[1, arm_feature_dim]` to make sure that policies recognize the
+       `IN_BATCH_DIM` case. The global observation will internally be tiled to
+       match the induced batch size. Also note that in this case, the
+       `max_num_actions` parameter is ignored.
 
 
     Example:
@@ -204,7 +206,9 @@ class StationaryStochasticPerArmPyEnvironment(
         GLOBAL_KEY:
             array_spec.ArraySpec.from_array(self._global_context_sampling_fn()),
         PER_ARM_KEY:
-            array_spec.ArraySpec.from_array(self._arm_context_sampling_fn())
+            array_spec.add_outer_dims_nest(
+                array_spec.ArraySpec.from_array(
+                    self._arm_context_sampling_fn()), (1,))
     }
     return spec
 
@@ -238,7 +242,7 @@ class StationaryStochasticPerArmPyEnvironment(
       num_actions = self._num_actions_fn()
       arm_observation = np.reshape(
           [self._arm_context_sampling_fn() for _ in range(num_actions)],
-          (num_actions, -1))
+          (num_actions, 1, -1))
       tiled_global_obs = np.tile(global_observation, (num_actions, 1))
       return {GLOBAL_KEY: tiled_global_obs, PER_ARM_KEY: arm_observation}
 
@@ -285,9 +289,12 @@ class StationaryStochasticPerArmPyEnvironment(
     if self._variable_action_method == VariableActionMethod.IN_BATCH_DIM:
       # If the number of actions is folded into the batch size, we need to take
       # only the first global observation (keeping the outer dimension), and
-      # create a batch dimension for the arm observations.
+      # move the batch dimension to the front for the arm observations.
       global_obs = global_obs[0:1]
-      arm_obs = np.expand_dims(arm_obs, axis=0)
+      arm_obs_shape = arm_obs.shape
+      swapped_shape = np.concatenate(
+          [[arm_obs_shape[1]], [arm_obs_shape[0]], arm_obs_shape[2:]], axis=0)
+      arm_obs = np.reshape(arm_obs, swapped_shape)
     batch_size_range = range(self.batch_size)
     arm_obs = arm_obs[batch_size_range, action, :]
     reward = np.stack([
