@@ -84,7 +84,7 @@ class ReverbReplayBufferTest(parameterized.TestCase, test_utils.TestCase):
     """Insert `num_step` random observations into Reverb server."""
     observers = [] if additional_observers is None else additional_observers
     traj_obs = reverb_utils.ReverbAddTrajectoryObserver(
-        self._py_client, [self._table_name], sequence_lengths=[sequence_length])
+        self._py_client, self._table_name, sequence_length=sequence_length)
     observers.append(traj_obs)
     policy = random_py_policy.RandomPyPolicy(env.time_step_spec(),
                                              env.action_spec())

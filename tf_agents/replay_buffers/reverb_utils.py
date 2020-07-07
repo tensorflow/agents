@@ -22,21 +22,22 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-import numbers
+from typing import Text, Union
 
 from absl import logging
-from six.moves import zip
+
+import reverb
 
 
 class ReverbAddEpisodeObserver(object):
   """Observer for writing episodes to the Reverb replay buffer."""
 
   def __init__(self,
-               py_client,
-               table_name,
-               max_sequence_length,
-               priority,
-               bypass_partial_episodes=False):
+               py_client: reverb.Client,
+               table_name: Text,
+               max_sequence_length: int,
+               priority: Union[float, int],
+               bypass_partial_episodes: bool = False):
     """Creates an instance of the ReverbAddEpisodeObserver.
 
     **Note**: This observer is designed to work with py_drivers only, and does
@@ -76,10 +77,6 @@ class ReverbAddEpisodeObserver(object):
       ValueError: If `priority` is not numeric.
       ValueError: If max_sequence_length is not positive.
     """
-    if not isinstance(table_name, str):
-      raise ValueError("`table_name` must be a string.")
-    if not isinstance(priority, numbers.Number):
-      raise ValueError("`priority` must be a numeric value.")
     if max_sequence_length <= 0:
       raise ValueError(
           "`max_sequence_length` must be an integer greater equal one.")
@@ -95,7 +92,7 @@ class ReverbAddEpisodeObserver(object):
     self._bypass_partial_episodes = bypass_partial_episodes
     self._overflow_episode = False
 
-  def update_priority(self, priority):
+  def update_priority(self, priority: Union[float, int]):
     """Update the table priority.
 
     Args:
@@ -103,8 +100,6 @@ class ReverbAddEpisodeObserver(object):
 
     ValueError: If priority is not numeric.
     """
-    if not isinstance(priority, numbers.Number):
-      raise ValueError("`priority` must be a numeric value.")
     self._priority = priority
 
   def __call__(self, trajectory):
@@ -196,13 +191,12 @@ class ReverbAddTrajectoryObserver(object):
   """
 
   def __init__(self,
-               py_client,
-               table_names,
-               # TODO(b/160653590): Only allow single sequence length.
-               sequence_lengths,
-               stride_lengths=None,
-               priority=5,
-               allow_multi_episode_sequences=False):
+               py_client: reverb.Client,
+               table_name: Text,
+               sequence_length: int,
+               stride_length: int = 1,
+               priority: Union[float, int] = 5,
+               allow_multi_episode_sequences: bool = False):
     """Creates an instance of the ReverbAddTrajectoryObserver.
 
     If multiple table_names and sequence lengths are provided data will only be
@@ -214,15 +208,15 @@ class ReverbAddTrajectoryObserver(object):
 
     Args:
       py_client: Python client for the reverb replay server.
-      table_names: A list or tuple  of table names where samples will be written
-        to.
-      sequence_lengths: List or tuple of integer sequence_lengths used to write
-        to the given tables. Must be the same length as the given table_names.
-        Note that setting this to other than 1 (the default) can cause final
-        transitions to not be written to the RB. This can easily break learning
-        for certain kinds of environments.
-      stride_lengths: List or tuple of integer strides for the sliding window
-        for overlapping sequences.
+      table_name: The table name where samples will be written to.
+      sequence_length: The sequence_length used to write
+        to the given table.
+      stride_length: The integer stride for the sliding window for overlapping
+        sequences.  The default value of `1` creates an item for every
+        window.  Using `L = sequence_length` this means items are created for
+        times `{0, 1, .., L-1}, {1, 2, .., L}, ...`.  In contrast,
+        `stride_length = L` will create an item only for disjoint windows
+        `{0, 1, ..., L-1}, {L, ..., 2 * L - 1}, ...`.
       priority: Initial priority for new samples in the RB.
       allow_multi_episode_sequences: Allows sequences to go over episode
         boundaries. **NOTE**: Samples generated when data is collected with this
@@ -233,25 +227,9 @@ class ReverbAddTrajectoryObserver(object):
       ValueError: If table_names or sequence_lengths are not lists or their
       lengths are not equal.
     """
-    if not isinstance(table_names, (list, tuple)):
-      raise ValueError("`table_names` must be a list or a tuple.")
-    if not isinstance(sequence_lengths, (list, tuple)):
-      raise ValueError("`sequence_lengths` must be a list or a tuple.")
-    if stride_lengths:
-      if not isinstance(stride_lengths, (list, tuple)):
-        raise ValueError("`stride_lengths` must be a list or a tuple.")
-      if len(table_names) != len(stride_lengths):
-        raise ValueError(
-            "Length of table_names and stride_lengths must be equal. "
-            "Got: {} and {}".format(len(table_names), len(stride_lengths)))
-    if len(table_names) != len(sequence_lengths):
-      raise ValueError(
-          "Length of table_names and sequence_lengths must be equal. "
-          "Got: {} and {}".format(len(table_names), len(sequence_lengths)))
-
-    self._table_names = table_names
-    self._sequence_lengths = sequence_lengths
-    self._stride_lengths = stride_lengths or [1] * len(sequence_lengths)
+    self._table_name = table_name
+    self._sequence_length = sequence_length
+    self._stride_length = stride_length
     self._priority = priority
     self._allow_multi_episode_sequences = allow_multi_episode_sequences
 
@@ -259,9 +237,7 @@ class ReverbAddTrajectoryObserver(object):
     # TODO(b/153700282): Use a single writer with max_sequence_length=max(...)
     # once Reverb Dataset with emit_timesteps=True returns properly shaped
     # sequences.
-    self._writers = [
-        py_client.writer(
-            max_sequence_length=s_len) for s_len in sequence_lengths]
+    self._writer = py_client.writer(max_sequence_length=sequence_length)
     self._cached_steps = 0
 
   def __call__(self, trajectory, force_is_boundary=None):
@@ -276,8 +252,7 @@ class ReverbAddTrajectoryObserver(object):
       force_is_boundary: Forces the indication of the trajectory being boundary.
         Useful if a flattened trajectory is provided.
     """
-    for writer in self._writers:
-      writer.append(trajectory)
+    self._writer.append(trajectory)
     self._cached_steps += 1
 
     self._write_cached_steps()
@@ -293,7 +268,6 @@ class ReverbAddTrajectoryObserver(object):
 
     **Note**: The method does *not* clear the cache after writing.
     """
-
     def write_item(table_name, writer, sequence_length, stride_length):
       if (self._cached_steps >= sequence_length and
           (self._cached_steps - sequence_length) % stride_length == 0):
@@ -302,10 +276,11 @@ class ReverbAddTrajectoryObserver(object):
             num_timesteps=sequence_length,
             priority=self._priority)
 
-    for table_name, writer, sequence_length, stride_length in zip(
-        self._table_names, self._writers, self._sequence_lengths,
-        self._stride_lengths):
-      write_item(table_name, writer, sequence_length, stride_length)
+    write_item(
+        self._table_name,
+        self._writer,
+        self._sequence_length,
+        self._stride_length)
 
   def _is_boundary(self, trajectory, force_is_boundary):
     if force_is_boundary is not None:
@@ -326,11 +301,9 @@ class ReverbAddTrajectoryObserver(object):
 
   def open(self):
     """Open the writer of the observer."""
-    if self._writers is None:
-      self._writers = [
-          self._py_client.writer(max_sequence_length=s_len)
-          for s_len in self._sequence_lengths
-      ]
+    if self._writer is None:
+      self._writer = self._py_client.writer(
+          max_sequence_length=self._sequence_length)
       self._cached_steps = 0
 
   def close(self):
@@ -338,8 +311,5 @@ class ReverbAddTrajectoryObserver(object):
 
     **Note**: Using the observer after closing it is not supported.
     """
-
-    if self._writers is not None:
-      for writer in self._writers:
-        writer.close()
-      self._writers = None
+    self._writer.close()
+    self._writer = None

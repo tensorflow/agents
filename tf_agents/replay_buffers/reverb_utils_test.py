@@ -272,8 +272,8 @@ class ReverbObserverTest(parameterized.TestCase):
   @parameterized.named_parameters(
       ('add_trajectory_observer',
        _create_add_trajectory_observer_fn(
-           table_names=['test_table'],
-           sequence_lengths=[2]), _env_creator(3),
+           table_name='test_table', sequence_length=2),
+       _env_creator(3),
        3,   # expected_items
        2,   # writer_call_counts
        4,   # max_steps
@@ -288,8 +288,8 @@ class ReverbObserverTest(parameterized.TestCase):
        10),  # append_count
       ('add_trajectory_observer_stride2',
        _create_add_trajectory_observer_fn(
-           table_names=['test_table'], sequence_lengths=[2],
-           stride_lengths=[2]), _env_creator(3),
+           table_name='test_table', sequence_length=2,
+           stride_length=2), _env_creator(3),
        2,   # expected_items
        2,   # writer_call_counts
        4,   # max_steps
@@ -306,47 +306,6 @@ class ReverbObserverTest(parameterized.TestCase):
     self.assertEqual(writer_call_counts, self._writer.call_count)
     self.assertEqual(append_count, self._writer.append.call_count)
     self.assertEqual(expected_items, self._writer.create_item.call_count)
-
-  @parameterized.named_parameters(
-      ('add_trajectory_observer',
-       _create_add_trajectory_observer_fn(
-           table_names=['test_table1', 'test_table2'],
-           sequence_lengths=[2, 3]), _env_creator(3),
-       5,    # expected_items
-       4,    # writer_call_counts
-       4,    # max_steps
-       10))  # append_count
-  def test_observer_writes_multiple_tables(self, create_observer_fn, env_fn,
-                                           expected_items, writer_call_counts,
-                                           max_steps, append_count):
-    env = env_fn()
-    with create_observer_fn(self._client) as observer:
-      policy = _create_random_policy_from_env(env)
-      driver = py_driver.PyDriver(
-          env, policy, observers=[observer], max_steps=max_steps)
-      driver.run(env.reset())
-
-    self.assertEqual(writer_call_counts, self._writer.call_count)
-    self.assertEqual(append_count, self._writer.append.call_count)
-    self.assertEqual(expected_items, self._writer.create_item.call_count)
-
-  def test_episodic_observer_assert_priority_is_numeric(self):
-    with self.assertRaisesRegex(ValueError,
-                                r'`priority` must be a numeric value'):
-      reverb_utils.ReverbAddEpisodeObserver(
-          self._client,
-          table_name='test_table1',
-          max_sequence_length=8,
-          priority=[3])
-
-  def test_episodic_observer_assert_table_is_string(self):
-    with self.assertRaisesRegex(ValueError,
-                                r'`table_name` must be a string.'):
-      _ = reverb_utils.ReverbAddEpisodeObserver(
-          self._client,
-          table_name=['test_table'],
-          max_sequence_length=8,
-          priority=3)
 
   def test_episodic_observer_overflow_episode_bypass(self):
     env1 = _env_creator(3)()
@@ -398,16 +357,6 @@ class ReverbObserverTest(parameterized.TestCase):
     self.assertEqual(observer._priority, 3)
     observer.update_priority(4)
     self.assertEqual(observer._priority, 4)
-
-  def test_episodic_observer_assert_update_priority_numeric(self):
-    observer = reverb_utils.ReverbAddEpisodeObserver(
-        self._client,
-        table_name='test_table',
-        max_sequence_length=1,
-        priority=3)
-    self.assertEqual(observer._priority, 3)
-    with self.assertRaises(ValueError):
-      observer.update_priority([4])
 
   def test_episodic_observer_num_steps(self):
     create_observer_fn = _create_add_episode_observer_fn(
