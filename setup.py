@@ -146,10 +146,10 @@ REQUIRED_PACKAGES = [
     # tensorflow-probability added below
 ]
 
-
 TEST_REQUIRED_PACKAGES = [
     'atari_py == 0.1.7',
     'gym == 0.12.5',
+    'mock >= 2.0.0',
     'opencv-python >= 3.4.1.15',
     'pybullet',
     'scipy == 1.1.0',
@@ -167,9 +167,11 @@ else:
   version = __dev_version__
   version += datetime.datetime.now().strftime('%Y%m%d')
 
+additional_packages = []
 if release:
   project_name = 'tf-agents'
-  tfp_package_name = 'tensorflow-probability>={}'.format(REQUIRED_TFP_VERSION)
+  additional_packages.append(
+      'tensorflow-probability>={}'.format(REQUIRED_TFP_VERSION))
 else:
   # Nightly releases use date-based versioning of the form
   # '0.0.1.dev20180305'
@@ -182,16 +184,11 @@ else:
 
   # Force tensorflow_probability at 0.8.0 for TF 1.x compatibility.
   if tf.__version__.startswith('1'):
-    tfp_package_name = 'tensorflow-probability==0.8.0'
+    additional_packages.append('tensorflow-probability==0.8.0')
   else:
-    tfp_package_name = 'tfp-nightly'
+    additional_packages.append('tfp-nightly')
 
-REQUIRED_PACKAGES.append(tfp_package_name)
-
-if sys.version_info.major == 2:
-  # mock comes with unittest.mock for python3, need to install for
-  # python2
-  REQUIRED_PACKAGES.append('mock >= 2.0.0')
+REQUIRED_PACKAGES.extend(additional_packages)
 
 
 class BinaryDistribution(Distribution):

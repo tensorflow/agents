@@ -19,6 +19,7 @@ from tf_agents.utils import common
 from tf_agents.utils import composite
 from tf_agents.utils import eager_utils
 from tf_agents.utils import example_encoding
+from tf_agents.utils import lazy_loader
 from tf_agents.utils import nest_utils
 from tf_agents.utils import numpy_storage
 from tf_agents.utils import session_utils
