@@ -116,7 +116,7 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     end_time = time.time()
     self.assertLessEqual(
         end_time - start_time,
-        5.0,
+        10.0,
         msg=('Expected all processes to start together, '
              'got {} wait time').format(end_time - start_time))
     env.close()
