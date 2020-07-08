@@ -73,7 +73,6 @@ class Td3Agent(tf_agent.TFAgent):
                target_update_tau: types.Float = 1.0,
                target_update_period: types.Int = 1,
                actor_update_period: types.Int = 1,
-               dqda_clipping: Optional[types.Float] = None,
                td_errors_loss_fn: Optional[types.LossFn] = None,
                gamma: types.Float = 1.0,
                reward_scale_factor: types.Float = 1.0,
@@ -122,9 +121,6 @@ class Td3Agent(tf_agent.TFAgent):
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       actor_update_period: Period for the optimization step on actor network.
-      dqda_clipping: A scalar or float clips the gradient dqda element-wise
-        between [-dqda_clipping, dqda_clipping]. Default is None representing no
-        clippiing.
       td_errors_loss_fn:  A function for computing the TD errors loss. If None,
         a default value of elementwise huber_loss is used.
       gamma: A discount factor for future rewards.
@@ -178,7 +174,6 @@ class Td3Agent(tf_agent.TFAgent):
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
     self._actor_update_period = actor_update_period
-    self._dqda_clipping = dqda_clipping
     self._td_errors_loss_fn = (
         td_errors_loss_fn or common.element_wise_huber_loss)
     self._gamma = gamma
@@ -493,32 +488,16 @@ class Td3Agent(tf_agent.TFAgent):
       actions, _ = self._actor_network(time_steps.observation,
                                        time_steps.step_type,
                                        training=training)
-      with tf.GradientTape(watch_accessed_variables=False) as tape:
-        tape.watch(actions)
-        q_values, _ = self._critic_network_1((time_steps.observation, actions),
-                                             time_steps.step_type,
-                                             training=False)
-        actions = tf.nest.flatten(actions)
 
-      dqdas = tape.gradient([q_values], actions)
-
-      actor_losses = []
-      for dqda, action in zip(dqdas, actions):
-        if self._dqda_clipping is not None:
-          dqda = tf.clip_by_value(dqda, -1 * self._dqda_clipping,
-                                  self._dqda_clipping)
-        loss = common.element_wise_squared_loss(
-            tf.stop_gradient(dqda + action), action)
-        if nest_utils.is_batched_nested_tensors(
-            time_steps, self.time_step_spec, num_outer_dims=2):
-          # Sum over the time dimension.
-          loss = tf.reduce_sum(loss, axis=1)
-        if weights is not None:
-          loss *= weights
-        loss = tf.reduce_mean(loss)
-        actor_losses.append(loss)
-
-      actor_loss = tf.add_n(actor_losses)
+      q_values, _ = self._critic_network_1((time_steps.observation, actions),
+                                           time_steps.step_type,
+                                           training=False)
+      actor_loss = -q_values
+      # Sum over the time dimension.
+      if actor_loss.shape.rank > 1:
+        actor_loss = tf.reduce_sum(actor_loss, axis=(1, actor_loss.shape.rank))
+      actor_loss = common.aggregate_losses(
+          per_example_loss=actor_loss, sample_weight=weights).total_loss
 
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(

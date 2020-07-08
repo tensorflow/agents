@@ -95,7 +95,6 @@ def train_eval(
     train_sequence_length=10,
     actor_learning_rate=1e-4,
     critic_learning_rate=1e-3,
-    dqda_clipping=None,
     gamma=0.995,
     reward_scale_factor=1.0,
     # Params for eval
@@ -176,7 +175,6 @@ def train_eval(
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
         actor_update_period=actor_update_period,
-        dqda_clipping=dqda_clipping,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
         debug_summaries=debug_summaries,

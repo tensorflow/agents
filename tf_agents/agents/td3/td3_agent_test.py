@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.td3 import td3_agent
 from tf_agents.networks import network
@@ -165,7 +166,12 @@ class TD3AgentTest(test_utils.TestCase):
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, batch_size=2)
 
-    expected_loss = 4.0
+    actions = [2 * 1 + 1 * 2 + 5, 2 * 3 + 1 * 4 + 5]
+    negative_q_values = [
+        -(1 * 1 + 3 * 2 + 2 * actions[0] + 4),
+        -(1 * 3 + 3 * 4 + 2 * actions[1] + 4)
+    ]
+    expected_loss = np.mean(negative_q_values)
     loss = agent.actor_loss(time_steps)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
