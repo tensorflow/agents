@@ -40,11 +40,6 @@ run_tests() {
     # Install pypi package
     pip install tf-agents-nightly
 
-  elif [[ $2 == "preview" ]] ; then
-    pip install tf-nightly-2.0-preview
-
-    # Install pypi package
-    pip install tf-agents-nightly
   else
     echo "Error unknown option only [test|official]"
     exit
@@ -58,8 +53,6 @@ run_tests() {
   deactivate
 }
 
-# Test on Python2.7
-run_tests "python2.7" $1
 # Test on Python3.6
 run_tests "python3.6" $1
 

@@ -66,14 +66,18 @@ run_tests() {
   TMP=$(mktemp -d)
   # Creates and activates a virtualenv to run the build and unittests in.
   VENV_PATH=${TMP}/virtualenv/$1
-  virtualenv "${VENV_PATH}"
+  virtualenv -p ~/.pyenv/versions/${PYTHON_VERSION}/bin/python "${VENV_PATH}"
   source ${VENV_PATH}/bin/activate
 
+  # Print the version of python
+  python --version
+  which pip
 
   # TensorFlow is not set as a dependency of TF-Agents because there are many
   # different TensorFlow versions a user might want and installed.
   if [ "$RELEASE_TYPE" = "nightly" ]; then
     pip install tf-nightly
+    pip install dm-reverb-nightly
 
     # Run the tests
     python setup.py test
