@@ -5,4 +5,3 @@ system.multiprocessing_test
 # TestSuite.
 environments.random_py_environment_test
 environments.random_tf_environment_test
-bandits.agents.examples.v1.trainer_test
