@@ -126,10 +126,8 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
 
     if local_server:
       self._server_address = 'localhost:{}'.format(local_server.port)
-      self._py_client = self._local_server.in_process_client()
-    else:
-      self._py_client = reverb.Client(self._server_address)
 
+    self._py_client = reverb.Client(self._server_address)
     self._tf_client = reverb.TFClient(self._server_address, 'rb_tf_client')
     self._table_info = self.get_table_info()
     sampler = self._table_info.sampler_options
