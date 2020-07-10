@@ -173,7 +173,7 @@ class CriticNetwork(network.Network):
 
   def call(self, inputs, step_type=(), network_state=(), training=False):
     observations, actions = inputs
-    del step_type  # unused.
+    # del step_type  # unused.
 
     state, network_state = self._encoder(
         observations,
