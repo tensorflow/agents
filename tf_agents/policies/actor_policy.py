@@ -135,10 +135,12 @@ class ActorPolicy(tf_policy.TFPolicy):
       observation = self._observation_normalizer.normalize(observation)
     if mask is None:
       return self._actor_network(
-          observation, step_type, policy_state, training=self._training)
+          observation, step_type=step_type, network_state=policy_state,
+          training=self._training)
     else:
       return self._actor_network(
-          observation, step_type, policy_state, training=self._training,
+          observation, step_type=step_type, network_state=policy_state,
+          training=self._training,
           mask=mask)
 
   @property

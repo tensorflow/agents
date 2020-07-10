@@ -142,7 +142,7 @@ class Sequential(network.Network):
       A deep copy of this network.
     """
     new_kwargs = dict(self._saved_kwargs, **kwargs)
-    if 'layers' not in new_kwargs:
+    if 'layers' not in kwargs:
       new_layers = [copy.deepcopy(l) for l in self.layers]
       new_kwargs['layers'] = new_layers
     return type(self)(**new_kwargs)

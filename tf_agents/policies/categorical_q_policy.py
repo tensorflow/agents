@@ -160,7 +160,8 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
           observation_and_action_constraint_splitter(network_observation))
 
     q_logits, policy_state = self._q_network(
-        network_observation, time_step.step_type, policy_state)
+        network_observation, step_type=time_step.step_type,
+        network_state=policy_state)
     q_logits.shape.assert_has_rank(3)
     q_values = common.convert_q_logits_to_values(q_logits, self._support)
 

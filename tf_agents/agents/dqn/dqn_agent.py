@@ -225,11 +225,16 @@ class DqnAgent(tf_agent.TFAgent):
     self._observation_and_action_constraint_splitter = (
         observation_and_action_constraint_splitter)
     self._q_network = q_network
-    q_network.create_variables()
+    net_observation_spec = time_step_spec.observation
+    if observation_and_action_constraint_splitter:
+      net_observation_spec, _ = observation_and_action_constraint_splitter(
+          net_observation_spec)
+    q_network.create_variables(net_observation_spec)
     if target_q_network:
-      target_q_network.create_variables()
+      target_q_network.create_variables(net_observation_spec)
     self._target_q_network = common.maybe_copy_target_network_with_checks(
-        self._q_network, target_q_network, 'TargetQNetwork')
+        self._q_network, target_q_network, input_spec=net_observation_spec,
+        name='TargetQNetwork')
 
     self._check_network_output(self._q_network, 'q_network')
     self._check_network_output(self._target_q_network, 'target_q_network')
@@ -541,7 +546,8 @@ class DqnAgent(tf_agent.TFAgent):
       network_observation, _ = self._observation_and_action_constraint_splitter(
           network_observation)
 
-    q_values, _ = self._q_network(network_observation, time_steps.step_type,
+    q_values, _ = self._q_network(network_observation,
+                                  step_type=time_steps.step_type,
                                   training=training)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
@@ -569,7 +575,7 @@ class DqnAgent(tf_agent.TFAgent):
           network_observation)
 
     next_target_q_values, _ = self._target_q_network(
-        network_observation, next_time_steps.step_type)
+        network_observation, step_type=next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
@@ -619,7 +625,7 @@ class DdqnAgent(DqnAgent):
           network_observation)
 
     next_target_q_values, _ = self._target_q_network(
-        network_observation, next_time_steps.step_type)
+        network_observation, step_type=next_time_steps.step_type)
     batch_size = (
         next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
     dummy_state = self._policy.get_initial_state(batch_size)

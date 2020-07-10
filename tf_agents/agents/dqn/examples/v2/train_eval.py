@@ -42,6 +42,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import functools
 import os
 import time
 
@@ -59,9 +60,9 @@ from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments.examples import masked_cartpole  # pylint: disable=unused-import
 from tf_agents.eval import metric_utils
+from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.metrics import tf_metrics
-from tf_agents.networks import q_network
-from tf_agents.networks import q_rnn_network
+from tf_agents.networks import sequential
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
@@ -74,6 +75,8 @@ flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 
 FLAGS = flags.FLAGS
+
+KERAS_LSTM_FUSED = 2
 
 
 @gin.configurable
@@ -147,18 +150,17 @@ def train_eval(
           'train_eval does not currently support n-step updates with stateful '
           'networks (i.e., RNNs)')
 
+    action_spec = tf_env.action_spec()
+    num_actions = action_spec.maximum - action_spec.minimum + 1
+
     if train_sequence_length > 1:
-      q_net = q_rnn_network.QRnnNetwork(
-          tf_env.observation_spec(),
-          tf_env.action_spec(),
-          input_fc_layer_params=input_fc_layer_params,
-          lstm_size=lstm_size,
-          output_fc_layer_params=output_fc_layer_params)
+      q_net = create_recurrent_network(
+          input_fc_layer_params,
+          lstm_size,
+          output_fc_layer_params,
+          num_actions)
     else:
-      q_net = q_network.QNetwork(
-          tf_env.observation_spec(),
-          tf_env.action_spec(),
-          fc_layer_params=fc_layer_params)
+      q_net = create_feedforward_network(fc_layer_params, num_actions)
       train_sequence_length = n_step_update
 
     # TODO(b/127301657): Decay epsilon based on global step, cf. cl/188907839
@@ -316,6 +318,45 @@ def train_eval(
           eval_metrics_callback(results, global_step.numpy())
         metric_utils.log_metrics(eval_metrics)
     return train_loss
+
+
+logits = functools.partial(
+    tf.keras.layers.Dense,
+    activation=None,
+    kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        minval=-0.03, maxval=0.03),
+    bias_initializer=tf.compat.v1.initializers.constant(-0.2))
+
+
+dense = functools.partial(
+    tf.keras.layers.Dense,
+    activation=tf.keras.activations.relu,
+    kernel_initializer=tf.compat.v1.variance_scaling_initializer(
+        scale=2.0, mode='fan_in', distribution='truncated_normal'))
+
+
+fused_lstm_cell = functools.partial(
+    tf.keras.layers.LSTMCell, implementation=KERAS_LSTM_FUSED)
+
+
+def create_feedforward_network(fc_layer_units, num_actions):
+  return sequential.Sequential(
+      [dense(num_units) for num_units in fc_layer_units]
+      + [logits(num_actions)])
+
+
+def create_recurrent_network(
+    input_fc_layer_units,
+    lstm_size,
+    output_fc_layer_units,
+    num_actions):
+  rnn_cell = tf.keras.layers.StackedRNNCells(
+      [fused_lstm_cell(s) for s in lstm_size])
+  return sequential.Sequential(
+      [dense(num_units) for num_units in input_fc_layer_units]
+      + [dynamic_unroll_layer.DynamicUnroll(rnn_cell)]
+      + [dense(num_units) for num_units in output_fc_layer_units]
+      + [logits(num_actions)])
 
 
 def main(_):

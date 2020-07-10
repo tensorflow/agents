@@ -385,7 +385,15 @@ class Network(tf.keras.layers.Layer):
     network_state = normalized_kwargs.get("network_state", None)
     normalized_kwargs.pop("self", None)
 
-    if network_state not in (None, (), []):
+    # TODO(b/158804957): tf.function changes "s in ((),)" to a tensor bool expr.
+    # pylint: disable=literal-comparison
+    network_has_state = (
+        network_state is not None
+        and network_state is not ()
+        and network_state is not [])
+    # pylint: enable=literal-comparison
+
+    if network_has_state:
       nest_utils.assert_matching_dtypes_and_inner_shapes(
           network_state,
           self.state_spec,

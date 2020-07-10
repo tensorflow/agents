@@ -1211,11 +1211,10 @@ def check_no_shared_variables(network_1, network_2):
     ValueError: if one of the networks has not yet been built
       (e.g. user must call `create_variables`).
   """
-  variables_1 = {id(v): v for v in network_1.trainable_variables}
-  variables_2 = {id(v): v for v in network_2.trainable_variables}
-  shared = set(variables_1.keys()) & set(variables_2.keys())
-  if shared:
-    shared_variables = [variables_1[v] for v in shared]
+  variables_1 = object_identity.ObjectIdentitySet(network_1.trainable_variables)
+  variables_2 = object_identity.ObjectIdentitySet(network_2.trainable_variables)
+  shared_variables = variables_1 & variables_2
+  if shared_variables:
     raise ValueError(
         'After making a copy of network \'{}\' to create a target '
         'network \'{}\', the target network shares weights with '
@@ -1227,7 +1226,9 @@ def check_no_shared_variables(network_1, network_2):
         'share weights make sure all the weights are created inside the Network'
         ' since a copy will be created by creating a new Network with the same '
         'args but a new name. Shared variables found: '
-        '\'{}\'.'.format(network_1.name, network_2.name, shared_variables))
+        '\'{}\'.'.format(
+            network_1.name, network_2.name,
+            [x.name for x in shared_variables]))
 
 
 def check_matching_networks(network_1, network_2):
@@ -1259,11 +1260,12 @@ def check_matching_networks(network_1, network_2):
 
 
 def maybe_copy_target_network_with_checks(network, target_network=None,
-                                          name='TargetNetwork'):
+                                          name=None,
+                                          input_spec=None):
   """Copies the network into target if None and checks for shared variables."""
   if target_network is None:
     target_network = network.copy(name=name)
-    target_network.create_variables()
+    target_network.create_variables(input_spec)
   # Copy may have been shallow, and variables may inadvertently be shared
   # between the target and the original networks. This would be an unusual
   # setup, so we throw an error to protect users from accidentally doing so.

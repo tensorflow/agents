@@ -151,7 +151,8 @@ class QPolicy(tf_policy.TFPolicy):
           network_observation)
 
     q_values, policy_state = self._q_network(
-        network_observation, time_step.step_type, policy_state)
+        network_observation, network_state=policy_state,
+        step_type=time_step.step_type)
 
     logits = q_values
 
