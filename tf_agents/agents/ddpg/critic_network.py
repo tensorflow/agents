@@ -163,7 +163,7 @@ class CriticNetwork(network.Network):
         kernel_initializer=kernel_initializer,
         name='joint_mlp')
 
-    self._joint_lay`ers.append(
+    self._joint_layers.append(
         tf.keras.layers.Dense(
             1,
             activation=output_activation_fn,
