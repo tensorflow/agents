@@ -77,6 +77,11 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
       ValueError: If the action or observation specs don't match.
     """
     super(ParallelPyEnvironment, self).__init__()
+    if any([not callable(ctor) for ctor in env_constructors]):
+      raise TypeError(
+          'Found non-callable `env_constructors` in `ParallelPyEnvironment` '
+          '__init__ call. Did you accidentally pass in environment instances '
+          'instead of constructors? Got: {}'.format(env_constructors))
     self._envs = [ProcessPyEnvironment(ctor, flatten=flatten)
                   for ctor in env_constructors]
     self._num_envs = len(env_constructors)

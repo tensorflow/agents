@@ -102,6 +102,16 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
                         time_step2.observation.shape)
     env.close()
 
+  def test_checks_constructors(self):
+    self._set_default_specs()
+    # pytype: disable=wrong-arg-types
+    with self.assertRaisesRegex(TypeError, '.*non-callable.*'):
+      parallel_py_environment.ParallelPyEnvironment([
+          random_py_environment.RandomPyEnvironment(self.observation_spec,
+                                                    self.action_spec)
+      ])
+    # pytype: enable=wrong-arg-types
+
   def test_non_blocking_start_processes_in_parallel(self):
     self._set_default_specs()
     constructor = functools.partial(
