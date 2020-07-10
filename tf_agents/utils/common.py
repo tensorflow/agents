@@ -21,12 +21,12 @@ from __future__ import print_function
 
 import collections as cs
 import contextlib
+import distutils.version
 import functools
 import importlib
 import os
 
 from absl import logging
-import distutils.version
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
@@ -212,7 +212,7 @@ def create_variable(name,
         initial_value = tf.convert_to_tensor(initial_value, dtype=dtype)
     else:
       if callable(initializer):
-        initial_value = lambda: initializer(shape)
+        initial_value = lambda: initializer(shape, dtype)
       else:
         initial_value = initializer
     return tf.compat.v2.Variable(
