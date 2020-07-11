@@ -112,6 +112,28 @@ class GymWrapperSpecTest(test_utils.TestCase):
       np.testing.assert_array_equal(np.array([-1.0, -2.0]), spec.minimum)
       np.testing.assert_array_equal(np.array([2.0, 4.0]), spec.maximum)
 
+  def test_spec_from_gym_space_box_array_constant_bounds(self):
+    for dtype in (np.float32, np.float64):
+      box_space = gym.spaces.Box(
+          np.array([-1.0, -1.0]), np.array([2.0, 2.0]), dtype=dtype)
+      spec = gym_wrapper.spec_from_gym_space(box_space)
+
+      self.assertEqual((2,), spec.shape)
+      self.assertEqual(dtype, spec.dtype)
+      self.assertAllEqual(-1.0, spec.minimum)
+      self.assertAllEqual(2.0, spec.maximum)
+
+  def test_spec_from_gym_space_box_array_constant_min(self):
+    for dtype in (np.float32, np.float64):
+      box_space = gym.spaces.Box(
+          np.array([-1.0, -1.0]), np.array([2.0, 4.0]), dtype=dtype)
+      spec = gym_wrapper.spec_from_gym_space(box_space)
+
+      self.assertEqual((2,), spec.shape)
+      self.assertEqual(dtype, spec.dtype)
+      self.assertAllEqual([-1., -1.], spec.minimum)
+      self.assertAllEqual([2., 4.], spec.maximum)
+
   def test_spec_from_gym_space_tuple(self):
     tuple_space = gym.spaces.Tuple((gym.spaces.Discrete(2),
                                     gym.spaces.Discrete(3)))

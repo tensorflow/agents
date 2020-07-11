@@ -111,8 +111,13 @@ def spec_from_gym_space(space: gym.Space,
     minimum = np.asarray(space.low, dtype=dtype)
     maximum = np.asarray(space.high, dtype=dtype)
     if simplify_box_bounds:
-      minimum = try_simplify_array_to_value(minimum)
-      maximum = try_simplify_array_to_value(maximum)
+      simple_minimum = try_simplify_array_to_value(minimum)
+      simple_maximum = try_simplify_array_to_value(maximum)
+      # Can only simplify if both bounds are simplified. Otherwise
+      # broadcasting doesn't work from non-simplified to simplified.
+      if simple_minimum.shape == simple_maximum.shape:
+        minimum = simple_minimum
+        maximum = simple_maximum
     return specs.BoundedArraySpec(
         shape=space.shape,
         dtype=dtype,
