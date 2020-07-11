@@ -178,6 +178,18 @@ def has_bandit_policy_type(info, check_for_tensor=False):
     return has_field
 
 
+def has_chosen_arm_features(info, check_for_tensor=False):
+  """Check if policy info has `chosen_arm_features` field/tensor."""
+  if info in ((), None):
+    return False
+  fields = getattr(info, '_fields', None)
+  has_field = fields is not None and InfoFields.CHOSEN_ARM_FEATURES in fields
+  if has_field and check_for_tensor:
+    return isinstance(info.chosen_arm_features, tf.Tensor)
+  else:
+    return has_field
+
+
 def set_bandit_policy_type(info, bandit_policy_type):
   """Sets the InfoFields.BANDIT_POLICY_TYPE on info to bandit_policy_type.
 
@@ -300,7 +312,7 @@ def construct_mask_from_multiple_sources(
 
 
 def create_chosen_arm_features_info_spec(
-    observation_spec, observation_and_action_constraint_splitter):
+    observation_spec, observation_and_action_constraint_splitter=None):
   """Creates the chosen arm features info spec from the arm observation spec."""
   if observation_and_action_constraint_splitter is not None:
     observation_spec = observation_and_action_constraint_splitter(

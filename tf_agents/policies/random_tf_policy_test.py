@@ -24,6 +24,8 @@ import math
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
+from tf_agents.bandits.policies import policy_utilities
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.policies import random_tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -44,12 +46,29 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
                                                       batch_size)
     return batch_time_step
 
-  def create_time_step(self):
+  def create_time_step(self, use_per_arm_features=False, num_arms=1):
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    time_step = ts.restart(observation)
-
     observation_spec = tensor_spec.TensorSpec(observation.shape.as_list(),
                                               tf.float32)
+    if use_per_arm_features:
+      # Create arm features with:
+      # max_num_arms = 4, num_action = 2, per_arm_dim = 2.
+      observation = {
+          bandit_spec_utils.GLOBAL_FEATURE_KEY: observation,
+          bandit_spec_utils.PER_ARM_FEATURE_KEY:
+              tf.constant([[5, 6],
+                           [7, 8],
+                           [9, 10],
+                           [11, 12]],
+                          tf.float32),
+          bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
+              tf.constant(num_arms, tf.int32),
+      }
+      observation_spec = tf.nest.map_structure(
+          lambda t: tensor_spec.TensorSpec(t.shape.as_list(), t.dtype),
+          observation)
+
+    time_step = ts.restart(observation)
     time_step_spec = ts.time_step_spec(observation_spec)
 
     return time_step_spec, time_step
@@ -190,6 +209,55 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     # With only three valid actions, all of the probabilities should be 1/3.
     self.assertAllClose(step.info.log_probability,
                         tf.constant(np.log(1. / 3), shape=[batch_size]))
+
+  def testNumActions(self, dtype):
+    if not dtype.is_integer:
+      self.skipTest('testNumActions only applies to integer dtypes')
+
+    batch_size = 1000
+
+    # Create action spec, time_step and spec with max_num_arms = 4.
+    action_spec = tensor_spec.BoundedTensorSpec((), dtype, 0, 3)
+    time_step_spec, time_step_1 = self.create_time_step(
+        use_per_arm_features=True, num_arms=2)
+    _, time_step_2 = self.create_time_step(
+        use_per_arm_features=True, num_arms=3)
+    # First half of time_step batch will have num_action = 2 and second
+    # half will have num_actions = 3.
+    half_batch_size = int(batch_size / 2)
+    time_step = nest_utils.stack_nested_tensors(
+        [time_step_1] * half_batch_size + [time_step_2] * half_batch_size)
+
+    # The features for the chosen arm is saved to policy_info.
+    chosen_arm_features_info = (
+        policy_utilities.create_chosen_arm_features_info_spec(
+            time_step_spec.observation))
+    info_spec = policy_utilities.PerArmPolicyInfo(
+        chosen_arm_features=chosen_arm_features_info)
+
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        info_spec=info_spec,
+        accepts_per_arm_features=True,
+        emit_log_probability=True)
+
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
+    step = self.evaluate(action_step)
+    action_ = step.action
+    self.assertTrue(np.all(action_ >= 0))
+    self.assertTrue(np.all(action_[:half_batch_size] < 2))
+    self.assertTrue(np.all(action_[half_batch_size:] < 3))
+
+    # With num_action valid actions, probabilities should be 1/num_actions.
+    self.assertAllClose(step.info.log_probability[:half_batch_size],
+                        tf.constant(np.log(1. / 2), shape=[half_batch_size]))
+    self.assertAllClose(step.info.log_probability[half_batch_size:],
+                        tf.constant(np.log(1. / 3), shape=[half_batch_size]))
 
   def testInfoSpec(self, dtype):
     action_spec = [

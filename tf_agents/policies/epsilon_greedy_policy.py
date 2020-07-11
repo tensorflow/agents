@@ -60,10 +60,15 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
     Raises:
       ValueError: If epsilon is invalid.
     """
-    observation_and_action_constraint_splitter = getattr(
-        policy, 'observation_and_action_constraint_splitter', None)
-    accepts_per_arm_features = getattr(policy, 'accepts_per_arm_features',
-                                       False)
+    try:
+      observation_and_action_constraint_splitter = (
+          policy.observation_and_action_constraint_splitter)
+    except AttributeError:
+      observation_and_action_constraint_splitter = None
+    try:
+      accepts_per_arm_features = policy.accepts_per_arm_features
+    except AttributeError:
+      accepts_per_arm_features = False
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
     self._random_policy = random_tf_policy.RandomTFPolicy(

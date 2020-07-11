@@ -19,6 +19,8 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.policies import policy_utilities
+from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.distributions import masked
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -59,6 +61,7 @@ def _calculate_log_probability(outer_dims, action_spec):
   return tf.cast(tf.fill(outer_dims, log_prob), tf.float32)
 
 
+# TODO(b/161005095): Refactor into RandomTFPolicy and RandomBanditTFPolicy.
 class RandomTFPolicy(tf_policy.TFPolicy):
   """Returns random samples of the given action_spec.
 
@@ -120,18 +123,35 @@ class RandomTFPolicy(tf_policy.TFPolicy):
     else:
       observation = time_step.observation
 
-      action_ = tensor_spec.sample_spec_nest(
-          self._action_spec, seed=seed, outer_dims=outer_dims)
+      if self._accepts_per_arm_features:
+        max_num_arms = self._action_spec.maximum - self._action_spec.minimum + 1
+        batch_size = tf.shape(time_step.step_type)[0]
+        num_actions = observation.get(
+            bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY,
+            tf.ones(shape=(batch_size,), dtype=tf.int32) * max_num_arms)
+        mask = tf.sequence_mask(num_actions, max_num_arms)
+        zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
+        masked_categorical = masked.MaskedCategorical(zero_logits, mask)
+        action_ = tf.nest.map_structure(
+            lambda t: tf.cast(masked_categorical.sample() + t.minimum, t.dtype),
+            self._action_spec)
+      else:
+        action_ = tensor_spec.sample_spec_nest(
+            self._action_spec, seed=seed, outer_dims=outer_dims)
+
       policy_info = tensor_spec.sample_spec_nest(
           self._info_spec, outer_dims=outer_dims)
+
+    # Update policy info with chosen arm features.
     if self._accepts_per_arm_features:
       def _gather_fn(t):
         return tf.gather(params=t, indices=action_, batch_dims=1)
+      chosen_arm_features = tf.nest.map_structure(
+          _gather_fn, observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
 
-      chosen_arm_features = tf.nest.map_structure(_gather_fn,
-                                                  observation['per_arm'])
-      policy_info = policy_info._replace(
-          chosen_arm_features=chosen_arm_features)
+      if policy_utilities.has_chosen_arm_features(self._info_spec):
+        policy_info = policy_info._replace(
+            chosen_arm_features=chosen_arm_features)
 
     # TODO(b/78181147): Investigate why this control dependency is required.
     if time_step is not None:
@@ -139,7 +159,8 @@ class RandomTFPolicy(tf_policy.TFPolicy):
         action_ = tf.nest.map_structure(tf.identity, action_)
 
     if self.emit_log_probability:
-      if observation_and_action_constraint_splitter is not None:
+      if (self._accepts_per_arm_features
+          or observation_and_action_constraint_splitter is not None):
         log_probability = masked_categorical.log_prob(action_ -
                                                       self.action_spec.minimum)
       else:
