@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import threading
+from typing import Text
 
 from absl.testing import parameterized
 from absl.testing.absltest import mock
@@ -97,8 +98,14 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
     return specs.ArraySpec([], np.int64, name='observation')
 
   def render(self, mode):
+    assert isinstance(mode, (str, Text)), 'Got: {}'.format(type(mode))
     if mode == 'rgb_array':
       return np.ones((4, 4, 3), dtype=np.uint8)
+    elif mode == 'human':
+      # Many environments often do not return anything on human mode.
+      return None
+    else:
+      raise ValueError('Unknown mode: {}'.format(mode))
 
 
 class PYEnvironmentMockNestedRewards(py_environment.PyEnvironment):
@@ -381,6 +388,9 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     img = self.evaluate(tf_env.render('human'))
     self.assertEqual(img.shape, (1, 4, 4, 3))
     self.assertEqual(img.dtype, np.uint8)
+    img = self.evaluate(tf_env.render())  # defaults to rgb_array
+    self.assertEqual(img.shape, (1, 4, 4, 3))
+    self.assertEqual(img.dtype, np.uint8)
 
   def testRenderBatched(self):
     py_env = self._get_py_env(True, False, batch_size=3)
@@ -390,6 +400,9 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(img.shape, (3, 4, 4, 3))
     self.assertEqual(img.dtype, np.uint8)
     img = self.evaluate(tf_env.render('human'))
+    self.assertEqual(img.shape, (3, 4, 4, 3))
+    self.assertEqual(img.dtype, np.uint8)
+    img = self.evaluate(tf_env.render())  # defaults to rgb_array
     self.assertEqual(img.shape, (3, 4, 4, 3))
     self.assertEqual(img.dtype, np.uint8)
 
