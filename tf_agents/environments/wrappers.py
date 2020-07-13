@@ -39,6 +39,7 @@ from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
+from tf_agents.utils import nest_utils
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -848,11 +849,13 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
 
     if self._include_actions:
       observation = {
-          'observation': np.stack(self._observation_history),
-          'action': np.stack(self._action_history)
+          'observation':
+              nest_utils.stack_nested_arrays(self._observation_history),
+          'action':
+              nest_utils.stack_nested_arrays(self._action_history)
       }
     else:
-      observation = np.stack(self._observation_history)
+      observation = nest_utils.stack_nested_arrays(self._observation_history)
     return time_step._replace(observation=observation)
 
   def _reset(self):

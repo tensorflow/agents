@@ -114,3 +114,65 @@ class EpisodeCountingEnv(py_environment.PyEnvironment):
       self._episodes += 1
       self._steps = 0
     return ts.restart(self._get_observation())
+
+
+@gin.configurable
+class NestedCountingEnv(py_environment.PyEnvironment):
+  """Counts up in the observation as steps are taken.
+
+  Step observation values are of the form
+    {
+      'total_steps': (10 ** episodes + self._current_step),
+      'current_steps': (self._current_step)
+    }
+  if steps_per_episode is greater than 10 then on reset the value of the
+  observation count may go down.
+  """
+
+  def __init__(self, steps_per_episode: types.Int = 10, nested_action=False):
+    self._steps_per_episode = steps_per_episode
+
+    self._episodes = 0
+    self._current_step = np.array(0, dtype=np.int32)
+    self._nested_action = nested_action
+    super(NestedCountingEnv, self).__init__()
+
+  def observation_spec(self) -> types.NestedArraySpec:
+    return {
+        'total_steps': specs.BoundedArraySpec((), dtype=np.int32),
+        'current_steps': specs.BoundedArraySpec((), dtype=np.int32)
+    }
+
+  def action_spec(self) -> types.NestedArraySpec:
+    if self._nested_action:
+      return {
+          'foo':
+              specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1),
+          'bar':
+              specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
+      }
+    else:
+      return specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
+
+  def _step(self, action):
+    del action  # Unused.
+    if self._current_time_step.is_last():
+      return self._reset()
+    self._current_step = np.array(1 + self._current_step, dtype=np.int32)
+    if self._current_step < self._steps_per_episode:
+      return ts.transition(self._get_observation(), 0)
+    return ts.termination(self._get_observation(), 1)
+
+  def _get_observation(self):
+    return {
+        'total_steps':
+            np.array(10 * self._episodes + self._current_step, dtype=np.int32),
+        'current_steps':
+            self._current_step
+    }
+
+  def _reset(self):
+    if self._current_time_step and self._current_time_step.is_last():
+      self._episodes += 1
+    self._current_step = np.array(0, dtype=np.int32)
+    return ts.restart(self._get_observation())

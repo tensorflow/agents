@@ -977,6 +977,85 @@ class HistoryWrapperTest(test_utils.TestCase):
     self.assertEqual([1, 2, 3], time_step.observation['observation'].tolist())
     self.assertEqual([5, 6, 7], time_step.observation['action'].tolist())
 
+  def test_observation_nested(self):
+    env = test_envs.NestedCountingEnv()
+    history_env = wrappers.HistoryWrapper(env, 3)
+    time_step = history_env.reset()
+    self.assertCountEqual({
+        'total_steps': [0, 0, 0],
+        'current_steps': [0, 0, 0]
+    }, time_step.observation)
+
+    time_step = history_env.step(0)
+    self.assertCountEqual({
+        'total_steps': [0, 0, 1],
+        'current_steps': [0, 0, 1]
+    }, time_step.observation)
+
+    time_step = history_env.step(0)
+    self.assertCountEqual({
+        'total_steps': [0, 1, 2],
+        'current_steps': [0, 1, 2]
+    }, time_step.observation)
+
+    time_step = history_env.step(0)
+    self.assertCountEqual({
+        'total_steps': [1, 2, 3],
+        'current_steps': [1, 2, 3]
+    }, time_step.observation)
+
+  def test_observation_and_action_nested(self):
+    env = test_envs.NestedCountingEnv(nested_action=True)
+    history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
+    time_step = history_env.reset()
+    self.assertCountEqual({
+        'total_steps': [0, 0, 0],
+        'current_steps': [0, 0, 0]
+    }, time_step.observation['observation'])
+    self.assertCountEqual({
+        'foo': [0, 0, 0],
+        'bar': [0, 0, 0]
+    }, time_step.observation['action'])
+
+    time_step = history_env.step({
+        'foo': 5,
+        'bar': 5
+    })
+    self.assertCountEqual({
+        'total_steps': [0, 0, 1],
+        'current_steps': [0, 0, 1]
+    }, time_step.observation['observation'])
+    self.assertCountEqual({
+        'foo': [0, 0, 5],
+        'bar': [0, 0, 5]
+    }, time_step.observation['action'])
+
+    time_step = history_env.step({
+        'foo': 6,
+        'bar': 6
+    })
+    self.assertCountEqual({
+        'total_steps': [0, 1, 2],
+        'current_steps': [0, 1, 2]
+    }, time_step.observation['observation'])
+    self.assertCountEqual({
+        'foo': [0, 5, 6],
+        'bar': [0, 5, 6]
+    }, time_step.observation['action'])
+
+    time_step = history_env.step({
+        'foo': 7,
+        'bar': 7
+    })
+    self.assertCountEqual({
+        'total_steps': [1, 2, 3],
+        'current_steps': [1, 2, 3]
+    }, time_step.observation['observation'])
+    self.assertCountEqual({
+        'foo': [5, 6, 7],
+        'bar': [5, 6, 7]
+    }, time_step.observation['action'])
+
 
 class PerformanceProfilerWrapperTest(test_utils.TestCase):
 
