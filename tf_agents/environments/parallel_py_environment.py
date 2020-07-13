@@ -198,6 +198,28 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     # Block until all envs are seeded.
     return [promise() for promise in promises]
 
+  def render(self, mode: Text = 'rgb_array') -> types.NestedArray:
+    """Renders the environment.
+
+    Args:
+      mode: Rendering mode. Currently only 'rgb_array' is supported because
+        this is a batched environment.
+
+    Returns:
+      An ndarray of shape [batch_size, width, height, 3] denoting RGB images
+      (for mode=`rgb_array`).
+    Raises:
+      NotImplementedError: If the environment does not support rendering,
+        or any other mode than `rgb_array` is given.
+    """
+    if mode != 'rgb_array':
+      raise NotImplementedError('Only rgb_array rendering mode is supported. '
+                                'Got %s' % mode)
+    imgs = [env.render(mode, blocking=self._blocking) for env in self._envs]
+    if not self._blocking:
+      imgs = [promise() for promise in imgs]
+    return nest_utils.stack_nested_arrays(imgs)
+
 
 class ProcessPyEnvironment(object):
   """Step a single env in a separate process for lock free paralellism."""
@@ -374,6 +396,31 @@ class ProcessPyEnvironment(object):
       observation.
     """
     promise = self.call('reset')
+    if blocking:
+      return promise()
+    else:
+      return promise
+
+  def render(self,
+             mode: Text = 'rgb_array',
+             blocking: bool = True) -> Union[types.NestedArray, Promise]:
+    """Renders the environment.
+
+    Args:
+      mode: Rendering mode. Only 'rgb_array' is supported.
+      blocking: Whether to wait for the result.
+
+    Returns:
+      An ndarray of shape [width, height, 3] denoting an RGB image when
+      blocking. Otherwise, callable that returns the rendered image.
+    Raises:
+      NotImplementedError: If the environment does not support rendering,
+        or any other modes than `rgb_array` is given.
+    """
+    if mode != 'rgb_array':
+      raise NotImplementedError('Only rgb_array rendering mode is supported. '
+                                'Got %s' % mode)
+    promise = self.call('render')
     if blocking:
       return promise()
     else:

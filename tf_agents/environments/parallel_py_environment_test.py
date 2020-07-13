@@ -202,6 +202,15 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         env._envs[1].access('_rng').get_state()[1][-1])
     env.close()
 
+  def test_render(self):
+    num_envs = 2
+    env = self._make_parallel_py_environment(num_envs=num_envs)
+    img = env.render('rgb_array')
+    self.assertEqual(img.shape, (num_envs, 2, 2, 3))
+    self.assertEqual(img.dtype, np.uint8)
+    with self.assertRaisesRegex(NotImplementedError, 'Only rgb_array'):
+      self.evaluate(env.render('human'))
+
 
 class ProcessPyEnvironmentTest(tf.test.TestCase):
 
