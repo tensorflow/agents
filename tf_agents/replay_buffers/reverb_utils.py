@@ -26,7 +26,10 @@ from typing import Text, Union
 
 from absl import logging
 
-import reverb
+from tf_agents.utils import lazy_loader
+
+# Lazy loading since not all users have the reverb package installed.
+reverb = lazy_loader.LazyLoader("reverb", globals(), "reverb")
 
 
 class ReverbAddEpisodeObserver(object):
