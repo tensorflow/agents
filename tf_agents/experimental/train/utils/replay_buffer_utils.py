@@ -16,9 +16,12 @@
 # Lint as: python3
 """Utils for using replay buffers."""
 
-import reverb
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
+from tf_agents.utils import lazy_loader
+
+# Lazy loading since not all users have the reverb package installed.
+reverb = lazy_loader.LazyLoader('reverb', globals(), 'reverb')
 
 
 # Default table creation function that creates a uniform sampling table

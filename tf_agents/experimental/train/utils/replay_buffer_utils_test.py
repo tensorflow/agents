@@ -16,13 +16,17 @@
 # Lint as: python3
 """Tests for tf_agents.experimental.train.replay_buffer_utils."""
 
-import reverb
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
+
 from tf_agents import specs
 from tf_agents.experimental.train.utils import replay_buffer_utils
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
+from tf_agents.utils import lazy_loader
 from tf_agents.utils import test_utils
+
+# Lazy loading since not all users have the reverb package installed.
+reverb = lazy_loader.LazyLoader('reverb', globals(), 'reverb')
 
 
 class ReplayBufferUtilsTest(test_utils.TestCase):
