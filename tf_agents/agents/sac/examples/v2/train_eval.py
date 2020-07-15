@@ -109,8 +109,8 @@ def train_eval(
     num_eval_episodes=30,
     eval_interval=10000,
     # Params for summaries and logging
-    train_checkpoint_interval=10000,
-    policy_checkpoint_interval=5000,
+    train_checkpoint_interval=50000,
+    policy_checkpoint_interval=50000,
     rb_checkpoint_interval=50000,
     log_interval=1000,
     summary_interval=1000,
@@ -219,12 +219,11 @@ def train_eval(
     train_checkpointer.initialize_or_restore()
     rb_checkpointer.initialize_or_restore()
 
-    if replay_buffer.num_frames() == 0:
-      initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
-          tf_env,
-          initial_collect_policy,
-          observers=replay_observer + train_metrics,
-          num_steps=initial_collect_steps)
+    initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
+        tf_env,
+        initial_collect_policy,
+        observers=replay_observer + train_metrics,
+        num_steps=initial_collect_steps)
 
     collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
@@ -280,7 +279,8 @@ def train_eval(
     if use_tf_functions:
       train_step = common.function(train_step)
 
-    for _ in range(num_iterations):
+    global_step_val = global_step.numpy()
+    while global_step_val < num_iterations:
       start_time = time.time()
       time_step, policy_state = collect_driver.run(
           time_step=time_step,
