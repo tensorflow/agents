@@ -253,7 +253,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         if the number of actions is greater than 1.
     """
     with tf.name_scope('loss'):
-      sample_weights = weights if weights else 1
+      sample_weights = weights if weights is not None else 1
       if self._heteroscedastic:
         predictions, _ = self._reward_network(observations,
                                               training=training)
