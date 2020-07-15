@@ -235,10 +235,17 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
           'num_parallel_calls cannot be bigger than sample_batch_size '
           '{} > {}'.format(num_parallel_calls, sample_batch_size))
     num_parallel_calls = num_parallel_calls or tf.data.experimental.AUTOTUNE
-    # Only allow a maxium of 1 worker per iterator due to interleave
-    num_workers_per_iterator = min(self._num_workers_per_iterator, 1)
-    dataset_buffer_size = self._dataset_buffer_size or 1
-    cycle_length = min(sample_batch_size or 1, self._max_cycle_length)
+    total_batch_size = sample_batch_size or 1
+    # This determines how many parallel Reverb dataset pipelines we create -
+    # aka "how many interleaves."
+    cycle_length = min(total_batch_size, self._max_cycle_length)
+    batch_size_per_interleave = total_batch_size // cycle_length
+    # Recomended buffer_size per connection is ~2-3x the batch size.
+    dataset_buffer_size = (
+        self._dataset_buffer_size or 3 * batch_size_per_interleave)
+    # Set a maximum number of workers per iterator due to interleave
+    num_workers_per_iterator = min(
+        self._num_workers_per_iterator, batch_size_per_interleave)
 
     def per_sequence_fn(sample):
       # At this point, each sample data contains a sequence of trajectories.
@@ -259,12 +266,11 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         shuffle_size = 100
         if self._sequence_length:
           shuffle_size = self._sequence_length // num_steps
-        if sample_batch_size and sample_batch_size > cycle_length:
-          # We will receive batches from interleaves of size
-          # cycle_length and batching them to size sample_batch_size.
-          # To try and ensure i.i.d. samples in each minibatch, make the shuffle
-          # buffer larger.
-          shuffle_size *= (sample_batch_size // cycle_length)
+        # We will receive batches from interleaves of size
+        # cycle_length and batching them to size sample_batch_size.
+        # To try and ensure i.i.d. samples in each minibatch, make the shuffle
+        # buffer larger.
+        shuffle_size *= batch_size_per_interleave
         dataset = dataset.shuffle(shuffle_size)
       return dataset
 
