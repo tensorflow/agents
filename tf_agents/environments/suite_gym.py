@@ -27,7 +27,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Callable, Dict, Optional, Sequence, Text
+from typing import Any, Callable, Dict, Optional, Sequence, Text
 
 import gin
 import gym
@@ -50,7 +50,9 @@ def load(
     gym_env_wrappers: Sequence[types.GymEnvWrapper] = (),
     env_wrappers: Sequence[types.PyEnvWrapper] = (),
     spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
-    gym_kwargs=None) -> py_environment.PyEnvironment:
+    gym_kwargs: Optional[Dict[str, Any]] = None,
+    render_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -71,7 +73,9 @@ def load(
       mapping through Gin is to define a gin-configurable function that returns
       desired mapping and call it in your Gin congif file, for example:
       `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
-    gym_kwargs: The kwargs to pass to the Gym environment class.
+    gym_kwargs: Optional kwargs to pass to the Gym environment class.
+    render_kwargs: Optional kwargs for rendering to pass to `render()` of the
+      gym_wrapped environment.
 
   Returns:
     A PyEnvironment instance.
@@ -89,7 +93,8 @@ def load(
       max_episode_steps=max_episode_steps,
       gym_env_wrappers=gym_env_wrappers,
       env_wrappers=env_wrappers,
-      spec_dtype_map=spec_dtype_map)
+      spec_dtype_map=spec_dtype_map,
+      render_kwargs=render_kwargs)
 
 
 @gin.configurable
@@ -101,7 +106,9 @@ def wrap_env(
     time_limit_wrapper: TimeLimitWrapperType = wrappers.TimeLimit,
     env_wrappers: Sequence[types.PyEnvWrapper] = (),
     spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
-    auto_reset: bool = True) -> py_environment.PyEnvironment:
+    auto_reset: bool = True,
+    render_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> py_environment.PyEnvironment:
   """Wraps given gym environment with TF Agent's GymWrapper.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -126,6 +133,7 @@ def wrap_env(
       `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
     auto_reset: If True (default), reset the environment automatically after a
       terminal state is reached.
+    render_kwargs: Optional `dict` of keywoard arguments for rendering.
 
   Returns:
     A PyEnvironment instance.
@@ -138,6 +146,7 @@ def wrap_env(
       discount=discount,
       spec_dtype_map=spec_dtype_map,
       auto_reset=auto_reset,
+      render_kwargs=render_kwargs,
   )
 
   if max_episode_steps is not None and max_episode_steps > 0:

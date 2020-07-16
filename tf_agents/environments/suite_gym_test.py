@@ -20,8 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
+from absl.testing.absltest import mock
 
 import gin
+import gym
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
@@ -72,6 +74,26 @@ class SuiteGymTest(test_utils.TestCase):
 
     env = suite_gym.load('FrozenLake-v0', gym_kwargs={'map_name': '8x8'})
     self.assertTupleEqual(env.unwrapped.desc.shape, (8, 8))
+
+  def test_load_gym_render_kwargs(self):
+    env = suite_gym.load('CartPole-v1',
+                         render_kwargs={'width': 96, 'height': 128})
+    gym_env = env.gym
+    self.assertIsInstance(gym_env, gym.Env)
+    gym_env.render = mock.MagicMock()
+    # render_kwargs should be passed to the underlying gym env's render().
+    env.render()
+    gym_env.render.assert_called_with('rgb_array', width=96, height=128)
+
+  def test_wrap_gym_render_kwargs(self):
+    gym_env = gym.make('CartPole-v1')
+    env = suite_gym.wrap_env(gym_env,
+                             render_kwargs={'width': 96, 'height': 128})
+    gym_env.render = mock.MagicMock()
+    # render_kwargs should be passed to them underlying gym env's render().
+    env.render()
+    gym_env.render.assert_called_with('rgb_array', width=96, height=128)
+
 
 if __name__ == '__main__':
   test_utils.main()

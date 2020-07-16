@@ -149,7 +149,9 @@ class GymWrapper(py_environment.PyEnvironment):
                spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
                match_obs_space_dtype: bool = True,
                auto_reset: bool = True,
-               simplify_box_bounds: bool = True):
+               simplify_box_bounds: bool = True,
+               render_kwargs: Optional[Dict[str, Any]] = None,
+               ):
     super(GymWrapper, self).__init__()
 
     self._gym_env = gym_env
@@ -166,6 +168,7 @@ class GymWrapper(py_environment.PyEnvironment):
                                             spec_dtype_map, simplify_box_bounds,
                                             'action')
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
+    self._render_kwargs = render_kwargs or {}
     self._info = None
     self._done = True
 
@@ -260,7 +263,7 @@ class GymWrapper(py_environment.PyEnvironment):
     return seed_value
 
   def render(self, mode: Text = 'rgb_array') -> Any:
-    return self._gym_env.render(mode)
+    return self._gym_env.render(mode, **self._render_kwargs)
 
   # pytype: disable=attribute-error
   def set_state(self, state: Any) -> None:
