@@ -157,7 +157,8 @@ def restart(observation: types.NestedTensorOrArray,
   else:
     reward = tf.nest.map_structure(
         # pylint: disable=g-long-lambda
-        lambda r: tf.fill(shape + r.shape, _as_float32_array(0.0),
+        lambda r: tf.fill(tf.concat([shape, r.shape], axis=-1),
+                          _as_float32_array(0.0),
                           name='reward'), reward_spec)
   discount = tf.fill(shape, _as_float32_array(1.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)

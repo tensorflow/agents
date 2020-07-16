@@ -295,7 +295,7 @@ def construct_mask_from_multiple_sources(
   if observation_and_action_constraint_splitter is not None:
     observation, mask = observation_and_action_constraint_splitter(observation)
   first_observation = tf.nest.flatten(observation)[0]
-  batch_size = first_observation.shape[0] or tf.shape(first_observation)[0]
+  batch_size = tf.shape(first_observation)[0]
   if (isinstance(observation, dict) and
       bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation):
     number_of_actions = observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
