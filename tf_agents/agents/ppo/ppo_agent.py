@@ -328,6 +328,7 @@ class PPOAgent(tf_agent.TFAgent):
           'Only tf.keras.optimizers.Optimiers are well supported, got a '
           'non-TF2 optimizer: %s', self._optimizer)
 
+    self._initial_adaptive_kl_beta = initial_adaptive_kl_beta
     if initial_adaptive_kl_beta > 0.0:
       # TODO(kbanoop): Rename create_variable.
       self._adaptive_kl_beta = common.create_variable(
@@ -528,10 +529,14 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       entropy_regularization_loss = tf.zeros_like(policy_gradient_loss)
 
-    kl_penalty_loss = self.kl_penalty_loss(time_steps,
-                                           action_distribution_parameters,
-                                           current_policy_distribution, weights,
-                                           debug_summaries)
+    # TODO(b/1613650790: Move this logic to PPOKLPenaltyAgent.
+    if self._initial_adaptive_kl_beta == 0:
+      kl_penalty_loss = tf.zeros_like(policy_gradient_loss)
+    else:
+      kl_penalty_loss = self.kl_penalty_loss(time_steps,
+                                             action_distribution_parameters,
+                                             current_policy_distribution,
+                                             weights, debug_summaries)
 
     total_loss = (
         policy_gradient_loss + value_estimation_loss + l2_regularization_loss +
@@ -842,14 +847,16 @@ class PPOAgent(tf_agent.TFAgent):
             loss_info.extra.entropy_regularization_loss)
         kl_penalty_losses.append(loss_info.extra.kl_penalty_loss)
 
-    # After update epochs, update adaptive kl beta, then update observation
-    #   normalizer and reward normalizer.
-    policy_state = self._collect_policy.get_initial_state(batch_size)
-    # Compute the mean kl from previous action distribution.
-    kl_divergence = self._kl_divergence(
-        time_steps, old_action_distribution_parameters,
-        self._collect_policy.distribution(time_steps, policy_state).action)
-    self.update_adaptive_kl_beta(kl_divergence)
+    # TODO(b/1613650790: Move this logic to PPOKLPenaltyAgent.
+    if self._initial_adaptive_kl_beta > 0:
+      # After update epochs, update adaptive kl beta, then update observation
+      #   normalizer and reward normalizer.
+      policy_state = self._collect_policy.get_initial_state(batch_size)
+      # Compute the mean kl from previous action distribution.
+      kl_divergence = self._kl_divergence(
+          time_steps, old_action_distribution_parameters,
+          self._collect_policy.distribution(time_steps, policy_state).action)
+      self.update_adaptive_kl_beta(kl_divergence)
 
     if self._update_normalizers_in_train:
       self.update_observation_normalizer(time_steps.observation)
