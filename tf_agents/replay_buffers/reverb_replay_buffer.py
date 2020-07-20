@@ -367,7 +367,6 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         num_parallel_calls=1,
         max_in_flight_samples_per_worker=1,
         num_workers_per_iterator=1,
-        parallel_batch_optimization=False,
         rate_limiter_timeout_ms=self._rate_limiter_timeout_ms)
 
     return dataset
@@ -410,7 +409,6 @@ def make_reverb_dataset(server_address: str,
                         sequence_length=None,
                         cycle_length=None,
                         num_parallel_calls=None,
-                        parallel_batch_optimization=True,
                         per_sequence_fn=None,
                         dataset_transformation=None,
                         num_workers_per_iterator=-1,
@@ -434,9 +432,6 @@ def make_reverb_dataset(server_address: str,
       from a different sequence. For reducing memory usage use a smaller number.
     num_parallel_calls: Optional. If specified number of parallel calls in
       iterleave. By default use `tf.data.experimental.AUTOTUNE`.
-    parallel_batch_optimization: Whether to enable the parallel_batch
-      optimization. In some cases this optimization may slow down sampling from
-      the dataset, in which case turning this to False may speed up performance.
     per_sequence_fn: Optional, per sequence function.
     dataset_transformation: Optional, per dataset interleave transformation.
     num_workers_per_iterator: (Defaults to -1, i.e auto selected) The number
@@ -497,7 +492,6 @@ def make_reverb_dataset(server_address: str,
   options = tf.data.Options()
   # reverb replay buffers are not considered deterministic for tf.data.
   options.experimental_deterministic = False
-  options.experimental_optimization.parallel_batch = parallel_batch_optimization
   dataset = dataset.with_options(options)
 
   if batch_size:
