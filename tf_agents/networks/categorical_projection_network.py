@@ -118,8 +118,11 @@ class CategoricalProjectionNetwork(network.DistributionNetwork):
       if mask.shape.rank < logits.shape.rank:
         mask = tf.expand_dims(mask, -2)
 
-      # Overwrite the logits for invalid actions to -inf.
-      neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
-      logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
+      # Overwrite the logits for invalid actions to a very large negative
+      # number. We do not use -inf because it produces NaNs in many tfp
+      # functions.
+      almost_neg_inf = tf.constant(logits.dtype.min, dtype=logits.dtype)
+      logits = tf.compat.v2.where(
+          tf.cast(mask, tf.bool), logits, almost_neg_inf)
 
     return self.output_spec.build_distribution(logits=logits), ()

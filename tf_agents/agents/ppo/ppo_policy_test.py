@@ -321,9 +321,11 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
         self.evaluate(action_step.info['dist_params']['logits']),
         dtype=np.float32)
     masked_actions = np.array(range(len(mask)))[~mask]
-    self.assertTrue(np.all(logits[:, :, masked_actions] == -np.inf))
+    self.assertTrue(
+        np.all(logits[:, :, masked_actions] == np.finfo(np.float32).min))
     valid_actions = np.array(range(len(mask)))[mask]
-    self.assertTrue(np.all(logits[:, :, valid_actions] > -np.inf))
+    self.assertTrue(
+        np.all(logits[:, :, valid_actions] > np.finfo(np.float32).min))
 
   @parameterized.named_parameters(*_test_cases('test_action'))
   def testValue(self, network_cls):
