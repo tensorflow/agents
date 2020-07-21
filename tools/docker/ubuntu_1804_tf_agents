@@ -21,10 +21,15 @@
 FROM tensorflow/tensorflow:nightly-gpu as base
 
 LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
-ARG tf_agents_pip_spec="tf-agents-nightly"
+ARG tf_agents_pip_spec="tf-agents-nightly[reverb]"
+ARG tensorflow_pip_spec="tf-nightly"
 ARG local_tf_agents_pip_spec=""
 COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
 
+# Removes TensorFlow so specific version can be installed.
+RUN pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
+
+RUN pip install ${tensorflow_pip_spec}
 RUN pip install ${tf_agents_pip_spec}
 
 # Needs to run before installing tzdata and other apps below.
@@ -83,4 +88,3 @@ RUN pip install jupyter
 RUN pip install ipykernel==5.1.1
 
 RUN pip freeze
-
