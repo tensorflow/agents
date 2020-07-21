@@ -24,7 +24,10 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_policy
+from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import mask_splitter_network
 from tf_agents.networks import network
+from tf_agents.networks import value_network as value_net
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -261,6 +264,66 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(actions_ >= self._action_spec.minimum))
     self.assertTrue(np.all(actions_ <= self._action_spec.maximum))
+
+  def testPolicyStepWithActionMaskTurnedOn(self):
+    # Creat specs with action constraints (mask).
+    num_categories = 5
+    observation_tensor_spec = (
+        tensor_spec.TensorSpec(shape=(3,), dtype=tf.int64, name='network_spec'),
+        tensor_spec.TensorSpec(
+            shape=(num_categories,), dtype=tf.bool, name='mask_spec'),
+    )
+    network_spec, _ = observation_tensor_spec
+    action_tensor_spec = tensor_spec.BoundedTensorSpec(
+        (1,), tf.int32, 0, num_categories - 1)
+
+    # Create policy with splitter.
+    def splitter_fn(observation_and_mask):
+      return observation_and_mask[0], observation_and_mask[1]
+
+    actor_network = mask_splitter_network.MaskSplitterNetwork(
+        splitter_fn,
+        actor_distribution_network.ActorDistributionNetwork(
+            network_spec, action_tensor_spec),
+        passthrough_mask=True)
+    value_network = mask_splitter_network.MaskSplitterNetwork(
+        splitter_fn, value_net.ValueNetwork(network_spec))
+    policy = ppo_policy.PPOPolicy(
+        ts.time_step_spec(observation_tensor_spec),
+        action_tensor_spec,
+        actor_network=actor_network,
+        value_network=value_network,
+        clip=False)
+
+    # Take a step.
+    mask = np.array([True, False, True, False, True], dtype=np.bool)
+    self.assertLen(mask, num_categories)
+    time_step = ts.TimeStep(
+        step_type=tf.constant([1], dtype=tf.int32),
+        reward=tf.constant([1], dtype=tf.float32),
+        discount=tf.constant([1], dtype=tf.float32),
+        observation=(tf.constant([[1, 2, 3], [4, 5, 6]], dtype=tf.int64),
+                     tf.constant([mask.tolist()], dtype=tf.bool)))
+    action_step = policy.action(time_step)
+
+    # Check the shape and type of the resulted action step.
+    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Check the actions in general and with respect to masking.
+    actions = self.evaluate(action_step.action)
+    self.assertTrue(np.all(actions >= action_tensor_spec.minimum))
+    self.assertTrue(np.all(actions <= action_tensor_spec.maximum))
+
+    # Check the logits.
+    logits = np.array(
+        self.evaluate(action_step.info['dist_params']['logits']),
+        dtype=np.float32)
+    masked_actions = np.array(range(len(mask)))[~mask]
+    self.assertTrue(np.all(logits[:, :, masked_actions] == -np.inf))
+    valid_actions = np.array(range(len(mask)))[mask]
+    self.assertTrue(np.all(logits[:, :, valid_actions] > -np.inf))
 
   @parameterized.named_parameters(*_test_cases('test_action'))
   def testValue(self, network_cls):
