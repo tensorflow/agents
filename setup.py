@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Install tf_agents."""
+"""Build, test, and install tf_agents."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import argparse
 import codecs
 import datetime
 import fnmatch
@@ -31,6 +32,15 @@ from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.test import test as TestCommandBase
 from setuptools.dist import Distribution
+
+# Default versions for packages we often override for testing and release
+# candidates. These can all be overridden with flags.
+TFP_VERSION = 'tensorflow-probability==0.11.0rc0'
+TFP_NIGHTLY = 'tfp-nightly'
+TENSORFLOW_VERSION = 'tensorflow>=2.3.0'
+TENSORFLOW_NIGHTLY = 'tf-nightly'
+REVERB_VERSION = 'dm-reverb'
+REVERB_NIGHTLY = 'dm-reverb-nightly'
 
 
 class StderrWrapper(io.IOBase):
@@ -60,9 +70,7 @@ class TestLoader(unittest.TestLoader):
 
 
 def load_test_list(filename):
-  testcases = [
-      x.rstrip() for x in open(filename, 'r').readlines()
-      if x]
+  testcases = [x.rstrip() for x in open(filename, 'r').readlines() if x]
   # Remove comments and blanks after comments are removed.
   testcases = [x.partition('#')[0].strip() for x in testcases]
   return [x for x in testcases if x]
@@ -78,8 +86,10 @@ class Test(TestCommandBase):
       # pybullet imports multiprocessing in their setup.py, which causes an
       # issue when we import multiprocessing.pool.dummy down the line because
       # the PYTHONPATH has changed.
-      for module in ['multiprocessing', 'multiprocessing.pool',
-                     'multiprocessing.dummy', 'multiprocessing.pool.dummy']:
+      for module in [
+          'multiprocessing', 'multiprocessing.pool', 'multiprocessing.dummy',
+          'multiprocessing.pool.dummy'
+      ]:
         if module in sys.modules:
           del sys.modules[module]
       # Reimport multiprocessing to avoid spurious error printouts. See
@@ -132,113 +142,176 @@ class Test(TestCommandBase):
     return multiprocessing.handle_test_main(lambda: app.run(main))
 
 
-from tf_agents.version import __dev_version__  # pylint: disable=g-import-not-at-top
-from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at-top
-
-REQUIRED_PACKAGES = [
-    'absl-py >= 0.6.1',
-    'cloudpickle == 1.3',  # TODO(b/155109696): Unpin cloudpickle version.
-    'gin-config >= 0.3.0',
-    'numpy >= 1.13.3',
-    'six >= 1.10.0',
-    'protobuf >= 3.11.3',
-    'wrapt >= 1.11.1',
-    # tensorflow-probability added below
-]
-
-TEST_REQUIRED_PACKAGES = [
-    'atari_py == 0.1.7',
-    'gym == 0.12.5',
-    'mock >= 2.0.0',
-    'opencv-python >= 3.4.1.15',
-    'pybullet',
-    'scipy == 1.1.0',
-]
-
-REQUIRED_TFP_VERSION = '0.9.0'
-
-if '--release' in sys.argv:
-  release = True
-  sys.argv.remove('--release')
-  version = __rel_version__
-else:
-  # Build a nightly package by default.
-  release = False
-  version = __dev_version__
-  version += datetime.datetime.now().strftime('%Y%m%d')
-
-additional_packages = []
-if release:
-  project_name = 'tf-agents'
-  additional_packages.append(
-      'tensorflow-probability>={}'.format(REQUIRED_TFP_VERSION))
-else:
-  # Nightly releases use date-based versioning of the form
-  # '0.0.1.dev20180305'
-  project_name = 'tf-agents-nightly'
-
-  try:
-    import tensorflow as tf  # pylint: disable=g-import-not-at-top
-  except:
-    raise ValueError('Tensorflow must be installed before installing TFAgents.')
-
-  # Force tensorflow_probability at 0.8.0 for TF 1.x compatibility.
-  if tf.__version__.startswith('1'):
-    additional_packages.append('tensorflow-probability==0.8.0')
-  else:
-    additional_packages.append('tfp-nightly')
-
-REQUIRED_PACKAGES.extend(additional_packages)
-
-
 class BinaryDistribution(Distribution):
   """This class is needed in order to create OS specific wheels."""
 
   def has_ext_modules(self):
     return False
 
-here = os.path.abspath(os.path.dirname(__file__))
-with codecs.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
-  long_description = f.read()
 
-setup(
-    name=project_name,
-    version=version,
-    description='TF-Agents: A Reinforcement Learning Library for TensorFlow',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
-    author='Google LLC',
-    author_email='no-reply@google.com',
-    url='http://github.com/tensorflow/agents',
-    license='Apache 2.0',
-    packages=find_packages(),
-    install_requires=REQUIRED_PACKAGES,
-    tests_require=TEST_REQUIRED_PACKAGES,
-    extras_require={'tests': TEST_REQUIRED_PACKAGES},
-    # Supports Python 3 only.
-    python_requires='>=3',
-    # Add in any packaged data.
-    zip_safe=False,
-    distclass=BinaryDistribution,
-    cmdclass={
-        'test': Test,
-    },
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Education',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Topic :: Scientific/Engineering',
-        'Topic :: Scientific/Engineering :: Mathematics',
-        'Topic :: Scientific/Engineering :: Artificial Intelligence',
-        'Topic :: Software Development',
-        'Topic :: Software Development :: Libraries',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
-    keywords='tensorflow agents reinforcement learning machine learning',
-)
+def get_required_packages():
+  """Returns list of required packages."""
+
+  required_packages = [
+      'absl-py >= 0.6.1',
+      'cloudpickle == 1.3',  # TODO(b/155109696): Unpin cloudpickle version.
+      'gin-config >= 0.3.0',
+      'numpy >= 1.13.3',
+      'six >= 1.10.0',
+      'protobuf >= 3.11.3',
+      'wrapt >= 1.11.1',
+  ]
+  add_additional_packages(required_packages)
+  return required_packages
+
+
+def add_additional_packages(required_packages):
+  """Adds additional required packages."""
+  if FLAGS.release:
+    tfp_version = TFP_VERSION
+  else:
+    tfp_version = TFP_NIGHTLY
+
+  if FLAGS.tfp_version:
+    tfp_version = FLAGS.tfp_version
+  required_packages.append(tfp_version)
+
+
+def get_test_packages():
+  """Returns list of packages needed when testing."""
+  test_packages = [
+      'atari_py == 0.1.7',
+      'gym == 0.12.5',
+      'mock >= 2.0.0',
+      'opencv-python >= 3.4.1.15',
+      'pybullet',
+      'scipy == 1.1.0',
+  ]
+  return test_packages
+
+
+def get_reverb_packages():
+  """Returns list of required packages if using reverb."""
+  reverb_packages = []
+  if FLAGS.release:
+    tf_version = TENSORFLOW_VERSION
+    reverb_version = REVERB_VERSION
+  else:
+    tf_version = TENSORFLOW_NIGHTLY
+    reverb_version = REVERB_NIGHTLY
+
+  # Overrides required versions if FLAGS are set.
+  if FLAGS.tf_version:
+    tf_version = FLAGS.tf_version
+  if FLAGS.reverb_version:
+    reverb_version = FLAGS.reverb_version
+
+  reverb_packages.append(reverb_version)
+  reverb_packages.append(tf_version)
+  return reverb_packages
+
+
+def get_version():
+  """Returns the version and project name to associate with the build."""
+  from tf_agents.version import __dev_version__  # pylint: disable=g-import-not-at-top
+  from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at-top
+
+  if FLAGS.release:
+    version = __rel_version__
+    project_name = 'tf-agents'
+  else:
+    version = __dev_version__
+    version += datetime.datetime.now().strftime('%Y%m%d')
+    project_name = 'tf-agents-nightly'
+  return version, project_name
+
+
+def run_setup():
+  """Triggers build, install, and other features of `setuptools.setup`."""
+
+  # Builds the long description from the README.
+  root_path = os.path.abspath(os.path.dirname(__file__))
+  with codecs.open(os.path.join(root_path, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
+  version, project_name = get_version()
+  test_packages = get_test_packages()
+  setup(
+      name=project_name,
+      version=version,
+      description='TF-Agents: A Reinforcement Learning Library for TensorFlow',
+      long_description=long_description,
+      long_description_content_type='text/markdown',
+      author='Google LLC',
+      author_email='no-reply@google.com',
+      url='http://github.com/tensorflow/agents',
+      license='Apache 2.0',
+      packages=find_packages(),
+      install_requires=get_required_packages(),
+      tests_require=test_packages,
+      extras_require={
+          'tests': test_packages,
+          'reverb': get_reverb_packages(),
+      },
+      # Supports Python 3 only.
+      python_requires='>=3',
+      # Add in any packaged data.
+      zip_safe=False,
+      distclass=BinaryDistribution,
+      cmdclass={
+          'test': Test,
+      },
+      classifiers=[
+          'Development Status :: 3 - Alpha',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Education',
+          'Intended Audience :: Science/Research',
+          'License :: OSI Approved :: Apache Software License',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Topic :: Scientific/Engineering',
+          'Topic :: Scientific/Engineering :: Mathematics',
+          'Topic :: Scientific/Engineering :: Artificial Intelligence',
+          'Topic :: Software Development',
+          'Topic :: Software Development :: Libraries',
+          'Topic :: Software Development :: Libraries :: Python Modules',
+      ],
+      keywords='tensorflow agents reinforcement learning machine bandits',
+  )
+
+
+if __name__ == '__main__':
+  # Hide argparse help so `setuptools.setup` help prints. This pattern is an
+  # improvement over using `sys.argv` and then `sys.argv.remove`, which also
+  # did not provide help about custom arguments.
+  parser = argparse.ArgumentParser(add_help=False)
+  parser.add_argument(
+      '--release',
+      action='store_true',
+      help='Pass as true to do a release build')
+  parser.add_argument(
+      '--tf-version',
+      type=str,
+      default=None,
+      help='Overrides TF version required when Reverb is installed, e.g.'
+      'tensorflow>=2.3.0')
+  parser.add_argument(
+      '--reverb-version',
+      type=str,
+      default=None,
+      help='Overrides Reverb version required, e.g. dm-reverb>=0.1.0')
+  parser.add_argument(
+      '--tfp-version',
+      type=str,
+      default=None,
+      help='Overrides tfp version required, e.g. '
+      'tensorflow-probability==0.11.0rc0')
+  FLAGS, unparsed = parser.parse_known_args()
+  # Go forward with only non-custom flags.
+  sys.argv.clear()
+  # Downstream `setuptools.setup` expects args to start at the second element.
+  unparsed.insert(0, 'foo')
+  sys.argv.extend(unparsed)
+  run_setup()
