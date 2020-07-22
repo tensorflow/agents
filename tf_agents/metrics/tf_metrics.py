@@ -70,6 +70,18 @@ class TFDeque(object):
       return tf.zeros(self._spec.shape, self._spec.dtype)
     return tf.math.reduce_mean(self.data, axis=0)
 
+  @common.function(autograph=True)
+  def max(self):
+    if tf.equal(self._head, 0):
+      return tf.zeros(self._spec.shape, self._spec.dtype)
+    return tf.math.reduce_max(self.data, axis=0)
+
+  @common.function(autograph=True)
+  def min(self):
+    if tf.equal(self._head, 0):
+      return tf.zeros(self._spec.shape, self._spec.dtype)
+    return tf.math.reduce_min(self.data, axis=0)
+
 
 @gin.configurable(module='tf_agents')
 class EnvironmentSteps(tf_metric.TFStepMetric):
@@ -177,6 +189,90 @@ class AverageReturnMetric(tf_metric.TFStepMetric):
 
   def result(self):
     return self._buffer.mean()
+
+  @common.function
+  def reset(self):
+    self._buffer.clear()
+    self._return_accumulator.assign(tf.zeros_like(self._return_accumulator))
+
+
+@gin.configurable(module='tf_agents')
+class MaxReturnMetric(tf_metric.TFStepMetric):
+  """Metric to compute the max return."""
+
+  def __init__(self,
+               name='MaxReturn',
+               prefix='Metrics',
+               dtype=tf.float32,
+               batch_size=1,
+               buffer_size=10):
+    super(MaxReturnMetric, self).__init__(name=name, prefix=prefix)
+    self._buffer = TFDeque(buffer_size, dtype)
+    self._dtype = dtype
+    self._return_accumulator = common.create_variable(
+        initial_value=0, dtype=dtype, shape=(batch_size,), name='Accumulator')
+
+  @common.function(autograph=True)
+  def call(self, trajectory):
+    # Zero out batch indices where a new episode is starting.
+    self._return_accumulator.assign(
+        tf.where(trajectory.is_first(), tf.zeros_like(self._return_accumulator),
+                 self._return_accumulator))
+
+    # Update accumulator with received rewards.
+    self._return_accumulator.assign_add(trajectory.reward)
+
+    # Add final returns to buffer.
+    last_episode_indices = tf.squeeze(tf.where(trajectory.is_last()), axis=-1)
+    for indx in last_episode_indices:
+      self._buffer.add(self._return_accumulator[indx])
+
+    return trajectory
+
+  def result(self):
+    return self._buffer.max()
+
+  @common.function
+  def reset(self):
+    self._buffer.clear()
+    self._return_accumulator.assign(tf.zeros_like(self._return_accumulator))
+
+
+@gin.configurable(module='tf_agents')
+class MinReturnMetric(tf_metric.TFStepMetric):
+  """Metric to compute the min return."""
+
+  def __init__(self,
+               name='MinReturn',
+               prefix='Metrics',
+               dtype=tf.float32,
+               batch_size=1,
+               buffer_size=10):
+    super(MinReturnMetric, self).__init__(name=name, prefix=prefix)
+    self._buffer = TFDeque(buffer_size, dtype)
+    self._dtype = dtype
+    self._return_accumulator = common.create_variable(
+        initial_value=0, dtype=dtype, shape=(batch_size,), name='Accumulator')
+
+  @common.function(autograph=True)
+  def call(self, trajectory):
+    # Zero out batch indices where a new episode is starting.
+    self._return_accumulator.assign(
+        tf.where(trajectory.is_first(), tf.zeros_like(self._return_accumulator),
+                 self._return_accumulator))
+
+    # Update accumulator with received rewards.
+    self._return_accumulator.assign_add(trajectory.reward)
+
+    # Add final returns to buffer.
+    last_episode_indices = tf.squeeze(tf.where(trajectory.is_last()), axis=-1)
+    for indx in last_episode_indices:
+      self._buffer.add(self._return_accumulator[indx])
+
+    return trajectory
+
+  def result(self):
+    return self._buffer.min()
 
   @common.function
   def reset(self):

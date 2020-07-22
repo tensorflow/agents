@@ -24,7 +24,7 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
 
-from tensorflow.python.eager import context  # TF internal
+from tensorflow.python.eager import context  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 
 class TFDequeTest(tf.test.TestCase):
@@ -71,12 +71,16 @@ class TFDequeTest(tf.test.TestCase):
     self.assertEqual(3, self.evaluate(d.mean()))
     self.assertEqual(tf.int32, d.mean().dtype)
 
-  def test_mean_empty(self):
+  def test_queue_empty(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual(0, self.evaluate(d.mean()))
+    self.assertEqual(0, self.evaluate(d.max()))
+    self.assertEqual(0, self.evaluate(d.min()))
     self.assertEqual(tf.int32, d.mean().dtype)
+    self.assertEqual(tf.int32, d.min().dtype)
+    self.assertEqual(tf.int32, d.max().dtype)
 
   def test_mean_roll_over(self):
     d = tf_metrics.TFDeque(3, tf.float32)
@@ -96,6 +100,18 @@ class TFDequeTest(tf.test.TestCase):
     self.evaluate(d.extend([1, 2, 3, 4]))
     self.assertEqual(3.0, self.evaluate(d.mean()))
     self.assertEqual(tf.float32, d.mean().dtype)
+
+  def test_min(self):
+    d = tf_metrics.TFDeque(4, tf.float32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(d.extend([1, 2, 3, 4]))
+    self.assertEqual(1.0, self.evaluate(d.min()))
+
+  def test_max(self):
+    d = tf_metrics.TFDeque(4, tf.float32)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(d.extend([1, 2, 3, 4]))
+    self.assertEqual(4.0, self.evaluate(d.max()))
 
 
 class TFShapedDequeTest(tf.test.TestCase):
@@ -253,6 +269,10 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
        tf_metrics.NumberOfEpisodes, 4, 2),
       ('testAverageReturnGraph', context.graph_mode,
        tf_metrics.AverageReturnMetric, 6, 9.0),
+      ('testMaxReturnGraph', context.graph_mode,
+       tf_metrics.MaxReturnMetric, 6, 14.0),
+      ('testMinReturnGraph', context.graph_mode,
+       tf_metrics.MinReturnMetric, 6, 4.0),
       ('testAverageEpisodeLengthGraph', context.graph_mode,
        tf_metrics.AverageEpisodeLengthMetric, 6, 2.0),
       ('testEnvironmentStepsEager', context.eager_mode,
@@ -261,6 +281,10 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
        tf_metrics.NumberOfEpisodes, 4, 2),
       ('testAverageReturnEager', context.eager_mode,
        tf_metrics.AverageReturnMetric, 6, 9.0),
+      ('testMaxReturnEager', context.eager_mode,
+       tf_metrics.MaxReturnMetric, 6, 14.0),
+      ('testMinReturnEager', context.eager_mode,
+       tf_metrics.MinReturnMetric, 6, 4.0),
       ('testAverageEpisodeLengthEager', context.eager_mode,
        tf_metrics.AverageEpisodeLengthMetric, 6, 2.0),
   ])
@@ -269,6 +293,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
     with run_mode():
       trajectories = self._create_trajectories()
       if metric_class in [tf_metrics.AverageReturnMetric,
+                          tf_metrics.MaxReturnMetric,
+                          tf_metrics.MinReturnMetric,
                           tf_metrics.AverageEpisodeLengthMetric]:
         metric = metric_class(batch_size=2)
       else:
