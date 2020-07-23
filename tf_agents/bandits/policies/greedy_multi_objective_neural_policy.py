@@ -21,7 +21,7 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
-from typing import Callable, List, Optional, Sequence, Text, Tuple, Union
+from typing import List, Optional, Sequence, Text, Tuple
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -38,9 +38,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 
 NestedBoundedTensorSpec = types.Nested[tensor_spec.BoundedTensorSpec]
-SplitterFn = Union[Callable[[tensor_spec.TensorSpec], tensor_spec.TensorSpec],
-                   Callable[[types.NestedSpecTensorOrArray],
-                            Tuple[types.NestedSpecTensorOrArray, tf.Tensor]]]
 
 
 @tf.function
