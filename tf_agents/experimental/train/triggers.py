@@ -136,8 +136,10 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
   def _log_steps_per_sec(self) -> None:
     steps_per_sec = self._step_timer.steps_per_second()
     self._step_timer.restart()
-    logging.info('Step: %d, %.3f steps/sec', self._train_step, steps_per_sec)
+    step = self._train_step.numpy()
+    logging.info('Step: %d, %.3f steps/sec', step,
+                 steps_per_sec)
     tf.summary.scalar(
         name='train_steps_per_sec',
         data=steps_per_sec,
-        step=self._train_step.numpy())
+        step=step)
