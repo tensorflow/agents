@@ -1,9 +1,9 @@
-# TF-Agents: A reliable, scalable and easy to use Reinforcement Learning library for TensorFlow.
+# TF-Agents: A reliable, scalable and easy to use TensorFlow library for Contextual Bandits and Reinforcement Learning.
 
-[TF-Agents](https://github.com/tensorflow/agents) makes designing, implementing
-and testing new RL algorithms easier, by providing well tested modular
-components that can be modified and extended. It enables fast code iteration,
-with good test integration and benchmarking.
+[TF-Agents](https://github.com/tensorflow/agents) makes implementing, deploying,
+and testing new Bandits and RL algorithms easier. It provides well tested and
+modular components that can be modified and extended. It enables fast code
+iteration, with good test integration and benchmarking.
 
 To get started, we recommend checking out one of our Colab tutorials. If you
 need an intro to RL (or a quick recap),
@@ -67,11 +67,11 @@ provided.
 
 ## Multi-Armed Bandits
 
-The TF-Agents library contains also a Multi-Armed Bandits suite with a few
-environments and agents. RL agents can also be used on Bandit environments. For
-a tutorial, see
+The TF-Agents library contains also a comprehensive Multi-Armed Bandits suite,
+including Bandits environments and agents. RL agents can also be used on Bandit
+environments. For a tutorial, see
 [`tf_agents/bandits/colabs/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/colabs/bandits_tutorial.ipynb).
-For examples ready to run, see
+For ready-to-run examples, see
 [`tf_agents/bandits/agents/examples/`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/).
 
 <a id='Examples'></a>
