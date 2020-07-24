@@ -203,7 +203,9 @@ class TrajectoryTest(test_utils.TestCase):
         discount=np.array([[1.0, 1.0, 0.0]]),
         policy_info=np.array([[1.0, 2.0, 3.0]]))
 
-    time_steps, policy_steps, next_time_steps = trajectory.to_transition(traj)
+    transition = trajectory.to_transition(traj)
+    self.assertIsInstance(transition, trajectory.Transition)
+    time_steps, policy_steps, next_time_steps = transition
 
     self.assertAllEqual(time_steps.step_type, np.array([[first, mid]]))
     self.assertAllEqual(time_steps.observation, np.array([[10.0, 20.0]]))
@@ -233,8 +235,9 @@ class TrajectoryTest(test_utils.TestCase):
     self.evaluate(run_driver)
     trajectories = self.evaluate(rb_gather_all)
 
-    time_steps, policy_step, next_time_steps = trajectory.to_transition(
-        trajectories)
+    transitions = trajectory.to_transition(trajectories)
+    self.assertIsInstance(transitions, trajectory.Transition)
+    time_steps, policy_step, next_time_steps = transitions
 
     self.assertAllEqual(time_steps.observation,
                         trajectories.observation[:, :-1])
@@ -255,7 +258,9 @@ class TrajectoryTest(test_utils.TestCase):
     policy = drivers_test_utils.TFPolicyMock(
         env.time_step_spec(), env.action_spec())
     trajectory_spec = policy.trajectory_spec
-    ts_spec, ps_spec, nts_spec = trajectory.to_transition_spec(trajectory_spec)
+    transition_spec = trajectory.to_transition_spec(trajectory_spec)
+    self.assertIsInstance(transition_spec, trajectory.Transition)
+    ts_spec, ps_spec, nts_spec = transition_spec
 
     self.assertAllEqual(ts_spec, env.time_step_spec())
     self.assertAllEqual(ps_spec.action, env.action_spec())

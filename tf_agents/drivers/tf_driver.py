@@ -42,7 +42,7 @@ class TFDriver(driver.Driver):
       env: tf_environment.TFEnvironment,
       policy: tf_policy.TFPolicy,
       observers: Sequence[Callable[[trajectory.Trajectory], Any]],
-      transition_observers: Optional[Sequence[Callable[[types.Transition],
+      transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
                                                        Any]]] = None,
       max_steps: Optional[types.Int] = None,
       max_episodes: Optional[types.Int] = None,

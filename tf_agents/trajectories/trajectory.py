@@ -22,6 +22,7 @@ from __future__ import print_function
 
 
 import functools
+from typing import NamedTuple, Optional
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -30,8 +31,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import composite
 from tf_agents.utils import nest_utils
-
-from typing import NamedTuple, Optional, Tuple
 
 
 class Trajectory(
@@ -46,7 +45,7 @@ class Trajectory(
     ])):
   """A tuple that represents a trajectory.
 
-  A `Trajectory` is a sequence of aligned time steps. It captures the
+  A `Trajectory` represents a sequence of aligned time steps. It captures the
   observation, step_type from current time step with the computed action
   and policy_info. Discount, reward and next_step_type come from the next
   time step.
@@ -107,6 +106,50 @@ class Trajectory(
 
     Returns:
       A new `Trajectory`.
+    """
+    return self._replace(**kwargs)
+
+
+# TODO(b/162101981): Move to its own file.
+class Transition(
+    NamedTuple('Transition', [
+        ('time_step', ts.TimeStep),
+        ('action_step', policy_step.PolicyStep),
+        ('next_time_step', ts.TimeStep)
+    ])):
+  """A tuple that represents a transition.
+
+  A `Transition` represents a `S, A, S'` sequence of operations.  Tensors
+  within a `Transition` are typically shaped `[B, ...]` where `B` is the
+  batch size.  However, in some cases Transition objects are used to store
+  time-shifted intermediate values for RNN computations, in which case the
+  stored tensors are shaped `[B, T, ...]`.
+
+  Attributes:
+    time_step: The initial state, reward, and discount.
+    action_step: The action, policy info, and possibly policy state taken.
+      (Note, `action_step.state` should not typically be stored in e.g.
+      a replay buffer, except a copy inside `policy_steep.info` as a special
+      case for algorithms that choose to do this).
+    next_time_step: The final state, reward, and discount.
+  """
+  __slots__ = ()
+
+  def replace(self, **kwargs):
+    """Exposes as namedtuple._replace.
+
+    Usage:
+    ```
+    new_transition = transition.replace(action_step=())
+    ```
+
+    This returns a new transition with an empty `action_step`.
+
+    Args:
+      **kwargs: key/value pairs of fields in the transition.
+
+    Returns:
+      A new `Transition`.
     """
     return self._replace(**kwargs)
 
@@ -535,7 +578,7 @@ def from_transition(time_step: ts.TimeStep,
 def to_transition(
     trajectory: Trajectory,
     next_trajectory: Optional[Trajectory] = None
-) -> Tuple[ts.TimeStep, policy_step.PolicyStep, ts.TimeStep]:
+) -> Transition:
   """Create a transition from a trajectory or two adjacent trajectories.
 
   **NOTE** If `next_trajectory` is not provided, tensors of `trajectory` are
@@ -593,13 +636,15 @@ def to_transition(
       reward=trajectory.reward,
       discount=trajectory.discount,
       observation=next_trajectory.observation)
-  return (time_steps, policy_steps, next_time_steps)
+  return Transition(time_steps, policy_steps, next_time_steps)
 
 
-def to_transition_spec(
-    trajectory_spec: Trajectory
-) -> Tuple[ts.TimeStep, policy_step.PolicyStep, ts.TimeStep]:
+def to_transition_spec(trajectory_spec: Trajectory) -> Transition:
   """Create a transition spec from a trajectory spec.
+
+  Note: since trajectories do not include the policy step's state (except
+  in special cases where the policy chooses to store this in the info field),
+  the returned `transition.action_spec.state` field will be an empty tuple.
 
   Args:
     trajectory_spec: An instance of `Trajectory` representing trajectory specs.
@@ -614,7 +659,7 @@ def to_transition_spec(
       reward=trajectory_spec.reward,
       discount=trajectory_spec.discount,
       observation=trajectory_spec.observation)
-  return (time_step_spec, policy_step_spec, time_step_spec)
+  return Transition(time_step_spec, policy_step_spec, time_step_spec)
 
 
 def _validate_rank(variable, min_rank, max_rank=None):
@@ -637,7 +682,7 @@ def _validate_rank(variable, min_rank, max_rank=None):
 
 def experience_to_transitions(
     experience: Trajectory, squeeze_time_dim: bool
-) -> Tuple[ts.TimeStep, policy_step.PolicyStep, ts.TimeStep]:
+) -> Transition:
   """Break experience to transitions."""
   transitions = to_transition(experience)
 
@@ -645,4 +690,4 @@ def experience_to_transitions(
     transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
                                         transitions)
   time_steps, policy_steps, next_time_steps = transitions
-  return time_steps, policy_steps, next_time_steps
+  return Transition(time_steps, policy_steps, next_time_steps)

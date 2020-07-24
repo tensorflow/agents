@@ -22,7 +22,7 @@ from __future__ import print_function
 
 import sys
 import typing
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, Tuple, TypeVar, Union
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -79,7 +79,6 @@ Seed = Union[int, Sequence[int], Tensor, Array]
 
 TimeStep = ForwardRef('tf_agents.trajectories.time_step.TimeStep')  # pylint: disable=invalid-name
 PolicyStep = ForwardRef('tf_agents.trajectories.policy_step.PolicyStep')  # pylint: disable=invalid-name
-Transition = Tuple[TimeStep, PolicyStep, TimeStep]
 
 GymEnv = ForwardRef('gym.Env')  # pylint: disable=invalid-name
 GymEnvWrapper = Callable[[GymEnv], GymEnv]
