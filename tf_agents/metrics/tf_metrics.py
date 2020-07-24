@@ -73,13 +73,13 @@ class TFDeque(object):
   @common.function(autograph=True)
   def max(self):
     if tf.equal(self._head, 0):
-      return tf.zeros(self._spec.shape, self._spec.dtype)
+      return tf.fill(self._spec.shape, self._spec.dtype.min)
     return tf.math.reduce_max(self.data, axis=0)
 
   @common.function(autograph=True)
   def min(self):
     if tf.equal(self._head, 0):
-      return tf.zeros(self._spec.shape, self._spec.dtype)
+      return tf.fill(self._spec.shape, self._spec.dtype.max)
     return tf.math.reduce_min(self.data, axis=0)
 
 

@@ -76,8 +76,8 @@ class TFDequeTest(tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     self.assertEqual(0, self.evaluate(d.mean()))
-    self.assertEqual(0, self.evaluate(d.max()))
-    self.assertEqual(0, self.evaluate(d.min()))
+    self.assertEqual(tf.int32.min, self.evaluate(d.max()))
+    self.assertEqual(tf.int32.max, self.evaluate(d.min()))
     self.assertEqual(tf.int32, d.mean().dtype)
     self.assertEqual(tf.int32, d.min().dtype)
     self.assertEqual(tf.int32, d.max().dtype)
@@ -264,32 +264,32 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
 
   @parameterized.named_parameters([
       ('testEnvironmentStepsGraph', context.graph_mode,
-       tf_metrics.EnvironmentSteps, 5, 6),
+       tf_metrics.EnvironmentSteps, 5, 6, 0.0),
       ('testNumberOfEpisodesGraph', context.graph_mode,
-       tf_metrics.NumberOfEpisodes, 4, 2),
+       tf_metrics.NumberOfEpisodes, 4, 2, 0.0),
       ('testAverageReturnGraph', context.graph_mode,
-       tf_metrics.AverageReturnMetric, 6, 9.0),
+       tf_metrics.AverageReturnMetric, 6, 9.0, 0.0),
       ('testMaxReturnGraph', context.graph_mode,
-       tf_metrics.MaxReturnMetric, 6, 14.0),
+       tf_metrics.MaxReturnMetric, 6, 14.0, tf.float32.min),
       ('testMinReturnGraph', context.graph_mode,
-       tf_metrics.MinReturnMetric, 6, 4.0),
+       tf_metrics.MinReturnMetric, 6, 4.0, tf.float32.max),
       ('testAverageEpisodeLengthGraph', context.graph_mode,
-       tf_metrics.AverageEpisodeLengthMetric, 6, 2.0),
+       tf_metrics.AverageEpisodeLengthMetric, 6, 2.0, 0.0),
       ('testEnvironmentStepsEager', context.eager_mode,
-       tf_metrics.EnvironmentSteps, 5, 6),
+       tf_metrics.EnvironmentSteps, 5, 6, 0.0),
       ('testNumberOfEpisodesEager', context.eager_mode,
-       tf_metrics.NumberOfEpisodes, 4, 2),
+       tf_metrics.NumberOfEpisodes, 4, 2, 0.0),
       ('testAverageReturnEager', context.eager_mode,
-       tf_metrics.AverageReturnMetric, 6, 9.0),
+       tf_metrics.AverageReturnMetric, 6, 9.0, 0.0),
       ('testMaxReturnEager', context.eager_mode,
-       tf_metrics.MaxReturnMetric, 6, 14.0),
+       tf_metrics.MaxReturnMetric, 6, 14.0, tf.float32.min),
       ('testMinReturnEager', context.eager_mode,
-       tf_metrics.MinReturnMetric, 6, 4.0),
+       tf_metrics.MinReturnMetric, 6, 4.0, tf.float32.max),
       ('testAverageEpisodeLengthEager', context.eager_mode,
-       tf_metrics.AverageEpisodeLengthMetric, 6, 2.0),
+       tf_metrics.AverageEpisodeLengthMetric, 6, 2.0, 0.0),
   ])
   def testMetric(self, run_mode, metric_class, num_trajectories,
-                 expected_result):
+                 expected_result, empty_queue_expected_result):
     with run_mode():
       trajectories = self._create_trajectories()
       if metric_class in [tf_metrics.AverageReturnMetric,
@@ -306,7 +306,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
 
       self.assertEqual(expected_result, self.evaluate(metric.result()))
       self.evaluate(metric.reset())
-      self.assertEqual(0.0, self.evaluate(metric.result()))
+      self.assertEqual(empty_queue_expected_result,
+                       self.evaluate(metric.result()))
 
   @parameterized.named_parameters([
       ('testActionRelativeFreqGraph', context.graph_mode),
