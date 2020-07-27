@@ -25,7 +25,7 @@ import functools
 from typing import NamedTuple, Optional
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types

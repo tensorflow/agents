@@ -59,6 +59,7 @@ class DummyActorPolicy(object):
     # Action is maximum of action range.
     self._action = single_action_spec.maximum
     self._action_spec = action_spec
+    self.info_spec = ()
 
   def action(self, time_step):
     observation = time_step.observation

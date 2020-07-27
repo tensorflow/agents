@@ -27,6 +27,7 @@ from typing import Dict, Optional, Text
 import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.agents import data_converter
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -292,6 +293,10 @@ class TFAgent(tf.Module):
     self._enable_summaries = enable_summaries
     self._training_data_spec = training_data_spec
     self._validate_args = validate_args
+    self._data_context = data_converter.DataContext(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        info_spec=collect_policy.info_spec)
     if train_argspec is None:
       train_argspec = {}
     elif validate_args:
@@ -545,6 +550,10 @@ class TFAgent(tf.Module):
     return self._train_argspec
 
   @property
+  def data_context(self) -> data_converter.DataContext:
+    return self._data_context
+
+  @property
   def policy(self) -> tf_policy.TFPolicy:
     """Return the current policy held by the agent.
 
@@ -569,7 +578,7 @@ class TFAgent(tf.Module):
     Returns:
       A `Trajectory` spec.
     """
-    return self.collect_policy.trajectory_spec
+    return self.data_context.trajectory_spec
 
   @property
   def training_data_spec(self) -> types.NestedTensorSpec:

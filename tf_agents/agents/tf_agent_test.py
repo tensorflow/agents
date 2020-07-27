@@ -129,6 +129,13 @@ class TFAgentTest(tf.test.TestCase):
     tf.nest.map_structure(
         self.assertAllEqual, loss_info.extra, ('blah', 3))
 
+  def testDataContext(self):
+    agent = MyAgent()
+    self.assertEqual(agent.data_context.time_step_spec,
+                     ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}))
+    self.assertEqual(agent.data_context.action_spec, ())
+    self.assertEqual(agent.data_context.info_spec, ())
+
 
 class AgentSpecTest(test_utils.TestCase):
 

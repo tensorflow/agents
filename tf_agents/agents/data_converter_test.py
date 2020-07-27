@@ -1,0 +1,103 @@
+# coding=utf-8
+# Copyright 2018 The TF-Agents Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for agents.tf_agent."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import tensorflow.compat.v2 as tf
+
+from tf_agents.agents import data_converter
+
+from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
+from tf_agents.utils import test_utils
+
+
+class AsTrajectoryTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(AsTrajectoryTest, self).setUp()
+    self._data_context = data_converter.DataContext(
+        time_step_spec=ts.TimeStep(step_type=(),
+                                   reward=tf.TensorSpec((), tf.float32),
+                                   discount=tf.TensorSpec((), tf.float32),
+                                   observation=()),
+        action_spec={'action1': tf.TensorSpec((), tf.float32)},
+        info_spec=())
+
+  def testSimple(self):
+    converter = data_converter.AsTrajectory(self._data_context)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[2, 3])
+    converted = converter(traj)
+    (traj, converted) = self.evaluate((traj, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, traj)
+
+  def testPrunes(self):
+    converter = data_converter.AsTrajectory(self._data_context)
+    my_spec = self._data_context.trajectory_spec.replace(
+        action={
+            'action1': tf.TensorSpec((), tf.float32),
+            'action2': tf.TensorSpec([4], tf.int32)
+        })
+    traj = tensor_spec.sample_spec_nest(my_spec, outer_dims=[2, 3])
+    converted = converter(traj)
+    expected = tf.nest.map_structure(lambda x: x, traj)
+    del expected.action['action2']
+    (expected, converted) = self.evaluate((expected, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, expected)
+
+  def testFromBatchTimeTransition(self):
+    converter = data_converter.AsTrajectory(self._data_context)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[2, 3])
+    transition = trajectory.to_transition(traj, traj)
+    converted = converter(transition)
+    (traj, converted) = self.evaluate((traj, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, traj)
+
+  def testNoTimeDimensionRaises(self):
+    converter = data_converter.AsTrajectory(self._data_context)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[3])
+    with self.assertRaisesRegex(
+        ValueError, r'must have two outer dimensions: batch size and time'):
+      converter(traj)
+
+  def testTransitionNoTimeDimensionRaises(self):
+    converter = data_converter.AsTrajectory(self._data_context)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[2])
+    transition = trajectory.to_transition(traj, traj)
+    with self.assertRaisesRegex(
+        ValueError, r'must have two outer dimensions: batch size and time'):
+      converter(transition)
+
+  def testInvalidTimeDimensionRaises(self):
+    converter = data_converter.AsTrajectory(
+        self._data_context, sequence_length=4)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[2, 3])
+    with self.assertRaisesRegex(
+        ValueError, r'has a time axis dim value \'3\' vs the expected \'4\''):
+      converter(traj)
+
+
+if __name__ == '__main__':
+  test_utils.main()
