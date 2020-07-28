@@ -386,7 +386,9 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
     limits = np.asarray(limits)
     # Simplify shape of bounds if they are all equal.
     if np.all(limits == limits.flat[0]):
-      limits = limits.flat[0]
+      discrete_spec_max_limit = limits.flat[0]
+    else:
+      discrete_spec_max_limit = limits
     # Workaround for b/148086610. Makes the discretized wrapper generate a
     # scalar spec when possible.
     shape = () if spec.shape == (1,) else spec.shape
@@ -394,7 +396,7 @@ class ActionDiscretizeWrapper(PyEnvironmentBaseWrapper):
         shape=shape,
         dtype=np.int32,
         minimum=0,
-        maximum=limits - 1,
+        maximum=discrete_spec_max_limit - 1,
         name=spec.name)
 
     minimum = np.broadcast_to(spec.minimum, shape)
