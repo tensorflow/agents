@@ -111,6 +111,45 @@ class DataContext(tf.Module):
     return self._transition_spec
 
 
+def _validate_trajectory(
+    value: trajectory.Trajectory,
+    trajectory_spec: trajectory.Trajectory,
+    sequence_length: typing.Optional[int]):
+  """Validate a Trajectory given its spec and a sequence length."""
+  if not nest_utils.is_batched_nested_tensors(
+      value, trajectory_spec, num_outer_dims=2, allow_extra_fields=True):
+    debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, value)
+    debug_str_2 = tf.nest.map_structure(
+        lambda spec: spec.shape, trajectory_spec)
+    raise ValueError(
+        'All of the Tensors in `value` must have two outer '
+        'dimensions: batch size and time. Specifically, tensors must '
+        'have shape `[B, T] + spec.shape.\n'
+        'Full shapes of value tensors:\n  {}.\n'
+        'Expected shapes (excluding the two outer dimensions):\n  {}.'
+        .format(debug_str_1, debug_str_2))
+
+  # If we have a time dimension and a train_sequence_length, make sure they
+  # match.
+  if sequence_length is not None:
+    def check_shape(path, t):  # pylint: disable=invalid-name
+      if t.shape[1] != sequence_length:
+        debug_str = tf.nest.map_structure(lambda tp: tp.shape, value)
+        raise ValueError(
+            'The agent was configured to expect a `sequence_length` '
+            'of \'{seq_len}\'. Value is expected to be shaped `[B, T] + '
+            'spec.shape` but at least one of the Tensors in `value` has a '
+            'time axis dim value \'{t_dim}\' vs '
+            'the expected \'{seq_len}\'.\nFirst such tensor is:\n\t'
+            'value.{path}. \nFull shape structure of '
+            'value:\n\t{debug_str}'.format(
+                seq_len=sequence_length,
+                t_dim=t.shape[1],
+                path=path,
+                debug_str=debug_str))
+    nest_utils.map_structure_with_paths(check_shape, value)
+
+
 class AsTrajectory(tf.Module):
   """Class that validates and converts other data types to Trajectory.
 
@@ -136,47 +175,6 @@ class AsTrajectory(tf.Module):
     """
     self._data_context = data_context
     self._sequence_length = sequence_length
-
-  def _validate_trajectory(self, value):
-    """Checks the given Trajectory for batch and time outer dimensions."""
-    if not nest_utils.is_batched_nested_tensors(
-        value,
-        self._data_context.trajectory_spec,
-        num_outer_dims=2,
-        allow_extra_fields=True,
-    ):
-      debug_str_1 = tf.nest.map_structure(
-          lambda tp: tp.shape, value)
-      debug_str_2 = tf.nest.map_structure(
-          lambda spec: spec.shape, self._data_context.trajectory_spec)
-      raise ValueError(
-          'All of the Tensors in `value` must have two outer '
-          'dimensions: batch size and time. Specifically, tensors must '
-          'have shape `[B, T] + spec.shape.\n'
-          'Full shapes of value tensors:\n  {}.\n'
-          'Expected shapes (excluding the two outer dimensions):\n  {}.'
-          .format(debug_str_1, debug_str_2))
-
-    # If we have a time dimension and a train_sequence_length, make sure they
-    # match.
-    if self._sequence_length is not None:
-      def check_shape(path, t):  # pylint: disable=invalid-name
-        if t.shape[1] != self._sequence_length:
-          debug_str = tf.nest.map_structure(lambda tp: tp.shape, value)
-          raise ValueError(
-              'The agent was configured to expect a `sequence_length` '
-              'of \'{seq_len}\'. Value is expected to be shaped `[B, T] + '
-              'spec.shape` but at least one of the Tensors in `value` has a '
-              'time axis dim value \'{t_dim}\' vs '
-              'the expected \'{seq_len}\'.\nFirst such tensor is:\n\t'
-              'value.{path}. \nFull shape structure of '
-              'value:\n\t{debug_str}'.format(
-                  seq_len=self._sequence_length,
-                  t_dim=t.shape[1],
-                  path=path,
-                  debug_str=debug_str))
-
-      nest_utils.map_structure_with_paths(check_shape, value)
 
   def __call__(self, value: typing.Any):
     """Convers `value` to a Trajectory.  Performs data validation and pruning.
@@ -216,7 +214,91 @@ class AsTrajectory(tf.Module):
           discount=value.next_time_step.discount)
     else:
       raise TypeError('Input type not supported: {}'.format(value))
-    self._validate_trajectory(value)
+    _validate_trajectory(
+        value, self._data_context.trajectory_spec,
+        sequence_length=self._sequence_length)
     value = nest_utils.prune_extra_keys(
         self._data_context.trajectory_spec, value)
+    return value
+
+
+class AsTransition(tf.Module):
+  """Class that validates and converts other data types to Transition.
+
+  Note that validation and conversion allows values to contain dictionaries
+  with extra keys as compared to the the specs in the data context.  These
+  additional entries / observations are ignored and dropped during conversion.
+
+  This non-strict checking allows users to provide additional info and
+  observation keys at input without having to manually prune them before
+  converting.
+  """
+
+  def __init__(self, data_context: DataContext):
+    """Create the AsTransition converter.
+
+    Args:
+      data_context: An instance of `DataContext`, typically accessed from the
+        `TFAgent.data_context` property.
+    """
+    self._data_context = data_context
+
+  def _validate_transition(self, value: trajectory.Transition):
+    """Checks the given Trajectory for batch and time outer dimensions."""
+    if not nest_utils.is_batched_nested_tensors(
+        value,
+        self._data_context.transition_spec,
+        num_outer_dims=1,
+        allow_extra_fields=True,
+    ):
+      debug_str_1 = tf.nest.map_structure(
+          lambda tp: tp.shape, value)
+      debug_str_2 = tf.nest.map_structure(
+          lambda spec: spec.shape, self._data_context.trajectory_spec)
+      raise ValueError(
+          'All of the Tensors in `value` must have a single outer (batch size) '
+          'dimension. Specifically, tensors must have shape `[B] + spec.shape`.'
+          '\nFull shapes of value tensors:\n  {}.\n'
+          'Expected shapes (excluding the two outer dimensions):\n  {}.'
+          .format(debug_str_1, debug_str_2))
+
+  def __call__(self, value: typing.Any):
+    """Converts `value` to a Transition.  Performs data validation and pruning.
+
+    - If `value` is already a `Transition`, only validation is performed.
+    - If `value` is a `Trajectory` it must have tensors with shape `[B, T=2]`
+      outer dims.  This is converted to a `Transition` object without a time
+      dimension.
+    - If `value` is a `Trajectory` with tensors containing a time dimension
+      having `T != 2`, a `ValueError` is raised.
+
+    Args:
+      value: A `Trajectory` or `Transition` object to convert.
+
+    Returns:
+      A validated and pruned `Transition`.
+
+    Raises:
+      TypeError: If `value` is not one of `Trajectory` or `Transition`.
+      ValueError: If `value` has structure that doesn't match the converter's
+        spec.
+      TypeError: If `value` has a structure that doesn't match the converter's
+        spec.
+      ValueError: If `value` is a `Trajectory` with a time dimension
+        having value other than `T=2`.
+    """
+    if isinstance(value, trajectory.Transition):
+      pass
+    elif isinstance(value, trajectory.Trajectory):
+      _validate_trajectory(
+          value, self._data_context.trajectory_spec, sequence_length=2)
+      value = trajectory.to_transition(value)
+      # Remove the now-singleton time dim.
+      value = tf.nest.map_structure(lambda x: tf.squeeze(x, axis=1), value)
+    else:
+      raise TypeError('Input type not supported: {}'.format(value))
+
+    self._validate_transition(value)
+    value = nest_utils.prune_extra_keys(
+        self._data_context.transition_spec, value)
     return value

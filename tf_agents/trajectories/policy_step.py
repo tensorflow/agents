@@ -48,6 +48,24 @@ class PolicyStep(
   """
   __slots__ = ()
 
+  def replace(self, **kwargs) -> 'PolicyStep':
+    """Exposes as namedtuple._replace.
+
+    Usage:
+    ```
+      new_policy_step = policy_step.replace(action=())
+    ```
+
+    This returns a new policy step with an empty action.
+
+    Args:
+      **kwargs: key/value pairs of fields in the policy step.
+
+    Returns:
+      A new `PolicyStep`.
+    """
+    return self._replace(**kwargs)
+
 
 # Set default empty tuple for PolicyStep.state and PolicyStep.info.
 PolicyStep.__new__.__defaults__ = ((),) * len(PolicyStep._fields)

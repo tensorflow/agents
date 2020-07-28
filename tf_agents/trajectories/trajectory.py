@@ -91,7 +91,7 @@ class Trajectory(
       return tf.equal(self.step_type, ts.StepType.LAST)
     return self.step_type == ts.StepType.LAST
 
-  def replace(self, **kwargs):
+  def replace(self, **kwargs) -> 'Trajectory':
     """Exposes as namedtuple._replace.
 
     Usage:
@@ -135,7 +135,7 @@ class Transition(
   """
   __slots__ = ()
 
-  def replace(self, **kwargs):
+  def replace(self, **kwargs) -> 'Transition':
     """Exposes as namedtuple._replace.
 
     Usage:
