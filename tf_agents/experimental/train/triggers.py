@@ -53,7 +53,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
                interval: int,
                async_saving: bool = False,
                metadata_metrics: Optional[Mapping[Text,
-                                                  py_metric.PyMetric]] = None):
+                                                  py_metric.PyMetric]] = None,
+               start: int = 0):
     """Initializes a PolicySavedModelTrigger.
 
     Args:
@@ -67,11 +68,12 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       metadata_metrics: A dictionary of metrics, whose `result()` method returns
         a scalar to be saved along with the policy. Currently only supported
         when async_saving is False.
+      start: Initial value for the trigger passed directly to the base class. It
+        helps control from which train step the weigts of the model are saved.
     """
     if async_saving and metadata_metrics:
-      raise NotImplementedError(
-          'Support for metadata_metrics is not implemented for async policy saver.'
-      )
+      raise NotImplementedError('Support for metadata_metrics is not '
+                                'implemented for async policy saver.')
 
     self._train_step = train_step
     self._async_saving = async_saving
@@ -104,7 +106,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
 
     self._checkpoint_dir = os.path.join(saved_model_dir,
                                         learner.POLICY_CHECKPOINT_DIR)
-    super(PolicySavedModelTrigger, self).__init__(interval, self._save_fn)
+    super(PolicySavedModelTrigger, self).__init__(
+        interval, self._save_fn, start=start)
 
   def _build_saver(
       self, policy: tf_policy.TFPolicy
