@@ -31,6 +31,7 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import composite
 from tf_agents.utils import nest_utils
+from tf_agents.utils import value_ops
 
 
 class Trajectory(
@@ -121,9 +122,28 @@ class Transition(
 
   A `Transition` represents a `S, A, S'` sequence of operations.  Tensors
   within a `Transition` are typically shaped `[B, ...]` where `B` is the
-  batch size.  However, in some cases Transition objects are used to store
-  time-shifted intermediate values for RNN computations, in which case the
-  stored tensors are shaped `[B, T, ...]`.
+  batch size.
+
+  In some cases Transition objects are used to store time-shifted intermediate
+  values for RNN computations, in which case the stored tensors are
+  shaped `[B, T, ...]`.
+
+  In other cases, `Transition` objects store n-step transitions
+  `S_t, A_t, S_{t+N}` where the associated reward and discount in
+  `next_time_step` are calculated as:
+
+  ```python
+  next_time_step.reward = r_t +
+                          g^{1} * d_t * r_{t+1} +
+                          g^{2} * d_t * d_{t+1} * r_{t+2} +
+                          g^{3} * d_t * d_{t+1} * d_{t+2} * r_{t+3} +
+                          ...
+                          g^{N-1} * d_t * ... * d_{t+N-2} * r_{t+N-1}
+
+  next_time_step.discount = g^{N-1} * d_t * d_{t+1} * ... * d_{t+N-1}.
+  ```
+  See `to_n_step_transition` for an example that converts `Trajectory` objects
+  to this format.
 
   Attributes:
     time_step: The initial state, reward, and discount.
@@ -342,14 +362,14 @@ def single_step(observation: types.NestedSpecTensorOrArray,
   Args:
     observation: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
-      ...]`, `[T, ...]`, or `[B, T, ...]`.
+    action: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
     policy_info: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
-    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped `[B,
-      ...]`, `[T, ...]`, or `[B, T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[B]`,
-      `[T]`, or `[B, T]` (optional).
+    reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
+      `[B, ...]`, `[T, ...]`, or `[B, T, ...]`.
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped
+      `[B]`, `[T]`, or `[B, T]` (optional).
 
   Returns:
     A `Trajectory` instance.
@@ -462,8 +482,8 @@ def from_episode(
       `[T, ...]`.
     reward: (possibly nested tuple of) `Tensor` or `np.ndarray`; all shaped
       `[T, ...]`.
-    discount: A floating point vector `Tensor` or `np.ndarray`; shaped `[T]`
-      (optional).
+    discount: A floating point vector `Tensor` or `np.ndarray`; shaped
+      `[T]` (optional).
 
   Returns:
     An instance of `Trajectory`.
@@ -596,8 +616,6 @@ def to_transition(
   Notice that reward and discount for time_steps are undefined, therefore filled
   with zero.
 
-  TODO(b/155302755): Update the rank validation check for discount.
-
   Args:
     trajectory: An instance of `Trajectory`. The tensors in Trajectory must have
       shape `[B, T, ...]` when next_trajectory is `None`.  `discount` is assumed
@@ -636,6 +654,135 @@ def to_transition(
       reward=trajectory.reward,
       discount=trajectory.discount,
       observation=next_trajectory.observation)
+  return Transition(time_steps, policy_steps, next_time_steps)
+
+
+def to_n_step_transition(
+    trajectory: Trajectory,
+    gamma: types.Float
+) -> Transition:
+  """Create an n-step transition from a trajectory with `T=N + 1` frames.
+
+  **NOTE** Tensors of `trajectory` are sliced along their *second* (`time`)
+  dimension, to pull out the appropriate fields for the n-step transitions.
+
+  The output transition's `next_time_step.{reward, discount}` will contain
+  N-step discounted reward and discount values calculated as:
+
+  ```
+  next_time_step.reward = r_t +
+                          g^{1} * d_t * r_{t+1} +
+                          g^{2} * d_t * d_{t+1} * r_{t+2} +
+                          g^{3} * d_t * d_{t+1} * d_{t+2} * r_{t+3} +
+                          ...
+                          g^{N-1} * d_t * ... * d_{t+N-2} * r_{t+N-1}
+  next_time_step.discount = g^{N-1} * d_t * d_{t+1} * ... * d_{t+N-1}
+  ```
+
+  In python notation:
+
+  ```python
+  discount = gamma**(N-1) * reduce_prod(trajectory.discount[:, :-1])
+  reward = discounted_return(
+      rewards=trajectory.reward[:, :-1],
+      discounts=gamma * trajectory.discount[:, :-1])
+  ```
+
+  When `trajectory.discount[:, :-1]` is an all-ones tensor, this is equivalent
+  to:
+
+  ```python
+  next_time_step.discount = (
+      gamma**(N-1) * tf.ones_like(trajectory.discount[:, 0]))
+  next_time_step.reward = (
+      sum_{n=0}^{N-1} gamma**n * trajectory.reward[:, n])
+  ```
+
+  Args:
+    trajectory: An instance of `Trajectory`. The tensors in Trajectory must have
+      shape `[B, T, ...]`.  `discount` is assumed to be a scalar float,
+      hence the shape of `trajectory.discount` must be `[B, T]`.
+    gamma: A floating point scalar; the discount factor.
+
+  Returns:
+    An N-step `Transition` where `N = T - 1`.  The reward and discount in
+    `time_step.{reward, discount}` are NaN.  The n-step discounted reward
+    and final discount are stored in `next_time_step.{reward, discount}`.
+    All tensors in the `Transition` have shape `[B, ...]` (no time dimension).
+
+  Raises:
+    ValueError: if `discount.shape.rank != 2`.
+    ValueError: if `discount.shape[1] < 2`.
+  """
+  _validate_rank(trajectory.discount, min_rank=2, max_rank=2)
+
+  # Use static values when available, so that we can use XLA when the time
+  # dimension is fixed.
+  time_dim = (tf.compat.dimension_value(trajectory.discount.shape[1])
+              or tf.shape(trajectory.discount)[1])
+
+  static_time_dim = tf.get_static_value(time_dim)
+  if static_time_dim in (0, 1):
+    raise ValueError(
+        'Trajectory frame count must be at least 2, but saw {}.  Shape of '
+        'trajectory.discount: {}'.format(static_time_dim,
+                                         trajectory.discount.shape))
+
+  n = time_dim - 1
+
+  # Use composite calculations to ensure we properly handle SparseTensor etc in
+  # the observations.
+
+  # pylint: disable=g-long-lambda
+
+  # Pull out x[:,0] for x in trajectory
+  first_frame = tf.nest.map_structure(
+      lambda t: composite.squeeze(
+          composite.slice_to(t, axis=1, end=1),
+          axis=1),
+      trajectory)
+
+  # Pull out x[:,-1] for x in trajectory
+  final_frame = tf.nest.map_structure(
+      lambda t: composite.squeeze(
+          composite.slice_from(t, axis=1, start=-1),
+          axis=1),
+      trajectory)
+  # pylint: enable=g-long-lambda
+
+  # When computing discounted return, we need to throw out the last time
+  # index of both reward and discount, which are filled with dummy values
+  # to match the dimensions of the observation.
+  reward = trajectory.reward[:, :-1]
+  discount = trajectory.discount[:, :-1]
+
+  policy_steps = policy_step.PolicyStep(
+      action=first_frame.action, state=(), info=first_frame.policy_info)
+
+  discounted_reward = value_ops.discounted_return(
+      rewards=reward,
+      discounts=gamma * discount,
+      time_major=False,
+      provide_all_returns=False)
+
+  # NOTE: `final_discount` will have one less discount than `discount`.
+  # This is so that when the learner/update uses an additional
+  # discount (e.g. gamma) we don't apply it twice.
+  final_discount = gamma**(n-1) * tf.math.reduce_prod(discount, axis=1)
+
+  time_steps = ts.TimeStep(
+      first_frame.step_type,
+      # unknown
+      reward=tf.nest.map_structure(
+          lambda r: np.nan * tf.ones_like(r), first_frame.reward),
+      # unknown
+      discount=np.nan * tf.ones_like(first_frame.discount),
+      observation=first_frame.observation)
+  next_time_steps = ts.TimeStep(
+      step_type=final_frame.step_type,
+      reward=discounted_reward,
+      discount=final_discount,
+      observation=final_frame.observation)
   return Transition(time_steps, policy_steps, next_time_steps)
 
 
@@ -689,5 +836,5 @@ def experience_to_transitions(
   if squeeze_time_dim:
     transitions = tf.nest.map_structure(lambda x: composite.squeeze(x, 1),
                                         transitions)
-  time_steps, policy_steps, next_time_steps = transitions
-  return Transition(time_steps, policy_steps, next_time_steps)
+
+  return transitions
