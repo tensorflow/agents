@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
-import enum
 from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import tensor_spec
@@ -33,19 +32,6 @@ NUM_ACTIONS_FEATURE_KEY = 'num_actions'
 # with the following keys that split the reward spec and the constraints spec.
 REWARD_SPEC_KEY = 'reward'
 CONSTRAINTS_SPEC_KEY = 'constraint'
-
-
-class VariableActionMethod(enum.Enum):
-  """The different ways variable number of actions is handled."""
-  # Fixed number of actions.
-  FIXED = 1
-  # Number of actions is encoded by a mask allowing the first `k` actions.
-  MASK = 2
-  # Feature key `num_actions` indicates the number of available actions.
-  NUM_ACTIONS_FEATURE = 3
-  # The number of actions is folded into the batch size. Works only if batch
-  # size is 1.
-  IN_BATCH_DIM = 4
 
 
 def create_per_arm_observation_spec(global_dim,

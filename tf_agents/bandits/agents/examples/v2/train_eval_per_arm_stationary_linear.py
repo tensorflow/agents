@@ -108,11 +108,8 @@ def main(unused_argv):
 
   observation_and_action_constraint_splitter = None
   num_actions_fn = None
-  variable_action_method = bandit_spec_utils.VariableActionMethod.FIXED
   if FLAGS.add_num_actions_feature:
     num_actions_fn = lambda: NUM_ACTIONS
-    variable_action_method = (
-        bandit_spec_utils.VariableActionMethod.NUM_ACTIONS_FEATURE)
 
   env = sspe.StationaryStochasticPerArmPyEnvironment(
       _global_context_sampling_fn,
@@ -120,8 +117,7 @@ def main(unused_argv):
       NUM_ACTIONS,
       reward_fn,
       num_actions_fn,
-      batch_size=BATCH_SIZE,
-      variable_action_method=variable_action_method)
+      batch_size=BATCH_SIZE)
   environment = tf_py_environment.TFPyEnvironment(env)
 
   if FLAGS.agent == 'LinUCB':
