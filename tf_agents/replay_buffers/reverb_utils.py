@@ -26,6 +26,7 @@ from typing import Text, Union
 
 from absl import logging
 
+from tf_agents.typing import types
 from tf_agents.utils import lazy_loader
 
 # Lazy loading since not all users have the reverb package installed.
@@ -36,7 +37,7 @@ class ReverbAddEpisodeObserver(object):
   """Observer for writing episodes to the Reverb replay buffer."""
 
   def __init__(self,
-               py_client: reverb.Client,
+               py_client: types.ReverbClient,
                table_name: Text,
                max_sequence_length: int,
                priority: Union[float, int],
@@ -194,7 +195,7 @@ class ReverbAddTrajectoryObserver(object):
   """
 
   def __init__(self,
-               py_client: reverb.Client,
+               py_client: types.ReverbClient,
                table_name: Text,
                sequence_length: int,
                stride_length: int = 1,

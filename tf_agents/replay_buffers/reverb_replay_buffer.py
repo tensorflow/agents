@@ -25,6 +25,7 @@ import gin
 import tensorflow.compat.v2 as tf
 
 from tf_agents.replay_buffers import replay_buffer
+from tf_agents.typing import types
 from tf_agents.utils import lazy_loader
 
 # Lazy loading since not all users have the reverb package installed.
@@ -140,15 +141,15 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         data_spec=data_spec, capacity=capacity, stateful_dataset=True)
 
   @property
-  def py_client(self):
+  def py_client(self) -> types.ReverbClient:
     return self._py_client
 
   @property
-  def local_server(self):
+  def local_server(self) -> types.ReverbServer:
     return self._local_server
 
   @property
-  def tf_client(self):
+  def tf_client(self) -> types.ReverbTFClient:
     return self._tf_client
 
   def get_table_info(self):

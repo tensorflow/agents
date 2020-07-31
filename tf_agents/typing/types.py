@@ -89,3 +89,9 @@ PyEnvWrapper = Callable[[PyEnv], PyEnv]
 LossFn = Callable[[Tensor, Tensor], Tensor]
 
 Optimizer = Union[tf.keras.optimizers.Optimizer, tf.compat.v1.train.Optimizer]
+
+# We use lazy loading of Reverb, so we predeclare common Reverb objects
+ReverbServer = ForwardRef('reverb.Server')
+ReverbTable = ForwardRef('reverb.Table')
+ReverbClient = ForwardRef('reverb.Client')
+ReverbTFClient = ForwardRef('reverb.TFClient')
