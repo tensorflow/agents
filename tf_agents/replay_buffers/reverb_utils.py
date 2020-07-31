@@ -40,7 +40,7 @@ class ReverbAddEpisodeObserver(object):
                py_client: types.ReverbClient,
                table_name: Text,
                max_sequence_length: int,
-               priority: Union[float, int],
+               priority: Union[float, int] = 1,
                bypass_partial_episodes: bool = False):
     """Creates an instance of the ReverbAddEpisodeObserver.
 
@@ -189,17 +189,14 @@ class ReverbAddEpisodeObserver(object):
 
 
 class ReverbAddTrajectoryObserver(object):
-  """Stateful observer for writing to the Reverb replay.
-
-  b/158373731: Simplify the observer to only support step insertion.
-  """
+  """Stateful observer for writing to the Reverb replay."""
 
   def __init__(self,
                py_client: types.ReverbClient,
                table_name: Text,
                sequence_length: int,
                stride_length: int = 1,
-               priority: Union[float, int] = 5):
+               priority: Union[float, int] = 1):
     """Creates an instance of the ReverbAddTrajectoryObserver.
 
     If multiple table_names and sequence lengths are provided data will only be
@@ -238,7 +235,7 @@ class ReverbAddTrajectoryObserver(object):
     self._writer = py_client.writer(max_sequence_length=sequence_length)
     self._cached_steps = 0
 
-  def __call__(self, trajectory, force_is_boundary=None):
+  def __call__(self, trajectory):
     """Writes the trajectory into the underlying replay buffer.
 
     Allows trajectory to be a flattened trajectory. No batch dimension allowed.
@@ -247,8 +244,6 @@ class ReverbAddTrajectoryObserver(object):
       trajectory: The trajectory to be written which could be (possibly nested)
         trajectory object or a flattened version of a trajectory. It assumes
         there is *no* batch dimension.
-      force_is_boundary: Forces the indication of the trajectory being boundary.
-        Useful if a flattened trajectory is provided.
     """
     self._writer.append(trajectory)
     self._cached_steps += 1
@@ -256,7 +251,7 @@ class ReverbAddTrajectoryObserver(object):
     self._write_cached_steps()
 
     # Reset the client on boundary transitions.
-    if self._is_boundary(trajectory, force_is_boundary):
+    if trajectory.is_boundary():
       self.reset()
 
   def _write_cached_steps(self):
@@ -277,15 +272,6 @@ class ReverbAddTrajectoryObserver(object):
         self._writer,
         self._sequence_length,
         self._stride_length)
-
-  def _is_boundary(self, trajectory, force_is_boundary):
-    if force_is_boundary is not None:
-      # Assumed the trajectory is flat, so being boundary is supllied as a side
-      # input.
-      return force_is_boundary
-    # Assumed trajectory is is a true `Trajectory` object, so use the
-    # corresponding method to decide if this is boundary trajectory.
-    return trajectory.is_boundary()
 
   def reset(self):
     """Resets the state of the observer.
