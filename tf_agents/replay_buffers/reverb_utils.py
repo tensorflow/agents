@@ -143,9 +143,9 @@ class ReverbAddEpisodeObserver(object):
       self._cached_steps += 1
 
     if trajectory.is_boundary():
-      self._write_cached_steps()
+      self.write_cached_steps()
 
-  def _write_cached_steps(self):
+  def write_cached_steps(self):
     """Writes the cached steps into the writer.
 
     **Note**: The method resets the number of episodes and steps after writing
@@ -198,8 +198,7 @@ class ReverbAddTrajectoryObserver(object):
                table_name: Text,
                sequence_length: int,
                stride_length: int = 1,
-               priority: Union[float, int] = 5,
-               allow_multi_episode_sequences: bool = False):
+               priority: Union[float, int] = 5):
     """Creates an instance of the ReverbAddTrajectoryObserver.
 
     If multiple table_names and sequence lengths are provided data will only be
@@ -221,10 +220,6 @@ class ReverbAddTrajectoryObserver(object):
         `stride_length = L` will create an item only for disjoint windows
         `{0, 1, ..., L-1}, {L, ..., 2 * L - 1}, ...`.
       priority: Initial priority for new samples in the RB.
-      allow_multi_episode_sequences: Allows sequences to go over episode
-        boundaries. **NOTE**: Samples generated when data is collected with this
-        flag set to True will contain episode boundaries which need to be
-        handled by the user.
 
     Raises:
       ValueError: If table_names or sequence_lengths are not lists or their
@@ -234,7 +229,6 @@ class ReverbAddTrajectoryObserver(object):
     self._sequence_length = sequence_length
     self._stride_length = stride_length
     self._priority = priority
-    self._allow_multi_episode_sequences = allow_multi_episode_sequences
 
     self._py_client = py_client
     # TODO(b/153700282): Use a single writer with max_sequence_length=max(...)
@@ -261,10 +255,8 @@ class ReverbAddTrajectoryObserver(object):
     self._write_cached_steps()
 
     # Reset the client on boundary transitions.
-    if not self._allow_multi_episode_sequences:
-      if self._is_boundary(trajectory, force_is_boundary):
-        self.close()
-        self.open()
+    if self._is_boundary(trajectory, force_is_boundary):
+      self.reset()
 
   def _write_cached_steps(self):
     """Writes the cached steps into the writer.

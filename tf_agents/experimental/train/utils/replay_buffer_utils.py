@@ -120,8 +120,7 @@ def get_reverb_buffer_and_observer(data_spec,
                                    port=None,
                                    replay_capacity=1000,
                                    min_size_limiter_size=1,
-                                   stride_length=1,
-                                   allow_multi_episode_sequences=False):
+                                   stride_length=1):
   """Returns an instance of Reverb replay buffer and observer to add items.
 
   Either creates a local reverb server or uses a remote reverb server at
@@ -146,10 +145,6 @@ def get_reverb_buffer_and_observer(data_spec,
       sampling can begin, used for local server only.
     stride_length: Integer strides for the sliding window for overlapping
       sequences.
-    allow_multi_episode_sequences: Allows sequences to go over episode
-      boundaries. **NOTE**: Samples generated when data is collected with this
-      flag set to True will contain episode boundaries which need to be
-      handled by the user.
   Returns:
     A tuple consisting of:
       - reverb replay buffer instance
@@ -170,7 +165,6 @@ def get_reverb_buffer_and_observer(data_spec,
 
   rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
       reverb_replay.py_client, table_name, sequence_length=sequence_length,
-      stride_length=stride_length,
-      allow_multi_episode_sequences=allow_multi_episode_sequences)
+      stride_length=stride_length)
 
   return reverb_replay, rb_observer

@@ -115,8 +115,7 @@ class Actor(object):
     else:
       raise ValueError("Unknown environment type.")
 
-    self._time_step = self._env.reset()
-    self._policy_state = policy.get_initial_state(env.batch_size or 1)
+    self.reset()
 
   @property
   def metrics(self):
@@ -176,6 +175,12 @@ class Actor(object):
       return
     log = ["{0} = {1}".format(m.name, m.result()) for m in self._metrics]
     logging.info("%s \n\t\t %s", self._name, "\n\t\t ".join(log))
+
+  def reset(self):
+    """Reset the environment to the start and the policy state."""
+    self._time_step = self._env.reset()
+    self._policy_state = self._policy.get_initial_state(
+        self._env.batch_size or 1)
 
 
 def collect_metrics(buffer_size):
