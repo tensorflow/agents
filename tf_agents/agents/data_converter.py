@@ -234,21 +234,26 @@ class AsTransition(tf.Module):
   converting.
   """
 
-  def __init__(self, data_context: DataContext):
+  def __init__(self, data_context: DataContext, squeeze_time_dim=False):
     """Create the AsTransition converter.
 
     Args:
       data_context: An instance of `DataContext`, typically accessed from the
         `TFAgent.data_context` property.
+      squeeze_time_dim: Whether to emit a transition without time
+        dimensions.  If `True`, incoming trajectories are expected
+        to have a time dimension of exactly `2`, and emitted Transitions
+        will have no time dimensions.
     """
     self._data_context = data_context
+    self._squeeze_time_dim = squeeze_time_dim
 
   def _validate_transition(self, value: trajectory.Transition):
     """Checks the given Trajectory for batch and time outer dimensions."""
     if not nest_utils.is_batched_nested_tensors(
         value,
         self._data_context.transition_spec,
-        num_outer_dims=1,
+        num_outer_dims=1 if self._squeeze_time_dim else 2,
         allow_extra_fields=True,
     ):
       debug_str_1 = tf.nest.map_structure(
@@ -266,8 +271,9 @@ class AsTransition(tf.Module):
     """Converts `value` to a Transition.  Performs data validation and pruning.
 
     - If `value` is already a `Transition`, only validation is performed.
-    - If `value` is a `Trajectory` it must have tensors with shape `[B, T=2]`
-      outer dims.  This is converted to a `Transition` object without a time
+    - If `value` is a `Trajectory` and `squeeze_time_dim = True` then
+      `value` it must have tensors with shape `[B, T=2]` outer dims.
+      This is converted to a `Transition` object without a time
       dimension.
     - If `value` is a `Trajectory` with tensors containing a time dimension
       having `T != 2`, a `ValueError` is raised.
@@ -276,7 +282,9 @@ class AsTransition(tf.Module):
       value: A `Trajectory` or `Transition` object to convert.
 
     Returns:
-      A validated and pruned `Transition`.
+      A validated and pruned `Transition`.  If `squeeze_time_dim = True`,
+      the resulting `Transition` has tensors with shape `[B, ...]`.  Otherwise,
+      the tensors will have shape `[B, T - 1, ...]`.
 
     Raises:
       TypeError: If `value` is not one of `Trajectory` or `Transition`.
@@ -284,17 +292,21 @@ class AsTransition(tf.Module):
         spec.
       TypeError: If `value` has a structure that doesn't match the converter's
         spec.
-      ValueError: If `value` is a `Trajectory` with a time dimension
-        having value other than `T=2`.
+      ValueError: If `squeeze_time_dim=True` and `value` is a `Trajectory`
+        with a time dimension having value other than `T=2`.
     """
     if isinstance(value, trajectory.Transition):
       pass
     elif isinstance(value, trajectory.Trajectory):
+      required_sequence_length = 2 if self._squeeze_time_dim else None
       _validate_trajectory(
-          value, self._data_context.trajectory_spec, sequence_length=2)
+          value,
+          self._data_context.trajectory_spec,
+          sequence_length=required_sequence_length)
       value = trajectory.to_transition(value)
       # Remove the now-singleton time dim.
-      value = tf.nest.map_structure(lambda x: tf.squeeze(x, axis=1), value)
+      if self._squeeze_time_dim:
+        value = tf.nest.map_structure(lambda x: tf.squeeze(x, axis=1), value)
     else:
       raise TypeError('Input type not supported: {}'.format(value))
 
