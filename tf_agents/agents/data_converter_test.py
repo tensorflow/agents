@@ -167,5 +167,72 @@ class AsTransitionTest(tf.test.TestCase):
     tf.nest.map_structure(self.assertAllEqual, converted, expected)
 
 
+class AsNStepTransitionTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(AsNStepTransitionTest, self).setUp()
+    self._data_context = data_converter.DataContext(
+        time_step_spec=ts.TimeStep(step_type=(),
+                                   reward=tf.TensorSpec((), tf.float32),
+                                   discount=tf.TensorSpec((), tf.float32),
+                                   observation=()),
+        action_spec={'action1': tf.TensorSpec((), tf.float32)},
+        info_spec=())
+
+  def testSimple(self):
+    converter = data_converter.AsNStepTransition(
+        self._data_context, gamma=0.5)
+    transition = tensor_spec.sample_spec_nest(
+        self._data_context.transition_spec, outer_dims=[2])
+    converted = converter(transition)
+    (transition, converted) = self.evaluate((transition, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, transition)
+
+  def testPrunes(self):
+    converter = data_converter.AsNStepTransition(
+        self._data_context, gamma=0.5)
+    my_spec = self._data_context.transition_spec.replace(
+        action_step=self._data_context.transition_spec.action_step.replace(
+            action={
+                'action1': tf.TensorSpec((), tf.float32),
+                'action2': tf.TensorSpec([4], tf.int32)
+            }))
+    transition = tensor_spec.sample_spec_nest(my_spec, outer_dims=[2])
+    converted = converter(transition)
+    expected = tf.nest.map_structure(lambda x: x, transition)
+    del expected.action_step.action['action2']
+    (expected, converted) = self.evaluate((expected, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, expected)
+
+  def testFromBatchTimeTrajectory(self):
+    converter = data_converter.AsNStepTransition(
+        self._data_context, gamma=0.5)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[4, 2])  # [B, T=2]
+    converted = converter(traj)
+    expected = trajectory.to_n_step_transition(traj, gamma=0.5)
+    (expected, converted) = self.evaluate((expected, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, expected)
+
+  def testTrajectoryInvalidTimeDimensionRaises(self):
+    converter = data_converter.AsNStepTransition(
+        self._data_context, gamma=0.5, n=4)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[2, 3])
+    with self.assertRaisesRegex(
+        ValueError, r'has a time axis dim value \'3\' vs the expected \'5\''):
+      converter(traj)
+
+  def testTrajectoryNotSingleStepTransition(self):
+    converter = data_converter.AsNStepTransition(
+        self._data_context, gamma=0.5)
+    traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
+                                        outer_dims=[2, 3])
+    converted = converter(traj)
+    expected = trajectory.to_n_step_transition(traj, gamma=0.5)
+    (expected, converted) = self.evaluate((expected, converted))
+    tf.nest.map_structure(self.assertAllEqual, converted, expected)
+
+
 if __name__ == '__main__':
   test_utils.main()
