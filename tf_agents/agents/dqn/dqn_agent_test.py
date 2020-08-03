@@ -25,6 +25,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.networks import network
 from tf_agents.networks import q_network
+from tf_agents.networks import sequential
 from tf_agents.networks import test_utils as networks_test_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -325,6 +326,54 @@ class DqnAgentTest(test_utils.TestCase):
     loss, _ = agent._loss(experience)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(self.evaluate(loss), expected_loss)
+
+  def testLossRNNSmokeTest(self, agent_class):
+    q_net = sequential.Sequential([
+        tf.keras.layers.LSTM(
+            2, return_state=True, return_sequences=True,
+            kernel_initializer=tf.constant_initializer(0.5),
+            recurrent_initializer=tf.constant_initializer(0.5)),
+    ])
+    agent = agent_class(
+        self._time_step_spec,
+        self._action_spec,
+        q_network=q_net,
+        gamma=0.95,
+        optimizer=None)
+
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=2)
+
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.7, 0.8], dtype=tf.float32)
+
+    next_observations = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
+    third_observations = tf.constant([[9, 10], [11, 12]], dtype=tf.float32)
+    third_time_steps = ts.transition(third_observations, rewards, discounts)
+
+    actions = tf.constant([0, 1], dtype=tf.int32)
+    action_steps = policy_step.PolicyStep(actions)
+
+    experience1 = trajectory.from_transition(
+        time_steps, action_steps, next_time_steps)
+    experience2 = trajectory.from_transition(
+        next_time_steps, action_steps, third_time_steps)
+    experience3 = trajectory.from_transition(
+        third_time_steps, action_steps, third_time_steps)
+
+    experience = tf.nest.map_structure(
+        lambda x, y, z: tf.stack([x, y, z], axis=1),
+        experience1, experience2, experience3)
+
+    loss, _ = agent._loss(experience)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    # Smoke test, here to make sure the calculation does not change as we
+    # modify preprocessing or other internals.
+    expected_loss = 28.722265
     self.assertAllClose(self.evaluate(loss), expected_loss)
 
   def testLossNStepMidMidLastFirst(self, agent_class):
