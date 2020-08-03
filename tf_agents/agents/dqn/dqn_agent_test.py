@@ -335,6 +335,7 @@ class DqnAgentTest(test_utils.TestCase):
             kernel_initializer=tf.constant_initializer(0.5),
             recurrent_initializer=tf.constant_initializer(0.5)),
     ])
+
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,

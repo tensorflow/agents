@@ -28,6 +28,7 @@ from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.typing import types
+from tf_agents.utils import composite
 from tf_agents.utils import nest_utils
 
 
@@ -306,7 +307,8 @@ class AsTransition(tf.Module):
       value = trajectory.to_transition(value)
       # Remove the now-singleton time dim.
       if self._squeeze_time_dim:
-        value = tf.nest.map_structure(lambda x: tf.squeeze(x, axis=1), value)
+        value = tf.nest.map_structure(
+            lambda x: composite.squeeze(x, axis=1), value)
     else:
       raise TypeError('Input type not supported: {}'.format(value))
 
