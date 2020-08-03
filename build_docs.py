@@ -33,6 +33,9 @@ import sys
 from absl import app
 from absl import flags
 
+import tensorflow as tf
+
+from tensorflow_docs.api_generator import doc_controls
 from tensorflow_docs.api_generator import generate_lib
 from tensorflow_docs.api_generator import public_api
 
@@ -68,6 +71,12 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
+  for cls in [tf.Module, tf.keras.layers.Layer]:
+    doc_controls.decorate_all_class_attributes(
+        decorator=doc_controls.do_not_doc_in_subclasses,
+        cls=cls,
+        skip=['__init__'])
+
   doc_generator = generate_lib.DocGenerator(
       root_title='TF-Agents',
       py_modules=[('tf_agents', tf_agents)],
