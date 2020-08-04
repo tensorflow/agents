@@ -25,7 +25,7 @@ import portpicker
 import reverb
 import tensorflow.compat.v2 as tf
 
-from tf_agents.experimental.distributed.variable_container import reverb_variable_container
+from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.typing import types
 from tf_agents.utils import nest_utils
