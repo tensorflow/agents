@@ -160,6 +160,7 @@ def get_required_packages():
       'six >= 1.10.0',
       'protobuf >= 3.11.3',
       'wrapt >= 1.11.1',
+      'pillow >= 7.0.0',
   ]
   add_additional_packages(required_packages)
   return required_packages

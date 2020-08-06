@@ -20,12 +20,13 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import io
 import gin
 
 import numpy as np
+from PIL import Image
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
@@ -187,7 +188,7 @@ def _get_feature_encoder(shape, dtype, compress_image=False, image_quality=95):
     shape: An array shape
     dtype: A list of dtypes.
     compress_image: Whether to compress image. It is assumed that any uint8
-      tensor of rank 3 with shape (w,h,3) is an image.
+      tensor of rank 3 with shape (w,h,c) is an image.
     image_quality: An optional int. Defaults to 95. Quality of the compression
       from 0 to 100 (higher is better and slower).
 
@@ -197,14 +198,13 @@ def _get_feature_encoder(shape, dtype, compress_image=False, image_quality=95):
   shape = _validate_shape(shape)
   dtype = _validate_dtype(dtype)
 
-  if compress_image and len(shape) == 3 and shape[2] == 3 and dtype == tf.uint8:
-    if not common.has_eager_been_enabled():
-      raise ValueError('Only supported in TF2.x.')
+  if compress_image and len(shape) == 3 and dtype == tf.uint8:
     def _encode_to_jpeg_bytes_list(value):
-      value = tf.io.encode_jpeg(value, quality=image_quality)
-
+      im = Image.fromarray(value)
+      out = io.BytesIO()
+      im.save(out, format='jpeg', quality=image_quality)
       return tf.train.Feature(
-          bytes_list=tf.train.BytesList(value=[value.numpy()]))
+          bytes_list=tf.train.BytesList(value=[out.getvalue()]))
 
     return _encode_to_jpeg_bytes_list
 
@@ -250,7 +250,7 @@ def _get_feature_parser(shape, dtype, compress_image=False):
     shape: An array shape
     dtype: A list of dtypes.
     compress_image: Whether to decompress image. It is assumed that any uint8
-      tensor of rank 3 with shape (w,h,3) is an image.
+      tensor of rank 3 with shape (w,h,c) is an image.
       If the tensor was compressed in the encoder, it needs to be decompressed.
 
   Returns:
@@ -259,7 +259,7 @@ def _get_feature_parser(shape, dtype, compress_image=False):
   shape = _validate_shape(shape)
   dtype = _validate_dtype(dtype)
 
-  if compress_image and len(shape) == 3 and shape[2] == 3 and dtype == tf.uint8:
+  if compress_image and len(shape) == 3 and dtype == tf.uint8:
     return (tf.io.FixedLenFeature(shape=[], dtype=tf.string), tf.io.decode_jpeg)
 
   if dtype == tf.float32:
