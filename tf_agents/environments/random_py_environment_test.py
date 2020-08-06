@@ -32,17 +32,17 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     env = random_py_environment.RandomPyEnvironment(obs_spec)
 
-    time_step = env.step([0])
+    time_step = env.step([0])  # pytype: disable=wrong-arg-types
     self.assertTrue(np.all(time_step.observation >= -10))
     self.assertTrue(np.all(time_step.observation <= 10))
     self.assertTrue(time_step.is_first())
 
     while not time_step.is_last():
-      time_step = env.step([0])
+      time_step = env.step([0])  # pytype: disable=wrong-arg-types
       self.assertTrue(np.all(time_step.observation >= -10))
       self.assertTrue(np.all(time_step.observation <= 10))
 
-    time_step = env.step([0])
+    time_step = env.step([0])  # pytype: disable=wrong-arg-types
     self.assertTrue(np.all(time_step.observation >= -10))
     self.assertTrue(np.all(time_step.observation <= 10))
     self.assertTrue(time_step.is_first())
@@ -58,11 +58,11 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     num_episodes = 100
 
     for _ in range(num_episodes):
-      time_step = env.step([0])
+      time_step = env.step([0])  # pytype: disable=wrong-arg-types
       self.assertTrue(time_step.is_first())
       num_steps = 0
       while not time_step.is_last():
-        time_step = env.step([0])
+        time_step = env.step([0])  # pytype: disable=wrong-arg-types
         num_steps += 1
       self.assertGreaterEqual(num_steps, min_duration)
 
@@ -77,11 +77,11 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     num_episodes = 100
 
     for _ in range(num_episodes):
-      time_step = env.step([0])
+      time_step = env.step([0])  # pytype: disable=wrong-arg-types
       self.assertTrue(time_step.is_first())
       num_steps = 0
       while not time_step.is_last():
-        time_step = env.step([0])
+        time_step = env.step([0])  # pytype: disable=wrong-arg-types
         num_steps += 1
       self.assertLessEqual(num_steps, max_duration)
 
@@ -94,7 +94,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     env.step(np.array([[0, 0], [0, 0]]))
 
     with self.assertRaises(ValueError):
-      env.step([0])
+      env.step([0])  # pytype: disable=wrong-arg-types
 
   def testRewardFnCalled(self):
 
@@ -106,9 +106,9 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     env = random_py_environment.RandomPyEnvironment(
         observation_spec, action_spec, reward_fn=reward_fn)
 
-    time_step = env.step(1)  # No reward in first time_step
+    time_step = env.step(1)  # No reward in first time_step  # pytype: disable=wrong-arg-types
     self.assertEqual(0.0, time_step.reward)
-    time_step = env.step(1)
+    time_step = env.step(1)  # pytype: disable=wrong-arg-types
     self.assertEqual(1, time_step.reward)
 
   def testRendersImage(self):
@@ -131,7 +131,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     env = random_py_environment.RandomPyEnvironment(obs_spec,
                                                     batch_size=batch_size)
 
-    time_step = env.step([0])
+    time_step = env.step([0])  # pytype: disable=wrong-arg-types
     self.assertEqual(time_step.observation.shape, (3, 2, 3))
     self.assertEqual(time_step.reward.shape[0], batch_size)
     self.assertEqual(time_step.discount.shape[0], batch_size)
@@ -145,7 +145,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
         batch_size=batch_size)
     env._done = False
     env.reset()
-    time_step = env.step([0])
+    time_step = env.step([0])  # pytype: disable=wrong-arg-types
     self.assertSequenceAlmostEqual([1.0] * 3, time_step.reward)
 
   def testRewardCheckerBatchSizeOne(self):
@@ -157,7 +157,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
         batch_size=1)
     env._done = False
     env.reset()
-    time_step = env.step([0])
+    time_step = env.step([0])  # pytype: disable=wrong-arg-types
     self.assertEqual(time_step.reward, 1.0)
 
   def testRewardCheckerSizeMismatch(self):
@@ -171,7 +171,7 @@ class RandomPyEnvironmentTest(parameterized.TestCase, test_utils.TestCase):
     env.reset()
     env._done = False
     with self.assertRaises(ValueError):
-      env.step([0])
+      env.step([0])  # pytype: disable=wrong-arg-types
 
 
 if __name__ == '__main__':

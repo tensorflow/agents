@@ -154,9 +154,9 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
         # This is the opposite of `cond`, which is 1-D bool tensor (batch_size,)
         # that is true when greedy policy was used, otherwise `cond` is false.
         random_policy_mask = tf.reshape(tf.logical_not(cond),
-                                        tf.shape(info.bandit_policy_type))
+                                        tf.shape(info.bandit_policy_type))  # pytype: disable=attribute-error
         bandit_policy_type = policy_utilities.bandit_policy_uniform_mask(
-            info.bandit_policy_type, mask=random_policy_mask)
+            info.bandit_policy_type, mask=random_policy_mask)  # pytype: disable=attribute-error
         info = policy_utilities.set_bandit_policy_type(
             info, bandit_policy_type)
     else:

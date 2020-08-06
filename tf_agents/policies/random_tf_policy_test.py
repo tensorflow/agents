@@ -99,7 +99,7 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     bounded = tensor_spec.BoundedTensorSpec.from_spec(action_spec[0])
     time_step_spec, time_step = self.create_time_step()
     policy = random_tf_policy.RandomTFPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec, action_spec=action_spec)  # pytype: disable=wrong-arg-types
 
     action_step = policy.action(time_step)
     tf.nest.assert_same_structure(action_spec, action_step.action)

@@ -202,7 +202,7 @@ class TFPolicy(tf.Module):
       log_probability_spec = tf.nest.map_structure(
           lambda _: log_probability_spec, action_spec)
       info_spec = policy_step.set_log_probability(info_spec,
-                                                  log_probability_spec)
+                                                  log_probability_spec)  # pytype: disable=wrong-arg-types
 
     self._info_spec = info_spec
     self._setup_specs()
@@ -557,7 +557,7 @@ class TFPolicy(tf.Module):
         `info`: Optional side information such as action log probabilities.
     """
     seed_stream = tfp.util.SeedStream(seed=seed, salt='tf_agents_tf_policy')
-    distribution_step = self._distribution(time_step, policy_state)
+    distribution_step = self._distribution(time_step, policy_state)  # pytype: disable=wrong-arg-types
     actions = tf.nest.map_structure(
         lambda d: reparameterized_sampling.sample(d, seed=seed_stream()),
         distribution_step.action)

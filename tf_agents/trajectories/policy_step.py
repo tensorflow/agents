@@ -94,9 +94,9 @@ def set_log_probability(
     return PolicyInfo(log_probability=log_probability)
   fields = getattr(info, '_fields', None)
   if fields is not None and CommonFields.LOG_PROBABILITY in fields:
-    return info._replace(log_probability=log_probability)
+    return info._replace(log_probability=log_probability)  # pytype: disable=attribute-error
   try:
-    info[CommonFields.LOG_PROBABILITY] = log_probability
+    info[CommonFields.LOG_PROBABILITY] = log_probability  # pytype: disable=unsupported-operands
   except TypeError:
     pass
   return info

@@ -83,9 +83,9 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
                     tfp.distributions.Normal(ones, ones))
     params = ppo_utils.get_distribution_params(distribution)
     self.assertAllEqual([set(['logits']), set(['loc', 'scale'])],
-                        [set(d.keys()) for d in params])
+                        [set(d.keys()) for d in params])  # pytype: disable=attribute-error
     self.assertAllEqual([[[2]], [[2], [2]]],
-                        [[d[k].shape.as_list() for k in d] for d in params])
+                        [[d[k].shape.as_list() for k in d] for d in params])  # pytype: disable=attribute-error
 
   def test_get_learning_rate(self):
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=0.1)

@@ -515,7 +515,7 @@ class PPOAgent(tf_agent.TFAgent):
         tf.stop_gradient(normalized_advantages),
         current_policy_distribution,
         weights,
-        debug_summaries=debug_summaries)
+        debug_summaries=debug_summaries)  # pytype: disable=wrong-arg-types
 
     if (self._policy_l2_reg > 0.0 or self._value_function_l2_reg > 0.0 or
         self._shared_vars_l2_reg > 0.0):

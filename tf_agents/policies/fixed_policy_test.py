@@ -88,7 +88,7 @@ class FixedPolicyTest(test_utils.TestCase):
                                                               'dict': 400
                                                           }))
     policy = fixed_policy.FixedPolicy(fixed_action, self._time_step_spec,
-                                      action_spec)
+                                      action_spec)  # pytype: disable=wrong-arg-types
     action = policy.action(time_step).action
     distribution_mode = tf.nest.map_structure(
         lambda t: t.mode(),

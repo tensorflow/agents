@@ -364,7 +364,7 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
 
-    first_time_step = env.step(0)
+    first_time_step = env.step(0)  # pytype: disable=wrong-arg-types
     self.assertTrue(first_time_step.is_first())
 
   def test_automatic_reset_after_done(self):
@@ -376,19 +376,19 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
       time_step = env.step(np.array(1, dtype=np.int32))
 
     self.assertTrue(time_step.is_last())
-    first_time_step = env.step(0)
+    first_time_step = env.step(0)  # pytype: disable=wrong-arg-types
     self.assertTrue(first_time_step.is_first())
 
   def test_automatic_reset_after_done_not_using_reset_directly(self):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
-    time_step = env.step(1)
+    time_step = env.step(1)  # pytype: disable=wrong-arg-types
 
     while not time_step.is_last():
       time_step = env.step(np.array(1, dtype=np.int32))
 
     self.assertTrue(time_step.is_last())
-    first_time_step = env.step(0)
+    first_time_step = env.step(0)  # pytype: disable=wrong-arg-types
     self.assertTrue(first_time_step.is_first())
 
   def test_method_propagation(self):

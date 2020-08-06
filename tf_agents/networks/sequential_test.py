@@ -51,7 +51,7 @@ class ActorNetwork(network.Network):
             tf.keras.layers.Dense(10),
             tf.keras.layers.Dense(num_actions)
         ],
-        input_spec=input_tensor_spec)
+        input_spec=input_tensor_spec)  # pytype: disable=wrong-arg-types
     super(ActorNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=self._sequential.state_spec,
@@ -72,7 +72,7 @@ class SequentialTest(test_utils.TestCase):
     sequential = sequential_lib.Sequential(
         [tf.keras.layers.Dense(4, use_bias=False),
          tf.keras.layers.ReLU()],
-        input_spec=tf.TensorSpec((3,), tf.float32))
+        input_spec=tf.TensorSpec((3,), tf.float32))  # pytype: disable=wrong-arg-types
     inputs = np.ones((2, 3))
     out, state = sequential(inputs)
     self.assertEqual(state, ())
@@ -104,7 +104,7 @@ class SequentialTest(test_utils.TestCase):
             tf.keras.layers.GRU(2, return_state=True, return_sequences=True),
             dynamic_unroll_layer.DynamicUnroll(tf.keras.layers.LSTMCell(2)),
         ],
-        input_spec=tf.TensorSpec((3,), tf.float32))
+        input_spec=tf.TensorSpec((3,), tf.float32))  # pytype: disable=wrong-arg-types
     self.assertEqual(
         sequential.input_tensor_spec, tf.TensorSpec((3,), tf.float32))
 

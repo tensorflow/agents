@@ -93,7 +93,7 @@ class QPolicy(tf_policy.TFPolicy):
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:
-      if not action_spec.is_compatible_with(network_action_spec):
+      if not action_spec.is_compatible_with(network_action_spec):  # pytype: disable=attribute-error
         raise ValueError(
             'action_spec must be compatible with q_network.action_spec; '
             'instead got action_spec=%s, q_network.action_spec=%s' % (

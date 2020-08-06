@@ -58,7 +58,7 @@ def _create_server(
 def _create_nested_variable() -> types.NestedVariable:
   return (tf.Variable(0, dtype=tf.int64, shape=()), {
       'var1': (tf.Variable([1, 1], dtype=tf.float64, shape=(2,)),),
-      'var2': tf.Variable([[2], [3]], dtype=tf.int32, shape=(2, 1))
+      'var2': tf.Variable([[2], [3]], dtype=tf.int32, shape=(2, 1))  # pytype: disable=bad-return-type
   })
 
 
@@ -81,7 +81,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     server.stop()
 
   def test_init_raises_type_error_if_no_signature_of_a_table(self):
-    server, server_address = _create_server(signature=None)
+    server, server_address = _create_server(signature=None)  # pytype: disable=wrong-arg-types
     with self.assertRaises(TypeError):
       reverb_variable_container.ReverbVariableContainer(server_address)
     server.stop()
@@ -99,7 +99,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     # Push the input to the server.
     variable_container = reverb_variable_container.ReverbVariableContainer(
         self._server_address)
-    variable_container.push(variables)
+    variable_container.push(variables)  # pytype: disable=wrong-arg-types
 
     # Check the content of the server.
     self._assert_nested_variable_in_server()
@@ -117,7 +117,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     # policies loaded from file which often change tuple to e.g. `ListWrapper`.
     variable_container = reverb_variable_container.ReverbVariableContainer(
         self._server_address)
-    variable_container.push(variables)
+    variable_container.push(variables)  # pytype: disable=wrong-arg-types
 
     # Check the content of the server.
     self._assert_nested_variable_in_server()
@@ -144,7 +144,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
         'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1))
     })
     with self.assertRaises(tf.errors.InvalidArgumentError):
-      variable_container.push(variables_with_wrong_type)
+      variable_container.push(variables_with_wrong_type)  # pytype: disable=wrong-arg-types
 
   def test_update(self) -> None:
     # Prepare some data in the Reverb server.
@@ -159,10 +159,10 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     # Update variables based on value pulled from the server.
     variable_container = reverb_variable_container.ReverbVariableContainer(
         self._server_address)
-    variable_container.update(variables)
+    variable_container.update(variables)  # pytype: disable=wrong-arg-types
 
     # Check the values of the `variables`.
-    self._assert_nested_variable_updated(variables)
+    self._assert_nested_variable_updated(variables)  # pytype: disable=wrong-arg-types
 
   def test_update_with_not_exact_sequence_type_matching(self) -> None:
     # Prepare some data in the Reverb server.
@@ -180,10 +180,10 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     # policies loaded from file which often change tuple to e.g. `ListWrapper`.
     variable_container = reverb_variable_container.ReverbVariableContainer(
         self._server_address)
-    variable_container.update(variables)
+    variable_container.update(variables)  # pytype: disable=wrong-arg-types
 
     # Check the values of the `variables`.
-    self._assert_nested_variable_updated(variables, check_nest_seq_types=False)
+    self._assert_nested_variable_updated(variables, check_nest_seq_types=False)  # pytype: disable=wrong-arg-types
 
   def test_update_raises_key_error_on_unknown_table(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
@@ -213,7 +213,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
         'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1))
     })
     with self.assertRaises(ValueError):
-      variable_container.update(variables_with_wrong_type)
+      variable_container.update(variables_with_wrong_type)  # pytype: disable=wrong-arg-types
 
   def test_pull_raises_key_error_on_unknown_table(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
@@ -235,7 +235,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     # Push the input to the server.
     variable_container = reverb_variable_container.ReverbVariableContainer(
         self._server_address)
-    variable_container.push(variables)
+    variable_container.push(variables)  # pytype: disable=wrong-arg-types
 
     # Check the content of the server.
     self._assert_nested_variable_in_server()

@@ -57,9 +57,9 @@ class UtilsTest(test_utils.TestCase):
 
     def step(unused_time_step):
       if rng.rand() < 0.10:
-        return ts.termination(sample_fn(), 0.0)
+        return ts.termination(sample_fn(), 0.0)  # pytype: disable=wrong-arg-types
       else:
-        return ts.transition(sample_fn(), 1.0)
+        return ts.transition(sample_fn(), 1.0)  # pytype: disable=wrong-arg-types
 
     env.step = step
     env.reset = lambda: ts.restart(sample_fn())
@@ -109,9 +109,9 @@ class UtilsTest(test_utils.TestCase):
 
     def step(unused_time_step):
       if rng.rand() < 0.10:
-        return ts.termination(sample_fn(), 0.0)
+        return ts.termination(sample_fn(), 0.0)  # pytype: disable=wrong-arg-types
       else:
-        return ts.transition(sample_fn(), 1.0)
+        return ts.transition(sample_fn(), 1.0)  # pytype: disable=wrong-arg-types
 
     env.step = step
     env.reset = lambda: ts.restart(sample_fn())

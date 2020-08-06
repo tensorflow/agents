@@ -70,7 +70,7 @@ class FixedPolicy(tf_policy.TFPolicy):
     log_probability = tf.nest.map_structure(
         lambda t: tf.constant(0.0, tf.float32), self._action_spec)
     self._policy_info = policy_step.set_log_probability(policy_info,
-                                                        log_probability)
+                                                        log_probability)  # pytype: disable=wrong-arg-types
 
   def _variables(self):
     return []

@@ -60,8 +60,8 @@ class CountingEnv(py_environment.PyEnvironment):
       return self._reset()
     self._current_step = np.array(1 + self._current_step, dtype=np.int32)
     if self._current_step < self._steps_per_episode:
-      return ts.transition(self._get_observation(), 0)
-    return ts.termination(self._get_observation(), 1)
+      return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
+    return ts.termination(self._get_observation(), 1)  # pytype: disable=wrong-arg-types
 
   def _get_observation(self):
     if self._episodes:
@@ -102,8 +102,8 @@ class EpisodeCountingEnv(py_environment.PyEnvironment):
       return self._reset()
     self._steps += 1
     if self._steps < self._steps_per_episode:
-      return ts.transition(self._get_observation(), 0)
-    return ts.termination(self._get_observation(), 1)
+      return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
+    return ts.termination(self._get_observation(), 1)  # pytype: disable=wrong-arg-types
 
   def _get_observation(self):
     return (np.array(self._episodes, dtype=np.int32),
@@ -160,8 +160,8 @@ class NestedCountingEnv(py_environment.PyEnvironment):
       return self._reset()
     self._current_step = np.array(1 + self._current_step, dtype=np.int32)
     if self._current_step < self._steps_per_episode:
-      return ts.transition(self._get_observation(), 0)
-    return ts.termination(self._get_observation(), 1)
+      return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
+    return ts.termination(self._get_observation(), 1)  # pytype: disable=wrong-arg-types
 
   def _get_observation(self):
     return {

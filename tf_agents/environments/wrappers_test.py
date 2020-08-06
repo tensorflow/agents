@@ -78,7 +78,7 @@ class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
     env = wrappers.PyEnvironmentBaseWrapper(mock_env)
     env.reset()
     self.assertEqual(1, mock_env.reset.call_count)
-    env.step(0)
+    env.step(0)  # pytype: disable=wrong-arg-types
     self.assertEqual(1, mock_env.step.call_count)
     mock_env.step.assert_called_with(0)
     env.seed(0)
@@ -911,11 +911,11 @@ class GoalReplayEnvWrapperTest(parameterized.TestCase):
     time_step = env.step(random_action)
     self.assertIsInstance(time_step.observation, dict)
     self.assertEqual(time_step.observation.keys(),
-                     env.observation_spec().keys())
+                     env.observation_spec().keys())  # pytype: disable=attribute-error
     time_step = env.reset()
     self.assertIsInstance(time_step.observation, dict)
     self.assertEqual(time_step.observation.keys(),
-                     env.observation_spec().keys())
+                     env.observation_spec().keys())  # pytype: disable=attribute-error
 
   def test_batch_env(self):
     """Test batched version of the environment."""
@@ -936,11 +936,11 @@ class GoalReplayEnvWrapperTest(parameterized.TestCase):
     time_step = env.step(random_action)
     self.assertIsInstance(time_step.observation, dict)
     self.assertEqual(time_step.observation.keys(),
-                     env.observation_spec().keys())
+                     env.observation_spec().keys())  # pytype: disable=attribute-error
     time_step = env.reset()
     self.assertIsInstance(time_step.observation, dict)
     self.assertEqual(time_step.observation.keys(),
-                     env.observation_spec().keys())
+                     env.observation_spec().keys())  # pytype: disable=attribute-error
 
 
 class HistoryWrapperTest(test_utils.TestCase):

@@ -41,7 +41,7 @@ def _infer_state_specs(
     `state_spec`, a tuple of the state specs of length `len(layers)`.
   """
   state_specs = tuple(network.get_state_spec(layer) for layer in layers)
-  return state_specs
+  return state_specs  # pytype: disable=bad-return-type
 
 
 class Sequential(network.Network):

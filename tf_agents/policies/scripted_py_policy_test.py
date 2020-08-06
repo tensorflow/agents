@@ -32,7 +32,7 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
     super(ScriptedPyPolicyTest, self).setUp()
     self._obs_spec = array_spec.ArraySpec((), np.int32, 'obs')
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._time_step = ts.restart(observation=1)
+    self._time_step = ts.restart(observation=1)  # pytype: disable=wrong-arg-types
 
   def testFollowsScript(self):
     action_spec = [
@@ -96,7 +96,7 @@ class ScriptedPyPolicyTest(test_utils.TestCase):
     policy = scripted_py_policy.ScriptedPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        action_script=action_script)
+        action_script=action_script)  # pytype: disable=wrong-arg-types
     policy_state = policy.get_initial_state()
 
     action_step = policy.action(self._time_step, policy_state)

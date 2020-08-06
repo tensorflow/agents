@@ -251,7 +251,7 @@ class PolicySaver(object):
     if seed is not None:
 
       def action_fn(time_step, policy_state):
-        return original_action_fn(time_step, policy_state, seed=seed)
+        return original_action_fn(time_step, policy_state, seed=seed)  # pytype: disable=wrong-arg-types
     else:
       action_fn = original_action_fn
 
@@ -259,7 +259,7 @@ class PolicySaver(object):
       """Wrapper for policy.distribution() in the SavedModel."""
       try:
         outs = policy.distribution(
-            time_step=time_step, policy_state=policy_state)
+            time_step=time_step, policy_state=policy_state)  # pytype: disable=wrong-arg-types
         return tf.nest.map_structure(_composite_distribution, outs)
       except (TypeError, NotImplementedError) as e:
         # TODO(b/156526399): Move this to just the policy.distribution() call

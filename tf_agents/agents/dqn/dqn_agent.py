@@ -532,7 +532,7 @@ class DqnAgent(tf_agent.TFAgent):
                                   training=training)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = self._action_spec.shape.rank > 0
+    multi_dim_actions = self._action_spec.shape.rank > 0  # pytype: disable=attribute-error
     return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),

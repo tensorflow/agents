@@ -74,7 +74,7 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
     self._state = 0
     self.resets += 1
     self.last_call_thread_id = threading.current_thread().ident
-    return ts.restart([self._state])
+    return ts.restart([self._state])  # pytype: disable=wrong-arg-types
 
   def _step(self, action):
     self._state = (self._state + 1) % 3
@@ -84,11 +84,11 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
 
     observation = [self._state]
     if self._state == 0:
-      return ts.restart(observation)
+      return ts.restart(observation)  # pytype: disable=wrong-arg-types
     elif self._state == 2:
       self.episodes += 1
-      return ts.termination(observation, reward=1.0)
-    return ts.transition(observation, reward=0.0)
+      return ts.termination(observation, reward=1.0)  # pytype: disable=wrong-arg-types
+    return ts.transition(observation, reward=0.0)  # pytype: disable=wrong-arg-types
 
   def action_spec(self):
     return specs.BoundedArraySpec(
@@ -135,7 +135,7 @@ class PYEnvironmentMockNestedRewards(py_environment.PyEnvironment):
     self._state = 0
     self.last_call_thread_id = threading.current_thread().ident
     return ts.restart(
-        [self._state], batch_size=1, reward_spec=self._reward_spec)
+        [self._state], batch_size=1, reward_spec=self._reward_spec)  # pytype: disable=wrong-arg-types
 
   def _step(self, action):
     self._state = (self._state + 1) % 3
@@ -148,10 +148,10 @@ class PYEnvironmentMockNestedRewards(py_environment.PyEnvironment):
     }
     if self._state == 0:
       return ts.restart(
-          observation, batch_size=1, reward_spec=self._reward_spec)
+          observation, batch_size=1, reward_spec=self._reward_spec)  # pytype: disable=wrong-arg-types
     elif self._state == 2:
-      return ts.termination(observation, reward=reward)
-    return ts.transition(observation, reward=reward)
+      return ts.termination(observation, reward=reward)  # pytype: disable=wrong-arg-types
+    return ts.transition(observation, reward=reward)  # pytype: disable=wrong-arg-types
 
 
 class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):

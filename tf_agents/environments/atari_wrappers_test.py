@@ -33,18 +33,18 @@ class AtariTimeLimitTest(test_utils.TestCase):
     wrapped_env = atari_wrappers.AtariTimeLimit(base_env, max_steps)
 
     base_env.gym.game_over = False
-    base_env.reset.return_value = ts.restart(1)
-    base_env.step.return_value = ts.transition(2, 0)
+    base_env.reset.return_value = ts.restart(1)  # pytype: disable=wrong-arg-types
+    base_env.step.return_value = ts.transition(2, 0)  # pytype: disable=wrong-arg-types
     action = 1
 
     self.assertFalse(wrapped_env.game_over)
 
     for _ in range(max_steps):
-      time_step = wrapped_env.step(action)
+      time_step = wrapped_env.step(action)  # pytype: disable=wrong-arg-types
       self.assertFalse(time_step.is_last())
       self.assertFalse(wrapped_env.game_over)
 
-    time_step = wrapped_env.step(action)
+    time_step = wrapped_env.step(action)  # pytype: disable=wrong-arg-types
     self.assertTrue(time_step.is_last())
     self.assertTrue(wrapped_env.game_over)
 
@@ -54,17 +54,17 @@ class AtariTimeLimitTest(test_utils.TestCase):
     wrapped_env = atari_wrappers.AtariTimeLimit(base_env, max_steps)
 
     base_env.gym.game_over = False
-    base_env.reset.return_value = ts.restart(1)
-    base_env.step.return_value = ts.transition(2, 0)
+    base_env.reset.return_value = ts.restart(1)  # pytype: disable=wrong-arg-types
+    base_env.step.return_value = ts.transition(2, 0)  # pytype: disable=wrong-arg-types
     action = 1
 
     for _ in range(max_steps + 1):
-      wrapped_env.step(action)
+      wrapped_env.step(action)  # pytype: disable=wrong-arg-types
 
     self.assertTrue(wrapped_env.game_over)
     self.assertEqual(1, base_env.reset.call_count)
 
-    wrapped_env.step(action)
+    wrapped_env.step(action)  # pytype: disable=wrong-arg-types
     self.assertFalse(wrapped_env.game_over)
     self.assertEqual(2, base_env.reset.call_count)
 

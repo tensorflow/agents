@@ -117,7 +117,7 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
            outer_rank: int,
            training: bool = False,
            mask: Optional[types.NestedTensor] = None) -> types.NestedTensor:
-    if inputs.dtype != self._sample_spec.dtype:
+    if inputs.dtype != self._sample_spec.dtype:  # pytype: disable=attribute-error
       raise ValueError('Inputs to TanhNormalProjectionNetwork must match the '
                        'sample_spec.dtype.')
 
@@ -144,4 +144,4 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
     means = batch_squash.unflatten(means)
     stds = batch_squash.unflatten(stds)
 
-    return self.output_spec.build_distribution(loc=means, scale_diag=stds), ()
+    return self.output_spec.build_distribution(loc=means, scale_diag=stds), ()  # pytype: disable=bad-return-type

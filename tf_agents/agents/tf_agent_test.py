@@ -60,7 +60,7 @@ class MyAgent(tf_agent.TFAgent):
         collect_policy=policy,
         train_sequence_length=train_sequence_length,
         train_argspec=train_argspec,
-        validate_args=validate_args)
+        validate_args=validate_args)  # pytype: disable=wrong-arg-types
 
   def _train(self, experience, weights=None, extra=None):
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
@@ -125,7 +125,7 @@ class TFAgentTest(tf.test.TestCase):
   def testValidateArgsDisabled(self):
     train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
     agent = MyAgent(validate_args=False, train_argspec=train_argspec)
-    loss_info = agent.train(experience='blah', extra=3)
+    loss_info = agent.train(experience='blah', extra=3)  # pytype: disable=wrong-arg-types
     tf.nest.map_structure(
         self.assertAllEqual, loss_info.extra, ('blah', 3))
 
