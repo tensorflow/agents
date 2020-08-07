@@ -36,30 +36,35 @@ else:
   ForwardRef = typing.ForwardRef
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
-Array = np.ndarray   # pylint: disable=invalid-name
+Array = Union[np.ndarray, int, float, str, bool]   # pylint: disable=invalid-name
 TensorOrArray = Union[Tensor, Array]
 Distribution = tfp.distributions.Distribution
 
-TensorSpec = tf.TypeSpec
+TensorSpec = Union[
+    tf.TypeSpec, tf.TensorSpec, tf.RaggedTensorSpec, tf.SparseTensorSpec]
 ArraySpec = array_spec.ArraySpec
 Spec = Union[TensorSpec, ArraySpec]
 
 SpecTensorOrArray = Union[Spec, Tensor, Array]
 
 Network = ForwardRef('tf_agents.networks.network.Network')  # pylint: disable=invalid-name
+BoundedTensorSpec = ForwardRef('tf_agents.specs.tensor_spec.BoundedTensorSpec')  # pylint: disable=invalid-name
 
 # Note that this is effectively treated as `Any`; see b/109648354.
 Tnest = TypeVar('Tnest')
-Nested = Union[Tnest, Iterable[Tnest], Mapping[Text, Tnest]]
-NestedTensor = Nested[Tensor]
-NestedVariable = Nested[tf.Variable]
-NestedArray = Nested[Array]
-NestedDistribution = Nested[tfp.distributions.Distribution]
-NestedPlaceHolder = Nested[tf.compat.v1.placeholder]
-NestedTensorSpec = Nested[TensorSpec]
-NestedArraySpec = Nested[array_spec.ArraySpec]
-NestedLayer = Nested[tf.keras.layers.Layer]
-NestedNetwork = Nested[Network]
+Trecursive = TypeVar('Trecursive')
+Nested = Union[Tnest, Iterable[Trecursive], Mapping[Text, Trecursive]]
+NestedTensor = Nested[Tensor, 'NestedTensor']
+NestedVariable = Nested[tf.Variable, 'NestedVariable']
+NestedArray = Nested[Array, 'NestedArray']
+NestedDistribution = Nested[
+    tfp.distributions.Distribution, 'NestedDistribution']
+NestedPlaceHolder = Nested[tf.compat.v1.placeholder, 'NestedPlaceholder']
+NestedTensorSpec = Nested[TensorSpec, 'NestedTensorSpec']
+NestedBoundedTensorSpec = Nested[BoundedTensorSpec, 'NestedBoundedTensorSpec']
+NestedArraySpec = Nested[array_spec.ArraySpec, 'NestedArraySpec']
+NestedLayer = Nested[tf.keras.layers.Layer, 'NestedLayer']
+NestedNetwork = Nested[Network, 'NestedNetwork']
 
 NestedSpec = Union[NestedTensorSpec, NestedArraySpec]
 NestedTensorOrArray = Union[NestedTensor, NestedArray]

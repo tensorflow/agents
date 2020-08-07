@@ -28,7 +28,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-from typing import Optional, Text
+from typing import Optional, Text, cast
 
 import gin
 import tensorflow as tf
@@ -41,6 +41,7 @@ from tf_agents.policies import boltzmann_policy
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import q_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
@@ -532,7 +533,8 @@ class DqnAgent(tf_agent.TFAgent):
                                   training=training)
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
-    multi_dim_actions = self._action_spec.shape.rank > 0  # pytype: disable=attribute-error
+    action_spec = cast(tensor_spec.BoundedTensorSpec, self._action_spec)
+    multi_dim_actions = action_spec.shape.rank > 0
     return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),

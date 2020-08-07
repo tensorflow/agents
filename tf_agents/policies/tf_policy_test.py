@@ -17,12 +17,15 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import cast
 
 from absl.testing import parameterized
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -132,8 +135,9 @@ class TfEmitLogProbsPolicy(tf_policy.TFPolicy):
         emit_log_probability=True)
 
   def _distribution(self, time_step, policy_state):
+    action_spec = cast(tensor_spec.BoundedTensorSpec, self.action_spec)
     probs = tf.constant(
-        0.2, shape=[self.action_spec.maximum - self.action_spec.minimum])  # pytype: disable=attribute-error
+        0.2, shape=[action_spec.maximum - action_spec.minimum])
     action_distribution = tf.nest.map_structure(
         lambda obs: tfp.distributions.Categorical(probs=probs),
         time_step.observation)
@@ -184,7 +188,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
                    tensor_spec.TensorSpec([1], tf.int32))
     time_step_spec = ts.time_step_spec(action_spec)
 
-    policy = TfPassThroughPolicy(time_step_spec, action_spec, clip=True)  # pytype: disable=wrong-arg-types
+    policy = TfPassThroughPolicy(time_step_spec, action_spec, clip=True)
 
     observation = (tf.constant(1, shape=(1,), dtype=tf.float32),
                    tf.constant(1, shape=(1,), dtype=tf.float32),
@@ -204,7 +208,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     }
     time_step_spec = ts.time_step_spec(observation_spec=action_spec)
 
-    policy = TfPassThroughPolicy(time_step_spec, action_spec, clip=True)  # pytype: disable=wrong-arg-types
+    policy = TfPassThroughPolicy(time_step_spec, action_spec, clip=True)
 
     observation = {"inp": tf.constant(1, shape=(1,), dtype=tf.float32),
                    "extra": tf.constant(1, shape=(1,), dtype=tf.int32)}
@@ -222,7 +226,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     action_spec = "blah"
     time_step_spec = ts.time_step_spec(observation_spec=None)
     policy = TfPassThroughPolicy(
-        time_step_spec, action_spec, validate_args=False, clip=False)  # pytype: disable=wrong-arg-types
+        time_step_spec, action_spec, validate_args=False, clip=False)
     observation = (tf.constant(1, shape=(1,), dtype=tf.float32),
                    tf.constant(1, shape=(1,), dtype=tf.float32),
                    tf.constant(1, shape=(1,), dtype=tf.int32),
@@ -296,7 +300,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
         time_step_spec,
         action_spec,
         policy_state_spec=policy_state_spec,
-        automatic_state_reset=True)  # pytype: disable=wrong-arg-types
+        automatic_state_reset=True)
 
     observation = tf.constant(1, dtype=tf.float32, shape=(1, 1))
     reward = tf.constant(1, dtype=tf.float32, shape=(1,))
@@ -330,7 +334,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     policy = TfPassThroughPolicy(
         time_step_spec,
         action_spec,
-        policy_state_spec=policy_state_spec)  # pytype: disable=wrong-arg-types
+        policy_state_spec=policy_state_spec)
 
     # Test state shape with explicit batch_size
     initial_state = policy.get_initial_state(3)

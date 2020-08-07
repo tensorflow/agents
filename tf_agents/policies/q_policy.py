@@ -20,11 +20,11 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Optional, Text
+from typing import Optional, Text, cast
 
 import gin
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import shifted_categorical
@@ -93,7 +93,8 @@ class QPolicy(tf_policy.TFPolicy):
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:
-      if not action_spec.is_compatible_with(network_action_spec):  # pytype: disable=attribute-error
+      action_spec = cast(tf.TypeSpec, action_spec)
+      if not action_spec.is_compatible_with(network_action_spec):
         raise ValueError(
             'action_spec must be compatible with q_network.action_spec; '
             'instead got action_spec=%s, q_network.action_spec=%s' % (

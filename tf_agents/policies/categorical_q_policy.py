@@ -20,11 +20,11 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Optional
+from typing import Optional, cast
 
 import gin
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.networks import network
@@ -88,7 +88,8 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:
-      if not action_spec.is_compatible_with(network_action_spec):  # pytype: disable=attribute-error
+      action_spec = cast(tf.TypeSpec, action_spec)
+      if not action_spec.is_compatible_with(network_action_spec):
         raise ValueError(
             'action_spec must be compatible with q_network.action_spec; '
             'instead got action_spec=%s, q_network.action_spec=%s' % (
@@ -98,14 +99,15 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
       raise TypeError('action_spec must be a BoundedTensorSpec. Got: %s' % (
           action_spec,))
 
-    if action_spec.minimum != 0:  # pytype: disable=attribute-error
+    action_spec = cast(tensor_spec.BoundedTensorSpec, action_spec)
+    if action_spec.minimum != 0:
       raise ValueError(
           'Action specs should have minimum of 0, but saw: {0}.  If collecting '
           'from a python environment, consider using '
           'tf_agents.environments.wrappers.ActionOffsetWrapper.'
           .format(action_spec))
 
-    num_actions = action_spec.maximum - action_spec.minimum + 1  # pytype: disable=attribute-error
+    num_actions = action_spec.maximum - action_spec.minimum + 1
     try:
       num_atoms = q_network.num_atoms
     except AttributeError:
@@ -132,7 +134,7 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
     support = np.linspace(min_q_value, max_q_value, self._num_atoms,
                           dtype=np.float32)
     self._support = tf.constant(support, dtype=tf.float32)
-    self._action_dtype = action_spec.dtype  # pytype: disable=attribute-error
+    self._action_dtype = action_spec.dtype
 
   def _variables(self):
     return self._q_network.variables
@@ -172,6 +174,8 @@ class CategoricalQPolicy(tf_policy.TFPolicy):
       neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
       logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
 
+    action_spec = cast(tf.TensorSpec, self.action_spec)
     dist = tfp.distributions.Categorical(
-        logits=logits, dtype=self.action_spec.dtype)  # pytype: disable=attribute-error
+        logits=logits, dtype=action_spec.dtype)
+
     return policy_step.PolicyStep(dist, policy_state)

@@ -24,8 +24,9 @@ import copy
 from typing import List, Optional, Sequence, Text, Tuple
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
+
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import policy_utilities
@@ -36,8 +37,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
-
-NestedBoundedTensorSpec = types.Nested[tensor_spec.BoundedTensorSpec]
 
 
 @tf.function
@@ -78,7 +77,7 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
   def __init__(
       self,
       time_step_spec: Optional[ts.TimeStep],
-      action_spec: Optional[NestedBoundedTensorSpec],
+      action_spec: Optional[types.NestedBoundedTensorSpec],
       scalarizer: multi_objective_scalarizer.Scalarizer,
       objective_networks: Sequence[Network],
       observation_and_action_constraint_splitter: types.Splitter = None,

@@ -23,7 +23,8 @@ import collections
 from typing import List, Dict, Text, Tuple
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
 from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.networks import heteroscedastic_q_network
@@ -36,12 +37,10 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import test_utils
 
-from tensorflow.python.framework import test_util  # type: ignore pylint: disable=g-direct-tensorflow-import  # TF internal
-
 
 class DummyNet(network.Network):
 
-  def __init__(self, observation_spec: types.Nested[tf.TypeSpec],
+  def __init__(self, observation_spec: types.NestedTensorSpec,
                kernel_weights: np.ndarray, bias: np.ndarray):
     """A simple linear network.
 
@@ -117,7 +116,6 @@ class HeteroscedasticDummyNet(
     return predictions, network_state
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class ScalarizeObjectivesTest(test_utils.TestCase):
 
   def setUp(self):
@@ -157,7 +155,6 @@ class ScalarizeObjectivesTest(test_utils.TestCase):
         atol=1e-3)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
 
   def setUp(self):

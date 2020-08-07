@@ -24,7 +24,8 @@ import collections
 from typing import List
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+
 from tf_agents.bandits.agents import greedy_multi_objective_neural_agent as greedy_multi_objective_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
@@ -45,7 +46,7 @@ from tensorflow.python.framework import test_util  # pylint:disable=g-direct-ten
 
 class DummyNet(network.Network):
 
-  def __init__(self, observation_spec: types.Nested[tf.TypeSpec],
+  def __init__(self, observation_spec: types.NestedTensorSpec,
                kernel_weights: np.ndarray, bias: np.ndarray):
     """A simple linear network.
 

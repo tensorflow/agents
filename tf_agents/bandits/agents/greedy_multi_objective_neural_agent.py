@@ -24,7 +24,8 @@ from typing import Callable, Optional, Sequence, Text, Tuple
 
 from absl import logging
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
@@ -32,13 +33,10 @@ from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_multi_objective_neural_policy as greedy_multi_objective_policy
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks.network import Network
-from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
-
-NestedBoundedTensorSpec = types.Nested[tensor_spec.BoundedTensorSpec]
 
 
 @gin.configurable
@@ -55,7 +53,7 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
   def __init__(
       self,
       time_step_spec: Optional[ts.TimeStep],
-      action_spec: Optional[NestedBoundedTensorSpec],
+      action_spec: Optional[types.NestedBoundedTensorSpec],
       scalarizer: multi_objective_scalarizer.Scalarizer,
       objective_networks: Sequence[Network],
       optimizer: tf.keras.optimizers.Optimizer,
