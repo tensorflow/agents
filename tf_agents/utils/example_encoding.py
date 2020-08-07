@@ -200,7 +200,10 @@ def _get_feature_encoder(shape, dtype, compress_image=False, image_quality=95):
 
   if compress_image and len(shape) == 3 and dtype == tf.uint8:
     def _encode_to_jpeg_bytes_list(value):
-      im = Image.fromarray(value)
+      if shape[-1] == 1:
+        im = Image.fromarray(value[:, :, 0])
+      else:
+        im = Image.fromarray(value)
       out = io.BytesIO()
       im.save(out, format='jpeg', quality=image_quality)
       return tf.train.Feature(

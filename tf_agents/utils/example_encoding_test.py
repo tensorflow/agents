@@ -139,13 +139,15 @@ class NestExampleEncodeUtilsTest(tf.test.TestCase, parameterized.TestCase):
     _get_feature_parser.compress_image=True
     """)
     spec = {
-        "image": array_spec.ArraySpec((128, 128, 3), np.uint8)
+        "image": array_spec.ArraySpec((128, 128, 3), np.uint8),
+        "mask": array_spec.ArraySpec((128, 128, 1), np.uint8)
     }
     serializer = example_encoding.get_example_serializer(spec)
     decoder = example_encoding.get_example_decoder(spec)
 
     sample = {
-        "image": 128 * np.ones([128, 128, 3], dtype=np.uint8)
+        "image": 128 * np.ones([128, 128, 3], dtype=np.uint8),
+        "mask": 128 * np.ones([128, 128, 1], dtype=np.uint8)
     }
     example_proto = serializer(sample)
 
