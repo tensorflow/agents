@@ -264,7 +264,8 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
         observation, time_step.step_type, policy_state)
     scalarized_reward = scalarize_objectives(predicted_objective_values_tensor,
                                              self._scalarizer)
-    batch_size = scalarized_reward.shape[0]
+    # Preserve static batch size values when they are available.
+    batch_size = (scalarized_reward.shape[0] or tf.shape(scalarized_reward)[0])
     mask = policy_utilities.construct_mask_from_multiple_sources(
         time_step.observation, self._observation_and_action_constraint_splitter,
         (), self._expected_num_actions)
