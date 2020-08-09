@@ -126,14 +126,17 @@ def nested_kl_divergence(nested_from_distribution: types.NestedDistribution,
                         for from_dist, to_dist
                         in zip(flat_from_distribution, flat_to_distribution)]
 
+  all_kl_divergences_reduced = []
+  for kl_divergence in all_kl_divergences:
+    # Reduce_sum over non-batch dimensions.
+    reduce_dims = list(range(len(kl_divergence.shape)))
+    for dim in outer_dims:
+      reduce_dims.remove(dim)
+    all_kl_divergences_reduced.append(
+        tf.reduce_sum(input_tensor=kl_divergence, axis=reduce_dims))
+   
   # Sum the kl of the leaves.
-  summed_kl_divergences = tf.add_n(all_kl_divergences)
-
-  # Reduce_sum over non-batch dimensions.
-  reduce_dims = list(range(len(summed_kl_divergences.shape)))
-  for dim in outer_dims:
-    reduce_dims.remove(dim)
-  total_kl = tf.reduce_sum(input_tensor=summed_kl_divergences, axis=reduce_dims)
+  total_kl = tf.add_n(all_kl_divergences_reduced)
 
   return total_kl
 
