@@ -186,9 +186,9 @@ run_tests() {
   # installed at the system level.
   deactivate
 
-  # Copies wheel out of tmp to root of repo so it can be more easily uploaded
-  # to pypi as part of the stable release process.
-  cp ${WHEEL_PATH}tf_agents*.whl ./
+  # Copies wheel out of tmp to root of repo so it can be uploaded to pypi.
+  mkdir -p ./dist
+  cp ${WHL_PATH} ./dist/
 
   # Testing the Colabs requires packages beyond what is needed to build and
   # unittest TF-Agents, e.g. Jupiter Notebook. It is assumed the base system
