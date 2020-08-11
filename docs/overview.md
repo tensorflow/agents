@@ -17,26 +17,35 @@ GitHub clone.
 
 ### Stable
 
-Run the commands below to install the most recent stable release (0.5.0), which
-was tested with TensorFlow 2.2.x and Python3.
+Run the commands below to install the most recent stable release. API
+documentation for the release is on
+[tensorflow.org](https://www.tensorflow.org/agents/api_docs/python/tf_agents).
 
-```bash
-pip install --user tf-agents
-pip install --user tensorflow==2.2.0
+```shell
+$ pip install --user tf-agents[reverb]
 
-# To get the matching examples and colabs
-git clone https://github.com/tensorflow/agents.git
-cd agents
-git checkout v0.5.0
+# Use this tag get the matching examples and colabs.
+$ git clone https://github.com/tensorflow/agents.git
+$ cd agents
+$ git checkout v0.6.0
+```
 
+If you want to install TF-Agents with versions of Tensorflow or
+[Reverb](https://github.com/deepmind/reverb) that are flagged as not compatible
+by the pip dependency check, use the following pattern below at your own risk.
+
+```shell
+$ pip install --user tensorflow
+$ pip install --user dm-reverb
+$ pip install --user tf-agents
 ```
 
 If you want to use TF-Agents with TensorFlow 1.15 or 2.0, install version 0.3.0:
 
-```bash
-pip install tf-agents==0.3.0
+```shell
 # Newer versions of tensorflow-probability require newer versions of TensorFlow.
-pip install tensorflow-probability==0.8.0
+$ pip install tensorflow-probability==0.8.0
+$ pip install tf-agents==0.3.0
 ```
 
 ### Nightly
@@ -44,17 +53,19 @@ pip install tensorflow-probability==0.8.0
 Nightly builds include newer features, but may be less stable than the versioned
 releases. The nightly build is pushed as `tf-agents-nightly`. We suggest
 installing nightly versions of TensorFlow (`tf-nightly`) and TensorFlow
-Probability (`tfp-nightly`) as those are the version TF-Agents nightly are
+Probability (`tfp-nightly`) as those are the versions TF-Agents nightly are
 tested against.
 
 To install the nightly build version, run the following:
 
 ```shell
+# `--force-reinstall helps guarantee the right versions.
+$ pip install --user --force-reinstall tf-nightly
+$ pip install --user --force-reinstall tfp-nightly
+$ pip install --user --force-reinstall dm-reverb-nightly
+
 # Installing with the `--upgrade` flag ensures you'll get the latest version.
-pip install --user --upgrade tf-agents-nightly  # depends on tf-nightly
-# `--force-reinstall helps guarantee the right version.
-pip install --user --force-reinstall tf-nightly
-pip install --user --force-reinstall tfp-nightly
+$ pip install --user --upgrade tf-agents-nightly
 ```
 
 ### From GitHub
@@ -85,24 +96,10 @@ users that may be locked into a specific version of TensorFlow.
 Release | Branch / Tag                                               | TensorFlow Version
 ------- | ---------------------------------------------------------- | ------------------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
+0.6.0   | [v0.6.0](https://github.com/tensorflow/agents/tree/v0.6.0) | 2.3.0
 0.5.0   | [v0.5.0](https://github.com/tensorflow/agents/tree/v0.5.0) | 2.2.0
 0.4.0   | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0
 0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0
-
-Examples of installing nightly, most recent stable, and a specific version of
-TF-Agents:
-
-```bash
-# Stable
-pip install tf-agents
-
-# Nightly
-pip install tf-agents-nightly
-
-# Specific version
-pip install tf-agents==0.3.0
-
-```
 
 <a id='Principles'></a>
 
