@@ -823,7 +823,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
                              tf.nest.flatten(reloaded_model_variables))]))
 
     # Verify variable update affects inference.
-    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).any())
+    assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
     reloaded_eval = self.evaluate(reloaded_policy.action(sample_input))
     tf.nest.map_structure(assert_np_not_equal, original_eval, reloaded_eval)
     current_eval = self.evaluate(policy.action(sample_input))
