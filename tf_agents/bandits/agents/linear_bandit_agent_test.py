@@ -756,7 +756,7 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(expected_a_updated_list, final_a)
     self.assertAllClose(expected_b_updated_list, final_b)
     self.assertAllClose(
-        expected_eigvals_updated_list, final_eig_vals, atol=1e-4, rtol=1e-4)
+        expected_eigvals_updated_list, final_eig_vals, atol=2.2e-4, rtol=1e-4)
 
   @test_cases()
   def testDistributedLinearAgentUpdate(self,
