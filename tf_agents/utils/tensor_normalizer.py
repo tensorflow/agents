@@ -329,3 +329,19 @@ class StreamingTensorNormalizer(TensorNormalizer):
                                             lambda a, b: a / b, self._var_sum,
                                             self._count)
     return mean_estimate, var_estimate
+
+  def reset(self):
+    """Reset the count, mean and variance to its initial state."""
+    reset_ops = [
+        tf.nest.map_structure(
+            lambda var: var.assign(tf.constant(1e-8, shape=var.shape)),
+            self._count),
+        tf.nest.map_structure(
+            lambda var: var.assign(tf.constant(0., shape=var.shape)),
+            self._mean_sum),
+        tf.nest.map_structure(
+            lambda var: var.assign(tf.constant(0., shape=var.shape)),
+            self._var_sum),
+    ]
+
+    return reset_ops

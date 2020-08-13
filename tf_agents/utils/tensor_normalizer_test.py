@@ -191,6 +191,41 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
         np.sum(np.square(np_array - original_mean_sum), axis=0) +
         original_variance_sum)
 
+  def testReset(self):
+    # Get original mean and variance.
+    original_count, original_mean_sum, original_variance_sum = self.evaluate(
+        self._tensor_normalizer.variables)
+
+    # Construct and evaluate normalized tensor. Should update mean &
+    #   variance.
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        np.float32)
+    tensor = tf.constant(np_array, dtype=tf.float32)
+    update_norm_vars = self._tensor_normalizer.update(tensor)
+    self.evaluate(update_norm_vars)
+
+    # Get new mean and variance, and make sure they changed.
+    new_count, new_mean_sum, new_variance_sum = self.evaluate(
+        self._tensor_normalizer.variables)
+
+    self.assertAllEqual(new_count,
+                        np.array([3, 3, 3], dtype=np.float32) + original_count)
+    self.assertAllClose(new_mean_sum,
+                        np.sum(np_array, axis=0) + original_mean_sum)
+    self.assertAllClose(
+        new_variance_sum,
+        np.sum(np.square(np_array - original_mean_sum), axis=0) +
+        original_variance_sum)
+
+    # Verify that the count, mean and variance have been successfully reset.
+    self.evaluate(self._tensor_normalizer.reset())
+
+    new_count, new_mean_sum, new_variance_sum = self.evaluate(
+        self._tensor_normalizer.variables)
+    self.assertAllEqual(new_count, original_count)
+    self.assertAllClose(new_mean_sum, original_mean_sum)
+    self.assertAllClose(new_variance_sum, original_variance_sum)
+
   def testUpdateVariablesDictNest(self):
     # Get original mean and variance.
     original_count, original_mean_sum, original_variance_sum = self.evaluate(

@@ -51,7 +51,7 @@ def make_trajectory_mask(batched_traj: trajectory.Trajectory) -> types.Tensor:
   # advantages.
   valid_return_value = ~(
       tf.equal(batched_traj.policy_info['return'], 0)
-      & tf.equal(batched_traj.policy_info['normalized_advantage'], 0))
+      & tf.equal(batched_traj.policy_info['advantage'], 0))
 
   return tf.cast(not_between_episodes & valid_return_value, tf.float32)
 

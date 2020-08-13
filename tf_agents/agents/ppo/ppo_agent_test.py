@@ -343,7 +343,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
                                        dtype=tf.float32)
     (_, _, next_time_steps) = trajectory.to_transition(experience)
-    expected_returns, expected_normalized_advantages = agent.compute_return_and_advantage(
+    expected_returns, expected_advantages = agent.compute_return_and_advantage(
         next_time_steps, expected_value_preds)
     self.assertAllClose(old_action_distribution_parameters,
                         returned_experience.policy_info['dist_params'])
@@ -351,12 +351,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
                      returned_experience.policy_info['return'].shape)
     self.assertAllClose(expected_returns,
                         returned_experience.policy_info['return'][:, :-1])
-    self.assertEqual(
-        (batch_size, n_time_steps),
-        returned_experience.policy_info['normalized_advantage'].shape)
-    self.assertAllClose(
-        expected_normalized_advantages,
-        returned_experience.policy_info['normalized_advantage'][:, :-1])
+    self.assertEqual((batch_size, n_time_steps),
+                     returned_experience.policy_info['advantage'].shape)
+    self.assertAllClose(expected_advantages,
+                        returned_experience.policy_info['advantage'][:, :-1])
 
   @parameterized.named_parameters(('Default', _default),
                                   ('OneDevice', _one_device),
@@ -419,11 +417,10 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
                      returned_experience.policy_info['return'].shape)
     self.assertAllClose([40.4821, 30.79],
                         returned_experience.policy_info['return'][:-1])
-    self.assertEqual(
-        n_time_steps,
-        returned_experience.policy_info['normalized_advantage'].shape)
-    self.assertAllClose(
-        [1., -1.], returned_experience.policy_info['normalized_advantage'][:-1])
+    self.assertEqual(n_time_steps,
+                     returned_experience.policy_info['advantage'].shape)
+    self.assertAllClose([31.482101, 15.790001],
+                        returned_experience.policy_info['advantage'][:-1])
 
   @parameterized.named_parameters(
       ('DefaultOneEpochValueInTrain', _default, 1, True, True),
@@ -971,17 +968,6 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertEqual(actions.shape.as_list(), [1, 1])
     self.evaluate(tf.compat.v1.global_variables_initializer())
     _ = self.evaluate(actions)
-
-  def testNormalizeAdvantages(self):
-    advantages = np.array([1.1, 3.2, -1.5, 10.9, 5.6])
-    mean = np.sum(advantages) / float(len(advantages))
-    variance = np.sum(np.square(advantages - mean)) / float(len(advantages))
-    stdev = np.sqrt(variance)
-    expected_advantages = (advantages - mean) / stdev
-    normalized_advantages = ppo_agent._normalize_advantages(
-        tf.constant(advantages, dtype=tf.float32), variance_epsilon=0.0)
-    self.assertAllClose(expected_advantages,
-                        self.evaluate(normalized_advantages))
 
   def testRNNTrain(self):
     actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
