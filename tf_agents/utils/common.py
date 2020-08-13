@@ -1391,3 +1391,11 @@ def deduped_network_variables(network, *args):
   other_vars = object_identity.ObjectIdentitySet(
       [v for n in args for v in n.variables])  # pylint:disable=g-complex-comprehension
   return [v for v in network.variables if v not in other_vars]
+
+
+def safe_has_state(state):
+  """Safely checks `state not in (None, (), [])`."""
+  # TODO(b/158804957): tf.function changes "s in ((),)" to a tensor bool expr.
+  # pylint: disable=literal-comparison
+  return state is not None and state is not () and state is not []
+  # pylint: enable=literal-comparison
