@@ -95,6 +95,17 @@ class Test(TestCommandBase):
       # Reimport multiprocessing to avoid spurious error printouts. See
       # https://bugs.python.org/issue15881.
       import multiprocessing as _  # pylint: disable=g-import-not-at-top
+      import tensorflow as tf  # pylint: disable=g-import-not-at-top
+
+      # Sets all GPUs to 1GB of memory. The process running the bulk of the unit
+      # tests allocates all GPU memory because by default TensorFlow allocates
+      # all GPU memory during initialization. This causes tests in
+      # run_seperately to fail with out of memory errors because they are run as
+      # a subprocess of the process holding the GPU memory.
+      gpus = tf.config.experimental.list_physical_devices('GPU')
+      for gpu in gpus:
+        tf.config.set_logical_device_configuration(
+            gpu, [tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
 
       run_separately = load_test_list('test_individually.txt')
       broken_tests = load_test_list('broken_tests.txt')
