@@ -483,10 +483,13 @@ def make_reverb_dataset(server_address: str,
   cycle_length = cycle_length or batch_size or 1
   num_parallel_calls = num_parallel_calls or tf.data.experimental.AUTOTUNE
 
-  dataset = tf.data.Dataset.range(cycle_length).interleave(
-      generate_reverb_dataset,
-      cycle_length=cycle_length,
-      num_parallel_calls=num_parallel_calls)
+  if cycle_length > 1:
+    dataset = tf.data.Dataset.range(cycle_length).interleave(
+        generate_reverb_dataset,
+        cycle_length=cycle_length,
+        num_parallel_calls=num_parallel_calls)
+  else:
+    dataset = generate_reverb_dataset(None)
 
   # Allows interleave to retrieve data from the first `reverb.ReplayDataset`
   # available.
