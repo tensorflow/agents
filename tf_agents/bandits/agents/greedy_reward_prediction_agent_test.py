@@ -561,42 +561,6 @@ class AgentTest(tf.test.TestCase):
     agent.train(experience, None)
     self.evaluate(tf.compat.v1.initialize_all_variables())
 
-  def testTrainPerArmAgentWithMask(self):
-    num_actions = 4
-    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        2, 3, num_actions, add_action_mask=True)
-    time_step_spec = ts.time_step_spec(obs_spec)
-    reward_net = (
-        global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            obs_spec[0], (4, 3), (3, 4), (4, 2)))
-    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
-    agent = greedy_agent.GreedyRewardPredictionAgent(
-        time_step_spec,
-        self._action_spec,
-        reward_network=reward_net,
-        observation_and_action_constraint_splitter=lambda x: [x[0], x[1]],
-        accepts_per_arm_features=True,
-        optimizer=optimizer)
-    observations = ({
-        bandit_spec_utils.GLOBAL_FEATURE_KEY:
-            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
-        bandit_spec_utils.PER_ARM_FEATURE_KEY:
-            tf.cast(
-                tf.reshape(tf.range(24), shape=[2, 4, 3]), dtype=tf.float32)
-    }, tf.ones([2, num_actions], dtype=tf.int32))
-    actions = np.array([0, 3], dtype=np.int32)
-    rewards = np.array([0.5, 3.0], dtype=np.float32)
-    initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
-        observations, rewards)
-    action_step = policy_step.PolicyStep(
-        action=tf.convert_to_tensor(actions),
-        info=policy_utilities.PerArmPolicyInfo(
-            chosen_arm_features=np.array([[1, 2, 3], [3, 2, 1]],
-                                         dtype=np.float32)))
-    experience = _get_experience(initial_step, action_step, final_step)
-    agent.train(experience, None)
-    self.evaluate(tf.compat.v1.initialize_all_variables())
-
 
 if __name__ == '__main__':
   tf.test.main()

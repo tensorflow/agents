@@ -170,7 +170,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     training_data_spec = None
     if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
-          policy.trajectory_spec, observation_and_action_constraint_splitter)
+          policy.trajectory_spec)
 
     super(GreedyRewardPredictionAgent, self).__init__(
         time_step_spec,
@@ -196,8 +196,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
   def _train(self, experience, weights):
     (observations, actions,
      rewards) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._observation_and_action_constraint_splitter,
-         self._accepts_per_arm_features, self.training_data_spec)
+         experience, self._accepts_per_arm_features, self.training_data_spec)
+    if self._observation_and_action_constraint_splitter is not None:
+      observations, _ = self._observation_and_action_constraint_splitter(
+          observations)
 
     with tf.GradientTape() as tape:
       loss_info = self.loss(observations,

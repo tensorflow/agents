@@ -239,7 +239,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     training_data_spec = None
     if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
-          policy.trajectory_spec, observation_and_action_constraint_splitter)
+          policy.trajectory_spec)
     super(NeuralLinUCBAgent, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=policy.action_spec,
@@ -533,8 +533,10 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     """
     (observation, action,
      reward) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._observation_and_action_constraint_splitter,
-         self._accepts_per_arm_features, self.training_data_spec)
+         experience, self._accepts_per_arm_features, self.training_data_spec)
+    if self._observation_and_action_constraint_splitter is not None:
+      observation, _ = self._observation_and_action_constraint_splitter(
+          observation)
     reward = tf.cast(reward, self._dtype)
 
     if tf.distribute.has_strategy():

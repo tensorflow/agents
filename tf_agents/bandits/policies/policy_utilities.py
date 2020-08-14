@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import collections
 
-from absl import logging
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
@@ -294,14 +293,14 @@ def construct_mask_from_multiple_sources(
   mask = None
   if observation_and_action_constraint_splitter is not None:
     observation, mask = observation_and_action_constraint_splitter(observation)
-  first_observation = tf.nest.flatten(observation)[0]
-  batch_size = tf.shape(first_observation)[0]
-  if (isinstance(observation, dict) and
-      bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation):
+  elif (isinstance(observation, dict) and
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation):
     number_of_actions = observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
     mask = tf.sequence_mask(
         lengths=number_of_actions, maxlen=max_num_actions, dtype=tf.int32)
 
+  first_observation = tf.nest.flatten(observation)[0]
+  batch_size = tf.shape(first_observation)[0]
   if constraints:
     feasibility_prob = compute_feasibility_probability(
         observation, constraints, batch_size,
@@ -311,18 +310,18 @@ def construct_mask_from_multiple_sources(
   return mask
 
 
-def create_chosen_arm_features_info_spec(
-    observation_spec, observation_and_action_constraint_splitter=None):
+def create_chosen_arm_features_info_spec(observation_spec):
   """Creates the chosen arm features info spec from the arm observation spec."""
-  if observation_and_action_constraint_splitter is not None:
-    observation_spec = observation_and_action_constraint_splitter(
-        observation_spec)[0]
-    if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation_spec:
-      raise ValueError('Variable number of actions and action masking '
-                       'should not be used together.')
-    logging.warning(
-        'Action masking with per-arm features is discouraged. '
-        'Instead, use variable number of actions via the `%s` feature key.',
-        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY)
   arm_spec = observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
   return tensor_spec.remove_outer_dims_nest(arm_spec, 1)
+
+
+def check_no_mask_with_arm_features(accepts_per_arm_features,
+                                    observation_and_action_constraint_splitter):
+  if accepts_per_arm_features and (observation_and_action_constraint_splitter is
+                                   not None):
+    raise NotImplementedError(
+        'Action masking is not allowed for Bandit problems with arm features. '
+        'To implement a policy that handles variable number of actions, please '
+        'use the `{}` feature key.'.format(
+            bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY))

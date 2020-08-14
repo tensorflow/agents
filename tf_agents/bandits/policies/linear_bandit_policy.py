@@ -125,6 +125,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         mask.
       name: The name of this policy.
     """
+    policy_utilities.check_no_mask_with_arm_features(
+        accepts_per_arm_features, observation_and_action_constraint_splitter)
     if not isinstance(cov_matrix, (list, tuple)):
       raise ValueError('cov_matrix must be a list of matrices (Tensors).')
     self._cov_matrix = cov_matrix
@@ -347,7 +349,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
       # The features for the chosen arm is saved to policy_info.
       chosen_arm_features_info = (
           policy_utilities.create_chosen_arm_features_info_spec(
-              observation_spec, observation_and_action_constraint_splitter))
+              observation_spec))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
           predicted_rewards_sampled=predicted_rewards_sampled,

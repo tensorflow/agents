@@ -119,6 +119,8 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
         observation and mask.
       name: The name of this policy.
     """
+    policy_utilities.check_no_mask_with_arm_features(
+        accepts_per_arm_features, observation_and_action_constraint_splitter)
     encoding_network.create_variables()
     self._encoding_network = encoding_network
     self._reward_layer = reward_layer
@@ -204,8 +206,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     if accepts_per_arm_features:
       chosen_arm_features_info_spec = (
           policy_utilities.create_chosen_arm_features_info_spec(
-              time_step_spec.observation,
-              observation_and_action_constraint_splitter))
+              time_step_spec.observation))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
           predicted_rewards_optimistic=predicted_rewards_optimistic,

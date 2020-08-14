@@ -152,7 +152,7 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
     training_data_spec = None
     if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
-          policy.trajectory_spec, observation_and_action_constraint_splitter)
+          policy.trajectory_spec)
 
     super(GreedyMultiObjectiveNeuralAgent, self).__init__(
         time_step_spec,
@@ -178,8 +178,10 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
              weights: types.Tensor) -> tf_agent.LossInfo:
     (observations, actions,
      objective_values) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._observation_and_action_constraint_splitter,
-         self._accepts_per_arm_features, self.training_data_spec)
+         experience, self._accepts_per_arm_features, self.training_data_spec)
+    if self._observation_and_action_constraint_splitter is not None:
+      observations, _ = self._observation_and_action_constraint_splitter(
+          observations)
     if objective_values.shape.rank != 2:
       raise ValueError(
           'The objectives tensor should be rank-2 [batch_size, num_objectives],'

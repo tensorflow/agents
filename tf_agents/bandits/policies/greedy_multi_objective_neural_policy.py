@@ -128,6 +128,8 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
       ValueError: If `accepts_per_arm_features` is true but `time_step_spec` is
         None.
     """
+    policy_utilities.check_no_mask_with_arm_features(
+        accepts_per_arm_features, observation_and_action_constraint_splitter)
     flat_action_spec = tf.nest.flatten(action_spec)
     if len(flat_action_spec) > 1:
       raise NotImplementedError(
@@ -172,8 +174,7 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
       # The features for the chosen arm is saved to policy_info.
       chosen_arm_features_info = (
           policy_utilities.create_chosen_arm_features_info_spec(
-              time_step_spec.observation,
-              observation_and_action_constraint_splitter))
+              time_step_spec.observation))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
           bandit_policy_type=bandit_policy_type,
