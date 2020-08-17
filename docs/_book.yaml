@@ -35,7 +35,7 @@ upper_tabs:
       - heading: "Tutorials"
       - title: REINFORCE agent
         path: /agents/tutorials/6_reinforce_tutorial
-      - title: Soft actor critic in Minitaur
+      - title: Soft Actor Critic (SAC) in Minitaur
         path: /agents/tutorials/7_SAC_minitaur_tutorial
       - title: Categorical DQN
         path: /agents/tutorials/9_c51_tutorial
