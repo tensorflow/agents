@@ -158,17 +158,17 @@ class ReverbAddEpisodeObserver(object):
           num_timesteps=self._cached_steps,
           priority=self._priority)
     self.reset()
-    self._overflow_episode = False
 
   def reset(self):
     """Resets the state of the observer.
 
-    The observed data (appended to the writer) will be written to RB after
-    calling reset. Note that, each write creates a separate entry in the
-    replay buffer.
+    Note that the data cached in the writer will NOT get automatically written
+    into the Reverb table. If you wish to write the cached partial episode as
+    a new sequences, call `write_cached_steps` instead.
     """
     self.close()
     self.open()
+    self._overflow_episode = False
 
   def open(self):
     """Open the writer of the observer."""
