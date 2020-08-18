@@ -32,8 +32,8 @@ from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
-
 from tf_agents.utils import common
+from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
 
@@ -512,6 +512,33 @@ class TFAgent(tf.Module):
       raise TypeError(
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))
     return loss_info
+
+  def _apply_loss(self, aggregated_losses, variables_to_train, tape, optimizer):
+    total_loss = aggregated_losses.total_loss
+    tf.debugging.check_numerics(total_loss, "Loss is inf or nan")
+    assert list(variables_to_train), "No variables in the agent's network."
+
+    grads = tape.gradient(total_loss, variables_to_train)
+    grads_and_vars = list(zip(grads, variables_to_train))
+
+    if self._gradient_clipping is not None:
+      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
+                                                       self._gradient_clipping)
+
+    if self.summarize_grads_and_vars:
+      eager_utils.add_variables_summaries(grads_and_vars,
+                                          self.train_step_counter)
+
+    optimizer.apply_gradients(grads_and_vars)
+
+    if self.summaries_enabled:
+      dict_losses = {
+          "loss": aggregated_losses.weighted,
+          "reg_loss": aggregated_losses.regularization,
+          "total_loss": total_loss
+      }
+      common.summarize_scalar_dict(
+          dict_losses, step=self.train_step_counter, name_scope="Losses/")
 
   @property
   def validate_args(self) -> bool:
