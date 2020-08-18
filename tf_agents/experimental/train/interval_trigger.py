@@ -18,6 +18,8 @@
 
 from typing import Callable
 
+from absl import logging
+
 
 class IntervalTrigger(object):
   """Triggers on every fixed interval."""
@@ -43,6 +45,12 @@ class IntervalTrigger(object):
       force_trigger: If True, the trigger will be forced triggered unless the
         last trigger value is equal to `value`.
     """
+    if self._interval <= 0:
+      logging.info(
+          'IntervalTrigger was not triggered because interval is set to %d',
+          self._interval)
+      return
+
     if (force_trigger and value != self._last_trigger_value) or (
         value >= self._last_trigger_value + self._interval):
       self._last_trigger_value = value
