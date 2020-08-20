@@ -139,6 +139,7 @@ class PPOAgent(tf_agent.TFAgent):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
+      observation_and_action_constraint_splitter: types.Splitter = None,
       name: Optional[Text] = None):
     """Creates a PPO Agent.
 
@@ -320,6 +321,8 @@ class PPOAgent(tf_agent.TFAgent):
           'Only tf.keras.optimizers.Optimiers are well supported, got a '
           'non-TF2 optimizer: %s', self._optimizer)
 
+    self._observation_and_action_constraint_splitter = observation_and_action_constraint_splitter
+
     self._initial_adaptive_kl_beta = initial_adaptive_kl_beta
     if initial_adaptive_kl_beta > 0.0:
       # TODO(kbanoop): Rename create_variable.
@@ -335,9 +338,13 @@ class PPOAgent(tf_agent.TFAgent):
 
     self._observation_normalizer = None
     if normalize_observations:
+      observation = time_step_spec.observation
+      if self._observation_and_action_constraint_splitter:
+        observation, _ = self._observation_and_action_constraint_splitter(observation)
+
       self._observation_normalizer = (
           tensor_normalizer.StreamingTensorNormalizer(
-              time_step_spec.observation, scope='normalize_observations'))
+              observation, scope='normalize_observations'))
 
     self._advantage_normalizer = tensor_normalizer.StreamingTensorNormalizer(
         tensor_spec.TensorSpec([], tf.float32), scope='normalize_advantages')
@@ -349,6 +356,7 @@ class PPOAgent(tf_agent.TFAgent):
             actor_network=actor_net,
             value_network=value_net,
             observation_normalizer=self._observation_normalizer,
+            observation_and_action_constraint_splitter=self._observation_and_action_constraint_splitter,
             clip=False,
             collect=False))
 
@@ -358,6 +366,7 @@ class PPOAgent(tf_agent.TFAgent):
         actor_network=actor_net,
         value_network=value_net,
         observation_normalizer=self._observation_normalizer,
+        observation_and_action_constraint_splitter=self._observation_and_action_constraint_splitter,
         clip=False,
         collect=True,
         compute_value_and_advantage_in_train=(
@@ -859,8 +868,12 @@ class PPOAgent(tf_agent.TFAgent):
           self._collect_policy.distribution(time_steps, policy_state).action)
       self.update_adaptive_kl_beta(kl_divergence)
 
+    observation = time_steps.observation
+    if self._observation_and_action_constraint_splitter is not None:
+      observation,_ = self._observation_and_action_constraint_splitter(time_steps.observation)
+
     if self.update_normalizers_in_train:
-      self.update_observation_normalizer(time_steps.observation)
+      self.update_observation_normalizer(observation)
       self.update_reward_normalizer(processed_experience.reward)
 
     loss_info = tf.nest.map_structure(tf.identity, loss_info)
