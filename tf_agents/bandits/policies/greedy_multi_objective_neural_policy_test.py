@@ -287,6 +287,28 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [2, 0])
 
+  def testSetScalarizationParameters(self):
+    policy = greedy_multi_objective_policy.GreedyMultiObjectiveNeuralPolicy(
+        self._time_step_spec, self._action_spec, self._scalarizer,
+        self._create_objective_networks())
+    observations = tf.constant([[1, 2], [2, 1]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    policy.scalarizer.set_parameters(
+        direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+        transform_params={
+            multi_objective_scalarizer.HyperVolumeScalarizer.SLOPE_KEY:
+                tf.constant([[0.2, 0.2, 0.2], [0.1, 0.1, 0.1]],
+                            dtype=tf.float32),
+            multi_objective_scalarizer.HyperVolumeScalarizer.OFFSET_KEY:
+                tf.constant([[1, 1, 1], [2, 2, 2]], dtype=tf.float32)
+        })
+    action_step = policy.action(time_step)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllEqual(self.evaluate(action_step.action), [2, 1])
+
   def testActionHeteroscedastic(self):
     policy = greedy_multi_objective_policy.GreedyMultiObjectiveNeuralPolicy(
         self._time_step_spec, self._action_spec, self._scalarizer,

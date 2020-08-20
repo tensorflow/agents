@@ -198,8 +198,12 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
         name=name)
 
   @property
-  def accepts_per_arm_features(self):
+  def accepts_per_arm_features(self) -> bool:
     return self._accepts_per_arm_features
+
+  @property
+  def scalarizer(self) -> multi_objective_scalarizer.Scalarizer:
+    return self._scalarizer
 
   def _predict(
       self, observation: types.NestedSpecTensorOrArray,

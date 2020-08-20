@@ -321,6 +321,32 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
     actions = self.evaluate(action_step.action)
     self.assertAllEqual(actions, [2, 0])
 
+  def testPolicySetScalarizationParameters(self):
+    agent = greedy_multi_objective_agent.GreedyMultiObjectiveNeuralAgent(
+        self._time_step_spec,
+        self._action_spec,
+        self._scalarizer,
+        objective_networks=self._create_objective_networks(),
+        optimizer=None)
+    observations = tf.constant([[1, 2], [2, 1]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=2)
+    policy = agent.policy
+    policy.scalarizer.set_parameters(
+        direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+        transform_params={
+            multi_objective_scalarizer.HyperVolumeScalarizer.SLOPE_KEY:
+                tf.constant([[0.2, 0.2, 0.2], [0.1, 0.1, 0.1]],
+                            dtype=tf.float32),
+            multi_objective_scalarizer.HyperVolumeScalarizer.OFFSET_KEY:
+                tf.constant([[1, 1, 1], [2, 2, 2]], dtype=tf.float32)
+        })
+    action_step = policy.action(time_steps)
+    # Batch size 2.
+    self.assertAllEqual([2], action_step.action.shape)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    actions = self.evaluate(action_step.action)
+    self.assertAllEqual(actions, [2, 1])
+
   def testInitializeRestoreAgent(self):
     agent = greedy_multi_objective_agent.GreedyMultiObjectiveNeuralAgent(
         self._time_step_spec,

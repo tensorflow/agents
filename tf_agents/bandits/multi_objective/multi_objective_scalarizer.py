@@ -22,13 +22,43 @@ from __future__ import print_function
 
 import abc
 import copy
-from typing import NamedTuple, Sequence, Union
+from typing import Dict, NamedTuple, Sequence, Union
 
 import numpy as np
 import six
 import tensorflow.compat.v2 as tf
 
 ScalarFloat = Union[float, np.float16, np.float32, np.float64]
+
+
+def _validate_scalarization_parameter_shape(
+    multi_objectives: tf.Tensor, params: Dict[str, Union[Sequence[ScalarFloat],
+                                                         tf.Tensor]]):
+  """A private helper that validates the shapes of scalarization parameters.
+
+  Every scalarization parameter in the input dictionary is either a 1-D tensor
+  or `Sequence`, or a tensor whose shape matches the shape of the input
+  `multi_objectives` tensor. This is invoked by the `Scalarizer.call` method.
+
+  Args:
+    multi_objectives: A `tf.Tensor` representing the multiple objectives to be
+      scalarized.
+    params: A dictionary from parameter names to parameter values (`Sequence` or
+      `tf.Tensor`).
+
+  Raises:
+    tf.errors.InvalidArgumentError: if any scalarization parameter is not a 1-D
+      tensor or `Sequence`, and has shape that does not match the shape of
+      `multi_objectives`.
+  """
+  for param_name, param_value in params.items():
+    param_shape = tf.convert_to_tensor(param_value).shape
+    if param_shape.rank != 1 and not multi_objectives.shape.is_compatible_with(
+        param_shape):
+      raise ValueError(
+          'The shape of multi_objectives: {} does not match the shape of '
+          'scalarization parameter: {}, which is {}'.format(
+              multi_objectives.shape, param_name, param_shape))
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -84,10 +114,40 @@ class Scalarizer(tf.Module):
               self._num_of_objectives, multi_objectives.shape.dims[1]))
     return self.call(multi_objectives)
 
+  def _validate_scalarization_parameters(self, params: Dict[str, tf.Tensor]):
+    """Validates the scalarization parameters.
+
+    Each scalarization parameter in the input dictionary should be a rank-2
+    tensor, and the last dimension size should match `self._num_of_objectives`.
+
+    Args:
+      params: A dictionary from parameter names to parameter tensors.
+
+    Raises:
+      ValueError: if any input scalarization parameter violates any of the
+      required properties.
+    """
+    for param_name, param in params.items():
+      if param.shape.rank != 2:
+        raise ValueError(
+            'Scalarization parameter: {} should be a rank-2 tensor with shape '
+            '[batch_size, num_of_objectives], but found to be: {}'.format(
+                param_name, param))
+      elif param.shape.dims[-1] != self._num_of_objectives:
+        raise ValueError(
+            'The number of objectives in scalarization parameter: {} should '
+            'be {}, but found to be {}.'.format(param_name,
+                                                self._num_of_objectives,
+                                                param.shape.dims[-1]))
+
   # Subclasses must implement these methods.
   @abc.abstractmethod
   def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
     """Implementation of scalarization logic by subclasses."""
+
+  @abc.abstractmethod
+  def set_parameters(self):
+    """Setter method for scalarization parameters."""
 
 
 class LinearScalarizer(Scalarizer):
@@ -109,7 +169,24 @@ class LinearScalarizer(Scalarizer):
     super(LinearScalarizer, self).__init__(len(self._weights))
 
   def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
+    _validate_scalarization_parameter_shape(multi_objectives,
+                                            {'weights': self._weights})
     return tf.reduce_sum(multi_objectives * self._weights, axis=1)
+
+  def set_parameters(self, weights: tf.Tensor):
+    """Set the scalarization parameter of the LinearScalarizer.
+
+    Args:
+      weights: A a rank-2 `tf.Tensor` of weights shaped as
+        [batch_size, self._num_of_objectives], where `batch_size` should match
+        the batch size of the `multi_objectives` passed to the scalarizer call.
+
+    Raises:
+      ValueError: if the weights tensor is not rank-2, or has a last dimension
+      size that does not match `self._num_of_objectives`.
+    """
+    self._validate_scalarization_parameters({'weights': weights})
+    self._weights = weights
 
 
 class ChebyshevScalarizer(Scalarizer):
@@ -148,12 +225,37 @@ class ChebyshevScalarizer(Scalarizer):
           'weights has {} elements but reference_point has {}.'.format(
               len(weights), len(reference_point)))
     self._weights = copy.deepcopy(weights)
-    self._reference_point = copy.deepcopy(reference_point)
+    self._reference_point = reference_point
     super(ChebyshevScalarizer, self).__init__(len(self._weights))
 
   def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
+    _validate_scalarization_parameter_shape(multi_objectives, {
+        'weights': self._weights,
+        'reference_point': self._reference_point
+    })
     return tf.reduce_min(
         (multi_objectives - self._reference_point) * self._weights, axis=1)
+
+  def set_parameters(self, weights: tf.Tensor, reference_point: tf.Tensor):
+    """Set the scalarization parameters for the ChebyshevScalarizer.
+
+    Args:
+      weights: A rank-2 `tf.Tensor` of weights shaped as
+        [batch_size, self._num_of_objectives], where `batch_size` should match
+        the batch size of the `multi_objectives` passed to the scalarizer call.
+      reference_point: A `tf.Tensor` of coordinates for the reference point that
+        must satisfy the same rank and shape requirements as `weights`.
+
+    Raises:
+      ValueError: if any input scalarization parameter tensor is not rank-2, or
+      has a last dimension size that does not match `self._num_of_objectives`.
+    """
+    self._validate_scalarization_parameters({
+        'weights': weights,
+        'reference_point': reference_point
+    })
+    self._weights = weights
+    self._reference_point = reference_point
 
 
 class HyperVolumeScalarizer(Scalarizer):
@@ -169,9 +271,11 @@ class HyperVolumeScalarizer(Scalarizer):
   Note that it is recommended for the user to set A_i and B_i in such a way to
   ensure non-negativity of the transformed objectives.
   """
-
-  PARAMS = NamedTuple('PARAMS', [('slope', ScalarFloat),
-                                 ('offset', ScalarFloat)])
+  DIRECTION_KEY = 'direction'
+  SLOPE_KEY = 'slope'
+  OFFSET_KEY = 'offset'
+  PARAMS = NamedTuple('PARAMS', [(SLOPE_KEY, ScalarFloat),
+                                 (OFFSET_KEY, ScalarFloat)])
   ALMOST_ZERO = 1e-16
 
   def __init__(self, direction: Sequence[ScalarFloat],
@@ -214,12 +318,18 @@ class HyperVolumeScalarizer(Scalarizer):
     if len(transform_params) != len(self._direction):
       raise ValueError(
           'direction has {} elements but transform_params has {}.'.format(
-              len(self._direction), len(transform_params)))
+              len(direction), len(transform_params)))
     self._slopes, self._offsets = zip(*[(p.slope, p.offset)
                                         for p in transform_params])
     super(HyperVolumeScalarizer, self).__init__(len(self._direction))
 
   def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
+    _validate_scalarization_parameter_shape(
+        multi_objectives, {
+            self.DIRECTION_KEY: self._direction,
+            self.SLOPE_KEY: self._slopes,
+            self.OFFSET_KEY: self._offsets
+        })
     transformed_objectives = tf.maximum(
         multi_objectives * self._slopes + self._offsets, 0)
     nonzero_mask = tf.broadcast_to(
@@ -229,3 +339,38 @@ class HyperVolumeScalarizer(Scalarizer):
         tf.where(nonzero_mask, transformed_objectives / self._direction,
                  multi_objectives.dtype.max),
         axis=1)
+
+  def set_parameters(self, direction: tf.Tensor,
+                     transform_params: Dict[str, tf.Tensor]):
+    """Set the scalarization parameters for the HyperVolumeScalarizer.
+
+    Args:
+      direction: A `tf.Tensor` representing a directional vector, which will be
+        normalized to have unit length. Coordinates of the normalized direction
+        whose absolute values are less than `HyperVolumeScalarizer.ALMOST_ZERO`
+        will be considered zeros. It must be rank-2 and shaped as
+        [batch_size, self._num_of_objectives], where `batch_size` should match
+        the batch size of the multi objectives passed to the scalarizer call.
+      transform_params: A dictionary mapping `self.SLOPE_KEY` and/or
+        `self.OFFSET_KEY` to `tf.Tensor`, representing the slope and the offset
+        parameters for transforming an objective to be non-negative. These
+        tensors must satisfy the same rank and shape requirements as
+        `direction`.
+
+    Raises:
+      ValueError: if any input scalarization parameter tensor is not rank-2, or
+      has a last dimension size that does not match `self._num_of_objectives`.
+    """
+    self._validate_scalarization_parameters({self.DIRECTION_KEY: direction})
+    self._direction = direction
+    for key, param in transform_params.items():
+      if key == self.SLOPE_KEY:
+        self._validate_scalarization_parameters({key: param})
+        self._slopes = param
+      elif key == self.OFFSET_KEY:
+        self._validate_scalarization_parameters({key: param})
+        self._offsets = param
+      else:
+        raise ValueError(
+            'All transform_params keys should be {} or {}, but one key is not:'
+            ' {}'.format(self.SLOPE_KEY, self.OFFSET_KEY, key))

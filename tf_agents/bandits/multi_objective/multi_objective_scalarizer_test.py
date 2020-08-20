@@ -30,6 +30,9 @@ class DummyScalarizer(multi_objective_scalarizer.Scalarizer):
   def call(self, multi_objectives):
     pass
 
+  def set_parameters(self):
+    pass
+
 
 class BaseScalarizerTest(tf.test.TestCase):
 
@@ -56,9 +59,11 @@ class BaseScalarizerTest(tf.test.TestCase):
 class LinearScalarizerTest(tf.test.TestCase):
 
   def setUp(self):
+    super(LinearScalarizerTest, self).setUp()
     self._scalarizer = multi_objective_scalarizer.LinearScalarizer(
         [1, 2, 3, -1])
-    super(LinearScalarizerTest, self).setUp()
+    self._batch_multi_objectives = tf.constant(
+        [[1, 2, 3, 4], [5, 6, 7, 8], [-1, -2, -3, -4]], dtype=tf.float32)
 
   def testInvalidWeights(self):
     with self.assertRaisesRegex(ValueError, 'at least two objectives'):
@@ -79,19 +84,43 @@ class LinearScalarizerTest(tf.test.TestCase):
         self.evaluate(tf.constant([10], dtype=tf.float32)))
 
   def testBatchSizeThree(self):
-    multi_objectives = tf.constant(
-        [[1, 2, 3, 4], [5, 6, 7, 8], [-1, -2, -3, -4]], dtype=tf.float32)
     self.assertAllEqual(
-        self.evaluate(self._scalarizer(multi_objectives)),
+        self.evaluate(self._scalarizer(self._batch_multi_objectives)),
         self.evaluate(tf.constant([10, 30, -10], dtype=tf.float32)))
+
+  def testSetParameters(self):
+    # batch_size = 3, num_actions = 4.
+    self._scalarizer.set_parameters(
+        tf.constant([[0.1, 0.2, 0.3, -0.1], [-0.1, 0.2, 0.3, 0.1],
+                     [0.1, -0.2, 0.3, 0.1]],
+                    dtype=tf.float32))
+    self.assertAllClose(
+        self.evaluate(self._scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([1, 3.6, -1], dtype=tf.float32)))
+
+  def testSetParametersWrongNumberOfObjectivesRaisesValueError(self):
+    with self.assertRaisesRegex(
+        ValueError, 'The number of objectives in scalarization parameter'):
+      self._scalarizer.set_parameters(
+          tf.constant([[0.1, 0.2]], dtype=tf.float32))
+
+  def testCallWrongBatchSizeRaisesValueError(self):
+    with self.assertRaisesRegex(ValueError, 'does not match the shape of'):
+      self._scalarizer.set_parameters(
+          tf.constant([[0.1, 0.2, 0.3, -0.1], [-0.1, 0.2, 0.3, 0.1],
+                       [0.1, -0.2, 0.3, 0.1], [0.1, 0.2, -0.3, 0.1]],
+                      dtype=tf.float32))
+      self.evaluate(self._scalarizer(self._batch_multi_objectives))
 
 
 class ChebyShevScalarizerTest(tf.test.TestCase):
 
   def setUp(self):
+    super(ChebyShevScalarizerTest, self).setUp()
     self._scalarizer = multi_objective_scalarizer.ChebyshevScalarizer(
         [1, 2, 3, -1], [0, 1, 2, 3])
-    super(ChebyShevScalarizerTest, self).setUp()
+    self._batch_multi_objectives = tf.constant(
+        [[1, 2, 3, 4], [5, 6, 7, 8], [-1, -2, -3, -4]], dtype=tf.float32)
 
   def testInvalidWeightsAndReference(self):
     with self.assertRaisesRegex(ValueError, 'at least two objectives'):
@@ -114,21 +143,67 @@ class ChebyShevScalarizerTest(tf.test.TestCase):
         self.evaluate(tf.constant([-1], dtype=tf.float32)))
 
   def testBatchSizeThree(self):
-    multi_objectives = tf.constant(
-        [[1, 2, 3, 4], [5, 6, 7, 8], [-1, -2, -3, -4]], dtype=tf.float32)
     self.assertAllEqual(
-        self.evaluate(self._scalarizer(multi_objectives)),
+        self.evaluate(self._scalarizer(self._batch_multi_objectives)),
         self.evaluate(tf.constant([-1, -5, -15], dtype=tf.float32)))
+
+  def testSetParameters(self):
+    self._scalarizer.set_parameters(
+        weights=tf.constant([[0.1, 0.2, 0.3, -0.1], [-0.1, 0.2, 0.3, 0.1],
+                             [0.1, -0.2, 0.3, 0.1]],
+                            dtype=tf.float32),
+        reference_point=tf.constant(
+            [[-5, -5, -5, -5], [0, 0, 0, 0], [1, 2, 3, 4]], dtype=tf.float32))
+    self.assertAllClose(
+        self.evaluate(self._scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([-0.9, -0.5, -1.8], dtype=tf.float32)))
+
+  def testSetParametersWeightsWrongNumberOfObjectivesRaisesValueError(self):
+    with self.assertRaisesRegex(
+        ValueError, 'The number of objectives in scalarization parameter'):
+      self._scalarizer.set_parameters(
+          weights=tf.constant([[0.1, 0.2, 0.3]] * 3, dtype=tf.float32),
+          reference_point=tf.constant([[-5, -5, -5, -5]] * 3, dtype=tf.float32))
+
+  def testSetParametersReferencePointWrongNumberOfObjectivesRaisesValueError(
+      self):
+    with self.assertRaisesRegex(
+        ValueError, 'The number of objectives in scalarization parameter'):
+      self._scalarizer.set_parameters(
+          weights=tf.constant([[0.1, 0.2, 0.3, -0.1]] * 3, dtype=tf.float32),
+          reference_point=tf.constant([[-5, -5, -5]] * 3, dtype=tf.float32))
+
+  def testCallWeightsWrongBatchSizeRaisesValueError(self):
+    with self.assertRaisesRegex(ValueError, 'does not match the shape of'):
+      self._scalarizer.set_parameters(
+          weights=tf.constant([[0.1, 0.2, 0.3, -0.1], [-0.1, 0.2, 0.3, 0.1],
+                               [0.1, -0.2, 0.3, 0.1], [0.1, 0.2, -0.3, 0.1]],
+                              dtype=tf.float32),
+          reference_point=tf.constant(
+              [[-5, -5, -5, -5], [0, 0, 0, 0], [1, 2, 3, 4]], dtype=tf.float32))
+      self.evaluate(self._scalarizer(self._batch_multi_objectives))
+
+  def testCallReferencePointWrongBatchSizeRaisesValueError(self):
+    with self.assertRaisesRegex(ValueError, 'does not match the shape of'):
+      self._scalarizer.set_parameters(
+          weights=tf.constant([[0.1, 0.2, 0.3, -0.1], [-0.1, 0.2, 0.3, 0.1],
+                               [0.1, -0.2, 0.3, 0.1]],
+                              dtype=tf.float32),
+          reference_point=tf.constant([[-5, -5, -5, -5], [0, 0, 0, 0]],
+                                      dtype=tf.float32))
+      self.evaluate(self._scalarizer(self._batch_multi_objectives))
 
 
 class HyperVolumeScalarizerTest(tf.test.TestCase):
 
   def setUp(self):
+    super(HyperVolumeScalarizerTest, self).setUp()
     self._hv_params = [
         multi_objective_scalarizer.HyperVolumeScalarizer.PARAMS(
             slope=1, offset=0)
     ] * 3
-    super(HyperVolumeScalarizerTest, self).setUp()
+    self._batch_multi_objectives = tf.constant([[3, 2, 1], [6, 5, 4]],
+                                               dtype=tf.float32)
 
   def testInvalidParams(self):
     with self.assertRaisesRegex(ValueError, 'nearly-zero vector'):
@@ -168,27 +243,24 @@ class HyperVolumeScalarizerTest(tf.test.TestCase):
     direction = [0, 1, 0]
     scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
         direction, self._hv_params)
-    multi_objectives = tf.constant([[3, 2, 1], [6, 5, 4]], dtype=tf.float32)
     self.assertAllEqual(
-        self.evaluate(scalarizer(multi_objectives)),
+        self.evaluate(scalarizer(self._batch_multi_objectives)),
         self.evaluate(tf.constant([2, 5], dtype=tf.float32)))
 
   def testDirectionNormalization(self):
-    multi_objectives = tf.constant([[3, 2, 1], [6, 5, 4]], dtype=tf.float32)
     for direction in [[1, 2, 2], [0.1, 0.2, 0.2]]:
       scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
           direction, self._hv_params)
       self.assertAllClose(
-          self.evaluate(scalarizer(multi_objectives)),
+          self.evaluate(scalarizer(self._batch_multi_objectives)),
           self.evaluate(tf.constant([1.5, 6], dtype=tf.float32)))
 
   def testNegativeObjectives(self):
     direction = [1, 0, 0]
     scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
         direction, self._hv_params)
-    multi_objectives = tf.constant([[-3, 2, 1], [-6, 5, 4]], dtype=tf.float32)
     self.assertAllEqual(
-        self.evaluate(scalarizer(multi_objectives)),
+        self.evaluate(scalarizer(-1.0 * self._batch_multi_objectives)),
         self.evaluate(tf.constant([0, 0], dtype=tf.float32)))
 
   def testObjectiveTranformation(self):
@@ -198,9 +270,8 @@ class HyperVolumeScalarizerTest(tf.test.TestCase):
     direction = [1, 0, 0]
     scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
         direction, hv_params)
-    multi_objectives = tf.constant([[-3, 2, 1], [-6, 5, 4]], dtype=tf.float32)
     self.assertAllEqual(
-        self.evaluate(scalarizer(multi_objectives)),
+        self.evaluate(scalarizer(-1.0 * self._batch_multi_objectives)),
         self.evaluate(tf.constant([5, 8], dtype=tf.float32)))
 
   def testNearZeroObjectivesAndDirectionCoordinates(self):
@@ -231,6 +302,151 @@ class HyperVolumeScalarizerTest(tf.test.TestCase):
     self.assertAllClose(
         self.evaluate(scalarizer(multi_objectives)),
         self.evaluate(tf.constant([3], dtype=tf.float32)))
+
+  def testSetParameters(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    scalarizer.set_parameters(
+        direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+        transform_params={
+            multi_objective_scalarizer.HyperVolumeScalarizer.SLOPE_KEY:
+                tf.constant([[1, 2, 1], [1, 1, 2]], dtype=tf.float32),
+            multi_objective_scalarizer.HyperVolumeScalarizer.OFFSET_KEY:
+                tf.constant([[0.5, 0.5, 0.5], [0.1, 0.1, 0.1]],
+                            dtype=tf.float32)
+        })
+    self.assertAllClose(
+        self.evaluate(scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([4.5, 8.1], dtype=tf.float32)))
+
+  def testSetParametersDirectionOnly(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    scalarizer.set_parameters(
+        direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+        transform_params={})
+    self.assertAllClose(
+        self.evaluate(scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([2, 4], dtype=tf.float32)))
+
+  def testSetParametersDirectionAndSlope(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    scalarizer.set_parameters(
+        direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+        transform_params={
+            multi_objective_scalarizer.HyperVolumeScalarizer.SLOPE_KEY:
+                tf.constant([[1, 2, 1], [1, 1, 2]], dtype=tf.float32)
+        })
+    self.assertAllClose(
+        self.evaluate(scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([4, 8], dtype=tf.float32)))
+
+  def testSetParametersDirectionAndOffset(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    scalarizer.set_parameters(
+        direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+        transform_params={
+            multi_objective_scalarizer.HyperVolumeScalarizer.OFFSET_KEY:
+                tf.constant([[0.5, 0.5, 0.5], [0.1, 0.1, 0.1]],
+                            dtype=tf.float32)
+        })
+    self.assertAllClose(
+        self.evaluate(scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([2.5, 4.1], dtype=tf.float32)))
+
+  def testSetParametersInvalidTransformationParamsKeysRaisesValueError(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(ValueError,
+                                'All transform_params keys should be'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1, 0], [0, 0, 1]], dtype=tf.float32),
+          transform_params={
+              'weights': tf.constant([1, 1, 1], dtype=tf.float32)
+          })
+
+  def testSetParametersDirectionWithWrongNumberOfObjectivesRaisesValueError(
+      self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(
+        ValueError, 'The number of objectives in scalarization parameter'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1]] * 2, dtype=tf.float32),
+          transform_params={})
+
+  def testSetParametersSlopeWithWrongNumberOfObjectivesRaisesValueError(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(
+        ValueError, 'The number of objectives in scalarization parameter'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1, 0]] * 2, dtype=tf.float32),
+          transform_params={
+              multi_objective_scalarizer.HyperVolumeScalarizer.SLOPE_KEY:
+                  tf.constant([[1, 2]] * 2, dtype=tf.float32)
+          })
+
+  def testSetParametersOffsetWithWrongNumberOfObjectivesRaisesValueError(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(
+        ValueError, 'The number of objectives in scalarization parameter'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1, 0]] * 2, dtype=tf.float32),
+          transform_params={
+              multi_objective_scalarizer.HyperVolumeScalarizer.OFFSET_KEY:
+                  tf.constant([[1, 2]] * 2, dtype=tf.float32)
+          })
+
+  def testCallDirectionWrongBatchSizeRaisesValueError(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(ValueError, 'does not match the shape of'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1, 0], [1, 0, 0], [0, 0, 1]],
+                                dtype=tf.float32),
+          transform_params={})
+      self.evaluate(scalarizer(self._batch_multi_objectives))
+
+  def testCallSlopeWrongBatchSizeRaisesValueError(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(ValueError, 'does not match the shape of'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1, 0], [1, 0, 0]], dtype=tf.float32),
+          transform_params={
+              multi_objective_scalarizer.HyperVolumeScalarizer.SLOPE_KEY:
+                  tf.constant([[1, 2, 1], [2, 1, 1], [1, 1, 2]],
+                              dtype=tf.float32)
+          })
+      self.evaluate(scalarizer(self._batch_multi_objectives))
+
+  def testCallOffsetWrongBatchSizeRaisesValueError(self):
+    direction = [1, 0, 0]
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        direction, self._hv_params)
+    with self.assertRaisesRegex(ValueError, 'does not match the shape of'):
+      scalarizer.set_parameters(
+          direction=tf.constant([[0, 1, 0], [1, 0, 0]], dtype=tf.float32),
+          transform_params={
+              multi_objective_scalarizer.HyperVolumeScalarizer.OFFSET_KEY:
+                  tf.constant([[1, 2, 1], [2, 1, 1], [1, 1, 2]],
+                              dtype=tf.float32)
+          })
+      self.evaluate(scalarizer(self._batch_multi_objectives))
 
 
 if __name__ == '__main__':
