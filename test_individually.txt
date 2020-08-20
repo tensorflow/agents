@@ -5,3 +5,4 @@ system.multiprocessing_test
 # TestSuite.
 environments.random_py_environment_test
 environments.random_tf_environment_test
+experimental.train.learner_test
