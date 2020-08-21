@@ -128,7 +128,9 @@ class Learner(tf.Module):
         max_to_keep=max_checkpoints_to_keep,
         agent=self._agent,
         train_step=self.train_step)
-    self._checkpointer.initialize_or_restore()  # pytype: disable=attribute-error
+
+    with self.strategy.scope():
+      self._checkpointer.initialize_or_restore()  # pytype: disable=attribute-error
 
     self.triggers.append(self._get_checkpoint_trigger(checkpoint_interval))
     self.summary_interval = tf.constant(summary_interval, dtype=tf.int64)
