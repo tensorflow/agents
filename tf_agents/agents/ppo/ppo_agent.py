@@ -781,7 +781,7 @@ class PPOAgent(tf_agent.TFAgent):
     normalized_advantages = self._advantage_normalizer.normalize(
         processed_experience.policy_info['advantage'],
         clip_value=0,
-        center_mean=False,
+        center_mean=True,
         variance_epsilon=1e-8)
     if self._debug_summaries:
       tf.compat.v2.summary.histogram(
