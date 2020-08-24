@@ -243,6 +243,11 @@ def soft_variables_update(source_variables,
                           sort_variables_by_name=False):
   """Performs a soft/hard update of variables from the source to the target.
 
+  Note: **when using this function with TF DistributionStrategy**, the
+  `strategy.extended.update` call (below) needs to be done in a cross-replica
+  context, i.e. inside a merge_call. Please use the Periodically class above
+  that provides this wrapper for you.
+
   For each variable v_t in target variables and its corresponding variable v_s
   in source variables, a soft update is:
   v_t = (1 - tau) * v_t + tau * v_s
@@ -262,9 +267,12 @@ def soft_variables_update(source_variables,
 
   Returns:
     An operation that updates target variables from source variables.
+
   Raises:
     ValueError: if `tau not in [0, 1]`.
     ValueError: if `len(source_variables) != len(target_variables)`.
+    ValueError: "Method requires being in cross-replica context,
+      use get_replica_context().merge_call()" if used inside replica context.
   """
   if tau < 0 or tau > 1:
     raise ValueError('Input `tau` should be in [0, 1].')
