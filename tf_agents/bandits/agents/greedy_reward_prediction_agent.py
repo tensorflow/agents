@@ -188,7 +188,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     tf.compat.v1.variables_initializer(self.variables)
 
   def _variables_to_train(self):
-    variables_to_train = self._reward_network.variables
+    variables_to_train = self._reward_network.trainable_variables
     for c in self._constraints:
       variables_to_train.extend(c.variables)
     return variables_to_train
