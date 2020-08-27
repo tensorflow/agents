@@ -98,6 +98,19 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
         policy_utilities.masked_argmax(input_tensor, tf.constant(mask)))
     self.assertAllEqual(actual, expected)
 
+  def testNumActionsFromTensorSpecGoodSpec(self):
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=15)
+    num_actions = policy_utilities.get_num_actions_from_tensor_spec(action_spec)
+    self.assertEqual(num_actions, 16)
+
+  def testNumActionsFromTensorSpecWrongRank(self):
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(2, 3), minimum=0, maximum=15)
+
+    with self.assertRaisesRegex(ValueError, r'Action spec must be a scalar'):
+      policy_utilities.get_num_actions_from_tensor_spec(action_spec)
+
   def testSetBanditPolicyType(self):
     dims = (10, 1)
     bandit_policy_spec = (

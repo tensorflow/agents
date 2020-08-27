@@ -25,7 +25,7 @@ import functools
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.agents import loss_utils
-from tf_agents.bandits.agents import utils as bandit_utils
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
@@ -98,7 +98,7 @@ class NeuralConstraint(BaseConstraint):
         action_spec,
         name)
 
-    self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
+    self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
         action_spec)
 
     with self.name_scope:

@@ -22,8 +22,8 @@ from __future__ import print_function
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
-from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
 
@@ -50,36 +50,6 @@ def sum_reward_weighted_observations(r, x):
   return tf.reduce_sum(tf.reshape(r, [batch_size, 1]) * x, axis=0)
 
 
-def get_num_actions_from_tensor_spec(action_spec):
-  """Validates `action_spec` and returns number of actions.
-
-  `action_spec` must specify a scalar int32 or int64 with minimum zero.
-
-  Args:
-    action_spec: a `TensorSpec`.
-
-  Returns:
-    The number of actions described by `action_spec`.
-
-  Raises:
-    ValueError: if `action_spec` is not an bounded scalar int32 or int64 spec
-      with minimum 0.
-  """
-  if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
-    raise ValueError('Action spec must be a `BoundedTensorSpec`; '
-                     'got {}'.format(type(action_spec)))
-  if action_spec.shape.rank != 0:
-    raise ValueError('Action spec must be a scalar; '
-                     'got shape{}'.format(action_spec.shape))
-  if action_spec.dtype not in (tf.int32, tf.int64):
-    raise ValueError('Action spec must be have dtype int32 or int64; '
-                     'got {}'.format(action_spec.dtype))
-  if action_spec.minimum != 0:
-    raise ValueError('Action spec must have minimum 0; '
-                     'got {}'.format(action_spec.minimum))
-  return action_spec.maximum + 1
-
-
 @gin.configurable
 def build_laplacian_over_ordinal_integer_actions(action_spec):
   """Build the unnormalized Laplacian matrix over ordinal integer actions.
@@ -102,7 +72,7 @@ def build_laplacian_over_ordinal_integer_actions(action_spec):
     ValueError: if `action_spec` is not a bounded scalar int32 or int64 spec
       with minimum 0.
   """
-  num_actions = get_num_actions_from_tensor_spec(action_spec)
+  num_actions = policy_utilities.get_num_actions_from_tensor_spec(action_spec)
   adjacency_matrix = np.zeros([num_actions, num_actions])
   for i in range(num_actions - 1):
     adjacency_matrix[i, i + 1] = 1.0

@@ -48,19 +48,6 @@ def test_cases():
 
 class UtilsTest(tf.test.TestCase, parameterized.TestCase):
 
-  def testNumActionsFromTensorSpecGoodSpec(self):
-    action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=15)
-    num_actions = utils.get_num_actions_from_tensor_spec(action_spec)
-    self.assertEqual(num_actions, 16)
-
-  def testNumActionsFromTensorSpecWrongRank(self):
-    action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(2, 3), minimum=0, maximum=15)
-
-    with self.assertRaisesRegexp(ValueError, r'Action spec must be a scalar'):
-      utils.get_num_actions_from_tensor_spec(action_spec)
-
   @test_cases()
   def testBUpdate(self, batch_size, context_dim):
     b_array = np.array(range(context_dim))
@@ -87,12 +74,11 @@ class UtilsTest(tf.test.TestCase, parameterized.TestCase):
   def testLaplacian1D(self):
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=4)
-    num_actions = utils.get_num_actions_from_tensor_spec(action_spec)
     laplacian_matrix = tf.convert_to_tensor(
         utils.build_laplacian_over_ordinal_integer_actions(action_spec),
         dtype=tf.float32)
     res = tf.matmul(
-        laplacian_matrix, tf.ones([num_actions, 1], dtype=tf.float32))
+        laplacian_matrix, tf.ones([5, 1], dtype=tf.float32))
     # The vector of ones is in the null space of the Laplacian matrix.
     self.assertAllClose(0.0, self.evaluate(tf.norm(res)))
 

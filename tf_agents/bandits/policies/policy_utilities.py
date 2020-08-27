@@ -30,6 +30,36 @@ from tf_agents.trajectories import policy_step
 from tf_agents.utils import common
 
 
+def get_num_actions_from_tensor_spec(action_spec):
+  """Validates `action_spec` and returns number of actions.
+
+  `action_spec` must specify a scalar int32 or int64 with minimum zero.
+
+  Args:
+    action_spec: a `TensorSpec`.
+
+  Returns:
+    The number of actions described by `action_spec`.
+
+  Raises:
+    ValueError: if `action_spec` is not an bounded scalar int32 or int64 spec
+      with minimum 0.
+  """
+  if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
+    raise ValueError('Action spec must be a `BoundedTensorSpec`; '
+                     'got {}'.format(type(action_spec)))
+  if action_spec.shape.rank != 0:
+    raise ValueError('Action spec must be a scalar; '
+                     'got shape{}'.format(action_spec.shape))
+  if action_spec.dtype not in (tf.int32, tf.int64):
+    raise ValueError('Action spec must be have dtype int32 or int64; '
+                     'got {}'.format(action_spec.dtype))
+  if action_spec.minimum != 0:
+    raise ValueError('Action spec must have minimum 0; '
+                     'got {}'.format(action_spec.minimum))
+  return action_spec.maximum + 1
+
+
 class InfoFields(object):
   """Strings which can be used in the policy info fields."""
   LOG_PROBABILITY = policy_step.CommonFields.LOG_PROBABILITY

@@ -30,8 +30,8 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
-from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import categorical_policy
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.trajectories import policy_step
 from tf_agents.utils import common
 
@@ -97,7 +97,7 @@ class Exp3Agent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
-    self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
+    self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
         action_spec)
     self._weights = tf.compat.v2.Variable(
         tf.zeros(self._num_actions), name='weights')

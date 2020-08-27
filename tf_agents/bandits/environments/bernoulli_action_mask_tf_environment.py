@@ -44,8 +44,8 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
-from tf_agents.bandits.agents import utils as agent_utils
 from tf_agents.bandits.environments import bandit_tf_environment
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
@@ -92,7 +92,7 @@ class BernoulliActionMaskTFEnvironment(bandit_tf_environment.BanditTFEnvironment
     action_spec = self._original_environment.action_spec()
     observation_spec_without_mask = (
         self._original_environment.time_step_spec().observation)
-    self._num_actions = agent_utils.get_num_actions_from_tensor_spec(
+    self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
         action_spec)
 
     mask_spec = tf.TensorSpec([self._num_actions], dtype=tf.int32)

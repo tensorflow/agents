@@ -38,6 +38,7 @@ from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import neural_linucb_policy
+from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
@@ -174,7 +175,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
-    self._num_actions = bandit_utils.get_num_actions_from_tensor_spec(
+    self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
         action_spec)
     self._num_models = 1 if accepts_per_arm_features else self._num_actions
     self._observation_and_action_constraint_splitter = (
