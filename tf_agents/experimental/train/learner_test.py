@@ -43,14 +43,24 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
   def setUp(self):
     super(LearnerTest, self).setUp()
 
-    devices = tf.config.list_physical_devices('CPU')
+    devices_cpu = tf.config.list_physical_devices('CPU')
+    devices_gpu = tf.config.list_physical_devices('GPU')
     tf.config.experimental.set_virtual_device_configuration(
-        devices[0], [
+        devices_cpu[0], [
             tf.config.experimental.VirtualDeviceConfiguration(),
             tf.config.experimental.VirtualDeviceConfiguration(),
             tf.config.experimental.VirtualDeviceConfiguration(),
             tf.config.experimental.VirtualDeviceConfiguration()
         ])
+    # If there are GPU devices:
+    if devices_gpu:
+      tf.config.experimental.set_virtual_device_configuration(
+          devices_gpu[0], [
+              tf.config.LogicalDeviceConfiguration(memory_limit=10),
+              tf.config.LogicalDeviceConfiguration(memory_limit=10),
+              tf.config.LogicalDeviceConfiguration(memory_limit=10),
+              tf.config.LogicalDeviceConfiguration(memory_limit=10)
+          ])
 
   def _build_learner_with_strategy(self,
                                    create_agent_and_dataset_fn,
