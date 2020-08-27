@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-from tf_agents.bandits.agents import loss_utils
+from tf_agents.bandits.policies import loss_utils
 
 
 tf.compat.v1.enable_v2_behavior()

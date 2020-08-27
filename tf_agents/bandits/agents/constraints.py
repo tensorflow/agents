@@ -24,7 +24,7 @@ import abc
 import functools
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.bandits.agents import loss_utils
+from tf_agents.bandits.policies import loss_utils
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
