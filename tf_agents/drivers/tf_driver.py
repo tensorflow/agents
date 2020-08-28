@@ -20,9 +20,10 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
+from typing import Any, Callable, Optional, Sequence, Tuple
+
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.drivers import driver
 from tf_agents.environments import tf_environment
 from tf_agents.policies import tf_policy
@@ -30,8 +31,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.typing import types
 from tf_agents.utils import common
-
-from typing import Any, Callable, Optional, Sequence, Tuple
 
 
 class TFDriver(driver.Driver):
@@ -114,7 +113,8 @@ class TFDriver(driver.Driver):
       for observer in self.observers:
         observer(traj)
 
-      num_episodes += tf.math.reduce_sum(tf.cast(traj.is_last(), tf.float32))
+      num_episodes += tf.math.reduce_sum(
+          tf.cast(traj.is_boundary(), tf.float32))
       num_steps += tf.math.reduce_sum(tf.cast(~traj.is_boundary(), tf.float32))
 
       time_step = next_time_step

@@ -41,7 +41,7 @@ class TestUtilsTest(parameterized.TestCase, test_utils.TestCase):
                                         np.repeat(ts.StepType.MID,
                                                   traj_len - 2),
                                         [ts.StepType.LAST]])
-    next_step_type = np.tile(single_trajectory, (batch_size, 1))
+    step_type = np.tile(single_trajectory, (batch_size, 1))
 
     traj = trajectory.Trajectory(
         observation=np.random.rand(batch_size, traj_len),
@@ -49,8 +49,8 @@ class TestUtilsTest(parameterized.TestCase, test_utils.TestCase):
         policy_info=(),
         reward=np.random.rand(batch_size, traj_len),
         discount=np.ones((batch_size, traj_len)),
-        step_type=np.zeros((batch_size, traj_len)),
-        next_step_type=next_step_type)
+        step_type=step_type,
+        next_step_type=np.zeros((batch_size, traj_len)))
 
     observer = driver_test_utils.NumEpisodesObserver()
     observer(traj)

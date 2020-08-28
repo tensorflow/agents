@@ -259,7 +259,7 @@ class NumEpisodesObserver(object):
 
   def __call__(self, traj):
     num_episodes = tf.reduce_sum(
-        input_tensor=tf.cast(traj.is_last(), dtype=tf.int32))
+        input_tensor=tf.cast(traj.is_boundary(), dtype=tf.int32))
     with tf.control_dependencies([
         self._num_episodes.assign_add(num_episodes)
     ]):
