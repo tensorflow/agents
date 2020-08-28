@@ -26,7 +26,6 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.bandits.environments import classification_environment as ce
-from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -37,7 +36,6 @@ def deterministic_reward_distribution(reward_table):
                          reinterpreted_batch_ndims=2)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class ClassificationEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(

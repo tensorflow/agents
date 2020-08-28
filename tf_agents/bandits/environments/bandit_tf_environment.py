@@ -17,15 +17,18 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
+from typing import Optional
 import six
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import tf_environment
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -57,7 +60,10 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
   ```
   """
 
-  def __init__(self, time_step_spec=None, action_spec=None, batch_size=1):
+  def __init__(self,
+               time_step_spec: Optional[types.NestedArray] = None,
+               action_spec: Optional[types.NestedArray] = None,
+               batch_size: Optional[types.Int] = 1):
     """Initialize instances of `BanditTFEnvironment`.
 
     Args:
@@ -94,7 +100,7 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
                           self._time_step_variables, time_step)
 
   @common.function()
-  def _current_time_step(self):
+  def _current_time_step(self) -> ts.TimeStep:
     def true_fn():
       return tf.nest.map_structure(tf.identity, self._time_step_variables)
     def false_fn():
@@ -104,7 +110,7 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
     return tf.cond(self._reset_called, true_fn, false_fn)
 
   @common.function
-  def _reset(self):
+  def _reset(self) -> ts.TimeStep:
     current_time_step = ts.restart(
         self._observe(), batch_size=self.batch_size,
         reward_spec=self.time_step_spec().reward)
@@ -113,16 +119,16 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
     return current_time_step
 
   @common.function
-  def _step(self, action):
+  def _step(self, action: types.NestedArray) -> ts.TimeStep:
     reward = self._apply_action(action)
     current_time_step = ts.termination(self._observe(), reward)
     self._update_time_step(current_time_step)
     return current_time_step
 
   @abc.abstractmethod
-  def _apply_action(self, action):
+  def _apply_action(self, action: types.NestedArray) -> types.Float:
     """Returns a reward for the given action."""
 
   @abc.abstractmethod
-  def _observe(self):
+  def _observe(self) -> types.NestedTensor:
     """Returns an observation."""

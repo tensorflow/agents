@@ -14,11 +14,15 @@
 # limitations under the License.
 
 """Class implementation of Python Bernoulli Bandit environment."""
+# Using Type Annotations.
+from typing import Optional, Sequence
+
 import gin
 import numpy as np
 
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.specs import array_spec
+from tf_agents.typing import types
 
 
 @gin.configurable
@@ -32,7 +36,9 @@ class BernoulliPyEnvironment(bandit_py_environment.BanditPyEnvironment):
   Russo et al. (https://web.stanford.edu/~bvr/pubs/TS_Tutorial.pdf)
   """
 
-  def __init__(self, means, batch_size=1):
+  def __init__(self,
+               means: Sequence[types.Float],
+               batch_size: Optional[types.Int] = 1):
     """Initializes a Bernoulli Bandit environment.
 
     Args:
@@ -56,18 +62,18 @@ class BernoulliPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         shape=(1,), dtype=np.int32, name='observation')
     super(BernoulliPyEnvironment, self).__init__(observation_spec, action_spec)
 
-  def _observe(self):
+  def _observe(self) -> types.NestedArray:
     return np.zeros(
         shape=[self._batch_size] + list(self.observation_spec().shape),
         dtype=self.observation_spec().dtype)
 
-  def _apply_action(self, action):
+  def _apply_action(self, action: types.NestedArray) -> types.Float:
     return [np.floor(self._means[i] + np.random.random()) for i in action]
 
   @property
-  def batched(self):
+  def batched(self) -> bool:
     return True
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> types.Int:
     return self._batch_size

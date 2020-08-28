@@ -15,12 +15,16 @@
 
 """Class implementation of Python Wheel Bandit environment."""
 from __future__ import absolute_import
+# Using Type Annotations.
+
+from typing import Optional, Sequence
 
 import gin
 import numpy as np
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
 _NUM_ACTIONS = 5
 _CONTEXT_DIM = 2
@@ -33,7 +37,8 @@ _SIGNS_TO_OPT_ACTION = {
 
 
 @gin.configurable
-def compute_optimal_action(observation, delta):
+def compute_optimal_action(observation: np.ndarray,
+                           delta: float) -> types.Array:
   batch_size = observation.shape[0]
   optimal_actions = np.zeros(batch_size, dtype=np.int32)
   is_outer = np.int32(np.linalg.norm(observation, ord=2, axis=1) > delta)
@@ -43,7 +48,11 @@ def compute_optimal_action(observation, delta):
 
 
 @gin.configurable
-def compute_optimal_reward(observation, delta, mu_inside, mu_high):
+def compute_optimal_reward(
+    observation: np.ndarray,
+    delta: float,
+    mu_inside: float,
+    mu_high: float) -> types.Array:
   is_inside = np.float32(np.linalg.norm(observation, ord=2, axis=1) <= delta)
   return is_inside * mu_inside + (1 - is_inside) * mu_high
 
@@ -69,8 +78,13 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
 
   """
 
-  def __init__(self, delta, mu_base, std_base, mu_high, std_high,
-               batch_size=None):
+  def __init__(self,
+               delta: float,
+               mu_base: Sequence[float],
+               std_base: Sequence[float],
+               mu_high: float,
+               std_high: float,
+               batch_size: Optional[int] = None):
     """Initializes the Wheel Bandit environment.
 
     Args:
@@ -120,11 +134,11 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     super(WheelPyEnvironment, self).__init__(observation_spec, action_spec)
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> int:
     return self._batch_size
 
   @property
-  def batched(self):
+  def batched(self) -> bool:
     return True
 
   def _reward_fn(self, observation, action):
@@ -152,7 +166,7 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     reward_final = reward_inside + reward_outside
     return reward_final
 
-  def _observe(self):
+  def _observe(self) -> types.NestedArray:
     """Returns 2-dim samples falling in the unit circle."""
     theta = np.random.uniform(0.0, 2.0 * np.pi, (self._batch_size))
     r = np.sqrt(np.random.uniform(size=self._batch_size))
@@ -162,6 +176,6 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         self._observation_spec.dtype)
     return self._observation
 
-  def _apply_action(self, action):
+  def _apply_action(self, action: types.Array) -> types.Array:
     """Computes the reward for the input actions."""
     return self._reward_fn(self._observation, action)

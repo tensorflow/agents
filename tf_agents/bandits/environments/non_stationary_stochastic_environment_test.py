@@ -24,7 +24,6 @@ import tensorflow_probability as tfp
 
 from tf_agents.bandits.environments import non_stationary_stochastic_environment as nsse
 from tf_agents.specs import tensor_spec
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -60,7 +59,6 @@ class DummyDynamics(nsse.EnvironmentDynamics):
             tf.reshape(tf.cast(t, dtype=tf.float32), [1, 1]))
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class NonStationaryStochasticEnvironmentTest(tf.test.TestCase):
 
   def testObservationAndRewardsVary(self):

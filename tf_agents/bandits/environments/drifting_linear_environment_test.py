@@ -24,7 +24,6 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.environments import drifting_linear_environment as dle
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 tfd = tfp.distributions
@@ -67,7 +66,6 @@ def get_deterministic_gaussian_non_stationary_environment(
       additive_reward_distribution)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class DriftingLinearEnvironmentTest(tf.test.TestCase,
                                     parameterized.TestCase):
 

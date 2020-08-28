@@ -26,7 +26,6 @@ import tensorflow_probability as tfp
 
 from tf_agents.bandits.environments import random_bandit_environment
 from tf_agents.specs import tensor_spec
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -46,7 +45,6 @@ def get_gaussian_random_environment(
       action_spec)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class RandomBanditEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters(

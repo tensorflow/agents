@@ -14,11 +14,16 @@
 # limitations under the License.
 
 """Class implementation of Python Bernoulli Bandit environment."""
+# Using Type Annotations.
+
+from typing import Callable, Optional
+
 import gin
 import numpy as np
 
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.specs import array_spec
+from tf_agents.typing import types
 
 
 @gin.configurable
@@ -60,7 +65,10 @@ class PiecewiseBernoulliPyEnvironment(
   Knowledge Management (https://arxiv.org/pdf/1805.09365.pdf.)
   """
 
-  def __init__(self, piece_means, change_duration_generator, batch_size=1):
+  def __init__(self,
+               piece_means: np.ndarray,
+               change_duration_generator: Callable[[], int],
+               batch_size: Optional[int] = 1):
     """Initializes a piecewise stationary Bernoulli Bandit environment.
 
     Args:
@@ -108,11 +116,11 @@ class PiecewiseBernoulliPyEnvironment(
         observation_spec, action_spec)
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> int:
     return self._batch_size
 
   @property
-  def batched(self):
+  def batched(self) -> bool:
     return True
 
   def _increment_time(self):
@@ -125,12 +133,12 @@ class PiecewiseBernoulliPyEnvironment(
       self._next_change += duration
       self._current_piece = (self._current_piece + 1) % self._num_pieces
 
-  def _observe(self):
+  def _observe(self) -> types.NestedArray:
     return np.zeros(
         shape=[self._batch_size, 1],
         dtype=self.observation_spec().dtype)
 
-  def _apply_action(self, action):
+  def _apply_action(self, action: types.NestedArray) -> types.NestedArray:
     reward = np.floor(self._piece_means[self._current_piece, action] +
                       np.random.random((self._batch_size,)))
     self._increment_time()

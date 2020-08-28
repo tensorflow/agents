@@ -26,12 +26,10 @@ import tensorflow_probability as tfp
 from tf_agents.bandits.environments import bernoulli_action_mask_tf_environment as masked_tf_env
 from tf_agents.bandits.environments import random_bandit_environment
 from tf_agents.specs import tensor_spec
-from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class BernoulliActionMaskTfEnvironmentTest(tf.test.TestCase,
                                            parameterized.TestCase):
 

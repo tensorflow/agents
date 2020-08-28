@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import gin
@@ -24,6 +25,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import non_stationary_stochastic_environment as nsse
 from tf_agents.specs import tensor_spec
+from tf_agents.typing import types
 
 
 def _raise_batch_shape_error(tensor_name, batch_shape):
@@ -33,7 +35,7 @@ def _raise_batch_shape_error(tensor_name, batch_shape):
                        batch_shape=batch_shape))
 
 
-def update_row(input_x, updates, row_index):
+def _update_row(input_x, updates, row_index):
   """Updates the i-th row of tensor `x` with the values given in `updates`.
 
   Args:
@@ -52,7 +54,7 @@ def update_row(input_x, updates, row_index):
       tensor=input_x, indices=indices, updates=tf.squeeze(updates))
 
 
-def apply_givens_rotation(cosa, sina, axis_i, axis_j, input_x):
+def _apply_givens_rotation(cosa, sina, axis_i, axis_j, input_x):
   """Applies a Givens rotation on tensor `x`.
 
   Reference on Givens rotations:
@@ -68,9 +70,9 @@ def apply_givens_rotation(cosa, sina, axis_i, axis_j, input_x):
   Returns:
     The rotated tensor (same shape as `x`).
   """
-  output = update_row(
+  output = _update_row(
       input_x, cosa * input_x[axis_i, :] - sina * input_x[axis_j, :], axis_i)
-  output = update_row(
+  output = _update_row(
       output, sina * input_x[axis_i, :] + cosa * input_x[axis_j, :], axis_j)
   return output
 
@@ -97,10 +99,10 @@ class DriftingLinearDynamics(nsse.EnvironmentDynamics):
   """
 
   def __init__(self,
-               observation_distribution,
-               observation_to_reward_distribution,
-               drift_distribution,
-               additive_reward_distribution):
+               observation_distribution: types.Distribution,
+               observation_to_reward_distribution: types.Distribution,
+               drift_distribution: types.Distribution,
+               additive_reward_distribution: types.Distribution):
     """Initialize the parameters of the drifting linear dynamics.
 
     Args:
@@ -161,19 +163,19 @@ class DriftingLinearDynamics(nsse.EnvironmentDynamics):
         name='additive_reward')
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> types.Int:
     return tf.compat.dimension_value(
         self._observation_distribution.batch_shape[0])
 
   @property
-  def observation_spec(self):
+  def observation_spec(self) -> types.TensorSpec:
     return tensor_spec.TensorSpec(
         shape=self._observation_distribution.batch_shape[1:],
         dtype=self._observation_distribution.dtype,
         name='observation_spec')
 
   @property
-  def action_spec(self):
+  def action_spec(self) -> types.BoundedTensorSpec:
     return tensor_spec.BoundedTensorSpec(
         shape=(),
         dtype=tf.int32,
@@ -182,10 +184,12 @@ class DriftingLinearDynamics(nsse.EnvironmentDynamics):
             self._additive_reward_distribution.batch_shape[0]) - 1,
         name='action')
 
-  def observation(self, unused_t):
+  def observation(self, unused_t) -> types.NestedTensor:
     return self._observation_distribution.sample()
 
-  def reward(self, observation, t):
+  def reward(self,
+             observation: types.NestedTensor,
+             t: types.Int) -> types.NestedTensor:
     # Apply the drift.
     theta = self._drift_distribution.sample()
     random_i = tf.random.uniform(
@@ -193,7 +197,7 @@ class DriftingLinearDynamics(nsse.EnvironmentDynamics):
     random_j = tf.math.mod(random_i + 1, self._observation_dim)
     tf.compat.v1.assign(
         self._current_observation_to_reward,
-        apply_givens_rotation(
+        _apply_givens_rotation(
             tf.cos(theta), tf.sin(theta), random_i, random_j,
             self._current_observation_to_reward))
     tf.compat.v1.assign(self._current_additive_reward,
@@ -204,14 +208,16 @@ class DriftingLinearDynamics(nsse.EnvironmentDynamics):
     return reward
 
   @gin.configurable
-  def compute_optimal_reward(self, observation):
+  def compute_optimal_reward(
+      self, observation: types.NestedTensor) -> types.NestedTensor:
     deterministic_reward = tf.matmul(
         observation, self._current_observation_to_reward)
     optimal_action_reward = tf.reduce_max(deterministic_reward, axis=-1)
     return optimal_action_reward
 
   @gin.configurable
-  def compute_optimal_action(self, observation):
+  def compute_optimal_action(
+      self, observation: types.NestedTensor) -> types.NestedTensor:
     deterministic_reward = tf.matmul(
         observation, self._current_observation_to_reward)
     optimal_action = tf.argmax(
@@ -224,10 +230,10 @@ class DriftingLinearEnvironment(nsse.NonStationaryStochasticEnvironment):
   """Implements a drifting linear environment."""
 
   def __init__(self,
-               observation_distribution,
-               observation_to_reward_distribution,
-               drift_distribution,
-               additive_reward_distribution):
+               observation_distribution: types.Distribution,
+               observation_to_reward_distribution: types.Distribution,
+               drift_distribution: types.Distribution,
+               additive_reward_distribution: types.Distribution):
     """Initialize the environment with the dynamics parameters.
 
     Args:

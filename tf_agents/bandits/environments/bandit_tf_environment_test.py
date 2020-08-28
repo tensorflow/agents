@@ -26,7 +26,6 @@ from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class ZerosEnvironment(bandit_tf_environment.BanditTFEnvironment):
@@ -73,7 +72,6 @@ class MultipleRewardsEnvironment(bandit_tf_environment.BanditTFEnvironment):
     return tf.zeros(observation_shape)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class BanditTFEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.named_parameters(

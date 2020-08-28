@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import gin
@@ -24,6 +25,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import non_stationary_stochastic_environment as nsse
 from tf_agents.specs import tensor_spec
+from tf_agents.typing import types
 
 
 def _raise_batch_shape_error(tensor_name, batch_shape):
@@ -49,10 +51,10 @@ class PiecewiseStationaryDynamics(nsse.EnvironmentDynamics):
   """
 
   def __init__(self,
-               observation_distribution,
-               interval_distribution,
-               observation_to_reward_distribution,
-               additive_reward_distribution):
+               observation_distribution: types.Distribution,
+               interval_distribution: types.Distribution,
+               observation_to_reward_distribution: types.Distribution,
+               additive_reward_distribution: types.Distribution):
     """Initialize the parameters of the piecewise dynamics.
 
     Args:
@@ -120,19 +122,19 @@ class PiecewiseStationaryDynamics(nsse.EnvironmentDynamics):
         name='additive_reward')
 
   @property
-  def batch_size(self):
+  def batch_size(self) -> types.Int:
     return tf.compat.dimension_value(
         self._observation_distribution.batch_shape[0])
 
   @property
-  def observation_spec(self):
+  def observation_spec(self) -> types.TensorSpec:
     return tensor_spec.TensorSpec(
         shape=self._observation_distribution.batch_shape[1:],
         dtype=self._observation_distribution.dtype,
         name='observation_spec')
 
   @property
-  def action_spec(self):
+  def action_spec(self) -> types.BoundedTensorSpec:
     return tensor_spec.BoundedTensorSpec(
         shape=(),
         dtype=tf.int32,
@@ -141,10 +143,12 @@ class PiecewiseStationaryDynamics(nsse.EnvironmentDynamics):
             self._additive_reward_distribution.batch_shape[0]) - 1,
         name='action')
 
-  def observation(self, unused_t):
+  def observation(self, unused_t) -> types.NestedTensor:
     return self._observation_distribution.sample()
 
-  def reward(self, observation, t):
+  def reward(self,
+             observation: types.NestedTensor,
+             t: types.Int) -> types.NestedTensor:
     def same_interval_parameters():
       """Returns the parameters of the current piece.
 
@@ -181,14 +185,16 @@ class PiecewiseStationaryDynamics(nsse.EnvironmentDynamics):
     return reward
 
   @gin.configurable
-  def compute_optimal_reward(self, observation):
+  def compute_optimal_reward(
+      self, observation: types.NestedTensor) -> types.NestedTensor:
     deterministic_reward = tf.matmul(
         observation, self._current_observation_to_reward)
     optimal_action_reward = tf.reduce_max(deterministic_reward, axis=-1)
     return optimal_action_reward
 
   @gin.configurable
-  def compute_optimal_action(self, observation):
+  def compute_optimal_action(
+      self, observation: types.NestedTensor) -> types.NestedTensor:
     deterministic_reward = tf.matmul(
         observation, self._current_observation_to_reward)
     optimal_action = tf.argmax(
@@ -201,10 +207,10 @@ class PiecewiseStochasticEnvironment(nsse.NonStationaryStochasticEnvironment):
   """Implements a piecewise stationary linear environment."""
 
   def __init__(self,
-               observation_distribution,
-               interval_distribution,
-               observation_to_reward_distribution,
-               additive_reward_distribution):
+               observation_distribution: types.Distribution,
+               interval_distribution: types.Distribution,
+               observation_to_reward_distribution: types.Distribution,
+               additive_reward_distribution: types.Distribution):
     """Initialize the environment with the dynamics parameters.
 
     Args:

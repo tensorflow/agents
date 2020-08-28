@@ -38,7 +38,10 @@ Usage:
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Callable
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -47,6 +50,7 @@ import tensorflow_probability as tfp
 from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 tfd = tfp.distributions
@@ -70,8 +74,11 @@ class BernoulliActionMaskTFEnvironment(bandit_tf_environment.BanditTFEnvironment
                                       ):
   """An environment wrapper that adds action masks to observations."""
 
-  def __init__(self, original_environment, action_constraint_join_fn,
-               action_probability):
+  def __init__(self,
+               original_environment: bandit_tf_environment.BanditTFEnvironment,
+               action_constraint_join_fn: Callable[
+                   [types.TensorSpec, types.TensorSpec], types.TensorSpec],
+               action_probability: float):
     """Initializes a `BernoulliActionMaskTFEnvironment`.
 
     Args:

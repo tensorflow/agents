@@ -23,7 +23,6 @@ from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.environments import piecewise_stochastic_environment as pse
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 tfd = tfp.distributions
@@ -50,9 +49,9 @@ def get_deterministic_gaussian_non_stationary_environment(
       additive_reward_distribution)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class PiecewiseStochasticEnvironmentTest(tf.test.TestCase,
                                          parameterized.TestCase):
+
   @parameterized.named_parameters(
       dict(testcase_name='_observation_[5]_action_[3]_batch_1',
            observation_shape=[5],
@@ -65,7 +64,6 @@ class PiecewiseStochasticEnvironmentTest(tf.test.TestCase,
            batch_size=2,
            seed=98765),
   )
-
   def testObservationAndRewardsVary(
       self, observation_shape, action_shape, batch_size, seed):
     """Ensure that observations and rewards change in consecutive calls."""

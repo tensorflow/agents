@@ -17,12 +17,16 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.environments import bandit_tf_environment as bte
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
+from tf_agents.typing import types
 
 __all__ = ['RandomBanditEnvironment']
 
@@ -40,9 +44,9 @@ class RandomBanditEnvironment(bte.BanditTFEnvironment):
   """Bandit environment that returns random observations and rewards."""
 
   def __init__(self,
-               observation_distribution,
-               reward_distribution,
-               action_spec=None):
+               observation_distribution: types.Distribution,
+               reward_distribution: types.Distribution,
+               action_spec: Optional[types.TensorSpec] = None):
     """Initializes an environment that returns random observations and rewards.
 
     Note that `observation_distribution` and `reward_distribution` are expected
@@ -107,9 +111,9 @@ class RandomBanditEnvironment(bte.BanditTFEnvironment):
                                                   action_spec=action_spec,
                                                   batch_size=batch_size)
 
-  def _apply_action(self, action):
+  def _apply_action(self, action: types.NestedTensor) -> types.NestedTensor:
     del action  # unused
     return self._reward_distribution.sample()
 
-  def _observe(self):
+  def _observe(self) -> types.NestedTensor:
     return self._observation_distribution.sample()

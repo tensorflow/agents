@@ -17,22 +17,22 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
 import gin
-import six
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import bandit_tf_environment as bte
 from tf_agents.trajectories import time_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 
-@six.add_metaclass(abc.ABCMeta)
 @gin.configurable
-class EnvironmentDynamics(tf.Module):
+class EnvironmentDynamics(tf.Module, metaclass=abc.ABCMeta):
   """Abstract class to represent a non-stationary environment dynamics.
 
   This class is used with the NonStationaryStochasticEnvironment class below to
@@ -47,22 +47,22 @@ class EnvironmentDynamics(tf.Module):
   """
 
   @abc.abstractproperty
-  def batch_size(self):
+  def batch_size(self) -> types.Int:
     """Returns the batch size used for observations and rewards."""
     pass
 
   @abc.abstractproperty
-  def observation_spec(self):
+  def observation_spec(self) -> types.TensorSpec:
     """Specification of the observations."""
     pass
 
   @abc.abstractproperty
-  def action_spec(self):
+  def action_spec(self) -> types.TensorSpec:
     """Specification of the actions."""
     pass
 
   @abc.abstractmethod
-  def observation(self, env_time):
+  def observation(self, env_time: types.Int) -> types.NestedTensor:
     """Returns an observation batch for the given time.
 
     Args:
@@ -75,7 +75,9 @@ class EnvironmentDynamics(tf.Module):
     pass
 
   @abc.abstractmethod
-  def reward(self, observation, env_time):
+  def reward(self,
+             observation: types.NestedTensor,
+             env_time: types.Int) -> types.NestedTensor:
     """Reward for the given observation and time step.
 
     Args:
@@ -91,7 +93,7 @@ class EnvironmentDynamics(tf.Module):
     pass
 
 
-def create_variable_from_spec_nest(specs, batch_size):
+def _create_variable_from_spec_nest(specs, batch_size):
   def create_variable(spec):
     return common.create_variable(
         name=spec.name,
@@ -100,13 +102,13 @@ def create_variable_from_spec_nest(specs, batch_size):
   return tf.nest.map_structure(create_variable, specs)
 
 
-def assign_variable_nest(variables, values):
+def _assign_variable_nest(variables, values):
   return tf.nest.map_structure(lambda variable, value: variable.assign(value),
                                variables,
                                values)
 
 
-def read_value_nest(variables):
+def _read_value_nest(variables):
   return tf.nest.map_structure(lambda variable: variable.read_value(),
                                variables)
 
@@ -121,7 +123,7 @@ class NonStationaryStochasticEnvironment(bte.BanditTFEnvironment):
   observations and rewards are computed for the current time.
   """
 
-  def __init__(self, environment_dynamics):
+  def __init__(self, environment_dynamics: EnvironmentDynamics):
     """Initializes a non-stationary environment with the given dynamics.
 
     Args:
@@ -132,7 +134,7 @@ class NonStationaryStochasticEnvironment(bte.BanditTFEnvironment):
         0, trainable=False, name='env_time', dtype=tf.int64)
     self._environment_dynamics = environment_dynamics
     observation_spec = environment_dynamics.observation_spec
-    self._observation = create_variable_from_spec_nest(
+    self._observation = _create_variable_from_spec_nest(
         observation_spec, environment_dynamics.batch_size)
     time_step_spec = time_step.time_step_spec(observation_spec)
     super(NonStationaryStochasticEnvironment, self).__init__(
@@ -141,10 +143,10 @@ class NonStationaryStochasticEnvironment(bte.BanditTFEnvironment):
         batch_size=environment_dynamics.batch_size)
 
   @property
-  def environment_dynamics(self):
+  def environment_dynamics(self) -> EnvironmentDynamics:
     return self._environment_dynamics
 
-  def _apply_action(self, action):
+  def _apply_action(self, action: types.NestedTensor) -> types.NestedTensor:
     self._reward = self._environment_dynamics.reward(self._observation,
                                                      self._env_time)
     tf.compat.v1.assign_add(self._env_time,
@@ -152,8 +154,8 @@ class NonStationaryStochasticEnvironment(bte.BanditTFEnvironment):
     return common.index_with_actions(
         self._reward, tf.cast(action, dtype=tf.int32))
 
-  def _observe(self):
-    assign_variable_nest(
+  def _observe(self) -> types.NestedTensor:
+    _assign_variable_nest(
         self._observation,
         self._environment_dynamics.observation(self._env_time))
-    return read_value_nest(self._observation)
+    return _read_value_nest(self._observation)
