@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
 from absl.testing import parameterized
 
 import numpy as np
@@ -60,10 +59,10 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     ]
 
   @parameterized.named_parameters(
-      [('NoneStepsTwoEpisodes', None, 2, 5),
+      [('NoneStepsTwoEpisodes', None, 2, 6),
        ('TwoStepsTwoEpisodes', 2, 2, 2),
        ('FourStepsTwoEpisodes', 4, 2, 5),
-       ('FourStepsOneEpisodes', 4, 1, 2),
+       ('FourStepsOneEpisodes', 4, 1, 3),
        ('FourStepsNoneEpisodes', 4, None, 5),
       ])
   def testRunOnce(self, max_steps, max_episodes, expected_steps):
@@ -119,7 +118,7 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
   def testMultipleRunMaxEpisodes(self):
 
     num_episodes = 2
-    num_expected_steps = 5
+    num_expected_steps = 6
 
     env = driver_test_utils.PyEnvironmentMock()
     policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
@@ -163,7 +162,7 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
   @parameterized.named_parameters([
       ('FourStepsNoneEpisodesBoundaryNotCounted', 4, None, 2),
       ('FiveStepsNoneEpisodesBoundaryNotCounted', 5, None, 3),
-      ('NoneStepsTwoEpisodesBoundaryNotCounted', None, 2, 3),
+      ('NoneStepsTwoEpisodesBoundaryNotCounted', None, 2, 4),
       ('TwoStepsTwoEpisodesBoundaryNotCounted', 2, 2, 1),
       ('FourStepsTwoEpisodesBoundaryNotCounted', 4, 2, 2),
   ])
@@ -193,7 +192,15 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
             policy_info=np.array([4, 2]),
             next_step_type=np.array([0, 2]),
             reward=np.array([0., 1.]),
-            discount=np.array([1., 0.]))
+            discount=np.array([1., 0.])),
+        trajectory.Trajectory(
+            step_type=np.array([0, 2]),
+            observation=np.array([0, 4]),
+            action=np.array([2, 2]),
+            policy_info=np.array([4, 4]),
+            next_step_type=np.array([1, 0]),
+            reward=np.array([1., 0.]),
+            discount=np.array([1., 1.]))
     ]
 
     env1 = driver_test_utils.PyEnvironmentMock(final_state=3)

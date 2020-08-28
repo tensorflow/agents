@@ -103,7 +103,7 @@ class PyDriver(driver.Driver):
       for observer in self.observers:
         observer(traj)
 
-      num_episodes += np.sum(traj.is_last())
+      num_episodes += np.sum(traj.is_boundary())
       num_steps += np.sum(~traj.is_boundary())
 
       time_step = next_time_step
