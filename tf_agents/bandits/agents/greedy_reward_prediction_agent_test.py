@@ -21,11 +21,10 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
-from tf_agents.bandits.agents import constraints
 from tf_agents.bandits.agents import greedy_reward_prediction_agent as greedy_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.networks import global_and_arm_feature_network
+from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network

@@ -21,10 +21,9 @@ from __future__ import print_function
 import collections
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
-from tf_agents.bandits.agents import constraints
 from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.networks import heteroscedastic_q_network
+from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
