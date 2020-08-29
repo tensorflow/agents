@@ -258,7 +258,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
        - `outputs` contains the outputs for all states of the unroll; this is
          either a tensor or nested tuple with tensors all shaped
-         `[n, batch_size, ...]` (if at least one input had rank `3` or above),
+         `[batch_size, n, ...]` (if at least one input had rank `3` or above),
          or `[batch_size, ...]` (if all of the inputs were at most rank `2`).
          with structure and shape matching `cell.output_size`.
        - `final_state` contains the final state of the unroll; with structure
