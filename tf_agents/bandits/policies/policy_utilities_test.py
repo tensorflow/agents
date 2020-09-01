@@ -20,59 +20,18 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.bandits.networks import global_and_arm_feature_network
-from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.policies import policy_utilities
-from tf_agents.bandits.specs import utils as bandit_spec_utils
-from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
-from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 _GREEDY = policy_utilities.BanditPolicyType.GREEDY
 _UNIFORM = policy_utilities.BanditPolicyType.UNIFORM
 
 
-class SimpleConstraint(constraints.BaseConstraint):
-
-  def __call__(self, observation, actions=None):
-    """Returns the probability of input actions being feasible."""
-    batch_size = tf.shape(observation)[0]
-    num_actions = self._action_spec.maximum - self._action_spec.minimum + 1
-    feasibility_prob = 0.5 * tf.ones([batch_size, num_actions], tf.float32)
-    return feasibility_prob
-
-
-class DummyNet(network.Network):
-
-  def __init__(self, observation_spec, num_actions=3):
-    super(DummyNet, self).__init__(observation_spec, (), 'DummyNet')
-
-    # Store custom layers that can be serialized through the Checkpointable API.
-    self._dummy_layers = [
-        tf.keras.layers.Dense(
-            num_actions,
-            kernel_initializer=tf.compat.v1.initializers.constant(
-                [[1, 1.5, 2], [1, 1.5, 4]]),
-            bias_initializer=tf.compat.v1.initializers.constant(
-                [[1], [1], [-10]]))
-    ]
-
-  def call(self, inputs, step_type=None, network_state=()):
-    del step_type
-    inputs = tf.cast(inputs, tf.float32)
-    for layer in self._dummy_layers:
-      inputs = layer(inputs)
-    return inputs, network_state
-
-
-@test_util.run_all_in_graph_and_eager_modes
 class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
 
   @parameterized.parameters(
@@ -148,80 +107,6 @@ class PolicyUtilitiesTest(test_utils.TestCase, parameterized.TestCase):
                 for mask_value in mask]
     result = policy_utilities.bandit_policy_uniform_mask(input_tensor, mask)
     self.assertAllEqual(result, expected)
-
-  def testComputeFeasibilityMask(self):
-    observation_spec = tensor_spec.TensorSpec([2], tf.float32)
-    time_step_spec = ts.time_step_spec(observation_spec)
-    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)
-    simple_constraint = SimpleConstraint(time_step_spec, action_spec)
-
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    feasibility_prob = policy_utilities.compute_feasibility_probability(
-        observations, [simple_constraint], batch_size=2, num_actions=3,
-        action_mask=None)
-    self.assertAllEqual(0.5 * np.ones([2, 3]), self.evaluate(feasibility_prob))
-
-  def testComputeFeasibilityMaskWithActionMask(self):
-    observation_spec = tensor_spec.TensorSpec([2], tf.float32)
-    time_step_spec = ts.time_step_spec(observation_spec)
-    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)
-    constraint_net = DummyNet(observation_spec)
-    neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        action_spec,
-        constraint_network=constraint_net)
-
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    action_mask = tf.constant([[0, 0, 1], [0, 1, 0]], dtype=tf.int32)
-    feasibility_prob = policy_utilities.compute_feasibility_probability(
-        observations, [neural_constraint], batch_size=2, num_actions=3,
-        action_mask=action_mask)
-    self.assertAllEqual(self.evaluate(tf.cast(action_mask, tf.float32)),
-                        self.evaluate(feasibility_prob))
-
-  def testComputeMaskFromMultipleSourcesNumActionsFeature(self):
-    observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        4, 5, 6, add_num_actions_feature=True)
-    time_step_spec = ts.time_step_spec(observation_spec)
-    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 5)
-    constraint_net = (
-        global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            observation_spec, (3, 4), (4, 3), (2, 3)))
-    neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        action_spec,
-        constraint_network=constraint_net)
-
-    observations = {
-        'global': tf.constant([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32),
-        'per_arm': tf.reshape(tf.range(60, dtype=tf.float32), shape=[2, 6, 5]),
-        'num_actions': tf.constant([4, 3], dtype=tf.int32)
-    }
-    mask = policy_utilities.construct_mask_from_multiple_sources(
-        observations, None, [neural_constraint], 6)
-    implied_mask = [[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]]
-    self.assertAllGreaterEqual(implied_mask - mask, 0)
-
-  def testComputeMaskFromMultipleSourcesMask(self):
-    observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        4, 5, 6)
-    time_step_spec = ts.time_step_spec(observation_spec)
-    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 5)
-    constraint_net = (
-        global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            observation_spec, (3, 4), (4, 3), (2, 3)))
-    neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        action_spec,
-        constraint_network=constraint_net)
-    original_mask = [[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]]
-    observations = ({
-        'global': tf.constant([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32),
-        'per_arm': tf.reshape(tf.range(60, dtype=tf.float32), shape=[2, 6, 5]),
-    }, original_mask)
-    mask = policy_utilities.construct_mask_from_multiple_sources(
-        observations, lambda x: (x[0], x[1]), [neural_constraint], 6)
-    self.assertAllGreaterEqual(original_mask - mask, 0)
 
 
 if __name__ == '__main__':

@@ -17,19 +17,23 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 tfd = tfp.distributions
 
 
-def _validate_weights(weights):
+def _validate_weights(weights: types.Tensor):
   if len(weights.shape) != 1:
     raise ValueError(
         'Expected a 1D `Tensor` of weights; got {}.'.format(weights))
@@ -48,12 +52,12 @@ class CategoricalPolicy(tf_policy.TFPolicy):
   """
 
   def __init__(self,
-               weights,
-               time_step_spec,
-               action_spec,
-               inverse_temperature=1.,
-               emit_log_probability=True,
-               name=None):
+               weights: types.Tensor,
+               time_step_spec: types.TimeStep,
+               action_spec: types.BoundedTensorSpec,
+               inverse_temperature: float = 1.,
+               emit_log_probability: bool = True,
+               name: Optional[Text] = None):
     """Initializes `CategoricalPolicy`.
 
     The `weights` and `inverse_temperature` arguments may be either `Tensor`s or
@@ -122,5 +126,6 @@ class CategoricalPolicy(tf_policy.TFPolicy):
         self._inverse_temperature *
         common.replicate(self._weights, outer_shape))
     action_distribution = tfd.Independent(
-        tfd.Categorical(logits=logits, dtype=self._action_spec.dtype))
+        tfd.Categorical(
+            logits=logits, dtype=tf.nest.flatten(self.action_spec)[0].dtype))
     return policy_step.PolicyStep(action_distribution, policy_state)

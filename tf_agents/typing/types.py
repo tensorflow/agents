@@ -91,7 +91,8 @@ GymEnvWrapper = Callable[[GymEnv], GymEnv]
 PyEnv = ForwardRef('tf_agents.environments.py_environment.PyEnvironment')  # pylint: disable=invalid-name
 PyEnvWrapper = Callable[[PyEnv], PyEnv]
 
-LossFn = Callable[[Tensor, Tensor], Tensor]
+ComparatorFn = Callable[[Float, Float], Bool]
+LossFn = Callable[..., Tensor]
 
 Optimizer = Union[tf.keras.optimizers.Optimizer, tf.compat.v1.train.Optimizer]
 

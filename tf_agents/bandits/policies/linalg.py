@@ -17,9 +17,11 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 
@@ -33,7 +35,9 @@ def _cg_check_shapes(a_mat, b):
 
 
 @common.function
-def conjugate_gradient(a_mat, b, tol=1e-10):
+def conjugate_gradient(a_mat: types.Tensor,
+                       b: types.Tensor,
+                       tol: float = 1e-10) -> types.Float:
   """Returns `x` such that `A * x = b`.
 
   Implements the Conjugate Gradient method.
@@ -92,7 +96,9 @@ def conjugate_gradient(a_mat, b, tol=1e-10):
 
 
 @common.function
-def conjugate_gradient_solve(a_mat, b_mat, tol=1e-10):
+def conjugate_gradient_solve(a_mat: types.Tensor,
+                             b_mat: types.Tensor,
+                             tol: float = 1e-10) -> types.Tensor:
   """Returns `X` such that `A * X = B`.
 
   Uses Conjugate Gradient to solve many linear systems of equations with the
@@ -139,7 +145,7 @@ def conjugate_gradient_solve(a_mat, b_mat, tol=1e-10):
   return x
 
 
-def _check_shapes(a_inv, u):
+def _check_shapes(a_inv: types.Tensor, u: types.Tensor):
   if a_inv.shape[0] != a_inv.shape[1] or a_inv.shape.rank != 2:
     raise ValueError('`a_inv` must be rank 2 square matrix; '
                      'got shape {}.'.format(a_inv.shape))
@@ -151,7 +157,8 @@ def _check_shapes(a_inv, u):
                      'got shapes {} and {}.'.format(a_inv.shape, u.shape))
 
 
-def simplified_woodbury_update(a_inv, u):
+def simplified_woodbury_update(a_inv: types.Float,
+                               u: types.Float) -> types.Float:
   """Returns `w` such that `inverse(a + u.T.dot(u)) = a_inv + w`.
 
   Makes use of the Woodbury matrix identity. See
@@ -180,7 +187,7 @@ def simplified_woodbury_update(a_inv, u):
       u_x_a_inv, tf.linalg.solve(capacitance, u_x_a_inv), transpose_a=True)
 
 
-def update_inverse(a_inv, x):
+def update_inverse(a_inv: types.Float, x: types.Float) -> types.Float:
   """Updates the inverse using the Woodbury matrix identity.
 
   Given a matrix `A` of size d-by-d and a matrix `X` of size k-by-d, this

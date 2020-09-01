@@ -29,6 +29,7 @@ import tensorflow_probability as tfp
 
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
 from tf_agents.bandits.networks import heteroscedastic_q_network
+from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks.network import Network
@@ -271,7 +272,7 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
     # Preserve static batch size values when they are available.
     batch_size = (tf.compat.dimension_value(scalarized_reward.shape[0])
                   or tf.shape(scalarized_reward)[0])
-    mask = policy_utilities.construct_mask_from_multiple_sources(
+    mask = constraints.construct_mask_from_multiple_sources(
         time_step.observation, self._observation_and_action_constraint_splitter,
         (), self._expected_num_actions)
 

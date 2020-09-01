@@ -29,7 +29,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 _POLICY_VARIABLES_OFFSET = 10.0
@@ -90,7 +89,6 @@ def test_cases():
       })
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class NeuralLinUCBPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):

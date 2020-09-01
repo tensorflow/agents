@@ -22,7 +22,10 @@ them for every observation. The distribution is defined by the
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Sequence, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -31,6 +34,7 @@ import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 tfd = tfp.distributions
@@ -44,7 +48,10 @@ SUBPOLICY_INFO = 'subpolicy_info'
 class MixturePolicy(tf_policy.TFPolicy):
   """A policy that chooses from a set of policies to decide the action."""
 
-  def __init__(self, mixture_distribution, policies, name=None):
+  def __init__(self,
+               mixture_distribution: types.Distribution,
+               policies: Sequence[tf_policy.TFPolicy],
+               name: Optional[Text] = None):
     """Initializes an instance of `MixturePolicy`.
 
     Args:

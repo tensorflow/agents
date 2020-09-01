@@ -17,26 +17,29 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Optional, Sequence, Text, Union
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-import tensorflow_probability as tfp
 
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 
-def get_num_actions_from_tensor_spec(action_spec):
+def get_num_actions_from_tensor_spec(
+    action_spec: types.BoundedTensorSpec) -> int:
   """Validates `action_spec` and returns number of actions.
 
   `action_spec` must specify a scalar int32 or int64 with minimum zero.
 
   Args:
-    action_spec: a `TensorSpec`.
+    action_spec: a `BoundedTensorSpec`.
 
   Returns:
     The number of actions described by `action_spec`.
@@ -98,9 +101,12 @@ PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
 PerArmPolicyInfo.__new__.__defaults__ = ((),) * len(PerArmPolicyInfo._fields)
 
 
-def populate_policy_info(arm_observations, chosen_actions, rewards_for_argmax,
-                         est_rewards, emit_policy_info,
-                         accepts_per_arm_features):
+def populate_policy_info(arm_observations: types.Tensor,
+                         chosen_actions: types.Tensor,
+                         rewards_for_argmax: types.Tensor,
+                         est_rewards: types.Tensor,
+                         emit_policy_info: Sequence[Text],
+                         accepts_per_arm_features: bool) -> PolicyInfo:
   """Populates policy info given all needed input.
 
   Args:
@@ -161,7 +167,8 @@ class BanditPolicyType(object):
   UNIFORM = 2
 
 
-def create_bandit_policy_type_tensor_spec(shape):
+def create_bandit_policy_type_tensor_spec(
+    shape: types.Shape) -> types.BoundedTensorSpec:
   """Create tensor spec for bandit policy type."""
   return tensor_spec.BoundedTensorSpec(
       shape=shape, dtype=tf.int32,
@@ -169,7 +176,9 @@ def create_bandit_policy_type_tensor_spec(shape):
 
 
 @common.function
-def masked_argmax(input_tensor, mask, output_type=tf.int32):
+def masked_argmax(input_tensor: types.Tensor,
+                  mask: types.Tensor,
+                  output_type: tf.DType = tf.int32) -> types.Tensor:
   """Computes the argmax where the allowed elements are given by a mask.
 
   If a row of `mask` contains all zeros, then this method will return -1 for the
@@ -195,9 +204,10 @@ def masked_argmax(input_tensor, mask, output_type=tf.int32):
   return tf.compat.v2.where(reduce_mask, argmax_tensor, neg_one)
 
 
-def has_bandit_policy_type(info, check_for_tensor=False):
+def has_bandit_policy_type(info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
+                           check_for_tensor: bool = False) -> bool:
   """Check if policy info has `bandit_policy_type` field/tensor."""
-  if info in ((), None):
+  if not info:
     return False
   fields = getattr(info, '_fields', None)
   has_field = fields is not None and InfoFields.BANDIT_POLICY_TYPE in fields
@@ -207,9 +217,10 @@ def has_bandit_policy_type(info, check_for_tensor=False):
     return has_field
 
 
-def has_chosen_arm_features(info, check_for_tensor=False):
+def has_chosen_arm_features(info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
+                            check_for_tensor: bool = False) -> bool:
   """Check if policy info has `chosen_arm_features` field/tensor."""
-  if info in ((), None):
+  if not info:
     return False
   fields = getattr(info, '_fields', None)
   has_field = fields is not None and InfoFields.CHOSEN_ARM_FEATURES in fields
@@ -219,7 +230,9 @@ def has_chosen_arm_features(info, check_for_tensor=False):
     return has_field
 
 
-def set_bandit_policy_type(info, bandit_policy_type):
+def set_bandit_policy_type(
+    info: Optional[Union[PolicyInfo, PerArmPolicyInfo]],
+    bandit_policy_type: types.Tensor) -> Union[PolicyInfo, PerArmPolicyInfo]:
   """Sets the InfoFields.BANDIT_POLICY_TYPE on info to bandit_policy_type.
 
   If policy `info` does not support InfoFields.BANDIT_POLICY_TYPE, this method
@@ -233,7 +246,7 @@ def set_bandit_policy_type(info, bandit_policy_type):
   Returns:
     Policy info with modified field (if possible).
   """
-  if info in ((), None):
+  if not info:
     return PolicyInfo(bandit_policy_type=bandit_policy_type)
   fields = getattr(info, '_fields', None)
   if fields is not None and InfoFields.BANDIT_POLICY_TYPE in fields:
@@ -246,7 +259,8 @@ def set_bandit_policy_type(info, bandit_policy_type):
 
 
 @common.function
-def bandit_policy_uniform_mask(values, mask):
+def bandit_policy_uniform_mask(values: types.Tensor,
+                               mask: types.Tensor) -> types.Tensor:
   """Set bandit policy type tensor to BanditPolicyType.UNIFORM based on mask.
 
   Set bandit policy type `values` to BanditPolicyType.UNIFORM; returns tensor
@@ -265,7 +279,7 @@ def bandit_policy_uniform_mask(values, mask):
       mask, tf.fill(tf.shape(values), BanditPolicyType.UNIFORM), values)
 
 
-def get_model_index(arm_index, accepts_per_arm_features):
+def get_model_index(arm_index: int, accepts_per_arm_features: bool) -> int:
   """Returns the model index for a specific arm.
 
   The number of models depends on the observation format: If the policy accepts
@@ -283,71 +297,16 @@ def get_model_index(arm_index, accepts_per_arm_features):
   return 0 if accepts_per_arm_features else arm_index
 
 
-def compute_feasibility_probability(observation, constraints, batch_size,
-                                    num_actions, action_mask=None):
-  """Helper function to compute the action feasibility probability."""
-  feasibility_prob = tf.ones([batch_size, num_actions])
-  if action_mask is not None:
-    feasibility_prob = tf.cast(action_mask, tf.float32)
-  for c in constraints:
-    # We assume the constraints are independent.
-    action_feasibility = c(observation)
-    feasibility_prob *= action_feasibility
-  return feasibility_prob
-
-
-def construct_mask_from_multiple_sources(
-    observation, observation_and_action_constraint_splitter, constraints,
-    max_num_actions):
-  """Constructs an action mask from multiple sources.
-
-  The sources include:
-  -- The action mask encoded in the observation,
-  -- the `num_actions` feature restricting the number of actions per sample,
-  -- the feasibility mask implied by constraints.
-
-  The resulting mask disables all actions that are masked out in any of the
-  three sources.
-
-  Args:
-    observation: A nest of Tensors containing the observation.
-    observation_and_action_constraint_splitter: The observation action mask
-      splitter function if the observation has action mask.
-    constraints: Iterable of constraints objects that are instances of
-        `tf_agents.bandits.agents.NeuralConstraint`.
-    max_num_actions: The maximum number of actions per sample.
-
-  Returns:
-    An action mask in the form of a `[batch_size, max_num_actions]` 0-1 tensor.
-  """
-  mask = None
-  if observation_and_action_constraint_splitter is not None:
-    observation, mask = observation_and_action_constraint_splitter(observation)
-  elif (isinstance(observation, dict) and
-        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in observation):
-    number_of_actions = observation[bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
-    mask = tf.sequence_mask(
-        lengths=number_of_actions, maxlen=max_num_actions, dtype=tf.int32)
-
-  first_observation = tf.nest.flatten(observation)[0]
-  batch_size = tf.shape(first_observation)[0]
-  if constraints:
-    feasibility_prob = compute_feasibility_probability(
-        observation, constraints, batch_size,
-        max_num_actions, mask)
-    # Probabilistic masking.
-    mask = tfp.distributions.Bernoulli(probs=feasibility_prob).sample()
-  return mask
-
-
-def create_chosen_arm_features_info_spec(observation_spec):
+def create_chosen_arm_features_info_spec(
+    observation_spec: types.NestedTensorSpec) -> types.NestedTensorSpec:
   """Creates the chosen arm features info spec from the arm observation spec."""
   arm_spec = observation_spec[bandit_spec_utils.PER_ARM_FEATURE_KEY]
   return tensor_spec.remove_outer_dims_nest(arm_spec, 1)
 
 
-def check_no_mask_with_arm_features(accepts_per_arm_features,
-                                    observation_and_action_constraint_splitter):
+def check_no_mask_with_arm_features(
+    accepts_per_arm_features: bool,
+    observation_and_action_constraint_splitter: types.Splitter):
   if accepts_per_arm_features and (observation_and_action_constraint_splitter is
                                    not None):
     raise NotImplementedError(

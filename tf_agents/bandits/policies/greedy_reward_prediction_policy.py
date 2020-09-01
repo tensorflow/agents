@@ -17,18 +17,23 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text, Tuple
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.bandits.networks import heteroscedastic_q_network
+from tf_agents.bandits.policies import constraints as constr
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 
 
 @gin.configurable
@@ -36,14 +41,15 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
   """Class to build GreedyNNPredictionPolicies."""
 
   def __init__(self,
-               time_step_spec=None,
-               action_spec=None,
-               reward_network=None,
-               observation_and_action_constraint_splitter=None,
-               accepts_per_arm_features=False,
-               constraints=(),
-               emit_policy_info=(),
-               name=None):
+               time_step_spec: types.TimeStep,
+               action_spec: types.NestedTensorSpec,
+               reward_network: types.Network,
+               observation_and_action_constraint_splitter: Optional[
+                   types.Splitter] = None,
+               accepts_per_arm_features: bool = False,
+               constraints: Tuple[constr.NeuralConstraint, ...] = (),
+               emit_policy_info: Tuple[Text, ...] = (),
+               name: Optional[Text] = None):
     """Builds a GreedyRewardPredictionPolicy given a reward tf_agents.Network.
 
     This policy takes a tf_agents.Network predicting rewards and generates the
@@ -168,7 +174,7 @@ class GreedyRewardPredictionPolicy(tf_policy.TFPolicy):
           ' size ({}).'.format(self._expected_num_actions,
                                predicted_reward_values.shape[1]))
 
-    mask = policy_utilities.construct_mask_from_multiple_sources(
+    mask = constr.construct_mask_from_multiple_sources(
         time_step.observation, self._observation_and_action_constraint_splitter,
         self._constraints, self._expected_num_actions)
 

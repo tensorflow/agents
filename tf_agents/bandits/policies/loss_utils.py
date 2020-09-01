@@ -17,15 +17,25 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Text
+
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+
+from tf_agents.typing import types
 
 
 def pinball_loss(
-    y_true, y_pred, weights=1.0, scope=None,
-    loss_collection=tf.compat.v1.GraphKeys.LOSSES,
-    reduction=tf.compat.v1.losses.Reduction.SUM_BY_NONZERO_WEIGHTS,
-    quantile=0.5):
+    y_true: types.Tensor,
+    y_pred: types.Tensor,
+    weights: types.Float = 1.0,
+    scope: Optional[Text] = None,
+    loss_collection: tf.compat.v1.GraphKeys = tf.compat.v1.GraphKeys.LOSSES,
+    reduction: tf.compat.v1.losses.Reduction = tf.compat.v1.losses.Reduction
+    .SUM_BY_NONZERO_WEIGHTS,
+    quantile: float = 0.5) -> types.Float:
   """Adds a Pinball loss for quantile regression.
 
     ```

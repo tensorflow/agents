@@ -17,9 +17,12 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+from typing import Optional, Sequence, Text
 
 from tf_agents.bandits.policies import linear_bandit_policy as lin_policy
+from tf_agents.typing import types
 
 
 class LinearUCBPolicy(lin_policy.LinearBanditPolicy):
@@ -32,20 +35,21 @@ class LinearUCBPolicy(lin_policy.LinearBanditPolicy):
   """
 
   def __init__(self,
-               action_spec,
-               cov_matrix,
-               data_vector,
-               num_samples,
-               time_step_spec=None,
-               alpha=1.0,
-               eig_vals=(),
-               eig_matrix=(),
-               tikhonov_weight=1.0,
-               add_bias=False,
-               emit_policy_info=(),
-               emit_log_probability=False,
-               observation_and_action_constraint_splitter=None,
-               name=None):
+               action_spec: types.BoundedTensorSpec,
+               cov_matrix: Sequence[types.Float],
+               data_vector: Sequence[types.Float],
+               num_samples: Sequence[types.Int],
+               time_step_spec: Optional[types.TimeStep] = None,
+               alpha: float = 1.0,
+               eig_vals: Sequence[types.Float] = (),
+               eig_matrix: Sequence[types.Float] = (),
+               tikhonov_weight: float = 1.0,
+               add_bias: bool = False,
+               emit_policy_info: Sequence[Text] = (),
+               emit_log_probability: bool = False,
+               observation_and_action_constraint_splitter: Optional[
+                   types.Splitter] = None,
+               name: Optional[Text] = None):
     """Initializes `LinUCBPolicy`.
 
     The `a` and `b` arguments may be either `Tensor`s or `tf.Variable`s.

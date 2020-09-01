@@ -17,10 +17,14 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Sequence, Text, Tuple
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
+from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.policies import linalg
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
@@ -28,6 +32,7 @@ from tf_agents.distributions import masked
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 
 tfd = tfp.distributions
 
@@ -56,22 +61,23 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
   """
 
   def __init__(self,
-               encoding_network,
-               encoding_dim,
-               reward_layer,
-               epsilon_greedy,
-               actions_from_reward_layer,
-               cov_matrix,
-               data_vector,
-               num_samples,
-               time_step_spec=None,
-               alpha=1.0,
-               emit_policy_info=(),
-               emit_log_probability=False,
-               accepts_per_arm_features=False,
-               distributed_use_reward_layer=False,
-               observation_and_action_constraint_splitter=None,
-               name=None):
+               encoding_network: types.Network,
+               encoding_dim: int,
+               reward_layer: tf.keras.layers.Dense,
+               epsilon_greedy: float,
+               actions_from_reward_layer: types.Bool,
+               cov_matrix: Sequence[types.Float],
+               data_vector: Sequence[types.Float],
+               num_samples: Sequence[types.Int],
+               time_step_spec: types.TimeStep,
+               alpha: float = 1.0,
+               emit_policy_info: Sequence[Text] = (),
+               emit_log_probability: bool = False,
+               accepts_per_arm_features: bool = False,
+               distributed_use_reward_layer: bool = False,
+               observation_and_action_constraint_splitter: Optional[
+                   types.Splitter] = None,
+               name: Optional[Text] = None):
     """Initializes `NeuralLinUCBPolicy`.
 
     Args:
@@ -233,7 +239,9 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     return [v for v in tf.nest.flatten(all_variables)
             if isinstance(v, tf.Variable)]
 
-  def _get_actions_from_reward_layer(self, encoded_observation, mask):
+  def _get_actions_from_reward_layer(
+      self, encoded_observation: types.Float, mask: Optional[types.Tensor]
+  ) -> Tuple[types.Int, types.Float, types.Float]:
     # Get the predicted expected reward.
     est_mean_reward = tf.reshape(self._reward_layer(encoded_observation),
                                  shape=[-1, self._num_actions])
@@ -265,7 +273,9 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
 
     return chosen_actions, est_mean_reward, est_mean_reward
 
-  def _get_actions_from_linucb(self, encoded_observation, mask):
+  def _get_actions_from_linucb(
+      self, encoded_observation: types.Float, mask: Optional[types.Tensor]
+  ) -> Tuple[types.Int, types.Float, types.Float]:
     encoded_observation = tf.cast(encoded_observation, dtype=self._dtype)
 
     p_values = []
@@ -312,7 +322,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     if self.observation_and_action_constraint_splitter is not None:
       observation, _ = self.observation_and_action_constraint_splitter(
           observation)
-    mask = policy_utilities.construct_mask_from_multiple_sources(
+    mask = constraints.construct_mask_from_multiple_sources(
         time_step.observation, self._observation_and_action_constraint_splitter,
         (), self._num_actions)
     # Pass the observations through the encoding network.
@@ -343,7 +353,8 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
         self._accepts_per_arm_features)
     return policy_step.PolicyStep(chosen_actions, policy_state, policy_info)
 
-  def _get_encoded_observation_for_arm(self, encoded_observation, arm_index):
+  def _get_encoded_observation_for_arm(self, encoded_observation: types.Float,
+                                       arm_index: int) -> types.Float:
     if self._accepts_per_arm_features:
       return(encoded_observation[:, arm_index, :])
     else:
