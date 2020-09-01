@@ -334,7 +334,7 @@ class HyperVolumeScalarizer(Scalarizer):
         multi_objectives * self._slopes + self._offsets, 0)
     nonzero_mask = tf.broadcast_to(
         tf.cast(tf.abs(self._direction) >= self.ALMOST_ZERO, dtype=tf.bool),
-        multi_objectives.shape)
+        tf.shape(multi_objectives))
     return tf.reduce_min(
         tf.where(nonzero_mask, transformed_objectives / self._direction,
                  multi_objectives.dtype.max),
