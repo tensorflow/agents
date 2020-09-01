@@ -33,7 +33,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
 from tf_agents.utils import test_utils
-from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -112,7 +111,6 @@ def test_cases():
       })
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class Exp3MixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):

@@ -25,12 +25,16 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Optional, Sequence, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.agents import linear_bandit_agent as lin_agent
+from tf_agents.typing import types
 
 
 @gin.configurable
@@ -52,21 +56,22 @@ class LinearThompsonSamplingAgent(lin_agent.LinearBanditAgent):
   """
 
   def __init__(self,
-               time_step_spec,
-               action_spec,
-               alpha=1.0,
-               gamma=1.0,
-               use_eigendecomp=False,
-               tikhonov_weight=1.0,
-               add_bias=False,
-               emit_policy_info=(),
-               observation_and_action_constraint_splitter=None,
-               accepts_per_arm_features=False,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               enable_summaries=True,
-               dtype=tf.float32,
-               name=None):
+               time_step_spec: types.TimeStep,
+               action_spec: types.BoundedTensorSpec,
+               alpha: float = 1.0,
+               gamma: float = 1.0,
+               use_eigendecomp: bool = False,
+               tikhonov_weight: float = 1.0,
+               add_bias: bool = False,
+               emit_policy_info: Sequence[Text] = (),
+               observation_and_action_constraint_splitter: Optional[
+                   types.Splitter] = None,
+               accepts_per_arm_features: bool = False,
+               debug_summaries: bool = False,
+               summarize_grads_and_vars: bool = False,
+               enable_summaries: bool = True,
+               dtype: tf.DType = tf.float32,
+               name: Optional[Text] = None):
     """Initialize an instance of `LinearThompsonSamplingAgent`.
 
     Args:

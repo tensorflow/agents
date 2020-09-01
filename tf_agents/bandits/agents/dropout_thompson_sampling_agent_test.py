@@ -30,9 +30,6 @@ from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 
 
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
-
-
 def _get_initial_and_final_steps(observations, rewards):
   batch_size = observations.shape[0]
   initial_step = ts.TimeStep(
@@ -96,7 +93,6 @@ def _get_experience(initial_step, action_step, final_step):
       single_experience)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class AgentTest(tf.test.TestCase):
 
   def setUp(self):

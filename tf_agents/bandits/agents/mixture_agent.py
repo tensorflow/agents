@@ -16,21 +16,25 @@
 """An agent that mixes a list of agents with a constant mixture distribution."""
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import abc
+from typing import List, Optional, Sequence, Text
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import mixture_policy
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
-def _dynamic_partition_of_nested_tensors(nested_tensor, partitions,
-                                         num_partitions):
+def _dynamic_partition_of_nested_tensors(
+    nested_tensor: types.NestedTensor, partitions: types.Int,
+    num_partitions: int) -> List[types.NestedTensor]:
   """This function takes a nested structure and partitions every element of it.
 
   Specifically it outputs a list of nest that all have the same structure as the
@@ -73,7 +77,10 @@ class MixtureAgent(tf_agent.TFAgent):
   compatible with XLA.
   """
 
-  def __init__(self, mixture_distribution, agents, name=None):
+  def __init__(self,
+               mixture_distribution: types.Distribution,
+               agents: Sequence[tf_agent.TFAgent],
+               name: Optional[Text] = None):
     """Initializes an instance of `MixtureAgent`.
 
     Args:

@@ -41,8 +41,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
 
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
-
 
 class DummyNet(network.Network):
 
@@ -121,7 +119,7 @@ class HeteroscedasticDummyNet(heteroscedastic_q_net.HeteroscedasticQNetwork):
     return predictions, network_state
 
 
-def _get_initial_and_final_steps(observations: np.ndarray,
+def _get_initial_and_final_steps(observations: types.NestedTensorOrArray,
                                  objectives: np.ndarray):
   batch_size = tf.nest.flatten(observations)[0].shape[0]
   assert len(objectives.shape) == 2
@@ -151,8 +149,8 @@ def _get_initial_and_final_steps(observations: np.ndarray,
   return initial_step, final_step
 
 
-def _get_initial_and_final_steps_with_action_mask(observations: np.ndarray,
-                                                  objectives: np.ndarray):
+def _get_initial_and_final_steps_with_action_mask(
+    observations: types.NestedTensorOrArray, objectives: np.ndarray):
   batch_size = tf.nest.flatten(observations)[0].shape[0]
   assert len(objectives.shape) == 2
   assert objectives.shape[0] == batch_size
@@ -194,7 +192,6 @@ def _get_experience(initial_step, action_step, final_step):
       single_experience)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class MultiObjectiveAgentTest(tf.test.TestCase):
 
   def setUp(self):

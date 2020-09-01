@@ -17,17 +17,22 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Tuple
 
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 
 
-def sum_reward_weighted_observations(r, x):
+def sum_reward_weighted_observations(r: types.Tensor,
+                                     x: types.Tensor) -> types.Tensor:
   """Calculates an update used by some Bandit algorithms.
 
   Given an observation `x` and corresponding reward `r`, the weigthed
@@ -51,7 +56,8 @@ def sum_reward_weighted_observations(r, x):
 
 
 @gin.configurable
-def build_laplacian_over_ordinal_integer_actions(action_spec):
+def build_laplacian_over_ordinal_integer_actions(
+    action_spec: types.BoundedTensorSpec) -> types.Tensor:
   """Build the unnormalized Laplacian matrix over ordinal integer actions.
 
   Assuming integer actions, this functions builds the (unnormalized) Laplacian
@@ -82,7 +88,7 @@ def build_laplacian_over_ordinal_integer_actions(action_spec):
   return laplacian_matrix
 
 
-def compute_pairwise_distances(input_vecs):
+def compute_pairwise_distances(input_vecs: types.Tensor) -> types.Tensor:
   """Compute the pairwise distances matrix.
 
   Given input embedding vectors, this utility computes the (squared) pairwise
@@ -104,7 +110,8 @@ def compute_pairwise_distances(input_vecs):
 
 
 @gin.configurable
-def build_laplacian_nearest_neighbor_graph(input_vecs, k=1):
+def build_laplacian_nearest_neighbor_graph(input_vecs: types.Tensor,
+                                           k: int = 1) -> types.Tensor:
   """Build the Laplacian matrix of a nearest neighbor graph.
 
   Given input embedding vectors, this utility returns the Laplacian matrix of
@@ -143,9 +150,9 @@ def build_laplacian_nearest_neighbor_graph(input_vecs, k=1):
 
 
 def process_experience_for_neural_agents(
-    experience,
-    accepts_per_arm_features,
-    training_data_spec):
+    experience: types.NestedTensor, accepts_per_arm_features: bool,
+    training_data_spec: types.NestedTensorSpec
+) -> Tuple[types.NestedTensor, types.Tensor, types.Tensor]:
   """Processes the experience and prepares it for the network of the agent.
 
   First the reward, the action, and the observation are flattened to have only

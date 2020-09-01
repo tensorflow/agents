@@ -28,7 +28,6 @@ from tf_agents.bandits.drivers import driver_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
-from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -59,7 +58,6 @@ def _get_experience(initial_step, action_step, final_step):
       single_experience)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class Exp3AgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):

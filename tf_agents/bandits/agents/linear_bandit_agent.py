@@ -20,9 +20,11 @@ LinUCB and Linear Thompson Sampling agents are subclasses of this agent.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 from enum import Enum
+from typing import Optional, Sequence, Text, Tuple
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -33,6 +35,7 @@ from tf_agents.bandits.policies import linalg
 from tf_agents.bandits.policies import linear_bandit_policy as lin_policy
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -47,11 +50,11 @@ class LinearBanditVariableCollection(tf.Module):
   """A collection of variables used by `LinearBanditAgent`."""
 
   def __init__(self,
-               context_dim,
-               num_models,
-               use_eigendecomp=False,
-               dtype=tf.float32,
-               name=None):
+               context_dim: int,
+               num_models: int,
+               use_eigendecomp: bool = False,
+               dtype: tf.DType = tf.float32,
+               name: Optional[Text] = None):
     """Initializes an instance of `LinearBanditVariableCollection`.
 
     It creates all the variables needed for `LinearBanditAgent`.
@@ -104,7 +107,13 @@ class LinearBanditVariableCollection(tf.Module):
 
 
 def update_a_and_b_with_forgetting(
-    a_prev, b_prev, r, x, gamma, compute_eigendecomp=False):
+    a_prev: types.Tensor,
+    b_prev: types.Tensor,
+    r: types.Tensor,
+    x: types.Tensor,
+    gamma: float,
+    compute_eigendecomp: bool = False
+) -> Tuple[types.Tensor, types.Tensor, types.Tensor, types.Tensor]:
   r"""Update the covariance matrix `a` and the weighted sum of rewards `b`.
 
   This function updates the covariance matrix `a` and the sum of weighted
@@ -139,25 +148,27 @@ def update_a_and_b_with_forgetting(
 class LinearBanditAgent(tf_agent.TFAgent):
   """An agent that maintains linear reward estimates and their uncertainties."""
 
-  def __init__(self,
-               exploration_policy,
-               time_step_spec,
-               action_spec,
-               variable_collection=None,
-               alpha=1.0,
-               gamma=1.0,
-               use_eigendecomp=False,
-               tikhonov_weight=1.0,
-               add_bias=False,
-               emit_policy_info=(),
-               emit_log_probability=False,
-               observation_and_action_constraint_splitter=None,
-               accepts_per_arm_features=False,
-               debug_summaries=False,
-               summarize_grads_and_vars=False,
-               enable_summaries=True,
-               dtype=tf.float32,
-               name=None):
+  def __init__(
+      self,
+      exploration_policy,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      variable_collection: Optional[LinearBanditVariableCollection] = None,
+      alpha: float = 1.0,
+      gamma: float = 1.0,
+      use_eigendecomp: bool = False,
+      tikhonov_weight: float = 1.0,
+      add_bias: bool = False,
+      emit_policy_info: Sequence[Text] = (),
+      emit_log_probability: bool = False,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter] = None,
+      accepts_per_arm_features: bool = False,
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      enable_summaries: bool = True,
+      dtype: tf.DType = tf.float32,
+      name: Optional[Text] = None):
     """Initialize an instance of `LinearBanditAgent`.
 
     Args:
@@ -352,7 +363,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
 
-  def compute_summaries(self, loss):
+  def compute_summaries(self, loss: types.Tensor):
     if self.summaries_enabled:
       with tf.name_scope('Losses/'):
         tf.compat.v2.summary.scalar(

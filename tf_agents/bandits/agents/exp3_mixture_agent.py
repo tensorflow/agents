@@ -21,12 +21,16 @@ Szepesvari (https://tor-lattimore.com/downloads/book/book.pdf).
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import List, Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
+from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import mixture_agent
 from tf_agents.bandits.policies import mixture_policy
 from tf_agents.utils import nest_utils
@@ -44,9 +48,9 @@ class Exp3MixtureVariableCollection(tf.Module):
   """
 
   def __init__(self,
-               num_agents,
-               reward_aggregates=None,
-               inverse_temperature=0.0):
+               num_agents: int,
+               reward_aggregates: Optional[List[float]] = None,
+               inverse_temperature: float = 0.0):
     """Initializes an instace of 'Exp3MixtureVariableCollection'.
 
     Args:
@@ -105,12 +109,13 @@ class Exp3MixtureAgent(mixture_agent.MixtureAgent):
   action. This information is in a policy info field `mixture_choice_info`.
   """
 
-  def __init__(self,
-               agents,
-               variable_collection=None,
-               forgetting=0.999,
-               max_inverse_temperature=1000.0,
-               name=None):
+  def __init__(
+      self,
+      agents: List[tf_agent.TFAgent],
+      variable_collection: Optional[Exp3MixtureVariableCollection] = None,
+      forgetting: float = 0.999,
+      max_inverse_temperature: float = 1000.0,
+      name: Optional[Text] = None):
     """Initializes an instance of `Exp3MixtureAgent`.
 
     Args:

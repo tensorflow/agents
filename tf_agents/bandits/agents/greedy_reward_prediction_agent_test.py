@@ -33,9 +33,6 @@ from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
-from tensorflow.python.framework import errors  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
-
 
 class DummyNet(network.Network):
 
@@ -192,7 +189,6 @@ def _get_experience(initial_step, action_step, final_step):
       single_experience)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class AgentTest(tf.test.TestCase):
 
   def setUp(self):
@@ -456,7 +452,7 @@ class AgentTest(tf.test.TestCase):
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
 
-    with self.assertRaisesRegexp(errors.InvalidArgumentError, ''):
+    with self.assertRaisesRegexp(tf.errors.InvalidArgumentError, ''):
       reward_net = DummyNet(self._observation_spec, self._action_spec)
       optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
       # Set the Laplacian matrix to be the identity, which is not a valid

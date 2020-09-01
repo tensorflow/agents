@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import os
@@ -34,7 +35,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
 from tf_agents.utils import common
-from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
 
@@ -240,7 +240,6 @@ def _get_experience(initial_step, action_step, final_step):
       lambda x: tf.expand_dims(tf.convert_to_tensor(x), 1), single_experience)
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):

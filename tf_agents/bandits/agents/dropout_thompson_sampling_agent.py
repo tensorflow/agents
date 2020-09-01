@@ -21,14 +21,19 @@ The neural network internally uses dropout to approximate Thompson sampling.
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Iterable, Optional, Text, Tuple
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.networks import heteroscedastic_q_network
+from tf_agents.bandits.policies import constraints as constr
 from tf_agents.networks import q_network
+from tf_agents.typing import types
 
 
 # TODO(b/146206372): refactor DropoutThompsonSamplingAgent API to be compliant
@@ -45,28 +50,29 @@ class DropoutThompsonSamplingAgent(
 
   def __init__(
       self,
-      time_step_spec,
-      action_spec,
-      optimizer,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      optimizer: types.Optimizer,
       # Network params.
-      dropout_rate,
-      network_layers,
-      dropout_only_top_layer=True,
-      observation_and_action_constraint_splitter=None,
-      constraints=(),
+      dropout_rate: float,
+      network_layers: Tuple[int, ...],
+      dropout_only_top_layer: bool = True,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter] = None,
+      constraints: Iterable[constr.BaseConstraint] = (),
       # Params for training.
-      error_loss_fn=tf.compat.v1.losses.mean_squared_error,
-      gradient_clipping=None,
-      heteroscedastic=False,
+      error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
+      gradient_clipping: Optional[float] = None,
+      heteroscedastic: bool = False,
       # Params for debugging.
-      debug_summaries=False,
-      summarize_grads_and_vars=False,
-      enable_summaries=True,
-      emit_policy_info=(),
-      train_step_counter=None,
-      laplacian_matrix=None,
-      laplacian_smoothing_weight=0.001,
-      name=None):
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      enable_summaries: bool = True,
+      emit_policy_info: Tuple[Text, ...] = (),
+      train_step_counter: Optional[tf.Variable] = None,
+      laplacian_matrix: Optional[types.Float] = None,
+      laplacian_smoothing_weight: float = 0.001,
+      name: Optional[Text] = None):
     """Creates a Dropout Thompson Sampling Agent.
 
     For more details about the Laplacian smoothing regularization, please see

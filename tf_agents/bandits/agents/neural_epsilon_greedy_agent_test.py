@@ -28,8 +28,6 @@ from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
-
 
 class DummyNet(network.Network):
 
@@ -57,7 +55,6 @@ class DummyNet(network.Network):
     return inputs, network_state
 
 
-@test_util.run_all_in_graph_and_eager_modes
 class AgentTest(tf.test.TestCase):
 
   def setUp(self):
