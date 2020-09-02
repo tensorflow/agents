@@ -225,7 +225,6 @@ class PPOAgent(tf_agent.TFAgent):
           agent = ppo_clip_agent.PPOClipAgent(
             time_step_tensor_spec, action_spec, actor_net, value_net, ...)
           ```
-          ```
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       kl_cutoff_factor: Only meaningful when `kl_cutoff_coef > 0.0`. A multipler
