@@ -124,9 +124,9 @@ In case of several reward signals, a common technique is called
 into a single one, which can be optimized by the vanilla bandits algorithms.
 The library offers the following options for scalarization:
 <ul>
-  <li>Linear [__Designing multi-objective multi-armed bandits algorithms: a study__  Drugan et al., 2013.](https://ieeexplore.ieee.org/document/6707036)</li>
-  <li>Chebyshev [__Designing multi-objective multi-armed bandits algorithms: a study__  Drugan et al., 2013.](https://ieeexplore.ieee.org/document/6707036)</li>
-  <li>Hypervolume [__Random Hypervolume Scalarizations for Provable Multi-Objective Black Box Optimization__ Golovin et al., 2020](https://arxiv.org/abs/2006.04655)</li>
+  <li>Linear [Designing multi-objective multi-armed bandits algorithms: a study  Drugan et al., 2013.](https://ieeexplore.ieee.org/document/6707036)</li>
+  <li>Chebyshev [Designing multi-objective multi-armed bandits algorithms: a study  Drugan et al., 2013.](https://ieeexplore.ieee.org/document/6707036)</li>
+  <li>Hypervolume [Random Hypervolume Scalarizations for Provable Multi-Objective Black Box Optimization Golovin et al., 2020](https://arxiv.org/abs/2006.04655)</li>
 </ul>
 * <b>Constrained optimization</b>
 In use cases where one metric clearly plays the role of reward metric and other
@@ -137,7 +137,7 @@ an action is eligible to be selected or not in the current round (given the
 current context). In the general case, the action feasibility is inferred by
 evaluating expressions involving one or more of the auxiliary constraint
 metrics.
-The [Constraints API] (https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/constraints.py)
+The [Constraints API] (https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/policies/constraints.py)
 unifies how all constraints are evaluated for computing the action feasibility.
 A single constraint may be trainable (or not) depending on whether the action
 feasibility computation is informed by a model predicting the value of the
