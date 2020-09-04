@@ -3,16 +3,17 @@
 #
 # Example usage:
 #
-#  Build a docker with the most recent stable version of TF-Agents.
+#  Builds a docker with the most recent nightly version of TF-Agents.
 #    docker build -t tf_agents/release_test \
 #      -f ubuntu_1804_tf_agents .
 #
-#  Build a docker without TF-Agents to use to build TF-Agents.
+#  Builds a docker without TF-Agents. Used to build TF-Agents.
 #    docker build -t tf_agents/release_build \
-#      --build-arg tf_agents_pip_spec=noop  \
+#      --build-arg tensorflow_pip_spec=noop \
+#      --build-arg tf_agents_pip_spec=noop \
 #      -f tools/docker/ubuntu_1804_tf_agents .
 #
-#  Build a docker with a local TF-Agents .whl file.
+#  Builds a docker with a local TF-Agents .whl file.
 #    docker build -t tf_agents/release_test \
 #      --build-arg local_tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl \
 #      --build-arg tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl  \

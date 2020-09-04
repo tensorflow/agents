@@ -1,0 +1,45 @@
+# Docker for running tf-agents with mujoco.
+#
+# Mujoco requires a license. A permanent or trial license is available from:
+# https://www.roboti.us/license.html
+#
+# Example usage:
+#  This docker builds on the tf-agents' core docker `ubuntu_1804_tf_agents`.
+#
+#  Build a docker with nightly version of TF-Agents and Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
+#    -f ubuntu_1804_tf_agents .
+#
+#    docker build -t tf_agents/mujoco -f ubuntu_1804_mujoco .
+#
+#
+#  Build a docker with latest stable TF-Agents and Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents[reverb] \
+#    --build-arg tensorflow_pip_spec=tensorflow -f ubuntu_1804_tf_agents .
+#
+#    docker build -t tf_agents/mujoco -f ubuntu_1804_mujoco .
+#
+FROM tf_agents/core as mujoco
+
+# Mujoco install. Only the install no license.
+RUN apt-get update && apt-get install -y \
+  --no-install-recommends \
+  libglew-dev \
+  libosmesa6-dev \
+  patchelf
+
+RUN mkdir -p /root/.mujoco \
+    && wget https://www.roboti.us/download/mujoco200_linux.zip -O mujoco.zip \
+    && unzip mujoco.zip -d /root/.mujoco \
+    && mv /root/.mujoco/mujoco200_linux /root/.mujoco/mujoco200 \
+    && rm mujoco.zip
+
+ENV LD_LIBRARY_PATH /root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}
+
+# Mojuoco will not install without a key.
+RUN echo 'This is a fake key, you will need to put your key here.' > /root/.mujoco/mjkey.txt
+RUN pip install -U 'mujoco-py<2.1,>=2.0'
+
+RUN pip freeze
