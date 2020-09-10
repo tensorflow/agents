@@ -77,6 +77,22 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     kl_divergence_ = self.evaluate(kl_divergence)
     self.assertAllClose(expected_kl_divergence, kl_divergence_)
 
+    # test for distributions with different shapes
+    one_reshaped = tf.constant([[1.0]] * 3, dtype=tf.float32)
+    dist_neg_one_reshaped = tfp.distributions.Normal(
+        loc=-one_reshaped, scale=one_reshaped)
+    dist_one_reshaped = tfp.distributions.Normal(
+        loc=one_reshaped, scale=one_reshaped)
+
+    nested_dist1 = [dist_zero, [dist_neg_one_reshaped, dist_one]]
+    nested_dist2 = [dist_one, [dist_one_reshaped, dist_zero]]
+    kl_divergence = ppo_utils.nested_kl_divergence(
+        nested_dist1, nested_dist2)
+    expected_kl_divergence = 3 * 3.0  # 3 * (0.5 + (2.0 + 0.5))
+
+    kl_divergence_ = self.evaluate(kl_divergence)
+    self.assertAllClose(expected_kl_divergence, kl_divergence_)
+
   def test_get_distribution_params(self):
     ones = tf.ones(shape=[2], dtype=tf.float32)
     distribution = (tfp.distributions.Categorical(logits=ones),
