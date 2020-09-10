@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Callable, Optional, Sequence, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -27,9 +30,11 @@ from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
+from tf_agents.typing import types
 
 
-def _remove_num_actions_dim_from_spec(observation_spec):
+def _remove_num_actions_dim_from_spec(
+    observation_spec: types.NestedTensorSpec) -> types.NestedTensorSpec:
   """Removes the extra `num_actions` dimension from the observation spec."""
   obs_spec_no_num_actions = {
       bandit_spec_utils.GLOBAL_FEATURE_KEY:
@@ -47,14 +52,16 @@ def _remove_num_actions_dim_from_spec(observation_spec):
 
 
 def create_feed_forward_common_tower_network(
-    observation_spec,
-    global_layers,
-    arm_layers,
-    common_layers,
-    output_dim=1,
-    global_preprocessing_combiner=None,
-    arm_preprocessing_combiner=None,
-    activation_fn=tf.keras.activations.relu):
+    observation_spec: types.NestedTensorSpec,
+    global_layers: Sequence[int],
+    arm_layers: Sequence[int],
+    common_layers: Sequence[int],
+    output_dim: int = 1,
+    global_preprocessing_combiner: Optional[Callable[..., types.Tensor]] = None,
+    arm_preprocessing_combiner: Optional[Callable[..., types.Tensor]] = None,
+    activation_fn: Callable[[types.Tensor],
+                            types.Tensor] = tf.keras.activations.relu
+) -> types.Network:
   """Creates a common tower network with feedforward towers.
 
   The network produced by this function can be used either in
@@ -117,10 +124,12 @@ def create_feed_forward_common_tower_network(
 
 
 def create_feed_forward_dot_product_network(
-    observation_spec,
-    global_layers,
-    arm_layers,
-    activation_fn=tf.keras.activations.relu):
+    observation_spec: types.NestedTensorSpec,
+    global_layers: Sequence[int],
+    arm_layers: Sequence[int],
+    activation_fn: Callable[[types.Tensor],
+                            types.Tensor] = tf.keras.activations.relu
+) -> types.Network:
   """Creates a dot product network with feedforward towers.
 
   Args:
@@ -167,11 +176,11 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
   """
 
   def __init__(self,
-               observation_spec,
-               global_network,
-               arm_network,
-               common_network,
-               name='GlobalAndArmCommonTowerNetwork'):
+               observation_spec: types.NestedTensorSpec,
+               global_network: types.Network,
+               arm_network: types.Network,
+               common_network: types.Network,
+               name='GlobalAndArmCommonTowerNetwork') -> types.Network:
     """Initializes an instance of `GlobalAndArmCommonTowerNetwork`.
 
     The network architecture contains networks for both the global and the arm
@@ -229,10 +238,10 @@ class GlobalAndArmDotProductNetwork(network.Network):
   """
 
   def __init__(self,
-               observation_spec,
-               global_network,
-               arm_network,
-               name='GlobalAndArmDotProductNetwork'):
+               observation_spec: types.NestedTensorSpec,
+               global_network: types.Network,
+               arm_network: types.Network,
+               name: Optional[Text] = 'GlobalAndArmDotProductNetwork'):
     """Initializes an instance of `GlobalAndArmDotProductNetwork`.
 
     The network architecture contains networks for both the global and the arm

@@ -17,9 +17,11 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import collections
+from typing import Any, Callable, Optional, Sequence, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -27,6 +29,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 from tf_agents.networks import q_network
+from tf_agents.typing import types
 
 
 class QBanditNetworkResult(collections.namedtuple(
@@ -38,21 +41,23 @@ class QBanditNetworkResult(collections.namedtuple(
 class HeteroscedasticQNetwork(network.Network):
   """Network Outputting Expected Value and Variance of Rewards."""
 
-  def __init__(self,
-               input_tensor_spec,
-               action_spec,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               fc_layer_params=(75, 40),
-               dropout_layer_params=None,
-               activation_fn=tf.keras.activations.relu,
-               kernel_initializer=None,
-               batch_squash=True,
-               min_variance=0.1,
-               max_variance=10000.0,
-               dtype=tf.float32,
-               name='HeteroscedasticQNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec: types.NestedTensorSpec,
+      action_spec: types.NestedTensorSpec,
+      preprocessing_layers: Optional[Callable[..., types.Tensor]] = None,
+      preprocessing_combiner: Optional[Callable[..., types.Tensor]] = None,
+      conv_layer_params: Optional[Sequence[Any]] = None,
+      fc_layer_params: Sequence[int] = (75, 40),
+      dropout_layer_params: Optional[Sequence[float]] = None,
+      activation_fn: Callable[[types.Tensor],
+                              types.Tensor] = tf.keras.activations.relu,
+      kernel_initializer: Optional[tf.keras.initializers.Initializer] = None,
+      batch_squash: bool = True,
+      min_variance: float = 0.1,
+      max_variance: float = 10000.0,
+      dtype: tf.DType = tf.float32,
+      name: Text = 'HeteroscedasticQNetwork'):
     """Creates an instance of `HeteroscedasticQNetwork`.
 
     Args:

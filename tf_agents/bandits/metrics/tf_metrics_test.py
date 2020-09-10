@@ -25,8 +25,6 @@ from tf_agents.bandits.policies import constraints
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
-from tensorflow.python.eager import context  # pylint: disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 
 def compute_optimal_reward(unused_observation):
@@ -114,51 +112,40 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(expected_name, metric.name)
 
   @parameterized.named_parameters([
-      ('TestRegretGraph', context.graph_mode, tf_metrics.RegretMetric,
+      ('TestRegret', tf_metrics.RegretMetric,
        compute_optimal_reward, 9),
-      ('TestRegretEager', context.eager_mode, tf_metrics.RegretMetric,
-       compute_optimal_reward, 9),
-      ('TestSuboptimalArmsGraph', context.graph_mode,
-       tf_metrics.SuboptimalArmsMetric, compute_optimal_action, 1),
-      ('TestSuboptimalArmsEager', context.eager_mode,
+      ('TestSuboptimalArms',
        tf_metrics.SuboptimalArmsMetric, compute_optimal_action, 1),
   ])
-  def testRegretMetric(self, run_mode, metric_class, fn, expected_result):
-    with run_mode():
-      traj = self._create_trajectory()
-      metric = metric_class(fn)
-      self.evaluate(metric.init_variables())
-      traj_out = metric(traj)
-      deps = tf.nest.flatten(traj_out)
-      with tf.control_dependencies(deps):
-        result = metric.result()
-      result_ = self.evaluate(result)
-      self.assertEqual(result_, expected_result)
+  def testRegretMetric(self, metric_class, fn, expected_result):
+    traj = self._create_trajectory()
+    metric = metric_class(fn)
+    self.evaluate(metric.init_variables())
+    traj_out = metric(traj)
+    deps = tf.nest.flatten(traj_out)
+    with tf.control_dependencies(deps):
+      result = metric.result()
+    result_ = self.evaluate(result)
+    self.assertEqual(result_, expected_result)
 
   @parameterized.named_parameters([
-      ('TestRegretGraphBatched', context.graph_mode, tf_metrics.RegretMetric,
+      ('TestRegretBatched', tf_metrics.RegretMetric,
        compute_optimal_reward, 8, 6.5),
-      ('TestRegretEagerBatched', context.eager_mode, tf_metrics.RegretMetric,
-       compute_optimal_reward, 8, 6.5),
-      ('TestSuboptimalArmsGraphBatched', context.graph_mode,
-       tf_metrics.SuboptimalArmsMetric, compute_optimal_action, 8, 7.0 / 8.0),
-      ('TestSuboptimalArmsEagerBatched', context.eager_mode,
+      ('TestSuboptimalArmsBatched',
        tf_metrics.SuboptimalArmsMetric, compute_optimal_action, 8, 7.0 / 8.0),
   ])
-  def testRegretMetricBatched(self, run_mode, metric_class, fn, batch_size,
+  def testRegretMetricBatched(self, metric_class, fn, batch_size,
                               expected_result):
-    with run_mode():
-      traj = self._create_batched_trajectory(batch_size)
-      metric = metric_class(fn)
-      self.evaluate(metric.init_variables())
-      traj_out = metric(traj)
-      deps = tf.nest.flatten(traj_out)
-      with tf.control_dependencies(deps):
-        result = metric.result()
-      result_ = self.evaluate(result)
-      self.assertEqual(result_, expected_result)
+    traj = self._create_batched_trajectory(batch_size)
+    metric = metric_class(fn)
+    self.evaluate(metric.init_variables())
+    traj_out = metric(traj)
+    deps = tf.nest.flatten(traj_out)
+    with tf.control_dependencies(deps):
+      result = metric.result()
+    result_ = self.evaluate(result)
+    self.assertEqual(result_, expected_result)
 
-  @test_util.run_in_graph_and_eager_modes
   def testRegretMetricWithRewardDict(
       self, metric_class=tf_metrics.RegretMetric, fn=compute_optimal_reward,
       batch_size=8, expected_result=6.5):

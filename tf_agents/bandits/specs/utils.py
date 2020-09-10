@@ -17,12 +17,16 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 import copy
-from absl import logging
+from typing import Optional, Tuple
+
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import trajectory as traj
+from tf_agents.typing import types
 
 GLOBAL_FEATURE_KEY = 'global'
 PER_ARM_FEATURE_KEY = 'per_arm'
@@ -34,11 +38,11 @@ REWARD_SPEC_KEY = 'reward'
 CONSTRAINTS_SPEC_KEY = 'constraint'
 
 
-def create_per_arm_observation_spec(global_dim,
-                                    per_arm_dim,
-                                    max_num_actions=None,
-                                    add_num_actions_feature=False,
-                                    add_action_mask=False):
+def create_per_arm_observation_spec(
+    global_dim: int,
+    per_arm_dim: int,
+    max_num_actions: Optional[int] = None,
+    add_num_actions_feature: bool = False) -> types.NestedTensorSpec:
   """Creates an observation spec with per-arm features and possibly action mask.
 
   Args:
@@ -51,17 +55,10 @@ def create_per_arm_observation_spec(global_dim,
       NUM_ACTIONS_FEATURE_KEY, or an action mask.
     add_num_actions_feature: (bool) whether to use the `num_actions` feature key
       to encode the number of actions per sample.
-    add_action_mask: (bool) whether to use an action mask to encode the number
-      of actions per sample. This option is discouraged for problems with per-
-      arm features, as the `num_actions` feature key is more natural. Using the
-      feature and the mask together is prohibited.
 
   Returns:
     A nested structure of observation spec.
   """
-  assert not (
-      add_num_actions_feature and add_action_mask
-  ), 'Action mask and `num_actions` feature key can not be used together.'
   global_obs_spec = tensor_spec.TensorSpec((global_dim,), tf.float32)
   arm_obs_spec = tensor_spec.TensorSpec((max_num_actions, per_arm_dim),
                                         tf.float32)
@@ -75,17 +72,12 @@ def create_per_arm_observation_spec(global_dim,
                                           maximum=max_num_actions,
                                           dtype=tf.int32)
     })
-  elif add_action_mask:
-    logging.warning('Action masking with per-arm features is discouraged. '
-                    'Instead, use variable number of actions via the `%s` '
-                    'feature key.', NUM_ACTIONS_FEATURE_KEY)
-    mask_spec = tensor_spec.BoundedTensorSpec(
-        shape=(max_num_actions,), minimum=0, maximum=1, dtype=tf.int32)
-    observation_spec = (observation_spec, mask_spec)
   return observation_spec
 
 
-def get_context_dims_from_spec(context_spec, accepts_per_arm_features):
+def get_context_dims_from_spec(
+    context_spec: types.NestedTensorSpec,
+    accepts_per_arm_features: bool) -> Tuple[int, int]:
   """Returns the global and per-arm context dimensions.
 
   If the policy accepts per-arm features, this function returns the tuple of
@@ -104,13 +96,15 @@ def get_context_dims_from_spec(context_spec, accepts_per_arm_features):
     global_context_dim = context_spec[GLOBAL_FEATURE_KEY].shape.as_list()[0]
     arm_context_dim = context_spec[PER_ARM_FEATURE_KEY].shape.as_list()[1]
   else:
+    assert hasattr(context_spec, 'shape')
     spec_shape = context_spec.shape.as_list()
     global_context_dim = spec_shape[0] if spec_shape else 1
     arm_context_dim = 0
   return global_context_dim, arm_context_dim
 
 
-def drop_arm_observation(trajectory):
+def drop_arm_observation(
+    trajectory: traj.Trajectory) -> traj.Trajectory:
   """Drops the per-arm observation from a given trajectory (or trajectory spec)."""
   transformed_trajectory = copy.deepcopy(trajectory)
   del transformed_trajectory.observation[PER_ARM_FEATURE_KEY]

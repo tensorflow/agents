@@ -17,13 +17,18 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
+
+from typing import Callable, Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.metrics import tf_metric
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 
@@ -31,7 +36,10 @@ from tf_agents.utils import common
 class RegretMetric(tf_metric.TFStepMetric):
   """Computes the regret with respect to a baseline."""
 
-  def __init__(self, baseline_reward_fn, name='RegretMetric', dtype=tf.float32):
+  def __init__(self,
+               baseline_reward_fn: Callable[[types.Tensor], types.Tensor],
+               name: Optional[Text] = 'RegretMetric',
+               dtype: float = tf.float32):
     """Computes the regret with respect to a baseline.
 
     The regret is computed by computing the difference of the current reward
@@ -77,8 +85,10 @@ class RegretMetric(tf_metric.TFStepMetric):
 class SuboptimalArmsMetric(tf_metric.TFStepMetric):
   """Computes the number of suboptimal arms with respect to a baseline."""
 
-  def __init__(self, baseline_action_fn, name='SuboptimalArmsMetric',
-               dtype=tf.float32):
+  def __init__(self,
+               baseline_action_fn: Callable[[types.Tensor], types.Tensor],
+               name: Optional[Text] = 'SuboptimalArmsMetric',
+               dtype: float = tf.float32):
     """Computes the number of suboptimal arms with respect to a baseline.
 
     Args:
@@ -118,16 +128,16 @@ class ConstraintViolationsMetric(tf_metric.TFStepMetric):
   """Computes the violations of a certain constraint."""
 
   def __init__(self,
-               constraint,
-               name='ConstraintViolationMetric',
-               dtype=tf.float32):
+               constraint: constraints.BaseConstraint,
+               name: Optional[Text] = 'ConstraintViolationMetric',
+               dtype: float = tf.float32):
     """Computes the constraint violations given an input constraint.
 
     Given a certain constraint, this metric computes how often the selected
     actions in the trajectory violate the constraint.
 
     Args:
-      constraint: an instance of `tf_agents.bandits.agents.BaseConstraint`.
+      constraint: an instance of `tf_agents.bandits.policies.BaseConstraint`.
       name: (str) name of the metric
       dtype: dtype of the metric value.
     """
