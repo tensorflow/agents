@@ -99,7 +99,8 @@ class Actor(object):
       self._summary_writer = NullSummaryWriter()
 
     self._summary_interval = summary_interval
-    self._last_summary = 0
+    # In order to write summaries at `train_step=0` as well.
+    self._last_summary = -summary_interval
 
     self._name = name
 
