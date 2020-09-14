@@ -16,6 +16,7 @@
 # Lint as: python3
 """Utils for running distributed actor/learner tests."""
 
+import functools
 import numpy as np
 import reverb
 import tensorflow.compat.v2 as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -29,7 +30,7 @@ from tf_agents.experimental.train.utils import replay_buffer_utils
 from tf_agents.experimental.train.utils import spec_utils
 from tf_agents.experimental.train.utils import train_utils
 from tf_agents.networks import actor_distribution_network
-from tf_agents.networks import q_network
+from tf_agents.networks import sequential
 from tf_agents.networks import value_network
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
@@ -41,16 +42,37 @@ from tf_agents.trajectories import trajectory
 def get_cartpole_env_and_specs():
   env = suite_gym.load('CartPole-v0')
 
-  observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
+  _, action_tensor_spec, time_step_tensor_spec = (
       spec_utils.get_tensor_specs(env))
 
-  return env, observation_tensor_spec, action_tensor_spec, time_step_tensor_spec
+  return env, action_tensor_spec, time_step_tensor_spec
 
 
-def create_ppo_agent_and_dataset_fn(observation_spec, action_spec,
-                                    time_step_spec, train_step, batch_size):
+def build_dummy_sequential_net(fc_layer_params, action_spec):
+  """Build a dummy sequential network."""
+  num_actions = action_spec.maximum - action_spec.minimum + 1
+
+  logits = functools.partial(
+      tf.keras.layers.Dense,
+      activation=None,
+      kernel_initializer=tf.compat.v1.initializers.random_uniform(
+          minval=-0.03, maxval=0.03),
+      bias_initializer=tf.compat.v1.initializers.constant(-0.2))
+
+  dense = functools.partial(
+      tf.keras.layers.Dense,
+      activation=tf.keras.activations.relu,
+      kernel_initializer=tf.compat.v1.variance_scaling_initializer(
+          scale=2.0, mode='fan_in', distribution='truncated_normal'))
+
+  return sequential.Sequential(
+      [dense(num_units) for num_units in fc_layer_params]
+      + [logits(num_actions)])
+
+
+def create_ppo_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
+                                    batch_size):
   """Builds and returns a dummy PPO Agent, dataset and dataset function."""
-  del observation_spec  # Unused.
   del action_spec  # Unused.
   del time_step_spec  # Unused.
   del batch_size  # Unused.
@@ -125,11 +147,11 @@ def create_ppo_agent_and_dataset_fn(observation_spec, action_spec,
   return agent, dataset, dataset_fn, agent.training_data_spec
 
 
-def create_dqn_agent_and_dataset_fn(observation_spec, action_spec,
-                                    time_step_spec, train_step, batch_size):
+def create_dqn_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
+                                    batch_size):
   """Builds and returns a dataset function for DQN Agent."""
-  q_net = q_network.QNetwork(
-      observation_spec, action_spec, fc_layer_params=(100,))
+  q_net = build_dummy_sequential_net(fc_layer_params=(100,),
+                                     action_spec=action_spec)
 
   agent = dqn_agent.DqnAgent(
       time_step_spec,
@@ -186,14 +208,13 @@ def get_actor_thread(test_case, reverb_server_port, num_iterations=10):
 
   def build_and_run_actor():
     root_dir = test_case.create_tempdir().full_path
-    env, observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
+    env, action_tensor_spec, time_step_tensor_spec = (
         get_cartpole_env_and_specs())
 
     train_step = train_utils.create_train_step()
 
-    # TODO(b/164143172): replace with tf_agents.networks.sequential.Sequential
-    q_net = q_network.QNetwork(
-        observation_tensor_spec, action_tensor_spec, fc_layer_params=(100,))
+    q_net = build_dummy_sequential_net(fc_layer_params=(100,),
+                                       action_spec=action_tensor_spec)
 
     agent = dqn_agent.DqnAgent(
         time_step_tensor_spec,

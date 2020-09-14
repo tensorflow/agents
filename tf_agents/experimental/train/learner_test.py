@@ -76,8 +76,8 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
 
       train_step = train_utils.create_train_step()
       agent, dataset, dataset_fn, _ = create_agent_and_dataset_fn(
-          tf_env.time_step_spec().observation, tf_env.action_spec(),
-          tf_env.time_step_spec(), train_step, sample_batch_size)
+          tf_env.action_spec(), tf_env.time_step_spec(), train_step,
+          sample_batch_size)
 
       root_dir = os.path.join(self.create_tempdir().full_path, 'learner')
 

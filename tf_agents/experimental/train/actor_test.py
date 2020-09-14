@@ -29,8 +29,8 @@ from tf_agents.environments import suite_gym
 from tf_agents.experimental.train import actor
 from tf_agents.experimental.train.utils import replay_buffer_utils
 from tf_agents.experimental.train.utils import spec_utils
+from tf_agents.experimental.train.utils import test_utils as dist_test_utils
 from tf_agents.experimental.train.utils import train_utils
-from tf_agents.networks import q_network
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.utils import test_utils
@@ -42,14 +42,12 @@ class ActorTest(test_utils.TestCase):
   def _build_components(self, rb_port):
     env = suite_gym.load('CartPole-v0')
 
-    observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
+    _, action_tensor_spec, time_step_tensor_spec = (
         spec_utils.get_tensor_specs(env))
     train_step = train_utils.create_train_step()
 
-    q_net = q_network.QNetwork(
-        observation_tensor_spec,
-        action_tensor_spec,
-        fc_layer_params=(100,))
+    q_net = dist_test_utils.build_dummy_sequential_net(
+        fc_layer_params=(100,), action_spec=action_tensor_spec)
 
     agent = dqn_agent.DqnAgent(
         time_step_tensor_spec,
