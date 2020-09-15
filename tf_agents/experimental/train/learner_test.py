@@ -43,15 +43,10 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
   def setUp(self):
     super(LearnerTest, self).setUp()
 
-    devices_cpu = tf.config.list_physical_devices('CPU')
+    # Define 4 logical CPUs on the first physical one.
+    dist_test_utils.configure_logical_cpus()
+
     devices_gpu = tf.config.list_physical_devices('GPU')
-    tf.config.experimental.set_virtual_device_configuration(
-        devices_cpu[0], [
-            tf.config.experimental.VirtualDeviceConfiguration(),
-            tf.config.experimental.VirtualDeviceConfiguration(),
-            tf.config.experimental.VirtualDeviceConfiguration(),
-            tf.config.experimental.VirtualDeviceConfiguration()
-        ])
     # If there are GPU devices:
     if devices_gpu:
       tf.config.experimental.set_virtual_device_configuration(

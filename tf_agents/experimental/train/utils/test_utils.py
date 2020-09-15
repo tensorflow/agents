@@ -17,6 +17,8 @@
 """Utils for running distributed actor/learner tests."""
 
 import functools
+
+from absl import logging
 import numpy as np
 import reverb
 import tensorflow.compat.v2 as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -37,6 +39,37 @@ from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+
+
+def configure_logical_cpus():
+  """Configures exactly 4 logical CPUs for the first physical CPU.
+
+  Assumes no logical configuration exists or it was configured the same way.
+
+  **Note**: The reason why the number of logical CPUs fixed is because
+  reconfiguring the number of logical CPUs once the underlying runtime has been
+  initialized is not supported (raises `RuntimeError`). So, with this choice it
+  is ensured that tests running in the same process calling this function
+  multiple times do not break.
+  """
+  first_cpu = tf.config.list_physical_devices('CPU')[0]
+  try:
+    logical_devices = [
+        tf.config.experimental.VirtualDeviceConfiguration() for _ in range(4)
+    ]
+    tf.config.experimental.set_virtual_device_configuration(
+        first_cpu, logical_devices=logical_devices)
+    logging.info(
+        'No current virtual device configuration. Defining 4 virtual CPUs on '
+        'the first physical one.')
+  except RuntimeError:
+    current_config = tf.config.experimental.get_virtual_device_configuration(
+        first_cpu)
+    logging.warn(
+        'The following virtual device configuration already exists: %s which '
+        'resulted this call to fail with `RuntimeError` since it is not '
+        'possible to reconfigure it after runtime initialization. It is '
+        'probably safe to ignore.', current_config)
 
 
 def get_cartpole_env_and_specs():
