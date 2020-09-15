@@ -42,6 +42,6 @@ upper_tabs:
     - name: API
       skip_translation: true
       contents:
-      - include: /agents/api_docs/python/_toc.yaml
+      - include: /agents/api_docs/python/tf_agents/_toc.yaml
 
 - include: /_upper_tabs_right.yaml
