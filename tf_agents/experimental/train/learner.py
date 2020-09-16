@@ -54,7 +54,7 @@ class Learner(tf.Module):
                train_step,
                agent,
                experience_dataset_fn=None,
-               after_train_step_fn=None,
+               after_train_strategy_step_fn=None,
                triggers=None,
                checkpoint_interval=100000,
                summary_interval=1000,
@@ -74,11 +74,11 @@ class Learner(tf.Module):
         tf.data.Dataset used to sample experience for training. Required for
         using the Learner as is. Optional for subclass learners which take a new
         iterator each time when `learner.run` is called.
-      after_train_step_fn: (Optional) callable of the form `fn(sample, loss)`
-        which can be used for example to update priorities in a replay buffer
-        where sample is pulled from the `experience_iterator` and loss is a
-        `LossInfo` named tuple returned from the agent. This is called after
-        every train step.
+      after_train_strategy_step_fn: (Optional) callable of the form
+        `fn(sample, loss)` which can be used for example to update priorities in
+        a replay buffer where sample is pulled from the `experience_iterator`
+        and loss is a `LossInfo` named tuple returned from the agent. This is
+        called after every train step. It runs using `strategy.run(...)`.
       triggers: List of callables of the form `trigger(train_step)`. After every
         `run` call every trigger is called with the current `train_step` value
         as an np scalar.
@@ -113,7 +113,7 @@ class Learner(tf.Module):
             lambda _: experience_dataset_fn())
         self._experience_iterator = iter(dataset)
 
-    self.after_train_step_fn = after_train_step_fn
+    self.after_train_strategy_step_fn = after_train_strategy_step_fn
     self.triggers = triggers or []
 
     # Prevent autograph from going into the agent.
@@ -213,7 +213,15 @@ class Learner(tf.Module):
     else:
       loss_info = self.strategy.run(self._agent.train, args=(experience,))
 
-    if self.after_train_step_fn:
-      self.after_train_step_fn((experience, sample_info), loss_info)
+    if self.after_train_strategy_step_fn:
+      if self.use_kwargs_in_agent_train:
+        self.strategy.run(
+            self.after_train_strategy_step_fn,
+            kwargs=dict(
+                experience=(experience, sample_info), loss_info=loss_info))
+      else:
+        self.strategy.run(
+            self.after_train_strategy_step_fn,
+            args=((experience, sample_info), loss_info))
 
     return loss_info

@@ -48,7 +48,7 @@ class PPOLearner(object):
                max_num_sequences=None,
                minibatch_size=None,
                shuffle_buffer_size=None,
-               after_train_step_fn=None,
+               after_train_strategy_step_fn=None,
                triggers=None,
                checkpoint_interval=100000,
                summary_interval=1000,
@@ -73,11 +73,11 @@ class PPOLearner(object):
         splitting them into mini batches. Only required when mini batch
         learning is enabled (minibatch_size is set). Otherwise it is ignored.
         Commonly set to a number 1-3x the episode length of your environment.
-      after_train_step_fn: (Optional) callable of the form `fn(sample, loss)`
-        which can be used for example to update priorities in a replay buffer
-        where sample is pulled from the `experience_iterator` and loss is a
-        `LossInfo` named tuple returned from the agent. This is called after
-        every train step.
+      after_train_strategy_step_fn: (Optional) callable of the form
+        `fn(sample, loss)` which can be used for example to update priorities in
+        a replay buffer where sample is pulled from the `experience_iterator`
+        and loss is a `LossInfo` named tuple returned from the agent. This is
+        called after every train step. It runs using `strategy.run(...)`.
       triggers: List of callables of the form `trigger(train_step)`. After every
         `run` call every trigger is called with the current `train_step` value
         as an np scalar.
@@ -116,7 +116,7 @@ class PPOLearner(object):
         train_step,
         agent,
         experience_dataset_fn=None,
-        after_train_step_fn=after_train_step_fn,
+        after_train_strategy_step_fn=after_train_strategy_step_fn,
         triggers=triggers,
         checkpoint_interval=checkpoint_interval,
         summary_interval=summary_interval,
@@ -199,9 +199,17 @@ class PPOLearner(object):
       loss_info = self._generic_learner.strategy.run(
           self._agent.train, args=(experience,))
 
-    if self._generic_learner.after_train_step_fn:
-      self._generic_learner.after_train_step_fn((experience, sample_info),
-                                                loss_info)
+    if self._generic_learner.after_train_strategy_step_fn:
+      if self.use_kwargs_in_agent_train:
+        self.strategy.run(
+            self._generic_learner.after_train_strategy_step_fn,
+            kwargs=dict(
+                experience=(experience, sample_info), loss_info=loss_info))
+      else:
+        self.strategy.run(
+            self._generic_learner.after_train_strategy_step_fn,
+            args=((experience, sample_info), loss_info))
+
     return loss_info
 
   @common.function(autograph=True)
