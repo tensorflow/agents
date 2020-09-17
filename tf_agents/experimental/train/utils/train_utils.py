@@ -106,21 +106,15 @@ def create_staleness_metrics_after_train_step_fn(
   return after_train_step_fn
 
 
-# TODO(b/142821173): Test train_utils `wait_for_files` functions.
-def wait_for_file(file_path: Text,
-                  sleep_time_secs: int = 2,
-                  num_retries: int = 86400,
-                  sleep: Callable[[int], None] = time.sleep) -> Text:
+# TODO(b/142821173): Test train_utils `wait_for_files` function.
+def wait_for_file(file_path: Text, sleep_time_secs: int,
+                  num_retries: int) -> Text:
   """Blocks until the file at `file_path` becomes available.
-
-  The default setting allows a fairly loose, but not infinite wait time of 2
-  days for this function to block.
 
   Args:
     file_path: The path to the file that we are waiting for.
     sleep_time_secs: Number of time in seconds slept between retries.
     num_retries: Number of times the existence of the file is checked.
-    sleep: Callable sleep function.
 
   Returns:
     The original `file_path`.
@@ -129,20 +123,54 @@ def wait_for_file(file_path: Text,
     TimeoutError: If the file does not become available during the number of
       trials.
   """
+
+  def _is_file_missing(file_path=file_path):
+    """Checks if the file is (still) missing, i.e. more wait is necessary."""
+    try:
+      stat = tf.io.gfile.stat(file_path)
+    except tf.errors.NotFoundError:
+      return True
+    return stat.length <= 0
+
+  wait_for_predicate(
+      wait_predicate_fn=_is_file_missing,
+      sleep_time_secs=sleep_time_secs,
+      num_retries=num_retries)
+
+  return file_path
+
+
+# TODO(b/142821173): Test train_utils `wait_for_predicate` function.
+def wait_for_predicate(wait_predicate_fn: Callable[[], bool],
+                       sleep_time_secs: int, num_retries: int) -> None:
+  """Blocks while `wait_predicate_fn` is returning `True`.
+
+  The callable `wait_predicate_fn` indicates if waiting is still needed by
+  returning `True`. Once the condition that we wanted to wait for met, the
+  callable should return `False` denoting that the execution can continue.
+
+  Args:
+    wait_predicate_fn: A callable returning a bool. Blocks while it is returning
+      `True`. Returns if it becomes `False`.
+    sleep_time_secs: Number of time in seconds slept between retries.
+    num_retries: Number of times the existence of the file is checked.
+
+  Raises:
+    TimeoutError: If the `wait_predicate_fn` does not become `False` during the
+      number of trials.
+  """
   retry = 0
-  while (num_retries is None or
-         retry < num_retries) and (not tf.io.gfile.exists(file_path) or
-                                   tf.io.gfile.stat(file_path).length <= 0):
-    logging.info('Waiting for the file to become available:\n\t%s', file_path)
-    sleep(sleep_time_secs)
+  while (num_retries is None or retry < num_retries) and wait_predicate_fn():
+    if sleep_time_secs > 0:
+      logging.info(
+          'Waiting for `wait_predicate_fn`. Block execution. Sleeping for %d '
+          'seconds.', sleep_time_secs)
+      time.sleep(sleep_time_secs)
     retry += 1
 
-  if (not tf.io.gfile.exists(file_path) or
-      tf.io.gfile.stat(file_path).length <= 0):
+  if wait_predicate_fn():
     raise TimeoutError(
-        'Could not find file {} after {} retries waiting {} seconds between '
-        'retries.'.format(file_path, num_retries, sleep_time_secs))
+        'The wait predicate did not return `False` after {} retries waiting {} '
+        'seconds between retries.'.format(num_retries, sleep_time_secs))
 
-  logging.info('The file %s became available, file length: %s', file_path,
-               tf.io.gfile.stat(file_path).length)
-  return file_path
+  logging.info('The `wait_predicate_fn` returned `False`. Continue execution.')
