@@ -37,11 +37,20 @@ from tf_agents.specs import tensor_spec
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_integer('min_table_size_before_sampling', 1,
+                     'Minimum number of elements in table before sampling.')
 flags.DEFINE_integer('replay_buffer_capacity', 1000000,
                      'Capacity of the replay buffer table.')
 flags.DEFINE_integer('port', None, 'Port to start the server on.')
+flags.DEFINE_integer(
+    'samples_per_insert', None,
+    'Samples per insert limit. To use this option, ensure that '
+    'min_table_size_before_sampling >= 2 * max(1.0, samples_per_insert)')
 
 FLAGS = flags.FLAGS
+
+# Ratio for samples per insert rate limiting tolerance
+_SAMPLES_PER_INSERT_TOLERANCE_RATIO = 0.1
 
 
 def main(_):
@@ -53,6 +62,10 @@ def main(_):
       learner.COLLECT_POLICY_SAVED_MODEL_DIR)
   saved_model_pb_path = os.path.join(collect_policy_saved_model_path,
                                      'saved_model.pb')
+
+  samples_per_insert = FLAGS.samples_per_insert
+  min_table_size_before_sampling = FLAGS.min_table_size_before_sampling
+
   try:
     # Wait for the collect policy to be outputed by learner (timeout after 2
     # days), then load it.
@@ -82,6 +95,20 @@ def main(_):
       collect_policy.collect_data_spec)
   logging.info('Signature of experience: \n%s', replay_buffer_signature)
 
+  if samples_per_insert is not None:
+    # Use SamplesPerInsertRatio limiter
+    samples_per_insert_tolerance = _SAMPLES_PER_INSERT_TOLERANCE_RATIO * samples_per_insert
+    error_buffer = min_table_size_before_sampling * samples_per_insert_tolerance
+
+    experience_rate_limiter = reverb.rate_limiters.SampleToInsertRatio(
+        min_size_to_sample=min_table_size_before_sampling,
+        samples_per_insert=samples_per_insert,
+        error_buffer=error_buffer)
+  else:
+    # Use MinSize limiter
+    experience_rate_limiter = reverb.rate_limiters.MinSize(
+        min_table_size_before_sampling)
+
   # Crete and start the replay buffer and variable container server.
   server = reverb.Server(
       tables=[
@@ -89,8 +116,7 @@ def main(_):
               name=reverb_replay_buffer.DEFAULT_TABLE,
               sampler=reverb.selectors.Uniform(),
               remover=reverb.selectors.Fifo(),
-              # TODO(b/159073060): Set rate limiter for SAC properly.
-              rate_limiter=reverb.rate_limiters.MinSize(1),
+              rate_limiter=experience_rate_limiter,
               max_size=FLAGS.replay_buffer_capacity,
               max_times_sampled=0,
               signature=replay_buffer_signature,
