@@ -239,6 +239,15 @@ def _create_add_episode_observer_fn(*args, **kwargs):
   return _create_and_yield
 
 
+def _create_add_sequence_observer_fn(*args, **kwargs):
+
+  @contextlib.contextmanager
+  def _create_and_yield(client):
+    yield reverb_utils.ReverbTrajectorySequenceObserver(client, *args, **kwargs)
+
+  return _create_and_yield
+
+
 def _env_creator(episode_len=3):
   return functools.partial(test_envs.CountingEnv, steps_per_episode=episode_len)
 
@@ -293,7 +302,16 @@ class ReverbObserverTest(parameterized.TestCase):
        2,   # expected_items
        2,   # writer_call_counts
        4,   # max_steps
-       5))  # append_count
+       5),  # append_count
+      ('add_sequence_observer',
+       _create_add_sequence_observer_fn(
+           table_name='test_table', sequence_length=2,
+           stride_length=2), _env_creator(3),
+       2,   # expected_items
+       1,   # writer_call_counts
+       4,   # max_steps
+       5)   # append_count
+  )
   def test_observer_writes(self, create_observer_fn, env_fn, expected_items,
                            writer_call_counts, max_steps, append_count):
     env = env_fn()

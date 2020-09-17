@@ -295,3 +295,35 @@ class ReverbAddTrajectoryObserver(object):
     """
     self._writer.close()
     self._writer = None
+
+
+class ReverbTrajectorySequenceObserver(ReverbAddTrajectoryObserver):
+  """Reverb trajectory sequence observer.
+
+  This is equivalent to ReverbAddTrajectoryObserver but sequences are not cut
+  when a boundary trajectory is seen. This allows for sequences to be sampled
+  with boundaries anywhere in the sequence rather than just at the end.
+
+  Consider using this observer when you want to create training experience that
+  can encompass any subsequence of the observed trajectories.
+
+  **Note**: Counting of steps in drivers does not include boundary steps. To
+  guarantee only 1 item is pushed to the replay when collecting n steps with a
+  `sequence_length` of n make sure to set the `stride_length`
+  """
+
+  def __call__(self, trajectory):
+    """Writes the trajectory into the underlying replay buffer.
+
+    Allows trajectory to be a flattened trajectory. No batch dimension allowed.
+
+    Args:
+      trajectory: The trajectory to be written which could be (possibly nested)
+        trajectory object or a flattened version of a trajectory. It assumes
+        there is *no* batch dimension.
+    """
+    self._writer.append(trajectory)
+    self._cached_steps += 1
+
+    self._write_cached_steps()
+
