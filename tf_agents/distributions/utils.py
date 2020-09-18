@@ -233,10 +233,15 @@ class Params(object):
   params: Mapping[Text, Any]
 
   def __str__(self):
-    return "<Params: type={}, params={}".format(self.type_, self.params)
+    return "<Params: type={}, params={}>".format(self.type_, self.params)
 
   def __repr__(self):
     return str(self)
+
+  def __eq__(self, other):
+    return (isinstance(self, type(other))
+            and self.type_ == other.type_
+            and self.params == other.params)
 
   def __init__(self, type_, params):
     self.type_ = type_
@@ -489,3 +494,67 @@ def merge_to_parameters_from_dict(
             sorted(params_dict.keys()), sorted(processed_params)))
 
   return Params(type_=value.type_, params=new_params)
+
+
+def _check_no_tensors(parameters: Params):
+  flat_params = tf.nest.flatten(parameters.params)
+  for p in flat_params:
+    if isinstance(p, Params):
+      _check_no_tensors(p)
+    if tf.is_tensor(p):
+      raise TypeError(
+          "Saw a `Tensor` value in parameters:\n  {}".format(parameters))
+
+
+class DistributionSpecV2(object):
+  """Describes a tfp.distribution.Distribution using nested parameters."""
+
+  def __init__(self,
+               event_shape: tf.TensorShape,
+               dtype: tf.DType,
+               parameters: Params):
+    """Construct a `DistributionSpecV2` from a Distribution's properties.
+
+    Note that the `parameters` used to create the spec should contain
+    `tf.TypeSpec` objects instead of tensors.  We check for this.
+
+    Args:
+      event_shape: The distribution's `event_shape`.  This is the shape that
+        `distribution.sample()` returns.  `distribution.sample(sample_shape)`
+        returns tensors of shape `sample_shape + event_shape`.
+      dtype: The distribution's `dtype`.
+      parameters: The recursive parameters of the distribution, with
+        tensors having directly been converted to `tf.TypeSpec` objects.
+
+    Raises:
+      TypeError: If for any entry `x` in `parameters`: `tf.is_tensor(x)`.
+    """
+    _check_no_tensors(parameters)
+    self._event_shape = event_shape
+    self._dtype = dtype
+    self._parameters = parameters
+
+  @property
+  def event_shape(self) -> tf.TensorShape:
+    return self._event_shape
+
+  @property
+  def dtype(self) -> tf.DType:
+    return self._dtype
+
+  @property
+  def parameters(self) -> Params:
+    return self._parameters
+
+  def __eq__(self, other):
+    return (isinstance(self, type(other))
+            and self._event_shape == other._event_shape
+            and self._dtype == other._dtype
+            and self._parameters == other._parameters)
+
+  def __str__(self):
+    return ("<DistributionSpecV2: event_shape={}, dtype={}, parameters={}>"
+            .format(self.event_shape, self.dtype, self.parameters))
+
+  def __repr__(self):
+    return str(self)

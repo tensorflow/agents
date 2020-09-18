@@ -28,12 +28,16 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from tf_agents.specs import array_spec
-
 if sys.version_info < (3, 7):
   ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
 else:
   ForwardRef = typing.ForwardRef
+
+ArraySpec = ForwardRef('tf_agents.specs.array_spec.ArraySpec')
+Network = ForwardRef('tf_agents.networks.network.Network')  # pylint: disable=invalid-name
+BoundedTensorSpec = ForwardRef('tf_agents.specs.tensor_spec.BoundedTensorSpec')  # pylint: disable=invalid-name
+DistributionSpecV2 = ForwardRef(
+    'tf_agents.distributions.utils.DistributionSpecV2')  # pylint: disable=invalid-name
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
 Array = Union[np.ndarray, int, float, str, bool]   # pylint: disable=invalid-name
@@ -41,14 +45,13 @@ TensorOrArray = Union[Tensor, Array]
 Distribution = tfp.distributions.Distribution
 
 TensorSpec = Union[
-    tf.TypeSpec, tf.TensorSpec, tf.RaggedTensorSpec, tf.SparseTensorSpec]
-ArraySpec = array_spec.ArraySpec
+    tf.TypeSpec, tf.TensorSpec, tf.RaggedTensorSpec, tf.SparseTensorSpec,
+    DistributionSpecV2
+]
+
 Spec = Union[TensorSpec, ArraySpec]
 
 SpecTensorOrArray = Union[Spec, Tensor, Array]
-
-Network = ForwardRef('tf_agents.networks.network.Network')  # pylint: disable=invalid-name
-BoundedTensorSpec = ForwardRef('tf_agents.specs.tensor_spec.BoundedTensorSpec')  # pylint: disable=invalid-name
 
 # Note that this is effectively treated as `Any`; see b/109648354.
 Tnest = TypeVar('Tnest')
@@ -62,7 +65,7 @@ NestedDistribution = Nested[
 NestedPlaceHolder = Nested[tf.compat.v1.placeholder, 'NestedPlaceholder']
 NestedTensorSpec = Nested[TensorSpec, 'NestedTensorSpec']
 NestedBoundedTensorSpec = Nested[BoundedTensorSpec, 'NestedBoundedTensorSpec']
-NestedArraySpec = Nested[array_spec.ArraySpec, 'NestedArraySpec']
+NestedArraySpec = Nested[ArraySpec, 'NestedArraySpec']
 NestedLayer = Nested[tf.keras.layers.Layer, 'NestedLayer']
 NestedNetwork = Nested[Network, 'NestedNetwork']
 

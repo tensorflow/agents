@@ -20,12 +20,17 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents import specs
+from tf_agents.distributions import utils as distribution_utils
 from tf_agents.keras_layers import rnn_wrapper
 from tf_agents.networks import network
 from tf_agents.utils import common
+
+
+tfd = tfp.distributions
 
 
 class BaseNetwork(network.Network):
@@ -115,7 +120,7 @@ class NetworkTest(tf.test.TestCase):
   def test_too_many_args_raises_appropriate_error(self):
     with self.assertRaisesRegexp(TypeError, '__init__.*given'):
       # pylint: disable=too-many-function-args
-      MockNetwork(0, 1, 2, 3, 4, 5, 6)
+      MockNetwork(0, 1, 2, 3, 4, 5, 6)  # pytype: disable=wrong-arg-count
 
   def test_assert_input_spec(self):
     spec = specs.TensorSpec([], tf.int32, 'action')
@@ -240,15 +245,45 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
           [tf.TensorSpec((3,), tf.float32),
            tf.TensorSpec((3,), tf.float32)],
       ),
-      ('TimeDistributed',
-       lambda: tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(3)),
-       tf.TensorSpec((5,), tf.float32), tf.TensorSpec((3,), tf.float32), ()),
-      ('Conv2D', lambda: tf.keras.layers.Conv2D(2, 3),
-       tf.TensorSpec((28, 28, 5), tf.float32),
-       tf.TensorSpec((26, 26, 2), tf.float32), ()),
-      ('SequentialOfDense',
-       lambda: tf.keras.Sequential([tf.keras.layers.Dense(3)] * 2),
-       tf.TensorSpec((5,), tf.float32), tf.TensorSpec((3,), tf.float32), ()),
+      (
+          'TimeDistributed',
+          lambda: tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(3)),
+          tf.TensorSpec((5,), tf.float32),
+          tf.TensorSpec((3,), tf.float32),
+          ()
+      ),
+      (
+          'Conv2D',
+          lambda: tf.keras.layers.Conv2D(2, 3),
+          tf.TensorSpec((28, 28, 5), tf.float32),
+          tf.TensorSpec((26, 26, 2), tf.float32),
+          ()
+      ),
+      (
+          'SequentialOfDense',
+          lambda: tf.keras.Sequential([tf.keras.layers.Dense(3)] * 2),
+          tf.TensorSpec((5,), tf.float32),
+          tf.TensorSpec((3,), tf.float32),
+          ()
+      ),
+      (
+          'NormalDistribution',
+          lambda: tf.keras.Sequential(
+              [tf.keras.layers.Dense(3),
+               tf.keras.layers.Lambda(
+                   lambda x: tfd.Normal(loc=x, scale=x**2))]),
+          tf.TensorSpec((5,), tf.float32),
+          distribution_utils.DistributionSpecV2(
+              event_shape=tf.TensorShape(()),
+              dtype=tf.float32,
+              parameters=distribution_utils.Params(
+                  type_=tfd.Normal,
+                  params=dict(
+                      loc=tf.TensorSpec((3,), tf.float32),
+                      scale=tf.TensorSpec((3,), tf.float32),
+                  ))),
+          ()
+      ),
   )
   # pylint: enable=g-long-λ
   def testKerasLayerCreate(self, layer_fn, input_spec, expected_output_spec,
@@ -258,7 +293,9 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
       network.create_variables(layer)
     output_spec = network.create_variables(layer, input_spec)
     self.assertTrue(layer.built)
-    self.assertEqual(output_spec, expected_output_spec)
+    self.assertEqual(
+        output_spec, expected_output_spec,
+        '\n{}\nvs.\n{}\n'.format(output_spec, expected_output_spec))
     output_spec_2 = network.create_variables(layer, input_spec)
     self.assertEqual(output_spec_2, expected_output_spec)
     state_spec = getattr(layer, '_network_state_spec', None)
