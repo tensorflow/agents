@@ -35,12 +35,12 @@ from tf_agents.experimental.train import learner
 from tf_agents.experimental.train import triggers
 from tf_agents.experimental.train.utils import spec_utils
 from tf_agents.experimental.train.utils import train_utils
-from tf_agents.google.replay_buffers import reverb_replay_buffer
-from tf_agents.google.replay_buffers import reverb_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import value_network
 from tf_agents.policies import py_tf_eager_policy
+from tf_agents.replay_buffers import reverb_replay_buffer
+from tf_agents.replay_buffers import reverb_utils
 
 
 @gin.configurable
@@ -203,13 +203,10 @@ def train_eval(
       # The only collected sequence is used to populate the batches.
       max_cycle_length=1,
       rate_limiter_timeout_ms=1000)
-  # TODO(b/162244134): move to using the episodic observer after the performance
-  # issue caused by the bug is resolved.
-  rb_observer = reverb_utils._ReverbAddTrajectoryObserver(  # pylint: disable=protected-access
+  rb_observer = reverb_utils.ReverbTrajectorySequenceObserver(
       reverb_replay.py_client, table_name,
       sequence_length=collect_sequence_length,
-      stride_length=collect_sequence_length,
-      allow_multi_episode_sequences=True)
+      stride_length=collect_sequence_length)
 
   saved_model_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR)
   collect_env_step_metric = py_metrics.EnvironmentSteps()
