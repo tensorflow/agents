@@ -17,6 +17,8 @@ upper_tabs:
         path: /agents/overview
       - title: Intro to RL
         path: /agents/tutorials/0_intro_rl
+      - title: Intro to Multi-Armed Bandits
+        path: /agents/tutorials/intro_bandit
       - title: Train a deep Q network
         path: /agents/tutorials/1_dqn_tutorial
       - heading: "Guide"
