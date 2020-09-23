@@ -156,6 +156,16 @@ def _get_expected_minibatch(all_traj, minibatch_size, current_iteration):
 
 class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
 
+  def setUp(self):
+    super(PpoLearnerTest, self).setUp()
+    # Run in full eager mode in order to inspect the content of the trajectory
+    # fed into the fake agent.
+    tf.config.experimental_run_functions_eagerly(True)
+
+  def tearDown(self):
+    tf.config.experimental_run_functions_eagerly(False)
+    super(PpoLearnerTest, self).tearDown()
+
   @parameterized.named_parameters(
       ('OneEpochMinibatch', 1, 1, 10, 10),
       ('TwoEpochsMinibatch', 2, 1, 10, 20),
@@ -270,7 +280,4 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
 
 if __name__ == '__main__':
   tf.compat.v1.enable_v2_behavior()
-  # Run in full eager mode in order to inspect the content of the trajectory
-  # fed into the fake agent.
-  tf.config.experimental_run_functions_eagerly(True)
   tf.test.main()
