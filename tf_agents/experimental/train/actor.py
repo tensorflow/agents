@@ -145,7 +145,6 @@ class Actor(object):
 
   def run_and_log(self):
     self.run()
-    self.write_metric_summaries()
     self.log_metrics()
 
   def write_metric_summaries(self):
