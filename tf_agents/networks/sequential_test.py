@@ -26,7 +26,9 @@ from absl import flags
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow_probability as tfp
 
+from tf_agents.distributions import utils as distribution_utils
 from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.keras_layers import inner_reshape
 from tf_agents.networks import network
@@ -39,6 +41,8 @@ from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
 FLAGS = flags.FLAGS
+
+tfd = tfp.distributions
 
 
 class ActorNetwork(network.Network):
@@ -103,13 +107,17 @@ class SequentialTest(test_utils.TestCase):
             inner_reshape.InnerReshape([None] * 3, [-1]),
             tf.keras.layers.GRU(2, return_state=True, return_sequences=True),
             dynamic_unroll_layer.DynamicUnroll(tf.keras.layers.LSTMCell(2)),
+            tf.keras.layers.Lambda(
+                lambda x: tfd.MultivariateNormalDiag(loc=x, scale_diag=x)),
         ],
         input_spec=tf.TensorSpec((3,), tf.float32))  # pytype: disable=wrong-arg-types
     self.assertEqual(
         sequential.input_tensor_spec, tf.TensorSpec((3,), tf.float32))
 
     output_spec = sequential.create_variables()
-    self.assertEqual(output_spec, tf.TensorSpec((2,), dtype=tf.float32))
+    self.assertIsInstance(output_spec, distribution_utils.DistributionSpecV2)
+    output_event_spec = output_spec.event_spec
+    self.assertEqual(output_event_spec, tf.TensorSpec((2,), dtype=tf.float32))
 
     tf.nest.map_structure(
         self.assertEqual,
@@ -137,7 +145,8 @@ class SequentialTest(test_utils.TestCase):
             ]))
 
     inputs = tf.ones((8, 10, 3), dtype=tf.float32)
-    outputs, _ = sequential(inputs)
+    dist, _ = sequential(inputs)
+    outputs = dist.sample()
     self.assertEqual(outputs.shape, tf.TensorShape([8, 10, 2]))
 
   def testPolicySaverCompatibility(self):

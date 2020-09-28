@@ -142,6 +142,20 @@ class NetworkTest(tf.test.TestCase):
     self.assertLen(net.variables, 2)
     self.assertLen(net.trainable_variables, 1)
 
+  def test_create_variables_distribution(self):
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    action_spec = specs.TensorSpec([2], tf.float32, 'action')
+    net = MockNetwork(observation_spec, action_spec)
+    self.assertFalse(net.built)
+    with self.assertRaises(ValueError):
+      net.variables  # pylint: disable=pointless-statement
+    output_spec = net.create_variables()
+    # MockNetwork adds some variables to observation, which has shape [bs, 1]
+    self.assertEqual(output_spec, tf.TensorSpec([1], dtype=tf.float32))
+    self.assertTrue(net.built)
+    self.assertLen(net.variables, 2)
+    self.assertLen(net.trainable_variables, 1)
+
   def test_summary_no_exception(self):
     """Tests that Network.summary() does not throw an exception."""
     observation_spec = specs.TensorSpec([1], tf.float32, 'observation')

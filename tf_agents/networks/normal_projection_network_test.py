@@ -42,9 +42,10 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
 
     distribution, _ = network(inputs, outer_rank=1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertEqual(tfp.distributions.Normal, type(distribution))
+    self.assertIsInstance(
+        distribution, tfp.distributions.MultivariateNormalDiag)
 
-    means, stds = distribution.loc, distribution.scale
+    means, stds = distribution.mean(), distribution.stddev()
 
     self.assertAllEqual(means.shape.as_list(),
                         [3] + output_spec.shape.as_list())
@@ -59,9 +60,10 @@ class NormalProjectionNetworkTest(tf.test.TestCase):
 
     distribution, _ = network(inputs, outer_rank=1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.assertEqual(tfp.distributions.Normal, type(distribution))
+    self.assertIsInstance(
+        distribution, tfp.distributions.MultivariateNormalDiag)
 
-    means, stds = distribution.loc, distribution.scale
+    means, stds = distribution.mean(), distribution.stddev()
 
     self.assertAllEqual(means.shape.as_list(),
                         [3] + output_spec.shape.as_list())

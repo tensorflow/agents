@@ -141,7 +141,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
     super(PPOPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, 2, 3)
+    self._action_spec = tensor_spec.BoundedTensorSpec((), tf.float32, 2, 3)
 
   @property
   def _time_step(self):
@@ -202,7 +202,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
         value_network=value_network)
 
     action_step = policy.action(self._time_step)
-    self.assertEqual(action_step.action.shape.as_list(), [1, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [1])
     self.assertEqual(action_step.action.dtype, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
@@ -258,7 +258,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
         value_network=value_network)
 
     action_step = policy.action(self._time_step_batch)
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
@@ -275,7 +275,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
     )
     network_spec, _ = observation_tensor_spec
     action_tensor_spec = tensor_spec.BoundedTensorSpec(
-        (1,), tf.int32, 0, num_categories - 1)
+        [], tf.int32, 0, num_categories - 1)
 
     # Create policy with splitter.
     def splitter_fn(observation_and_mask):
@@ -307,7 +307,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
     action_step = policy.action(time_step)
 
     # Check the shape and type of the resulted action step.
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
@@ -322,10 +322,10 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
         dtype=np.float32)
     masked_actions = np.array(range(len(mask)))[~mask]
     self.assertTrue(
-        np.all(logits[:, :, masked_actions] == np.finfo(np.float32).min))
+        np.all(logits[:, masked_actions] == np.finfo(np.float32).min))
     valid_actions = np.array(range(len(mask)))[mask]
     self.assertTrue(
-        np.all(logits[:, :, valid_actions] > np.finfo(np.float32).min))
+        np.all(logits[:, valid_actions] > np.finfo(np.float32).min))
 
   @parameterized.named_parameters(*_test_cases('test_action'))
   def testValue(self, network_cls):

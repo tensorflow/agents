@@ -27,6 +27,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import tanh_bijector_stable
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -533,6 +534,7 @@ class DistributionSpecV2(object):
     self._event_shape = event_shape
     self._dtype = dtype
     self._parameters = parameters
+    self._event_spec = tf.TensorSpec(shape=event_shape, dtype=dtype)
 
   @property
   def event_shape(self) -> tf.TensorShape:
@@ -541,6 +543,10 @@ class DistributionSpecV2(object):
   @property
   def dtype(self) -> tf.DType:
     return self._dtype
+
+  @property
+  def event_spec(self) -> tf.TensorSpec:
+    return self._event_spec
 
   @property
   def parameters(self) -> Params:
@@ -558,3 +564,36 @@ class DistributionSpecV2(object):
 
   def __repr__(self):
     return str(self)
+
+
+def assert_specs_are_compatible(
+    network_output_spec: types.NestedTensorSpec,
+    spec: types.NestedTensorSpec,
+    message_prefix: str):
+  """Checks that the output of `network.create_variables` matches a spec.
+
+  Args:
+    network_output_spec: The output of `network.create_variables`.
+    spec: The spec we are matching to.
+    message_prefix: The message prefix for error messages, used when the specs
+      don't match.
+
+  Raises:
+    ValueError: If the specs don't match.
+  """
+  def to_event(s):
+    return s.event_spec if isinstance(s, DistributionSpecV2) else s
+
+  event_spec = tf.nest.map_structure(to_event, network_output_spec)
+
+  nest_utils.assert_same_structure(
+      event_spec,
+      spec,
+      message=("{}:\n{}\nvs.\n{}".format(message_prefix, event_spec, spec)))
+
+  def compare_output_to_spec(s1, s2):
+    if not s1.is_compatible_with(s2):
+      raise ValueError("{}:\n{}\nvs.\n{}".format(message_prefix, event_spec,
+                                                 spec))
+
+  tf.nest.map_structure(compare_output_to_spec, event_spec, spec)

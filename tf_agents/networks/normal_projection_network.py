@@ -94,6 +94,7 @@ class NormalProjectionNetwork(network.DistributionNetwork):
         name=name)
 
     self._sample_spec = sample_spec
+    self._is_multivariate = sample_spec.shape.ndims > 0
     self._mean_transform = mean_transform
     self._std_transform = std_transform
     self._state_dependent_std = state_dependent_std
@@ -122,8 +123,9 @@ class NormalProjectionNetwork(network.DistributionNetwork):
               value=std_bias_initializer_value))
 
   def _output_distribution_spec(self, sample_spec, network_name):
-    input_param_shapes = tfp.distributions.Normal.param_static_shapes(
-        sample_spec.shape)
+    is_multivariate = sample_spec.shape.ndims > 0
+    input_param_shapes = (
+        tfp.distributions.Normal.param_static_shapes(sample_spec.shape))
 
     input_param_spec = {
         name: tensor_spec.TensorSpec(  # pylint: disable=g-complex-comprehension
@@ -134,7 +136,18 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     }
 
     def distribution_builder(*args, **kwargs):
-      distribution = tfp.distributions.Normal(*args, **kwargs)
+      if is_multivariate:
+        # For backwards compatibility, and because MVNDiag does not support
+        # `param_static_shapes`, even when using MVNDiag the spec
+        # continues to use the terms 'loc' and 'scale'.  Here we have to massage
+        # the construction to use 'scale' for kwarg 'scale_diag'.  Since they
+        # have the same shape and dtype expectationts, this is okay.
+        kwargs = kwargs.copy()
+        kwargs['scale_diag'] = kwargs['scale']
+        del kwargs['scale']
+        distribution = tfp.distributions.MultivariateNormalDiag(*args, **kwargs)
+      else:
+        distribution = tfp.distributions.Normal(*args, **kwargs)
       if self._scale_distribution:
         return distribution_utils.scale_distribution_to_spec(
             distribution, sample_spec)

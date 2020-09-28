@@ -26,7 +26,8 @@ import numbers
 from absl import logging
 import numpy as np
 from six.moves import zip
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+from tf_agents.typing import types
 from tf_agents.utils import composite
 import wrapt
 
@@ -1024,3 +1025,35 @@ def tile_batch(tensors, multiplier):
     the rank is < 1.
   """
   return tf.nest.map_structure(lambda t_: _tile_batch(t_, multiplier), tensors)
+
+
+def assert_value_spec(
+    output_spec: types.NestedTensorSpec,
+    network_name: str):
+  """Checks that `output_spec` is a nest of "value" type values.
+
+  "value" type values correspond to floating point tensors with spec shape
+  `()` or `(1,)`.
+
+  Args:
+    output_spec: The output spec returned by `network.create_variables`.
+    network_name: The string name of the network for error messages.
+
+  Raises:
+    ValueError: If `output_spec` is not a nest of value-type tensors.
+  """
+  def check_value_spec(v):
+    if not isinstance(v, tf.TensorSpec):
+      raise ValueError(
+          '{} emits outputs that are not tensors; spec: {}'
+          .format(network_name, output_spec))
+    if v.shape not in ((), (1,)):
+      raise ValueError(
+          '{} emits multiple values; spec: {}'
+          .format(network_name, output_spec))
+    if not v.dtype.is_floating:
+      raise ValueError(
+          '{} emits outputs that are not real numbers; spec: {}'
+          .format(network_name, output_spec))
+
+  tf.nest.map_structure(check_value_spec, output_spec)

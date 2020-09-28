@@ -22,7 +22,8 @@ from __future__ import print_function
 
 from typing import Sequence
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+import tensorflow_probability as tfp
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -104,11 +105,21 @@ def get_distribution_params(
       distribution, with keys as parameter name and values as tensors containing
       parameter values.
   """
-  def _tensor_parameters_only(params):
-    return {k: params[k] for k in params if isinstance(params[k], tf.Tensor)}
+  def _maybe_scale(d, k):
+    # For backwards compatibility with old DistributionNetworks, we rewrite
+    # the 'scale_diag' of MVNDiag to 'scale'.
+    if (isinstance(d, tfp.distributions.MultivariateNormalDiag)
+        and k == 'scale_diag'):
+      return 'scale'
+    else:
+      return k
+
+  def _tensor_parameters_only(d, params):
+    return {_maybe_scale(d, k): params[k]
+            for k in params if isinstance(params[k], tf.Tensor)}
 
   return tf.nest.map_structure(
-      lambda single_dist: _tensor_parameters_only(single_dist.parameters),
+      lambda d: _tensor_parameters_only(d, d.parameters),
       nested_distribution)
 
 

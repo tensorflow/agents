@@ -75,6 +75,7 @@ class DummyActorNet(network.DistributionNetwork):
     ]
 
   def _get_normal_distribution_spec(self, sample_spec):
+    is_multivariate = sample_spec.shape.ndims > 0
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(
         sample_spec.shape)
     input_param_spec = tf.nest.map_structure(
@@ -83,8 +84,22 @@ class DummyActorNet(network.DistributionNetwork):
             dtype=sample_spec.dtype),
         input_param_shapes)
 
+    def distribution_builder(*args, **kwargs):
+      if is_multivariate:
+        # For backwards compatibility, and because MVNDiag does not support
+        # `param_static_shapes`, even when using MVNDiag the spec
+        # continues to use the terms 'loc' and 'scale'.  Here we have to massage
+        # the construction to use 'scale' for kwarg 'scale_diag'.  Since they
+        # have the same shape and dtype expectationts, this is okay.
+        kwargs = kwargs.copy()
+        kwargs['scale_diag'] = kwargs['scale']
+        del kwargs['scale']
+        return tfp.distributions.MultivariateNormalDiag(*args, **kwargs)
+      else:
+        return tfp.distributions.Normal(*args, **kwargs)
+
     return distribution_spec.DistributionSpec(
-        tfp.distributions.Normal, input_param_spec, sample_spec=sample_spec)
+        distribution_builder, input_param_spec, sample_spec=sample_spec)
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
@@ -816,8 +831,8 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     action_distribution_parameters = {
-        'loc': tf.constant([1.0, 1.0], dtype=tf.float32),
-        'scale': tf.constant([1.0, 1.0], dtype=tf.float32),
+        'loc': tf.constant([[1.0], [1.0]], dtype=tf.float32),
+        'scale': tf.constant([[1.0], [1.0]], dtype=tf.float32),
     }
     current_policy_distribution, unused_network_state = DummyActorNet(
         self._obs_spec, self._action_spec)(time_steps.observation,

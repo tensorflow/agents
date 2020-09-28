@@ -225,7 +225,12 @@ class Network(tf.keras.layers.Layer):
 
     def _calc_unbatched_spec(x):
       if isinstance(x, tfp.distributions.Distribution):
-        return None
+        parameters = distribution_utils.get_parameters(x)
+        parameter_specs = _convert_to_spec_and_remove_singleton_batch_dim(
+            parameters, outer_ndim=1)
+        return distribution_utils.DistributionSpecV2(
+            event_shape=x.event_shape, dtype=x.dtype,
+            parameters=parameter_specs)
       else:
         return nest_utils.remove_singleton_batch_spec_dim(
             tf.type_spec_from_value(x), outer_ndim=1)

@@ -23,10 +23,11 @@ from __future__ import print_function
 from typing import Optional
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_utils
+from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.specs import distribution_spec
@@ -34,6 +35,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
+from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
 
 
@@ -55,10 +57,10 @@ class PPOPolicy(actor_policy.ActorPolicy):
   """
 
   def __init__(self,
-               time_step_spec: Optional[ts.TimeStep] = None,
-               action_spec: Optional[types.NestedTensorSpec] = None,
-               actor_network: Optional[network.Network] = None,
-               value_network: Optional[network.Network] = None,
+               time_step_spec: ts.TimeStep,
+               action_spec: types.NestedTensorSpec,
+               actor_network: network.Network,
+               value_network: network.Network,
                observation_normalizer: Optional[
                    tensor_normalizer.TensorNormalizer] = None,
                clip: bool = True,
@@ -91,13 +93,27 @@ class PPOPolicy(actor_policy.ActorPolicy):
         is enabled.
 
     Raises:
-      ValueError: if actor_network or value_network is not of type
-        tf_agents.networks.network.Network.
+      TypeError: if `actor_network` or `value_network` is not of type
+        `tf_agents.networks.Network`.
+      ValueError: if `actor_network` or `value_network` do not emit
+        valid outputs.
     """
     if not isinstance(actor_network, network.Network):
-      raise ValueError('actor_network is not of type network.Network')
+      raise TypeError('actor_network is not of type network.Network')
     if not isinstance(value_network, network.Network):
-      raise ValueError('value_network is not of type network.Network')
+      raise TypeError('value_network is not of type network.Network')
+
+    actor_output_spec = actor_network.create_variables(
+        time_step_spec.observation)
+    value_output_spec = value_network.create_variables(
+        time_step_spec.observation)
+
+    nest_utils.assert_value_spec(
+        value_output_spec, 'value_network')
+
+    distribution_utils.assert_specs_are_compatible(
+        actor_output_spec, action_spec,
+        'actor_network output spec does not match action spec')
 
     self._compute_value_and_advantage_in_train = (
         compute_value_and_advantage_in_train)
