@@ -155,14 +155,21 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     flat_action_spec = tf.nest.flatten(action_spec)
     continuous_specs = [tensor_spec.is_continuous(s) for s in flat_action_spec]
 
-    if any(continuous_specs) and not all(continuous_specs) and loss_fn is None:
-      raise ValueError('A `loss_fn` must be provided since the action_spec '
-                       'contains a mix of continuous and discrete actions.')
+    if not flat_action_spec:
+      raise ValueError('The `action_spec` must contain at least one action.')
+
+    single_scalar_discrete_action = (
+        len(flat_action_spec) == 1 and flat_action_spec[0].shape.rank == 0
+        and not tensor_spec.is_continuous(flat_action_spec[0]))
+
+    if not single_scalar_discrete_action and loss_fn is None:
+      raise ValueError('A `loss_fn` must be provided unless there is a single, '
+                       'discrete scalar action.')
 
     # If there is a mix of continuous and discrete actions we want to use an
     # actor policy so we can use the `setup_as_continuous` method as long as the
     # user provided a custom loss_fn which we verified above.
-    if any(continuous_specs):
+    if not single_scalar_discrete_action:
       policy, collect_policy = self._setup_as_continuous(
           time_step_spec, action_spec, loss_fn)
     else:
