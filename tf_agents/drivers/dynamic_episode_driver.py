@@ -64,6 +64,16 @@ class DynamicEpisodeDriver(driver.Driver):
                num_episodes=1):
     """Creates a DynamicEpisodeDriver.
 
+    **Note** about bias when using batched environments with `num_episodes`:
+    When using `num_episodes != None`, a `run` step "finishes" when
+    `num_episodes` have been completely collected (hit a boundary).
+    When used in conjunction with environments that have variable-length
+    episodes, this skews the distribution of collected episodes' lengths:
+    short episodes are seen more frequently than long ones.
+    As a result, running an `env` of `N > 1` batched environments
+    with `num_episodes >= 1` is not the same as running an env with `1`
+    environment with `num_episodes >= 1`.
+
     Args:
       env: A tf_environment.Base environment.
       policy: A tf_policy.TFPolicy policy.
@@ -171,6 +181,16 @@ class DynamicEpisodeDriver(driver.Driver):
 
     If `time_step` and `policy_state` are not provided, `run` will reset the
     environment and request an initial state from the policy.
+
+    **Note** about bias when using batched environments with `num_episodes`:
+    When using `num_episodes != None`, a `run` step "finishes" collecting
+    `num_episodes` have been completely collected (hit a boundary).
+    When used in conjunction with environments that have variable-length
+    episodes, this skews the distribution of collected episodes' lengths:
+    short episodes are seen more frequently than long ones.
+    As a result, running an `env` of `N > 1` batched environments
+    with `num_episodes >= 1` is not the same as running an env with `1`
+    environment with `num_episodes >= 1`.
 
     Args:
       time_step: optional initial time_step. If None, it will be obtained by
