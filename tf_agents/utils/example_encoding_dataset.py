@@ -158,7 +158,8 @@ class TFRecordObserver(object):
 
 
 def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
-                          as_trajectories=False, add_batch_dim=True):
+                          as_trajectories=False, add_batch_dim=True,
+                          decoder=None):
   """Loads a TFRecord dataset from file, sequencing samples as Trajectories.
 
   Args:
@@ -174,6 +175,8 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
     add_batch_dim: (bool) If True the data will have a batch dim of 1 to conform
       with the expected tensor batch convention. Set to false if you want to
       batch the data on your own.
+    decoder: Optional, a custom decoder to use rather than using the default
+      spec path.
 
   Returns:
     A dataset of type tf.data.Dataset. Samples follow the dataset's spec nested
@@ -183,14 +186,15 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
     IOError: One or more of the dataset files does not exist.
   """
 
-  specs = []
-  for dataset_file in dataset_files:
-    spec_path = dataset_file + _SPEC_FILE_EXTENSION
-    dataset_spec = parse_encoded_spec_from_file(spec_path)
-    specs.append(dataset_spec)
-    if not all([dataset_spec == spec for spec in specs]):
-      raise IOError('One or more of the encoding specs do not match.')
-  decoder = example_encoding.get_example_decoder(specs[0])
+  if not decoder:
+    specs = []
+    for dataset_file in dataset_files:
+      spec_path = dataset_file + _SPEC_FILE_EXTENSION
+      dataset_spec = parse_encoded_spec_from_file(spec_path)
+      specs.append(dataset_spec)
+      if not all([dataset_spec == spec for spec in specs]):
+        raise IOError('One or more of the encoding specs do not match.')
+    decoder = example_encoding.get_example_decoder(specs[0])
   logging.info('Loading TFRecord dataset...')
   dataset = tf.data.TFRecordDataset(
       dataset_files,
