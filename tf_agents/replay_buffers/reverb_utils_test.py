@@ -325,6 +325,24 @@ class ReverbObserverTest(parameterized.TestCase):
     self.assertEqual(append_count, self._writer.append.call_count)
     self.assertEqual(expected_items, self._writer.create_item.call_count)
 
+  def test_observer_writes_multi_tables(self):
+    episode_length = 3
+    collect_step_count = 6
+    table_count = 2
+    create_observer_fn = _create_add_sequence_observer_fn(
+        table_name=['test_table1', 'test_table2'],
+        sequence_length=episode_length,
+        stride_length=episode_length)
+    env = _env_creator(episode_length)()
+    with create_observer_fn(self._client) as observer:
+      policy = _create_random_policy_from_env(env)
+      driver = py_driver.PyDriver(
+          env, policy, observers=[observer], max_steps=collect_step_count)
+      driver.run(env.reset())
+
+    self.assertEqual(table_count * int(collect_step_count / episode_length),
+                     self._writer.create_item.call_count)
+
   def test_episodic_observer_overflow_episode_bypass(self):
     env1 = _env_creator(3)()
     env2 = _env_creator(4)()

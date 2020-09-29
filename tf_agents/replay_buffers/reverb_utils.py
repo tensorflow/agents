@@ -22,7 +22,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Text, Union
+from typing import Text, Union, Sequence
 
 from absl import logging
 
@@ -38,7 +38,7 @@ class ReverbAddEpisodeObserver(object):
 
   def __init__(self,
                py_client: types.ReverbClient,
-               table_name: Text,
+               table_name: Union[Text, Sequence[Text]],
                max_sequence_length: int,
                priority: Union[float, int] = 1,
                bypass_partial_episodes: bool = False):
@@ -51,7 +51,7 @@ class ReverbAddEpisodeObserver(object):
 
     Args:
       py_client: Python client for the reverb replay server.
-      table_name: The table name where samples will be written to.
+      table_name: The table name(s) where samples will be written to.
       max_sequence_length: An integer. `max_sequence_length` used
         to write to the replay buffer tables. This defines the size of the
         internal buffer controlling the `upper` limit of the number of timesteps
@@ -77,7 +77,6 @@ class ReverbAddEpisodeObserver(object):
         upper bound.
 
     Raises:
-      ValueError: If `table_name` is not a string.
       ValueError: If `priority` is not numeric.
       ValueError: If max_sequence_length is not positive.
     """
@@ -85,7 +84,11 @@ class ReverbAddEpisodeObserver(object):
       raise ValueError(
           "`max_sequence_length` must be an integer greater equal one.")
 
-    self._table_name = table_name
+    if isinstance(table_name, Text):
+      self._table_names = [table_name]
+    else:
+      self._table_names = table_name
+
     self._max_sequence_length = max_sequence_length
     self._priority = priority
 
@@ -153,10 +156,11 @@ class ReverbAddEpisodeObserver(object):
       the data into the replay buffer.
     """
     if not self._overflow_episode:
-      self._writer.create_item(
-          table=self._table_name,
-          num_timesteps=self._cached_steps,
-          priority=self._priority)
+      for table_name in self._table_names:
+        self._writer.create_item(
+            table=table_name,
+            num_timesteps=self._cached_steps,
+            priority=self._priority)
     self.reset()
 
   def reset(self):
@@ -193,7 +197,7 @@ class ReverbAddTrajectoryObserver(object):
 
   def __init__(self,
                py_client: types.ReverbClient,
-               table_name: Text,
+               table_name: Union[Text, Sequence[Text]],
                sequence_length: int,
                stride_length: int = 1,
                priority: Union[float, int] = 1):
@@ -208,7 +212,7 @@ class ReverbAddTrajectoryObserver(object):
 
     Args:
       py_client: Python client for the reverb replay server.
-      table_name: The table name where samples will be written to.
+      table_name: The table name(s) where samples will be written to.
       sequence_length: The sequence_length used to write
         to the given table.
       stride_length: The integer stride for the sliding window for overlapping
@@ -218,12 +222,11 @@ class ReverbAddTrajectoryObserver(object):
         `stride_length = L` will create an item only for disjoint windows
         `{0, 1, ..., L-1}, {L, ..., 2 * L - 1}, ...`.
       priority: Initial priority for new samples in the RB.
-
-    Raises:
-      ValueError: If table_names or sequence_lengths are not lists or their
-      lengths are not equal.
     """
-    self._table_name = table_name
+    if isinstance(table_name, Text):
+      self._table_names = [table_name]
+    else:
+      self._table_names = table_name
     self._sequence_length = sequence_length
     self._stride_length = stride_length
     self._priority = priority
@@ -259,16 +262,17 @@ class ReverbAddTrajectoryObserver(object):
 
     **Note**: The method does *not* clear the cache after writing.
     """
-    def write_item(table_name, writer, sequence_length, stride_length):
+
+    def write_item(writer, sequence_length, stride_length):
       if (self._cached_steps >= sequence_length and
           (self._cached_steps - sequence_length) % stride_length == 0):
-        writer.create_item(
-            table=table_name,
-            num_timesteps=sequence_length,
-            priority=self._priority)
+        for table_name in self._table_names:
+          writer.create_item(
+              table=table_name,
+              num_timesteps=sequence_length,
+              priority=self._priority)
 
     write_item(
-        self._table_name,
         self._writer,
         self._sequence_length,
         self._stride_length)
