@@ -83,6 +83,11 @@ class MultiprocessingTest(test_utils.TestCase):
     values = p.map(x.__add__, [3, 4, 5, 6, 6])
     self.assertEqual(values, [4, 5, 6, 7, 7])
 
+  def testArgExpected(self):
+    no_argument_main_fn = lambda: None
+    with self.assertRaises(TypeError):
+      multiprocessing.handle_main(no_argument_main_fn)
+
 
 if __name__ == '__main__':
   multiprocessing.handle_test_main(

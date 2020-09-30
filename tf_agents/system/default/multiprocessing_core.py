@@ -21,6 +21,8 @@ import multiprocessing as _multiprocessing
 
 from typing import Any, Text
 
+from absl import app
+
 __all__ = [
     'StateSaver',
     'handle_main',
@@ -73,7 +75,7 @@ def handle_main(parent_main_fn, *args, **kwargs):
   extra_state_savers = kwargs.pop('extra_state_savers', [])
   _STATE_SAVERS.extend(extra_state_savers)
   _INITIALIZED[0] = True
-  return parent_main_fn(*args, **kwargs)
+  return app.run(parent_main_fn, *args, **kwargs)
 
 
 def handle_test_main(parent_main_fn, *args, **kwargs):
