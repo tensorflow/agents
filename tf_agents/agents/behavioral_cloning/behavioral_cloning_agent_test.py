@@ -80,7 +80,7 @@ def create_arbitrary_trajectory():
   return traj, time_step_spec, action_spec
 
 
-def get_dummy_net(action_spec):
+def get_dummy_net(action_spec, observation_spec=None):
   flat_action_spec = tf.nest.flatten(action_spec)[0]
   num_actions = flat_action_spec.maximum - flat_action_spec.minimum + 1
 
@@ -91,7 +91,7 @@ def get_dummy_net(action_spec):
                                                                 ]),
           bias_initializer=tf.compat.v1.initializers.constant([[1], [1]]),
           dtype=tf.float32)
-  ])
+  ], input_spec=observation_spec)
 
 
 class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
@@ -104,7 +104,7 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateAgent(self):
-    cloning_net = get_dummy_net(self._action_spec)
+    cloning_net = get_dummy_net(self._action_spec, self._observation_spec)
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
         self._time_step_spec,
         self._action_spec,
@@ -137,8 +137,7 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
   def testCreateAgentNestSizeChecks(self,
                                     action_spec,
                                     expected_error):
-    cloning_net = get_dummy_net(action_spec)
-    cloning_net._input_tensor_spec = self._observation_spec
+    cloning_net = get_dummy_net(action_spec, self._observation_spec)
     if expected_error is not None:
       with self.assertRaisesRegex(ValueError, expected_error):
         behavioral_cloning_agent.BehavioralCloningAgent(
