@@ -112,14 +112,41 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         optimizer=None)
     self.assertIsNotNone(agent.policy)
 
-  def testCreateAgentNestSizeChecks(self):
-    action_spec = [
-        tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
-        tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
-    ]
-
+  @parameterized.named_parameters(
+      ('MultipleActions', [
+          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
+          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)],
+       '.* single, scalar discrete.*'),
+      ('NonScalarAction', [
+          tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)],
+       '.* single, scalar discrete.*'),
+      ('ScalarDiscreteAction', [
+          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)],
+       None),
+      ('SingleNonScalarFloatAction', [
+          tensor_spec.BoundedTensorSpec([3, 2], tf.float32, 0, 1)],
+       None),
+      ('MultipleContinuous', [
+          tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1),
+          tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1)],
+       '.* single, scalar discrete.*'),
+      ('MixedDiscreteAndContinuous', [
+          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
+          tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1)],
+       '.* single, scalar discrete.*'))
+  def testCreateAgentNestSizeChecks(self,
+                                    action_spec,
+                                    expected_error):
     cloning_net = get_dummy_net(action_spec)
-    with self.assertRaisesRegex(ValueError, 'Only scalar .*'):
+    cloning_net._input_tensor_spec = self._observation_spec
+    if expected_error is not None:
+      with self.assertRaisesRegex(ValueError, expected_error):
+        behavioral_cloning_agent.BehavioralCloningAgent(
+            self._time_step_spec,
+            action_spec,
+            cloning_network=cloning_net,
+            optimizer=None)
+    else:
       behavioral_cloning_agent.BehavioralCloningAgent(
           self._time_step_spec,
           action_spec,
