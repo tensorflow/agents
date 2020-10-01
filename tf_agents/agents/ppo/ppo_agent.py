@@ -801,6 +801,9 @@ class PPOAgent(tf_agent.TFAgent):
     variables_to_train = list(
         object_identity.ObjectIdentitySet(self._actor_net.trainable_weights +
                                           self._value_net.trainable_weights))
+    # Sort to ensure tensors on different processes end up in same order.
+    variables_to_train = sorted(variables_to_train, key=lambda x: x.name)
+
     for i_epoch in range(self._num_epochs):
       with tf.name_scope('epoch_%d' % i_epoch):
         # Only save debug summaries for first and last epochs.
