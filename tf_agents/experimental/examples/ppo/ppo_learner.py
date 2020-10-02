@@ -15,13 +15,19 @@
 
 # Lint as: python3
 """PPO Learner implementation."""
+from typing import Callable, Optional, Text
 
 import gin
 import tensorflow.compat.v2 as tf
 
+from tf_agents.agents import tf_agent
+from tf_agents.agents.ppo import ppo_agent
 from tf_agents.experimental.train import learner
 from tf_agents.networks import utils
+from tf_agents.specs import tensor_spec
+from tf_agents.typing import types
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 
 
 @gin.configurable
@@ -42,19 +48,43 @@ class PPOLearner(object):
   """
 
   def __init__(self,
-               root_dir,
-               train_step,
-               agent,
-               max_num_sequences=None,
-               minibatch_size=None,
-               shuffle_buffer_size=None,
-               after_train_strategy_step_fn=None,
-               triggers=None,
-               checkpoint_interval=100000,
-               summary_interval=1000,
-               use_kwargs_in_agent_train=False,
-               strategy=None):
+               root_dir: Text,
+               train_step: tf.Variable,
+               agent: ppo_agent.PPOAgent,
+               experience_dataset_fn: Callable[..., tf.data.Dataset],
+               normalization_dataset_fn: Callable[..., tf.data.Dataset],
+               num_batches: int,
+               num_epochs: int = 1,
+               minibatch_size: Optional[int] = None,
+               shuffle_buffer_size: Optional[int] = None,
+               after_train_strategy_step_fn: Optional[Callable[
+                   [types.NestedTensor, tf_agent.LossInfo], None]] = None,
+               triggers: Callable[..., None] = None,
+               checkpoint_interval: int = 100000,
+               summary_interval: int = 1000,
+               use_kwargs_in_agent_train: bool = False,
+               strategy: Optional[tf.distribute.Strategy] = None):
     """Initializes a PPOLearner instance.
+
+    ```python
+    agent = ppo_agent.PPOAgent(...,
+      compute_value_and_advantage_in_train=False,
+      # Skips updating normalizers in the agent, as it's handled in the learner.
+      update_normalizers_in_train=False)
+
+    # train_replay_buffer and normalization_replay_buffer point to two Reverb
+    # tables that are synchronized. Sampling is done in a FIFO fashion.
+    def experience_dataset_fn():
+      return train_replay_buffer.as_dataset(sample_batch_size,
+        sequence_preprocess_fn=agent.preprocess_sequence)
+    def normalization_dataset_fn():
+      return normalization_replay_buffer.as_dataset(sample_batch_size,
+        sequence_preprocess_fn=agent.preprocess_sequence)
+
+    learner = PPOLearner(..., agent, experience_dataset_fn,
+      normalization_dataset_fn)
+    learner.run()
+    ```
 
     Args:
       root_dir: Main directory path where checkpoints, saved_models, and
@@ -62,13 +92,30 @@ class PPOLearner(object):
       train_step: a scalar tf.int64 `tf.Variable` which will keep track of the
         number of train steps. This is used for artifacts created like
         summaries, or outputs in the root_dir.
-      agent: `tf_agent.TFAgent` instance to train with.
-      max_num_sequences: The max number of sequences to read from the input
-        dataset in `run`. Defaults to None, in which case `run` will terminate
-        when reach the end of the dataset (for instance when the rate limiter
-        times out).
+      agent: `ppo_agent.PPOAgent` instance to train with. Note that
+        update_normalizers_in_train should be set to `False`, otherwise a
+        ValueError will be raised. We do not update normalizers in the agent
+        again because we already update it in the learner. When mini batching is
+        enabled, compute_value_and_advantage_in_train should be set to False,
+        and preprocessing should be done as part of the data pipeline as part of
+        `replay_buffer.as_dataset`.
+      experience_dataset_fn: a function that will create an instance of a
+        tf.data.Dataset used to sample experience for training. Each element
+        in the dataset is a (Trajectory, SampleInfo) pair.
+      normalization_dataset_fn: a function that will create an instance of a
+        tf.data.Dataset used for normalization. This dataset is often from a
+        separate reverb table that is synchronized with the table used in
+        experience_dataset_fn. Each element in the dataset is a (Trajectory,
+        SampleInfo) pair.
+      num_batches: The number of batches to sample for training and
+        normalization. If fewer than this amount of batches exists in the
+        dataset, the learner will wait for more data to be added, or until the
+        reverb timeout is reached.
+      num_epochs: The number of iterations to go through the same sequences.
       minibatch_size: The minibatch size. The dataset used for training is
-        shaped [minibatch_size, 1, ...].
+        shaped `[minibatch_size, 1, ...]`. If None, full sequences will be fed
+        into the agent. Please set this parameter to None for RNN networks which
+        requires full sequences.
       shuffle_buffer_size: The buffer size for shuffling the trajectories before
         splitting them into mini batches. Only required when mini batch
         learning is enabled (minibatch_size is set). Otherwise it is ignored.
@@ -94,11 +141,30 @@ class PPOLearner(object):
         be of the form `dict(experience=experience, kwarg1=kwarg1, ...)`. This
         is useful if you have an agent with a custom argspec.
       strategy: (Optional) `tf.distribute.Strategy` to use during training.
+
+    Raises:
+      ValueError:mini batching is enabled, but shuffle_buffer_size isn't
+        provided.
+      ValueError: minibatch_size is passed in for RNN networks. RNNs require
+        full sequences.
+      ValueError:mini batching is enabled, but
+        agent._compute_value_and_advantage_in_train is set to `True`.
+      ValueError: agent.update_normalizers_in_train or is set to `True`. The
+        learner already updates the normalizers, so no need to update again in
+        the agent.
     """
-    if minibatch_size is not None and shuffle_buffer_size is None:
+    if minibatch_size and shuffle_buffer_size is None:
       raise ValueError(
-          'shuffle_buffer_size must be provided if minibatch_size is not None.'
-      )
+          'shuffle_buffer_size must be provided if minibatch_size is not None.')
+
+    if minibatch_size and (agent._actor_net.state_spec or
+                           agent._value_net.state_spec):
+      raise ValueError('minibatch_size must be set to None for RNN networks.')
+
+    if minibatch_size and agent._compute_value_and_advantage_in_train:
+      raise ValueError(
+          'agent.compute_value_and_advantage_in_train should be set to False '
+          'when mini batching is used.')
 
     if agent.update_normalizers_in_train:
       raise ValueError(
@@ -106,10 +172,14 @@ class PPOLearner(object):
           'PPOLearner is used.'
       )
 
+    strategy = strategy or tf.distribute.get_strategy()
     self._agent = agent
-    self._max_num_sequences = max_num_sequences
     self._minibatch_size = minibatch_size
     self._shuffle_buffer_size = shuffle_buffer_size
+    self._num_epochs = num_epochs
+    self._experience_dataset_fn = experience_dataset_fn
+    self._normalization_dataset_fn = normalization_dataset_fn
+    self._num_batches = num_batches
 
     self._generic_learner = learner.Learner(
         root_dir,
@@ -123,116 +193,116 @@ class PPOLearner(object):
         use_kwargs_in_agent_train=use_kwargs_in_agent_train,
         strategy=strategy)
 
-  def run(self, iterations, dataset):
-    """Runs training until dataset timesout, or when num sequences is reached.
+    self.num_replicas = strategy.num_replicas_in_sync
+    self._create_datasets(strategy)
+    self.num_frames_for_training = tf.Variable(0, dtype=tf.int32)
 
-    Args:
-      iterations: Number of iterations/epochs to repeat over the collected
-        sequences. (Schulman,2017) sets this to 10 for Mujoco, 15 for Roboschool
-         and 3 for Atari.
-      dataset: A 'tf.Dataset' where each sample is shaped
-        [sample_batch_size, sequence_length, ...], commonly the output from
-        'reverb_replay_buffer.as_dataset(sample_batch_size, preprocess_fn)'.
+  def _create_datasets(self, strategy):
+    """Create the training dataset and iterator."""
+
+    def _make_dataset(_):
+      train_dataset = self._experience_dataset_fn().take(self._num_batches)
+
+      # We take the current batches, repeat for `num_epochs` times and exhaust
+      # this data in the current learner run. The next time learner runs, new
+      # batches of data will be sampled, cached and repeated.
+      # This is enabled by the `Counter().flat_map()` trick below.
+      train_dataset = train_dataset.cache().repeat(self._num_epochs)
+
+      if self._minibatch_size:
+
+        def squash_dataset_element(sequence, info):
+          return tf.nest.map_structure(
+              utils.BatchSquash(2).flatten, (sequence, info))
+
+        # We unbatch the dataset shaped [B, T, ...] to a new dataset that
+        # contains individual elements.
+        # Note that we unbatch across the time dimension, which could result
+        # in mini batches that contain subsets from more than one sequences.
+        # PPO agent can handle mini batches across episode boundaries.
+        train_dataset = train_dataset.map(squash_dataset_element).unbatch()
+        train_dataset = train_dataset.shuffle(self._shuffle_buffer_size)
+        train_dataset = train_dataset.batch(1, drop_remainder=True)
+        train_dataset = train_dataset.batch(
+            self._minibatch_size, drop_remainder=True)
+
+      return train_dataset
+
+    def make_dataset(_):
+      return tf.data.experimental.Counter().flat_map(_make_dataset)
+
+    with strategy.scope():
+
+      if strategy.num_replicas_in_sync > 1:
+        self._train_dataset = (
+            strategy.distribute_datasets_from_function(make_dataset))
+      else:
+        self._train_dataset = make_dataset(0)
+      self._train_iterator = iter(self._train_dataset)
+
+  def run(self):
+    """Train `num_batches` batches repeating for `num_epochs` of iterations.
 
     Returns:
       The total loss computed before running the final step.
     """
-    # TODO(b/160802425): Verify this setup works with distributed.
-    if self._max_num_sequences:
-      dataset = dataset.take(self._max_num_sequences)
-    cached_dataset = dataset.cache()
-    self._update_advantage_normalizer(cached_dataset)
+    self._normalization_iterator = iter(self._normalization_dataset_fn())
+    num_frames = self._update_normalizers(self._normalization_iterator)
+    self.num_frames_for_training.assign(num_frames)
 
-    new_dataset = cached_dataset.repeat(iterations)
-    if self._minibatch_size:
-
-      def squash_dataset_element(sequence, info):
-        return tf.nest.map_structure(
-            utils.BatchSquash(2).flatten, (sequence, info))
-
-      # We unbatch the dataset shaped [B, T, ...] to a new dataset that contains
-      # individual elements.
-      # Note that we unbatch across the time dimension, which could result in
-      # mini batches that contain subsets from more than one sequences. The PPO
-      # agent can handle mini batches across episode boundaries.
-      new_dataset = new_dataset.map(squash_dataset_element).unbatch()
-      new_dataset = new_dataset.shuffle(self._shuffle_buffer_size)
-      new_dataset = new_dataset.batch(1, drop_remainder=True)
-      new_dataset = new_dataset.batch(self._minibatch_size, drop_remainder=True)
-
-    # TODO(b/161133726): use learner.run once it supports None iterations.
     def _summary_record_if():
       return tf.math.equal(
           self._generic_learner.train_step %
           tf.constant(self._generic_learner.summary_interval), 0)
 
+    if self._minibatch_size:
+      num_total_batches = int(self.num_frames_for_training.numpy() /
+                              self._minibatch_size) * self._num_epochs
+    else:
+      num_total_batches = self._num_batches * self._num_epochs
+
+    iterations = int(num_total_batches / self.num_replicas)
+
     with self._generic_learner.train_summary_writer.as_default(), \
      common.soft_device_placement(), \
      tf.compat.v2.summary.record_if(_summary_record_if), \
      self._generic_learner.strategy.scope():
-      loss_info = self.multi_train_step(iter(new_dataset))
+      loss_info = self._generic_learner.run(iterations, self._train_iterator)
 
       train_step_val = self._generic_learner.train_step_numpy
       for trigger in self._generic_learner.triggers:
         trigger(train_step_val)
 
-    self._update_normalizers(cached_dataset)
-
     return loss_info
 
   @common.function(autograph=True)
-  def multi_train_step(self, iterator):
-    experience, sample_info = next(iterator)
+  def _update_normalizers(self, iterator):
+    """Update the normalizers and count the total number of frames."""
 
-    loss_info = self.single_train_step(experience, sample_info)
-    for experience, sample_info in iterator:
-      loss_info = self.single_train_step(experience, sample_info)
-    return loss_info
-
-  @common.function(autograph=False)
-  def single_train_step(self, experience, sample_info):
-    """Train a single (mini) batch of Trajectories."""
-    if self._generic_learner.use_kwargs_in_agent_train:
-      loss_info = self._generic_learner.strategy.run(
-          self._agent.train, kwargs=experience)
-    else:
-      loss_info = self._generic_learner.strategy.run(
-          self._agent.train, args=(experience,))
-
-    if self._generic_learner.after_train_strategy_step_fn:
-      if self.use_kwargs_in_agent_train:
-        self.strategy.run(
-            self._generic_learner.after_train_strategy_step_fn,
-            kwargs=dict(
-                experience=(experience, sample_info), loss_info=loss_info))
-      else:
-        self.strategy.run(
-            self._generic_learner.after_train_strategy_step_fn,
-            args=((experience, sample_info), loss_info))
-
-    return loss_info
-
-  @common.function(autograph=True)
-  def _update_normalizers(self, dataset):
-    iterator = iter(dataset)
-    traj, _ = next(iterator)
-    self._agent.update_observation_normalizer(traj.observation)
-    self._agent.update_reward_normalizer(traj.reward)
-
-    for traj, _ in iterator:
+    reward_spec = tensor_spec.TensorSpec(shape=[], dtype=tf.float32)
+    def _update(traj):
       self._agent.update_observation_normalizer(traj.observation)
       self._agent.update_reward_normalizer(traj.reward)
-
-  @common.function(autograph=True)
-  def _update_advantage_normalizer(self, dataset):
-    self._agent._reset_advantage_normalizer()  # pylint: disable=protected-access
-
-    iterator = iter(dataset)
-    traj, _ = next(iterator)
-    self._agent._update_advantage_normalizer(traj.policy_info['advantage'])  # pylint: disable=protected-access
-
-    for traj, _ in iterator:
       self._agent._update_advantage_normalizer(traj.policy_info['advantage'])  # pylint: disable=protected-access
+      if traj.reward.shape:
+
+        outer_shape = nest_utils.get_outer_shape(traj.reward, reward_spec)
+        batch_size = outer_shape[0]
+        if len(outer_shape) > 1:
+          batch_size *= outer_shape[1]
+      else:
+        batch_size = 1
+      return batch_size
+
+    num_frames = 0
+    traj, _ = next(iterator)
+    num_frames += _update(traj)
+
+    for _ in tf.range(1, self._num_batches):
+      traj, _ = next(iterator)
+      num_frames += _update(traj)
+
+    return num_frames
 
   @property
   def train_step_numpy(self):

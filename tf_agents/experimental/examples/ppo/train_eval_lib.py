@@ -185,26 +185,47 @@ def train_eval(
       train_step_counter=train_step)
   agent.initialize()
 
-  table_name = 'uniform_table'
-  table = reverb.Table(
-      table_name,
-      max_size=replay_capacity,
-      sampler=reverb.selectors.Uniform(),
-      remover=reverb.selectors.Fifo(),
-      rate_limiter=reverb.rate_limiters.MinSize(1),
-      max_times_sampled=1)
+  reverb_server = reverb.Server(
+      [
+          reverb.Table(  # Replay buffer storing experience for training.
+              name='training_table',
+              sampler=reverb.selectors.Fifo(),
+              remover=reverb.selectors.Fifo(),
+              rate_limiter=reverb.rate_limiters.MinSize(1),
+              max_size=replay_capacity,
+              max_times_sampled=1,
+          ),
+          reverb.Table(  # Replay buffer storing experience for normalization.
+              name='normalization_table',
+              sampler=reverb.selectors.Fifo(),
+              remover=reverb.selectors.Fifo(),
+              rate_limiter=reverb.rate_limiters.MinSize(1),
+              max_size=replay_capacity,
+              max_times_sampled=1,
+          )
+      ],
+      port=reverb_port)
 
-  reverb_server = reverb.Server([table], port=reverb_port)
-  reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
+  # Create the replay buffer.
+  reverb_replay_train = reverb_replay_buffer.ReverbReplayBuffer(
       agent.collect_data_spec,
       sequence_length=collect_sequence_length,
-      table_name=table_name,
+      table_name='training_table',
       server_address='localhost:{}'.format(reverb_server.port),
       # The only collected sequence is used to populate the batches.
       max_cycle_length=1,
       rate_limiter_timeout_ms=1000)
+  reverb_replay_normalization = reverb_replay_buffer.ReverbReplayBuffer(
+      agent.collect_data_spec,
+      sequence_length=collect_sequence_length,
+      table_name='normalization_table',
+      server_address='localhost:{}'.format(reverb_server.port),
+      # The only collected sequence is used to populate the batches.
+      max_cycle_length=1,
+      rate_limiter_timeout_ms=1000)
+
   rb_observer = reverb_utils.ReverbTrajectorySequenceObserver(
-      reverb_replay.py_client, table_name,
+      reverb_replay_train.py_client, ['training_table', 'normalization_table'],
       sequence_length=collect_sequence_length,
       stride_length=collect_sequence_length)
 
@@ -222,10 +243,24 @@ def train_eval(
       triggers.StepPerSecondLogTrigger(train_step, interval=summary_interval),
   ]
 
+  def training_dataset_fn():
+    return reverb_replay_train.as_dataset(
+        sample_batch_size=num_environments,
+        sequence_preprocess_fn=agent.preprocess_sequence)
+
+  def normalization_dataset_fn():
+    return reverb_replay_normalization.as_dataset(
+        sample_batch_size=num_environments,
+        sequence_preprocess_fn=agent.preprocess_sequence)
+
   agent_learner = ppo_learner.PPOLearner(
       root_dir,
       train_step,
       agent,
+      experience_dataset_fn=training_dataset_fn,
+      normalization_dataset_fn=normalization_dataset_fn,
+      num_batches=1,
+      num_epochs=num_epochs,
       minibatch_size=minibatch_size,
       shuffle_buffer_size=collect_sequence_length,
       triggers=learning_triggers)
@@ -262,19 +297,15 @@ def train_eval(
     eval_actor.run_and_log()
 
   logging.info('Training.')
-  dataset = reverb_replay.as_dataset(
-      sample_batch_size=num_environments,
-      sequence_preprocess_fn=agent.preprocess_sequence)
   for _ in range(num_iterations):
     collect_actor.run()
-    # TODO(b/159490625): Get rid of the reset call once the
-    # multi_episode_sequences flag is gone.
     # TODO(b/159615593): Update to use observer.flush.
     # Reset the reverb observer to make sure the data collected is flushed and
     # written to the RB.
     rb_observer.reset()
-    agent_learner.run(iterations=num_epochs, dataset=dataset)
-    reverb_replay.clear()
+    agent_learner.run()
+    reverb_replay_train.clear()
+    reverb_replay_normalization.clear()
     current_iteration.assign_add(1)
 
     if eval_interval and agent_learner.train_step_numpy % eval_interval == 0:

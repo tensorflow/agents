@@ -181,18 +181,24 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
     traj = _create_trajectories(
         n_time_steps=100, batch_size=num_parallel_environments)
     info = ()
-    dataset = tf.data.Dataset.from_tensors((traj, info),)
+
+    dataset_fn = lambda: tf.data.Dataset.from_tensors((traj, info),)
+
     fake_agent = FakePPOAgent()
 
     learner = ppo_learner.PPOLearner(
         root_dir=FLAGS.test_tmpdir,
         train_step=tf.Variable(0, dtype=tf.int32),
         agent=fake_agent,
+        experience_dataset_fn=dataset_fn,
+        normalization_dataset_fn=dataset_fn,
+        num_batches=1,
+        num_epochs=num_epochs,
         minibatch_size=minibatch_size,
         # Disable shuffling to have deterministic input into agent.train.
         shuffle_buffer_size=1,
         triggers=None)
-    learner.run(iterations=num_epochs, dataset=dataset)
+    learner.run()
 
     # Check that fake agent was called the expected number of times.
     self.assertEqual(fake_agent.train_called_times.numpy(),
@@ -239,11 +245,12 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
       for _ in range(num_episodes):
         yield (traj, unused_info)
 
-    dataset = tf.data.Dataset.from_generator(
-        generate_data,
-        dtypes,
-        output_shapes=shapes,
-    )
+    def dataset_fn():
+      return tf.data.Dataset.from_generator(
+          generate_data,
+          dtypes,
+          output_shapes=shapes,
+      )
 
     fake_agent = FakePPOAgent()
 
@@ -251,11 +258,15 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         root_dir=FLAGS.test_tmpdir,
         train_step=tf.Variable(0, dtype=tf.int32),
         agent=fake_agent,
+        experience_dataset_fn=dataset_fn,
+        normalization_dataset_fn=dataset_fn,
+        num_batches=num_episodes,
+        num_epochs=num_epochs,
         minibatch_size=minibatch_size,
         # Disable shuffling to have deterministic input into agent.train.
         shuffle_buffer_size=1,
         triggers=None)
-    learner.run(iterations=num_epochs, dataset=dataset)
+    learner.run()
 
     # Check that fake agent was called the expected number of times.
     self.assertEqual(fake_agent.train_called_times.numpy(),
