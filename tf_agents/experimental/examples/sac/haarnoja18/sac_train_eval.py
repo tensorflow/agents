@@ -40,6 +40,7 @@ from tf_agents.experimental.train.utils import spec_utils
 from tf_agents.experimental.train.utils import train_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import actor_distribution_network
+from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
@@ -205,13 +206,13 @@ def train_eval(
       summary_dir=os.path.join(root_dir, learner.TRAIN_DIR),
       observers=[rb_observer, env_step_metric])
 
-  tf_greedy_policy = agent.policy
-  greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
+  tf_greedy_policy = greedy_policy.GreedyPolicy(agent.policy)
+  eval_greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
       tf_greedy_policy, use_tf_function=True)
 
   eval_actor = actor.Actor(
       eval_env,
-      greedy_policy,
+      eval_greedy_policy,
       train_step,
       episodes_per_run=eval_episodes,
       metrics=actor.eval_metrics(eval_episodes),
