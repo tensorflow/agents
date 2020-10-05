@@ -119,11 +119,11 @@ If you use this code, please cite it as:
 ```
 @misc{TFAgents,
   title = {{TF-Agents}: A library for Reinforcement Learning in TensorFlow},
-  author = "{Sergio Guadarrama and Anoop Korattikara and Oscar Ramirez and
+  author = {Sergio Guadarrama and Anoop Korattikara and Oscar Ramirez and
      Pablo Castro and Ethan Holly and Sam Fishman and Ke Wang and
      Ekaterina Gonina and Neal Wu and Efi Kokiopoulou and Luciano Sbaiz and
      Jamie Smith and Gábor Bartók and Jesse Berent and Chris Harris and
-     Vincent Vanhoucke and Eugene Brevdo}",
+     Vincent Vanhoucke and Eugene Brevdo},
   howpublished = {\url{https://github.com/tensorflow/agents}},
   url = "https://github.com/tensorflow/agents",
   year = 2018,
