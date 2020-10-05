@@ -41,6 +41,8 @@ upper_tabs:
         path: /agents/tutorials/7_SAC_minitaur_tutorial
       - title: Categorical DQN
         path: /agents/tutorials/9_c51_tutorial
+      - title: Multi-Armed Bandits Tutorial
+        path: /agents/tutorials/bandits_tutorial
     - name: API
       skip_translation: true
       contents:

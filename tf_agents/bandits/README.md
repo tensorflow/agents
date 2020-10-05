@@ -16,7 +16,7 @@ context in each round.
 
 To get started with Bandits in TF-Agents, we recommend checking the following
 Colab tutorial:
-[`tf_agents/bandits/colabs/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/colabs/bandits_tutorial.ipynb).
+[`tf_agents/g3doc/tutorials/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/g3doc/tutorials/bandits_tutorial.ipynb).
 
 ## Agents
 
