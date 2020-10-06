@@ -38,7 +38,6 @@ from tf_agents.experimental.train.utils import train_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import value_network
-from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
@@ -281,9 +280,8 @@ def train_eval(
       summary_dir=os.path.join(root_dir, learner.TRAIN_DIR),
       summary_interval=summary_interval)
 
-  tf_greedy_policy = greedy_policy.GreedyPolicy(agent.policy)
   eval_greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
-      tf_greedy_policy, use_tf_function=True)
+      agent.policy, use_tf_function=True)
 
   if eval_interval:
     logging.info('Intial evaluation.')
