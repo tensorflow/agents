@@ -170,8 +170,6 @@ class PPOPolicy(actor_policy.ActorPolicy):
         clip=clip)
 
     self._collect = collect
-    if value_network is not None:
-      value_network.create_variables()
     self._value_network = value_network
 
   def get_initial_value_state(self,
@@ -249,22 +247,19 @@ class PPOPolicy(actor_policy.ActorPolicy):
 
     new_policy_state = {'actor_network_state': (), 'value_network_state': ()}
 
-    def _to_distribution(action_or_distribution):
-      if isinstance(action_or_distribution, tf.Tensor):
-        # This is an action tensor, so wrap it in a deterministic distribution.
-        return tfp.distributions.Deterministic(loc=action_or_distribution)
-      return action_or_distribution
-
-    (actions_or_distributions,
-     new_policy_state['actor_network_state']) = self._apply_actor_network(
-         time_step, policy_state['actor_network_state'], training=training)
-    distributions = tf.nest.map_structure(_to_distribution,
-                                          actions_or_distributions)
+    (distributions, new_policy_state['actor_network_state']) = (
+        self._apply_actor_network(
+            time_step, policy_state['actor_network_state'], training=training))
 
     if self._collect:
       policy_info = {
-          'dist_params': ppo_utils.get_distribution_params(distributions)
+          'dist_params': ppo_utils.get_distribution_params(
+              distributions,
+              legacy_distribution_network=isinstance(
+                  self._actor_network,
+                  network.DistributionNetwork))
       }
+
       if not self._compute_value_and_advantage_in_train:
         # If value_prediction is not computed in agent.train it needs to be
         # computed and saved here.
@@ -281,8 +276,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
         not new_policy_state['value_network_state']):
       new_policy_state = ()
     elif not new_policy_state['value_network_state']:
-      new_policy_state.pop('value_network_state', None)
+      del new_policy_state['value_network_state']
     elif not new_policy_state['actor_network_state']:
-      new_policy_state.pop('actor_network_state', None)
+      del new_policy_state['actor_network_state']
 
     return policy_step.PolicyStep(distributions, new_policy_state, policy_info)

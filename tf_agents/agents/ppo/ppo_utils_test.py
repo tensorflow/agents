@@ -93,11 +93,15 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
     kl_divergence_ = self.evaluate(kl_divergence)
     self.assertAllClose(expected_kl_divergence, kl_divergence_)
 
-  def test_get_distribution_params(self):
+  @parameterized.named_parameters(
+      ('NoLegacyDistributionNetwork', False),
+      ('WithLegacyDistributionNetwork', True))
+  def test_get_distribution_params(self, legacy_distribution_network):
     ones = tf.ones(shape=[2], dtype=tf.float32)
     distribution = (tfp.distributions.Categorical(logits=ones),
                     tfp.distributions.Normal(ones, ones))
-    params = ppo_utils.get_distribution_params(distribution)
+    params = ppo_utils.get_distribution_params(
+        distribution, legacy_distribution_network)
     self.assertAllEqual([set(['logits']), set(['loc', 'scale'])],
                         [set(d.keys()) for d in params])  # pytype: disable=attribute-error
     self.assertAllEqual([[[2]], [[2], [2]]],
