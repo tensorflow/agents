@@ -33,10 +33,12 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
 
+tfd = tfp.distributions
+
 
 class DummyActorNet(network.Network):
 
-  def __init__(self, action_spec, name=None):
+  def __init__(self, action_spec, emit_distribution=True, name=None):
     super(DummyActorNet, self).__init__(
         tensor_spec.TensorSpec([2], tf.float32), (), 'DummyActorNet')
     self._action_spec = action_spec
@@ -51,6 +53,8 @@ class DummyActorNet(network.Network):
         )
     ]
 
+    self._emit_distribution = emit_distribution
+
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
@@ -64,6 +68,8 @@ class DummyActorNet(network.Network):
     spec_ranges = (
         self._flat_action_spec.maximum - self._flat_action_spec.minimum) / 2.0
     action_means = spec_means + spec_ranges * means
+    if self._emit_distribution:
+      action_means = tfd.Deterministic(loc=action_means)
 
     return tf.nest.pack_sequence_as(self._action_spec,
                                     [action_means]), network_state
@@ -79,7 +85,7 @@ class DummyActorDistributionNet(network.DistributionNetwork):
         (),
         output_spec=output_spec,
         name='DummyActorDistributionNet')
-    self._action_net = DummyActorNet(action_spec)
+    self._action_net = DummyActorNet(action_spec, emit_distribution=False)
 
   def _get_normal_distribution_spec(self, sample_spec):
     input_param_shapes = tfp.distributions.Normal.param_static_shapes(

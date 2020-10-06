@@ -30,7 +30,6 @@ from tf_agents.agents.ppo import ppo_utils
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
-from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
@@ -96,7 +95,9 @@ class PPOPolicy(actor_policy.ActorPolicy):
       TypeError: if `actor_network` or `value_network` is not of type
         `tf_agents.networks.Network`.
       ValueError: if `actor_network` or `value_network` do not emit
-        valid outputs.
+        valid outputs.  For example, `actor_network` must either be
+        a (legacy style) `DistributionNetwork`, or explicitly emit
+        a nest of `tfp.distribution.Distribution` objects.
     """
     if not isinstance(actor_network, network.Network):
       raise TypeError('actor_network is not of type network.Network')
@@ -105,6 +106,7 @@ class PPOPolicy(actor_policy.ActorPolicy):
 
     actor_output_spec = actor_network.create_variables(
         time_step_spec.observation)
+
     value_output_spec = value_network.create_variables(
         time_step_spec.observation)
 
@@ -122,14 +124,26 @@ class PPOPolicy(actor_policy.ActorPolicy):
       # TODO(oars): Cleanup how we handle non distribution networks.
       if isinstance(actor_network, network.DistributionNetwork):
         network_output_spec = actor_network.output_spec
+        info_spec = {
+            'dist_params':
+                tf.nest.map_structure(lambda spec: spec.input_params_spec,
+                                      network_output_spec)
+        }
       else:
-        network_output_spec = tf.nest.map_structure(
-            distribution_spec.deterministic_distribution_from_spec, action_spec)
-      info_spec = {
-          'dist_params':
-              tf.nest.map_structure(lambda spec: spec.input_params_spec,
-                                    network_output_spec)
-      }
+        # We have a Network that emits a nest of distributions.
+        def nested_dist_params(spec):
+          if not isinstance(spec, distribution_utils.DistributionSpecV2):
+            raise ValueError(
+                'Unexpected output from `actor_network`.  Expected '
+                '`Distribution` objects, but saw output spec: {}'
+                .format(actor_output_spec))
+          return distribution_utils.parameters_to_dict(spec.parameters)
+
+        info_spec = {
+            'dist_params':
+                tf.nest.map_structure(nested_dist_params,
+                                      actor_output_spec)
+        }
 
       if not self._compute_value_and_advantage_in_train:
         info_spec['value_prediction'] = tensor_spec.TensorSpec(
