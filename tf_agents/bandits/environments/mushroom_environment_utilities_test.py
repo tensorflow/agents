@@ -41,7 +41,7 @@ class MushroomEnvironmentUtilitiesTest(tf.test.TestCase):
         r_eat_poison_bad=-35.0,
         r_eat_poison_good=5.0,
         prob_poison_bad=0.5)
-    np.testing.assert_array_equal(reward_distr.mean(), [[0, -15.], [0, 5.]])
+    self.assertAllEqual(reward_distr.mean(), [[0, -15.], [0, 5.]])
 
 
 if __name__ == '__main__':

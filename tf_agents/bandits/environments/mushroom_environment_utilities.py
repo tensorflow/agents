@@ -93,7 +93,7 @@ def convert_mushroom_csv_to_tf_dataset(file_path, buffer_size=40000):
     AssertionError: If the CSV file does not conform to the syntax of the
       mushroom environment.
   """
-  with tf.gfile.Open(file_path, 'r') as infile:
+  with tf.io.gfile.GFile(file_path, 'r') as infile:
     nd = np.genfromtxt(infile, dtype=np.str, delimiter=',')
   _validate_mushroom_data(nd)
   encoded = _one_hot(nd)
