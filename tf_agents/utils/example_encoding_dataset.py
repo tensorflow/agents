@@ -211,7 +211,7 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
     return nest_utils.batch_nested_tensors(sample)
 
   if as_experience:
-    dataset = dataset.map(decode_fn).batch(2)
+    dataset = dataset.map(decode_fn).batch(2, drop_remainder=True)
   elif add_batch_dim:
     dataset = dataset.map(decode_and_batch_fn)
   else:
