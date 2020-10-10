@@ -101,7 +101,7 @@ class DqnAgent(tf_agent.TFAgent):
       optimizer: types.Optimizer,
       observation_and_action_constraint_splitter: Optional[
           types.Splitter] = None,
-      epsilon_greedy: types.Float = 0.1,
+      epsilon_greedy: types.FloatOrReturningFloat = 0.1,
       n_step_update: int = 1,
       boltzmann_temperature: Optional[types.Int] = None,
       emit_log_probability: bool = False,
