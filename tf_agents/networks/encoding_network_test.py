@@ -28,6 +28,8 @@ from tf_agents.networks import encoding_network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
 
+keras_preprocessing = tf.keras.layers.experimental.preprocessing
+
 
 class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
@@ -287,86 +289,101 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
       encoding_network.EncodingNetwork(
           input_spec, preprocessing_combiner=dense_features)
 
-  def testNumericFeatureColumnInput(self):
+  def testNumericKerasInput(self):
     key = 'feature_key'
     batch_size = 3
     state_dims = 5
     input_shape = (batch_size, state_dims)
-    column = tf.feature_column.numeric_column(key, [state_dims])
+    keras_input = tf.keras.Input(shape=[state_dims], dtype=tf.int32, name=key)
     state = {key: tf.ones(input_shape, tf.int32)}
     input_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
 
-    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
     network = encoding_network.EncodingNetwork(
-        input_spec, preprocessing_combiner=dense_features)
+        input_spec, preprocessing_combiner=tf.keras.Sequential([keras_input]))
 
     output, _ = network(state)
     self.assertEqual(input_shape, output.shape)
 
-  def testIndicatorFeatureColumnInput(self):
+  def testKerasIntegerLookup(self):
+    if not tf.executing_eagerly():
+      self.skipTest('This test is TF2 only.')
+
     key = 'feature_key'
     vocab_list = [2, 3, 4]
-    column = tf.feature_column.categorical_column_with_vocabulary_list(
-        key, vocab_list)
-    column = tf.feature_column.indicator_column(column)
+
+    keras_input = tf.keras.Input(shape=(1,), name=key, dtype=tf.dtypes.int32)
+    id_input = keras_preprocessing.IntegerLookup(vocabulary=vocab_list)
+    encoded_input = keras_preprocessing.CategoryEncoding(
+        max_tokens=len(vocab_list))
 
     state_input = [3, 2, 2, 4, 3]
     state = {key: tf.expand_dims(state_input, -1)}
     input_spec = {key: tensor_spec.TensorSpec([1], tf.int32)}
 
-    dense_features = tf.compat.v2.keras.layers.DenseFeatures([column])
     network = encoding_network.EncodingNetwork(
-        input_spec, preprocessing_combiner=dense_features)
+        input_spec,
+        preprocessing_combiner=tf.keras.Sequential(
+            [keras_input, id_input, encoded_input]))
 
     output, _ = network(state)
     expected_shape = (len(state_input), len(vocab_list))
     self.assertEqual(expected_shape, output.shape)
 
-  def testCombinedFeatureColumnInput(self):
-    columns = {}
+  def testCombinedKerasPreprocessingLayers(self):
+    if not tf.executing_eagerly():
+      self.skipTest('This test is TF2 only.')
+
+    inputs = {}
+    features = {}
     tensors = {}
     specs = {}
     expected_dim = 0
 
     indicator_key = 'indicator_key'
     vocab_list = [2, 3, 4]
-    column1 = tf.feature_column.categorical_column_with_vocabulary_list(
-        indicator_key, vocab_list)
-    columns[indicator_key] = tf.feature_column.indicator_column(column1)
+    inputs[indicator_key] = tf.keras.Input(
+        shape=(1,), dtype=tf.dtypes.int32, name=indicator_key)
+    id_input = keras_preprocessing.IntegerLookup(
+        vocabulary=vocab_list)(inputs[indicator_key])
+    features[indicator_key] = keras_preprocessing.CategoryEncoding(
+        max_tokens=len(vocab_list))(id_input)
     state_input = [3, 2, 2, 4, 3]
     tensors[indicator_key] = tf.expand_dims(state_input, -1)
     specs[indicator_key] = tensor_spec.TensorSpec([1], tf.int32)
     expected_dim += len(vocab_list)
 
-    # TODO(b/134950354): Test embedding column for non-eager mode only for now.
-    if not tf.executing_eagerly():
-      embedding_key = 'embedding_key'
-      embedding_dim = 3
-      vocab_list = [2, 3, 4]
-      column2 = tf.feature_column.categorical_column_with_vocabulary_list(
-          embedding_key, vocab_list)
-      columns[embedding_key] = tf.feature_column.embedding_column(
-          column2, embedding_dim)
-      state_input = [3, 2, 2, 4, 3]
-      tensors[embedding_key] = tf.expand_dims(state_input, -1)
-      specs[embedding_key] = tensor_spec.TensorSpec([1], tf.int32)
-      expected_dim += embedding_dim
+    embedding_key = 'embedding_key'
+    embedding_dim = 3
+    vocab_list = [2, 3, 4]
+    inputs[embedding_key] = tf.keras.Input(
+        shape=(1,), dtype=tf.dtypes.int32, name=embedding_key)
+    id_input = keras_preprocessing.IntegerLookup(
+        vocabulary=vocab_list)(inputs[embedding_key])
+    embedding_input = tf.keras.layers.Embedding(
+        input_dim=len(vocab_list),
+        output_dim=embedding_dim)(id_input)
+    features[embedding_key] = tf.reduce_sum(embedding_input, axis=-2)
+    state_input = [3, 2, 2, 4, 3]
+    tensors[embedding_key] = tf.expand_dims(state_input, -1)
+    specs[embedding_key] = tensor_spec.TensorSpec([1], tf.int32)
+    expected_dim += embedding_dim
 
     numeric_key = 'numeric_key'
     batch_size = 5
     state_dims = 3
     input_shape = (batch_size, state_dims)
-    columns[numeric_key] = tf.feature_column.numeric_column(
-        numeric_key, [state_dims])
-    tensors[numeric_key] = tf.ones(input_shape, tf.int32)
-    specs[numeric_key] = tensor_spec.TensorSpec([state_dims], tf.int32)
+    inputs[numeric_key] = tf.keras.Input(
+        shape=[state_dims], dtype=tf.float32, name=numeric_key)
+    features[numeric_key] = inputs[numeric_key]
+    tensors[numeric_key] = tf.ones(input_shape, tf.float32)
+    specs[numeric_key] = tensor_spec.TensorSpec([state_dims], tf.float32)
     expected_dim += state_dims
+    features = tf.keras.layers.concatenate(features.values(), axis=-1)
 
-    dense_features = tf.compat.v2.keras.layers.DenseFeatures(
-        list(columns.values()))
+    # TODO(b/170645185): Replace Model with FunctionalPreprocessingStage.
     network = encoding_network.EncodingNetwork(
-        specs, preprocessing_combiner=dense_features)
-
+        specs,
+        preprocessing_combiner=tf.keras.Model(inputs=inputs, outputs=features))
     output, _ = network(tensors)
     expected_shape = (batch_size, expected_dim)
     self.assertEqual(expected_shape, output.shape)
