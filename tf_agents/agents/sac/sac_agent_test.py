@@ -23,12 +23,14 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.agents.sac import sac_agent
+from tf_agents.agents.sac import tanh_normal_projection_network
+from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
-from tf_agents.trajectories.policy_step import PolicyStep
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
@@ -65,12 +67,12 @@ class DummyActorPolicy(object):
     observation = time_step.observation
     batch_size = observation.shape[0]
     action = tf.constant(self._action, dtype=tf.float32, shape=[batch_size, 1])
-    return PolicyStep(action=action)
+    return policy_step.PolicyStep(action=action)
 
   def distribution(self, time_step, policy_state=()):
     del policy_state
     action = self.action(time_step).action
-    return PolicyStep(action=_MockDistribution(action))
+    return policy_step.PolicyStep(action=_MockDistribution(action))
 
   def get_initial_state(self, batch_size):
     del batch_size
@@ -124,7 +126,10 @@ class SacAgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(SacAgentTest, self).setUp()
-    self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
+    self._obs_spec = tensor_spec.BoundedTensorSpec([2],
+                                                   tf.float32,
+                                                   minimum=0,
+                                                   maximum=1)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
 
@@ -138,6 +143,69 @@ class SacAgentTest(test_utils.TestCase):
         critic_optimizer=None,
         alpha_optimizer=None,
         actor_policy_ctor=DummyActorPolicy)
+
+  def testAgentTrajectoryTrain(self):
+    actor_net = actor_distribution_network.ActorDistributionNetwork(
+        self._obs_spec,
+        self._action_spec,
+        fc_layer_params=(10,),
+        continuous_projection_net=tanh_normal_projection_network
+        .TanhNormalProjectionNetwork)
+
+    agent = sac_agent.SacAgent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=DummyCriticNet(),
+        actor_network=actor_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        alpha_optimizer=tf.compat.v1.train.AdamOptimizer(0.001))
+
+    trajectory_spec = trajectory.Trajectory(
+        step_type=self._time_step_spec.step_type,
+        observation=self._time_step_spec.observation,
+        action=self._action_spec,
+        policy_info=(),
+        next_step_type=self._time_step_spec.step_type,
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'),
+        discount=self._time_step_spec.discount)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        trajectory_spec, outer_dims=(3, 2))
+    agent.train(sample_trajectory_experience)
+
+  def testAgentTransitionTrain(self):
+    actor_net = actor_distribution_network.ActorDistributionNetwork(
+        self._obs_spec,
+        self._action_spec,
+        fc_layer_params=(10,),
+        continuous_projection_net=tanh_normal_projection_network
+        .TanhNormalProjectionNetwork)
+
+    agent = sac_agent.SacAgent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=DummyCriticNet(),
+        actor_network=actor_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        alpha_optimizer=tf.compat.v1.train.AdamOptimizer(0.001))
+
+    time_step_spec = self._time_step_spec._replace(
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'))
+
+    transition_spec = trajectory.Transition(
+        time_step=time_step_spec,
+        action_step=policy_step.PolicyStep(action=self._action_spec,
+                                           state=(),
+                                           info=()),
+        next_time_step=time_step_spec)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        transition_spec, outer_dims=(3,))
+    agent.train(sample_trajectory_experience)
 
   def testCriticLoss(self):
     agent = sac_agent.SacAgent(

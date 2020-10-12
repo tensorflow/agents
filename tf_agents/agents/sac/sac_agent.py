@@ -33,12 +33,12 @@ from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import tf_policy
 from tf_agents.trajectories import time_step as ts
-from tf_agents.trajectories import trajectory
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
@@ -230,7 +230,12 @@ class SacAgent(tf_agent.TFAgent):
         train_sequence_length=train_sequence_length,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False
+    )
+
+    self._as_transition = data_converter.AsTransition(
+        self.data_context, squeeze_time_dim=(train_sequence_length == 2))
 
   def _check_action_spec(self, action_spec):
     flat_action_spec = tf.nest.flatten(action_spec)
@@ -283,9 +288,8 @@ class SacAgent(tf_agent.TFAgent):
       ValueError: If optimizers are None and no default value was provided to
         the constructor.
     """
-    squeeze_time_dim = not self._critic_network_1.state_spec
-    time_steps, policy_steps, next_time_steps = (
-        trajectory.experience_to_transitions(experience, squeeze_time_dim))
+    transition = self._as_transition(experience)
+    time_steps, policy_steps, next_time_steps = transition
     actions = policy_steps.action
 
     trainable_critic_variables = list(object_identity.ObjectIdentitySet(
