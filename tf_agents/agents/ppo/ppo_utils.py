@@ -25,6 +25,7 @@ from typing import Sequence
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tf_agents.distributions import utils as distribution_utils
+from tf_agents.specs import distribution_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -92,6 +93,40 @@ def make_timestep_mask(batched_next_time_step: ts.TimeStep,
     return tf.cast(episode_is_complete & not_between_episodes, tf.float32)
 
 
+def distribution_from_spec(
+    spec: types.NestedTensorSpec,
+    new_distribution_params: types.NestedTensor,
+    legacy_distribution_network: bool) -> types.NestedDistribution:
+  """Convert `(spec, new_distribution_params) -> Distribution`.
+
+  `new_distribution_params` typically comes from a logged policy info.
+
+  Args:
+    spec: A nested tensor spec.  If `legacy_distribution_network` is `True`,
+      these are typically `actor_net.output_spec`.  If it's `False`,
+      these are typically the output of `actor_net.create_variables()`.
+    new_distribution_params: Parameters to merge with the spec to create
+      a new distribution.  These were typically emitted by
+      `get_distribution_params` and stored in the replay buffer.
+    legacy_distribution_network: `True` if the spec and params were generated
+      from a `network.DistributionNetwork`.
+
+  Returns:
+    A (possibly nested set of) `Distribution` created from the spec
+    merged with the new params.
+  """
+  if legacy_distribution_network:
+    return distribution_spec.nested_distributions_from_specs(
+        spec, new_distribution_params)
+  else:
+    def merge_and_convert(spec, params):
+      return distribution_utils.make_from_parameters(
+          distribution_utils.merge_to_parameters_from_dict(
+              spec.parameters, params))
+    return nest_utils.map_structure_up_to(
+        spec, merge_and_convert, spec, new_distribution_params)
+
+
 def get_distribution_params(
     nested_distribution: types.NestedDistribution,
     legacy_distribution_network: bool) -> types.NestedTensor:
@@ -113,7 +148,7 @@ def get_distribution_params(
   if not legacy_distribution_network:
     def dist_params_dict(d):
       return distribution_utils.parameters_to_dict(
-          distribution_utils.get_parameters(d))
+          distribution_utils.get_parameters(d), tensors_only=True)
     return tf.nest.map_structure(dist_params_dict, nested_distribution)
 
   ## Legacy behavior below this line.
@@ -129,7 +164,7 @@ def get_distribution_params(
 
   def _tensor_parameters_only(d, params):
     return {_maybe_scale(d, k): params[k]
-            for k in params if isinstance(params[k], tf.Tensor)}
+            for k in params if tf.is_tensor(params[k])}
 
   return tf.nest.map_structure(
       lambda d: _tensor_parameters_only(d, d.parameters),

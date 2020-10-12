@@ -121,8 +121,10 @@ class PPOPolicy(actor_policy.ActorPolicy):
         compute_value_and_advantage_in_train)
 
     if collect:
-      # TODO(oars): Cleanup how we handle non distribution networks.
       if isinstance(actor_network, network.DistributionNetwork):
+        # Legacy DistributionNetwork case.  New code can just provide a regular
+        # Network that emits a Distribution object; and we use a different
+        # code path using DistributionSpecV2 for that.
         network_output_spec = actor_network.output_spec
         info_spec = {
             'dist_params':
@@ -137,7 +139,8 @@ class PPOPolicy(actor_policy.ActorPolicy):
                 'Unexpected output from `actor_network`.  Expected '
                 '`Distribution` objects, but saw output spec: {}'
                 .format(actor_output_spec))
-          return distribution_utils.parameters_to_dict(spec.parameters)
+          return distribution_utils.parameters_to_dict(
+              spec.parameters, tensors_only=True)
 
         info_spec = {
             'dist_params':

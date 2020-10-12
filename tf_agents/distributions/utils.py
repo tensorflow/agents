@@ -353,7 +353,9 @@ def make_from_parameters(value: Params) -> Any:
   return value.type_(**params)
 
 
-def parameters_to_dict(value: Params) -> Mapping[Text, Any]:
+def parameters_to_dict(
+    value: Params,
+    tensors_only: bool = False) -> Mapping[Text, Any]:
   """Converts `value` to a nested `dict` (excluding all `type_` info).
 
   Sub-dicts represent `Params` objects; keys represent flattened nest structures
@@ -370,21 +372,31 @@ def parameters_to_dict(value: Params) -> Mapping[Text, Any]:
       adjoint=True)
   b_d = b(d)
   p = utils.get_parameters(b_d)
-  params_dict = utils.parameters_to_dict(p)
+  params_dict = utils.parameters_to_dict(p, tensors_only)
   ```
 
-  results in the nested dictionary:
+  results in the nested dictionary, if `tensors_only=False`:
 
   ```python
-  {"bijector": {"adjoint": True,
-                "scale": {"matrix": scale_matrix}},
-   "distribution": {"validate_args": True,
-                    # These are deeply nested because we passed lists
-                    # intead of numpy arrays for `loc` and `scale_diag`.
-                    "scale_diag:0": 2.0,
-                    "scale_diag:1": 3.0,
-                    "loc:0": 1.0,
-                    "loc:1": 1.0}
+  {
+    "bijector": {"adjoint": True,
+                 "scale": {"matrix": scale_matrix}},
+    "distribution": {"validate_args": True,
+                     # These are deeply nested because we passed lists
+                     # intead of numpy arrays for `loc` and `scale_diag`.
+                     "scale_diag:0": 2.0,
+                     "scale_diag:1": 3.0,
+                     "loc:0": 1.0,
+                     "loc:1": 1.0}
+  }
+  ```
+
+  results if `tensors_only=True`:
+
+  ```python
+  {
+    "bijector": {"scale": {"matrix": scale_matrix}},
+    "distribution": {},
   }
   ```
 
@@ -393,22 +405,35 @@ def parameters_to_dict(value: Params) -> Mapping[Text, Any]:
 
   Args:
     value: The (possibly recursively defined) `Params`.
+    tensors_only: Whether to include all parameters or only
+      tensors and TypeSpecs.  If `True`, then only
+      `tf.Tensor` and `tf.TypeSpec` leaf parameters are emitted.
 
   Returns:
     A `dict` mapping `value.params` to flattened key/value pairs.  Any
     sub-`Params` objects become nested dicts.
   """
-  convert = lambda p: parameters_to_dict(p) if isinstance(p, Params) else p
-
   output_entries = {}
+
+  # All tensors and TensorSpecs will be included for purposes of this test.
+  is_tensor_or_spec = (
+      lambda p: tf.is_tensor(p) or isinstance(p, tf.TypeSpec))
+
+  def convert(key, p):
+    if isinstance(p, Params):
+      output_entries[key] = parameters_to_dict(p, tensors_only)
+    elif not tensors_only or is_tensor_or_spec(p):
+      output_entries[key] = p
+
   for k, v in value.params.items():
     if tf.nest.is_nested(v):
       flattened_params = nest_utils.flatten_with_joined_paths(v)
       for (param_k, param_v) in flattened_params:
         key = "{}:{}".format(k, param_k)
-        output_entries[key] = convert(param_v)
+        convert(key, param_v)
     else:
-      output_entries[k] = convert(v)
+      convert(k, v)
+
   return output_entries
 
 
@@ -458,20 +483,23 @@ def merge_to_parameters_from_dict(
     KeyError: If a subdict entry is missing for a nested value in
       `value.params`.
   """
-
   new_params = {}
+  if params_dict is None:
+    params_dict = {}
 
   processed_params = set()
   for k, v in value.params.items():
     # pylint: disable=cell-var-from-loop
+    visited = set()
+    converted = set()
+
     def convert(params_k, p):
       if params_k is not None:
         params_key = "{}:{}".format(k, params_k)
+        visited.add(params_key)
         params_dict_value = params_dict.get(params_key, None)
-        if params_dict_value is None:
-          raise KeyError("Missing a required nested element from "
-                         "params_dict.keys: '{}'.  params_dict.keys: {}"
-                         .format(params_key, sorted(params_dict.keys())))
+        if params_dict_value is not None:
+          converted.add(params_key)
       else:
         params_key = k
         params_dict_value = params_dict.get(k, None)
@@ -484,6 +512,12 @@ def merge_to_parameters_from_dict(
 
     if tf.nest.is_nested(v):
       new_params[k] = nest_utils.map_structure_with_paths(convert, v)
+      if converted and visited != converted:
+        raise KeyError(
+            "Only saw partial information from the dictionary for nested "
+            "key '{}' in params_dict.  Entries provided: {}.  "
+            "Entries required: {}"
+            .format(k, sorted(converted), sorted(visited)))
     else:
       new_params[k] = convert(None, v)
 

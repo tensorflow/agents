@@ -97,13 +97,14 @@ class PPOUtilsTest(parameterized.TestCase, tf.test.TestCase):
       ('NoLegacyDistributionNetwork', False),
       ('WithLegacyDistributionNetwork', True))
   def test_get_distribution_params(self, legacy_distribution_network):
-    ones = tf.ones(shape=[2], dtype=tf.float32)
+    ones = tf.Variable(tf.ones(shape=[2], dtype=tf.float32))
     distribution = (tfp.distributions.Categorical(logits=ones),
                     tfp.distributions.Normal(ones, ones))
     params = ppo_utils.get_distribution_params(
         distribution, legacy_distribution_network)
-    self.assertAllEqual([set(['logits']), set(['loc', 'scale'])],
-                        [set(d.keys()) for d in params])  # pytype: disable=attribute-error
+
+    self.assertEqual([set(['logits']), set(['loc', 'scale'])],
+                     [set(d.keys()) for d in params])  # pytype: disable=attribute-error
     self.assertAllEqual([[[2]], [[2], [2]]],
                         [[d[k].shape.as_list() for k in d] for d in params])  # pytype: disable=attribute-error
 

@@ -18,6 +18,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+# Using Type Annotations.
 from __future__ import print_function
 
 from absl import flags
@@ -35,6 +36,7 @@ from tf_agents.environments import random_tf_environment
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
+from tf_agents.networks import sequential
 from tf_agents.networks import utils as network_utils
 from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
@@ -125,6 +127,25 @@ class DummyActorNet(network.DistributionNetwork):
 
     return self.output_spec.build_distribution(
         loc=actions, scale=stdevs), network_state
+
+
+def create_sequential_actor_net(ndims: int):
+  def create_dist(loc_and_scale):
+    return {
+        'my_action': tfp.bijectors.Tanh()(
+            tfp.distributions.MultivariateNormalDiag(
+                loc=loc_and_scale[..., :ndims],
+                scale_diag=0.01 + tf.math.softplus(loc_and_scale[..., ndims:]),
+                validate_args=True,
+                name='my_action_normal',
+            ))
+    }
+
+  return sequential.Sequential([
+      tf.keras.layers.Dense(4),
+      tf.keras.layers.Dense(ndims * 2),
+      tf.keras.layers.Lambda(create_dist)
+  ])
 
 
 class DummyValueNet(network.Network):
@@ -465,14 +486,16 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           num_epochs=num_epochs,
           use_gae=use_td_lambda_return,
           use_td_lambda_return=use_td_lambda_return,
-          compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
+          compute_value_and_advantage_in_train=(
+              compute_value_and_advantage_in_train),
           train_step_counter=counter)
       agent.initialize()
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
@@ -1153,11 +1176,12 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         compute_value_and_advantage_in_train=False,
         debug_summaries=True)
 
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32)
 
     observations = (observations, observations, {
         'a': observations,
@@ -1199,6 +1223,96 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     experience = agent._preprocess(experience)
 
     agent.train(experience)
+
+  def testTrainWithNonLegacyActorNetwork(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Skipping test: sequential networks not supported in TF1')
+
+    num_epochs = 5
+    counter = common.create_variable('test_train_counter')
+    action_spec = {
+        'my_action': tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
+    }
+
+    agent = ppo_agent.PPOAgent(
+        self._time_step_spec,
+        action_spec,
+        tf.compat.v1.train.AdamOptimizer(),
+        # action_spec == TensorSpec([1], tf.float32)
+        actor_net=create_sequential_actor_net(ndims=1),
+        value_net=DummyValueNet(self._obs_spec),
+        normalize_observations=False,
+        num_epochs=num_epochs,
+        # TODO(b/34467761): Re-enable KL in this test once it is supported
+        # TransformedDistributions.
+        initial_adaptive_kl_beta=0.0,
+        kl_cutoff_factor=0.0,
+        check_numerics=True,
+        compute_value_and_advantage_in_train=False,
+        train_step_counter=counter)
+    agent.initialize()
+
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32)
+
+    mid_time_step_val = ts.StepType.MID.tolist()
+    time_steps = ts.TimeStep(
+        step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
+        reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+        discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+        observation=observations)
+    actions = {
+        'my_action':
+            tf.constant([[[0.1], [0.9], [0.1]], [[0.9], [0.1], [0.9]]],
+                        dtype=tf.float32)
+    }
+
+    action_distribution_parameters = {
+        'my_action': {
+            'bijector': {},
+            'distribution': {
+                'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
+                'scale_diag': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32)
+            }
+        }
+    }
+    value_preds = tf.constant([[0.9, 1.5, 2.1], [0.9, 1.5, 2.1]],
+                              dtype=tf.float32)
+
+    policy_info = {
+        'dist_params': action_distribution_parameters,
+    }
+    policy_info['value_prediction'] = value_preds
+    experience = trajectory.Trajectory(time_steps.step_type, observations,
+                                       actions, policy_info,
+                                       time_steps.step_type, time_steps.reward,
+                                       time_steps.discount)
+    experience = agent._preprocess(experience)
+
+    if tf.executing_eagerly():
+      loss = lambda: agent.train(experience)
+    else:
+      loss = agent.train(experience)
+
+    # Assert that counter starts out at zero.
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.assertEqual(0, self.evaluate(counter))
+    loss_type = self.evaluate(loss)
+    loss_numpy = loss_type.loss
+
+    # Assert that loss is not zero as we are training in a non-episodic env.
+    self.assertNotEqual(
+        loss_numpy,
+        0.0,
+        msg=('Loss is exactly zero, looks like no training '
+             'was performed due to incomplete episodes.'))
+
+    # Assert that train_op ran increment_counter num_epochs times.
+    self.assertEqual(num_epochs, self.evaluate(counter))
 
 
 if __name__ == '__main__':

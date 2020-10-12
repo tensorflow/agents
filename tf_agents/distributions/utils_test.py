@@ -20,6 +20,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -28,7 +29,7 @@ from tf_agents.distributions import utils
 from tf_agents.specs import tensor_spec
 
 
-class UtilsTest(tf.test.TestCase):
+class UtilsTest(tf.test.TestCase, parameterized.TestCase):
 
   def testScaleDistribution(self):
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -2, 4)
@@ -146,7 +147,9 @@ class UtilsTest(tf.test.TestCase):
     self.assertAllClose(
         b_d.log_prob(points), b_d_recreated.log_prob(points))
 
-  def testParametersToAndFromDict(self):
+  @parameterized.named_parameters(('ConvertAll', False),
+                                  ('ConvertOnlyNonconstantTensors', True))
+  def testParametersToAndFromDict(self, tensors_only):
     scale_matrix = tf.Variable([[1.0, 2.0], [-1.0, 0.0]])
     d = tfp.distributions.MultivariateNormalDiag(
         loc=[1.0, 1.0], scale_diag=[2.0, 3.0], validate_args=True)
@@ -156,17 +159,25 @@ class UtilsTest(tf.test.TestCase):
     b_d = b(d)
     p = utils.get_parameters(b_d)
 
-    p_dict = utils.parameters_to_dict(p)
-    expected_p_dict = {
-        'bijector': {'adjoint': True,
-                     'scale': {'matrix': scale_matrix}},
-        'distribution': {'validate_args': True,
-                         # These are deeply nested because we passed lists
-                         # intead of numpy arrays for `loc` and `scale_diag`.
-                         'scale_diag:0': 2.0,
-                         'scale_diag:1': 3.0,
-                         'loc:0': 1.0,
-                         'loc:1': 1.0}}
+    p_dict = utils.parameters_to_dict(
+        p, tensors_only=tensors_only)
+
+    if tensors_only:
+      expected_p_dict = {
+          'bijector': {'scale': {'matrix': scale_matrix}},
+          'distribution': {},
+      }
+    else:
+      expected_p_dict = {
+          'bijector': {'adjoint': True,
+                       'scale': {'matrix': scale_matrix}},
+          'distribution': {'validate_args': True,
+                           # These are deeply nested because we passed lists
+                           # intead of numpy arrays for `loc` and `scale_diag`.
+                           'scale_diag:0': 2.0,
+                           'scale_diag:1': 3.0,
+                           'loc:0': 1.0,
+                           'loc:1': 1.0}}
 
     tf.nest.map_structure(
         self.assertAllEqual, p_dict, expected_p_dict)
@@ -175,8 +186,9 @@ class UtilsTest(tf.test.TestCase):
     p_dict['bijector']['scale']['matrix'] = (
         p_dict['bijector']['scale']['matrix'] + 1.0)
 
-    p_recreated = utils.merge_to_parameters_from_dict(
-        p, p_dict)
+    # When tensors_only=True, we make sure that we can merge into p
+    # from a dict where we dropped everything but tensors.
+    p_recreated = utils.merge_to_parameters_from_dict(p, p_dict)
 
     self.assertAllClose(
         p_recreated.params['bijector'].params['scale'].params['matrix'],
@@ -204,9 +216,10 @@ class UtilsTest(tf.test.TestCase):
     # into the bijector list when converting back.
     with self.assertRaisesRegex(
         ValueError,
+        r'params_dict had keys that were not part of value.params.*'
         r'params_dict keys: \[\'bijectors:0\', \'bijectors:1\', '
-        r'\'bijectors:2\'\], value.params processed keys: '
-        r'\[\'bijectors:0\', \'bijectors:1\'\]'):
+        r'\'bijectors:2\'\], value.params processed keys: \[\'bijectors:0\', '
+        r'\'bijectors:1\'\]'):
       utils.merge_to_parameters_from_dict(p, p_dict)
 
   def testParametersFromDictMissingNestedDictKeyFailure(self):
@@ -233,8 +246,10 @@ class UtilsTest(tf.test.TestCase):
     # the nested bijectors list.
     with self.assertRaisesRegex(
         KeyError,
-        r'Missing a required nested element from params_dict.keys: '
-        r'\'bijectors:1\'.  params_dict.keys: \[\'bijectors:0\'\]'):
+        r'Only saw partial information from the dictionary for nested key '
+        r'\'bijectors\' in params_dict.*'
+        r'Entries provided: \[\'bijectors:0\'\].*'
+        r'Entries required: \[\'bijectors:0\', \'bijectors:1\'\]'):
       utils.merge_to_parameters_from_dict(p, p_dict)
 
 

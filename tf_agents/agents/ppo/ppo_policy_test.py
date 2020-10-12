@@ -20,13 +20,14 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_policy
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import mask_splitter_network
 from tf_agents.networks import network
+from tf_agents.networks import sequential
 from tf_agents.networks import value_network as value_net
 from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
@@ -129,6 +130,28 @@ class DummyValueNet(network.Network):
     for layer in self._dummy_layers:
       hidden_state = layer(hidden_state)
     return hidden_state, network_state
+
+
+def create_sequential_actor_net():
+  def create_dist(loc_and_scale):
+    # Bring my_action into [2.0, 3.0]:
+    #  (-inf, inf) -> (-1, 1) -> (-0.5, 0.5) -> (2, 3)
+    my_action = tfp.bijectors.Chain(
+        [tfp.bijectors.Shift(2.5), tfp.bijectors.Scale(0.5),
+         tfp.bijectors.Tanh()])(
+             tfd.Normal(
+                 loc=loc_and_scale[..., 0],
+                 scale=tf.math.softplus(loc_and_scale[..., 1]),
+                 validate_args=True))
+    return {
+        'my_action': my_action,
+    }
+
+  return sequential.Sequential([
+      tf.keras.layers.Dense(4),
+      tf.keras.layers.Dense(2),
+      tf.keras.layers.Lambda(create_dist)
+  ])
 
 
 def _test_cases(prefix=''):
@@ -413,6 +436,42 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
     distribution_step = policy.distribution(self._time_step)
     self.assertIsInstance(distribution_step.action, tfp.distributions.Normal)
+
+  def testNonLegacyDistribution(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Skipping test: sequential networks not supported in TF1')
+
+    actor_network = create_sequential_actor_net()
+    action_spec = {'my_action': self._action_spec}
+    value_network = DummyValueNet()
+
+    policy = ppo_policy.PPOPolicy(
+        self._time_step_spec,
+        action_spec,
+        actor_network=actor_network,
+        value_network=value_network)
+
+    distribution_step = policy.distribution(self._time_step)
+    self.assertIsInstance(
+        distribution_step.action['my_action'],
+        tfp.distributions.TransformedDistribution)
+
+    expected_info_spec = {
+        'dist_params': {
+            'my_action': {
+                'bijector': {'bijectors:0': {},
+                             'bijectors:1': {},
+                             'bijectors:2': {}},
+                'distribution': {'scale': tf.TensorSpec([1], tf.float32),
+                                 'loc': tf.TensorSpec([1], tf.float32)},
+            }
+        },
+        'value_prediction': tf.TensorSpec([1, 1], tf.float32)
+    }
+
+    tf.nest.map_structure(
+        lambda v, s: self.assertEqual(tf.type_spec_from_value(v), s),
+        distribution_step.info, expected_info_spec)
 
 
 if __name__ == '__main__':

@@ -76,7 +76,6 @@ from tf_agents.agents.ppo import ppo_policy
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.networks import network
 from tf_agents.policies import greedy_policy
-from tf_agents.specs import distribution_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -283,8 +282,9 @@ class PPOAgent(tf_agent.TFAgent):
     if not isinstance(value_net, network.Network):
       raise TypeError('value_net must be an instance of a network.Network.')
 
-    actor_net.create_variables()
-    value_net.create_variables()
+    # PPOPolicy validates these, so we skip validation here.
+    actor_net.create_variables(time_step_spec.observation)
+    value_net.create_variables(time_step_spec.observation)
 
     tf.Module.__init__(self, name=name)
 
@@ -363,7 +363,12 @@ class PPOAgent(tf_agent.TFAgent):
             self._compute_value_and_advantage_in_train),
     )
 
-    self._action_distribution_spec = (self._actor_net.output_spec)
+    if isinstance(self._actor_net, network.DistributionNetwork):
+      # Legacy behavior
+      self._action_distribution_spec = self._actor_net.output_spec
+    else:
+      self._action_distribution_spec = self._actor_net.create_variables(
+          time_step_spec.observation)
 
     # Set training_data_spec to collect_data_spec with augmented policy info,
     # iff return and normalized advantage are saved in preprocess_sequence.
@@ -747,9 +752,14 @@ class PPOAgent(tf_agent.TFAgent):
     #   parameters.
     old_action_distribution_parameters = processed_experience.policy_info[
         'dist_params']
+
     old_actions_distribution = (
-        distribution_spec.nested_distributions_from_specs(
-            self._action_distribution_spec, old_action_distribution_parameters))
+        ppo_utils.distribution_from_spec(
+            self._action_distribution_spec,
+            old_action_distribution_parameters,
+            legacy_distribution_network=isinstance(
+                self._actor_net, network.DistributionNetwork)))
+
     # Compute log probability of actions taken during data collection, using the
     #   collect policy distribution.
     old_act_log_probs = common.log_probability(old_actions_distribution,
@@ -1321,8 +1331,10 @@ class PPOAgent(tf_agent.TFAgent):
         range(nest_utils.get_outer_rank(time_steps, self.time_step_spec)))
 
     old_actions_distribution = (
-        distribution_spec.nested_distributions_from_specs(
-            self._action_distribution_spec, action_distribution_parameters))
+        ppo_utils.distribution_from_spec(
+            self._action_distribution_spec, action_distribution_parameters,
+            legacy_distribution_network=isinstance(
+                self._actor_net, network.DistributionNetwork)))
 
     kl_divergence = ppo_utils.nested_kl_divergence(
         old_actions_distribution,
