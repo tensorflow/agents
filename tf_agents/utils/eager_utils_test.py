@@ -45,7 +45,7 @@ class Network(tf.keras.layers.Layer):
   def __init__(self, name=None):
     super(Network, self).__init__(name=name)
     self._layer = tf.keras.layers.Dense(
-        3, kernel_initializer=tf.compat.v1.initializers.ones(), name='logits')
+        3, kernel_initializer=tf.keras.initializers.Ones(), name='logits')
 
   def call(self, inputs):
     return self._layer(inputs)
