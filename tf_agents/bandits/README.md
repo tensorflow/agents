@@ -137,7 +137,7 @@ an action is eligible to be selected or not in the current round (given the
 current context). In the general case, the action feasibility is inferred by
 evaluating expressions involving one or more of the auxiliary constraint
 metrics.
-The [Constraints API] (https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/policies/constraints.py)
+The [Constraints API](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/policies/constraints.py)
 unifies how all constraints are evaluated for computing the action feasibility.
 A single constraint may be trainable (or not) depending on whether the action
 feasibility computation is informed by a model predicting the value of the
