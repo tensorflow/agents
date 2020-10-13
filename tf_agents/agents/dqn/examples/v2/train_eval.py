@@ -323,8 +323,7 @@ def train_eval(
 logits = functools.partial(
     tf.keras.layers.Dense,
     activation=None,
-    kernel_initializer=tf.compat.v1.initializers.random_uniform(
-        minval=-0.03, maxval=0.03),
+    kernel_initializer=tf.random_uniform_initializer(minval=-0.03, maxval=0.03),
     bias_initializer=tf.compat.v1.initializers.constant(-0.2))
 
 

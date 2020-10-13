@@ -209,7 +209,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
 
     reward_layer = tf.keras.layers.Dense(
         self._num_models,
-        kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
         use_bias=False,
         activation=None,

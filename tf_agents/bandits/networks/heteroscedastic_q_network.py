@@ -122,7 +122,7 @@ class HeteroscedasticQNetwork(network.Network):
     q_value_layer = tf.keras.layers.Dense(
         num_actions,
         activation=None,
-        kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
         bias_initializer=tf.compat.v1.initializers.constant(-0.2),
         dtype=dtype)
@@ -138,7 +138,7 @@ class HeteroscedasticQNetwork(network.Network):
     self._log_variance_layer = tf.keras.layers.Dense(
         num_actions,
         activation=None,
-        kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
         dtype=dtype)
 

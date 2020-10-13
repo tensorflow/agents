@@ -109,7 +109,7 @@ class ValueRnnNetwork(network.Network):
     postprocessing_layers = tf.keras.layers.Dense(
         1,
         activation=None,
-        kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03))
 
     super(ValueRnnNetwork, self).__init__(

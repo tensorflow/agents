@@ -117,7 +117,7 @@ class ValueNetwork(network.Network):
     self._postprocessing_layers = tf.keras.layers.Dense(
         1,
         activation=None,
-        kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03))
 
   def call(self, observation, step_type=None, network_state=(), training=False):
