@@ -71,6 +71,7 @@ from six.moves import range
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_policy
 from tf_agents.agents.ppo import ppo_utils
@@ -396,7 +397,15 @@ class PPOAgent(tf_agent.TFAgent):
         training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False)
+
+    # This must be built after super() which sets up self.data_context.
+    self._collected_as_transition = data_converter.AsTransition(
+        self.collect_data_context, squeeze_time_dim=False)
+
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   @property
   def actor_net(self) -> network.Network:
@@ -649,12 +658,11 @@ class PPOAgent(tf_agent.TFAgent):
       filled in its policy info. The advantages and returns for the last
       transition is filled with 0s as they cannot be calculated.
     """
-    if self._compute_value_and_advantage_in_train:
-      outer_rank = nest_utils.get_outer_rank(experience,
-                                             self.training_data_spec)
-    else:
-      outer_rank = nest_utils.get_outer_rank(experience,
-                                             self.collect_data_spec)
+    # Try to be agnostic about the input type of experience before we call
+    # to_transition() below.
+    outer_rank = nest_utils.get_outer_rank(
+        _get_discount(experience), self.collect_data_spec.discount)
+
     # Add 1 as the batch dimension for inputs that just have the time dimension,
     # as all utility functions below require the batch dimension.
     if outer_rank == 1:
@@ -663,13 +671,18 @@ class PPOAgent(tf_agent.TFAgent):
       batched_experience = experience
 
     # Get individual tensors from experience.
-    num_steps = batched_experience.step_type.shape[1]
+    num_steps = _get_discount(batched_experience).shape[1]
     if num_steps and num_steps <= 1:
       raise ValueError(
           'Experience used for advantage calculation must have >1 num_steps.')
 
-    (time_steps, _,
-     next_time_steps) = trajectory.to_transition(batched_experience)
+    transition = self._collected_as_transition(batched_experience)
+    time_steps, _, next_time_steps = transition
+
+    # TODO(b/170680358): Decide if we will require Trajectory for preprocess,
+    # or if we want to handle transitions here too; if so, what do we return?
+    # Below we use batched_experience assuming it's a Trajectory, and return
+    # a trajectory.
 
     # Compute the value predictions for states using the current value function.
     # To be used for return & advantage computation.
@@ -684,6 +697,7 @@ class PPOAgent(tf_agent.TFAgent):
       value_preds = tf.stop_gradient(value_preds)
     else:
       value_preds = batched_experience.policy_info['value_prediction']
+
     new_policy_info = {
         'dist_params': batched_experience.policy_info['dist_params'],
         'value_prediction': value_preds,
@@ -736,6 +750,8 @@ class PPOAgent(tf_agent.TFAgent):
     return self._preprocess(experience)
 
   def _train(self, experience, weights):
+    experience = self._as_trajectory(experience)
+
     if self._compute_value_and_advantage_in_train:
       processed_experience = self._preprocess(experience)
     else:
@@ -1435,3 +1451,20 @@ class PPOAgent(tf_agent.TFAgent):
           step=self.train_step_counter)
 
     return self._adaptive_kl_beta
+
+
+def _get_discount(experience) -> types.Tensor:
+  """Try to get the discount entry from `experience`.
+
+  Typically experience is either a Trajectory or a Transition.
+
+  Args:
+    experience: Data collected from e.g. a replay buffer.
+
+  Returns:
+    discount: The discount tensor stored in `experience`.
+  """
+  if isinstance(experience, trajectory.Transition):
+    return experience.time_step.discount
+  else:
+    return experience.discount

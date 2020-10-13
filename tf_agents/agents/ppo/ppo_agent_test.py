@@ -334,11 +334,12 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           compute_value_and_advantage_in_train=False,
           train_step_counter=counter)
       agent.initialize()
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
@@ -1083,11 +1084,12 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         train_step_counter=counter,
         compute_value_and_advantage_in_train=compute_value_and_advantage_in_train
     )
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
@@ -1224,7 +1226,9 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
     agent.train(experience)
 
-  def testTrainWithNonLegacyActorNetwork(self):
+  @parameterized.named_parameters(('FeedTrajectory', False),
+                                  ('FeedTransition', True))
+  def testTrainWithNonLegacyActorNetwork(self, feed_transition):
     if not tf.executing_eagerly():
       self.skipTest('Skipping test: sequential networks not supported in TF1')
 
@@ -1252,51 +1256,13 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         train_step_counter=counter)
     agent.initialize()
 
-    observations = tf.constant(
-        [
-            [[1, 2], [3, 4], [5, 6]],
-            [[1, 2], [3, 4], [5, 6]],
-        ],
-        dtype=tf.float32)
-
-    mid_time_step_val = ts.StepType.MID.tolist()
-    time_steps = ts.TimeStep(
-        step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
-        reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        observation=observations)
-    actions = {
-        'my_action':
-            tf.constant([[[0.1], [0.9], [0.1]], [[0.9], [0.1], [0.9]]],
-                        dtype=tf.float32)
-    }
-
-    action_distribution_parameters = {
-        'my_action': {
-            'bijector': {},
-            'distribution': {
-                'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
-                'scale_diag': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32)
-            }
-        }
-    }
-    value_preds = tf.constant([[0.9, 1.5, 2.1], [0.9, 1.5, 2.1]],
-                              dtype=tf.float32)
-
-    policy_info = {
-        'dist_params': action_distribution_parameters,
-    }
-    policy_info['value_prediction'] = value_preds
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = _create_experience_trajectory_my_action()
     experience = agent._preprocess(experience)
 
-    if tf.executing_eagerly():
-      loss = lambda: agent.train(experience)
-    else:
-      loss = agent.train(experience)
+    if feed_transition:
+      experience = trajectory.to_transition(experience)
+
+    loss = lambda: agent.train(experience)
 
     # Assert that counter starts out at zero.
     self.evaluate(tf.compat.v1.initialize_all_variables())
@@ -1314,6 +1280,48 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     # Assert that train_op ran increment_counter num_epochs times.
     self.assertEqual(num_epochs, self.evaluate(counter))
 
+
+def _create_experience_trajectory_my_action() -> trajectory.Trajectory:
+  observations = tf.constant(
+      [
+          [[1, 2], [3, 4], [5, 6]],
+          [[1, 2], [3, 4], [5, 6]],
+      ],
+      dtype=tf.float32)
+
+  mid_time_step_val = ts.StepType.MID.tolist()
+  time_steps = ts.TimeStep(
+      step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
+      reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+      discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
+      observation=observations)
+  actions = {
+      'my_action':
+          tf.constant([[[0.1], [0.9], [0.1]], [[0.9], [0.1], [0.9]]],
+                      dtype=tf.float32)
+  }
+
+  action_distribution_parameters = {
+      'my_action': {
+          'bijector': {},
+          'distribution': {
+              'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
+              'scale_diag': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32)
+          }
+      }
+  }
+  value_preds = tf.constant([[0.9, 1.5, 2.1], [0.9, 1.5, 2.1]],
+                            dtype=tf.float32)
+
+  policy_info = {
+      'dist_params': action_distribution_parameters,
+  }
+  policy_info['value_prediction'] = value_preds
+  experience = trajectory.Trajectory(time_steps.step_type, observations,
+                                     actions, policy_info,
+                                     time_steps.step_type, time_steps.reward,
+                                     time_steps.discount)
+  return experience
 
 if __name__ == '__main__':
   tf.test.main()

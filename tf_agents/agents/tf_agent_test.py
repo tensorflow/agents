@@ -47,6 +47,7 @@ class MyAgent(tf_agent.TFAgent):
                action_spec=None,
                validate_args=True,
                train_argspec=None,
+               training_data_spec=None,
                train_sequence_length=None):
     if time_step_spec is None:
       obs_spec = {'obs': tf.TensorSpec([], tf.float32)}
@@ -60,6 +61,7 @@ class MyAgent(tf_agent.TFAgent):
         collect_policy=policy,
         train_sequence_length=train_sequence_length,
         train_argspec=train_argspec,
+        training_data_spec=training_data_spec,
         validate_args=validate_args)  # pytype: disable=wrong-arg-types
 
   def _train(self, experience, weights=None, extra=None):
@@ -130,11 +132,25 @@ class TFAgentTest(tf.test.TestCase):
         self.assertAllEqual, loss_info.extra, ('blah', 3))
 
   def testDataContext(self):
-    agent = MyAgent()
+    agent = MyAgent(training_data_spec=(
+        trajectory.Trajectory(
+            observation={'obs': tf.TensorSpec([], tf.float32)},
+            action=(),
+            policy_info={'info': tf.TensorSpec([], tf.int32)},
+            reward=tf.TensorSpec([], tf.float32),
+            step_type=tf.TensorSpec([], tf.int32),
+            next_step_type=tf.TensorSpec([], tf.int32),
+            discount=tf.TensorSpec([], tf.float32),
+        )))
     self.assertEqual(agent.data_context.time_step_spec,
                      ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}))
+    self.assertEqual(agent.collect_data_context.time_step_spec,
+                     ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}))
     self.assertEqual(agent.data_context.action_spec, ())
-    self.assertEqual(agent.data_context.info_spec, ())
+    self.assertEqual(agent.collect_data_context.action_spec, ())
+    self.assertEqual(agent.data_context.info_spec,
+                     {'info': tf.TensorSpec([], tf.int32)})
+    self.assertEqual(agent.collect_data_context.info_spec, ())
 
 
 class AgentSpecTest(test_utils.TestCase):
