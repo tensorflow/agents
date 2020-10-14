@@ -21,10 +21,13 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+
 from tf_agents.agents.td3 import td3_agent
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
@@ -105,7 +108,9 @@ class TD3AgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(TD3AgentTest, self).setUp()
-    self._obs_spec = [tensor_spec.TensorSpec([2], tf.float32)]
+    self._obs_spec = [
+        tensor_spec.BoundedTensorSpec([2], tf.float32, minimum=0, maximum=1)
+    ]
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = [tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)]
 
@@ -125,6 +130,55 @@ class TD3AgentTest(test_utils.TestCase):
         actor_optimizer=None,
         critic_optimizer=None,
         )
+
+  def testAgentTrajectoryTrain(self):
+    agent = td3_agent.Td3Agent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=self._critic_net,
+        actor_network=self._bounded_actor_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        )
+
+    trajectory_spec = trajectory.Trajectory(
+        step_type=self._time_step_spec.step_type,
+        observation=self._time_step_spec.observation,
+        action=self._action_spec,
+        policy_info=(),
+        next_step_type=self._time_step_spec.step_type,
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'),
+        discount=self._time_step_spec.discount)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        trajectory_spec, outer_dims=(3, 2))
+    agent.train(sample_trajectory_experience)
+
+  def testAgentTransitionTrain(self):
+    agent = td3_agent.Td3Agent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=self._critic_net,
+        actor_network=self._bounded_actor_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        )
+
+    time_step_spec = self._time_step_spec._replace(
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'))
+
+    transition_spec = trajectory.Transition(
+        time_step=time_step_spec,
+        action_step=policy_step.PolicyStep(action=self._action_spec,
+                                           state=(),
+                                           info=()),
+        next_time_step=time_step_spec)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        transition_spec, outer_dims=(3,))
+    agent.train(sample_trajectory_experience)
 
   def testCriticLoss(self):
     # The loss is now 119.3098526. Investigate this.
