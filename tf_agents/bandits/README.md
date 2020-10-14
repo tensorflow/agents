@@ -14,9 +14,8 @@ known as <b>contextual bandits</b> problems, and can be thought of as a
 generalization of multi-armed bandits where the agent has access to additional
 context in each round.
 
-To get started with Bandits in TF-Agents, we recommend checking the following
-Colab tutorial:
-[`tf_agents/g3doc/tutorials/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/g3doc/tutorials/bandits_tutorial.ipynb).
+To get started with Bandits in TF-Agents, we recommend checking our [`bandits tutorial`]
+(https://github.com/tensorflow/agents/blob/master/docs/tutorials/bandits_tutorial.ipynb).
 
 ## Agents
 
