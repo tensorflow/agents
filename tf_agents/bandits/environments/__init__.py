@@ -21,6 +21,7 @@ from tf_agents.bandits.environments import bernoulli_action_mask_tf_environment
 from tf_agents.bandits.environments import bernoulli_py_environment
 from tf_agents.bandits.environments import classification_environment
 from tf_agents.bandits.environments import drifting_linear_environment
+from tf_agents.bandits.environments import movielens_py_environment
 from tf_agents.bandits.environments import mushroom_environment_utilities
 from tf_agents.bandits.environments import non_stationary_stochastic_environment
 from tf_agents.bandits.environments import piecewise_bernoulli_py_environment
