@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+
 from absl import logging
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -117,6 +119,7 @@ class TFRecordObserver(object):
         self._array_data_spec)
     # Two output files: a tfrecord file and a file with the serialized spec
     self.output_path = output_path
+    tf.io.gfile.makedirs(os.path.dirname(self.output_path))
     self._writer = tf.io.TFRecordWriter(self.output_path)
     logging.info('Writing dataset to TFRecord at %s', self.output_path)
     # Save the tensor spec used to write the dataset to file
