@@ -71,6 +71,9 @@ def from_spec(spec):
 
 def to_array_spec(tensor_spec):
   """Converts TensorSpec into ArraySpec."""
+  if isinstance(tensor_spec, array_spec.ArraySpec):
+    return tensor_spec
+
   if hasattr(tensor_spec, "minimum") and hasattr(tensor_spec, "maximum"):
     return array_spec.BoundedArraySpec(
         tensor_spec.shape.as_list(),
