@@ -107,7 +107,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1,
                                                       'action')
-    self._float_action_spec = tensor_spec.BoundedTensorSpec([], tf.float32,
+    self._float_action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32,
                                                             0, 1, 'action')
     self._tf_policy = q_policy.QPolicy(
         self._time_step_spec,

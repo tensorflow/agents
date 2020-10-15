@@ -20,9 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import numpy as np
+import tensorflow as tf
 
 from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
+from tf_agents.keras_layers import inner_reshape
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
 from tf_agents.networks import sequential
@@ -82,15 +84,27 @@ def create_arbitrary_trajectory():
 
 def get_dummy_net(action_spec, observation_spec=None):
   flat_action_spec = tf.nest.flatten(action_spec)[0]
-  num_actions = flat_action_spec.maximum - flat_action_spec.minimum + 1
+  if flat_action_spec.dtype.is_integer:
+    # Emitting discrete actions.
+    num_actions = flat_action_spec.maximum - flat_action_spec.minimum + 1
+    kernel_initializer = tf.constant_initializer([[2, 1], [1, 1]])
+    bias_initializer = tf.constant_initializer([[1], [1]])
+    final_shape = [num_actions]
+  else:
+    # Emitting continuous vectors.
+    num_actions = np.prod(flat_action_spec.shape)
+    kernel_initializer = None
+    bias_initializer = None
+    final_shape = flat_action_spec.shape
 
   return sequential.Sequential([
       tf.keras.layers.Dense(
           num_actions,
-          kernel_initializer=tf.constant_initializer([[2, 1], [1, 1]]),
-          bias_initializer=tf.constant_initializer([[1], [1]]))
-  ],
-                               input_spec=observation_spec)
+          kernel_initializer=kernel_initializer,
+          bias_initializer=bias_initializer,
+          dtype=tf.float32),
+      inner_reshape.InnerReshape([None], final_shape)
+  ], input_spec=observation_spec)
 
 
 class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
@@ -122,8 +136,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
       ('ScalarDiscreteAction', [
           tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)],
        None),
-      ('SingleNonScalarFloatAction', [
-          tensor_spec.BoundedTensorSpec([3, 2], tf.float32, 0, 1)],
+      ('SingleNonScalarFloatAction',
+       tensor_spec.BoundedTensorSpec([3, 2], tf.float32, 0, 1),
        None),
       ('MultipleContinuous', [
           tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1),

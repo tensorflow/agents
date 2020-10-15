@@ -22,7 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 from absl.testing.absltest import mock
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents.reinforce import reinforce_agent
@@ -34,8 +34,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
-
-from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class DummyActorNet(network.Network):
@@ -76,14 +74,19 @@ class DummyActorNet(network.Network):
       states = layer(states)
 
     single_action_spec = tf.nest.flatten(self._output_tensor_spec)[0]
-    actions, stdevs = states[..., 0], states[..., 1]
+    # action_spec is TensorSpec([1], ...) so make sure there's an outer dim.
+    actions = states[..., 0]
+    stdevs = states[..., 1]
     actions = tf.reshape(actions, [-1] + single_action_spec.shape.as_list())
     stdevs = tf.reshape(stdevs, [-1] + single_action_spec.shape.as_list())
     actions = tf.nest.pack_sequence_as(self._output_tensor_spec, [actions])
     stdevs = tf.nest.pack_sequence_as(self._output_tensor_spec, [stdevs])
 
-    distribution = nest.map_structure_up_to(
-        self._output_tensor_spec, tfp.distributions.Normal, actions, stdevs)
+    distribution = nest_utils.map_structure_up_to(
+        self._output_tensor_spec,
+        tfp.distributions.MultivariateNormalDiag,
+        actions,
+        stdevs)
     return distribution, network_state
 
 

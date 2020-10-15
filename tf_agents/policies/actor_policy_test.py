@@ -96,7 +96,7 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
     super(ActorPolicyTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, 2, 3)
+    self._action_spec = tensor_spec.BoundedTensorSpec((), tf.float32, 2, 3)
 
   @property
   def _time_step(self):
@@ -128,7 +128,7 @@ class ActorPolicyTest(parameterized.TestCase, test_utils.TestCase):
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     action_step = policy.action(self._time_step_batch)
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
@@ -189,7 +189,7 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
     super(ActorPolicyDiscreteActionsTest, self).setUp()
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
-    self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 7)
+    self._action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 7)
 
   @property
   def _time_step(self):
@@ -220,7 +220,7 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
         self._time_step_spec, self._action_spec, actor_network=actor_network)
 
     action_step = policy.action(self._time_step_batch)
-    self.assertEqual(action_step.action.shape.as_list(), [2, 1])
+    self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, self._action_spec.dtype)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     actions_ = self.evaluate(action_step.action)
@@ -251,7 +251,7 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
     input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
     time_step_spec = ts.time_step_spec(input_tensor_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
-        [1], tf.int32, 0, num_actions - 1)
+        (), tf.int32, 0, num_actions - 1)
 
     # We create a fixed mask here for testing purposes. Normally the mask would
     # be part of the observation.
@@ -273,8 +273,8 @@ class ActorPolicyDiscreteActionsTest(test_utils.TestCase):
     # invalid according to the mask are never chosen.
     action_step = policy.action(time_step)
     action = self.evaluate(action_step.action)
-    self.assertEqual(action.shape, (batch_size, 1))
-    self.assertAllEqual(np_mask[action], np.ones([batch_size, 1]))
+    self.assertEqual(action.shape, (batch_size,))
+    self.assertAllEqual(np_mask[action], np.ones([batch_size]))
 
 
 if __name__ == '__main__':

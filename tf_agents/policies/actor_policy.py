@@ -26,9 +26,10 @@ from __future__ import print_function
 from typing import Optional, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
+from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import network
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -103,7 +104,19 @@ class ActorPolicy(tf_policy.TFPolicy):
     if not isinstance(actor_network, network.Network):
       raise ValueError('actor_network must be a network.Network. Found '
                        '{}.'.format(type(actor_network)))
-    actor_network.create_variables()
+
+    # Create variables regardless of if we use the output spec.
+    actor_output_spec = actor_network.create_variables(
+        time_step_spec.observation)
+
+    if isinstance(actor_network, network.DistributionNetwork):
+      actor_output_spec = tf.nest.map_structure(
+          lambda o: o.sample_spec, actor_network.output_spec)
+
+    distribution_utils.assert_specs_are_compatible(
+        actor_output_spec, action_spec,
+        'actor_network output spec does not match action spec')
+
     self._actor_network = actor_network
     self._observation_normalizer = observation_normalizer
     self._training = training
