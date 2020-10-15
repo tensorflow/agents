@@ -276,17 +276,7 @@ class DqnAgent(tf_agent.TFAgent):
         validate_args=False,
     )
 
-    if q_network.state_spec:
-      # AsNStepTransition does not support emitting [B, T, ...] tensors,
-      # which we need for DQN-RNN.
-      self._as_transition = data_converter.AsTransition(
-          self.data_context, squeeze_time_dim=False)
-    else:
-      # This reduces the n-step return and removes the extra time dimension,
-      # allowing the rest of the computations to be independent of the
-      # n-step parameter.
-      self._as_transition = data_converter.AsNStepTransition(
-          self.data_context, gamma=gamma, n=n_step_update)
+    self._setup_data_converter(q_network, gamma, n_step_update)
 
   def _check_action_spec(self, action_spec):
     flat_action_spec = tf.nest.flatten(action_spec)
@@ -306,6 +296,19 @@ class DqnAgent(tf_agent.TFAgent):
           'Action specs should have minimum of 0, but saw: {0}'.format(spec))
 
     self._num_actions = spec.maximum - spec.minimum + 1
+
+  def _setup_data_converter(self, q_network, gamma, n_step_update):
+    if q_network.state_spec:
+      # AsNStepTransition does not support emitting [B, T, ...] tensors,
+      # which we need for DQN-RNN.
+      self._as_transition = data_converter.AsTransition(
+          self.data_context, squeeze_time_dim=False)
+    else:
+      # This reduces the n-step return and removes the extra time dimension,
+      # allowing the rest of the computations to be independent of the
+      # n-step parameter.
+      self._as_transition = data_converter.AsNStepTransition(
+          self.data_context, gamma=gamma, n=n_step_update)
 
   def _check_network_output(self, net, label):
     """Check outputs of q_net and target_q_net against expected shape.
