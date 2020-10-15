@@ -48,8 +48,8 @@ class DummyActorNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements(),
-            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5]),
+            kernel_initializer=tf.constant_initializer([2, 1]),
+            bias_initializer=tf.constant_initializer([5]),
             activation=tf.keras.activations.tanh,
         )
     ]
@@ -120,8 +120,8 @@ class DummyValueNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             1,
-            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5]))
+            kernel_initializer=tf.constant_initializer([2, 1]),
+            bias_initializer=tf.constant_initializer([5]))
     ]
 
   def call(self, inputs, step_type=None, network_state=()):

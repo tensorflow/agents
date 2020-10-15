@@ -50,8 +50,8 @@ class DummyActorNetwork(network.Network):
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
-        kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-        bias_initializer=tf.compat.v1.initializers.constant([5]),
+        kernel_initializer=tf.constant_initializer([2, 1]),
+        bias_initializer=tf.constant_initializer([5]),
         name='action')
 
   def call(self, observations, step_type=(), network_state=()):
@@ -79,8 +79,8 @@ class DummyCriticNetwork(network.Network):
     self._action_layer = tf.keras.layers.Flatten()
     self._joint_layer = tf.keras.layers.Dense(
         1,
-        kernel_initializer=tf.compat.v1.initializers.constant([1, 3, 2]),
-        bias_initializer=tf.compat.v1.initializers.constant([4]))
+        kernel_initializer=tf.constant_initializer([1, 3, 2]),
+        bias_initializer=tf.constant_initializer([4]))
 
   def call(self, inputs, step_type=None, network_state=()):
     observations, actions = inputs

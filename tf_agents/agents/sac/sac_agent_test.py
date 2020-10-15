@@ -91,14 +91,14 @@ class DummyCriticNet(network.Network):
     self._value_layer = tf.keras.layers.Dense(
         1,
         kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
-        kernel_initializer=tf.compat.v1.initializers.constant([[0], [1]]),
-        bias_initializer=tf.compat.v1.initializers.constant([[0]]))
+        kernel_initializer=tf.constant_initializer([[0], [1]]),
+        bias_initializer=tf.constant_initializer([[0]]))
     self._shared_layer = shared_layer
     self._action_layer = tf.keras.layers.Dense(
         1,
         kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
-        kernel_initializer=tf.compat.v1.initializers.constant([[1]]),
-        bias_initializer=tf.compat.v1.initializers.constant([[0]]))
+        kernel_initializer=tf.constant_initializer([[1]]),
+        bias_initializer=tf.constant_initializer([[0]]))
 
   def copy(self, name=''):
     del name
@@ -410,8 +410,8 @@ class SacAgentTest(test_utils.TestCase):
   def testSharedLayer(self):
     shared_layer = tf.keras.layers.Dense(
         1,
-        kernel_initializer=tf.compat.v1.initializers.constant([0]),
-        bias_initializer=tf.compat.v1.initializers.constant([0]),
+        kernel_initializer=tf.constant_initializer([0]),
+        bias_initializer=tf.constant_initializer([0]),
         name='shared')
 
     critic_net_1 = DummyCriticNet(shared_layer=shared_layer)
@@ -419,8 +419,8 @@ class SacAgentTest(test_utils.TestCase):
 
     target_shared_layer = tf.keras.layers.Dense(
         1,
-        kernel_initializer=tf.compat.v1.initializers.constant([0]),
-        bias_initializer=tf.compat.v1.initializers.constant([0]),
+        kernel_initializer=tf.constant_initializer([0]),
+        bias_initializer=tf.constant_initializer([0]),
         name='shared_target')
 
     target_critic_net_1 = DummyCriticNet(shared_layer=target_shared_layer)

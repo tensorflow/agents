@@ -69,9 +69,9 @@ class DummyActorNet(network.DistributionNetwork):
     self._dummy_layers = (preprocessing_layers or []) + [
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements() * 2,
-            kernel_initializer=tf.compat.v1.initializers.constant([[2.0, 1.0],
-                                                                   [1.0, 1.0]]),
-            bias_initializer=tf.compat.v1.initializers.constant([5.0, 5.0]),
+            kernel_initializer=tf.constant_initializer([[2.0, 1.0], [1.0, 1.0]
+                                                       ]),
+            bias_initializer=tf.constant_initializer([5.0, 5.0]),
             activation=None,
         )
     ]
@@ -160,8 +160,8 @@ class DummyValueNet(network.Network):
     self._dummy_layers = (preprocessing_layers or []) + [
         tf.keras.layers.Dense(
             1,
-            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5]))
+            kernel_initializer=tf.constant_initializer([2, 1]),
+            bias_initializer=tf.constant_initializer([5]))
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -188,9 +188,8 @@ def _create_joint_actor_value_networks(observation_spec, action_spec):
   shared_layers = [
       tf.keras.layers.Dense(
           tf.nest.flatten(observation_spec)[0].shape.num_elements(),
-          kernel_initializer=tf.compat.v1.initializers.constant([[3.0, 1.0],
-                                                                 [1.0, 1.0]]),
-          bias_initializer=tf.compat.v1.initializers.constant([5.0, 5.0]),
+          kernel_initializer=tf.constant_initializer([[3.0, 1.0], [1.0, 1.0]]),
+          bias_initializer=tf.constant_initializer([5.0, 5.0]),
           activation=None,
       )
   ]

@@ -58,9 +58,8 @@ class DummyNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             kernel_weights.shape[1],
-            kernel_initializer=tf.compat.v1.initializers.constant(
-                kernel_weights),
-            bias_initializer=tf.compat.v1.initializers.constant(bias))
+            kernel_initializer=tf.constant_initializer(kernel_weights),
+            bias_initializer=tf.constant_initializer(bias))
     ]
 
   def call(self, inputs: tf.Tensor, step_type=None, network_state=()):
@@ -96,13 +95,13 @@ class HeteroscedasticDummyNet(
                                                   action_tensor_spec)
     self._value_layer = tf.keras.layers.Dense(
         kernel_weights.shape[1],
-        kernel_initializer=tf.compat.v1.initializers.constant(kernel_weights),
-        bias_initializer=tf.compat.v1.initializers.constant(bias))
+        kernel_initializer=tf.constant_initializer(kernel_weights),
+        bias_initializer=tf.constant_initializer(bias))
 
     self._log_variance_layer = tf.keras.layers.Dense(
         kernel_weights.shape[1],
-        kernel_initializer=tf.compat.v1.initializers.constant(kernel_weights),
-        bias_initializer=tf.compat.v1.initializers.constant(bias))
+        kernel_initializer=tf.constant_initializer(kernel_weights),
+        bias_initializer=tf.constant_initializer(bias))
 
   def call(self, inputs: tf.Tensor, step_type=None, network_state=()):
     del step_type

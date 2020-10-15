@@ -53,11 +53,9 @@ class DummyNet(network.Network):
             num_actions,
             kernel_regularizer=tf.keras.regularizers.l2(
                 l2_regularization_weight),
-            kernel_initializer=tf.compat.v1.initializers.constant(
-                [[num_actions, 1],
-                 [1, 1]]),
-            bias_initializer=tf.compat.v1.initializers.constant(
-                [[1], [1]]))
+            kernel_initializer=tf.constant_initializer([[num_actions, 1],
+                                                        [1, 1]]),
+            bias_initializer=tf.constant_initializer([[1], [1]]))
     ]
 
   def call(self, inputs, step_type=None, network_state=()):

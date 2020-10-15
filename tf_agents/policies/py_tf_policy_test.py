@@ -54,10 +54,8 @@ class DummyNet(network.Network):
     kernel_initializer = None
     bias_initializer = None
     if use_constant_initializer:
-      kernel_initializer = tf.compat.v1.initializers.constant(
-          [[1, 200], [3, 4]], verify_shape=True)
-      bias_initializer = tf.compat.v1.initializers.constant([1, 1],
-                                                            verify_shape=True)
+      kernel_initializer = tf.constant_initializer([[1, 200], [3, 4]])
+      bias_initializer = tf.constant_initializer([1, 1])
 
     # Store custom layers that can be serialized through the Checkpointable API.
     self._dummy_layers = [

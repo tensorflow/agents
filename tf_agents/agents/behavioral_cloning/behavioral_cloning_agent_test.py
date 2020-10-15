@@ -87,11 +87,10 @@ def get_dummy_net(action_spec, observation_spec=None):
   return sequential.Sequential([
       tf.keras.layers.Dense(
           num_actions,
-          kernel_initializer=tf.compat.v1.initializers.constant([[2, 1], [1, 1]
-                                                                ]),
-          bias_initializer=tf.compat.v1.initializers.constant([[1], [1]]),
-          dtype=tf.float32)
-  ], input_spec=observation_spec)
+          kernel_initializer=tf.constant_initializer([[2, 1], [1, 1]]),
+          bias_initializer=tf.constant_initializer([[1], [1]]))
+  ],
+                               input_spec=observation_spec)
 
 
 class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):

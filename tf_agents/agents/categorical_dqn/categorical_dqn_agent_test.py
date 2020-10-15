@@ -60,8 +60,7 @@ class DummyCategoricalNet(network.Network):
     weights_initializer = np.array([
         np.concatenate((np.arange(num_atoms), np.ones(num_atoms))),
         np.concatenate((np.ones(num_atoms), np.ones(num_atoms)))])
-    kernel_initializer = tf.compat.v1.initializers.constant(
-        weights_initializer, verify_shape=True)
+    kernel_initializer = tf.constant_initializer(weights_initializer)
     bias_initializer = tf.keras.initializers.Ones()
 
     # Store custom layers that can be serialized through the Checkpointable API.

@@ -43,10 +43,9 @@ class DummyNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             encoding_dim,
-            kernel_initializer=tf.compat.v1.initializers.constant(
+            kernel_initializer=tf.constant_initializer(
                 np.ones([obs_dim, encoding_dim])),
-            bias_initializer=tf.compat.v1.initializers.constant(
-                np.zeros([encoding_dim])))
+            bias_initializer=tf.constant_initializer(np.zeros([encoding_dim])))
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -61,10 +60,9 @@ def get_reward_layer(num_actions=5, encoding_dim=10):
   return tf.keras.layers.Dense(
       num_actions,
       activation=None,
-      kernel_initializer=tf.compat.v1.initializers.constant(
+      kernel_initializer=tf.constant_initializer(
           np.ones([encoding_dim, num_actions])),
-      bias_initializer=tf.compat.v1.initializers.constant(
-          np.array(range(num_actions))))
+      bias_initializer=tf.constant_initializer(np.array(range(num_actions))))
 
 
 def get_per_arm_reward_layer(encoding_dim=10):
@@ -72,8 +70,7 @@ def get_per_arm_reward_layer(encoding_dim=10):
       units=1,
       activation=None,
       use_bias=False,
-      kernel_initializer=tf.compat.v1.initializers.constant(
-          list(range(encoding_dim))))
+      kernel_initializer=tf.constant_initializer(list(range(encoding_dim))))
 
 
 def test_cases():

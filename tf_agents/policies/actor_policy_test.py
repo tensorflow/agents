@@ -43,8 +43,8 @@ class DummyActionNet(network.Network):
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
             activation=tf.nn.tanh,
-            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5]),
+            kernel_initializer=tf.constant_initializer([2, 1]),
+            bias_initializer=tf.constant_initializer([5]),
         ),
     ]
 

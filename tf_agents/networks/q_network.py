@@ -118,7 +118,7 @@ class QNetwork(network.Network):
         activation=None,
         kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
-        bias_initializer=tf.compat.v1.initializers.constant(-0.2),
+        bias_initializer=tf.constant_initializer(-0.2),
         dtype=dtype)
 
     super(QNetwork, self).__init__(

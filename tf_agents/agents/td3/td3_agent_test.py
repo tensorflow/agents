@@ -54,8 +54,8 @@ class DummyActorNetwork(network.Network):
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
-        kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-        bias_initializer=tf.compat.v1.initializers.constant([5]),
+        kernel_initializer=tf.constant_initializer([2, 1]),
+        bias_initializer=tf.constant_initializer([5]),
         name='action')
     self._shared_layer = shared_layer
 
@@ -88,8 +88,8 @@ class DummyCriticNetwork(network.Network):
     self._joint_layer = tf.keras.layers.Dense(
         1,
         activation=None,
-        kernel_initializer=tf.compat.v1.initializers.constant([1, 3, 2]),
-        bias_initializer=tf.compat.v1.initializers.constant([4]))
+        kernel_initializer=tf.constant_initializer([1, 3, 2]),
+        bias_initializer=tf.constant_initializer([4]))
 
   def call(self, inputs, step_type=None, network_state=()):
     observations, actions = inputs
@@ -282,8 +282,8 @@ class TD3AgentTest(test_utils.TestCase):
 
     shared_layer = tf.keras.layers.Dense(
         2,
-        kernel_initializer=tf.compat.v1.initializers.constant([0]),
-        bias_initializer=tf.compat.v1.initializers.constant([0]),
+        kernel_initializer=tf.constant_initializer([0]),
+        bias_initializer=tf.constant_initializer([0]),
         name='shared')
 
     critic_net_1 = DummyCriticNetwork(input_spec, shared_layer=shared_layer)
@@ -297,8 +297,8 @@ class TD3AgentTest(test_utils.TestCase):
 
     target_shared_layer = tf.keras.layers.Dense(
         2,
-        kernel_initializer=tf.compat.v1.initializers.constant([0]),
-        bias_initializer=tf.compat.v1.initializers.constant([0]),
+        kernel_initializer=tf.constant_initializer([0]),
+        bias_initializer=tf.constant_initializer([0]),
         name='shared')
 
     target_critic_net_1 = DummyCriticNetwork(
