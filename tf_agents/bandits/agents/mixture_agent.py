@@ -53,6 +53,8 @@ def _dynamic_partition_of_nested_tensors(
     A list of nested tensors with the same structure as `nested_tensor`.
   """
   flattened_tensors = tf.nest.flatten(nested_tensor)
+  if not flattened_tensors:
+    return [nested_tensor] * num_partitions
   partitioned_flat_tensors = [
       tf.dynamic_partition(
           data=t, partitions=partitions, num_partitions=num_partitions)

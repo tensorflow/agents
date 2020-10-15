@@ -69,9 +69,11 @@ def _get_initial_and_final_steps(batch_size, context_dim):
   return initial_step, final_step
 
 
-def _get_action_step(action, num_agents, num_actions):
+def _get_action_step(action, num_agents, num_actions, emit_policy_info):
   batch_size = tf.shape(action)[0]
   choices = tf.constant(num_agents - 1, shape=action.shape, dtype=tf.int32)
+  predicted_rewards_mean = (
+      tf.zeros([batch_size, num_actions]) if emit_policy_info else ())
   return policy_step.PolicyStep(
       action=tf.convert_to_tensor(action),
       info={
@@ -79,7 +81,7 @@ def _get_action_step(action, num_agents, num_actions):
               choices,
           mixture_policy.SUBPOLICY_INFO:
               policy_utilities.PolicyInfo(
-                  predicted_rewards_mean=tf.zeros([batch_size, num_actions]))
+                  predicted_rewards_mean=predicted_rewards_mean)
       })
 
 
@@ -94,20 +96,23 @@ def _get_experience(initial_step, action_step, final_step):
 def test_cases():
   return parameterized.named_parameters(
       {
-          'testcase_name': '_batch1_contextdim10_numagents2',
+          'testcase_name': '_batch1_contextdim10_numagents2_info',
           'batch_size': 1,
           'context_dim': 10,
           'num_agents': 2,
+          'emit_policy_info': True
       }, {
-          'testcase_name': '_batch3_contextdim7_numagents17',
+          'testcase_name': '_batch3_contextdim7_numagents17_noinfo',
           'batch_size': 3,
           'context_dim': 7,
           'num_agents': 17,
+          'emit_policy_info': False
       }, {
-          'testcase_name': '_batch4_contextdim5_numagents10',
+          'testcase_name': '_batch4_contextdim5_numagents10_info',
           'batch_size': 4,
           'context_dim': 5,
           'num_agents': 10,
+          'emit_policy_info': True
       })
 
 
@@ -118,7 +123,8 @@ class Exp3MixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
     tf.compat.v1.enable_resource_variables()
 
   @test_cases()
-  def testInitializeAgent(self, batch_size, context_dim, num_agents):
+  def testInitializeAgent(self, batch_size, context_dim, num_agents,
+                          emit_policy_info):
     num_actions = 7
     observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
     time_step_spec = time_step.time_step_spec(observation_spec)
@@ -132,25 +138,31 @@ class Exp3MixtureAgentTest(test_utils.TestCase, parameterized.TestCase):
     self.evaluate(mixed_agent.initialize())
 
   @test_cases()
-  def testMixtureUpdate(self, batch_size, context_dim, num_agents):
+  def testMixtureUpdate(self, batch_size, context_dim, num_agents,
+                        emit_policy_info):
     num_actions = 5
     observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
     agents = []
+    policy_info = (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,
+                  ) if emit_policy_info else ()
     for _ in range(num_agents):
       agents.append(
           lin_ucb_agent.LinearUCBAgent(
-              time_step_spec,
-              action_spec,
-              emit_policy_info=(
-                  policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,)))
+              time_step_spec, action_spec, emit_policy_info=policy_info))
     mixed_agent = exp3_mixture_agent.Exp3MixtureAgent(agents)
     initial_step, final_step = _get_initial_and_final_steps(
         batch_size, context_dim)
     action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
-    action_step = _get_action_step(action, num_agents, num_actions)
+    action_step = _get_action_step(action, num_agents, num_actions,
+                                   emit_policy_info)
+    if emit_policy_info:
+      self.assertEqual(
+          self.evaluate(
+              action_step.info['subpolicy_info'].predicted_rewards_mean[0, 0]),
+          0)
     experience = _get_experience(initial_step, action_step, final_step)
     self.evaluate(mixed_agent.initialize())
     self.evaluate(mixed_agent._variable_collection.reward_aggregates)
