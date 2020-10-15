@@ -30,12 +30,12 @@ from typing import Optional, Text
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.trajectories import time_step as ts
-from tf_agents.trajectories import trajectory
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils
@@ -179,7 +179,11 @@ class DdpgAgent(tf_agent.TFAgent):
         train_sequence_length=2 if not self._actor_network.state_spec else None,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False)
+
+    self._as_transition = data_converter.AsTransition(
+        self.data_context, squeeze_time_dim=not self._actor_network.state_spec)
 
   def _initialize(self):
     common.soft_variables_update(
@@ -223,9 +227,8 @@ class DdpgAgent(tf_agent.TFAgent):
       return common.Periodically(update, period, 'periodic_update_targets')
 
   def _train(self, experience, weights=None):
-    squeeze_time_dim = not self._actor_network.state_spec
-    time_steps, policy_steps, next_time_steps = (
-        trajectory.experience_to_transitions(experience, squeeze_time_dim))
+    transition = self._as_transition(experience)
+    time_steps, policy_steps, next_time_steps = transition
     actions = policy_steps.action
 
     # TODO(b/124382524): Apply a loss mask or filter boundary transitions.

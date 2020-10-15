@@ -24,7 +24,9 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.ddpg import ddpg_agent
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
@@ -186,6 +188,55 @@ class DdpgAgentTest(test_utils.TestCase):
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
+
+  def testAgentTrajectoryTrain(self):
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._bounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+    )
+
+    trajectory_spec = trajectory.Trajectory(
+        step_type=self._time_step_spec.step_type,
+        observation=self._time_step_spec.observation,
+        action=self._action_spec,
+        policy_info=(),
+        next_step_type=self._time_step_spec.step_type,
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'),
+        discount=self._time_step_spec.discount)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        trajectory_spec, outer_dims=(3, 2))
+    agent.train(sample_trajectory_experience)
+
+  def testAgentTransitionTrain(self):
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._bounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+    )
+
+    time_step_spec = self._time_step_spec._replace(
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'))
+
+    transition_spec = trajectory.Transition(
+        time_step=time_step_spec,
+        action_step=policy_step.PolicyStep(action=self._action_spec,
+                                           state=(),
+                                           info=()),
+        next_time_step=time_step_spec)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        transition_spec, outer_dims=(3,))
+    agent.train(sample_trajectory_experience)
 
 
 if __name__ == '__main__':
