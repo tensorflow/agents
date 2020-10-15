@@ -173,6 +173,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
           'discrete action or a single (scalar or non-scalar) continuous '
           'action.')
 
+    cloning_network.create_variables(time_step_spec.observation)
+
     # If there is a mix of continuous and discrete actions we want to use an
     # actor policy so we can use the `setup_as_continuous` method as long as the
     # user provided a custom loss_fn which we verified above.
@@ -183,8 +185,6 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       policy, collect_policy = self._setup_as_discrete(time_step_spec,
                                                        action_spec, loss_fn,
                                                        epsilon_greedy)
-
-    cloning_network.create_variables(time_step_spec.observation)
 
     super(BehavioralCloningAgent, self).__init__(
         time_step_spec,
