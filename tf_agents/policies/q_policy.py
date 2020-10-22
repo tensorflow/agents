@@ -23,7 +23,6 @@ from __future__ import print_function
 from typing import Optional, Text, cast
 
 import gin
-import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -158,9 +157,10 @@ class QPolicy(tf_policy.TFPolicy):
     logits = q_values
 
     if observation_and_action_constraint_splitter is not None:
-      # Overwrite the logits for invalid actions to -inf.
-      neg_inf = tf.constant(-np.inf, dtype=logits.dtype)
-      logits = tf.compat.v2.where(tf.cast(mask, tf.bool), logits, neg_inf)
+      # Overwrite the logits for invalid actions to logits.dtype.min.
+      almost_neg_inf = tf.constant(logits.dtype.min, dtype=logits.dtype)
+      logits = tf.compat.v2.where(
+          tf.cast(mask, tf.bool), logits, almost_neg_inf)
 
     if self._flat_action_spec.minimum != 0:
       distribution = shifted_categorical.ShiftedCategorical(
