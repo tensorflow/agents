@@ -400,8 +400,8 @@ def is_bounded(spec):
 
 
 def is_discrete(spec):
-  return np.issubdtype(spec.dtype, np.integer)
+  return issubclass(np.dtype(spec).type, np.integer)
 
 
 def is_continuous(spec):
-  return np.issubdtype(spec.dtype, np.float)
+  return issubclass(np.dtype(spec).type, np.floating)
