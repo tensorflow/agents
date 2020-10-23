@@ -68,6 +68,40 @@ class NetworkUtilsTest(tf.test.TestCase):
       self.assertAllEqual((5, 4, 3, 2, 1), flat.shape)
       self.assertAllEqual((5, 4, 3, 2, 1), unflat.shape)
 
+  def test_flatten_undefined_shapes_in_tffun(self):
+    batch_squash = utils.BatchSquash(2)
+
+    @tf.function
+    def tf_fn():
+      # Construct a tensor with some unknown shapes.
+      x_default = tf.random.uniform([2, 2, 128, 128, 3])
+      input_tensor = tf.compat.v1.placeholder_with_default(
+          x_default, shape=[2, 2, None, None, None])
+      flat = batch_squash.flatten(input_tensor)
+
+      self.assertAllEqual((4, None, None, None), flat.shape)
+
+    tf_fn()
+
+  def test_flatten_undefined_shapes_in_tffun_sparse_tensor_undefined(self):
+    batch_squash = utils.BatchSquash(2)
+
+    @tf.function
+    def tf_fn():
+      # Construct a SparseTensor with some unknown shapes.
+      x_default = tf.random.uniform([2, 2, 128, 128, 3])
+      input_dense = tf.compat.v1.placeholder_with_default(
+          x_default, shape=[2, 2, None, None, None])
+      input_sparse = tf.sparse.from_dense(input_dense)
+      flat = batch_squash.flatten(input_sparse)
+
+      # SparseTensors are still fully undefined, as setting the known part of
+      # the shape is not implemented in flatten. If implemented, this assertion
+      # should be changed to (4, None, None, None).
+      self.assertAllEqual((None, None, None, None), flat.shape)
+
+    tf_fn()
+
   def test_mlp_layers(self):
     layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
                               fc_layer_params=[10, 20],

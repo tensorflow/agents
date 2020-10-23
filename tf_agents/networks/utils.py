@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import typing
 
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.typing import types
 from tf_agents.utils import composite
@@ -97,10 +98,23 @@ class BatchSquash(object):
         return composite.reshape(
             tensor, [-1] + tensor.shape[self._batch_dims:].as_list())
 
-      return tf.reshape(
+      reshaped = composite.reshape(
           tensor,
           tf.concat([[-1], composite.shape(tensor)[self._batch_dims:]], axis=0),
       )
+      # If the batch dimensions are all defined but the rest are undefined,
+      # `reshaped` will have None as the first squashed dim since we are calling
+      # tf.shape above. Since we know how many batch_dims we have, we can check
+      # if all the elements we want to squash are defined, allowing us to
+      # call ensure_shape to set the shape of the squashed dim. Note that this
+      # is only implemented for tf.Tensor and not SparseTensors.
+      if (isinstance(tensor, tf.Tensor) and
+          tensor.shape[:self._batch_dims].is_fully_defined()):
+        return tf.ensure_shape(
+            reshaped,
+            [np.prod(tensor.shape[:self._batch_dims], dtype=np.int64)] +
+            tensor.shape[self._batch_dims:])
+      return reshaped
 
   def unflatten(self, tensor):
     """Unflattens the tensor's batch_dims using the cached shape."""
