@@ -114,12 +114,12 @@ class NormalProjectionNetwork(network.DistributionNetwork):
           activation=activation_fn,
           kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
               scale=init_means_output_factor),
-          bias_initializer=tf.keras.initializers.Constant(
+          bias_initializer=tf.constant_initializer(
               value=std_bias_initializer_value),
           name='stddev_projection_layer')
     else:
       self._bias = bias_layer.BiasLayer(
-          bias_initializer=tf.keras.initializers.Constant(
+          bias_initializer=tf.constant_initializer(
               value=std_bias_initializer_value))
 
   def _output_distribution_spec(self, sample_spec, network_name):
