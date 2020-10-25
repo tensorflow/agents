@@ -31,7 +31,7 @@ flags.DEFINE_string('single_colab', None,
                     'Path to a single colab to run.')
 flags.DEFINE_string('output_dir', '/tmp/notebook_tests',
                     'Full path for executed notebooks and artifacts.')
-flags.DEFINE_boolean('debug', True,
+flags.DEFINE_boolean('debug', False,
                      'Debug logging if true. Otherwise info only.')
 flags.DEFINE_boolean('override_pip_install_agents', True,
                      'If true a replace is done to prevent notebooks from '
