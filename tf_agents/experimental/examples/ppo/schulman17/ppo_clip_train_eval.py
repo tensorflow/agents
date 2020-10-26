@@ -25,6 +25,8 @@ from absl import app
 from absl import flags
 from absl import logging
 
+import gin
+
 import tensorflow.compat.v2 as tf
 
 from tf_agents.experimental.examples.ppo import train_eval_lib
@@ -41,11 +43,15 @@ flags.DEFINE_integer('num_iterations', 1600,
 flags.DEFINE_integer(
     'eval_interval', 10000,
     'Number of train steps between evaluations. Set to 0 to skip.')
+flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
+flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
 
 def main(_):
   logging.set_verbosity(logging.INFO)
   tf.enable_v2_behavior()
+
+  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
 
   train_eval_lib.train_eval(
       FLAGS.root_dir,
