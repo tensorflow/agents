@@ -165,8 +165,9 @@ def get_required_packages():
 
   required_packages = [
       'absl-py >= 0.6.1',
-      'cloudpickle == 1.3',  # TODO(b/155109696): Unpin cloudpickle version.
+      'cloudpickle >= 1.3',
       'gin-config >= 0.3.0',
+      'gym >= 0.17.0',
       'numpy >= 1.13.3',
       'six >= 1.10.0',
       'protobuf >= 3.11.3',
@@ -193,7 +194,6 @@ def get_test_packages():
   """Returns list of packages needed when testing."""
   test_packages = [
       'atari_py == 0.1.7',
-      'gym == 0.12.5',
       'mock >= 2.0.0',
       'opencv-python >= 3.4.1.15',
       'pybullet',
