@@ -42,7 +42,8 @@ class ConstantPolicy(tf_policy.TFPolicy):
     super(ConstantPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        info_spec={'a': tensor_spec.TensorSpec(shape=(), dtype=tf.int32)})
+        info_spec={'a': tensor_spec.TensorSpec(shape=(), dtype=tf.int32),
+                   'b': tensor_spec.TensorSpec(shape=(4,), dtype=tf.float32)})
 
   def _variables(self):
     return []
@@ -55,7 +56,8 @@ class ConstantPolicy(tf_policy.TFPolicy):
     batch_size = tf.compat.dimension_value(tf.shape(time_step.observation)[0])
     return policy_step.PolicyStep(
         tf.fill([batch_size], self._constant_action), policy_state,
-        {'a': tf.range(batch_size, dtype=tf.int32)})
+        {'a': tf.range(batch_size, dtype=tf.int32),
+         'b': tf.ones(shape=[batch_size, 4], dtype=tf.float32)})
 
 
 class MixturePolicyTest(test_utils.TestCase):

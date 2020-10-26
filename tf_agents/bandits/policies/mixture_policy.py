@@ -117,8 +117,9 @@ class MixturePolicy(tf_policy.TFPolicy):
         lambda t: tf.gather(t, policy_choice, batch_dims=1), policy_actions)
 
     expanded_mixture_info = tf.nest.map_structure(
-        lambda t: tf.gather(t, expanded_choice, batch_dims=1), policy_infos)
-    mixture_info = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=1),
+        lambda t: tf.gather(t, expanded_choice, batch_dims=1, axis=-1),
+        policy_infos)
+    mixture_info = tf.nest.map_structure(lambda t: tf.squeeze(t, axis=-1),
                                          expanded_mixture_info)
     return policy_step.PolicyStep(mixture_action, policy_state, {
         MIXTURE_AGENT_ID: policy_choice,
