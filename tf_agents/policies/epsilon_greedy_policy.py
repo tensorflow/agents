@@ -110,7 +110,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
     rng = tf.random.uniform(
         outer_shape, maxval=1.0, seed=seed_stream(), name='epsilon_rng')
-    cond = tf.greater(rng, self._get_epsilon())
+    cond = tf.greater_equal(rng, self._get_epsilon())
 
     # Selects the action/info from the random policy with probability epsilon.
     # TODO(b/133175894): tf.compat.v1.where only supports a condition which is
