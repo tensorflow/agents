@@ -258,7 +258,7 @@ class Network(tf.keras.layers.Layer):
   @property
   def layers(self):
     """Get the list of all (nested) sub-layers used in this Network."""
-    return list(_filter_empty_layer_containers(self._layers))
+    return list(self._flatten_layers(include_self=False, recursive=False))
 
   def get_layer(self, name=None, index=None):
     """Retrieves a layer based on either its name (unique) or index.
