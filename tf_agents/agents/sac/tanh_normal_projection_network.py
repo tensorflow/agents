@@ -38,21 +38,11 @@ from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
 
 
-def tanh_squash_to_spec(inputs: types.Tensor,
-                        spec: types.TensorSpec) -> types.Tensor:
-  """Maps inputs with arbitrary range to range defined by spec using `tanh`."""
-  means = (spec.maximum + spec.minimum) / 2.0
-  magnitudes = (spec.maximum - spec.minimum) / 2.0
-
-  return means + magnitudes * tf.tanh(inputs)
-
-
 @gin.configurable
 class TanhNormalProjectionNetwork(network.DistributionNetwork):
   """Generates a tanh-squashed MultivariateNormalDiag distribution.
 
-  Note: This network uses `tanh_squash_to_spec` to normalize its
-  output. Due to the nature of the `tanh` function, values near the spec bounds
+  Note: Due to the nature of the `tanh` function, values near the spec bounds
   cannot be returned.
   """
 
@@ -96,8 +86,8 @@ class TanhNormalProjectionNetwork(network.DistributionNetwork):
         'loc': sample_spec.shape,
         'scale_diag': sample_spec.shape
     }
-    input_param_spec = {
-        name: tensor_spec.TensorSpec(  # pylint: disable=g-complex-comprehension
+    input_param_spec = {  # pylint: disable=g-complex-comprehension
+        name: tensor_spec.TensorSpec(
             shape=shape,
             dtype=sample_spec.dtype,
             name=network_name + '_' + name)
