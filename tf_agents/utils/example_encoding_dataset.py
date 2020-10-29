@@ -162,7 +162,7 @@ class TFRecordObserver(object):
 
 def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
                           as_trajectories=False, add_batch_dim=True,
-                          decoder=None):
+                          decoder=None, num_parallel_reads=None):
   """Loads a TFRecord dataset from file, sequencing samples as Trajectories.
 
   Args:
@@ -180,6 +180,8 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
       batch the data on your own.
     decoder: Optional, a custom decoder to use rather than using the default
       spec path.
+    num_parallel_reads: Optional, number of parallel reads in the TFRecord
+      dataset. If not specified, len(dataset_files) will be used.
 
   Returns:
     A dataset of type tf.data.Dataset. Samples follow the dataset's spec nested
@@ -199,10 +201,12 @@ def load_tfrecord_dataset(dataset_files, buffer_size=1000, as_experience=False,
         raise IOError('One or more of the encoding specs do not match.')
     decoder = example_encoding.get_example_decoder(specs[0])
   logging.info('Loading TFRecord dataset...')
+  if not num_parallel_reads:
+    num_parallel_reads = len(dataset_files)
   dataset = tf.data.TFRecordDataset(
       dataset_files,
       buffer_size=buffer_size,
-      num_parallel_reads=len(dataset_files))
+      num_parallel_reads=num_parallel_reads)
 
   def decode_fn(proto):
     """Decodes a proto object."""
