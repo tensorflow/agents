@@ -27,19 +27,14 @@ from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.agents import exp3_agent
-from tf_agents.bandits.agents import exp3_mixture_agent
-from tf_agents.bandits.agents import lin_ucb_agent
-from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_agent
-from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
+from tf_agents.bandits.agents.examples.v2 import trainer_test_utils
 from tf_agents.bandits.environments import environment_utilities
 from tf_agents.bandits.environments import random_bandit_environment
 from tf_agents.bandits.environments import stationary_stochastic_py_environment
 from tf_agents.bandits.environments import wheel_py_environment
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.environments import tf_py_environment
-from tf_agents.networks import q_network
 from tf_agents.specs import tensor_spec
 
 tfd = tfp.distributions
@@ -104,64 +99,6 @@ def get_environment_and_optimal_functions_by_name(environment_name, batch_size):
         environment_utilities.tf_wheel_bandit_compute_optimal_action,
         delta=delta)
   return (environment, optimal_reward_fn, optimal_action_fn)
-
-
-def get_agent_by_name(agent_name, time_step_spec, action_spec):
-  if agent_name == 'LinUCB':
-    return lin_ucb_agent.LinearUCBAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        dtype=tf.float32)
-  elif agent_name == 'LinTS':
-    return lin_ts_agent.LinearThompsonSamplingAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        dtype=tf.float32)
-  elif agent_name == 'epsGreedy':
-    network = q_network.QNetwork(
-        input_tensor_spec=time_step_spec.observation,
-        action_spec=action_spec,
-        fc_layer_params=(50, 50, 50))
-    return neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        reward_network=network,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
-        epsilon=0.1)
-  elif agent_name == 'mix':
-    emit_policy_info = (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,)
-    network = q_network.QNetwork(
-        input_tensor_spec=time_step_spec.observation,
-        action_spec=action_spec,
-        fc_layer_params=(50, 50, 50))
-    agent_epsgreedy = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        reward_network=network,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
-        emit_policy_info=emit_policy_info,
-        epsilon=0.1)
-    agent_linucb = lin_ucb_agent.LinearUCBAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        emit_policy_info=emit_policy_info,
-        dtype=tf.float32)
-    agent_random = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        reward_network=network,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
-        emit_policy_info=emit_policy_info,
-        epsilon=1.)
-    agent_halfrandom = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        reward_network=network,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
-        emit_policy_info=emit_policy_info,
-        epsilon=0.5)
-    return exp3_mixture_agent.Exp3MixtureAgent(
-        (agent_epsgreedy, agent_linucb, agent_random, agent_halfrandom))
 
 
 class TrainerTest(tf.test.TestCase, parameterized.TestCase):
@@ -238,12 +175,13 @@ class TrainerTest(tf.test.TestCase, parameterized.TestCase):
     batch_size = 8
     training_loops = 3
     steps_per_loop = 2
-    (environment, optimal_reward_fn,
-     optimal_action_fn) = get_environment_and_optimal_functions_by_name(
-         environment_name, batch_size)
+    (environment, optimal_reward_fn, optimal_action_fn
+    ) = trainer_test_utils.get_environment_and_optimal_functions_by_name(
+        environment_name, batch_size)
 
-    agent = get_agent_by_name(agent_name, environment.time_step_spec(),
-                              environment.action_spec())
+    agent = trainer_test_utils.get_agent_by_name(agent_name,
+                                                 environment.time_step_spec(),
+                                                 environment.action_spec())
 
     regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
     suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(

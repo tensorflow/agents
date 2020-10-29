@@ -13,13 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python2, python3
-"""Helper functions for the mushroom dataset.
-
-The dataset is expected to be a CSV with the first column being the label, the
-other columns represent features. All features, as well as the label, are string
-features that will be used for one-hot embeddings.
-"""
+"""Helper functions for the environments that load datasets."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -138,3 +132,14 @@ def mushroom_reward_distribution(r_noeat, r_eat_safe, r_eat_poison_bad,
            [1, 1]])
        (distr)))
   return tfd.Independent(reward_distr, reinterpreted_batch_ndims=2)
+
+
+def convert_covertype_dataset(file_path, buffer_size=40000):
+  with tf.io.gfile.GFile(file_path, 'r') as infile:
+    data_array = np.genfromtxt(infile, dtype=np.int, delimiter=',')
+  contexts = data_array[:, :-1]
+  context_tensor = tf.cast(contexts, tf.float32)
+  labels = data_array[:, -1] - 1  # Classes are from [1, 7].
+  label_tensor = tf.cast(labels, tf.int32)
+  return tf.data.Dataset.from_tensor_slices(
+      (context_tensor, label_tensor)).repeat().shuffle(buffer_size=buffer_size)

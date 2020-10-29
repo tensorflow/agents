@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.bandits.environments.mushroom_environment_utilities."""
+"""Tests for tf_agents.bandits.environments.dataset_utilities."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -22,20 +22,20 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.bandits.environments import mushroom_environment_utilities
+from tf_agents.bandits.environments import dataset_utilities
 
 
-class MushroomEnvironmentUtilitiesTest(tf.test.TestCase):
+class DatasetUtilitiesTest(tf.test.TestCase):
 
   def testOneHot(self):
     data = np.array([[1, 2], [1, 3], [2, 2], [1, 1]], dtype=np.int32)
-    encoded = mushroom_environment_utilities._one_hot(data)
+    encoded = dataset_utilities._one_hot(data)
     expected = [[1, 0, 0, 1, 0], [1, 0, 0, 0, 1], [0, 1, 0, 1, 0],
                 [1, 0, 1, 0, 0]]
     np.testing.assert_array_equal(encoded, expected)
 
   def testRewardDistribution(self):
-    reward_distr = mushroom_environment_utilities.mushroom_reward_distribution(
+    reward_distr = dataset_utilities.mushroom_reward_distribution(
         r_noeat=0.0,
         r_eat_safe=5.0,
         r_eat_poison_bad=-35.0,

@@ -31,7 +31,6 @@ import functools
 import os
 from absl import app
 from absl import flags
-import numpy as np
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
@@ -40,6 +39,7 @@ from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_ag
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent as eps_greedy_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import classification_environment as ce
+from tf_agents.bandits.environments import dataset_utilities
 from tf_agents.bandits.environments import environment_utilities as env_util
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 from tf_agents.networks import q_network
@@ -68,23 +68,13 @@ LAYERS = (300, 200, 100, 100, 50, 50)
 LR = 0.002
 
 
-def _convert_covertype_dataset(file_path, buffer_size=400000):
-  with tf.gfile.Open(file_path, 'r') as infile:
-    data_array = np.genfromtxt(infile, dtype=np.int, delimiter=',')
-  contexts = data_array[:, :-1]
-  context_tensor = tf.cast(contexts, tf.float32)
-  labels = data_array[:, -1] - 1  # Classes are from [1, 7].
-  label_tensor = tf.cast(labels, tf.int32)
-  return tf.data.Dataset.from_tensor_slices(
-      (context_tensor, label_tensor)).repeat().shuffle(buffer_size=buffer_size)
-
-
 def main(unused_argv):
   tf.compat.v1.enable_v2_behavior()  # The trainer only runs with V2 enabled.
 
   with tf.device('/CPU:0'):  # due to b/128333994
 
-    covertype_dataset = _convert_covertype_dataset(FLAGS.covertype_csv)
+    covertype_dataset = dataset_utilities.convert_covertype_dataset(
+        FLAGS.covertype_csv)
     covertype_reward_distribution = tfd.Independent(
         tfd.Deterministic(tf.eye(7)), reinterpreted_batch_ndims=2)
     environment = ce.ClassificationBanditEnvironment(

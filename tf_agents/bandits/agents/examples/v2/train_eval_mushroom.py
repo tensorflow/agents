@@ -31,8 +31,8 @@ from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import classification_environment as ce
+from tf_agents.bandits.environments import dataset_utilities
 from tf_agents.bandits.environments import environment_utilities as env_util
-from tf_agents.bandits.environments import mushroom_environment_utilities
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 
 
@@ -61,11 +61,11 @@ def main(unused_argv):
   with tf.device('/CPU:0'):  # due to b/128333994
 
     mushroom_reward_distribution = (
-        mushroom_environment_utilities.mushroom_reward_distribution(
+        dataset_utilities.mushroom_reward_distribution(
             r_noeat=0.0, r_eat_safe=5.0, r_eat_poison_bad=-35.0,
             r_eat_poison_good=5.0, prob_poison_bad=0.5))
     mushroom_dataset = (
-        mushroom_environment_utilities.convert_mushroom_csv_to_tf_dataset(
+        dataset_utilities.convert_mushroom_csv_to_tf_dataset(
             FLAGS.mushroom_csv))
     environment = ce.ClassificationBanditEnvironment(
         mushroom_dataset, mushroom_reward_distribution, BATCH_SIZE)
