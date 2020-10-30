@@ -24,12 +24,24 @@
 FROM tf_agents/core as mujoco
 ARG mujoco_license=mjkey.txt
 
-# Prerequisites for Mujoco.
+# Add google-cloud-sdk to the source list
+# Nightly tests are on google cloud and need the SDK.
+RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-$(lsb_release -c -s) main" | \
+  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+# Prerequisites for Mujoco and installs google-cloud for nightly tests.
 RUN apt-get update && apt-get install -y \
   --no-install-recommends \
   libglew-dev \
   libosmesa6-dev \
-  patchelf
+  patchelf \
+  google-cloud-sdk
+
+# Needed to upload results from nightly test runs.
+RUN pip install \
+  google-cloud-bigquery \
+  psutil
 
 RUN mkdir -p /root/.mujoco \
     && wget https://www.roboti.us/download/mujoco200_linux.zip -O mujoco.zip \
@@ -37,8 +49,9 @@ RUN mkdir -p /root/.mujoco \
     && mv /root/.mujoco/mujoco200_linux /root/.mujoco/mujoco200 \
     && rm mujoco.zip
 
-ENV LD_LIBRARY_PATH /root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}
-
 # Copies Mujoco key into image.
 COPY ${mujoco_license} /root/.mujoco/mjkey.txt
-RUN pip install -U 'mujoco-py<2.1,>=2.0'
+
+RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}' >> /etc/bash.bashrc
+
+RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin pip install -U 'mujoco-py<2.1,>=2.0'
