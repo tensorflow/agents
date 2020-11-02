@@ -293,6 +293,7 @@ class EncodingNetwork(network.Network):
     self._preprocessing_combiner = preprocessing_combiner
     self._postprocessing_layers = layers
     self._batch_squash = batch_squash
+    self.built = True  # Allow access to self.variables
 
   def call(self, observation, step_type=None, network_state=(), training=False):
     del step_type  # unused.

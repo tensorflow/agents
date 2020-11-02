@@ -37,9 +37,6 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     input_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
     network = encoding_network.EncodingNetwork(input_spec,)
 
-    with self.assertRaises(ValueError):
-      network.variables  # pylint: disable=pointless-statement
-
     # Only one layer to flatten input.
     self.assertLen(network.layers, 1)
     config = network.layers[0].get_config()
