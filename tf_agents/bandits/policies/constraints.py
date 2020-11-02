@@ -435,6 +435,61 @@ class RelativeQuantileConstraint(NeuralConstraint):
     return tf.cast(is_satisfied, tf.float32)
 
 
+class InputNetworkConstraint(BaseConstraint):
+  """Class for representing a constraint using an input network.
+
+  This constraint class uses an input network to compute the action feasibility.
+  It assumes that the input network is already trained and it can be provided
+  at construction time or later using the set_network() function.
+  """
+
+  def __init__(
+      self,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      input_network: Optional[types.Network] = None,
+      name: Optional[Text] = 'InputNetworkConstraint'):
+    """Creates a constraint using an input network.
+
+    Args:
+      time_step_spec: A `TimeStep` spec of the expected time_steps.
+      action_spec: A nest of `BoundedTensorSpec` representing the actions.
+      input_network: An instance of `tf_agents.network.Network` used to
+        provide estimates of action feasibility.
+      name: Python str name of this agent. All variables in this module will
+        fall under that name. Defaults to the class name.
+    """
+    super(InputNetworkConstraint, self).__init__(
+        time_step_spec,
+        action_spec,
+        name)
+    self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
+        action_spec)
+    self._network = input_network
+
+  @property
+  def network(self):
+    return self._network
+
+  @network.setter
+  def network(self, input_network):
+    self._network = input_network
+
+  def compute_loss(self,
+                   observations: types.NestedTensor,
+                   actions: types.NestedTensor,
+                   rewards: types.Tensor,
+                   weights: Optional[types.TensorOrArray] = None,
+                   training: bool = False) -> types.Tensor:
+    with tf.name_scope('constraint_loss'):
+      return tf.constant(0.0)
+
+  # Subclasses must implement these methods.
+  @abc.abstractmethod
+  def __call__(self, observation, actions=None):
+    """Returns the probability of input actions being feasible."""
+
+
 def compute_feasibility_probability(
     observation: types.NestedTensor,
     constraints: Iterable[BaseConstraint],

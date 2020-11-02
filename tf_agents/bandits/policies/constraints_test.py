@@ -33,6 +33,12 @@ from tf_agents.utils import common
 tf.compat.v1.enable_v2_behavior()
 
 
+class SimpleInputNetworkConstraint(constraints.InputNetworkConstraint):
+
+  def __call__(self, observation, actions=None):
+    return tf.ones([2, 3])
+
+
 class SimpleConstraint(constraints.BaseConstraint):
 
   def __call__(self, observation, actions=None):
@@ -428,6 +434,54 @@ class ConstraintFeasibilityTest(tf.test.TestCase):
     mask = constraints.construct_mask_from_multiple_sources(
         observations, lambda x: (x[0], x[1]), [neural_constraint], 6)
     self.assertAllGreaterEqual(original_mask - mask, 0)
+
+
+class InputNetworkConstraintTest(tf.test.TestCase):
+
+  def setUp(self):
+    super(InputNetworkConstraintTest, self).setUp()
+    tf.compat.v1.enable_resource_variables()
+    self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
+    self._time_step_spec = ts.time_step_spec(self._obs_spec)
+    self._action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+    self._observation_spec = self._time_step_spec.observation
+
+  def testCreateConstraint(self):
+    input_net = DummyNet(self._observation_spec, self._action_spec)
+    SimpleInputNetworkConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        input_network=input_net)
+
+  def testComputeLoss(self):
+    input_net = DummyNet(self._observation_spec, self._action_spec)
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
+    rewards = tf.constant([0.5, 3.0], dtype=tf.float32)
+
+    neural_constraint = SimpleInputNetworkConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        input_network=input_net)
+    loss = neural_constraint.compute_loss(
+        observations,
+        actions,
+        rewards)
+    self.assertAllClose(self.evaluate(loss), 0.0)
+
+  def testComputeActionFeasibility(self):
+    input_net = DummyNet(self._observation_spec, self._action_spec)
+
+    neural_constraint = SimpleInputNetworkConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        input_network=input_net)
+
+    observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    feasibility_prob = neural_constraint(observation)
+    self.assertAllClose(self.evaluate(feasibility_prob), np.ones([2, 3]))
+
 
 if __name__ == '__main__':
   tf.test.main()
