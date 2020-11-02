@@ -136,6 +136,10 @@ def train_eval(
 
   observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
       spec_utils.get_tensor_specs(collect_env))
+  # TODO(b/172267869): Remove this conversion once TensorNormalizer stops
+  # converting float64 inputs to float32.
+  observation_tensor_spec = tf.TensorSpec(
+      dtype=tf.float32, shape=observation_tensor_spec.shape)
 
   train_step = train_utils.create_train_step()
 
