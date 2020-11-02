@@ -1246,10 +1246,9 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         value_net=DummyValueNet(self._obs_spec),
         normalize_observations=False,
         num_epochs=num_epochs,
-        # TODO(b/34467761): Re-enable KL in this test once it is supported
-        # TransformedDistributions.
-        initial_adaptive_kl_beta=0.0,
-        kl_cutoff_factor=0.0,
+        initial_adaptive_kl_beta=1.0,
+        adaptive_kl_target=10.0,
+        adaptive_kl_tolerance=0.5,
         check_numerics=True,
         compute_value_and_advantage_in_train=False,
         train_step_counter=counter)
