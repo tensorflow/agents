@@ -116,7 +116,7 @@ class EncodingNetwork(network.Network):
 
     ```python
     preprocessed = [preprocessing_layers[0](observations[0]),
-                    preprocessing_layers[1](obsrevations[1])]
+                    preprocessing_layers[1](observations[1])]
     ```
 
     However if
