@@ -61,7 +61,10 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       saved_model_dir: Base dir where checkpoints will be saved.
       agent: Agent to extract policies from.
       train_step: `tf.Variable` which keeps track of the number of train steps.
-      interval: How often, in train_steps, the trigger will save.
+      interval: How often, in train_steps, the trigger will save. Note that as
+        long as the >= `interval` number of steps have passed since the
+        last trigger, the event gets triggered. The current value is not
+        necessarily `interval` steps away from the last triggered value.
       async_saving: If True saving will be done asynchronously in a separate
         thread. Note if this is on the variable values in the saved
         checkpoints/models are not deterministic.
@@ -130,6 +133,15 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
   """Logs train_steps_per_second."""
 
   def __init__(self, train_step: tf.Variable, interval: int):
+    """Initializes a StepPerSecondLogTrigger.
+
+    Args:
+      train_step: `tf.Variable` which keeps track of the number of train steps.
+      interval: How often, in train_steps, the trigger will save. Note that as
+        long as the >= `interval` number of steps have passed since the
+        last trigger, the event gets triggered. The current value is not
+        necessarily `interval` steps away from the last triggered value.
+    """
     self._train_step = train_step
     self._step_timer = step_per_second_tracker.StepPerSecondTracker(train_step)
 

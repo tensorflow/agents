@@ -22,7 +22,12 @@ from absl import logging
 
 
 class IntervalTrigger(object):
-  """Triggers on every fixed interval."""
+  """Triggers on every fixed interval.
+
+  Note that as long as the >= `interval` number of steps have passed since the
+  last trigger, the event gets triggered. The current value is not necessarily
+  `interval` steps away from the last triggered value.
+  """
 
   def __init__(self, interval: int, fn: Callable[[], None], start: int = 0):
     """Constructs the IntervalTrigger.
