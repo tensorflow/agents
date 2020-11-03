@@ -294,6 +294,7 @@ def train_eval(
         eval_greedy_policy,
         train_step,
         metrics=actor.eval_metrics(eval_episodes),
+        reference_metrics=[collect_env_step_metric],
         summary_dir=os.path.join(root_dir, 'eval'),
         episodes_per_run=eval_episodes)
 

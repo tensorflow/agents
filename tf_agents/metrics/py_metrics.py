@@ -220,8 +220,8 @@ class EnvironmentSteps(py_metric.PyStepMetric):
     self._np_state = numpy_storage.NumpyState()
     self.reset()
 
-  def reset(self):
-    self._np_state.environment_steps = np.int64(0)
+  def reset(self, environment_steps: int = 0):
+    self._np_state.environment_steps = np.int64(environment_steps)
 
   def result(self) -> np.int64:
     return self._np_state.environment_steps
