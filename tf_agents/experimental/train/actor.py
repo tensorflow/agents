@@ -74,7 +74,8 @@ class Actor(object):
         plotted against. As an example passing in a metric that tracks number of
         environment episodes will result in having summaries of all other
         metrics over this value. Note summaries against the train_step are done
-        by default.
+        by default. If you want reference_metrics to be updated make sure they
+        are also added to the metrics list.
       summary_dir: Path used for summaries. If no path is provided no summaries
         are written.
       summary_interval: How often summaries are written.
@@ -87,7 +88,7 @@ class Actor(object):
     self._metrics = metrics or []
     self._observers.extend(self._metrics)
     self._reference_metrics = reference_metrics or []
-    self._observers.extend(self._reference_metrics)
+    # Make sure metrics are not repeated.
     self._observers = list(set(self._observers))
 
     self._write_summaries = bool(summary_dir)  # summary_dir is not None

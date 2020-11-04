@@ -31,6 +31,7 @@ from tf_agents.experimental.train.utils import replay_buffer_utils
 from tf_agents.experimental.train.utils import spec_utils
 from tf_agents.experimental.train.utils import test_utils as dist_test_utils
 from tf_agents.experimental.train.utils import train_utils
+from tf_agents.metrics import py_metrics
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.utils import test_utils
@@ -85,6 +86,30 @@ class ActorTest(test_utils.TestCase):
     for _ in range(10):
       test_actor.run()
     self.assertGreater(replay_buffer.num_frames(), 0)
+
+  def testRefereneMetricsNotInObservers(self):
+    rb_port = portpicker.pick_unused_port(portserver_address='localhost')
+
+    env, agent, train_step, _, rb_observer = (
+        self._build_components(rb_port))
+
+    temp_dir = self.create_tempdir().full_path
+    tf_collect_policy = agent.collect_policy
+    collect_policy = py_tf_eager_policy.PyTFEagerPolicy(
+        tf_collect_policy, use_tf_function=True)
+    metrics = metrics = actor.collect_metrics(buffer_size=1)
+    step_metric = py_metrics.EnvironmentSteps()
+    test_actor = actor.Actor(
+        env,
+        collect_policy,
+        train_step,
+        steps_per_run=1,
+        metrics=metrics,
+        reference_metrics=[step_metric],
+        summary_dir=temp_dir,
+        observers=[rb_observer])
+
+    self.assertNotIn(step_metric, test_actor._observers)
 
   def testCollectLocalPyActorRun(self):
     rb_port = portpicker.pick_unused_port(portserver_address='localhost')
