@@ -48,7 +48,7 @@ def train_eval(
     root_dir,
     env_name='HalfCheetah-v2',
     # Training params
-    num_iterations=20000,
+    num_iterations=1600,
     actor_fc_layers=(64, 64),
     value_fc_layers=(64, 64),
     learning_rate=3e-4,
@@ -72,7 +72,7 @@ def train_eval(
     policy_save_interval=5000,
     summary_interval=1000,
     eval_interval=10000,
-    eval_episodes=30,
+    eval_episodes=100,
     debug_summaries=False,
     summarize_grads_and_vars=False):
   """Trains and evaluates PPO (Importance Ratio Clipping).

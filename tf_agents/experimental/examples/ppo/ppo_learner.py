@@ -250,11 +250,6 @@ class PPOLearner(object):
     num_frames = self._update_normalizers(self._normalization_iterator)
     self.num_frames_for_training.assign(num_frames)
 
-    def _summary_record_if():
-      return tf.math.equal(
-          self._generic_learner.train_step %
-          tf.constant(self._generic_learner.summary_interval), 0)
-
     if self._minibatch_size:
       num_total_batches = int(self.num_frames_for_training.numpy() /
                               self._minibatch_size) * self._num_epochs
@@ -262,16 +257,7 @@ class PPOLearner(object):
       num_total_batches = self._num_batches * self._num_epochs
 
     iterations = int(num_total_batches / self.num_replicas)
-
-    with self._generic_learner.train_summary_writer.as_default(), \
-     common.soft_device_placement(), \
-     tf.compat.v2.summary.record_if(_summary_record_if), \
-     self._generic_learner.strategy.scope():
-      loss_info = self._generic_learner.run(iterations, self._train_iterator)
-
-      train_step_val = self._generic_learner.train_step_numpy
-      for trigger in self._generic_learner.triggers:
-        trigger(train_step_val)
+    loss_info = self._generic_learner.run(iterations, self._train_iterator)
 
     return loss_info
 
