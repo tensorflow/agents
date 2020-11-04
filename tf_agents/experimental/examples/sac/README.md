@@ -59,11 +59,11 @@ TensorBoard.dev for maximum utility.
 
 Env                     | Measurement 1 | Measurement 2 | Tensorboard
 ----------------------- | ------------- | ------------- | -----------
-HalfCheetah-v2 (Mujoco) | 11,116@1M     | 13,250@3M     | [tensorboard.dev](https://tensorboard.dev/experiment/Bsb224EkTJ2ImSgyyPAjkA/#scalars&runSelectionState=eyJIYWxmQ2hlZXRhaC12Ml8wMC9ldmFsIjp0cnVlLCJIYWxmQ2hlZXRhaC12Ml8wMC90cmFpbiI6ZmFsc2UsIkhhbGZDaGVldGFoLXYyXzAxL2V2YWwiOnRydWUsIkhhbGZDaGVldGFoLXYyXzAxL3RyYWluIjpmYWxzZSwiSGFsZkNoZWV0YWgtdjJfMDIvZXZhbCI6dHJ1ZSwiSGFsZkNoZWV0YWgtdjJfMDIvdHJhaW4iOmZhbHNlLCJIYWxmQ2hlZXRhaC12Ml8wMy9ldmFsIjp0cnVlLCJIYWxmQ2hlZXRhaC12Ml8wMy90cmFpbiI6ZmFsc2UsIkhhbGZDaGVldGFoLXYyXzA0L2V2YWwiOnRydWUsIkhhbGZDaGVldGFoLXYyXzA0L3RyYWluIjpmYWxzZX0%3D)
-Hopper-v2 (Mujoco)      | 2,540@1M      | n/a           | [tensorboard.dev](https://tensorboard.dev/experiment/ZMxemRYmQaK0vf6iP5PQwQ/#scalars&runSelectionState=eyJIb3BwZXItdjJfMDAvZXZhbCI6dHJ1ZSwiSG9wcGVyLXYyXzAwL3RyYWluIjpmYWxzZSwiSG9wcGVyLXYyXzAxL2V2YWwiOnRydWUsIkhvcHBlci12Ml8wMS90cmFpbiI6ZmFsc2UsIkhvcHBlci12Ml8wMi9ldmFsIjp0cnVlLCJIb3BwZXItdjJfMDIvdHJhaW4iOmZhbHNlLCJIb3BwZXItdjJfMDMvZXZhbCI6dHJ1ZSwiSG9wcGVyLXYyXzAzL3RyYWluIjpmYWxzZSwiSG9wcGVyLXYyXzA0L2V2YWwiOnRydWUsIkhvcHBlci12Ml8wNC90cmFpbiI6ZmFsc2V9)
-Walker2d-v2 (Mujoco)    | 4,672@1M      | 5,823@3M      | [tensorboard.dev](https://tensorboard.dev/experiment/qW4nCOtlT52Rj6N4Mp6uwA/#scalars&runSelectionState=eyJXYWxrZXIyZC12Ml8wMC9ldmFsIjp0cnVlLCJXYWxrZXIyZC12Ml8wMC90cmFpbiI6ZmFsc2UsIldhbGtlcjJkLXYyXzAxL2V2YWwiOnRydWUsIldhbGtlcjJkLXYyXzAxL3RyYWluIjpmYWxzZSwiV2Fsa2VyMmQtdjJfMDIvZXZhbCI6dHJ1ZSwiV2Fsa2VyMmQtdjJfMDIvdHJhaW4iOmZhbHNlLCJXYWxrZXIyZC12Ml8wMy9ldmFsIjp0cnVlLCJXYWxrZXIyZC12Ml8wMy90cmFpbiI6ZmFsc2UsIldhbGtlcjJkLXYyXzA0L2V2YWwiOnRydWUsIldhbGtlcjJkLXYyXzA0L3RyYWluIjpmYWxzZX0%3D)
-Ant-v2 (Mujoco)         | 4,714@1M      | 4,500@3M      | [tensorboard.dev](https://tensorboard.dev/experiment/4ywD2XzOS2GVJgdkY19c9w/#scalars&runSelectionState=eyJBbnQtdjJfMDAvZXZhbCI6dHJ1ZSwiQW50LXYyXzAwL3RyYWluIjpmYWxzZSwiQW50LXYyXzAxL2V2YWwiOnRydWUsIkFudC12Ml8wMS90cmFpbiI6ZmFsc2UsIkFudC12Ml8wMi9ldmFsIjp0cnVlLCJBbnQtdjJfMDIvdHJhaW4iOmZhbHNlLCJBbnQtdjJfMDMvZXZhbCI6dHJ1ZSwiQW50LXYyXzAzL3RyYWluIjpmYWxzZSwiQW50LXYyXzA0L2V2YWwiOnRydWUsIkFudC12Ml8wNC90cmFpbiI6ZmFsc2V9)
-Humanoid-v2 (Mujoco)    | 7,098@5M      | 7,391@10M     | [tensorboard.dev](https://tensorboard.dev/experiment/L9KkrwFzQrKArX0xMjs8Cg/#scalars&runSelectionState=eyJIdW1hbm9pZC12Ml8wMC9ldmFsIjp0cnVlLCJIdW1hbm9pZC12Ml8wMC90cmFpbiI6ZmFsc2UsIkh1bWFub2lkLXYyXzAxL2V2YWwiOnRydWUsIkh1bWFub2lkLXYyXzAxL3RyYWluIjpmYWxzZSwiSHVtYW5vaWQtdjJfMDIvZXZhbCI6dHJ1ZSwiSHVtYW5vaWQtdjJfMDIvdHJhaW4iOmZhbHNlLCJIdW1hbm9pZC12Ml8wMy9ldmFsIjp0cnVlLCJIdW1hbm9pZC12Ml8wMy90cmFpbiI6ZmFsc2UsIkh1bWFub2lkLXYyXzA0L2V2YWwiOnRydWUsIkh1bWFub2lkLXYyXzA0L3RyYWluIjpmYWxzZX0%3D)
+HalfCheetah-v2 (Mujoco) | 12,096@1M     | 14,877@3M     | [tensorboard.dev](https://tensorboard.dev/experiment/MD1SVkFARDKnwoqirHJ7Iw/#scalars&runSelectionState=eyJIYWxmQ2hlZXRhaC12Ml8wMC90cmFpbiI6ZmFsc2UsIkhhbGZDaGVldGFoLXYyXzAxL3RyYWluIjpmYWxzZSwiSGFsZkNoZWV0YWgtdjJfMDIvdHJhaW4iOmZhbHNlLCJIYWxmQ2hlZXRhaC12Ml8wMy90cmFpbiI6ZmFsc2UsIkhhbGZDaGVldGFoLXYyXzA0L3RyYWluIjpmYWxzZX0%3D)
+Hopper-v2 (Mujoco)      | 3,323@1M      | n/a           | [tensorboard.dev](https://tensorboard.dev/experiment/Q3q2E5zXQmCVEFlS0EAHGA/#scalars&runSelectionState=eyJIb3BwZXItdjJfMDAvdHJhaW4iOmZhbHNlLCJIb3BwZXItdjJfMDEvdHJhaW4iOmZhbHNlLCJIb3BwZXItdjJfMDIvdHJhaW4iOmZhbHNlLCJIb3BwZXItdjJfMDMvdHJhaW4iOmZhbHNlLCJIb3BwZXItdjJfMDQvdHJhaW4iOmZhbHNlfQ%3D%3D)
+Walker2d-v2 (Mujoco)    | 4,966@1M      | 5,612@3M      | [tensorboard.dev](https://tensorboard.dev/experiment/I3nq1OQ7QiqWXexD1KVaTg/#scalars&runSelectionState=eyJXYWxrZXIyZC12Ml8wNC9ldmFsIjp0cnVlLCJXYWxrZXIyZC12Ml8wNC90cmFpbiI6ZmFsc2UsIldhbGtlcjJkLXYyXzAyL3RyYWluIjpmYWxzZSwiV2Fsa2VyMmQtdjJfMDIvZXZhbCI6dHJ1ZSwiV2Fsa2VyMmQtdjJfMDEvdHJhaW4iOmZhbHNlLCJXYWxrZXIyZC12Ml8wMS9ldmFsIjp0cnVlLCJXYWxrZXIyZC12Ml8wMC90cmFpbiI6ZmFsc2UsIldhbGtlcjJkLXYyXzAwL2V2YWwiOnRydWUsIldhbGtlcjJkLXYyXzAzL2V2YWwiOnRydWUsIldhbGtlcjJkLXYyXzAzL3RyYWluIjpmYWxzZX0%3D)
+Ant-v2 (Mujoco)         | 5,494@1M      | 5,561@3M      | [tensorboard.dev](https://tensorboard.dev/experiment/jsbkOQeERTmBOy0XoCMQcw/#scalars&runSelectionState=eyJBbnQtdjJfMDAvdHJhaW4iOmZhbHNlLCJBbnQtdjJfMDEvdHJhaW4iOmZhbHNlLCJBbnQtdjJfMDIvdHJhaW4iOmZhbHNlLCJBbnQtdjJfMDMvdHJhaW4iOmZhbHNlLCJBbnQtdjJfMDQvdHJhaW4iOmZhbHNlfQ%3D%3D)
+Humanoid-v2 (Mujoco)    | 7,455@5M      | 8,114@10M     | [tensorboard.dev](https://tensorboard.dev/experiment/Xk9qg2cmRc2R2Mzr18LXgw/#scalars&runSelectionState=eyJIdW1hbm9pZC12Ml8wNC90cmFpbiI6ZmFsc2UsIkh1bWFub2lkLXYyXzAzL3RyYWluIjpmYWxzZSwiSHVtYW5vaWQtdjJfMDIvdHJhaW4iOmZhbHNlLCJIdW1hbm9pZC12Ml8wMS90cmFpbiI6ZmFsc2UsIkh1bWFub2lkLXYyXzAwL3RyYWluIjpmYWxzZX0%3D)
 
 The sections that follow contain figures showing the mean along with min/max
 ranges for each of 5 runs of the environments tested along with details of the
@@ -75,7 +75,7 @@ executing an experiment is detailed in the
 [Reproduce results](#reproduce-results) section. The commands should also work
 on a bare metal workstation setup as well.
 
-## HalfCheetah-v2 (Mujoco)
+## HalfCheetah-v2 (MuJoCo)
 
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/halfcheetah-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
@@ -87,7 +87,7 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
      --alsologtostderr
 ```
 
-## Hopper-v2 (Mujoco)
+## Hopper-v2 (MuJoCo)
 
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/hopper-v2_graph.png "Hopper-v2 Mean and min/max graph.")
 
@@ -99,7 +99,7 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
      --alsologtostderr
 ```
 
-## Walker2d-v2 (Mujoco)
+## Walker2d-v2 (MuJoCo)
 
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/walker2d-v2_graph.png "Walker2d-v2 Mean and min/max graph.")
 
@@ -111,7 +111,7 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
      --alsologtostderr
 ```
 
-## Ant-v2 (Mujoco)
+## Ant-v2 (MuJoCo)
 
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/ant-v2_graph.png "Ant-v2 Mean and min/max graph.")
 
@@ -123,7 +123,7 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
      --alsologtostderr
 ```
 
-## Humanoid-v2 (Mujoco)
+## Humanoid-v2 (MuJoCo)
 
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/humanoid-v2_graph.png "Humanoid-v2 Mean and min/max graph.")
 
@@ -135,15 +135,10 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
      --alsologtostderr
 ```
 
-**Deviations from standard testing environment:**
-
-*   The Humanoid experiment ran on a `n1-standard-32` instance for a small
-    improvement in total time to run the experiment.
-
 ## Reproduce results
 
 To reproduce the numbers we suggest using the commands below, which is using the
-head of TF-Agents. Unless specified in the details of section, each experiment
+`head` of TF-Agents. Unless specified in the details of section, each experiment
 was run on a Google Cloud `n1-standard-16` instance.
 
 **Step 1:** Create a
@@ -208,7 +203,7 @@ $  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/mujoco \
      python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
        --root_dir=./logs/HalfCheetah-v2_00/ \
        --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/half_cheetah.gin \
-       -- num_iterations=3000000 \
+       --num_iterations=3000000 \
        --alsologtostderr
 ```
 
@@ -226,17 +221,12 @@ $  tensorboard dev upload --logdir=./logs/
 
 **Addendum**
 
-Due to a fix for the Mujoco docker that was not checked in, running the exact
-code for the recorded results requires a specific git hash and cherry-pick of
-the docker build file. We do not recommend this step because the `head` is
-tested nightly. This information is recorded here so we remember exactly how the
-data was collected with warts and all.
+Below is the githash and version of TensorFlow used to get the results above.
+This is here for an audit trail.
 
 ```shell
 # After checking out the code above and before building the docker execute the following:
-$  git reset --hard 75a2e7f9bef90d03fbf371321293aba4bacff255
-$  git cherry-pick a7aeba2fef8d4908a4a3f7513ccddc887d4c7c32
+$  git reset --hard 0c82138c4e36dc851c0ed97067cf3118ee9c07c1
 ```
 
-`tf-agents-nightly==0.7.0.dev20200905` and `tf-nightly==2.4.0.dev20200904` were
-used to generate the results.
+`tf-nightly==2.4.0.dev20200904` was used to generate the results.
