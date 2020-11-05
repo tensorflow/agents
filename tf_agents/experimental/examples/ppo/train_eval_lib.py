@@ -301,7 +301,8 @@ def train_eval(
     eval_actor.run_and_log()
 
   logging.info('Training.')
-  for _ in range(num_iterations):
+  last_eval_step = 0
+  for i in range(num_iterations):
     collect_actor.run()
     # TODO(b/159615593): Update to use observer.flush.
     # Reset the reverb observer to make sure the data collected is flushed and
@@ -312,7 +313,13 @@ def train_eval(
     reverb_replay_normalization.clear()
     current_iteration.assign_add(1)
 
-    if eval_interval and agent_learner.train_step_numpy % eval_interval == 0:
+    # Eval only if `eval_interval` has been set. Then, eval if the current train
+    # step is equal or greater than the `last_eval_step` + `eval_interval` or if
+    # this is the last iteration. This logic exists because agent_learner.run()
+    # does not return after every train step.
+    if (eval_interval and
+        (agent_learner.train_step_numpy >= eval_interval + last_eval_step
+         or i == num_iterations - 1)):
       logging.info('Evaluating.')
       eval_actor.run_and_log()
 
