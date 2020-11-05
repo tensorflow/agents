@@ -581,8 +581,11 @@ class PPOAgent(tf_agent.TFAgent):
     rewards = next_time_steps.reward
     if self._debug_summaries:
       # Summarize rewards before they get normalized below.
-      tf.compat.v2.summary.histogram(
-          name='rewards', data=rewards, step=self.train_step_counter)
+      # TODO(b/171573175): remove the condition once histograms are
+      # supported on TPUs.
+      if not tf.config.list_logical_devices('TPU'):
+        tf.compat.v2.summary.histogram(
+            name='rewards', data=rewards, step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='rewards_mean',
           data=tf.reduce_mean(rewards),
@@ -593,10 +596,13 @@ class PPOAgent(tf_agent.TFAgent):
       rewards = self._reward_normalizer.normalize(
           rewards, center_mean=False, clip_value=self._reward_norm_clipping)
       if self._debug_summaries:
-        tf.compat.v2.summary.histogram(
-            name='rewards_normalized',
-            data=rewards,
-            step=self.train_step_counter)
+        # TODO(b/171573175): remove the condition once histograms are
+        # supported on TPUs.
+        if not tf.config.list_logical_devices('TPU'):
+          tf.compat.v2.summary.histogram(
+              name='rewards_normalized',
+              data=rewards,
+              step=self.train_step_counter)
         tf.compat.v2.summary.scalar(
             name='rewards_normalized_mean',
             data=tf.reduce_mean(rewards),
@@ -619,7 +625,9 @@ class PPOAgent(tf_agent.TFAgent):
         discounts,
         time_major=False,
         final_value=final_value_bootstrapped)
-    if self._debug_summaries:
+    # TODO(b/171573175): remove the condition once histograms are
+    # supported on TPUs.
+    if self._debug_summaries and not tf.config.list_logical_devices('TPU'):
       tf.compat.v2.summary.histogram(
           name='returns', data=returns, step=self.train_step_counter)
 
@@ -627,7 +635,9 @@ class PPOAgent(tf_agent.TFAgent):
     advantages = self.compute_advantages(rewards, returns, discounts,
                                          value_preds)
 
-    if self._debug_summaries:
+    # TODO(b/171573175): remove the condition once historgrams are
+    # supported on TPUs.
+    if self._debug_summaries and not tf.config.list_logical_devices('TPU'):
       tf.compat.v2.summary.histogram(
           name='advantages', data=advantages, step=self.train_step_counter)
 
@@ -782,7 +792,9 @@ class PPOAgent(tf_agent.TFAgent):
                                                processed_experience.action,
                                                self._action_spec)
 
-    if self._debug_summaries:
+    # TODO(b/171573175): remove the condition once histograms are
+    # supported on TPUs.
+    if self._debug_summaries and not tf.config.list_logical_devices('TPU'):
       actions_list = tf.nest.flatten(processed_experience.action)
       show_action_index = len(actions_list) != 1
       for i, single_action in enumerate(actions_list):
@@ -808,7 +820,9 @@ class PPOAgent(tf_agent.TFAgent):
         clip_value=0,
         center_mean=True,
         variance_epsilon=1e-8)
-    if self._debug_summaries:
+    # TODO(b/171573175): remove the condition once histograms are
+    # supported on TPUs.
+    if self._debug_summaries and not tf.config.list_logical_devices('TPU'):
       tf.compat.v2.summary.histogram(
           name='advantages_normalized',
           data=normalized_advantages,
@@ -945,7 +959,10 @@ class PPOAgent(tf_agent.TFAgent):
           data=learning_rate,
           step=self.train_step_counter)
 
-    if self._summarize_grads_and_vars:
+    # TODO(b/171573175): remove the condition once histograms are
+    # supported on TPUs.
+    if self._summarize_grads_and_vars and not tf.config.list_logical_devices(
+        'TPU'):
       with tf.name_scope('Variables/'):
         all_vars = (
             self._actor_net.trainable_weights +
@@ -1017,7 +1034,9 @@ class PPOAgent(tf_agent.TFAgent):
           total_l2_loss = tf.debugging.check_numerics(total_l2_loss,
                                                       'total_l2_loss')
 
-        if debug_summaries:
+        # TODO(b/171573175): remove the condition once histograms are
+        # supported on TPUs.
+        if debug_summaries and not tf.config.list_logical_devices('TPU'):
           tf.compat.v2.summary.histogram(
               name='l2_loss', data=total_l2_loss, step=self.train_step_counter)
     else:
@@ -1047,7 +1066,9 @@ class PPOAgent(tf_agent.TFAgent):
           entropy_reg_loss = tf.debugging.check_numerics(
               entropy_reg_loss, 'entropy_reg_loss')
 
-        if debug_summaries:
+        # TODO(b/171573175): remove the condition once histograms are supported
+        # on TPUs.
+        if debug_summaries and not tf.config.list_logical_devices('TPU'):
           tf.compat.v2.summary.histogram(
               name='entropy_reg_loss',
               data=entropy_reg_loss,
@@ -1090,7 +1111,9 @@ class PPOAgent(tf_agent.TFAgent):
     """
 
     observation = time_steps.observation
-    if debug_summaries:
+    # TODO(b/171573175): remove the condition once histograms are
+    # supported on TPUs.
+    if debug_summaries and not tf.config.list_logical_devices('TPU'):
       observation_list = tf.nest.flatten(observation)
       show_observation_index = len(observation_list) != 1
       for i, single_observation in enumerate(observation_list):
@@ -1140,12 +1163,15 @@ class PPOAgent(tf_agent.TFAgent):
           name='value_estimation_loss',
           data=value_estimation_loss,
           step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='value_preds', data=value_preds, step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='value_estimation_error',
-          data=value_estimation_error,
-          step=self.train_step_counter)
+      # TODO(b/171573175): remove the condition once histograms are supported
+      # on TPUs.
+      if not tf.config.list_logical_devices('TPU'):
+        tf.compat.v2.summary.histogram(
+            name='value_preds', data=value_preds, step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='value_estimation_error',
+            data=value_estimation_error,
+            step=self.train_step_counter)
 
     if self._check_numerics:
       value_estimation_loss = tf.debugging.check_numerics(
@@ -1233,65 +1259,69 @@ class PPOAgent(tf_agent.TFAgent):
             name='clip_fraction',
             data=clip_fraction,
             step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='action_log_prob',
-          data=action_log_prob,
-          step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='action_log_prob_sample',
-          data=sample_action_log_probs,
-          step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='importance_ratio',
-          data=importance_ratio,
-          step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='importance_ratio_mean',
           data=tf.reduce_mean(input_tensor=importance_ratio),
           step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='importance_ratio_clipped',
-          data=importance_ratio_clipped,
-          step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='per_timestep_objective',
-          data=per_timestep_objective,
-          step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='per_timestep_objective_clipped',
-          data=per_timestep_objective_clipped,
-          step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='per_timestep_objective_min',
-          data=per_timestep_objective_min,
-          step=self.train_step_counter)
       entropy = common.entropy(current_policy_distribution, self.action_spec)
-      tf.compat.v2.summary.histogram(
-          name='policy_entropy', data=entropy, step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='policy_entropy_mean',
           data=tf.reduce_mean(input_tensor=entropy),
           step=self.train_step_counter)
-      for i, (single_action, single_distribution) in enumerate(
-          zip(
-              tf.nest.flatten(self.action_spec),
-              tf.nest.flatten(current_policy_distribution))):
-        # Categorical distribution (used for discrete actions) doesn't have a
-        # mean.
-        distribution_index = '_{}'.format(i) if i > 0 else ''
-        if not tensor_spec.is_discrete(single_action):
-          tf.compat.v2.summary.histogram(
-              name='actions_distribution_mean' + distribution_index,
-              data=single_distribution.mean(),
-              step=self.train_step_counter)
-          tf.compat.v2.summary.histogram(
-              name='actions_distribution_stddev' + distribution_index,
-              data=single_distribution.stddev(),
-              step=self.train_step_counter)
-      tf.compat.v2.summary.histogram(
-          name='policy_gradient_loss',
-          data=policy_gradient_loss,
-          step=self.train_step_counter)
+      # TODO(b/171573175): remove the condition once histograms are supported
+      # on TPUs.
+      if not tf.config.list_logical_devices('TPU'):
+        tf.compat.v2.summary.histogram(
+            name='action_log_prob',
+            data=action_log_prob,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='action_log_prob_sample',
+            data=sample_action_log_probs,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='importance_ratio',
+            data=importance_ratio,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='importance_ratio_clipped',
+            data=importance_ratio_clipped,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='per_timestep_objective',
+            data=per_timestep_objective,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='per_timestep_objective_clipped',
+            data=per_timestep_objective_clipped,
+            step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='per_timestep_objective_min',
+            data=per_timestep_objective_min,
+            step=self.train_step_counter)
+
+        tf.compat.v2.summary.histogram(
+            name='policy_entropy', data=entropy, step=self.train_step_counter)
+        for i, (single_action, single_distribution) in enumerate(
+            zip(
+                tf.nest.flatten(self.action_spec),
+                tf.nest.flatten(current_policy_distribution))):
+          # Categorical distribution (used for discrete actions) doesn't have a
+          # mean.
+          distribution_index = '_{}'.format(i) if i > 0 else ''
+          if not tensor_spec.is_discrete(single_action):
+            tf.compat.v2.summary.histogram(
+                name='actions_distribution_mean' + distribution_index,
+                data=single_distribution.mean(),
+                step=self.train_step_counter)
+            tf.compat.v2.summary.histogram(
+                name='actions_distribution_stddev' + distribution_index,
+                data=single_distribution.stddev(),
+                step=self.train_step_counter)
+        tf.compat.v2.summary.histogram(
+            name='policy_gradient_loss',
+            data=policy_gradient_loss,
+            step=self.train_step_counter)
 
     if self._check_numerics:
       policy_gradient_loss = tf.debugging.check_numerics(
@@ -1392,7 +1422,9 @@ class PPOAgent(tf_agent.TFAgent):
                                         current_policy_distribution)
     kl_divergence *= weights
 
-    if debug_summaries:
+    # TODO(b/171573175): remove the condition once histograms are supported
+    # on TPUs.
+    if debug_summaries and not tf.config.list_logical_devices('TPU'):
       tf.compat.v2.summary.histogram(
           name='kl_divergence',
           data=kl_divergence,
