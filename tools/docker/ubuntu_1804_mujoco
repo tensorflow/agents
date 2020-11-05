@@ -49,9 +49,26 @@ RUN mkdir -p /root/.mujoco \
     && mv /root/.mujoco/mujoco200_linux /root/.mujoco/mujoco200 \
     && rm mujoco.zip
 
+# On some hosts LD_LIBRARY_PATH is unset when running the container. After hours
+# of internet research along with trial and error, a root cause was not found.
+# It works fine on google cloud instances but fails on my workstation, which
+# worked fine on my workstation a few months ago. `docker inspect` shows it is
+# in the container config. If you are getting the error:
+#
+#       Please add following line to .bashrc:
+#       export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/.mujoco/mujoco200/bin
+#
+# This seems to be the best workaround and worked when LD_LIBRARY_PATH would not
+# stay sticky is:
+#    docker run --rm -it tf_agents/mujoco /bin/bash -c \
+#    "LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin python3 foo.py --bar 10"
+ENV LD_LIBRARY_PATH "/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}"
+# When LD_LIBRARY_PATH is not sticky, this sets it on login.
+RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}' >> /etc/bash.bashrc
+
 # Copies Mujoco key into image.
 COPY ${mujoco_license} /root/.mujoco/mjkey.txt
 
-RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}' >> /etc/bash.bashrc
-
+# LD_LIBRARY_PATH is redunanty but needed on hosts where LD_LIBRARY_APTH is
+# not sticky. See comments above.
 RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin pip install -U 'mujoco-py<2.1,>=2.0'
