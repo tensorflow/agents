@@ -53,7 +53,7 @@ class CriticNetwork(network.Network):
       observation_dropout_layer_params: Optional list of dropout layer
         parameters, each item is the fraction of input units to drop or a
         dictionary of parameters according to the keras.Dropout documentation.
-        The additional parameter `permanent', if set to True, allows to apply
+        The additional parameter `permanent`, if set to True, allows to apply
         dropout at inference for approximated Bayesian inference. The dropout
         layers are interleaved with the fully connected layers; there is a
         dropout layer after each fully connected layer, except if the entry in
@@ -64,7 +64,7 @@ class CriticNetwork(network.Network):
       action_dropout_layer_params: Optional list of dropout layer parameters,
         each item is the fraction of input units to drop or a dictionary of
         parameters according to the keras.Dropout documentation. The additional
-        parameter `permanent', if set to True, allows to apply dropout at
+        parameter `permanent`, if set to True, allows to apply dropout at
         inference for approximated Bayesian inference. The dropout layers are
         interleaved with the fully connected layers; there is a dropout layer
         after each fully connected layer, except if the entry in the list is
@@ -76,7 +76,7 @@ class CriticNetwork(network.Network):
       joint_dropout_layer_params: Optional list of dropout layer parameters,
         each item is the fraction of input units to drop or a dictionary of
         parameters according to the keras.Dropout documentation. The additional
-        parameter `permanent', if set to True, allows to apply dropout at
+        parameter `permanent`, if set to True, allows to apply dropout at
         inference for approximated Bayesian inference. The dropout layers are
         interleaved with the fully connected layers; there is a dropout layer
         after each fully connected layer, except if the entry in the list is

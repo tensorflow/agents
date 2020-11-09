@@ -116,7 +116,7 @@ class EncodingNetwork(network.Network):
 
     ```python
     preprocessed = [preprocessing_layers[0](observations[0]),
-                    preprocessing_layers[1](obsrevations[1])]
+                    preprocessing_layers[1](observations[1])]
     ```
 
     However if
@@ -161,7 +161,7 @@ class EncodingNetwork(network.Network):
       dropout_layer_params: Optional list of dropout layer parameters, each item
         is the fraction of input units to drop or a dictionary of parameters
         according to the keras.Dropout documentation. The additional parameter
-        `permanent', if set to True, allows to apply dropout at inference for
+        `permanent`, if set to True, allows to apply dropout at inference for
         approximated Bayesian inference. The dropout layers are interleaved with
         the fully connected layers; there is a dropout layer after each fully
         connected layer, except if the entry in the list is None. This list must
