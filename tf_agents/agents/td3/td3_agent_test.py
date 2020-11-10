@@ -76,21 +76,6 @@ class DummyActorNetwork(network.Network):
     return output_actions, network_state
 
 
-class FakeCriticNetwork(network.Network):
-  """Fake critic network with random output Q value of a specified shape."""
-
-  def __init__(self, input_tensor_spec, output_shape, name=None):
-    self._output_shape = output_shape
-    super(FakeCriticNetwork, self).__init__(
-        input_tensor_spec, state_spec=(), name=name)
-
-  def call(self, inputs, step_type=None, network_state=()):
-    q_value = tf.random.uniform(
-        self._output_shape, minval=0, maxval=1, dtype=tf.dtypes.float32,
-    )
-    return q_value, network_state
-
-
 class DummyCriticNetwork(network.Network):
 
   def __init__(self, input_tensor_spec, shared_layer=None, name=None):
@@ -248,6 +233,21 @@ class TD3AgentTest(test_utils.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   def testBatchedActorLoss(self):
+
+    class FakeCriticNetwork(network.Network):
+      """Fake critic network with random output Q value of a specified shape."""
+
+      def __init__(self, input_tensor_spec, output_shape, name=None):
+        self._output_shape = output_shape
+        super(FakeCriticNetwork, self).__init__(
+            input_tensor_spec, state_spec=(), name=name)
+
+      def call(self, inputs, step_type=None, network_state=()):
+        q_value = tf.random.uniform(
+            self._output_shape, minval=0, maxval=1, dtype=tf.dtypes.float32,
+        )
+        return q_value, network_state
+
     critic_input_spec = (self._obs_spec, self._action_spec)
     critic_net = FakeCriticNetwork(critic_input_spec, output_shape=(2, 1),)
     obs_spec = [
