@@ -76,6 +76,21 @@ class DummyActorNetwork(network.Network):
     return output_actions, network_state
 
 
+class FakeCriticNetwork(network.Network):
+  """Fake critic network with random output Q value of a specified shape."""
+
+  def __init__(self, input_tensor_spec, output_shape, name=None):
+    self._output_shape = output_shape
+    super(FakeCriticNetwork, self).__init__(
+        input_tensor_spec, state_spec=(), name=name)
+
+  def call(self, inputs, step_type=None, network_state=()):
+    q_value = tf.random.uniform(
+        self._output_shape, minval=0, maxval=1, dtype=tf.dtypes.float32,
+    )
+    return q_value, network_state
+
+
 class DummyCriticNetwork(network.Network):
 
   def __init__(self, input_tensor_spec, shared_layer=None, name=None):
@@ -231,6 +246,30 @@ class TD3AgentTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
+
+  def testBatchedActorLoss(self):
+    critic_input_spec = (self._obs_spec, self._action_spec)
+    critic_net = FakeCriticNetwork(critic_input_spec, output_shape=(2, 1),)
+    obs_spec = [
+        tensor_spec.BoundedTensorSpec([1], tf.float32, minimum=0, maximum=1)
+    ]
+    time_step_spec = ts.time_step_spec(obs_spec)
+    agent = td3_agent.Td3Agent(
+        time_step_spec,
+        self._action_spec,
+        critic_network=critic_net,
+        actor_network=self._unbounded_actor_net,
+        actor_optimizer=None,
+        critic_optimizer=None)
+
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
+
+    loss = agent.actor_loss(time_steps)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    # Ensures that the actor loss calculation does not err out when the critic
+    # output has rank > 1.
+    self.evaluate(loss)
 
   def testPolicyProducesBoundedAction(self):
     agent = td3_agent.Td3Agent(

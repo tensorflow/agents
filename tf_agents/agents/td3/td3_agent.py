@@ -466,7 +466,8 @@ class Td3Agent(tf_agent.TFAgent):
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec, num_outer_dims=2):
         # Sum over the time dimension.
-        critic_loss = tf.reduce_sum(input_tensor=critic_loss, axis=1)
+        critic_loss = tf.reduce_sum(
+            input_tensor=critic_loss, axis=range(1, critic_loss.shape.rank))
 
       if weights is not None:
         critic_loss *= weights
@@ -499,7 +500,8 @@ class Td3Agent(tf_agent.TFAgent):
       actor_loss = -q_values
       # Sum over the time dimension.
       if actor_loss.shape.rank > 1:
-        actor_loss = tf.reduce_sum(actor_loss, axis=(1, actor_loss.shape.rank))
+        actor_loss = tf.reduce_sum(
+            actor_loss, axis=range(1, actor_loss.shape.rank))
       actor_loss = common.aggregate_losses(
           per_example_loss=actor_loss, sample_weight=weights).total_loss
 
