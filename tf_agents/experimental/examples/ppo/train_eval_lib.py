@@ -322,6 +322,7 @@ def train_eval(
          or i == num_iterations - 1)):
       logging.info('Evaluating.')
       eval_actor.run_and_log()
+      last_eval_step = agent_learner.train_step_numpy
 
   rb_observer.close()
   reverb_server.stop()
