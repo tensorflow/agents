@@ -258,6 +258,7 @@ def run_setup():
       author_email='no-reply@google.com',
       url='http://github.com/tensorflow/agents',
       license='Apache 2.0',
+      include_package_data=True,
       packages=find_packages(),
       install_requires=get_required_packages(),
       tests_require=test_packages,
