@@ -42,6 +42,8 @@ DEFAULT_ATARI_GYM_WRAPPERS = (atari_preprocessing.AtariPreprocessing,)
 # wrappers will be removed.
 DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = DEFAULT_ATARI_GYM_WRAPPERS + (
     atari_wrappers.FrameStack4,)
+gin.constant('DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING',
+             DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
 
 
 @gin.configurable
