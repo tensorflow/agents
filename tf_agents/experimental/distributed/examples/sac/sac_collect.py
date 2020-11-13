@@ -135,7 +135,7 @@ def main(_):
   collect(
       FLAGS.task,
       FLAGS.root_dir,
-      replay_buffer_server_address=FLAGS.variable_container_server_address,
+      replay_buffer_server_address=FLAGS.replay_buffer_server_address,
       variable_container_server_address=FLAGS.variable_container_server_address,
       create_env_fn=lambda: suite_mujoco.load('HalfCheetah-v2'))
 
