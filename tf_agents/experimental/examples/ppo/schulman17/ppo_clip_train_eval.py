@@ -47,39 +47,44 @@ flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
 
+def ppo_clip_train_eval(root_dir, num_iterations, reverb_port=None,
+                        eval_interval=0):
+  """Executes train and eval for ppo_clip.
+
+  gin is used to configure parameters related to the agent and environment.
+  Arguments related to the execution, e.g. number of iterations and how often to
+  eval, are set directly by this method. This keeps the gin config focused on
+  the agent and execution level arguments quickly changed on the command line
+  without using the more verbose --gin_bindings.
+
+  See the `./configs` directory for example gin configs.
+
+  Args:
+    root_dir: Root directory for writing logs/summaries/checkpoints.
+    num_iterations: Total number train/eval iterations to perform.
+    reverb_port: Port for reverb server. If None, a random unused port is used.
+    eval_interval: Number of train steps between evaluations. Set to 0 to skip.
+  """
+  train_eval_lib.train_eval(
+      root_dir,
+      # Training params
+      num_iterations=num_iterations,
+      # Replay params
+      reverb_port=reverb_port,
+      # Others
+      eval_interval=eval_interval)
+
+
 def main(_):
   logging.set_verbosity(logging.INFO)
   tf.enable_v2_behavior()
 
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
 
-  train_eval_lib.train_eval(
-      FLAGS.root_dir,
-      env_name='HalfCheetah-v2',
-      # Training params
-      num_iterations=FLAGS.num_iterations,
-      actor_fc_layers=(64, 64),
-      value_fc_layers=(64, 64),
-      learning_rate=3e-4,
-      collect_sequence_length=2048,
-      minibatch_size=64,
-      num_epochs=10,
-      # Agent params
-      importance_ratio_clipping=0.2,
-      lambda_value=0.95,
-      discount_factor=0.99,
-      entropy_regularization=0.,
-      value_pred_loss_coef=0.5,
-      use_gae=True,
-      use_td_lambda_return=True,
-      gradient_clipping=0.5,
-      # Replay params
-      reverb_port=FLAGS.reverb_port,
-      replay_capacity=10000,
-      # Others
-      policy_save_interval=5000,
-      summary_interval=1000,
-      eval_interval=FLAGS.eval_interval)
+  ppo_clip_train_eval(FLAGS.root_dir,
+                      num_iterations=FLAGS.num_iterations,
+                      reverb_port=FLAGS.reverb_port,
+                      eval_interval=FLAGS.eval_interval)
 
 
 if __name__ == '__main__':

@@ -63,7 +63,7 @@ def train_eval(
     value_pred_loss_coef=0.5,
     use_gae=True,
     use_td_lambda_return=True,
-    gradient_clipping=None,
+    gradient_clipping=0.5,
     value_clipping=None,
     # Replay params
     reverb_port=None,
@@ -300,7 +300,7 @@ def train_eval(
 
     eval_actor.run_and_log()
 
-  logging.info('Training.')
+  logging.info('Training on %s', env_name)
   last_eval_step = 0
   for i in range(num_iterations):
     collect_actor.run()
