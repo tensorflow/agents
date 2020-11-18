@@ -47,6 +47,8 @@ class LinearUCBAgent(lin_agent.LinearBanditAgent):
   def __init__(self,
                time_step_spec: types.TimeStep,
                action_spec: types.BoundedTensorSpec,
+               variable_collection: Optional[
+                   lin_agent.LinearBanditVariableCollection] = None,
                alpha: float = 1.0,
                gamma: float = 1.0,
                use_eigendecomp: bool = False,
@@ -68,6 +70,9 @@ class LinearUCBAgent(lin_agent.LinearBanditAgent):
       time_step_spec: A `TimeStep` spec describing the expected `TimeStep`s.
       action_spec: A scalar `BoundedTensorSpec` with `int32` or `int64` dtype
         describing the number of actions for this agent.
+      variable_collection: Instance of `LinearBanditVariableCollection`.
+        Collection of variables to be updated by the agent. If `None`, a new
+        instance of `LinearBanditVariableCollection` will be created.
       alpha: (float) positive scalar. This is the exploration parameter that
         multiplies the confidence intervals.
       gamma: a float forgetting factor in [0.0, 1.0]. When set to
@@ -108,6 +113,7 @@ class LinearUCBAgent(lin_agent.LinearBanditAgent):
         exploration_policy=lin_agent.ExplorationPolicy.linear_ucb_policy,
         time_step_spec=time_step_spec,
         action_spec=action_spec,
+        variable_collection=variable_collection,
         alpha=alpha,
         gamma=gamma,
         use_eigendecomp=use_eigendecomp,

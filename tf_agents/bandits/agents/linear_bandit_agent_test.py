@@ -26,7 +26,9 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
+from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
+from tf_agents.bandits.agents import linear_thompson_sampling_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.policies import policy_utilities
@@ -793,6 +795,38 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     checkpoint_load_status = checkpoint.restore(latest_checkpoint)
     self.evaluate(checkpoint_load_status.initialize_or_restore())
     self.assertEqual(self.evaluate(variable_collection.num_samples_list[2]), 0)
+
+  def testUCBandThompsonSamplingShareVariables(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Test only works in eager mode.')
+    context_dim = 9
+    num_actions = 4
+    batch_size = 7
+    variable_collection = linear_agent.LinearBanditVariableCollection(
+        context_dim=context_dim, num_models=num_actions)
+    observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    ucb_agent = lin_ucb_agent.LinearUCBAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        variable_collection=variable_collection)
+    ts_agent = linear_thompson_sampling_agent.LinearThompsonSamplingAgent(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        variable_collection=variable_collection)
+    initial_step, final_step = _get_initial_and_final_steps(
+        batch_size, context_dim)
+    action = np.random.randint(num_actions, size=batch_size, dtype=np.int32)
+    action_step = _get_action_step(action)
+    experience = _get_experience(initial_step, action_step, final_step)
+    self.evaluate(ucb_agent.train(experience))
+    self.assertAllEqual(ucb_agent._variable_collection.cov_matrix_list[0],
+                        ts_agent._variable_collection.cov_matrix_list[0])
+    self.evaluate(ts_agent.train(experience))
+    self.assertAllEqual(ucb_agent._variable_collection.data_vector_list[0],
+                        ts_agent._variable_collection.data_vector_list[0])
 
 
 if __name__ == '__main__':
