@@ -754,7 +754,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     # Create the wrapper with list of observations to keep before packing it
     # into one dimension.
     env = wrappers.FlattenObservationsWrapper(
-        env, observations_whitelist=observations_to_keep)
+        env, observations_allowlist=observations_to_keep)
     time_step = env.step(
         array_spec.sample_bounded_spec(action_spec, np.random.RandomState()))
     # The expected shape is the sum of observation lengths in the observation
@@ -793,7 +793,7 @@ class FlattenObservationsWrapper(parameterized.TestCase):
 
   @parameterized.parameters(([array_spec.ArraySpec((1,), np.int32)],),
                             array_spec.ArraySpec((1,), np.int32))
-  def test_observations_wrong_spec_for_whitelist(self, observation_spec):
+  def test_observations_wrong_spec_for_allowlist(self, observation_spec):
     """Test the Wrapper has ValueError if the observation spec is invalid."""
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
@@ -803,9 +803,9 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     # into one dimension.
     with self.assertRaises(ValueError):
       env = wrappers.FlattenObservationsWrapper(
-          env, observations_whitelist=['obs1'])
+          env, observations_allowlist=['obs1'])
 
-  def test_observations_unknown_whitelist(self):
+  def test_observations_unknown_allowlist(self):
     """Test the Wrapper has ValueError if given unknown keys."""
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
@@ -818,11 +818,11 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     env = random_py_environment.RandomPyEnvironment(
         obs_spec, action_spec=action_spec)
 
-    whitelist_unknown_keys = ['obs1', 'obs4']
+    allowlist_unknown_keys = ['obs1', 'obs4']
 
     with self.assertRaises(ValueError):
       env = wrappers.FlattenObservationsWrapper(
-          env, observations_whitelist=whitelist_unknown_keys)
+          env, observations_allowlist=allowlist_unknown_keys)
 
   def test_observations_multiple_dtypes(self):
     """Test the Wrapper has ValueError if given unknown keys."""

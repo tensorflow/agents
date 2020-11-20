@@ -542,12 +542,12 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
 
   def __init__(self,
                env: py_environment.PyEnvironment,
-               observations_whitelist: Optional[Sequence[Text]] = None):
+               observations_allowlist: Optional[Sequence[Text]] = None):
     """Initializes a wrapper to flatten environment observations.
 
     Args:
       env: A `py_environment.PyEnvironment` environment to wrap.
-      observations_whitelist: A list of observation keys that want to be
+      observations_allowlist: A list of observation keys that want to be
         observed from the environment.  All other observations returned are
         filtered out.  If not provided, all observations will be kept.
         Additionally, if this is provided, the environment is expected to return
@@ -555,29 +555,29 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
 
     Raises:
       ValueError: If the current environment does not return a dictionary of
-        observations and observations whitelist is provided.
-      ValueError: If the observation whitelist keys are not found in the
+        observations and observations_allowlist is provided.
+      ValueError: If the observation_allowlist keys are not found in the
         environment.
     """
     super(FlattenObservationsWrapper, self).__init__(env)
 
-    # If observations whitelist is provided:
+    # If observations allowlist is provided:
     #  Check that the environment returns a dictionary of observations.
-    #  Check that the set of whitelist keys is a found in the environment keys.
-    if observations_whitelist is not None:
+    #  Check that the set of allowed keys is a found in the environment keys.
+    if observations_allowlist is not None:
       if not isinstance(env.observation_spec(), dict):
         raise ValueError(
-            'If you provide an observations whitelist, the current environment '
+            'If you provide an observations allowlist, the current environment '
             'must return a dictionary of observations! The returned observation'
             ' spec is type %s.' % (type(env.observation_spec())))
 
-      # Check that observation whitelist keys are valid observation keys.
-      if not (set(observations_whitelist).issubset(
+      # Check that observation allowlist keys are valid observation keys.
+      if not (set(observations_allowlist).issubset(
           env.observation_spec().keys())):
         raise ValueError(
-            'The observation whitelist contains keys not found in the '
+            'The observation allowlist contains keys not found in the '
             'environment! Unknown keys: %s' % list(
-                set(observations_whitelist).difference(
+                set(observations_allowlist).difference(
                     env.observation_spec().keys())))
 
     # Check that all observations have the same dtype. This dtype will be used
@@ -590,10 +590,10 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     inferred_spec_dtype = env_dtypes[0]
 
     self._observation_spec_dtype = inferred_spec_dtype
-    self._observations_whitelist = observations_whitelist
+    self._observations_allowlist = observations_allowlist
     # Update the observation spec in the environment.
     observations_spec = env.observation_spec()
-    if self._observations_whitelist is not None:
+    if self._observations_allowlist is not None:
       observations_spec = self._filter_observations(observations_spec)
 
     # Compute the observation length after flattening the observation items and
@@ -619,10 +619,10 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
 
     Returns:
       A nested dict of arrays corresponding to `observation_spec()` with only
-        observation keys in the observation whitelist.
+        observation keys in the observation allowlist.
     """
     filter_out = set(observations.keys()).difference(
-        self._observations_whitelist)
+        self._observations_allowlist)
     # Remove unwanted keys from the observation list.
     for filter_key in filter_out:
       del observations[filter_key]
@@ -646,7 +646,7 @@ class FlattenObservationsWrapper(PyEnvironmentBaseWrapper):
     # We can't set attribute to the TimeStep tuple, so we make a copy of the
     # observations.
     observations = timestep.observation
-    if self._observations_whitelist is not None:
+    if self._observations_allowlist is not None:
       observations = self._filter_observations(observations)
 
     return ts.TimeStep(

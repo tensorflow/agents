@@ -72,7 +72,7 @@ def train_eval(
     root_dir,
     env_name='cartpole',
     task_name='balance',
-    observations_whitelist='position',
+    observations_allowlist='position',
     eval_env_name=None,
     num_iterations=1000000,
     # Params for networks.
@@ -132,11 +132,11 @@ def train_eval(
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
-    if observations_whitelist is not None:
+    if observations_allowlist is not None:
       env_wrappers = [
           functools.partial(
               wrappers.FlattenObservationsWrapper,
-              observations_whitelist=[observations_whitelist])
+              observations_allowlist=[observations_allowlist])
       ]
     else:
       env_wrappers = []
