@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@
 """A REINFORCE Agent.
 
 Implements the REINFORCE algorithm from (Williams, 1992):
-http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
+https://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -122,7 +122,7 @@ class ReinforceAgent(tf_agent.TFAgent):
   "Simple statistical gradient-following algorithms for connectionist
   reinforcement learning"
   Williams, R.J., 1992.
-  http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
+  https://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 
   REINFORCE with state-value baseline, where state-values are estimated with
   function approximation, from

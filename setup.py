@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -256,7 +256,7 @@ def run_setup():
       long_description_content_type='text/markdown',
       author='Google LLC',
       author_email='no-reply@google.com',
-      url='http://github.com/tensorflow/agents',
+      url='https://github.com/tensorflow/agents',
       license='Apache 2.0',
       include_package_data=True,
       packages=find_packages(),

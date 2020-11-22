@@ -26,7 +26,7 @@ ARG mujoco_license=mjkey.txt
 
 # Add google-cloud-sdk to the source list
 # Nightly tests are on google cloud and need the SDK.
-RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-$(lsb_release -c -s) main" | \
+RUN echo "deb https://packages.cloud.google.com/apt cloud-sdk-$(lsb_release -c -s) main" | \
   tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
