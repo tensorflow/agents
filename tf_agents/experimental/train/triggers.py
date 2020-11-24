@@ -98,14 +98,20 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
     greedy_policy_saver = self._build_saver(greedy)
     self._raw_policy_saver = self._build_saver(greedy.wrapped_policy)
 
-    # Save initial saved_model. These can be updated from the
-    # policy_checkpoints.
-    collect_policy_saver.save(
-        os.path.join(saved_model_dir, learner.COLLECT_POLICY_SAVED_MODEL_DIR))
-    greedy_policy_saver.save(
-        os.path.join(saved_model_dir, learner.GREEDY_POLICY_SAVED_MODEL_DIR))
-    self._raw_policy_saver.save(
-        os.path.join(saved_model_dir, learner.RAW_POLICY_SAVED_MODEL_DIR))
+    # Save initial saved_model if they do not exist yet. These can be updated
+    # from the policy_checkpoints.
+    raw_policy_specs_path = os.path.join(saved_model_dir,
+                                         learner.RAW_POLICY_SAVED_MODEL_DIR,
+                                         'policy_specs.pbtxt')
+    # TODO(b/173815037): Use a TF-Agents util to check for whether a saved
+    # policy already exists.
+    if not tf.io.gfile.exists(raw_policy_specs_path):
+      collect_policy_saver.save(
+          os.path.join(saved_model_dir, learner.COLLECT_POLICY_SAVED_MODEL_DIR))
+      greedy_policy_saver.save(
+          os.path.join(saved_model_dir, learner.GREEDY_POLICY_SAVED_MODEL_DIR))
+      self._raw_policy_saver.save(
+          os.path.join(saved_model_dir, learner.RAW_POLICY_SAVED_MODEL_DIR))
 
     self._checkpoint_dir = os.path.join(saved_model_dir,
                                         learner.POLICY_CHECKPOINT_DIR)
