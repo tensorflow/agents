@@ -18,9 +18,9 @@
 
 import os
 
+from absl import logging
 import gin
 import tensorflow.compat.v2 as tf
-
 from tf_agents.experimental.train import interval_trigger
 from tf_agents.utils import common
 
@@ -84,9 +84,11 @@ class Learner(tf.Module):
         as an np scalar.
       checkpoint_interval: Number of train steps in between checkpoints. Note
         these are placed into triggers and so a check to generate a checkpoint
-        only occurs after every `run` call. Set to -1 to disable.  This only
-        takes care of the checkpointing the training process.  Policies must be
-        explicitly exported through triggers
+        only occurs after every `run` call. Set to -1 to disable (this is not
+        recommended, because it means that if the pipeline gets preempted, all
+        previous progress is lost). This only takes care of the checkpointing
+        the training process.  Policies must be explicitly exported through
+        triggers.
       summary_interval: Number of train steps in between summaries. Note these
         are placed into triggers and so a check to generate a checkpoint only
         occurs after every `run` call.
@@ -98,6 +100,13 @@ class Learner(tf.Module):
         is useful if you have an agent with a custom argspec.
       strategy: (Optional) `tf.distribute.Strategy` to use during training.
     """
+    if checkpoint_interval < 0:
+      logging.warning(
+          'Warning: checkpointing the training process is manually disabled.'
+          'This means training progress will NOT be automatically restored '
+          'if the job gets preempted.'
+      )
+
     self._train_dir = os.path.join(root_dir, TRAIN_DIR)
     self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
         self._train_dir, flush_millis=10000)

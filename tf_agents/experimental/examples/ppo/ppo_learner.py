@@ -130,9 +130,11 @@ class PPOLearner(object):
         as an np scalar.
       checkpoint_interval: Number of train steps in between checkpoints. Note
         these are placed into triggers and so a check to generate a checkpoint
-        only occurs after every `run` call. Set to -1 to disable.  This only
-        takes care of the checkpointing the training process.  Policies must be
-        explicitly exported through triggers
+        only occurs after every `run` call. Set to -1 to disable (this is not
+        recommended, because it means that if the pipeline gets preempted, all
+        previous progress is lost). This only takes care of the checkpointing
+        the training process.  Policies must be explicitly exported through
+        triggers.
       summary_interval: Number of train steps in between summaries. Note these
         are placed into triggers and so a check to generate a checkpoint only
         occurs after every `run` call.
