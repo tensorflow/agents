@@ -17,33 +17,15 @@
 from __future__ import absolute_import
 # Using Type Annotations.
 
-import csv
 import random
 from typing import Text
 import gin
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.environments import bandit_py_environment
+from tf_agents.bandits.environments import dataset_utilities
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
-
-
-_MAX_NUM_ACTIONS = 1682
-_NUM_USERS = 943
-
-
-def load_movielens_data(data_file: Text) -> np.array:
-  """Loads the movielens data and returns the ratings matrix."""
-  ratings_matrix = np.zeros([_NUM_USERS, _MAX_NUM_ACTIONS])
-  with tf.io.gfile.GFile(data_file, 'r') as infile:
-    reader = csv.reader(infile)
-    for row in reader:
-      user_id = int(row[0])
-      item_id = int(row[1])
-      rating = float(row[2])
-      ratings_matrix[user_id - 1, item_id - 1] = rating
-  return ratings_matrix
 
 
 @gin.configurable
@@ -73,14 +55,15 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
       data_dir: (string) Directory where the data lies (in text form).
       rank_k : (int) Which rank to use in the matrix factorization.
       batch_size: (int) Number of observations generated per call.
-      num_movies: (int) How many movies to use.
+      num_movies: (int) Only the first `num_movies` movies will be used by the
+        environment. The rest is cut out from the data.
     """
     self._num_actions = num_movies
     self._batch_size = batch_size
     self._context_dim = rank_k
 
     # Compute the matrix factorization.
-    self._data_matrix = load_movielens_data(data_dir)
+    self._data_matrix = dataset_utilities.load_movielens_data(data_dir)
     # Keep only the first items.
     self._data_matrix = self._data_matrix[:, :num_movies]
     # Filter the users with no iterm rated.

@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import csv
 import gin
 import numpy as np
 
@@ -28,6 +29,10 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions
+
+
+MOVIELENS_NUM_USERS = 943
+MOVIELENS_NUM_MOVIES = 1682
 
 
 def _validate_mushroom_data(numpy_data):
@@ -143,3 +148,16 @@ def convert_covertype_dataset(file_path, buffer_size=40000):
   label_tensor = tf.cast(labels, tf.int32)
   return tf.data.Dataset.from_tensor_slices(
       (context_tensor, label_tensor)).repeat().shuffle(buffer_size=buffer_size)
+
+
+def load_movielens_data(data_file):
+  """Loads the movielens data and returns the ratings matrix."""
+  ratings_matrix = np.zeros([MOVIELENS_NUM_USERS, MOVIELENS_NUM_MOVIES])
+  with tf.io.gfile.GFile(data_file, 'r') as infile:
+    # The file is a csv with rows containing:
+    # user id | item id | rating | timestamp
+    reader = csv.reader(infile)
+    for row in reader:
+      user_id, item_id, rating, _ = row
+      ratings_matrix[int(user_id) - 1, int(item_id) - 1] = float(rating)
+  return ratings_matrix
