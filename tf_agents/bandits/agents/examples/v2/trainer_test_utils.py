@@ -30,6 +30,7 @@ from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.environments import environment_utilities
 from tf_agents.bandits.environments import stationary_stochastic_py_environment
 from tf_agents.bandits.environments import wheel_py_environment
+from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.policies import policy_utilities
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
@@ -107,28 +108,42 @@ def get_agent_by_name(agent_name, time_step_spec, action_spec):
   Returns:
     The desired agent.
   """
+  accepts_per_arm_features = isinstance(
+      time_step_spec.observation,
+      dict) and 'per_arm' in time_step_spec.observation
   if agent_name == 'LinUCB':
     return lin_ucb_agent.LinearUCBAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        dtype=tf.float32)
+        dtype=tf.float32,
+        accepts_per_arm_features=accepts_per_arm_features)
   elif agent_name == 'LinTS':
     return lin_ts_agent.LinearThompsonSamplingAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        dtype=tf.float32)
+        dtype=tf.float32,
+        accepts_per_arm_features=accepts_per_arm_features)
   elif agent_name == 'epsGreedy':
-    network = q_network.QNetwork(
-        input_tensor_spec=time_step_spec.observation,
-        action_spec=action_spec,
-        fc_layer_params=(50, 50, 50))
+    if accepts_per_arm_features:
+      network = (
+          global_and_arm_feature_network
+          .create_feed_forward_common_tower_network(time_step_spec.observation,
+                                                    (20, 20), (20, 20),
+                                                    (20, 20)))
+    else:
+      network = q_network.QNetwork(
+          input_tensor_spec=time_step_spec.observation,
+          action_spec=action_spec,
+          fc_layer_params=(50, 50, 50))
     return neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
-        epsilon=0.1)
+        epsilon=0.1,
+        accepts_per_arm_features=accepts_per_arm_features)
   elif agent_name == 'mix':
+    assert not accepts_per_arm_features, 'Per-arm mixture agent not supported.'
     emit_policy_info = (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,)
     network = q_network.QNetwork(
         input_tensor_spec=time_step_spec.observation,
@@ -162,5 +177,3 @@ def get_agent_by_name(agent_name, time_step_spec, action_spec):
         epsilon=0.5)
     return exp3_mixture_agent.Exp3MixtureAgent(
         (agent_epsgreedy, agent_linucb, agent_random, agent_halfrandom))
-
-

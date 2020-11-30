@@ -31,8 +31,10 @@ from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_ag
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent as eps_greedy_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import environment_utilities
+from tf_agents.bandits.environments import movielens_per_arm_py_environment
 from tf_agents.bandits.environments import movielens_py_environment
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
+from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
 
@@ -44,6 +46,8 @@ flags.DEFINE_enum(
     'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'DropoutTS'],
     'Which agent to use. Possible values: `LinUCB`, `LinTS`, `epsGreedy`,'
     ' `DropoutTS`.')
+flags.DEFINE_bool('per_arm', False, 'Whether to  use the per arm version of the'
+                  ' movielens environment.')
 
 FLAGS = flags.FLAGS
 
@@ -52,6 +56,7 @@ TRAINING_LOOPS = 20000
 STEPS_PER_LOOP = 2
 
 RANK_K = 20
+NUM_ACTIONS = 20
 
 # LinUCB agent constants.
 
@@ -73,8 +78,12 @@ def main(unused_argv):
   data_path = FLAGS.data_path
   if not data_path:
     raise ValueError('Please specify the location of the data file.')
-  env = movielens_py_environment.MovieLensPyEnvironment(
-      data_path, RANK_K, BATCH_SIZE, num_movies=20)
+  if FLAGS.per_arm:
+    env = movielens_per_arm_py_environment.MovieLensPerArmPyEnvironment(
+        data_path, RANK_K, BATCH_SIZE, num_actions=NUM_ACTIONS)
+  else:
+    env = movielens_py_environment.MovieLensPyEnvironment(
+        data_path, RANK_K, BATCH_SIZE, num_movies=NUM_ACTIONS)
   environment = tf_py_environment.TFPyEnvironment(env)
 
   optimal_reward_fn = functools.partial(
@@ -91,17 +100,27 @@ def main(unused_argv):
         action_spec=environment.action_spec(),
         tikhonov_weight=0.001,
         alpha=AGENT_ALPHA,
-        dtype=tf.float32)
+        dtype=tf.float32,
+        accepts_per_arm_features=FLAGS.per_arm)
   elif FLAGS.agent == 'LinTS':
     agent = lin_ts_agent.LinearThompsonSamplingAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
-        dtype=tf.float32)
+        dtype=tf.float32,
+        accepts_per_arm_features=FLAGS.per_arm)
   elif FLAGS.agent == 'epsGreedy':
-    network = q_network.QNetwork(
-        input_tensor_spec=environment.time_step_spec().observation,
-        action_spec=environment.action_spec(),
-        fc_layer_params=LAYERS)
+    if FLAGS.per_arm:
+      network = (
+          global_and_arm_feature_network
+          .create_feed_forward_dot_product_network(
+              environment.time_step_spec().observation,
+              global_layers=LAYERS,
+              arm_layers=LAYERS))
+    else:
+      network = q_network.QNetwork(
+          input_tensor_spec=environment.time_step_spec().observation,
+          action_spec=environment.action_spec(),
+          fc_layer_params=LAYERS)
     agent = eps_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
