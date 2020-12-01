@@ -40,7 +40,7 @@ from tf_agents.utils import nest_utils
 tfd = tfp.distributions
 
 
-@gin.configurable(module='tf_agents', blacklist=['policy'])
+@gin.configurable(module='tf_agents', denylist=['policy'])
 class EpsilonGreedyPolicy(tf_policy.TFPolicy):
   """Returns epsilon-greedy samples of a given policy."""
 

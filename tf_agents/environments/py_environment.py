@@ -51,7 +51,7 @@ class PyEnvironment(object):
   def __init__(self):
     self._current_time_step = None
     common.assert_members_are_not_overridden(
-        base_cls=PyEnvironment, instance=self, black_list=('reset', 'step'))
+        base_cls=PyEnvironment, instance=self, denylist=('reset', 'step'))
 
   @property
   def batched(self) -> bool:

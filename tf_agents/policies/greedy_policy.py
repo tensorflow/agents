@@ -39,7 +39,7 @@ class DeterministicWithLogProb(tfp.distributions.Deterministic):
     return tf.math.log(tf.cast(self.prob(x), dtype=tf.float32))
 
 
-@gin.configurable(module='tf_agents', blacklist=['policy'])
+@gin.configurable(module='tf_agents', denylist=['policy'])
 class GreedyPolicy(tf_policy.TFPolicy):
   """Returns greedy samples of a given policy."""
 
