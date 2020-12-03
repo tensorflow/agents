@@ -29,6 +29,7 @@ port number:
 ```
   python tf_agents/experimental/distributed/examples/sac/sac_train.py -- \
   --root_dir=/tmp/sac_train/ \
+  --gin_bindings='train.environment_name="HalfCheetah-v2"' \
   --gin_bindings='train.learning_rate=0.0003' \
   --replay_buffer_server_address=localhost:8008 \
   --variable_container_server_address=localhost:8008 \

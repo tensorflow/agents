@@ -31,7 +31,6 @@ import tensorflow.compat.v2 as tf
 from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.experimental.train import learner
 from tf_agents.experimental.train.utils import train_utils
-from tf_agents.policies import py_tf_eager_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.specs import tensor_spec
 
@@ -56,28 +55,15 @@ _SAMPLES_PER_INSERT_TOLERANCE_RATIO = 0.1
 def main(_):
   logging.set_verbosity(logging.INFO)
 
-  # Create the path for the serialized collect policy.
-  collect_policy_saved_model_path = os.path.join(
-      FLAGS.root_dir, learner.POLICY_SAVED_MODEL_DIR,
-      learner.COLLECT_POLICY_SAVED_MODEL_DIR)
-  saved_model_pb_path = os.path.join(collect_policy_saved_model_path,
-                                     'saved_model.pb')
+  # Wait for the collect policy to become available, then load it.
+  collect_policy_dir = os.path.join(FLAGS.root_dir,
+                                    learner.POLICY_SAVED_MODEL_DIR,
+                                    learner.COLLECT_POLICY_SAVED_MODEL_DIR)
+  collect_policy = train_utils.wait_for_policy(
+      collect_policy_dir, load_specs_from_pbtxt=True)
 
   samples_per_insert = FLAGS.samples_per_insert
   min_table_size_before_sampling = FLAGS.min_table_size_before_sampling
-
-  try:
-    # Wait for the collect policy to be outputed by learner (timeout after 2
-    # days), then load it.
-    train_utils.wait_for_file(
-        saved_model_pb_path, sleep_time_secs=2, num_retries=86400)
-    collect_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
-        collect_policy_saved_model_path, load_specs_from_pbtxt=True)
-  except TimeoutError as e:
-    # If the collect policy does not become available during the wait time of
-    # the call `wait_for_file`, that probably means the learner is not running.
-    logging.error('Could not get the file %s. Exiting.', saved_model_pb_path)
-    raise e
 
   # Create the signature for the variable container holding the policy weights.
   train_step = train_utils.create_train_step()
@@ -97,7 +83,8 @@ def main(_):
 
   if samples_per_insert is not None:
     # Use SamplesPerInsertRatio limiter
-    samples_per_insert_tolerance = _SAMPLES_PER_INSERT_TOLERANCE_RATIO * samples_per_insert
+    samples_per_insert_tolerance = (
+        _SAMPLES_PER_INSERT_TOLERANCE_RATIO * samples_per_insert)
     error_buffer = min_table_size_before_sampling * samples_per_insert_tolerance
 
     experience_rate_limiter = reverb.rate_limiters.SampleToInsertRatio(

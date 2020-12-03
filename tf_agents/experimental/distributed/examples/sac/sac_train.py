@@ -20,6 +20,7 @@ See README for launch instructions.
 """
 
 import os
+from typing import Callable, Text
 
 from absl import app
 from absl import flags
@@ -28,10 +29,11 @@ from absl import logging
 import gin
 import tensorflow.compat.v2 as tf
 
+from tf_agents.agents import tf_agent
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import sac_agent
 from tf_agents.agents.sac import tanh_normal_projection_network
-
+from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.experimental.train import learner
@@ -42,6 +44,8 @@ from tf_agents.experimental.train.utils import train_utils
 from tf_agents.networks import actor_distribution_network
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
@@ -49,16 +53,17 @@ flags.DEFINE_string('replay_buffer_server_address', None,
                     'Replay buffer server address.')
 flags.DEFINE_string('variable_container_server_address', None,
                     'Variable container server address.')
-flags.DEFINE_integer('num_iterations', 100000,
-                     'Total number train/eval iterations to perform.')
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
 FLAGS = flags.FLAGS
 
 
-def _create_agent(train_step, observation_tensor_spec, action_tensor_spec,
-                  time_step_tensor_spec, learning_rate):
+def _create_agent(train_step: tf.Variable,
+                  observation_tensor_spec: types.NestedTensorSpec,
+                  action_tensor_spec: types.NestedTensorSpec,
+                  time_step_tensor_spec: ts.TimeStep,
+                  learning_rate: float) -> tf_agent.TFAgent:
   """Creates an agent."""
   critic_net = critic_network.CriticNetwork(
       (observation_tensor_spec, action_tensor_spec),
@@ -97,31 +102,31 @@ def _create_agent(train_step, observation_tensor_spec, action_tensor_spec,
 
 @gin.configurable
 def train(
-    root_dir,
-    strategy,
-    replay_buffer_server_address,
-    variable_container_server_address,
-    create_agent_fn,
-    create_env_fn,
+    root_dir: Text,
+    strategy: tf.distribute.Strategy,
+    replay_buffer_server_address: Text,
+    variable_container_server_address: Text,
+    environment_name: Text,
+    suite_load_fn: Callable[[Text],
+                            py_environment.PyEnvironment] = suite_mujoco.load,
     # Training params
-    learning_rate=3e-4,
-    batch_size=256,
-    num_iterations=32000,
-    learner_iterations_per_call=100):
+    learning_rate: float = 3e-4,
+    batch_size: int = 256,
+    num_iterations: int = 10000000,
+    learner_iterations_per_call: int = 1) -> None:
   """Trains a DQN agent."""
   # Get the specs from the environment.
   logging.info('Training SAC with learning rate: %f', learning_rate)
-  env = create_env_fn()
+  env = suite_load_fn(environment_name)
   observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
       spec_utils.get_tensor_specs(env))
 
   # Create the agent.
   with strategy.scope():
     train_step = train_utils.create_train_step()
-    agent = create_agent_fn(train_step, observation_tensor_spec,
-                            action_tensor_spec, time_step_tensor_spec,
-                            learning_rate)
-    agent.initialize()
+    agent = _create_agent(train_step, observation_tensor_spec,
+                          action_tensor_spec, time_step_tensor_spec,
+                          learning_rate=learning_rate)
 
   # Create the policy saver which saves the initial model now, then it
   # periodically checkpoints the policy weigths.
@@ -181,14 +186,11 @@ def main(_):
   strategy = strategy_utils.get_strategy(FLAGS.tpu, FLAGS.use_gpu)
 
   train(
-      FLAGS.root_dir,
-      strategy,
+      root_dir=FLAGS.root_dir,
+      strategy=strategy,
       replay_buffer_server_address=FLAGS.replay_buffer_server_address,
       variable_container_server_address=FLAGS.variable_container_server_address,
-      create_agent_fn=_create_agent,
-      create_env_fn=lambda: suite_mujoco.load('HalfCheetah-v2'),
-      num_iterations=FLAGS.num_iterations,
-  )
+      environment_name=gin.REQUIRED)
 
 
 if __name__ == '__main__':
