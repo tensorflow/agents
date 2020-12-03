@@ -13,8 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
-"""Utils for processing specs."""
-
-from tf_agents.train.utils.spec_utils import *  # pylint:disable=wildcard-import
-

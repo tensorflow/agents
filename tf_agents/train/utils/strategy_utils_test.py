@@ -14,12 +14,12 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Tests for tf_agents.experimental.train.strategy_utils."""
+"""Tests for tf_agents.train.strategy_utils."""
 
 from absl.testing.absltest import mock
 import tensorflow.compat.v2 as tf
 
-from tf_agents.experimental.train.utils import strategy_utils
+from tf_agents.train.utils import strategy_utils
 from tf_agents.utils import test_utils
 
 

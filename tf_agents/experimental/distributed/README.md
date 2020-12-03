@@ -50,7 +50,7 @@ Similar to the Replay Buffer, we use [Reverb](https://github.com/deepmind/reverb
 to implement the variable container. Below is an example of creating a variable
 container, both the Actor and Learner use the same code to create the container.
 Note that this requires an instance of a reverb server, you can take a look at
-how a local server (that runs in the same binary) is constructed in the [train/README.md](https://github.com/tensorflow/agents/blob/master/tf_agents/experimental/train/README.md)
+how a local server (that runs in the same binary) is constructed in the [train/README.md](https://github.com/tensorflow/agents/blob/master/tf_agents/train/README.md)
 
 For distributed setup, we can run a separate instance of the Reverb server
 serving both the replay buffer and variable container tables. Here is an example

@@ -33,15 +33,15 @@ import tensorflow.compat.v2 as tf
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.distributed import reverb_variable_container
-from tf_agents.experimental.train import actor
-from tf_agents.experimental.train import learner
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train import actor
+from tf_agents.train import learner
+from tf_agents.train.utils import train_utils
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

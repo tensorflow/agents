@@ -22,9 +22,9 @@ import tensorflow.compat.v2 as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent
-from tf_agents.experimental.train import learner
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
+from tf_agents.train import learner
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils

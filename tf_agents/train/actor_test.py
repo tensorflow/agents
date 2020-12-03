@@ -26,14 +26,14 @@ import tensorflow.compat.v2 as tf  # pylint: disable=g-explicit-tensorflow-versi
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import suite_gym
-from tf_agents.experimental.train import actor
-from tf_agents.experimental.train.utils import replay_buffer_utils
-from tf_agents.experimental.train.utils import spec_utils
-from tf_agents.experimental.train.utils import test_utils as dist_test_utils
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train import actor
+from tf_agents.train.utils import replay_buffer_utils
+from tf_agents.train.utils import spec_utils
+from tf_agents.train.utils import test_utils as dist_test_utils
+from tf_agents.train.utils import train_utils
 from tf_agents.utils import test_utils
 
 

@@ -16,4 +16,29 @@
 # Lint as: python3
 """Utility class to keep track of global training steps per second."""
 
-from tf_agents.train.step_per_second_tracker import *  # pylint:disable=wildcard-import
+import time
+
+
+class StepPerSecondTracker(object):
+  """Utility class for measuring steps/second."""
+
+  def __init__(self, step):
+    """Creates an instance of the StepPerSecondTracker.
+
+    Args:
+      step: `tf.Variable` holding the current value for the number of train
+        steps.
+    """
+    self.step = step
+    self.last_iteration = 0
+    self.last_time = 0
+    self.restart()
+
+  def restart(self):
+    self.last_iteration = self.step.numpy()
+    self.last_time = time.time()
+
+  def steps_per_second(self):
+    value = ((self.step.numpy() - self.last_iteration) /
+             (time.time() - self.last_time))
+    return value

@@ -14,11 +14,11 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Tests for tf_agents.experimental.train.utils.spec_utils."""
+"""Tests for tf_agents.train.utils.spec_utils."""
 
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import suite_gym
-from tf_agents.experimental.train.utils import spec_utils
+from tf_agents.train.utils import spec_utils
 from tf_agents.utils import test_utils
 
 

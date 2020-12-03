@@ -29,10 +29,10 @@ import reverb
 import tensorflow.compat.v2 as tf
 
 from tf_agents.experimental.distributed import reverb_variable_container
-from tf_agents.experimental.train import learner
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.specs import tensor_spec
+from tf_agents.train import learner
+from tf_agents.train.utils import train_utils
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

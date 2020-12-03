@@ -25,9 +25,9 @@ import reverb
 
 import tensorflow as tf
 
-from tf_agents.experimental.train.utils import test_utils as dist_test_utils
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train.utils import test_utils as dist_test_utils
+from tf_agents.train.utils import train_utils
 from tf_agents.utils import test_utils
 
 _CPUS = ('/cpu:0', '/cpu:1', '/cpu:2', '/cpu:3')

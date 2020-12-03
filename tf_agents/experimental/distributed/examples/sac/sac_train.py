@@ -36,14 +36,14 @@ from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.distributed import reverb_variable_container
-from tf_agents.experimental.train import learner
-from tf_agents.experimental.train import triggers
-from tf_agents.experimental.train.utils import spec_utils
-from tf_agents.experimental.train.utils import strategy_utils
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.networks import actor_distribution_network
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train import learner
+from tf_agents.train import triggers
+from tf_agents.train.utils import spec_utils
+from tf_agents.train.utils import strategy_utils
+from tf_agents.train.utils import train_utils
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 

@@ -39,11 +39,6 @@ import tensorflow.compat.v2 as tf
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import suite_gym
-from tf_agents.experimental.train import actor
-from tf_agents.experimental.train import learner
-from tf_agents.experimental.train import triggers
-from tf_agents.experimental.train.utils import spec_utils
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import q_network
 from tf_agents.policies import py_tf_eager_policy
@@ -51,6 +46,11 @@ from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train import actor
+from tf_agents.train import learner
+from tf_agents.train import triggers
+from tf_agents.train.utils import spec_utils
+from tf_agents.train.utils import train_utils
 from tf_agents.utils import common
 
 FLAGS = flags.FLAGS

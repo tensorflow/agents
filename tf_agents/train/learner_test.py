@@ -30,10 +30,10 @@ import tensorflow.compat.v2 as tf  # pylint: disable=g-explicit-tensorflow-versi
 
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
-from tf_agents.experimental.train import learner
-from tf_agents.experimental.train.utils import test_utils as dist_test_utils
-from tf_agents.experimental.train.utils import train_utils
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train import learner
+from tf_agents.train.utils import test_utils as dist_test_utils
+from tf_agents.train.utils import train_utils
 from tf_agents.utils import test_utils
 
 
