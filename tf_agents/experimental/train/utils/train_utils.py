@@ -16,6 +16,7 @@
 # Lint as: python3
 """Utils for distributed training using Actor/Learner API."""
 
+import os
 import time
 from typing import Callable, Text, Tuple
 
@@ -24,11 +25,18 @@ from absl import logging
 import tensorflow.compat.v2 as tf
 
 from tf_agents.agents import tf_agent
+from tf_agents.policies import py_tf_eager_policy
 from tf_agents.typing import types
 from tf_agents.utils import lazy_loader
 
 # Lazy loading since not all users have the reverb package installed.
 reverb = lazy_loader.LazyLoader('reverb', globals(), 'reverb')
+
+# By default the implementation of wait functions blocks with relatively large
+# number of frequent retries assuming that the event usually happens soon, but
+# occasionally takes longer.
+_WAIT_DEFAULT_SLEEP_TIME_SECS = 1
+_WAIT_DEFAULT_NUM_RETRIES = 60 * 60 * 24  # 1 day
 
 
 def create_train_step() -> tf.Variable:
@@ -106,10 +114,49 @@ def create_staleness_metrics_after_train_step_fn(
   return after_train_step_fn
 
 
+def wait_for_policy(
+    policy_dir: Text,
+    sleep_time_secs: int = _WAIT_DEFAULT_SLEEP_TIME_SECS,
+    num_retries: int = _WAIT_DEFAULT_NUM_RETRIES,
+    **saved_model_policy_args) -> py_tf_eager_policy.PyTFEagerPolicyBase:
+  """Blocks until the policy in `policy_dir` becomes available.
+
+  The default setting allows a fairly loose, but not infinite wait time of one
+  days for this function to block checking the `policy_dir` in every seconds.
+
+  Args:
+    policy_dir: The directory containing the policy files.
+    sleep_time_secs: Number of time in seconds slept between retries.
+    num_retries: Number of times the existence of the file is checked.
+    **saved_model_policy_args: Additional keyword arguments passed directly to
+      the `SavedModelPyTFEagerPolicy` policy constructor which loads the policy
+      from `policy_dir` once the policy becomes available.
+
+  Returns:
+    The policy loaded from the `policy_dir`.
+
+  Raises:
+    TimeoutError: If the policy does not become available during the number of
+      retries.
+  """
+  # TODO(b/173815037): Write and wait for a DONE file instead.
+  last_written_policy_file = os.path.join(policy_dir, 'policy_specs.pbtxt')
+  wait_for_file(
+      last_written_policy_file,
+      sleep_time_secs=sleep_time_secs,
+      num_retries=num_retries)
+  return py_tf_eager_policy.SavedModelPyTFEagerPolicy(policy_dir,
+                                                      **saved_model_policy_args)
+
+
 # TODO(b/142821173): Test train_utils `wait_for_files` function.
-def wait_for_file(file_path: Text, sleep_time_secs: int,
-                  num_retries: int) -> Text:
+def wait_for_file(file_path: Text,
+                  sleep_time_secs: int = _WAIT_DEFAULT_SLEEP_TIME_SECS,
+                  num_retries: int = _WAIT_DEFAULT_NUM_RETRIES) -> Text:
   """Blocks until the file at `file_path` becomes available.
+
+  The default setting allows a fairly loose, but not infinite wait time of one
+  days for this function to block checking the `file_path` in every seconds.
 
   Args:
     file_path: The path to the file that we are waiting for.
@@ -142,12 +189,17 @@ def wait_for_file(file_path: Text, sleep_time_secs: int,
 
 # TODO(b/142821173): Test train_utils `wait_for_predicate` function.
 def wait_for_predicate(wait_predicate_fn: Callable[[], bool],
-                       sleep_time_secs: int, num_retries: int) -> None:
+                       sleep_time_secs: int = _WAIT_DEFAULT_SLEEP_TIME_SECS,
+                       num_retries: int = _WAIT_DEFAULT_NUM_RETRIES) -> None:
   """Blocks while `wait_predicate_fn` is returning `True`.
 
   The callable `wait_predicate_fn` indicates if waiting is still needed by
   returning `True`. Once the condition that we wanted to wait for met, the
   callable should return `False` denoting that the execution can continue.
+
+  The default setting allows a fairly loose, but not infinite wait time of one
+  days for this function to block checking the `wait_predicate_fn` in every
+  seconds.
 
   Args:
     wait_predicate_fn: A callable returning a bool. Blocks while it is returning

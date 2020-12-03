@@ -20,14 +20,17 @@ See README for launch instructions.
 """
 
 import os
+from typing import Callable, Text
 
 from absl import app
 from absl import flags
 from absl import logging
 
+import gin
 import reverb
 import tensorflow.compat.v2 as tf
 
+from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.experimental.train import actor
@@ -48,39 +51,25 @@ flags.DEFINE_string('variable_container_server_address', None,
                     'Variable container server address.')
 flags.DEFINE_integer(
     'task', 0, 'Identifier of the collect task. Must be unique in a job.')
+flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
+flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
 FLAGS = flags.FLAGS
 
 
-def collect(task,
-            root_dir,
-            replay_buffer_server_address,
-            variable_container_server_address,
-            create_env_fn,
-            initial_collect_steps=10000,
-            num_iterations=10000000):
+@gin.configurable
+def collect(collect_policy: py_tf_eager_policy.PyTFEagerPolicyBase,
+            summary_dir: Text,
+            replay_buffer_server_address: Text,
+            variable_container_server_address: Text,
+            environment_name: Text = gin.REQUIRED,
+            suite_load_fn: Callable[
+                [Text], py_environment.PyEnvironment] = suite_mujoco.load,
+            initial_collect_steps: int = 10000,
+            num_iterations: int = 10000000) -> None:
   """Collects experience using a policy updated after every episode."""
   # Create the environment. For now support only single environment collection.
-  collect_env = create_env_fn()
-
-  # Create the path for the serialized collect policy.
-  collect_policy_saved_model_path = os.path.join(
-      root_dir, learner.POLICY_SAVED_MODEL_DIR,
-      learner.COLLECT_POLICY_SAVED_MODEL_DIR)
-  saved_model_pb_path = os.path.join(collect_policy_saved_model_path,
-                                     'saved_model.pb')
-  try:
-    # Wait for the collect policy to be outputed by learner (timeout after 2
-    # days), then load it.
-    train_utils.wait_for_file(
-        saved_model_pb_path, sleep_time_secs=2, num_retries=86400)
-    collect_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
-        collect_policy_saved_model_path, load_specs_from_pbtxt=True)
-  except TimeoutError as e:
-    # If the collect policy does not become available during the wait time of
-    # the call `wait_for_file`, that probably means the learner is not running.
-    logging.error('Could not get the file %s. Exiting.', saved_model_pb_path)
-    raise e
+  collect_env = suite_load_fn(environment_name)
 
   # Create the variable container.
   train_step = train_utils.create_train_step()
@@ -100,8 +89,8 @@ def collect(task,
       sequence_length=2,
       stride_length=1)
 
-  random_policy = random_py_policy.RandomPyPolicy(
-      collect_env.time_step_spec(), collect_env.action_spec())
+  random_policy = random_py_policy.RandomPyPolicy(collect_env.time_step_spec(),
+                                                  collect_env.action_spec())
   initial_collect_actor = actor.Actor(
       collect_env,
       random_policy,
@@ -118,7 +107,7 @@ def collect(task,
       train_step,
       steps_per_run=1,
       metrics=actor.collect_metrics(10),
-      summary_dir=os.path.join(root_dir, learner.TRAIN_DIR, str(task)),
+      summary_dir=summary_dir,
       observers=[rb_observer, env_step_metric])
 
   # Run the experience collection loop.
@@ -132,12 +121,24 @@ def main(_):
   logging.set_verbosity(logging.INFO)
   tf.enable_v2_behavior()
 
+  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
+
+  # Wait for the collect policy to become available, then load it.
+  collect_policy_dir = os.path.join(FLAGS.root_dir,
+                                    learner.POLICY_SAVED_MODEL_DIR,
+                                    learner.COLLECT_POLICY_SAVED_MODEL_DIR)
+  collect_policy = train_utils.wait_for_policy(
+      collect_policy_dir, load_specs_from_pbtxt=True)
+
+  # Prepare summary directory.
+  summary_dir = os.path.join(FLAGS.root_dir, learner.TRAIN_DIR, str(FLAGS.task))
+
+  # Perform collection.
   collect(
-      FLAGS.task,
-      FLAGS.root_dir,
+      collect_policy=collect_policy,
+      summary_dir=summary_dir,
       replay_buffer_server_address=FLAGS.replay_buffer_server_address,
-      variable_container_server_address=FLAGS.variable_container_server_address,
-      create_env_fn=lambda: suite_mujoco.load('HalfCheetah-v2'))
+      variable_container_server_address=FLAGS.variable_container_server_address)
 
 
 if __name__ == '__main__':

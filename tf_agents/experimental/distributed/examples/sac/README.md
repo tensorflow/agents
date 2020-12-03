@@ -18,6 +18,7 @@ port number:
 ```
   python tf_agents/experimental/distributed/examples/sac/sac_collect.py -- \
   --root_dir=/tmp/sac_train/ \
+  --gin_bindings='collect.environment_name="HalfCheetah-v2"' \
   --replay_buffer_server_address=localhost:8008 \
   --variable_container_server_address=localhost:8008 \
   --alsologtostderr
