@@ -35,3 +35,19 @@ port number:
   --variable_container_server_address=localhost:8008 \
   --alsologtostderr
 ```
+
+4) Eval job (optional):
+
+Not SAC specific. The evaluator job simply reads the greedy policy from an
+arbitrary actor-learner `root_dir`, instantiates an environment (defined by the
+GIN bindings to `evaluate.environment_name` and `evaluate.suite_load_fn`;
+assumed the environment dependencies are already provided), then evaluates the
+policy iteratively on policy parameters provided by the variable container.
+
+```
+  python tf_agents/experimental/distributed/examples/eval_job.py -- \
+  --root_dir=/tmp/sac_train/ \
+  --variable_container_server_address=localhost:8008 \
+  --gin_bindings='evaluate.environment_name="HalfCheetah-v2"' \
+  --alsologtostderr
+```
