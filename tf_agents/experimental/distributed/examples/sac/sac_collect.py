@@ -58,11 +58,11 @@ FLAGS = flags.FLAGS
 
 
 @gin.configurable
-def collect(collect_policy: py_tf_eager_policy.PyTFEagerPolicyBase,
-            summary_dir: Text,
+def collect(summary_dir: Text,
+            environment_name: Text,
+            collect_policy: py_tf_eager_policy.PyTFEagerPolicyBase,
             replay_buffer_server_address: Text,
             variable_container_server_address: Text,
-            environment_name: Text,
             suite_load_fn: Callable[
                 [Text], py_environment.PyEnvironment] = suite_mujoco.load,
             initial_collect_steps: int = 10000,
@@ -135,11 +135,11 @@ def main(_):
 
   # Perform collection.
   collect(
-      collect_policy=collect_policy,
       summary_dir=summary_dir,
+      environment_name=gin.REQUIRED,
+      collect_policy=collect_policy,
       replay_buffer_server_address=FLAGS.replay_buffer_server_address,
-      variable_container_server_address=FLAGS.variable_container_server_address,
-      environment_name=gin.REQUIRED)
+      variable_container_server_address=FLAGS.variable_container_server_address)
 
 
 if __name__ == '__main__':

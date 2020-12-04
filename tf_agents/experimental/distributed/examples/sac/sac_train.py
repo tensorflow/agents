@@ -103,10 +103,10 @@ def _create_agent(train_step: tf.Variable,
 @gin.configurable
 def train(
     root_dir: Text,
+    environment_name: Text,
     strategy: tf.distribute.Strategy,
     replay_buffer_server_address: Text,
     variable_container_server_address: Text,
-    environment_name: Text,
     suite_load_fn: Callable[[Text],
                             py_environment.PyEnvironment] = suite_mujoco.load,
     # Training params
@@ -124,9 +124,12 @@ def train(
   # Create the agent.
   with strategy.scope():
     train_step = train_utils.create_train_step()
-    agent = _create_agent(train_step, observation_tensor_spec,
-                          action_tensor_spec, time_step_tensor_spec,
-                          learning_rate=learning_rate)
+    agent = _create_agent(
+        train_step=train_step,
+        observation_tensor_spec=observation_tensor_spec,
+        action_tensor_spec=action_tensor_spec,
+        time_step_tensor_spec=time_step_tensor_spec,
+        learning_rate=learning_rate)
 
   # Create the policy saver which saves the initial model now, then it
   # periodically checkpoints the policy weigths.
@@ -187,10 +190,10 @@ def main(_):
 
   train(
       root_dir=FLAGS.root_dir,
+      environment_name=gin.REQUIRED,
       strategy=strategy,
       replay_buffer_server_address=FLAGS.replay_buffer_server_address,
-      variable_container_server_address=FLAGS.variable_container_server_address,
-      environment_name=gin.REQUIRED)
+      variable_container_server_address=FLAGS.variable_container_server_address)
 
 
 if __name__ == '__main__':
