@@ -128,17 +128,15 @@ class Learner(tf.Module):
     # Prevent autograph from going into the agent.
     self._agent.train = tf.autograph.experimental.do_not_convert(agent.train)
 
+    checkpoint_dir = os.path.join(self._train_dir, POLICY_CHECKPOINT_DIR)
     with self.strategy.scope():
       agent.initialize()
 
-    checkpoint_dir = os.path.join(self._train_dir, POLICY_CHECKPOINT_DIR)
-    self._checkpointer = common.Checkpointer(
-        checkpoint_dir,
-        max_to_keep=max_checkpoints_to_keep,
-        agent=self._agent,
-        train_step=self.train_step)
-
-    with self.strategy.scope():
+      self._checkpointer = common.Checkpointer(
+          checkpoint_dir,
+          max_to_keep=max_checkpoints_to_keep,
+          agent=self._agent,
+          train_step=self.train_step)
       self._checkpointer.initialize_or_restore()  # pytype: disable=attribute-error
 
     self.triggers.append(self._get_checkpoint_trigger(checkpoint_interval))
