@@ -13,19 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python2, python3
 """Utilities for running benchmarks."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
+import datetime
+import os
 import time
+from typing import Dict, Optional, Tuple
 
+from absl import logging
 import numpy as np
 from six.moves import range
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+# pylint: disable=g-direct-tensorflow-import
+from tensorflow.core.util import event_pb2  # TF internal
+from tensorflow.python.lib.io import tf_record  # TF internal
+# pylint: enable=g-direct-tensorflow-import
 
 
 def run_test(target_call,
@@ -195,3 +197,107 @@ def check_values_changed(agent, initial_values, check_value_changes, name=None):
     all_close = np.allclose(initial, final)
     assert not all_close, ('[{}] Variable "{}" did not change: {} -> {}'.format(
         name, var_name, initial, final))
+
+
+def summary_iterator(path: str) -> event_pb2.Event:
+  # `tf.data.TFRecordDataset` is not used because it requires Eager or
+  # tf.function, which is a state the util should not own. b/174888476
+  for record in tf_record.tf_record_iterator(path):
+    yield event_pb2.Event.FromString(record)
+
+
+def find_event_log(eventlog_dir: str,
+                   log_file_pattern: str = 'events.out.tfevents.*') -> str:
+  """Find the event log in a given folder.
+
+  Expects to find a single log file matching the pattern provided.
+
+  Args:
+    eventlog_dir: Event log directory to search.
+    log_file_pattern: Pattern to use to find the event log.
+
+  Returns:
+    Path to the event log file that was found.
+
+  Raises:
+    FileNotFoundError: If an event log is not found in the event log
+      directory.
+  """
+  event_log_path = os.path.join(eventlog_dir, log_file_pattern)
+
+  # In OSS tf.io.gfile.glob throws `NotFoundError` vs returning an empty
+  # list. Catching `NotFoundError` and doing the check yields a consistent
+  # message.
+  try:
+    event_files = tf.io.gfile.glob(event_log_path)
+  except tf.errors.NotFoundError:
+    event_files = []
+
+  if not event_files:
+    raise FileNotFoundError(f'No files found matching pattern:{event_log_path}')
+
+  assert len(event_files) == 1, (
+      'Found {} event files({}) matching "{}" pattertn and expected 1.'.format(
+          len(event_files), ','.join(event_files), event_log_path))
+
+  return event_files[0]
+
+
+def extract_event_log_values(
+    event_file: str,
+    event_tag: str,
+    end_step: Optional[int] = None) -> Tuple[Dict[int, np.generic], float]:
+  """Extracts the event values for the `event_tag` and total wall time.
+
+  Args:
+    event_file: Path to the event log.
+    event_tag: Event to extract from the logs.
+    end_step: If set, processing of the event log ends on this step.
+
+  Returns:
+    Tuple with a dict of int: int (step: event value) and the total walltime
+      in minutes.
+
+  Raises:
+    ValueError: If no events are found or the final step is smaller than the
+      `end_step` requested.
+  """
+  start_step = 0
+  current_step = 0
+  start_time = 0
+  max_wall_time = 0.0
+  logging.info('Processing event file: %s', event_file)
+  event_values = {}
+  for summary in summary_iterator(event_file):
+    current_step = summary.step
+    logging.debug('Event log item: %s', summary)
+    for value in summary.summary.value:
+      if value.tag == event_tag:
+        ndarray = tf.make_ndarray(value.tensor)
+        event_values[summary.step] = ndarray.item(0)
+        if current_step == start_step:
+          start_time = summary.wall_time
+          logging.info(
+              'training start (step %d): %s', current_step,
+              datetime.datetime.fromtimestamp(
+                  summary.wall_time).strftime('%Y-%m-%d %H:%M:%S.%f'))
+        # Avoids issue of summaries not recorded in order.
+        max_wall_time = max(summary.wall_time, max_wall_time)
+    if end_step and summary.step >= end_step:
+      break
+
+  if not start_time:
+    raise ValueError(
+        'Error: Starting event not found. Check arg event_name and '
+        'warmup_steps. Possible no events were found.')
+
+  if end_step and current_step < end_step:
+    raise ValueError('Error: Final step was less than the requested end_step.')
+
+  elapse_time = (max_wall_time - start_time) / 60
+  logging.info(
+      'training end (step %d): %s', current_step,
+      datetime.datetime.fromtimestamp(max_wall_time).strftime(
+          '%Y-%m-%d %H:%M:%S.%f'))
+  logging.info('elapsed time:%dm', elapse_time)
+  return event_values, elapse_time

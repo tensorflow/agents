@@ -26,7 +26,6 @@ Usage examples:
                            --eventlog=<path to event log 2>
 """
 import csv
-import datetime
 import enum
 import os
 from typing import Dict, List, Optional, Sequence, Tuple, Union
@@ -38,11 +37,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import tensorflow as tf
-# pylint: disable=g-direct-tensorflow-import
-from tensorflow.core.util import event_pb2  # TF internal
-from tensorflow.python.lib.io import tf_record  # TF internal
-# pylint: enable=g-direct-tensorflow-import
+from tf_agents.benchmark import utils
 
 FLAGS = flags.FLAGS
 
@@ -128,85 +123,6 @@ class StatsBuilder(object):
     else:
       self.yaxis_title = event_tag
 
-  def _summary_iterator(self, path):
-    for record in tf_record.tf_record_iterator(path):
-      yield event_pb2.Event.FromString(record)
-
-  def _extract_values(
-      self, event_log_dir: str) -> Tuple[Dict[int, np.generic], float]:
-    """Extracts the event values for the `event_tag` and total wall time.
-
-    Args:
-      event_log_dir: Path to the event log directory.
-
-    Returns:
-      Tuple with a dict of int: int (step: event value) and the total walltime
-        in minutes.
-
-    Raises:
-      ValueError: If no events are found or the final step is smaller than the
-        `end_step` requested.
-      FileNotFoundError: If an event log is not found in the event log
-        directory.
-    """
-    start_step = 0
-    current_step = 0
-    start_time = 0
-    max_wall_time = 0.0
-    event_log_path = os.path.join(event_log_dir, 'events.out.tfevents.*')
-
-    # In OSS tf.io.gfile.glob throws `NotFoundError` vs returning an empty list.
-    # Catching `NotFoundError` and doing the check yields a consistent message.
-    try:
-      event_files = tf.io.gfile.glob(event_log_path)
-    except tf.errors.NotFoundError:
-      event_files = []
-
-    if not event_files:
-      raise FileNotFoundError(
-          f'No files found matching pattern:{event_log_path}')
-
-    assert len(event_files) == 1, (
-        'Found {} event files({}) matching "{}" pattertn and expected 1.'
-        .format(len(event_files), ','.join(event_files), event_log_path))
-
-    event_file = event_files[0]
-    logging.info('Processing event file: %s', event_file)
-    event_values = {}
-    for summary in self._summary_iterator(event_file):
-      current_step = summary.step
-      logging.debug('Event log item: %s', summary)
-      for value in summary.summary.value:
-        if value.tag == self.event_tag:
-          ndarray = tf.make_ndarray(value.tensor)
-          event_values[summary.step] = ndarray.item(0)
-          if current_step == start_step:
-            start_time = summary.wall_time
-            logging.info(
-                'training start (step %d): %s', current_step,
-                datetime.datetime.fromtimestamp(
-                    summary.wall_time).strftime('%Y-%m-%d %H:%M:%S.%f'))
-          max_wall_time = summary.wall_time
-      if self.end_step and summary.step >= self.end_step:
-        break
-
-    if not start_time:
-      raise ValueError(
-          'Error: Starting event not found. Check arg event_name and '
-          'warmup_steps. Possible no events were found.')
-
-    if self.end_step and current_step < self.end_step:
-      raise ValueError(
-          'Error: Final step was less than the requested end_step.')
-
-    elapse_time = (max_wall_time - start_time) / 60
-    logging.info(
-        'training end (step %d): %s', current_step,
-        datetime.datetime.fromtimestamp(max_wall_time).strftime(
-            '%Y-%m-%d %H:%M:%S.%f'))
-    logging.info('elapsed time:%dm', elapse_time)
-    return event_values, elapse_time
-
   def _gather_data(self) -> Tuple[List[Dict[int, np.generic]], List[float]]:
     """Gather data from all of the logs and add to the data_collector list.
 
@@ -217,7 +133,11 @@ class StatsBuilder(object):
     """
     data_collector, walltimes = [], []
     for eventlog_dir in self.eventlog_dirs:
-      data, total_time = self._extract_values(eventlog_dir)
+      event_file = utils.find_event_log(eventlog_dir)
+      logging.info('Processing event file: %s', event_file)
+      data, total_time = utils.extract_event_log_values(event_file,
+                                                        self.event_tag,
+                                                        self.end_step)
       walltimes.append(total_time)
       data_collector.append(data)
     return data_collector, walltimes
@@ -297,10 +217,7 @@ class StatsBuilder(object):
     # Build graph
     plt.figure(figsize=(10, 5))
     ax = sns.lineplot(
-        data=new_pd,
-        x='step',
-        y=self.yaxis_title,
-        estimator=self.graph_agg)
+        data=new_pd, x='step', y=self.yaxis_title, estimator=self.graph_agg)
     ax.set_title(self.title)
     ax.set(xlabel=self.xaxis_title)
     plt.ticklabel_format(style='plain', axis='x')
