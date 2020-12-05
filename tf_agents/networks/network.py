@@ -266,7 +266,7 @@ class Network(tf.keras.layers.Layer):
     If `name` and `index` are both provided, `index` will take precedence.
     Indices are based on order of horizontal graph traversal (bottom-up).
 
-    Arguments:
+    Args:
         name: String, name of layer.
         index: Integer, index of layer.
 
