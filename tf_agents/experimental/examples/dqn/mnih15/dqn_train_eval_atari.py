@@ -237,6 +237,7 @@ def train_eval(
       steps_per_run=update_frequency,
       observers=[rb_observer, env_step_metric],
       metrics=actor.collect_metrics(10),
+      reference_metrics=[env_step_metric],
       summary_dir=os.path.join(root_dir, learner.TRAIN_DIR),
   )
 
@@ -250,6 +251,7 @@ def train_eval(
       train_step,
       episodes_per_run=eval_episodes,
       metrics=actor.eval_metrics(eval_episodes),
+      reference_metrics=[env_step_metric],
       summary_dir=os.path.join(root_dir, 'eval'),
   )
 
