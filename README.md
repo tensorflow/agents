@@ -51,7 +51,7 @@ Currently the following algorithms are available under TF-Agents:
     Fujimoto et al., 2018](https://arxiv.org/abs/1802.09477)
 *   [REINFORCE: __Simple Statistical Gradient-Following Algorithms for
     Connectionist Reinforcement Learning__ Williams,
-    1992](http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)
+    1992](https://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)
 *   [PPO: __Proximal Policy Optimization Algorithms__ Schulman et al., 2017](https://arxiv.org/abs/1707.06347)
 *   [SAC: __Soft Actor Critic__ Haarnoja et al., 2018](https://arxiv.org/abs/1812.05905)
 

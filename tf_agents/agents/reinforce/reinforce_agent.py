@@ -16,7 +16,7 @@
 """A REINFORCE Agent.
 
 Implements the REINFORCE algorithm from (Williams, 1992):
-http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
+https://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -122,7 +122,7 @@ class ReinforceAgent(tf_agent.TFAgent):
   "Simple statistical gradient-following algorithms for connectionist
   reinforcement learning"
   Williams, R.J., 1992.
-  http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
+  https://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf
 
   REINFORCE with state-value baseline, where state-values are estimated with
   function approximation, from

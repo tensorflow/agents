@@ -256,7 +256,7 @@ def run_setup():
       long_description_content_type='text/markdown',
       author='Google LLC',
       author_email='no-reply@google.com',
-      url='http://github.com/tensorflow/agents',
+      url='https://github.com/tensorflow/agents',
       license='Apache 2.0',
       include_package_data=True,
       packages=find_packages(),
