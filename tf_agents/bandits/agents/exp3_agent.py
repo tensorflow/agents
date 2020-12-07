@@ -81,7 +81,7 @@ class Exp3Agent(tf_agent.TFAgent):
 
   "Bandit Algorithms"
     Lattimore and Szepesvari, 2019
-    http://downloads.tor-lattimore.com/book.pdf
+    https://tor-lattimore.com/downloads/book/book.pdf
   """
 
   def __init__(self,
