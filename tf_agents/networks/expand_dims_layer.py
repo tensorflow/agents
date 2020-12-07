@@ -25,7 +25,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 class ExpandDims(tf.keras.layers.Layer):
   """Expands dims along a particular axis.
 
-  Arguments:
+  Args:
       axis: Axis to expand.  A new dim is added before this axis.
          May be a negative value.  Must not be a tensor.
 

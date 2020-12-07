@@ -27,7 +27,7 @@ class BiasLayer(tf.keras.layers.Layer):
   `BiasLayer` implements the operation:
   `output = input + bias`
 
-  Arguments:
+  Args:
       bias_initializer: Initializer for the bias vector.
   Input shape:
       nD tensor with shape: `(batch_size, ..., input_dim)`. The most common
