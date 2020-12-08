@@ -36,21 +36,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.utils import common
-
-# pylint:disable=g-direct-tensorflow-import
-from tensorflow.python.framework import tensor_shape  # TF internal
-from tensorflow.python.keras import layers  # TF internal
-# pylint:enable=g-direct-tensorflow-import
 
 __all__ = ["DynamicUnroll"]
 
 
 def _maybe_tensor_shape_from_tensor(shape):
   if isinstance(shape, tf.Tensor):
-    return tensor_shape.as_shape(tf.get_static_value(shape))
+    return tf.TensorShape(tf.get_static_value(shape))
   else:
     return shape
 
@@ -184,7 +179,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
   @classmethod
   def from_config(cls, config, custom_objects=None):
-    cell = layers.deserialize(config.pop("cell"), custom_objects=custom_objects)
+    cell = tf.keras.layers.deserialize(
+        config.pop("cell"), custom_objects=custom_objects)
     layer = cls(cell, **config)
     return layer
 
@@ -288,7 +284,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
     inputs_static_shapes = tuple(x.shape for x in inputs_flat)
     batch_size = _best_effort_input_batch_size(inputs_flat)
-    const_batch_size = tensor_shape.dimension_value(inputs_static_shapes[0][1])
+    const_batch_size = tf.compat.dimension_value(inputs_static_shapes[0][1])
 
     inputs = tf.nest.pack_sequence_as(inputs, inputs_flat)
 
@@ -297,7 +293,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
       reset_mask = tf.transpose(a=reset_mask)
 
     for shape in inputs_static_shapes:
-      got_batch_size = tensor_shape.dimension_value(shape[1])
+      got_batch_size = tf.compat.dimension_value(shape[1])
       if const_batch_size is None:
         const_batch_size = got_batch_size
       if got_batch_size is not None and const_batch_size != got_batch_size:
@@ -316,7 +312,7 @@ class DynamicUnroll(tf.keras.layers.Layer):
 
     # Try to get the iteration count statically; if that's not possible,
     # access it dynamically at runtime.
-    iterations = tensor_shape.dimension_value(inputs_flat[0].shape[0])
+    iterations = tf.compat.dimension_value(inputs_flat[0].shape[0])
     iterations = iterations or tf.shape(input=inputs_flat[0])[0]
 
     if not tf.is_tensor(iterations) and iterations == 1:

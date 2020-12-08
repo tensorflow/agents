@@ -20,3 +20,4 @@ from tf_agents.keras_layers.dynamic_unroll_layer import DynamicUnroll
 from tf_agents.keras_layers.inner_reshape import InnerReshape
 from tf_agents.keras_layers.rnn_wrapper import RNNWrapper
 from tf_agents.keras_layers.sequential_layer import SequentialLayer
+from tf_agents.keras_layers.squashed_outer_wrapper import SquashedOuterWrapper
