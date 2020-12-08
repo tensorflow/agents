@@ -69,7 +69,7 @@ provided.
 The TF-Agents library contains a comprehensive Multi-Armed Bandits suite,
 including Bandits environments and agents. RL agents can also be used on Bandit
 environments. There is a tutorial in
-[`bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/docs/tutorials/bandits_tutorial.ipynb).
+[`bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/docs/tutorials/bandits_tutorial.ipynb).
 and ready-to-run examples in
 [`tf_agents/bandits/agents/examples/v2`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/v2).
 
