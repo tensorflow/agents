@@ -1,0 +1,4 @@
+# v4 aligns the action space with the Deepmind paper.
+# Deterministic ensures that a fixed frameskip of 4 is applied.
+train_eval.env_name='BreakoutDeterministic-v4'
+AtariPreprocessing.terminal_on_life_loss = True
