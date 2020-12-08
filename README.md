@@ -66,12 +66,12 @@ provided.
 
 ## Multi-Armed Bandits
 
-The TF-Agents library contains also a comprehensive Multi-Armed Bandits suite,
+The TF-Agents library contains a comprehensive Multi-Armed Bandits suite,
 including Bandits environments and agents. RL agents can also be used on Bandit
-environments. For a tutorial, see
-[`tf_agents/g3doc/tutorials/bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/g3doc/tutorials/bandits_tutorial.ipynb).
-For ready-to-run examples, see
-[`tf_agents/bandits/agents/examples/`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/).
+environments. There is a tutorial in
+[`bandits_tutorial.ipynb`](https://github.com/tensorflow/agents/tree/master/tf_agents/docs/tutorials/bandits_tutorial.ipynb).
+and ready-to-run examples in
+[`tf_agents/bandits/agents/examples/v2`](https://github.com/tensorflow/agents/tree/master/tf_agents/bandits/agents/examples/v2).
 
 <a id='Examples'></a>
 
