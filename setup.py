@@ -33,6 +33,11 @@ from setuptools import setup
 from setuptools.command.test import test as TestCommandBase
 from setuptools.dist import Distribution
 
+# To enable importing version.py directly, we add its path to sys.path.
+version_path = os.path.join(os.path.dirname(__file__), 'tf_agents')
+sys.path.append(version_path)
+import version as tf_agents_version  # pylint: disable=g-import-not-at-top
+
 # Default versions for packages we often override for testing and release
 # candidates. These can all be overridden with flags.
 TFP_VERSION = 'tensorflow-probability>=0.11.0'
@@ -166,7 +171,7 @@ def get_required_packages():
   required_packages = [
       'absl-py >= 0.6.1',
       'cloudpickle >= 1.3',
-      'gin-config >= 0.3.0',
+      'gin-config >= 0.4.0',
       'gym >= 0.17.0',
       'numpy >= 1.13.3',
       'six >= 1.10.0',
@@ -225,8 +230,8 @@ def get_reverb_packages():
 
 def get_version():
   """Returns the version and project name to associate with the build."""
-  from tf_agents.version import __dev_version__  # pylint: disable=g-import-not-at-top
-  from tf_agents.version import __rel_version__  # pylint: disable=g-import-not-at-top
+  __dev_version__ = tf_agents_version.__dev_version__  # pylint: disable=invalid-name
+  __rel_version__ = tf_agents_version.__rel_version__  # pylint: disable=invalid-name
 
   if FLAGS.release:
     version = __rel_version__

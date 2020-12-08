@@ -13,3 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""TF-Agents Experimental Modules.
+
+These utilities, libraries, and tools have not been rigorously tested for
+production use.  For example, experimental examples may not have associated
+nightly regression tests.
+"""
+from tf_agents.experimental import distributed
+from tf_agents.experimental import examples
+from tf_agents.experimental import train
