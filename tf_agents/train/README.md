@@ -59,9 +59,9 @@ Below is an example of creating an Actor class:
 
 ```python
   from tf_agents.environments import suite_mujoco
-  from tf_agents.experimental.train import actor
-  from tf_agents.experimental.train.utils import train_utils
   from tf_agents.replay_buffers import reverb_utils
+  from tf_agents.train import actor
+  from tf_agents.train.utils import train_utils
 
   REQUIRED_TIMESTEPS_PER_TRAIN_CALL=2
 
@@ -109,8 +109,8 @@ Below is an example of creating the experience dataset function from the replay
 buffer and creating a Learner:
 
 ```python
-  from tf_agents.experimental.train import learner
-  from tf_agents.experimental.train import triggers
+  from tf_agents.train import learner
+  from tf_agents.train import triggers
 
   # create the experience dataset function
   # reverb_replay buffer is created as in the example above

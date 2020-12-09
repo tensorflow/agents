@@ -2,7 +2,7 @@
 
 In this README we describe the use of the TF-Agents Actor-Learner API for
 distributed collection and training. Please read the
-[API overview](https://github.com/tensorflow/agents/tree/master/tf_agents/experimental/train/README.md)
+[API overview](https://github.com/tensorflow/agents/tree/master/tf_agents/train/README.md)
 first.
 
 The TF-Agents Actor-Learner API supports both distributed data collection across
