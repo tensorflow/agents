@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""TF-Agents Training Library."""
+"""TF-Agents Experimental Modules.
 
-from tf_agents.train import actor
-from tf_agents.train import learner
-from tf_agents.train import triggers
-
-from tf_agents.train.actor import Actor
-from tf_agents.train.learner import Learner
+These utilities, libraries, and tools have not been rigorously tested for
+production use.  For example, experimental examples may not have associated
+nightly regression tests.
+"""
+from tf_agents.experimental import distributed

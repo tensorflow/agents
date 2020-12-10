@@ -13,3 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""TF-Agents Experimental Distributed Library."""
+
+from tf_agents.experimental.distributed.reverb_variable_container import ReverbVariableContainer

@@ -81,6 +81,7 @@ from tf_agents import policies
 from tf_agents import replay_buffers
 from tf_agents import specs
 from tf_agents import system
+from tf_agents import train
 from tf_agents import trajectories
 from tf_agents import typing
 from tf_agents import utils
