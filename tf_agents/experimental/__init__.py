@@ -19,4 +19,8 @@ These utilities, libraries, and tools have not been rigorously tested for
 production use.  For example, experimental examples may not have associated
 nightly regression tests.
 """
+# Aliasing the already moved `tf_agent.train` module from its new location here
+# for backward compatibility.
+# TODO(b/175303833): Remove this when everyone uses the new dependencies.
+from tf_agents import train
 from tf_agents.experimental import distributed
