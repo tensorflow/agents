@@ -23,6 +23,7 @@ import copy
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.agents import test_util
 from tf_agents.agents import tf_agent
 from tf_agents.policies import random_tf_policy
 from tf_agents.specs import array_spec
@@ -65,6 +66,9 @@ class MyAgent(tf_agent.TFAgent):
         validate_args=validate_args)  # pytype: disable=wrong-arg-types
 
   def _train(self, experience, weights=None, extra=None):
+    return tf_agent.LossInfo(loss=(), extra=(experience, extra))
+
+  def _loss(self, experience, weights=None, extra=None):
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
 
   def _initialize(self):
@@ -151,6 +155,53 @@ class TFAgentTest(tf.test.TestCase):
     self.assertEqual(agent.data_context.info_spec,
                      {'info': tf.TensorSpec([], tf.int32)})
     self.assertEqual(agent.collect_data_context.info_spec, ())
+
+  def testLoss(self):
+    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
+    agent = MyAgent(train_argspec=train_argspec)
+    extra = tf.ones(shape=[3, 4], dtype=tf.float32)
+    experience = tf.nest.map_structure(
+        lambda x: x[tf.newaxis, ...],
+        trajectory.from_episode(
+            observation={'obs': tf.constant([1.0])},
+            action=(),
+            policy_info=(),
+            reward=tf.constant([1.0])))
+    test_util.test_loss_and_train_output(
+        test=self,
+        expect_equal_loss_values=True,
+        agent=agent,
+        experience=experience,
+        extra=extra)
+
+  def testLossNotMatching(self):
+
+    class MyAgentWithLossNotMatching(MyAgent):
+
+      def _loss(self, experience, weights=None, extra=None):
+        return tf_agent.LossInfo(loss=(), extra=(experience, ()))
+
+    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
+    agent = MyAgentWithLossNotMatching(train_argspec=train_argspec)
+    extra = tf.ones(shape=[3, 4], dtype=tf.float32)
+    experience = tf.nest.map_structure(
+        lambda x: x[tf.newaxis, ...],
+        trajectory.from_episode(
+            observation={'obs': tf.constant([1.0])},
+            action=(),
+            policy_info=(),
+            reward=tf.constant([1.0])))
+
+    with self.assertRaisesRegex(
+        ValueError,
+        r'.*`LossInfo` from train\(\) and `LossInfo` from loss\(\) do not have '
+        'matching structures.*'):
+      test_util.test_loss_and_train_output(
+          test=self,
+          expect_equal_loss_values=True,
+          agent=agent,
+          experience=experience,
+          extra=extra)
 
 
 class AgentSpecTest(test_utils.TestCase):

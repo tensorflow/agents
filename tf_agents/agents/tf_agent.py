@@ -330,6 +330,7 @@ class TFAgent(tf.Module):
     self._initialize_fn = common.function_in_tf1()(self._initialize)
     self._preprocess_sequence_fn = common.function_in_tf1()(
         self._preprocess_sequence)
+    self._loss_fn = common.function_in_tf1()(self._loss)
 
   def initialize(self) -> Optional[tf.Operation]:
     """Initializes the agent.
@@ -524,6 +525,73 @@ class TFAgent(tf.Module):
           "loss_info is not a subclass of LossInfo: {}".format(loss_info))
     return loss_info
 
+  def loss(self,
+           experience: types.NestedTensor,
+           weights: Optional[types.Tensor] = None,
+           **kwargs) -> LossInfo:
+    """Gets loss from the agent.
+
+    If the user calls this from _train, it must be in a `tf.GradientTape` scope
+    in order to apply gradients to trainable variables.
+    If intermediate gradient steps are needed, _loss and _train will return
+    different values since _loss only supports updating all gradients at once
+    after all losses have been calculated.
+
+    Args:
+      experience: A batch of experience data in the form of a `Trajectory`. The
+        structure of `experience` must match that of `self.training_data_spec`.
+        All tensors in `experience` must be shaped `[batch, time, ...]` where
+        `time` must be equal to `self.train_step_length` if that
+        property is not `None`.
+      weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
+        containing weights to be used when calculating the total train loss.
+        Weights are typically multiplied elementwise against the per-batch loss,
+        but the implementation is up to the Agent.
+      **kwargs: Any additional data as args to `loss`.
+
+    Returns:
+        A `LossInfo` loss tuple containing loss and info tensors.
+
+    Raises:
+      TypeError: If `validate_args is True` and: Experience is not type
+        `Trajectory`; or if `experience`  does not match
+        `self.training_data_spec` structure types.
+      ValueError: If `validate_args is True` and: Experience tensors' time axes
+        are not compatible with `self.train_sequence_length`; or if experience
+        does not match `self.training_data_spec` structure.
+      ValueError: If `validate_args is True` and the user does not pass
+        `**kwargs` matching `self.train_argspec`.
+      RuntimeError: If the class was not initialized properly (`super.__init__`
+        was not called).
+    """
+    if self._enable_functions and getattr(self, "_loss_fn", None) is None:
+      raise RuntimeError(
+          "Cannot find _loss_fn.  Did %s.__init__ call super?"
+          % type(self).__name__)
+
+    if self._validate_args:
+      self._check_trajectory_dimensions(experience)
+      self._check_train_argspec(kwargs)
+
+      # Even though the checks above prune dict keys, we want them to see
+      # the non-pruned versions to provide clearer error messages.
+      # However, from here on out we want to remove dict entries that aren't
+      # requested in the spec.
+      experience = nest_utils.prune_extra_keys(
+          self.training_data_spec, experience)
+      kwargs = nest_utils.prune_extra_keys(self.train_argspec, kwargs)
+
+    if self._enable_functions:
+      loss_info = self._loss_fn(
+          experience=experience, weights=weights, **kwargs)
+    else:
+      loss_info = self._loss(experience=experience, weights=weights, **kwargs)
+
+    if not isinstance(loss_info, LossInfo):
+      raise TypeError(
+          "loss_info is not a subclass of LossInfo: {}".format(loss_info))
+    return loss_info
+
   def _apply_loss(self, aggregated_losses, variables_to_train, tape, optimizer):
     total_loss = aggregated_losses.total_loss
     tf.debugging.check_numerics(total_loss, "Loss is inf or nan")
@@ -685,6 +753,35 @@ class TFAgent(tf.Module):
       A post processed `Trajectory` with the same shape as the input.
     """
     return experience
+
+  def _loss(self, experience: types.NestedTensor,
+            weights: types.Tensor) -> Optional[LossInfo]:
+    """Computes loss.
+
+    This method does not increment self.train_step_counter or upgrade gradients.
+    By default, any networks are called with `training=False`.
+
+    Args:
+      experience: A batch of experience data in the form of a `Trajectory`. The
+        structure of `experience` must match that of `self.training_data_spec`.
+        All tensors in `experience` must be shaped `[batch, time, ...]` where
+        `time` must be equal to `self.train_step_length` if that property is not
+        `None`.
+      weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
+        containing weights to be used when calculating the total train loss.
+        Weights are typically multiplied elementwise against the per-batch loss,
+        but the implementation is up to the Agent.
+
+    Returns:
+        A `LossInfo` containing the loss *before* the training step is taken.
+        In most cases, if `weights` is provided, the entries of this tuple will
+        have been calculated with the weights.  Note that each Agent chooses
+        its own method of applying weights.
+
+    Raises:
+      NotImplementedError: If this method has not been overridden.
+    """
+    raise NotImplementedError("Loss not implemented.")
 
   # Subclasses must implement these methods.
   @abc.abstractmethod
