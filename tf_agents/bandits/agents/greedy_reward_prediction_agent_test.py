@@ -222,9 +222,13 @@ class AgentTest(tf.test.TestCase):
 
   def testLoss(self):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    actions = tf.constant([0, 1], dtype=tf.int32)
-    rewards = tf.constant([0.5, 3.0], dtype=tf.float32)
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
+    rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps_nested_rewards(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
 
     agent = greedy_agent.GreedyRewardPredictionAgent(
         self._time_step_spec,
@@ -236,9 +240,7 @@ class AgentTest(tf.test.TestCase):
       with self.cached_session() as sess:
         common.initialize_uninitialized_variables(sess)
         self.assertIsNone(sess.run(init_op))
-    loss, _ = agent.loss(observations,
-                         actions,
-                         rewards)
+    loss, _ = agent._loss(experience)
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss), 42.25)
 

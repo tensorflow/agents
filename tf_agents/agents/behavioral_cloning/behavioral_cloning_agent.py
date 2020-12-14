@@ -246,7 +246,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
   def _setup_as_discrete(self, time_step_spec, action_spec, loss_fn,
                          epsilon_greedy):
-    self._loss_fn = loss_fn or self._discrete_loss
+    self._bc_loss_fn = loss_fn or self._discrete_loss
     # Unlike DQN, we support continuous action spaces - in which case
     # the policy just emits the network output.  In that case, we
     # don't care if the action_spec is a scalar integer value.
@@ -260,7 +260,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     return policy, collect_policy
 
   def _setup_as_continuous(self, time_step_spec, action_spec, loss_fn):
-    self._loss_fn = loss_fn or self._continuous_loss_fn
+    self._bc_loss_fn = loss_fn or self._continuous_loss_fn
     collect_policy = actor_policy.ActorPolicy(
         time_step_spec, action_spec, actor_network=self._cloning_network)
     policy = greedy_policy.GreedyPolicy(collect_policy)
@@ -268,7 +268,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
 
   def _train(self, experience, weights=None):
     with tf.GradientTape() as tape:
-      per_example_loss = self._loss_fn(experience)
+      per_example_loss = self._bc_loss_fn(experience)
 
       aggregated_losses = common.aggregate_losses(
           per_example_loss=per_example_loss,

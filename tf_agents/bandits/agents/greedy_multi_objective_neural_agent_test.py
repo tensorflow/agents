@@ -287,16 +287,20 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
         self._scalarizer,
         objective_networks=self._create_objective_networks(),
         optimizer=None)
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
-    actions = tf.constant([0, 1], dtype=tf.int32)
-    objectives = tf.constant([[8, 12, 11], [25, 18, 32]], dtype=tf.float32)
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
+    objectives = np.array([[8, 12, 11], [25, 18, 32]], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, objectives)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
 
     init_op = agent.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
         common.initialize_uninitialized_variables(sess)
         self.assertIsNone(sess.run(init_op))
-    loss, _ = agent.loss(observations, actions, objectives)
+    loss, _ = agent._loss(experience)
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss), 0.0)
 

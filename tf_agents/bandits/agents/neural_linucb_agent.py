@@ -314,12 +314,12 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
               data=var,
               step=self.train_step_counter)
 
-  def loss(self,
-           observations: types.NestedTensor,
-           actions: types.Tensor,
-           rewards: types.Tensor,
-           weights: Optional[types.Float] = None,
-           training: bool = False) -> tf_agent.LossInfo:
+  def _loss_using_reward_layer(self,
+                               observations: types.NestedTensor,
+                               actions: types.Tensor,
+                               rewards: types.Tensor,
+                               weights: Optional[types.Float] = None,
+                               training: bool = False) -> tf_agent.LossInfo:
     """Computes loss for reward prediction training.
 
     Args:
@@ -387,7 +387,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
     """
     # Update the neural network params.
     with tf.GradientTape() as tape:
-      loss_info = self.loss(
+      loss_info = self._loss_using_reward_layer(
           observation, action, reward, weights, training=training)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
     if self._summarize_grads_and_vars:

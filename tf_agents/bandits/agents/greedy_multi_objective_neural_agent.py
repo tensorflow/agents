@@ -177,27 +177,9 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
 
   def _train(self, experience: types.NestedTensor,
              weights: types.Tensor) -> tf_agent.LossInfo:
-    (observations, actions,
-     objective_values) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._accepts_per_arm_features, self.training_data_spec)
-    if self._observation_and_action_constraint_splitter is not None:
-      observations, _ = self._observation_and_action_constraint_splitter(
-          observations)
-    if objective_values.shape.rank != 2:
-      raise ValueError(
-          'The objectives tensor should be rank-2 [batch_size, num_objectives],'
-          ' but found to be rank-{}'.format(objective_values.shape.rank))
-    if objective_values.shape[1] != self._num_objectives:
-      raise ValueError(
-          'The number of objectives in the objective_values tensor: {} '
-          'is different from the number of objective networks: {}.'.format(
-              objective_values.shape[1], self._num_objectives))
-
     with tf.GradientTape() as tape:
-      loss_info = self.loss(
-          observations,
-          actions,
-          objective_values,
+      loss_info = self._loss(
+          experience,
           weights=weights,
           training=True)
 
@@ -285,19 +267,15 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
 
     return loss
 
-  def loss(self,
-           observations: tf.Tensor,
-           actions: tf.Tensor,
-           objective_values: tf.Tensor,
-           weights: types.Tensor = None,
-           training: bool = False) -> tf_agent.LossInfo:
+  def _loss(self,
+            experience: types.NestedTensor,
+            weights: types.Tensor = None,
+            training: bool = False) -> tf_agent.LossInfo:
     """Computes loss for training the objective networks.
 
     Args:
-      observations: A batch of observations.
-      actions: A batch of actions.
-      objective_values: A batch of objectives shaped as [batch_size,
-        self._num_objectives].
+      experience: A batch of experience data in the form of a `Trajectory` or
+        `Transition`.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output batch loss will be scaled by these weights, and the
         final scalar loss is the mean of these values.
@@ -312,6 +290,22 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         - If the number of columns in `objectives` does not equal
           `self._num_objectives`.
     """
+    (observations, actions,
+     objective_values) = bandit_utils.process_experience_for_neural_agents(
+         experience, self._accepts_per_arm_features, self.training_data_spec)
+    if self._observation_and_action_constraint_splitter is not None:
+      observations, _ = self._observation_and_action_constraint_splitter(
+          observations)
+    if objective_values.shape.rank != 2:
+      raise ValueError(
+          'The objectives tensor should be rank-2 [batch_size, num_objectives],'
+          ' but found to be rank-{}'.format(objective_values.shape.rank))
+    if objective_values.shape[1] != self._num_objectives:
+      raise ValueError(
+          'The number of objectives in the objective_values tensor: {} '
+          'is different from the number of objective networks: {}.'.format(
+              objective_values.shape[1], self._num_objectives))
+
     objective_losses = []
     for idx in range(self._num_objectives):
       single_objective_values = objective_values[:, idx]

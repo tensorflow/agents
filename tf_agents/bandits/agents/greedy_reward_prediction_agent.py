@@ -200,19 +200,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     return variables_to_train
 
   def _train(self, experience, weights):
-    (observations, actions,
-     rewards) = bandit_utils.process_experience_for_neural_agents(
-         experience, self._accepts_per_arm_features, self.training_data_spec)
-    if self._observation_and_action_constraint_splitter is not None:
-      observations, _ = self._observation_and_action_constraint_splitter(
-          observations)
-
     with tf.GradientTape() as tape:
-      loss_info = self.loss(observations,
-                            actions,
-                            rewards,
-                            weights=weights,
-                            training=True)
+      loss_info = self._loss(experience, weights=weights, training=True)
 
     variables_to_train = self._variables_to_train()
     if not variables_to_train:
@@ -303,21 +292,15 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
 
     return loss
 
-  def loss(self,
-           observations: types.NestedTensor,
-           actions: types.Tensor,
-           rewards: types.Tensor,
-           weights: Optional[types.Float] = None,
-           training: bool = False) -> tf_agent.LossInfo:
+  def _loss(self,
+            experience: types.NestedTensor,
+            weights: Optional[types.Float] = None,
+            training: bool = False) -> tf_agent.LossInfo:
     """Computes loss for training the reward and constraint networks.
 
     Args:
-      observations: A batch of observations.
-      actions: A batch of actions.
-      rewards: A batch of rewards. In the case we have constraints, we assume
-        that reward is a dict of tensors with 'reward' and 'constraint' keys
-        defined in 'bandit_spec_utils'. In case of many constraint signals, the
-        constraint tensor has many columns; one column per constraint signal.
+      experience: A batch of experience data in the form of a `Trajectory` or
+        `Transition`.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.  The output batch loss will be scaled by these weights, and
         the final scalar loss is the mean of these values.
@@ -329,6 +312,13 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       ValueError:
         if the number of actions is greater than 1.
     """
+    (observations, actions,
+     rewards) = bandit_utils.process_experience_for_neural_agents(
+         experience, self._accepts_per_arm_features, self.training_data_spec)
+    if self._observation_and_action_constraint_splitter is not None:
+      observations, _ = self._observation_and_action_constraint_splitter(
+          observations)
+
     if self._constraints:
       rewards_tensor = rewards[bandit_spec_utils.REWARD_SPEC_KEY]
     else:
