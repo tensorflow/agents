@@ -1004,11 +1004,9 @@ class Checkpointer(object):
     self._load_status.initialize_or_restore(session)
     return self._load_status
 
-  def save(self, global_step: tf.Tensor,
-           options: tf.train.CheckpointOptions = None):
+  def save(self, global_step):
     """Save state to checkpoint."""
-    saved_checkpoint = self._manager.save(
-        checkpoint_number=global_step, options=options)
+    saved_checkpoint = self._manager.save(checkpoint_number=global_step)
     self._checkpoint_exists = True
     logging.info('%s', 'Saved checkpoint: {}'.format(saved_checkpoint))
 
