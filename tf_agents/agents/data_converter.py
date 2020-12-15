@@ -31,6 +31,8 @@ from tf_agents.typing import types
 from tf_agents.utils import composite
 from tf_agents.utils import nest_utils
 
+import typing_extensions as te
+
 
 class DataContext(tf.Module):
   """A class that stores useful data for performing data conversions."""
@@ -115,20 +117,30 @@ class DataContext(tf.Module):
 def _validate_trajectory(
     value: trajectory.Trajectory,
     trajectory_spec: trajectory.Trajectory,
-    sequence_length: typing.Optional[int]):
+    sequence_length: typing.Optional[int],
+    num_outer_dims: te.Literal[1, 2] = 2):  # pylint: disable=bad-whitespace
   """Validate a Trajectory given its spec and a sequence length."""
   if not nest_utils.is_batched_nested_tensors(
-      value, trajectory_spec, num_outer_dims=2, allow_extra_fields=True):
+      value, trajectory_spec, num_outer_dims=num_outer_dims,
+      allow_extra_fields=True):
     debug_str_1 = tf.nest.map_structure(lambda tp: tp.shape, value)
     debug_str_2 = tf.nest.map_structure(
         lambda spec: spec.shape, trajectory_spec)
+
+    shape_str = (
+        'two outer dimensions' if num_outer_dims == 2
+        else 'one outer dimension')
+    shape_prefix_str = '[B, T]' if num_outer_dims == 2 else '[B]'
     raise ValueError(
-        'All of the Tensors in `value` must have two outer '
-        'dimensions: batch size and time. Specifically, tensors must '
-        'have shape `[B, T] + spec.shape.\n'
-        'Full shapes of value tensors:\n  {}.\n'
-        'Expected shapes (excluding the two outer dimensions):\n  {}.'
-        .format(debug_str_1, debug_str_2))
+        'All of the Tensors in `value` must have {shape_str}. Specifically, '
+        'tensors must have shape `{shape_prefix_str} + spec.shape`.\n'
+        'Full shapes of value tensors:\n  {debug_str_1}.\n'
+        'Expected shapes (excluding the {shape_str}):\n  {debug_str_2}.'
+        .format(
+            shape_str=shape_str,
+            debug_str_1=debug_str_1,
+            debug_str_2=debug_str_2,
+            shape_prefix_str=shape_prefix_str))
 
   # If we have a time dimension and a train_sequence_length, make sure they
   # match.
@@ -165,7 +177,8 @@ class AsTrajectory(tf.Module):
 
   def __init__(self,
                data_context: DataContext,
-               sequence_length: typing.Optional[int] = None):
+               sequence_length: typing.Optional[int] = None,
+               num_outer_dims: te.Literal[1, 2] = 2):  # pylint: disable=bad-whitespace
     """Create the AsTrajectory converter.
 
     Args:
@@ -173,9 +186,13 @@ class AsTrajectory(tf.Module):
         `TFAgent.data_context` property.
       sequence_length: The required time dimension value (if any), typically
          determined by the subclass of `TFAgent`.
+      num_outer_dims: Expected number of outer dimensions.  Either 1 or 2.
+         If `1`, call expects an outer batch dimension.  If `2`, then call
+         expects the two outer dimensions `[batch, time]`.
     """
     self._data_context = data_context
     self._sequence_length = sequence_length
+    self._num_outer_dims = num_outer_dims
 
   def __call__(self, value: typing.Any):
     """Convers `value` to a Trajectory.  Performs data validation and pruning.
@@ -217,7 +234,8 @@ class AsTrajectory(tf.Module):
       raise TypeError('Input type not supported: {}'.format(value))
     _validate_trajectory(
         value, self._data_context.trajectory_spec,
-        sequence_length=self._sequence_length)
+        sequence_length=self._sequence_length,
+        num_outer_dims=self._num_outer_dims)
     value = nest_utils.prune_extra_keys(
         self._data_context.trajectory_spec, value)
     return value

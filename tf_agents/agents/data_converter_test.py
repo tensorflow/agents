@@ -77,7 +77,7 @@ class AsTrajectoryTest(tf.test.TestCase):
     traj = tensor_spec.sample_spec_nest(self._data_context.trajectory_spec,
                                         outer_dims=[3])
     with self.assertRaisesRegex(
-        ValueError, r'must have two outer dimensions: batch size and time'):
+        ValueError, r'tensors must have shape \`\[B, T\] \+ spec.shape\`'):
       converter(traj)
 
   def testTransitionNoTimeDimensionRaises(self):
@@ -86,7 +86,7 @@ class AsTrajectoryTest(tf.test.TestCase):
                                         outer_dims=[2])
     transition = trajectory.to_transition(traj, traj)
     with self.assertRaisesRegex(
-        ValueError, r'must have two outer dimensions: batch size and time'):
+        ValueError, r'tensors must have shape \`\[B, T\] \+ spec.shape\`'):
       converter(transition)
 
   def testInvalidTimeDimensionRaises(self):

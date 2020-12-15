@@ -178,6 +178,7 @@ def get_required_packages():
       'protobuf >= 3.11.3',
       'wrapt >= 1.11.1',
       'pillow >= 7.0.0',
+      'typing-extensions >= 3.7.4.3',
   ]
   add_additional_packages(required_packages)
   return required_packages

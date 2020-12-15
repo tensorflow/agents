@@ -34,9 +34,10 @@ import collections
 from typing import Callable, Optional, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
@@ -47,6 +48,11 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
+
+import typing_extensions
+
+
+Literal = typing_extensions.Literal
 
 
 class BehavioralCloningLossInfo(collections.namedtuple(
@@ -75,14 +81,14 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       labels=experience.action - action_spec.minimum, logits=bc_logits)
   ```
 
-  This requires a QNetwork that generates `num_action` Q-values. In the case of
+  This requires a Network that generates `num_action` Q-values. In the case of
   continuous actions a simple MSE loss is used by default:
 
   ```python
   def continuous_loss_fn(agent, experience):
     bc_output, _ = self._cloning_network(
         experience.observation,
-        experience.step_type,
+        step_type=experience.step_type,
         training=True,
         network_state=network_state)
 
@@ -105,7 +111,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       action_spec: types.NestedTensorSpec,
       cloning_network: network.Network,
       optimizer: types.Optimizer,
-      num_outer_dims: int = 1,
+      num_outer_dims: Literal[1, 2] = 1,  # pylint: disable=bad-whitespace
       epsilon_greedy: types.Float = 0.1,
       loss_fn: Callable[[types.Tnest], types.Tensor] = None,
       gradient_clipping: Optional[types.Float] = None,
@@ -119,11 +125,11 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     Args:
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
-      cloning_network: A tf_agents.network.Network to be used by the agent.
+      cloning_network: A `tf_agents.networks.Network` to be used by the agent.
         The network will be called as
 
           ```
-          network(observation, step_type, network_state=initial_state)
+          network(observation, step_type=step_type, network_state=initial_state)
           ```
         and must return a 2-tuple with elements `(output, next_network_state)`
       optimizer: The optimizer to use for training.
@@ -192,10 +198,14 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         policy,
         collect_policy,
         train_sequence_length=None,
-        num_outer_dims=num_outer_dims,
+        validate_args=False,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)
+
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None,
+        num_outer_dims=num_outer_dims)
 
   @property
   def cloning_network(self):
@@ -209,7 +219,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     network_state = self._cloning_network.get_initial_state(batch_size)
     bc_logits, _ = self._cloning_network(
         experience.observation,
-        experience.step_type,
+        step_type=experience.step_type,
         training=True,
         network_state=network_state)
 
@@ -231,7 +241,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     network_state = self._cloning_network.get_initial_state(batch_size)
     bc_output, _ = self._cloning_network(
         experience.observation,
-        experience.step_type,
+        step_type=experience.step_type,
         training=True,
         network_state=network_state)
 
@@ -267,6 +277,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     return policy, collect_policy
 
   def _train(self, experience, weights=None):
+    experience = self._as_trajectory(experience)
+
     with tf.GradientTape() as tape:
       per_example_loss = self._bc_loss_fn(experience)
 
@@ -275,8 +287,11 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
           sample_weight=weights,
           regularization_loss=self._cloning_network.losses)
 
-    self._apply_loss(aggregated_losses, self._cloning_network.trainable_weights,
-                     tape, self._optimizer)
+    self._apply_loss(aggregated_losses,
+                     variables_to_train=self._cloning_network.trainable_weights,
+                     tape=tape,
+                     optimizer=self._optimizer)
+
     self.train_step_counter.assign_add(1)
     return tf_agent.LossInfo(aggregated_losses.total_loss,
                              BehavioralCloningLossInfo(per_example_loss))

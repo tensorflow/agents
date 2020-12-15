@@ -69,7 +69,7 @@ from absl import logging
 import gin
 from six.moves import range
 from six.moves import zip
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
