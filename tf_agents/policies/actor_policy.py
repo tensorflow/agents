@@ -176,7 +176,8 @@ class ActorPolicy(tf_policy.TFPolicy):
 
     # Actor network outputs nested structure of distributions or actions.
     actions_or_distributions, policy_state = self._apply_actor_network(
-        network_observation, time_step.step_type, policy_state, mask=mask)
+        network_observation, step_type=time_step.step_type,
+        policy_state=policy_state, mask=mask)
 
     def _to_distribution(action_or_distribution):
       if isinstance(action_or_distribution, tf.Tensor):

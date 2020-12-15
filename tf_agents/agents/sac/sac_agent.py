@@ -153,16 +153,10 @@ class SacAgent(tf_agent.TFAgent):
 
     self._check_action_spec(action_spec)
 
+    net_observation_spec = time_step_spec.observation
+    critic_spec = (net_observation_spec, action_spec)
+
     self._critic_network_1 = critic_network
-    self._critic_network_1.create_variables(
-        (time_step_spec.observation, action_spec))
-    if target_critic_network:
-      target_critic_network.create_variables(
-          (time_step_spec.observation, action_spec))
-    self._target_critic_network_1 = (
-        common.maybe_copy_target_network_with_checks(self._critic_network_1,
-                                                     target_critic_network,
-                                                     'TargetCriticNetwork1'))
 
     if critic_network_2 is not None:
       self._critic_network_2 = critic_network_2
@@ -170,18 +164,33 @@ class SacAgent(tf_agent.TFAgent):
       self._critic_network_2 = critic_network.copy(name='CriticNetwork2')
       # Do not use target_critic_network_2 if critic_network_2 is None.
       target_critic_network_2 = None
-    self._critic_network_2.create_variables(
-        (time_step_spec.observation, action_spec))
+
+    # Wait until critic_network_2 has been copied from critic_network_1 before
+    # creating variables on both.
+    self._critic_network_1.create_variables(critic_spec)
+    self._critic_network_2.create_variables(critic_spec)
+
+    if target_critic_network:
+      target_critic_network.create_variables(critic_spec)
+
+    self._target_critic_network_1 = (
+        common.maybe_copy_target_network_with_checks(
+            self._critic_network_1,
+            target_critic_network,
+            input_spec=critic_spec,
+            name='TargetCriticNetwork1'))
+
     if target_critic_network_2:
-      target_critic_network_2.create_variables(
-          (time_step_spec.observation, action_spec))
+      target_critic_network_2.create_variables(critic_spec)
     self._target_critic_network_2 = (
-        common.maybe_copy_target_network_with_checks(self._critic_network_2,
-                                                     target_critic_network_2,
-                                                     'TargetCriticNetwork2'))
+        common.maybe_copy_target_network_with_checks(
+            self._critic_network_2,
+            target_critic_network_2,
+            input_spec=critic_spec,
+            name='TargetCriticNetwork2'))
 
     if actor_network:
-      actor_network.create_variables(time_step_spec.observation)
+      actor_network.create_variables(net_observation_spec)
     self._actor_network = actor_network
 
     policy = actor_policy_ctor(
@@ -463,9 +472,9 @@ class SacAgent(tf_agent.TFAgent):
       next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps)
       target_input = (next_time_steps.observation, next_actions)
       target_q_values1, unused_network_state1 = self._target_critic_network_1(
-          target_input, next_time_steps.step_type, training=False)
+          target_input, step_type=next_time_steps.step_type, training=False)
       target_q_values2, unused_network_state2 = self._target_critic_network_2(
-          target_input, next_time_steps.step_type, training=False)
+          target_input, step_type=next_time_steps.step_type, training=False)
       target_q_values = (
           tf.minimum(target_q_values1, target_q_values2) -
           tf.exp(self._log_alpha) * next_log_pis)
@@ -476,9 +485,9 @@ class SacAgent(tf_agent.TFAgent):
 
       pred_input = (time_steps.observation, actions)
       pred_td_targets1, _ = self._critic_network_1(
-          pred_input, time_steps.step_type, training=training)
+          pred_input, step_type=time_steps.step_type, training=training)
       pred_td_targets2, _ = self._critic_network_2(
-          pred_input, time_steps.step_type, training=training)
+          pred_input, step_type=time_steps.step_type, training=training)
       critic_loss1 = td_errors_loss_fn(td_targets, pred_td_targets1)
       critic_loss2 = td_errors_loss_fn(td_targets, pred_td_targets2)
       critic_loss = critic_loss1 + critic_loss2
@@ -519,9 +528,9 @@ class SacAgent(tf_agent.TFAgent):
       actions, log_pi = self._actions_and_log_probs(time_steps)
       target_input = (time_steps.observation, actions)
       target_q_values1, _ = self._critic_network_1(
-          target_input, time_steps.step_type, training=False)
+          target_input, step_type=time_steps.step_type, training=False)
       target_q_values2, _ = self._critic_network_2(
-          target_input, time_steps.step_type, training=False)
+          target_input, step_type=time_steps.step_type, training=False)
       target_q_values = tf.minimum(target_q_values1, target_q_values2)
       actor_loss = tf.exp(self._log_alpha) * log_pi - target_q_values
       if actor_loss.shape.rank > 1:

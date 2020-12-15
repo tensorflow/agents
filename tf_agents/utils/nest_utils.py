@@ -111,7 +111,8 @@ def assert_same_structure(nest1,
         lambda _: _DOT, nest1, expand_composites=expand_composites)
     str2 = tf.nest.map_structure(
         lambda _: _DOT, nest2, expand_composites=expand_composites)
-    raise exception('{}:\n  {}\nvs.\n  {}'.format(message, str1, str2))
+    raise exception('{}:\n  {}\nvs.\n  {}\nValues:\n  {}\nvs.\n  {}.'
+                    .format(message, str1, str2, nest1, nest2))
 
 
 def flatten_with_joined_paths(structure, expand_composites=False):

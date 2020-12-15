@@ -19,14 +19,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from absl.testing import parameterized
+
+import tensorflow as tf
 
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.agents.sac import sac_agent
 from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import actor_distribution_rnn_network
+from tf_agents.networks import nest_map
 from tf_agents.networks import network
+from tf_agents.networks import sequential
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
@@ -122,7 +126,33 @@ class DummyCriticNet(network.Network):
     return q_value, network_state
 
 
-class SacAgentTest(test_utils.TestCase):
+def create_sequential_critic_net(l2_regularization_weight=0.0,
+                                 shared_layer=None):
+  value_layer = tf.keras.layers.Dense(
+      1,
+      kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
+      kernel_initializer=tf.initializers.constant([[0], [1]]),
+      bias_initializer=tf.initializers.constant([[0]]))
+  if shared_layer:
+    value_layer = sequential.Sequential([value_layer, shared_layer])
+
+  action_layer = tf.keras.layers.Dense(
+      1,
+      kernel_regularizer=tf.keras.regularizers.l2(l2_regularization_weight),
+      kernel_initializer=tf.initializers.constant([[1]]),
+      bias_initializer=tf.initializers.constant([[0]]))
+
+  def sum_value_and_action_out(value_and_action_out):
+    value_out, action_out = value_and_action_out
+    return tf.reshape(value_out + action_out, [-1])
+
+  return sequential.Sequential([
+      nest_map.NestMap((value_layer, action_layer)),
+      tf.keras.layers.Lambda(sum_value_and_action_out)
+  ])
+
+
+class SacAgentTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
     super(SacAgentTest, self).setUp()
@@ -133,11 +163,18 @@ class SacAgentTest(test_utils.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
 
-  def testCreateAgent(self):
+  @parameterized.named_parameters(('Network', DummyCriticNet, False),
+                                  ('Keras', create_sequential_critic_net, True))
+  def testCreateAgent(self, create_critic_net_fn, skip_in_tf1):
+    if skip_in_tf1 and not common.has_eager_been_enabled():
+      self.skipTest('Skipping test: sequential networks not supported in TF1')
+
+    critic_network = create_critic_net_fn()
+
     sac_agent.SacAgent(
         self._time_step_spec,
         self._action_spec,
-        critic_network=DummyCriticNet(),
+        critic_network=critic_network,
         actor_network=None,
         actor_optimizer=None,
         critic_optimizer=None,
@@ -207,11 +244,17 @@ class SacAgentTest(test_utils.TestCase):
         transition_spec, outer_dims=(3,))
     agent.train(sample_trajectory_experience)
 
-  def testCriticLoss(self):
+  @parameterized.named_parameters(('Network', DummyCriticNet, False),
+                                  ('Keras', create_sequential_critic_net, True))
+  def testCriticLoss(self, create_critic_net_fn, skip_in_tf1):
+    if skip_in_tf1 and not common.has_eager_been_enabled():
+      self.skipTest('Skipping test: sequential networks not supported in TF1')
+
+    critic_network = create_critic_net_fn()
     agent = sac_agent.SacAgent(
         self._time_step_spec,
         self._action_spec,
-        critic_network=DummyCriticNet(),
+        critic_network=critic_network,
         actor_network=None,
         actor_optimizer=None,
         critic_optimizer=None,
