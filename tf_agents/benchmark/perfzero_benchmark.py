@@ -15,6 +15,7 @@
 
 """Utils for creating PerfZero benchmarks."""
 import os
+from typing import Optional, Union
 
 from absl import flags
 from absl import logging
@@ -22,6 +23,7 @@ from absl.testing import flagsaver
 import tensorflow as tf
 
 FLAGS = flags.FLAGS
+Number = Union[int, float]
 
 
 class PerfZeroBenchmark(tf.test.Benchmark):
@@ -50,7 +52,7 @@ class PerfZeroBenchmark(tf.test.Benchmark):
     """Returns directory to store info, e.g. saved model and event log."""
     return os.path.join(self.output_dir, folder_name)
 
-  def _setup(self):
+  def setUp(self):
     """Sets up and resets flags before each test."""
     logging.set_verbosity(logging.INFO)
     if PerfZeroBenchmark.local_flags is None:
@@ -60,3 +62,32 @@ class PerfZeroBenchmark(tf.test.Benchmark):
       PerfZeroBenchmark.local_flags = saved_flag_values
     else:
       flagsaver.restore_flag_values(PerfZeroBenchmark.local_flags)
+
+  def build_metric(self,
+                   name: str,
+                   value: Number,
+                   min_value: Optional[Number] = None,
+                   max_value: Optional[Number] = None):
+    """Builds a dictionary representing the metric to record.
+
+    Args:
+      name: Name of the metric.
+      value: Value of the metric.
+      min_value: Lowest acceptable value.
+      max_value: Highest acceptable value.
+
+    Returns:
+      Dictionary representing the metric.
+    """
+    metric = {
+        'name': name,
+        'value': value,
+    }
+
+    if min_value:
+      metric['min_value'] = min_value
+
+    if max_value:
+      metric['max_value'] = max_value
+
+    return metric
