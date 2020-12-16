@@ -255,8 +255,8 @@ def extract_event_log_values(
     end_step: If set, processing of the event log ends on this step.
 
   Returns:
-    Tuple with a dict of int: int (step: event value) and the total walltime
-      in minutes.
+    Tuple with a dict of int: np.generic (step: event value) and the total
+      walltime in minutes.
 
   Raises:
     ValueError: If no events are found or the final step is smaller than the
