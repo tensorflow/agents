@@ -17,11 +17,15 @@
 """Learner implementation for Agents. Refer to the examples dir."""
 
 import os
+from typing import Any, Tuple
 
 from absl import logging
 import gin
 import tensorflow.compat.v2 as tf
+
+from tf_agents.agents import tf_agent
 from tf_agents.train import interval_trigger
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 TRAIN_DIR = 'train'
@@ -30,6 +34,8 @@ COLLECT_POLICY_SAVED_MODEL_DIR = 'collect_policy'
 GREEDY_POLICY_SAVED_MODEL_DIR = 'greedy_policy'
 RAW_POLICY_SAVED_MODEL_DIR = 'policy'
 POLICY_CHECKPOINT_DIR = 'checkpoints'
+
+ExperienceAndSampleInfo = Tuple[types.NestedTensor, Tuple[Any, ...]]
 
 
 @gin.configurable
@@ -232,3 +238,73 @@ class Learner(tf.Module):
             args=((experience, sample_info), loss_info))
 
     return loss_info
+
+  def loss(
+      self,
+      experience_and_sample_info: ExperienceAndSampleInfo = None,
+      reduce_op: tf.distribute.ReduceOp = tf.distribute.ReduceOp.SUM,
+  ) -> tf_agent.LossInfo:
+    """Computes loss for the experience.
+
+    Since this calls agent.loss() it does not update gradients or
+    increment the train step counter. Networks are called with `training=False`
+    so statistics like batch norm are not updated.
+
+    Args:
+      experience_and_sample_info: A batch of experience and sample info. If
+        not specified, `next(self._experience_iterator)` is used.
+      reduce_op: a `tf.distribute.ReduceOp` value specifying how loss values
+        should be aggregated across replicas.
+
+    Returns:
+      The total loss computed.
+    """
+
+    def _summary_record_if():
+      return tf.math.equal(
+          self.train_step % tf.constant(self.summary_interval), 0)
+
+    with self.train_summary_writer.as_default(), \
+         common.soft_device_placement(), \
+         tf.compat.v2.summary.record_if(_summary_record_if), \
+         self.strategy.scope():
+      experience_and_sample_info = experience_and_sample_info or next(
+          self._experience_iterator)
+      loss_info = self._loss(experience_and_sample_info, reduce_op)
+
+      return loss_info
+
+  # Use tf.config.experimental_run_functions_eagerly(True) if you want to
+  # disable use of tf.function.
+  @common.function(autograph=True)
+  def _loss(
+      self,
+      experience_and_sample_info: ExperienceAndSampleInfo,
+      reduce_op: tf.distribute.ReduceOp,
+  ) -> tf_agent.LossInfo:
+    (experience, sample_info) = experience_and_sample_info
+
+    if self.use_kwargs_in_agent_train:
+      loss_info = self.strategy.run(self._agent.loss, kwargs=experience)
+    else:
+      loss_info = self.strategy.run(self._agent.loss, args=(experience,))
+
+    if self.after_train_strategy_step_fn:
+      if self.use_kwargs_in_agent_train:
+        self.strategy.run(
+            self.after_train_strategy_step_fn,
+            kwargs=dict(
+                experience=(experience, sample_info), loss_info=loss_info))
+      else:
+        self.strategy.run(
+            self.after_train_strategy_step_fn,
+            args=((experience, sample_info), loss_info))
+
+    def _reduce_loss(loss):
+      return self.strategy.reduce(reduce_op, loss, axis=None)
+
+    # We assume all data can be reduced in the loss_info. This means no
+    # string dtypes are currently allowed as LossInfo Fields.
+    reduced_loss_info = tf.nest.map_structure(_reduce_loss, loss_info)
+    return reduced_loss_info
+

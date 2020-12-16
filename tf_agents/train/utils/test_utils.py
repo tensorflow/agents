@@ -305,6 +305,28 @@ def check_variables_different(test_case, old_vars_numpy, new_vars_numpy):
   test_case.assertTrue(np.any(vars_changed))
 
 
+def check_variables_same(test_case, old_vars_numpy, new_vars_numpy):
+  """Tests whether the two sets of variables are the same.
+
+  Useful for checking if variables were not updated, i.e. a loss step was run.
+
+  Args:
+    test_case: an instande of tf.test.TestCase for assertions
+    old_vars_numpy: numpy representation of old variables
+    new_vars_numpy: numpy representation of new variables
+  """
+
+  # Check that there is no change.
+  def same(a, b):
+    return np.equal(a, b).all()
+
+  vars_same = tf.nest.flatten(
+      tf.nest.map_structure(same, old_vars_numpy, new_vars_numpy))
+
+  # Assert if all of the variables are the same.
+  test_case.assertTrue(np.all(vars_same))
+
+
 def create_reverb_server_for_replay_buffer_and_variable_container(
     collect_policy, train_step, replay_buffer_capacity, port):
   """Sets up one reverb server for replay buffer and variable container."""

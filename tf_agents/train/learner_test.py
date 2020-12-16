@@ -82,7 +82,7 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
           agent=agent,
           experience_dataset_fn=dataset_fn)
       variables = agent.collect_policy.variables()
-    return test_learner, dataset, variables, train_step
+    return test_learner, dataset, variables, train_step, dataset_fn
 
   def _compare_losses(self, loss_1, loss_2, delta=1.e-2):
     (digits_1, exponent_1) = np.frexp(loss_1)
@@ -93,7 +93,7 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
   def testLearnerRun(self):
     strategy = tf.distribute.OneDeviceStrategy('/cpu:0')
 
-    test_learner, _, variables, _ = (
+    test_learner, _, variables, _, _ = (
         self._build_learner_with_strategy(
             dist_test_utils.create_dqn_agent_and_dataset_fn,
             strategy,
@@ -106,10 +106,52 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
         self, old_vars, new_vars)
     self.assertAllInRange(loss, tf.float32.min, tf.float32.max)
 
+  def testLearnerLoss(self):
+    strategy = tf.distribute.OneDeviceStrategy('/cpu:0')
+
+    test_learner, _, variables, _, _ = (
+        self._build_learner_with_strategy(
+            dist_test_utils.create_dqn_agent_and_dataset_fn,
+            strategy,
+            sample_batch_size=4))
+    old_vars = self.evaluate(variables)
+
+    # Compute loss using the default sum reduce op.
+    loss_sum = test_learner.loss().loss
+    new_vars = self.evaluate(variables)
+
+    dist_test_utils.check_variables_same(self, old_vars, new_vars)
+    self.assertAllInRange(loss_sum, tf.float32.min, tf.float32.max)
+
+    # Compute loss using a mean reduce op.
+    loss_mean = test_learner.loss(reduce_op=tf.distribute.ReduceOp.MEAN).loss
+    new_vars = self.evaluate(variables)
+
+    dist_test_utils.check_variables_same(self, old_vars, new_vars)
+    self.assertAllInRange(loss_mean, tf.float32.min, tf.float32.max)
+
+  def testLearnerLossPassExperience(self):
+    strategy = tf.distribute.OneDeviceStrategy('/cpu:0')
+
+    test_learner, _, variables, _, dataset_fn = (
+        self._build_learner_with_strategy(
+            dist_test_utils.create_dqn_agent_and_dataset_fn,
+            strategy,
+            sample_batch_size=4))
+    old_vars = self.evaluate(variables)
+
+    dataset_iter = iter(dataset_fn())
+    loss_sum = test_learner.loss(
+        experience_and_sample_info=next(dataset_iter)).loss
+    new_vars = self.evaluate(variables)
+
+    dist_test_utils.check_variables_same(self, old_vars, new_vars)
+    self.assertAllInRange(loss_sum, tf.float32.min, tf.float32.max)
+
   def testLearnerAssertInvalidIterations(self):
     strategy = tf.distribute.OneDeviceStrategy('/cpu:0')
 
-    test_learner, _, _, _ = (
+    test_learner, _, _, _, _ = (
         self._build_learner_with_strategy(
             dist_test_utils.create_dqn_agent_and_dataset_fn,
             strategy,
@@ -150,8 +192,8 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     }
 
     # Verify that the initial variable values in the learners are the same.
-    default_strat_trainer, _, default_vars, _ = learners['default']
-    for name, (trainer, _, variables, _) in learners.items():
+    default_strat_trainer, _, default_vars, _, _ = learners['default']
+    for name, (trainer, _, variables, _, _) in learners.items():
       if name != 'default':
         self._assign_variables(default_strat_trainer, trainer)
         self.assertLen(variables, len(default_vars))
@@ -161,7 +203,7 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     # Calculate losses.
     losses = {}
     iterations = 1
-    for name, (trainer, _, variables, train_step) in learners.items():
+    for name, (trainer, _, variables, train_step, _) in learners.items():
       old_vars = self.evaluate(variables)
 
       loss = trainer.run(iterations=iterations).loss
