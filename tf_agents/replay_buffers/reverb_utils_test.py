@@ -62,7 +62,7 @@ class ReverbTableTests(test_utils.TestCase):
             table=table_name, num_timesteps=1, priority=1)
 
     dataset = replay.as_dataset(
-        sample_batch_size=1, num_steps=None, num_parallel_calls=None)
+        sample_batch_size=1, num_steps=None, num_parallel_calls=1)
 
     iterator = iter(dataset)
     for i in range(3):
@@ -93,7 +93,7 @@ class ReverbTableTests(test_utils.TestCase):
             table=table_name, num_timesteps=1, priority=1)
 
     dataset = replay.as_dataset(
-        sample_batch_size=1, num_steps=None, num_parallel_calls=None)
+        sample_batch_size=1, num_steps=None, num_parallel_calls=1)
 
     iterator = iter(dataset)
     counts = [0] * 3
@@ -129,7 +129,7 @@ class ReverbTableTests(test_utils.TestCase):
         writer.append(i)
         writer.create_item(table_name, num_timesteps=1, priority=1)
 
-    dataset = replay.as_dataset(sample_batch_size=3)
+    dataset = replay.as_dataset(sample_batch_size=3, num_parallel_calls=3)
 
     self.assertTrue(table.can_sample(3))
     iterator = iter(dataset)
@@ -169,7 +169,7 @@ class ReverbTableTests(test_utils.TestCase):
             table=table_name, num_timesteps=1, priority=i)
 
     dataset = replay.as_dataset(
-        sample_batch_size=1, num_steps=None, num_parallel_calls=None)
+        sample_batch_size=1, num_steps=None, num_parallel_calls=1)
 
     iterator = iter(dataset)
     counts = [0] * 3
@@ -204,7 +204,7 @@ class ReverbTableTests(test_utils.TestCase):
         writer.append(i)
         writer.create_item(table_name, num_timesteps=1, priority=i)
 
-    dataset = replay.as_dataset(sample_batch_size=3)
+    dataset = replay.as_dataset(sample_batch_size=3, num_parallel_calls=3)
 
     self.assertTrue(table.can_sample(3))
     iterator = iter(dataset)
