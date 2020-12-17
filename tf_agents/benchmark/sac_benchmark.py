@@ -14,9 +14,11 @@
 # limitations under the License.
 
 """Executes Soft Actor Critic (SAC) benchmarks."""
+import os
 import time
 
 import tensorflow as tf
+from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
 from tf_agents.experimental.examples.sac.haarnoja18 import sac_train_eval
 
@@ -38,27 +40,36 @@ class SacHaarnoja18Return(PerfZeroBenchmark):
 
   def benchmark_halfcheetah_v2(self):
     """Benchmarks MuJoCo HalfCheetah to 3M steps."""
-    self._setup()
+    self.setUp()
+    output_dir = self._get_test_output_dir('halfcheetah_v2')
     start_time_sec = time.time()
     # TODO(b/172017027): Use halfcheetah gin config.
     sac_train_eval.train_eval(
-        self._get_test_output_dir('halfcheetah_v2'),
+        output_dir,
         initial_collect_steps=10000,
         env_name='HalfCheetah-v2',
+        eval_interval=50000,
         num_iterations=3000000)
     wall_time_sec = time.time() - start_time_sec
-    # TODO(b/172011457): Add train and eval final return, batch-size, and
-    # batches/sec to perfzero metrics.
-    self._report_benchmark(wall_time_sec)
+    event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
+    values, _ = utils.extract_event_log_values(event_file, 'AverageReturn')
 
-  def _report_benchmark(self, wall_time_sec):
-    """Reports benchmark results.
+    # Min/Max ranges are very large to only hard fail if very broken. The system
+    # monitoring the results owns looking for anomalies.
+    metric_1m = self.build_metric(
+        'average_return_at_env_step1000000',
+        values[1000000],
+        min_value=800,
+        max_value=16000)
 
-    Args:
-      wall_time_sec: the during of the benchmark execution in seconds
-    """
-    metrics = []
-    self.report_benchmark(wall_time=wall_time_sec, metrics=metrics, extras={})
+    metric_3m = self.build_metric(
+        'average_return_at_env_step3000000',
+        values[3000000],
+        min_value=12000,
+        max_value=16500)
+
+    self.report_benchmark(
+        wall_time=wall_time_sec, metrics=[metric_1m, metric_3m], extras={})
 
 
 if __name__ == '__main__':
