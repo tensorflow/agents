@@ -27,6 +27,9 @@ from typing import Callable, Iterable, Mapping, Optional, Sequence, Text, TypeVa
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+# pylint:disable=g-direct-tensorflow-import
+from tensorflow.python.framework.ops import EagerTensor  # TF internal
+# pylint:enable=g-direct-tensorflow-import
 
 if sys.version_info < (3, 7):
   ForwardRef = typing._ForwardRef  # pylint: disable=protected-access
@@ -39,7 +42,7 @@ BoundedTensorSpec = ForwardRef('tf_agents.specs.tensor_spec.BoundedTensorSpec') 
 DistributionSpecV2 = ForwardRef(
     'tf_agents.distributions.utils.DistributionSpecV2')  # pylint: disable=invalid-name
 
-Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor]
+Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor, EagerTensor]
 Array = Union[np.ndarray, int, float, str, bool]   # pylint: disable=invalid-name
 TensorOrArray = Union[Tensor, Array]
 Distribution = tfp.distributions.Distribution
