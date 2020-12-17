@@ -237,7 +237,7 @@ def find_event_log(eventlog_dir: str,
     raise FileNotFoundError(f'No files found matching pattern:{event_log_path}')
 
   assert len(event_files) == 1, (
-      'Found {} event files({}) matching "{}" pattertn and expected 1.'.format(
+      'Found {} event files({}) matching "{}" pattern and expected 1.'.format(
           len(event_files), ','.join(event_files), event_log_path))
 
   return event_files[0]
