@@ -196,7 +196,9 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
                                                         batch_size))
     return self.session.run(self._tf_initial_state)
 
-  def _action(self, time_step, policy_state):
+  def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
+    if seed is not None:
+      raise ValueError('`seed` is passed to the class as an argument.')
     if not self._built:
       self._build_from_time_step(time_step)
 

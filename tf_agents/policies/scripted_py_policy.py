@@ -19,10 +19,11 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Optional
 from absl import logging
 
 import numpy as np
+
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import policy_step
@@ -77,8 +78,9 @@ class ScriptedPyPolicy(py_policy.PyPolicy):
     # how many times it has been performed.
     return [0, 0]
 
-  def _action(self, time_step, policy_state):
+  def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
     del time_step  # Unused.
+    del seed  # Unused.
     if policy_state is None:
       policy_state = [0, 0]
 

@@ -541,7 +541,7 @@ class TFPolicy(tf.Module):
   # Subclasses MAY optionally override _action.
   def _action(self, time_step: ts.TimeStep,
               policy_state: types.NestedTensor,
-              seed: Optional[types.Seed]) -> policy_step.PolicyStep:
+              seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
     """Implementation of `action`.
 
     Args:

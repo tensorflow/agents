@@ -41,61 +41,80 @@ from tf_agents.utils import test_utils
 
 class PyTFEagerPolicyTest(test_utils.TestCase):
 
+  def setUp(self):
+    super(PyTFEagerPolicyTest, self).setUp()
+    self._observation_spec = array_spec.ArraySpec([2], np.float32)
+    self._action_spec = array_spec.BoundedArraySpec([1], np.float32, 2, 3)
+    self._observation_tensor_spec = tensor_spec.from_spec(
+        self._observation_spec)
+    self._action_tensor_spec = tensor_spec.from_spec(self._action_spec)
+    self._time_step_tensor_spec = ts.time_step_spec(
+        self._observation_tensor_spec)
+    info_spec = {
+        'a': array_spec.BoundedArraySpec([1], np.float32, 0, 1),
+        'b': array_spec.BoundedArraySpec([1], np.float32, 100, 101)
+    }
+    self._info_tensor_spec = tensor_spec.from_spec(info_spec)
+    # Env will validate action types automaticall since we provided the
+    # action_spec.
+    self._env = random_py_environment.RandomPyEnvironment(
+        self._observation_spec, self._action_spec)
+
   def testPyEnvCompatible(self):
     if not common.has_eager_been_enabled():
       self.skipTest('Only supported in eager.')
 
-    observation_spec = array_spec.ArraySpec([2], np.float32)
-    action_spec = array_spec.BoundedArraySpec([1], np.float32, 2, 3)
-
-    observation_tensor_spec = tensor_spec.from_spec(observation_spec)
-    action_tensor_spec = tensor_spec.from_spec(action_spec)
-    time_step_tensor_spec = ts.time_step_spec(observation_tensor_spec)
-
     actor_net = actor_network.ActorNetwork(
-        observation_tensor_spec,
-        action_tensor_spec,
+        self._observation_tensor_spec,
+        self._action_tensor_spec,
         fc_layer_params=(10,),
     )
 
     tf_policy = actor_policy.ActorPolicy(
-        time_step_tensor_spec, action_tensor_spec, actor_network=actor_net)
+        self._time_step_tensor_spec,
+        self._action_tensor_spec,
+        actor_network=actor_net)
 
     py_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_policy)
-    # Env will validate action types automaticall since we provided the
-    # action_spec.
-    env = random_py_environment.RandomPyEnvironment(observation_spec,
-                                                    action_spec)
-
-    time_step = env.reset()
+    time_step = self._env.reset()
 
     for _ in range(100):
       action_step = py_policy.action(time_step)
-      time_step = env.step(action_step.action)
+      time_step = self._env.step(action_step.action)
+
+  def testActionWithSeed(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in eager.')
+
+    tf_policy = random_tf_policy.RandomTFPolicy(
+        self._time_step_tensor_spec,
+        self._action_tensor_spec,
+        info_spec=self._info_tensor_spec)
+
+    py_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_policy)
+    time_step = self._env.reset()
+    tf.random.set_seed(100)
+    action_step_1 = py_policy.action(time_step, seed=100)
+    time_step = self._env.reset()
+    tf.random.set_seed(100)
+    action_step_2 = py_policy.action(time_step, seed=100)
+    time_step = self._env.reset()
+    tf.random.set_seed(200)
+    action_step_3 = py_policy.action(time_step, seed=200)
+    self.assertEqual(action_step_1.action[0], action_step_2.action[0])
+    self.assertNotEqual(action_step_1.action[0], action_step_3.action[0])
 
   def testRandomTFPolicyCompatibility(self):
     if not common.has_eager_been_enabled():
       self.skipTest('Only supported in eager.')
 
-    observation_spec = array_spec.ArraySpec([2], np.float32)
-    action_spec = array_spec.BoundedArraySpec([1], np.float32, 2, 3)
-    info_spec = {
-        'a': array_spec.BoundedArraySpec([1], np.float32, 0, 1),
-        'b': array_spec.BoundedArraySpec([1], np.float32, 100, 101)
-    }
-
-    observation_tensor_spec = tensor_spec.from_spec(observation_spec)
-    action_tensor_spec = tensor_spec.from_spec(action_spec)
-    info_tensor_spec = tensor_spec.from_spec(info_spec)
-    time_step_tensor_spec = ts.time_step_spec(observation_tensor_spec)
-
     tf_policy = random_tf_policy.RandomTFPolicy(
-        time_step_tensor_spec, action_tensor_spec, info_spec=info_tensor_spec)
+        self._time_step_tensor_spec,
+        self._action_tensor_spec,
+        info_spec=self._info_tensor_spec)
 
     py_policy = py_tf_eager_policy.PyTFEagerPolicy(tf_policy)
-    env = random_py_environment.RandomPyEnvironment(observation_spec,
-                                                    action_spec)
-    time_step = env.reset()
+    time_step = self._env.reset()
 
     def _check_action_step(action_step):
       self.assertIsInstance(action_step.action, np.ndarray)
@@ -113,7 +132,7 @@ class PyTFEagerPolicyTest(test_utils.TestCase):
     for _ in range(100):
       action_step = py_policy.action(time_step)
       _check_action_step(action_step)
-      time_step = env.step(action_step.action)
+      time_step = self._env.step(action_step.action)
 
 
 class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,

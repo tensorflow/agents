@@ -20,8 +20,10 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
+
 import os
 from typing import Optional, Text
+from absl import logging
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -53,7 +55,8 @@ class PyTFEagerPolicyBase(py_policy.PyPolicy):
                info_spec: types.NestedArraySpec,
                use_tf_function: bool = False):
     self._policy = policy
-    if use_tf_function:
+    self._use_tf_function = use_tf_function
+    if self._use_tf_function:
       self._policy_action_fn = common.function(policy.action)
     else:
       self._policy_action_fn = policy.action
@@ -66,11 +69,17 @@ class PyTFEagerPolicyBase(py_policy.PyPolicy):
   def _get_initial_state(self, batch_size):
     return self._policy.get_initial_state(batch_size=batch_size)
 
-  def _action(self, time_step, policy_state):
+  def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
+    if seed is not None and self._use_tf_function:
+      logging.warning(
+          'Using `seed` may force a retrace for each call to `action`.')
     time_step = nest_utils.batch_nested_array(time_step)
     # Avoid passing numpy arrays to avoid retracing of the tf.function.
     time_step = tf.nest.map_structure(tf.convert_to_tensor, time_step)
-    policy_step = self._policy_action_fn(time_step, policy_state)
+    if seed is not None:
+      policy_step = self._policy_action_fn(time_step, policy_state, seed=seed)
+    else:
+      policy_step = self._policy_action_fn(time_step, policy_state)
     return policy_step._replace(
         action=nest_utils.unbatch_nested_tensors_to_arrays(policy_step.action),
         # We intentionally do not convert the `state` so it is outputted as the

@@ -26,6 +26,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -122,7 +123,7 @@ class TFPyPolicy(tf_policy.TFPolicy):
   # when empty fields in the policy_step get dropped by tf.nest.flatten
   # in the numpy_function.
   @common.function
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
     if seed is not None:
       raise NotImplementedError(
           'seed is not supported; but saw seed: {}'.format(seed))

@@ -28,7 +28,7 @@ from __future__ import print_function
 from multiprocessing import dummy as mp_threads
 # pylint: enable=line-too-long
 
-from typing import Sequence
+from typing import Sequence, Optional
 
 import gin
 
@@ -143,22 +143,30 @@ class BatchedPyPolicy(py_policy.PyPolicy):
       infos = nest_utils.unbatch_nested_array(infos)
       return nest_utils.stack_nested_arrays(infos)
 
-  def _action(self, time_step: ts.TimeStep,
-              policy_state: types.NestedArray) -> ps.PolicyStep:
+  def _action(self,
+              time_step: ts.TimeStep,
+              policy_state: types.NestedArray,
+              seed: Optional[types.Seed] = None) -> ps.PolicyStep:
     """Forward a batch of time_step and policy_states to the wrapped policies.
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
-      policy_state: An Array, or a nested dict, list or tuple of
-        Arrays representing the previous policy_state.
+      policy_state: An Array, or a nested dict, list or tuple of Arrays
+        representing the previous policy_state.
+      seed: Seed value used to initialize a pseudorandom number generator.
 
     Returns:
       A batch of `PolicyStep` named tuples, each one containing:
         `action`: A nest of action Arrays matching the `action_spec()`.
         `state`: A nest of policy states to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
-    """
 
+    Raises:
+      NotImplementedError: if `seed` is not None.
+    """
+    if seed is not None:
+      raise NotImplementedError(
+          "seed is not supported; but saw seed: {}".format(seed))
     if self._num_policies == 1:
       time_step = nest_utils.unbatch_nested_array(time_step)
       policy_state = nest_utils.unbatch_nested_array(policy_state)

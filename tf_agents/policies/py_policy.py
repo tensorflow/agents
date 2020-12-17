@@ -137,15 +137,17 @@ class PyPolicy(object):
     """
     return self._get_initial_state(batch_size)
 
-  def action(
-      self, time_step: ts.TimeStep, policy_state: types.NestedArray = ()
-  ) -> policy_step.PolicyStep:
+  def action(self,
+             time_step: ts.TimeStep,
+             policy_state: types.NestedArray = (),
+             seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
     """Generates next action given the time_step and policy_state.
 
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
       policy_state: An optional previous policy_state.
+      seed: Seed to use if action uses sampling (optional).
 
     Returns:
       A PolicyStep named tuple containing:
@@ -153,7 +155,10 @@ class PyPolicy(object):
         `state`: A nest of policy states to be fed into the next call to action.
         `info`: Optional side information such as action log probabilities.
     """
-    return self._action(time_step, policy_state)
+    if seed is not None:
+      return self._action(time_step, policy_state, seed=seed)
+    else:
+      return self._action(time_step, policy_state)
 
   @property
   def time_step_spec(self) -> ts.TimeStep:
@@ -232,14 +237,17 @@ class PyPolicy(object):
     return self._collect_data_spec
 
   @abc.abstractmethod
-  def _action(self, time_step: ts.TimeStep,
-              policy_state: types.NestedArray) -> policy_step.PolicyStep:
+  def _action(self,
+              time_step: ts.TimeStep,
+              policy_state: types.NestedArray,
+              seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
     """Implementation of `action`.
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
-      policy_state: An Array, or a nested dict, list or tuple of
-        Arrays representing the previous policy_state.
+      policy_state: An Array, or a nested dict, list or tuple of Arrays
+        representing the previous policy_state.
+      seed: Seed to use if action uses sampling (optional).
 
     Returns:
       A `PolicyStep` named tuple containing:

@@ -106,7 +106,8 @@ class RandomPyPolicy(py_policy.PyPolicy):
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))
 
-  def _action(self, time_step, policy_state):
+  def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
+    del seed  # Unused. Seed passed to the class.
     outer_dims = self._outer_dims
     if outer_dims is None:
       if self.time_step_spec.observation:
