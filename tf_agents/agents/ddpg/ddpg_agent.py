@@ -130,17 +130,26 @@ class DdpgAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
     self._actor_network = actor_network
-    actor_network.create_variables()
+    actor_network.create_variables(
+        time_step_spec.observation)
     if target_actor_network:
-      target_actor_network.create_variables()
+      target_actor_network.create_variables(time_step_spec.observation)
     self._target_actor_network = common.maybe_copy_target_network_with_checks(
-        self._actor_network, target_actor_network, 'TargetActorNetwork')
+        self._actor_network,
+        target_actor_network,
+        'TargetActorNetwork',
+        input_spec=time_step_spec.observation)
+
     self._critic_network = critic_network
-    critic_network.create_variables()
+    critic_input_spec = (time_step_spec.observation, action_spec)
+    critic_network.create_variables(critic_input_spec)
     if target_critic_network:
-      target_critic_network.create_variables()
+      target_critic_network.create_variables(critic_input_spec)
     self._target_critic_network = common.maybe_copy_target_network_with_checks(
-        self._critic_network, target_critic_network, 'TargetCriticNetwork')
+        self._critic_network,
+        target_critic_network,
+        'TargetCriticNetwork',
+        input_spec=critic_input_spec)
 
     self._actor_optimizer = actor_optimizer
     self._critic_optimizer = critic_optimizer
@@ -298,11 +307,11 @@ class DdpgAgent(tf_agent.TFAgent):
     """
     with tf.name_scope('critic_loss'):
       target_actions, _ = self._target_actor_network(
-          next_time_steps.observation, next_time_steps.step_type,
+          next_time_steps.observation, step_type=next_time_steps.step_type,
           training=False)
       target_critic_net_input = (next_time_steps.observation, target_actions)
       target_q_values, _ = self._target_critic_network(
-          target_critic_net_input, next_time_steps.step_type,
+          target_critic_net_input, step_type=next_time_steps.step_type,
           training=False)
 
       td_targets = tf.stop_gradient(
@@ -311,7 +320,7 @@ class DdpgAgent(tf_agent.TFAgent):
 
       critic_net_input = (time_steps.observation, actions)
       q_values, _ = self._critic_network(critic_net_input,
-                                         time_steps.step_type,
+                                         step_type=time_steps.step_type,
                                          training=training)
 
       critic_loss = self._td_errors_loss_fn(td_targets, q_values)
@@ -355,12 +364,12 @@ class DdpgAgent(tf_agent.TFAgent):
     """
     with tf.name_scope('actor_loss'):
       actions, _ = self._actor_network(time_steps.observation,
-                                       time_steps.step_type,
+                                       step_type=time_steps.step_type,
                                        training=training)
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actions)
         q_values, _ = self._critic_network((time_steps.observation, actions),
-                                           time_steps.step_type,
+                                           step_type=time_steps.step_type,
                                            training=False)
         actions = tf.nest.flatten(actions)
 
