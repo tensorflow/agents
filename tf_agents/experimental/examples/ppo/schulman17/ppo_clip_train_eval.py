@@ -29,7 +29,7 @@ import gin
 
 import tensorflow.compat.v2 as tf
 
-from tf_agents.experimental.examples.ppo import train_eval_lib
+from tf_agents.experimental.examples.ppo.schulman17 import train_eval_lib
 
 FLAGS = flags.FLAGS
 
