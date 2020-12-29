@@ -34,7 +34,19 @@ reverb = lazy_loader.LazyLoader("reverb", globals(), "reverb")
 
 
 class ReverbAddEpisodeObserver(object):
-  """Observer for writing episodes to the Reverb replay buffer."""
+  """Observer for writing episodes to Reverb.
+
+  This observer should be called at every step. It does not support batched
+  trajectories. The steps are cached and written at the end of the episode.
+
+  At the end of each episode, an item is written to Reverb. Each item is the
+  trajectory containing an episode, including a boundary step in the end.
+  Therefore, the sequence lengths of the items may vary. If you want a fixed
+  sequence length, use `ReverbAddTrajectoryObserver` instead.
+
+  Unfinished episodes remain in the cache and do not get written until
+  `reset(write_cached_steps=True)` is called.
+  """
 
   def __init__(self,
                py_client: types.ReverbClient,
@@ -109,13 +121,13 @@ class ReverbAddEpisodeObserver(object):
     """
     self._priority = priority
 
-  def __call__(self, trajectory):
-    """Writes the trajectory into the underlying replay buffer.
+  def __call__(self, traj):
+    """Cache the single step trajectory to be written into Reverb.
 
     Allows trajectory to be a flattened trajectory. No batch dimension allowed.
 
     Args:
-      trajectory: The trajectory to be written which could be (possibly nested)
+      traj: The trajectory to be written which could be (possibly nested)
         trajectory object or a flattened version of a trajectory. It assumes
         there is *no* batch dimension.
 
@@ -123,10 +135,11 @@ class ReverbAddEpisodeObserver(object):
       ValueError: If `bypass_partial_episodes` == False and episode length
         is > `max_sequence_length`.
     """
+    # TODO(b/176494855): Raise an error if an invalid trajectory is passed in.
+    # Currently, invalid `traj` value (mid->first, last->last) is not specially
+    # handled and is treated as a normal mid->mid step.
     if (self._cached_steps >= self._max_sequence_length and
         not self._overflow_episode):
-      # The reason for moving forward even if there is an overflowed episode is
-      # to capture the boundary of the episode and reset `_cached_steps`.
       self._overflow_episode = True
       if self._bypass_partial_episodes:
         logging.error(
@@ -142,49 +155,59 @@ class ReverbAddEpisodeObserver(object):
             "to bypass the episodes with length more than "
             "`max_sequence_length`.")
 
+    # At the end of the overflowing episode, drop the cached incomplete episode
+    # and reset the writer.
+    if self._overflow_episode and traj.is_boundary():
+      self.reset(write_cached_steps=False)
+      return
+
     if not self._overflow_episode:
-      self._writer.append(trajectory)
+      self._writer.append(traj)
       self._cached_steps += 1
 
-    if trajectory.is_boundary():
-      self.write_cached_steps()
+      # At the end of an episode, write the item to Reverb and clear the cache.
+      if traj.is_boundary():
+        self.reset(write_cached_steps=True)
 
-  def write_cached_steps(self):
+  def _write_cached_steps(self):
     """Writes the cached steps into the writer.
 
-    **Note**: The method resets the number of episodes and steps after writing
-      the data into the replay buffer.
+    **Note**: The method does not clear the cache.
     """
-    if not self._overflow_episode:
-      for table_name in self._table_names:
-        self._writer.create_item(
-            table=table_name,
-            num_timesteps=self._cached_steps,
-            priority=self._priority)
-    self.reset()
+    for table_name in self._table_names:
+      self._writer.create_item(
+          table=table_name,
+          num_timesteps=self._cached_steps,
+          priority=self._priority)
 
-  def reset(self):
+  def reset(self, write_cached_steps=True):
     """Resets the state of the observer.
 
-    Note that the data cached in the writer will NOT get automatically written
-    into the Reverb table. If you wish to write the cached partial episode as
-    a new sequences, call `write_cached_steps` instead.
+    Args:
+      write_cached_steps: By default, if there is remaining data in the cache,
+        write them to Reverb before clearing the cache. If `write_cached_steps`
+        is `False`, throw away the cached data instead.
     """
-    self.close()
-    self.open()
+    if write_cached_steps:
+      self._write_cached_steps()
+
+    self._cached_steps = 0
     self._overflow_episode = False
 
+    self.close()
+    self.open()
+
   def open(self):
-    """Open the writer of the observer."""
+    """Open the writer of the observer. This is a no-op if it's already open."""
     if self._writer is None:
       self._writer = self._py_client.writer(
           max_sequence_length=self._max_sequence_length)
-      self._cached_steps = 0
 
   def close(self):
     """Closes the writer of the observer.
 
-    **Note**: Using the observer after closing it is not supported.
+    **Note**: Using the observer after it is closed (and not reopened) is not
+      supported.
     """
 
     if self._writer is not None:
