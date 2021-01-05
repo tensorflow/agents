@@ -58,7 +58,9 @@ def evaluate(
     suite_load_fn: Callable[[Text],
                             py_environment.PyEnvironment] = suite_mujoco.load,
     additional_metrics: Optional[Iterable[py_metric.PyStepMetric]] = None,
-    is_running: Optional[Callable[[], bool]] = None) -> None:
+    is_running: Optional[Callable[[], bool]] = None,
+    eval_interval: int = 1000,
+    eval_episodes: int = 1) -> None:
   """Evaluates a policy iteratively fetching weights from variable container.
 
   Args:
@@ -75,6 +77,9 @@ def evaluate(
       evaluation loop (including fetching weights from the variable container
       and running the eval actor periodically). By default (`None`) this is a
       callable always returning `True` resulting in an infinite evaluation loop.
+    eval_interval: If set, eval is done at the given step interval or as close
+      as possible based on polling.
+    eval_episodes: Number of episodes to eval.
   """
   additional_metrics = additional_metrics or []
   is_running = is_running or (lambda: True)
@@ -94,16 +99,26 @@ def evaluate(
       environment,
       policy,
       train_step,
-      episodes_per_run=1,
+      episodes_per_run=eval_episodes,
       summary_dir=summary_dir,
+      summary_interval=eval_interval,
       metrics=actor.collect_metrics(buffer_size=1) + additional_metrics,
       name='eval_actor')
 
   # Run the experience evaluation loop.
+  last_eval_step = 0
   while is_running():
-    eval_actor.run()
-    logging.info('Evaluating using greedy policy at step: %d',
-                 train_step.numpy())
+
+    # Eval every step if no `eval_interval` is set, or if on the first step, or
+    # if the step is equal or greater than `last_eval_step` + `eval_interval`.
+    # It is very possible when logging a specific interval that the steps evaled
+    # will not be exact, e.g. 1001 and then 2003 vs. 1000 and then 2000.
+    if (train_step.numpy() == 0 or
+        train_step.numpy() >= eval_interval + last_eval_step):
+      logging.info('Evaluating using greedy policy at step: %d',
+                   train_step.numpy())
+      eval_actor.run()
+      last_eval_step = train_step.numpy()
 
     def is_train_step_the_same_or_behind():
       # Checks if the `train_step` received from variable conainer is the same
