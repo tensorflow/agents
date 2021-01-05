@@ -138,6 +138,26 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
         mock_scalar_summary.assert_has_calls(
             expected_scalar_summary_calls, any_order=False)
 
+  def test_wait_for_predicate_instant_false(self):
+    """Tests predicate returning False on first call."""
+    predicate_mock = mock.MagicMock(side_effect=[False])
+    # 10 retry limit to avoid a near infinite loop on an error.
+    train_utils.wait_for_predicate(predicate_mock, num_retries=10)
+    self.assertEqual(predicate_mock.call_count, 1)
+
+  def test_wait_for_predicate_second_false(self):
+    """Tests predicate returning False on second call."""
+    predicate_mock = mock.MagicMock(side_effect=[True, False])
+    # 10 retry limit to avoid a near infinite loop on an error.
+    train_utils.wait_for_predicate(predicate_mock, num_retries=10)
+    self.assertEqual(predicate_mock.call_count, 2)
+
+  def test_wait_for_predicate_timeout(self):
+    """Tests predicate returning True forever and then timing out."""
+    predicate_mock = mock.MagicMock(side_effect=[True, True, True])
+    with self.assertRaises(TimeoutError):
+      train_utils.wait_for_predicate(predicate_mock, num_retries=3)
+
 
 if __name__ == '__main__':
   multiprocessing.handle_test_main(test_utils.main)

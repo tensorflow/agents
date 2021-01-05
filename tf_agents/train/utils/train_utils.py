@@ -220,7 +220,7 @@ def wait_for_predicate(wait_predicate_fn: Callable[[], bool],
       time.sleep(sleep_time_secs)
     retry += 1
 
-  if wait_predicate_fn():
+  if retry >= num_retries:
     raise TimeoutError(
         'The wait predicate did not return `False` after {} retries waiting {} '
         'seconds between retries.'.format(num_retries, sleep_time_secs))
