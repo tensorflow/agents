@@ -29,7 +29,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import utils as distribution_utils
-from tf_agents.keras_layers import sequential_layer
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
 from tf_agents.typing import types
@@ -641,7 +640,7 @@ def _get_input_outer_ndim(layer: tf.keras.layers.Layer,
         "`tf_agents.networks.Sequential`.  Layer: {}".format(layer))
   if isinstance(layer, tf.keras.layers.TimeDistributed):
     return 1 + _get_input_outer_ndim(layer.layer, input_spec)
-  if isinstance(layer, (sequential_layer.SequentialLayer, tf.keras.Sequential)):
+  if isinstance(layer, tf.keras.Sequential):
     # We don't trust Sequential to give us the right thing if the first layer
     # is e.g. a TimeDistributed.
     return _get_input_outer_ndim(layer.layers[0], input_spec)

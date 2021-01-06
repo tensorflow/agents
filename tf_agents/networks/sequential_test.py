@@ -25,7 +25,7 @@ import os
 from absl import flags
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import utils as distribution_utils
@@ -148,6 +148,65 @@ class SequentialTest(test_utils.TestCase):
     dist, _ = sequential(inputs)
     outputs = dist.sample()
     self.assertEqual(outputs.shape, tf.TensorShape([8, 10, 2]))
+
+  def testBuild(self):
+    sequential = sequential_lib.Sequential(
+        [tf.keras.layers.Dense(4, use_bias=False),
+         tf.keras.layers.ReLU()])
+    inputs = np.ones((2, 3))
+    out, _ = sequential(inputs)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    out = self.evaluate(out)
+    weights = self.evaluate(sequential.layers[0].weights[0])
+    expected = np.dot(inputs, weights)
+    expected[expected < 0] = 0
+    self.assertAllClose(expected, out)
+
+  def testTrainableVariables(self):
+    sequential = sequential_lib.Sequential(
+        [tf.keras.layers.Dense(3),
+         tf.keras.layers.Dense(4)])
+    sequential.create_variables(tf.TensorSpec(shape=(3, 2)))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    variables = self.evaluate(sequential.trainable_variables)
+    self.assertLen(variables, 4)
+    self.assertLen(sequential.variables, 4)
+    self.assertTrue(sequential.trainable)
+    sequential.trainable = False
+    self.assertFalse(sequential.trainable)
+    self.assertEmpty(sequential.trainable_variables)
+    self.assertLen(sequential.variables, 4)
+
+  def testTrainableVariablesNestedNetwork(self):
+    sequential_inner = sequential_lib.Sequential(
+        [tf.keras.layers.Dense(3),
+         tf.keras.layers.Dense(4)])
+    sequential = sequential_lib.Sequential(
+        [tf.keras.layers.Dense(3),
+         sequential_inner])
+    sequential.create_variables(tf.TensorSpec(shape=(3, 2)))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    variables = self.evaluate(sequential.trainable_variables)
+
+    self.assertLen(variables, 6)
+    self.assertLen(sequential.variables, 6)
+    self.assertLen(sequential_inner.variables, 4)
+    self.assertTrue(sequential.trainable)
+    sequential.trainable = False
+    self.assertFalse(sequential.trainable)
+    self.assertEmpty(sequential.trainable_variables)
+    self.assertLen(sequential.variables, 6)
+
+  def testCopy(self):
+    sequential = sequential_lib.Sequential(
+        [tf.keras.layers.Dense(3),
+         tf.keras.layers.Dense(4, use_bias=False)])
+    clone = type(sequential).from_config(sequential.get_config())
+    self.assertLen(clone.layers, 2)
+    for l1, l2 in zip(sequential.layers, clone.layers):
+      self.assertEqual(l1.dtype, l2.dtype)
+      self.assertEqual(l1.units, l2.units)
+      self.assertEqual(l1.use_bias, l2.use_bias)
 
   def testPolicySaverCompatibility(self):
     observation_spec = tensor_spec.TensorSpec(shape=(100,), dtype=tf.float32)

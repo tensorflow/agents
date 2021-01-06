@@ -19,8 +19,7 @@ from __future__ import division
 from __future__ import print_function
 from absl.testing import parameterized
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-from tf_agents.keras_layers import sequential_layer
+import tensorflow as tf
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.policies import actor_policy
 from tf_agents.specs import tensor_spec
@@ -218,7 +217,7 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
     ]
 
     preprocessing_layers = (tf.keras.layers.Dense(4),
-                            sequential_layer.SequentialLayer([
+                            tf.keras.Sequential([
                                 tf.keras.layers.Reshape((1,)),
                                 tf.keras.layers.Dense(4)
                             ]))

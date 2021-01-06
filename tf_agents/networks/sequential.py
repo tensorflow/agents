@@ -21,9 +21,9 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
-import typing
+from typing import Any, List, Mapping, Sequence, Text, Tuple, Union
 
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
 from tf_agents.keras_layers import rnn_wrapper
 from tf_agents.networks import network
@@ -31,7 +31,7 @@ from tf_agents.typing import types
 
 
 def _infer_state_specs(
-    layers: typing.Sequence[tf.keras.layers.Layer]) -> types.NestedTensorSpec:
+    layers: Sequence[tf.keras.layers.Layer]) -> types.NestedTensorSpec:
   """Infer the state spec of a sequence of keras Layers and Networks.
 
   Args:
@@ -67,9 +67,9 @@ class Sequential(network.Network):
   """
 
   def __init__(self,
-               layers: typing.Sequence[tf.keras.layers.Layer],
+               layers: Sequence[tf.keras.layers.Layer],
                input_spec: types.NestedTensorSpec = None,
-               name: typing.Text = None):
+               name: Text = None):
     """Create a Sequential Network.
 
     Args:
@@ -85,12 +85,7 @@ class Sequential(network.Network):
       ValueError: If `layers[0]` is a generic Keras layer (not a TF-Agents
         network) and `input_spec is None`.
       TypeError: If any of the layers are not instances of keras `Layer`.
-      RuntimeError: If not `tf.executing_eagerly()`; as this is required to
-        be able to create deep copies of layers in `layers`.
     """
-    if not tf.executing_eagerly():
-      raise RuntimeError(
-          'Not executing eagerly - cannot make deep copies of `layers`.')
     if not layers:
       raise ValueError(
           '`layers` must not be empty; saw: {}'.format(layers))
@@ -123,7 +118,7 @@ class Sequential(network.Network):
     self._layer_has_state = layer_has_state
 
   @property
-  def layers(self) -> typing.List[tf.keras.layers.Layer]:
+  def layers(self) -> List[tf.keras.layers.Layer]:
     # Return a shallow copy so users don't modify the layers list.
     return copy.copy(self._sequential_layers)
 
@@ -140,7 +135,14 @@ class Sequential(network.Network):
 
     Returns:
       A deep copy of this network.
+
+    Raises:
+      RuntimeError: If not `tf.executing_eagerly()`; as this is required to
+        be able to create deep copies of layers in `layers`.
     """
+    if not tf.executing_eagerly():
+      raise RuntimeError(
+          'Not executing eagerly - cannot make deep copies of `layers`.')
     new_kwargs = dict(self._saved_kwargs, **kwargs)
     if 'layers' not in kwargs:
       new_layers = [copy.deepcopy(l) for l in self.layers]
@@ -184,3 +186,66 @@ class Sequential(network.Network):
           inputs = layer(inputs, **layer_kwargs)
 
     return inputs, tuple(next_network_state)
+
+  def compute_output_shape(
+      self,
+      input_shape: Union[List[int], Tuple[int], tf.TensorShape]) -> (
+          tf.TensorShape):
+    output_shape = tf.TensorShape(input_shape)
+    for l in self._sequential_layers:
+      output_shape = l.compute_output_shape(output_shape)
+    return tf.TensorShape(output_shape)
+
+  def compute_output_signature(
+      self, input_signature: types.NestedSpec) -> types.NestedSpec:
+    output_signature = input_signature
+    for l in self._sequential_layers:
+      output_signature = l.compute_output_signature(output_signature)
+    return output_signature
+
+  @property
+  def trainable_weights(self) -> List[tf.Variable]:
+    if not self.trainable:
+      return []
+    weights = {}
+    for l in self._sequential_layers:
+      for v in l.trainable_weights:
+        weights[id(v)] = v
+    return list(weights.values())
+
+  @property
+  def non_trainable_weights(self) -> List[tf.Variable]:
+    weights = {}
+    for l in self._sequential_layers:
+      for v in l.non_trainable_weights:
+        weights[id(v)] = v
+    return list(weights.values())
+
+  @property
+  def trainable(self) -> bool:
+    return all([l.trainable for l in self._sequential_layers])
+
+  @trainable.setter
+  def trainable(self, value: bool):
+    for l in self._sequential_layers:
+      l.trainable = value
+
+  def get_config(self) -> Mapping[int, Mapping[str, Any]]:
+    config = {}
+    for i, layer in enumerate(self._sequential_layers):
+      config[i] = {
+          'class_name': layer.__class__.__name__,
+          'config': copy.deepcopy(layer.get_config())
+      }
+    return config
+
+  @classmethod
+  def from_config(cls, config, custom_objects=None) -> 'Sequential':
+    layers = [
+        tf.keras.layers.deserialize(conf, custom_objects=custom_objects)
+        for conf in config.values()
+    ]
+    return cls(layers)
+
+
+tf.keras.utils.get_custom_objects()['SequentialNetwork'] = Sequential

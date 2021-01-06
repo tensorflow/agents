@@ -22,8 +22,7 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-from tf_agents.keras_layers import sequential_layer
+import tensorflow as tf
 from tf_agents.networks import encoding_network
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import test_utils
@@ -236,7 +235,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
         input_spec,
         preprocessing_layers={
             'a':
-                sequential_layer.SequentialLayer([
+                tf.keras.Sequential([
                     tf.keras.layers.Dense(4, activation='tanh'),
                     tf.keras.layers.Flatten()
                 ]),
@@ -262,7 +261,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
         input_spec,
         preprocessing_layers={
             'a':
-                sequential_layer.SequentialLayer([
+                tf.keras.Sequential([
                     tf.keras.layers.Dense(4, activation='tanh'),
                     tf.keras.layers.Flatten()
                 ]),
