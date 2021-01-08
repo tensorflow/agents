@@ -31,8 +31,10 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents import specs
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import py_environment
+from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import common
 
 COMMON_PARAMETERS = (
     dict(batch_py_env=True, isolation=True),
@@ -419,6 +421,42 @@ class TFPYEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllEqual([2.], time_step.reward['constraint'])
     self.assertAllEqual([1.0], time_step.discount)
     self.assertAllEqual([1], time_step.observation)
+
+  def testObservationsNotCached(self):
+    py_env = suite_gym.load('CartPole-v1')
+    tf_env = tf_py_environment.TFPyEnvironment(py_env)
+
+    time_step_1 = py_env.reset()
+    time_step_2 = py_env.reset()
+    # Make sure py env generates unique observations
+    self.assertNotEqual(time_step_1.observation.tolist(),
+                        time_step_2.observation.tolist())
+
+    # Test tf_env also creates uniquee observations
+    time_step_1 = tf_env.reset()
+    time_step_2 = tf_env.reset()
+
+    observation_1 = self.evaluate(time_step_1.observation).tolist()
+    observation_2 = self.evaluate(time_step_2.observation).tolist()
+
+    self.assertNotEqual(observation_1, observation_2)
+
+  @parameterized.parameters(dict(autograph=True), dict(autograph=False))
+  def testObservationsNotCachedWithTFFunction(self, autograph):
+    py_env = suite_gym.load('CartPole-v1')
+    tf_env = tf_py_environment.TFPyEnvironment(py_env)
+
+    tf_env.reset = common.function(tf_env.reset, autograph=autograph)
+    # Test tf_env also creates uniquee observations
+    time_step_1 = tf_env.reset()
+    time_step_2 = tf_env.reset()
+    observation_1 = self.evaluate(time_step_1.observation)
+    observation_2 = self.evaluate(time_step_2.observation)
+    self.assertNotEqual(observation_1.tolist(), observation_2.tolist())
+
+    # Check observation is not all 0.
+    self.assertGreater(abs(sum(observation_2.flatten().tolist())), 0)
+
 
 if __name__ == '__main__':
   tf.test.main()
