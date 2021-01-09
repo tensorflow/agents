@@ -23,9 +23,10 @@ import os
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.agents.ddpg import actor_network
+from tf_agents.environments import batched_py_environment
 from tf_agents.environments import random_py_environment
 from tf_agents.policies import actor_policy
 from tf_agents.policies import policy_saver
@@ -81,6 +82,35 @@ class PyTFEagerPolicyTest(test_utils.TestCase):
     for _ in range(100):
       action_step = py_policy.action(time_step)
       time_step = self._env.step(action_step.action)
+
+  def testBatchedPyEnvCompatible(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in eager.')
+
+    actor_net = actor_network.ActorNetwork(
+        self._observation_tensor_spec,
+        self._action_tensor_spec,
+        fc_layer_params=(10,),
+    )
+
+    tf_policy = actor_policy.ActorPolicy(
+        self._time_step_tensor_spec,
+        self._action_tensor_spec,
+        actor_network=actor_net)
+
+    py_policy = py_tf_eager_policy.PyTFEagerPolicy(
+        tf_policy, batch_time_steps=False)
+
+    env_ctr = lambda: random_py_environment.RandomPyEnvironment(  # pylint: disable=g-long-lambda
+        self._observation_spec, self._action_spec)
+
+    env = batched_py_environment.BatchedPyEnvironment(
+        [env_ctr() for _ in range(3)])
+    time_step = env.reset()
+
+    for _ in range(20):
+      action_step = py_policy.action(time_step)
+      time_step = env.step(action_step.action)
 
   def testActionWithSeed(self):
     if not common.has_eager_been_enabled():
