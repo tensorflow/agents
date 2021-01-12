@@ -203,6 +203,7 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     # Calculate losses.
     losses = {}
     iterations = 1
+    optimizer_variables = {}
     for name, (trainer, _, variables, train_step, _) in learners.items():
       old_vars = self.evaluate(variables)
 
@@ -212,6 +213,8 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
 
       new_vars = self.evaluate(variables)
       losses[name] = old_vars, loss, new_vars
+      self.assertNotEmpty(trainer._agent._optimizer.variables())
+      optimizer_variables[name] = trainer._agent._optimizer.variables()
 
     # Verify same dataset across learner calls.
     for item in tf.data.Dataset.zip(tuple([v[1] for v in learners.values()])):
@@ -224,6 +227,18 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     _, default_loss, _ = losses['default']
     for name, (_, loss, _) in losses.items():
       self._compare_losses(loss, default_loss, delta=1.e-2)
+
+    # Check that the optimizer variables are close to each other.
+    default_optimizer_vars = optimizer_variables['default']
+    for name, optimizer_vars in optimizer_variables.items():
+      self.assertAllClose(
+          optimizer_vars,
+          default_optimizer_vars,
+          atol=1.e-2,
+          rtol=1.e-2,
+          msg=('The initial values of the optimizer variables for the strategy '
+               '{} are significantly different from the initial values of the '
+               'default strategy.').format(name))
 
     # Check that the variables changed after calling `learner.run`.
     for old_vars, _, new_vars in losses.values():

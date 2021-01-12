@@ -63,12 +63,19 @@ class FakePPOAgent(ppo_agent.PPOAgent):
         compute_value_and_advantage_in_train=False,
         update_normalizers_in_train=False,
     )
-    self.train_called_times = tf.Variable(0, dtype=tf.int32)
+    # There is an artifical call on `_train` during the initialization which
+    # ensures that the variables of the optimizer are initialized. This is
+    # excluded from the call count.
+    self.train_called_times = -1
     self.experiences = []
 
   def _train(self, experience, weights):
-    self.train_called_times.assign_add(1)
-    self.experiences.append(experience)
+    self.train_called_times += 1
+    # The first call is an artificial one and it corresponds to the optimizer
+    # variable initialization, and it does not run on a true experience, so it
+    # is excluded.
+    if self.train_called_times > 0:
+      self.experiences.append(experience)
     return tf_agent.LossInfo(0., 0.)
 
 
@@ -201,8 +208,7 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
     learner.run()
 
     # Check that fake agent was called the expected number of times.
-    self.assertEqual(fake_agent.train_called_times.numpy(),
-                     expected_train_times)
+    self.assertEqual(fake_agent.train_called_times, expected_train_times)
 
     # Check that agent.train() is receiving the expected trajectories.
     if minibatch_size:
@@ -269,8 +275,7 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
     learner.run()
 
     # Check that fake agent was called the expected number of times.
-    self.assertEqual(fake_agent.train_called_times.numpy(),
-                     expected_train_times)
+    self.assertEqual(fake_agent.train_called_times, expected_train_times)
 
     # Check that agent.train() is receiving the expected trajectories.
     if minibatch_size:

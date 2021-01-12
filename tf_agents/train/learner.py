@@ -24,6 +24,7 @@ import gin
 import tensorflow.compat.v2 as tf
 
 from tf_agents.agents import tf_agent
+from tf_agents.specs import tensor_spec
 from tf_agents.train import interval_trigger
 from tf_agents.typing import types
 from tf_agents.utils import common
@@ -66,7 +67,8 @@ class Learner(tf.Module):
                summary_interval=1000,
                max_checkpoints_to_keep=3,
                use_kwargs_in_agent_train=False,
-               strategy=None):
+               strategy=None,
+               run_optimizer_variable_init=True):
     """Initializes a Learner instance.
 
     Args:
@@ -105,6 +107,20 @@ class Learner(tf.Module):
         be of the form `dict(experience=experience, kwarg1=kwarg1, ...)`. This
         is useful if you have an agent with a custom argspec.
       strategy: (Optional) `tf.distribute.Strategy` to use during training.
+      run_optimizer_variable_init: Specifies if the variables of the optimizer
+        are initialized before checkpointing. This should be almost always
+        `True` (default) to ensure that the state of the optimizer is
+        checkpointed properly. The initialization of the optimizer variables
+        happens by building the Tensorflow graph. This is done by calling a
+        `get_concrete_function` on the agent's `train` method which requires
+        passing some input. Since, no real data is available at this point we
+        use the batched form of `training_data_spec` and `train_argspec` to
+        achieve this (standard technique). The problem arises when the agent
+        expects some agent specific batching of the input. In this case, there
+        is no _general_ way at this point in the learner to batch the impacted
+        specs properly. To avoid breaking the code in these specific cases, we
+        recommend turning off initialization of the optimizer variables by
+        setting the value of this field to `False`.
     """
     if checkpoint_interval < 0:
       logging.warning(
@@ -137,6 +153,30 @@ class Learner(tf.Module):
     checkpoint_dir = os.path.join(self._train_dir, POLICY_CHECKPOINT_DIR)
     with self.strategy.scope():
       agent.initialize()
+
+      if run_optimizer_variable_init:
+        # Force a concrete function creation inside of the strategy scope to
+        # ensure that all variables, including optimizer slot variables, are
+        # created. This has to happen before the checkpointer is created.
+        batched_specs = tensor_spec.add_outer_dims_nest(
+            self._agent.training_data_spec,
+            (None, self._agent.train_sequence_length))
+        batched_train_argspec = tensor_spec.add_outer_dims_nest(
+            self._agent.train_argspec or {}, (None,))
+        if self.use_kwargs_in_agent_train:
+          batched_specs = dict(
+              experience=batched_specs, **batched_train_argspec)
+
+        @common.function
+        def _create_variables(specs):
+          # TODO(b/170516529): Each replica has to be in the same graph.
+          # This can be ensured by placing the `strategy.run(...)` call inside
+          # the `tf.function`.
+          if self.use_kwargs_in_agent_train:
+            return self.strategy.run(self._agent.train, kwargs=specs)
+          return self.strategy.run(self._agent.train, args=(specs,))
+
+        _create_variables.get_concrete_function(batched_specs)
 
       self._checkpointer = common.Checkpointer(
           checkpoint_dir,
@@ -307,4 +347,3 @@ class Learner(tf.Module):
     # string dtypes are currently allowed as LossInfo Fields.
     reduced_loss_info = tf.nest.map_structure(_reduce_loss, loss_info)
     return reduced_loss_info
-
