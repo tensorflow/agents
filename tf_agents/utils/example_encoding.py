@@ -30,7 +30,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.utils import nest_utils
 
 
-def get_example_encoder(spec):
+def get_example_encoder(spec, compress_image=False, image_quality=95):
   """Get example encoder function for the given spec.
 
   Given a spec, returns an example encoder function. The example encoder
@@ -62,6 +62,10 @@ def get_example_encoder(spec):
 
   Args:
     spec: list/tuple/nest of ArraySpecs describing a single example.
+    compress_image: Whether to compress image. It is assumed that any uint8
+      tensor of rank 3 with shape (w,h,c) is an image.
+    image_quality: An optional int. Defaults to 95. Quality of the compression
+      from 0 to 100 (higher is better and slower).
 
   Returns:
     Function
@@ -71,7 +75,9 @@ def get_example_encoder(spec):
     ```
   """
   # pylint: disable=g-complex-comprehension
-  feature_encoders = [(path, _get_feature_encoder(spec.shape, spec.dtype))
+  feature_encoders = [(path,
+                       _get_feature_encoder(spec.shape, spec.dtype,
+                                            compress_image, image_quality))
                       for (path,
                            spec) in nest_utils.flatten_with_joined_paths(spec)]
 
@@ -89,13 +95,16 @@ def get_example_encoder(spec):
   return _example_encoder
 
 
-def get_example_serializer(spec):
+def get_example_serializer(spec, compress_image=False, image_quality=95):
   """Returns string serializer of example protos."""
-  encoder = get_example_encoder(spec)
+  encoder = get_example_encoder(
+      spec, compress_image=compress_image, image_quality=image_quality)
   return lambda features_nest: encoder(features_nest).SerializeToString()
 
 
-def get_example_decoder(example_spec, batched=False):
+def get_example_decoder(example_spec,
+                        batched=False,
+                        compress_image=False):
   """Get an example decoder function for a nested spec.
 
   Given a spec, returns an example decoder function. The decoder function parses
@@ -105,6 +114,9 @@ def get_example_decoder(example_spec, batched=False):
     example_spec: list/tuple/nest of ArraySpecs describing a single example.
     batched: Boolean indicating if the decoder will receive batches of
       serialized data.
+    compress_image: Whether to decompress image. It is assumed that any uint8
+      tensor of rank 3 with shape (w,h,c) is an image.
+      If the tensor was compressed in the encoder, it needs to be decompressed.
 
   Returns:
     Function
@@ -117,7 +129,8 @@ def get_example_decoder(example_spec, batched=False):
   parsers = []
 
   for (path, spec) in nest_utils.flatten_with_joined_paths(example_spec):
-    feature, parser = _get_feature_parser(spec.shape, spec.dtype)
+    feature, parser = _get_feature_parser(spec.shape, spec.dtype,
+                                          compress_image)
     features_dict[path] = feature
     parsers.append((path, parser))
 
