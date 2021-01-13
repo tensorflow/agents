@@ -391,7 +391,7 @@ class ReinforceAgent(tf_agent.TFAgent):
       losses_dict['value_network_regularization_loss'] = (
           value_network_regularization_loss)
 
-    loss_info_extra = ReinforceAgentLossInfo._make(losses_dict)
+    loss_info_extra = ReinforceAgentLossInfo(**losses_dict)
 
     losses_dict['total_loss'] = total_loss  # Total loss not in loss_info_extra.
 

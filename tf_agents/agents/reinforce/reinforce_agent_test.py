@@ -587,6 +587,11 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Rewards on the StepType.FIRST should be counted.
     expected_loss = 10.8935775757
+    expected_policy_gradient_loss = 10.8935775757
+    expected_policy_network_regularization_loss = 0
+    expected_entropy_regularization_loss = 0
+    expected_value_estimation_loss = 0
+    expected_value_network_regularization_loss = 0
 
     if tf.executing_eagerly():
       loss = lambda: agent.train(experience)
@@ -596,6 +601,16 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_info = self.evaluate(loss)
     self.assertAllClose(loss_info.loss, expected_loss)
+    self.assertAllClose(loss_info.extra.policy_gradient_loss,
+                        expected_policy_gradient_loss)
+    self.assertAllClose(loss_info.extra.policy_network_regularization_loss,
+                        expected_policy_network_regularization_loss)
+    self.assertAllClose(loss_info.extra.entropy_regularization_loss,
+                        expected_entropy_regularization_loss)
+    self.assertAllClose(loss_info.extra.value_estimation_loss,
+                        expected_value_estimation_loss)
+    self.assertAllClose(loss_info.extra.value_network_regularization_loss,
+                        expected_value_network_regularization_loss)
 
   def testTrainMaskingRewardSingleEpisodeRewardOnLast(self):
     # Test that train reacts correctly to experience when there are:
