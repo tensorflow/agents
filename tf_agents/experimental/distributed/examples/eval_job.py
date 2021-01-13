@@ -26,8 +26,6 @@ from absl import logging
 
 import gin
 
-import tensorflow.compat.v2 as tf
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.distributed import reverb_variable_container
@@ -131,14 +129,10 @@ def evaluate(
     prev_train_step_value = train_step.numpy()
 
 
-def main(unused_argv: Sequence[Text]) -> None:
-  logging.set_verbosity(logging.INFO)
-  tf.enable_v2_behavior()
-
-  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
-
+def run_eval(root_dir: Text) -> None:
+  """Load the policy and evaluate it."""
   # Wait for the greedy policy to become available, then load it.
-  greedy_policy_dir = os.path.join(FLAGS.root_dir,
+  greedy_policy_dir = os.path.join(root_dir,
                                    learner.POLICY_SAVED_MODEL_DIR,
                                    learner.GREEDY_POLICY_SAVED_MODEL_DIR)
   policy = train_utils.wait_for_policy(
@@ -152,11 +146,18 @@ def main(unused_argv: Sequence[Text]) -> None:
 
   # Run the evaluation.
   evaluate(
-      summary_dir=os.path.join(FLAGS.root_dir, learner.TRAIN_DIR, 'eval'),
+      summary_dir=os.path.join(root_dir, learner.TRAIN_DIR, 'eval'),
       environment_name=gin.REQUIRED,
       policy=policy,
       variable_container=variable_container)
 
+
+def main(unused_argv: Sequence[Text]) -> None:
+  logging.set_verbosity(logging.INFO)
+
+  gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
+
+  run_eval(FLAGS.root_dir)
 
 if __name__ == '__main__':
   flags.mark_flags_as_required(
