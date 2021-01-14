@@ -158,17 +158,16 @@ def train_eval(
       sequence_length=sequence_length,
       table_name=table_name,
       local_server=reverb_server)
-  rb_observer = reverb_utils.ReverbTrajectorySequenceObserver(
+  rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
       reverb_replay.py_client,
       table_name,
       sequence_length=sequence_length,
-      stride_length=1)
+      stride_length=1,
+      pad_end_of_episodes=True)
 
-  dataset = reverb_replay.as_dataset(
-      num_parallel_calls=3,
-      sample_batch_size=batch_size,
-      num_steps=sequence_length).prefetch(3)
-  experience_dataset_fn = lambda: dataset
+  def experience_dataset_fn():
+    return reverb_replay.as_dataset(
+        sample_batch_size=batch_size, num_steps=sequence_length)
 
   saved_model_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR)
   env_step_metric = py_metrics.EnvironmentSteps()
