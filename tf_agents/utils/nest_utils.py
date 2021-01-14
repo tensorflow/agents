@@ -277,6 +277,61 @@ def prune_extra_keys(narrow, wide):
   return wide
 
 
+def assert_tensors_matching_dtypes_and_shapes(tensors_1, tensors_2, caller,
+                                              tensors_1_name, tensors_2_name):
+  """Checks if tensors have matching dtypes and shapes.
+
+  Args:
+    tensors_1: A nest of tensor objects.
+    tensors_2: A nest of tensor objects.
+    caller: The object calling `assert...`.
+    tensors_1_name: (str) Name to use for tensors_1 in case of an error.
+    tensors_2_name: (str) Name to use for tensors_2 in case of an error.
+
+  Raises:
+    ValueError: If the tensors do not match dtypes or shapes.
+  """
+  assert_same_structure(
+      tensors_1,
+      tensors_2,
+      message=('{}: {} and {} do not have matching structures'.format(
+          caller, tensors_1_name, tensors_2_name)))
+
+  def convert_to_tensor(t):
+    return tf.convert_to_tensor(t) if not tf.is_tensor(t) else t
+
+  flat_t1 = tf.nest.map_structure(convert_to_tensor, tf.nest.flatten(tensors_1))
+  flat_t2 = tf.nest.map_structure(convert_to_tensor, tf.nest.flatten(tensors_2))
+
+  t1_shapes = [t.shape for t in flat_t1]
+  t1_dtypes = [t.dtype for t in flat_t1]
+  t2_shapes = [t.shape for t in flat_t2]
+  t2_dtypes = [t.dtype for t in flat_t2]
+
+  compatible = True
+
+  if any(
+      t1_dtype != t2_dtype for t1_dtype, t2_dtype in zip(t1_dtypes, t2_dtypes)):
+    compatible = False
+  else:
+    for t1_shape, t2_shape in zip(t1_shapes, t2_shapes):
+      if t1_shape.ndims != t2_shape.ndims:
+        compatible = False
+        break
+
+  if not compatible:
+    get_dtypes = lambda v: tf.nest.map_structure(lambda x: x.dtype, v)
+    get_shapes = lambda v: tf.nest.map_structure(lambda x: x.shape, v)
+    raise ValueError('{}: Inconsistent dtypes or shapes between {} and {}.\n'
+                     'dtypes:\n{}\nvs.\n{}.\n'
+                     'shapes:\n{}\nvs.\n{}.'.format(caller, tensors_1_name,
+                                                    tensors_2_name,
+                                                    get_dtypes(tensors_1),
+                                                    get_dtypes(tensors_2),
+                                                    get_shapes(tensors_1),
+                                                    get_shapes(tensors_2)))
+
+
 def assert_matching_dtypes_and_inner_shapes(tensors,
                                             specs,
                                             caller,

@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from typing import Optional
+import tensorflow as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.typing import types
@@ -48,10 +49,14 @@ def test_loss_and_train_output(test: test_utils.TestCase,
       calculating the total loss.
     **kwargs: Any additional data as args to `train` and `loss`.
   """
-  loss_info_from_train = agent.train(
-      experience=experience, weights=weights, **kwargs)
   loss_info_from_loss = agent.loss(
       experience=experience, weights=weights, **kwargs)
+  loss_info_from_train = agent.train(
+      experience=experience, weights=weights, **kwargs)
+  if not tf.executing_eagerly():
+    test.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_info_from_loss = test.evaluate(loss_info_from_loss)
+    loss_info_from_train = test.evaluate(loss_info_from_train)
 
   test.assertIsInstance(loss_info_from_train, tf_agent.LossInfo)
   test.assertEqual(type(loss_info_from_train), type(loss_info_from_loss))
@@ -72,8 +77,7 @@ def test_loss_and_train_output(test: test_utils.TestCase,
         msg='Expected train() and loss() output to have different loss values, '
         'but both are {loss}.'.format(loss=loss_info_from_train.loss))
 
-  # Check that both `LossInfo` outputs have matching dtypes and inner shapes.
-  nest_utils.assert_matching_dtypes_and_inner_shapes(loss_info_from_train,
-                                                     loss_info_from_loss, test,
-                                                     '`LossInfo` from train()',
-                                                     '`LossInfo` from loss()')
+  # Check that both `LossInfo` outputs have matching dtypes and shapes.
+  nest_utils.assert_tensors_matching_dtypes_and_shapes(
+      loss_info_from_train, loss_info_from_loss, test,
+      '`LossInfo` from train()', '`LossInfo` from loss()')
