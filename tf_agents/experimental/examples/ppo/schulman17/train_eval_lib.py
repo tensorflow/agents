@@ -347,7 +347,12 @@ def train_eval(
     # TODO(b/159615593): Update to use observer.flush.
     # Reset the reverb observer to make sure the data collected is flushed and
     # written to the RB.
-    rb_observer.reset()
+    # At this point, there a small number of steps left in the cache because the
+    # actor does not count a boundary step as a step, whereas it still gets
+    # added to Reverb for training. We throw away those extra steps without
+    # padding to align with the paper implementation which never collects them
+    # in the first place.
+    rb_observer.reset(write_cached_steps=False)
     agent_learner.run()
     reverb_replay_train.clear()
     reverb_replay_normalization.clear()
