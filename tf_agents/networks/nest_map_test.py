@@ -34,6 +34,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
+from tf_agents.utils import nest_utils
 from tf_agents.utils import test_utils
 
 FLAGS = flags.FLAGS
@@ -122,24 +123,60 @@ class NestMapTest(test_utils.TestCase):
             'inp3': (2 * [tf.TensorShape([8, 8])],),
         },))
 
+  def testNestedNest(self):
+    # layer structure: {'a': {'b': .}}
+    net = nest_map.NestMap(
+        {'a': nest_map.NestMap(
+            {'b': tf.keras.layers.Dense(8)})})
+    net.create_variables({'a': {'b': tf.TensorSpec((1,), dtype=tf.float32)}})
+
+  def testNestedNestWithNestedState(self):
+    # layer structure: (., {'a': {'b': .}})
+    net = nest_map.NestMap(
+        (tf.keras.layers.Dense(7),
+         {'a': nest_map.NestMap(
+             {'b': tf.keras.layers.LSTM(
+                 8, return_state=True, return_sequences=True)})}))
+    # TODO(b/177337002): remove the forced tuple wrapping the LSTM
+    # state once we make a generic KerasWrapper network and clean up
+    # Sequential and NestMap to use that instead of singleton Sequential.
+    out, state = net(
+        (tf.ones((1, 2)), {'a': {'b': tf.ones((1, 2))}}),
+        network_state=((), {'a': {'b': ([tf.ones((1, 8)), tf.ones((1, 8))],)}}))
+    nest_utils.assert_matching_dtypes_and_inner_shapes(
+        out,
+        (
+            tf.TensorSpec(dtype=tf.float32, shape=(7,)),
+            {'a': {'b': tf.TensorSpec(dtype=tf.float32, shape=(8,))}}
+        ),
+        caller=self, tensors_name='out', specs_name='out_expected')
+    nest_utils.assert_matching_dtypes_and_inner_shapes(
+        state,
+        (
+            (),
+            {'a': {'b': ([tf.TensorSpec(dtype=tf.float32, shape=(8,)),
+                          tf.TensorSpec(dtype=tf.float32, shape=(8,))],)}}
+        ),
+        caller=self, tensors_name='state', specs_name='state_expected')
+
   def testIncompatibleStructureInputs(self):
     with self.assertRaisesRegex(
-        ValueError,
+        TypeError,
         r'`nested_layers` and `input_spec` do not have matching structures'):
       nest_map.NestMap(
-          tf.keras.layers.Dense(8),
+          [tf.keras.layers.Dense(8)],
           input_spec={'ick': tf.TensorSpec(8, tf.float32)})
 
     with self.assertRaisesRegex(
-        ValueError,
-        r'`inputs` and `self.nested_layers` do not have matching structures'):
-      net = nest_map.NestMap(tf.keras.layers.Dense(8))
+        TypeError,
+        r'`self.nested_layers` and `inputs` do not have matching structures'):
+      net = nest_map.NestMap([tf.keras.layers.Dense(8)])
       net.create_variables({'ick': tf.TensorSpec((1,), dtype=tf.float32)})
 
     with self.assertRaisesRegex(
-        ValueError,
-        r'`inputs` and `self.nested_layers` do not have matching structures'):
-      net = nest_map.NestMap(tf.keras.layers.Dense(8))
+        TypeError,
+        r'`self.nested_layers` and `inputs` do not have matching structures'):
+      net = nest_map.NestMap([tf.keras.layers.Dense(8)])
       net({'ick': tf.constant([[1.0]])})
 
     with self.assertRaisesRegex(

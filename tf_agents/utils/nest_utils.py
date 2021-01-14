@@ -23,6 +23,8 @@ from __future__ import print_function
 import collections
 import numbers
 
+from typing import Optional, Text
+
 from absl import logging
 import numpy as np
 from six.moves import zip
@@ -64,9 +66,10 @@ _DOT = _Dot()
 
 def assert_same_structure(nest1,
                           nest2,
-                          check_types=True,
-                          expand_composites=False,
-                          message=None):
+                          check_types: bool = True,
+                          expand_composites: bool = False,
+                          allow_shallow_nest1: bool = False,
+                          message: Optional[Text] = None) -> None:
   """Same as tf.nest.assert_same_structure but with cleaner error messages.
 
   Args:
@@ -81,6 +84,8 @@ def assert_same_structure(nest1,
       "_ListWrapper" from trackable dependency tracking to compare equal).
     expand_composites: If true, then composite tensors such as `tf.SparseTensor`
       and `tf.RaggedTensor` are expanded into their component tensors.
+    allow_shallow_nest1: If `True`, `nest1` is allowed to be more shallow
+      than `nest2`.
     message: Optional error message to provide in case of failure.
 
   Raises:
@@ -97,8 +102,14 @@ def assert_same_structure(nest1,
         expand_composites))
   message = message or 'The two structures do not match'
   exception = None
+
+  if allow_shallow_nest1:
+    check_fn = nest.assert_shallow_structure
+  else:
+    check_fn = tf.nest.assert_same_structure
+
   try:
-    tf.nest.assert_same_structure(
+    check_fn(
         nest1,
         nest2,
         check_types=check_types,
