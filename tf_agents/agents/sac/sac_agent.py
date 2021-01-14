@@ -368,6 +368,56 @@ class SacAgent(tf_agent.TFAgent):
 
     return tf_agent.LossInfo(loss=total_loss, extra=extra)
 
+  def _loss(self,
+            experience: types.NestedTensor,
+            weights: Optional[types.Tensor] = None):
+    """Returns the loss of the provided experience.
+
+    Args:
+      experience: A time-stacked trajectory object.
+      weights: Optional scalar or elementwise (per-batch-entry) importance
+        weights.
+
+    Returns:
+      A `LossInfo` containing the loss for the experience.
+    """
+    transition = self._as_transition(experience)
+    time_steps, policy_steps, next_time_steps = transition
+    actions = policy_steps.action
+    critic_loss = self._critic_loss_weight * self.critic_loss(
+        time_steps,
+        actions,
+        next_time_steps,
+        td_errors_loss_fn=self._td_errors_loss_fn,
+        gamma=self._gamma,
+        reward_scale_factor=self._reward_scale_factor,
+        weights=weights,
+        training=False)
+    tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
+
+    actor_loss = self._actor_loss_weight * self.actor_loss(
+        time_steps, weights=weights)
+    tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
+
+    alpha_loss = self._alpha_loss_weight * self.alpha_loss(
+        time_steps, weights=weights)
+    tf.debugging.check_numerics(alpha_loss, 'Alpha loss is inf or nan.')
+
+    with tf.name_scope('Losses'):
+      tf.compat.v2.summary.scalar(
+          name='critic_loss', data=critic_loss, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='actor_loss', data=actor_loss, step=self.train_step_counter)
+      tf.compat.v2.summary.scalar(
+          name='alpha_loss', data=alpha_loss, step=self.train_step_counter)
+
+    total_loss = critic_loss + actor_loss + alpha_loss
+
+    extra = SacLossInfo(
+        critic_loss=critic_loss, actor_loss=actor_loss, alpha_loss=alpha_loss)
+
+    return tf_agent.LossInfo(loss=total_loss, extra=extra)
+
   def _apply_gradients(self, gradients, variables, optimizer):
     # list(...) is required for Python3.
     grads_and_vars = list(zip(gradients, variables))

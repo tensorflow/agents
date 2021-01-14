@@ -21,8 +21,10 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 
+import mock
 import tensorflow as tf
 
+from tf_agents.agents import test_util
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.agents.sac import sac_agent
 from tf_agents.agents.sac import tanh_normal_projection_network
@@ -364,6 +366,55 @@ class SacAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
+
+  @mock.patch.object(sac_agent.SacAgent, '_apply_gradients')
+  @mock.patch.object(sac_agent.SacAgent, '_actions_and_log_probs')
+  def testLoss(self, mock_actions_and_log_probs, mock_apply_gradients):
+    # Mock _actions_and_log_probs so that _train() and _loss() run on the same
+    # sampled values.
+    actions = tf.constant([[0.2], [0.5], [-0.8]])
+    log_pi = tf.constant([-1.1, -0.8, -0.5])
+    mock_actions_and_log_probs.return_value = (actions, log_pi)
+
+    # Skip applying gradients since mocking _actions_and_log_probs.
+    del mock_apply_gradients
+
+    actor_net = actor_distribution_network.ActorDistributionNetwork(
+        self._obs_spec,
+        self._action_spec,
+        fc_layer_params=(10,),
+        continuous_projection_net=tanh_normal_projection_network
+        .TanhNormalProjectionNetwork)
+
+    agent = sac_agent.SacAgent(
+        self._time_step_spec,
+        self._action_spec,
+        critic_network=DummyCriticNet(),
+        actor_network=actor_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        alpha_optimizer=tf.compat.v1.train.AdamOptimizer(0.001))
+
+    observations = tf.constant(
+        [[[1, 2], [3, 4]], [[5, 6], [7, 8]], [[9, 10], [11, 12]]],
+        dtype=tf.float32)
+    actions = tf.constant([[[0], [1]], [[2], [3]], [[4], [5]]],
+                          dtype=tf.float32)
+    time_steps = ts.TimeStep(
+        step_type=tf.constant([[1, 1]] * 3, dtype=tf.int32),
+        reward=tf.constant([[1, 1]] * 3, dtype=tf.float32),
+        discount=tf.constant([[1, 1]] * 3, dtype=tf.float32),
+        observation=observations)
+
+    experience = trajectory.Trajectory(
+        time_steps.step_type, observations, actions, (),
+        time_steps.step_type, time_steps.reward, time_steps.discount)
+
+    test_util.test_loss_and_train_output(
+        test=self,
+        expect_equal_loss_values=True,
+        agent=agent,
+        experience=experience)
 
   def testPolicy(self):
     agent = sac_agent.SacAgent(
