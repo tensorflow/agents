@@ -276,6 +276,19 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     policy = greedy_policy.GreedyPolicy(collect_policy)
     return policy, collect_policy
 
+  def _loss(self, experience, weights=None):
+    experience = self._as_trajectory(experience)
+
+    per_example_loss = self._bc_loss_fn(experience)
+    aggregated_losses = common.aggregate_losses(
+        per_example_loss=per_example_loss,
+        sample_weight=weights,
+        regularization_loss=self._cloning_network.losses)
+
+    return tf_agent.LossInfo(
+        loss=aggregated_losses.total_loss,
+        extra=BehavioralCloningLossInfo(per_example_loss))
+
   def _train(self, experience, weights=None):
     experience = self._as_trajectory(experience)
 

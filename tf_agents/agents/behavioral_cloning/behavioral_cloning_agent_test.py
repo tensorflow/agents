@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 
+from tf_agents.agents import test_util
 from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
 from tf_agents.keras_layers import inner_reshape
 from tf_agents.networks import q_network
@@ -196,6 +197,12 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
     total_loss = self.evaluate(loss_info.loss)
 
     self.assertAllClose(total_loss, expected_loss)
+
+    test_util.test_loss_and_train_output(
+        test=self,
+        expect_equal_loss_values=True,
+        agent=agent,
+        experience=experience)
 
   @parameterized.named_parameters(('TrainOnMultipleSteps', False),
                                   ('TrainOnSingleStep', True))
