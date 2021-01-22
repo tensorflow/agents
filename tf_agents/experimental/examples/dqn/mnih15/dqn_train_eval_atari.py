@@ -18,7 +18,7 @@ r"""Example training DQN using actor/learner in an Atari environment.
 
 To run DQN on Pong following the hyperparameters from
 "Human level control through deep reinforcement learning" (Mnih et al., 2015)
-https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf
+https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
 
 ```bash
 tensorboard --logdir $HOME/tmp/dqn/gym/Pong-v0/ --port 2223 &
