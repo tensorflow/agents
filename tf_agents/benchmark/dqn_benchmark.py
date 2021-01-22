@@ -47,7 +47,7 @@ class DqnMnih15Return(PerfZeroBenchmark):
     confirms we have not regressed at 3M and does not gurantee convergence to 21
     at 12.5M.
     """
-    self._setup()
+    self.setUp()
     output_dir = self._get_test_output_dir('pongAt3M')
     start_time_sec = time.time()
     dqn_train_eval_atari.train_eval(
@@ -56,7 +56,6 @@ class DqnMnih15Return(PerfZeroBenchmark):
     event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
     values, _ = utils.extract_event_log_values(
         event_file, 'AverageReturn/EnvironmentSteps')
-    print('Values:{}'.format(values))
     # Min/Max ranges are very large to only hard fail if very broken. The system
     # monitoring the results owns looking for anomalies.
     metric_3m = self.build_metric(
