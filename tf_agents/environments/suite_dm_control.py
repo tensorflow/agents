@@ -25,7 +25,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Sequence, Text
+from typing import Any, Callable, Sequence, Text, TYPE_CHECKING
 
 import gin
 from tf_agents.environments import dm_control_wrapper
@@ -36,11 +36,17 @@ _TRY_IMPORT = True  # pylint: disable=g-statement-before-imports
 
 if _TRY_IMPORT:
   try:
+    from dm_env import Environment as DMEnvironment  # pylint: disable=g-import-not-at-top
     from dm_control import suite  # pylint: disable=g-import-not-at-top
     from dm_control.suite.wrappers import pixels  # pylint: disable=g-import-not-at-top
   except ImportError:
     suite = None
+    if TYPE_CHECKING:  # Always evaluates to False at runtime.
+      DMEnvironment = Any
+    else:
+      DMEnvironment = None
 else:
+  from dm_env import Environment as DMEnvironment  # pylint: disable=g-import-not-at-top
   from dm_control import suite  # pylint: disable=g-import-not-at-top
   from dm_control.suite.wrappers import pixels  # pylint: disable=g-import-not-at-top
 
@@ -112,14 +118,14 @@ def load(
   Raises:
     ImportError: if dm_control module was not available.
   """
-  dm_env = _load_env(
+  dmc_env = _load_env(
       domain_name,
       task_name,
       task_kwargs=task_kwargs,
       environment_kwargs=environment_kwargs,
       visualize_reward=visualize_reward)
 
-  env = dm_control_wrapper.DmControlWrapper(dm_env, render_kwargs)
+  env = dm_control_wrapper.DmControlWrapper(dmc_env, render_kwargs)
 
   for wrapper in env_wrappers:
     env = wrapper(env)
@@ -137,7 +143,9 @@ def load_pixels(
     environment_kwargs=None,
     visualize_reward: bool = False,
     render_kwargs=None,
-    env_wrappers: Sequence[types.PyEnvWrapper] = ()
+    env_wrappers: Sequence[types.PyEnvWrapper] = (),
+    env_state_wrappers: Sequence[Callable[[DMEnvironment],
+                                          DMEnvironment]] = (),
 ) -> py_environment.PyEnvironment:
   """Returns an environment from a domain name, task name and optional settings.
 
@@ -159,6 +167,8 @@ def load_pixels(
     render_kwargs: Optional `dict` of keyword arguments for rendering.
     env_wrappers: Iterable with references to wrapper classes to use on the
       wrapped environment.
+    env_state_wrappers: Iterable with references to DM wrappers to use on the
+      state-only DM environment.
 
   Returns:
     The requested environment.
@@ -166,19 +176,22 @@ def load_pixels(
   Raises:
     ImportError: if dm_control module was not available.
   """
-  dm_env = _load_env(
+  dmc_env = _load_env(
       domain_name,
       task_name,
       task_kwargs=task_kwargs,
       environment_kwargs=environment_kwargs,
       visualize_reward=visualize_reward)
 
-  dm_env = pixels.Wrapper(
-      dm_env,
+  for wrapper in env_state_wrappers:
+    dmc_env = wrapper(dmc_env)
+
+  dmc_env = pixels.Wrapper(
+      dmc_env,
       pixels_only=pixels_only,
       render_kwargs=render_kwargs,
       observation_key=observation_key)
-  env = dm_control_wrapper.DmControlWrapper(dm_env, render_kwargs)
+  env = dm_control_wrapper.DmControlWrapper(dmc_env, render_kwargs)
 
   for wrapper in env_wrappers:
     env = wrapper(env)
