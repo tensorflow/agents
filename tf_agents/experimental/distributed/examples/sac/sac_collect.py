@@ -66,7 +66,7 @@ def collect(summary_dir: Text,
             suite_load_fn: Callable[
                 [Text], py_environment.PyEnvironment] = suite_mujoco.load,
             initial_collect_steps: int = 10000,
-            num_iterations: int = 10000000) -> None:
+            max_train_steps: int = 2000000) -> None:
   """Collects experience using a policy updated after every episode."""
   # Create the environment. For now support only single environment collection.
   collect_env = suite_load_fn(environment_name)
@@ -111,7 +111,7 @@ def collect(summary_dir: Text,
       observers=[rb_observer, env_step_metric])
 
   # Run the experience collection loop.
-  for _ in range(num_iterations):
+  while train_step.numpy() < max_train_steps:
     logging.info('Collecting with policy at step: %d', train_step.numpy())
     collect_actor.run()
     variable_container.update(variables)

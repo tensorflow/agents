@@ -112,7 +112,7 @@ def train(
     # Training params
     learning_rate: float = 3e-4,
     batch_size: int = 256,
-    num_iterations: int = 10000000,
+    num_iterations: int = 2000000,
     learner_iterations_per_call: int = 1) -> None:
   """Trains a DQN agent."""
   # Get the specs from the environment.
@@ -174,8 +174,7 @@ def train(
       strategy=strategy)
 
   # Run the training loop.
-  # TODO(b/162440911) change the loop use train_step to handle preemptions
-  for _ in range(num_iterations):
+  while train_step.numpy() < num_iterations:
     sac_learner.run(iterations=learner_iterations_per_call)
     variable_container.push(variables)
 
