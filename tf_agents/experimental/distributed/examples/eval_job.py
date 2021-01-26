@@ -30,6 +30,7 @@ from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.metrics import py_metric
+from tf_agents.metrics import py_metrics
 from tf_agents.policies import greedy_policy  # pylint: disable=unused-import
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.system import system_multiprocessing as multiprocessing
@@ -58,7 +59,10 @@ def evaluate(
     additional_metrics: Optional[Iterable[py_metric.PyStepMetric]] = None,
     is_running: Optional[Callable[[], bool]] = None,
     eval_interval: int = 1000,
-    eval_episodes: int = 1) -> None:
+    eval_episodes: int = 1,
+    # TODO(b/178225158): Deprecate in favor of the reporting libray when ready.
+    return_reporting_fn: Optional[Callable[[int, float], None]] = None
+) -> None:
   """Evaluates a policy iteratively fetching weights from variable container.
 
   Args:
@@ -78,6 +82,9 @@ def evaluate(
     eval_interval: If set, eval is done at the given step interval or as close
       as possible based on polling.
     eval_episodes: Number of episodes to eval.
+    return_reporting_fn: Optional callback function of the form
+      `fn(train_step, average_return)` which reports the average return to a
+      custom destination.
   """
   additional_metrics = additional_metrics or []
   is_running = is_running or (lambda: True)
@@ -93,6 +100,14 @@ def evaluate(
   prev_train_step_value = train_step.numpy()
 
   # Create the evaluator actor.
+  metrics = actor.collect_metrics(buffer_size=eval_episodes)
+
+  if return_reporting_fn:
+    for m in metrics:
+      if isinstance(m, py_metrics.AverageReturnMetric):
+        average_return_metric = m
+        break
+
   eval_actor = actor.Actor(
       environment,
       policy,
@@ -100,7 +115,7 @@ def evaluate(
       episodes_per_run=eval_episodes,
       summary_dir=summary_dir,
       summary_interval=eval_interval,
-      metrics=actor.collect_metrics(buffer_size=1) + additional_metrics,
+      metrics=metrics + additional_metrics,
       name='eval_actor')
 
   # Run the experience evaluation loop.
@@ -128,9 +143,23 @@ def evaluate(
         wait_predicate_fn=is_train_step_the_same_or_behind)
     prev_train_step_value = train_step.numpy()
 
+    # Optionally report the average return metric via a callback.
+    if return_reporting_fn:
+      return_reporting_fn(train_step.numpy(), average_return_metric.result())
 
-def run_eval(root_dir: Text) -> None:
-  """Load the policy and evaluate it."""
+
+def run_eval(
+    root_dir: Text,
+    # TODO(b/178225158): Deprecate in favor of the reporting libray when ready.
+    return_reporting_fn: Optional[Callable[[int, float], None]] = None
+) -> None:
+  """Load the policy and evaluate it.
+
+  Args:
+    root_dir: the root directory for this experiment.
+    return_reporting_fn: Optional callback function of the form `fn(train_step,
+      average_return)` which reports the average return to a custom destination.
+  """
   # Wait for the greedy policy to become available, then load it.
   greedy_policy_dir = os.path.join(root_dir,
                                    learner.POLICY_SAVED_MODEL_DIR,
@@ -149,7 +178,8 @@ def run_eval(root_dir: Text) -> None:
       summary_dir=os.path.join(root_dir, learner.TRAIN_DIR, 'eval'),
       environment_name=gin.REQUIRED,
       policy=policy,
-      variable_container=variable_container)
+      variable_container=variable_container,
+      return_reporting_fn=return_reporting_fn)
 
 
 def main(unused_argv: Sequence[Text]) -> None:
