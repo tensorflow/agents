@@ -23,6 +23,7 @@ from __future__ import print_function
 from typing import Callable, Optional, Sequence, Text
 
 import gin
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.specs import utils as bandit_spec_utils
@@ -209,9 +210,21 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
     arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
     arm_output, arm_state = self._arm_network(
         arm_obs, step_type=step_type, network_state=network_state)
+
+    # Reshape arm output to rank 3 tensor.
     arm_output_shape = tf.shape(arm_output)
+    batch_size = arm_output_shape[0]
+    inner_dim = 1
+    outer_dim = arm_output_shape[-1]
+    if arm_output.shape.rank > 2:
+      # Cannot have undefined inner dimension in arm output shape.
+      inner_dims = arm_output.shape[1: -1]
+      if any(d is None for d in inner_dims):
+        raise ValueError('inner dimensions of arm output cannot be unknown; '
+                         f'arm_output.shape: {arm_output.shape}')
+      inner_dim = np.prod(inner_dims)
     arm_output = tf.reshape(
-        arm_output, shape=[arm_output_shape[0], -1, arm_output_shape[-1]])
+        arm_output, shape=[batch_size, inner_dim, outer_dim])
 
     global_output, global_state = self._global_network(
         global_obs, step_type=step_type, network_state=network_state)
