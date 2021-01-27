@@ -56,13 +56,12 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
       time_step_spec: Optional[ts.TimeStep],
       action_spec: Optional[types.NestedBoundedTensorSpec],
       scalarizer: multi_objective_scalarizer.Scalarizer,
-      objective_networks: Sequence[Network],
+      objective_network_and_loss_fn_sequence: Sequence[Tuple[Network, Callable[
+          ..., tf.Tensor]]],
       optimizer: tf.keras.optimizers.Optimizer,
       observation_and_action_constraint_splitter: types.Splitter = None,
       accepts_per_arm_features: bool = False,
       # Params for training.
-      error_loss_fn: Callable[
-          ..., tf.Tensor] = tf.compat.v1.losses.mean_squared_error,
       gradient_clipping: Optional[float] = None,
       # Params for debugging.
       debug_summaries: bool = False,
@@ -80,10 +79,15 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
        `tf_agents.bandits.multi_objective.multi_objective_scalarizer.Scalarizer`
         object that implements scalarization of multiple objectives into a
         single scalar reward.
-      objective_networks: A Sequence of `tf_agents.network.Network` objects to
-        be used by the agent. Each network will be called with
-        call(observation, step_type) and is expected to provide a prediction for
-        a specific objective for all actions.
+      objective_network_and_loss_fn_sequence: A Sequence of Tuples
+        (`tf_agents.network.Network`, error loss function) to be used by the
+        agent. Each network `net` will be called as
+        `net(observation, training=...)` and is expected to output a
+        `tf.Tensor` of predicted values for a specific objective for all
+        actions, shaped as [batch-size, number-of-actions]. Each network will be
+        trained via minimizing the accompanying error loss function, which takes
+        parameters labels, predictions, and weights (any function from tf.losses
+        would work).
       optimizer: A 'tf.keras.optimizers.Optimizer' object, the optimizer to use
         for training.
       observation_and_action_constraint_splitter: A function used for masking
@@ -95,9 +99,6 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         output `TensorSpec` objects for the observation and mask.
       accepts_per_arm_features: (bool) Whether the agent accepts per-arm
         features.
-      error_loss_fn: A function for computing the error loss, taking parameters
-        labels, predictions, and weights (any function from tf.losses would
-        work). The default is `tf.losses.mean_squared_error`.
       gradient_clipping: A float representing the norm length to clip gradients
         (or None for no clipping.)
       debug_summaries: A Python bool, default False. When True, debug summaries
@@ -118,7 +119,8 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
       ValueError:
         - If the action spec contains more than one action or or it is not a
           bounded scalar int32 spec with minimum 0.
-        - If `objective_networks` has fewer than two networks.
+        - If the length of `objective_network_and_loss_fn_sequence` is less than
+          two.
     """
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
@@ -128,18 +130,18 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         action_spec)
     self._accepts_per_arm_features = accepts_per_arm_features
 
-    self._num_objectives = len(objective_networks)
+    self._num_objectives = len(objective_network_and_loss_fn_sequence)
     if self._num_objectives < 2:
       raise ValueError(
           'Number of objectives should be at least two, but found to be {}'
           .format(self._num_objectives))
-    self._objective_networks = objective_networks
+    self._objective_networks, self._error_loss_fns = tuple(
+        zip(*objective_network_and_loss_fn_sequence))
     self._optimizer = optimizer
-    self._error_loss_fn = error_loss_fn
     self._gradient_clipping = gradient_clipping
     self._heteroscedastic = [
         isinstance(network, heteroscedastic_q_network.HeteroscedasticQNetwork)
-        for network in objective_networks
+        for network in self._objective_networks
     ]
 
     policy = greedy_multi_objective_policy.GreedyMultiObjectiveNeuralPolicy(
@@ -262,8 +264,9 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
           predicted_values,
           tf.cast(actions, dtype=tf.int32))
 
-      loss += self._error_loss_fn(single_objective_values,
-                                  action_predicted_values, sample_weights)
+      loss += self._error_loss_fns[objective_idx](single_objective_values,
+                                                  action_predicted_values,
+                                                  sample_weights)
 
     return loss
 
