@@ -22,6 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow_probability as tfp
 
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import tensor_normalizer
@@ -318,6 +319,18 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
         variance_epsilon=0.0, clip_value=0.0)
     expected = [[90.0, 100.0, 110.0]]
     self.assertAllClose(expected, self.evaluate(norm_obs))
+
+  def testVarianceEstimate(self):
+    normalizer = tensor_normalizer.StreamingTensorNormalizer(
+      tensor_spec.TensorSpec([], tf.float32), scope='normalize_advantages'
+    )
+    tensor = tf.constant([1., 2.])
+
+    normalizer.update(tensor, outer_dims=(0,))
+    mean, var = normalizer._get_mean_var_estimates()
+
+    self.assertAllClose(tf.reduce_mean(tensor), mean[0])
+    self.assertAllClose(tfp.stats.variance(tensor), var[0])
 
 if __name__ == '__main__':
   tf.test.main()
