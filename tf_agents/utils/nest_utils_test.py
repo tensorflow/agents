@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import collections
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
@@ -760,6 +760,7 @@ class PruneExtraKeysTest(tf.test.TestCase):
 
   def testPruneExtraKeys(self):
     self.assertEqual(nest_utils.prune_extra_keys({}, {'a': 1}), {})
+    self.assertEqual(nest_utils.prune_extra_keys((), {'a': 1}), ())
     self.assertEqual(nest_utils.prune_extra_keys(
         {'a': 1}, {'a': 'a'}), {'a': 'a'})
     self.assertEqual(
@@ -768,12 +769,22 @@ class PruneExtraKeysTest(tf.test.TestCase):
         nest_utils.prune_extra_keys([{'a': 1}], [{'a': 'a', 'b': 2}]),
         [{'a': 'a'}])
     self.assertEqual(
+        nest_utils.prune_extra_keys({'a': (), 'b': None}, {'a': 1, 'b': 2}),
+        {'a': (), 'b': 2})
+    self.assertEqual(
         nest_utils.prune_extra_keys(
             {'a': {'aa': 1, 'ab': 2}, 'b': {'ba': 1}},
             {'a': {'aa': 'aa', 'ab': 'ab', 'ac': 'ac'},
              'b': {'ba': 'ba', 'bb': 'bb'},
              'c': 'c'}),
         {'a': {'aa': 'aa', 'ab': 'ab'}, 'b': {'ba': 'ba'}})
+
+    # Test with DictWrapper
+    module = tf.Module()
+    module.d = {'a': {'b': None}}
+    self.assertEqual(
+        nest_utils.prune_extra_keys({'a': ()}, module.d),
+        {'a': ()})
 
   def testInvalidWide(self):
     self.assertEqual(nest_utils.prune_extra_keys(None, {'a': 1}), {'a': 1})

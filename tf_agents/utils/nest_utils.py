@@ -203,6 +203,8 @@ def prune_extra_keys(narrow, wide):
   assert (prune_extra_keys({"a": {"b": 1}, "d": None},
                            {"a": {"b": "b", "c": "c"}, "d": [1, 2]})
           == {"a": {"b": "b"}, "d": [1, 2]})
+  # assert prune_extra_keys((), wide) == ()
+  # assert prune_extra_keys({"a": ()}, wide) == {"a": ()}
   ```
 
   Args:
@@ -219,11 +221,20 @@ def prune_extra_keys(narrow, wide):
     will be returned as is.  Note that ObjectProxy-wrapped objects are
     considered equivalent to their non-ObjectProxy types.
   """
+  #  If `narrow` is `()`, then `()` is returned.  That is, we narrow any
+  #  object w.r.t. an empty tuple to to an empty tuple.  We use `id()`
+  #  here because the emtpy tuple is a singleton in cpython and
+  #  because using "x is ()" or "x == ()" gives syntax warnings for
+  #  numpy arrays.
+  narrow_raw = (narrow.__wrapped__ if isinstance(narrow, wrapt.ObjectProxy)
+                else narrow)
+
+  if id(narrow_raw) == id(()):
+    return narrow
+
   if isinstance(wide, wrapt.ObjectProxy):
     return type(wide)(prune_extra_keys(narrow, wide.__wrapped__))
 
-  narrow_raw = (narrow.__wrapped__ if isinstance(narrow, wrapt.ObjectProxy)
-                else narrow)
   wide_raw = (wide.__wrapped__ if isinstance(wide, wrapt.ObjectProxy) else wide)
 
   if ((type(narrow_raw) != type(wide_raw))  # pylint: disable=unidiomatic-typecheck
@@ -233,7 +244,7 @@ def prune_extra_keys(narrow, wide):
     # We return early if the types are different; but we make some exceptions:
     #  list subtypes are considered the same (e.g. ListWrapper and list())
     #  Mapping subtypes are considered the same (e.g. DictWrapper and dict())
-    #  (TupleWrapper subtypes are handled by unwrapping ObjectProxy above)
+    #  (TupleWrapper subtypes are handled by unwrapping ObjectProxy above).
     return wide
 
   if isinstance(narrow, collections_abc.Mapping):
