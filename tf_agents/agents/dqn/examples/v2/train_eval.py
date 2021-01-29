@@ -62,6 +62,8 @@ from tf_agents.environments.examples import masked_cartpole  # pylint: disable=u
 from tf_agents.eval import metric_utils
 from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.metrics import tf_metrics
+from tf_agents.networks import duel_q_network
+from tf_agents.networks import q_network
 from tf_agents.networks import sequential
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
@@ -87,6 +89,9 @@ def train_eval(
     train_sequence_length=1,
     # Params for QNetwork
     fc_layer_params=(100,),
+    a_fc_layer_params=(50,),
+    v_fc_layer_params=(50,),
+    network_type='duel_q_network',
     # Params for QRnnNetwork
     input_fc_layer_params=(50,),
     lstm_size=(20,),
@@ -160,7 +165,20 @@ def train_eval(
           output_fc_layer_params,
           num_actions)
     else:
-      q_net = create_feedforward_network(fc_layer_params, num_actions)
+      observation_spec = tf_env.time_step_spec().observation
+      action_spec = tf_env.action_spec()
+      if network_type == 'q_network':
+        q_net = create_q_network(observation_spec,
+                                 action_spec,
+                                 fc_layer_params)
+      elif network_type == 'duel_q_network':
+        q_net = create_duel_q_network(observation_spec,
+                                      action_spec,
+                                      fc_layer_params,
+                                      a_fc_layer_params,
+                                      v_fc_layer_params)
+      else:
+        q_net = create_feedforward_network(fc_layer_params, num_actions)
       train_sequence_length = n_step_update
 
     # TODO(b/127301657): Decay epsilon based on global step, cf. cl/188907839
@@ -336,6 +354,27 @@ dense = functools.partial(
 
 fused_lstm_cell = functools.partial(
     tf.keras.layers.LSTMCell, implementation=KERAS_LSTM_FUSED)
+
+
+def create_q_network(observation_spec, action_spec, fc_layer_params):
+  return q_network.QNetwork(
+      observation_spec,
+      action_spec,
+      fc_layer_params=fc_layer_params)
+
+
+def create_duel_q_network(observation_spec,
+                          action_spec,
+                          fc_layer_params,
+                          a_fc_layer_params,
+                          v_fc_layer_params):
+  return duel_q_network.DuelQNetwork(
+      observation_spec,
+      action_spec,
+      fc_layer_params=fc_layer_params,
+      a_fc_layer_params=a_fc_layer_params,
+      v_fc_layer_params=v_fc_layer_params
+  )
 
 
 def create_feedforward_network(fc_layer_units, num_actions):
