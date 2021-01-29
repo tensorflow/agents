@@ -105,9 +105,18 @@ def create_feed_forward_common_tower_network(
       fc_layer_params=arm_layers,
       activation_fn=activation_fn,
       preprocessing_combiner=arm_preprocessing_combiner)
-  common_input_dim = global_layers[-1] + arm_layers[-1]
+
+  # When `global_layers` or `arm_layers` are empty, the corresponding encoding
+  # networks simply pass the inputs forward, so in such cases we get the output
+  # dimensions from the respective observation specs.
+  global_network_out_dim = global_layers[
+      -1] if global_layers else obs_spec_no_num_actions[
+          bandit_spec_utils.GLOBAL_FEATURE_KEY].shape[-1]
+  arm_network_out_dim = arm_layers[
+      -1] if arm_layers else obs_spec_no_num_actions[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[-1]
   common_input_spec = tensor_spec.TensorSpec(
-      shape=(common_input_dim,), dtype=tf.float32)
+      shape=(global_network_out_dim + arm_network_out_dim,), dtype=tf.float32)
   if output_dim == 1:
     common_network = q_network.QNetwork(
         input_tensor_spec=common_input_spec,
