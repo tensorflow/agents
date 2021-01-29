@@ -301,7 +301,7 @@ class TFAgent(tf.Module):
     # Data context for data passed to train().  May be different if
     # training_data_spec is provided.
     if training_data_spec is not None:
-      data_context_info_spec = training_data_spec.policy_info
+      data_context_info_spec = getattr(training_data_spec, "policy_info", ())
     else:
       data_context_info_spec = collect_policy.info_spec
     self._data_context = data_converter.DataContext(
