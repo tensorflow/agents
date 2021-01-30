@@ -20,14 +20,15 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-import numpy as np
+import pprint
+from typing import NamedTuple, Optional
 
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
-from typing import NamedTuple, Optional
 
 
 def _as_float32_array(a):
@@ -82,6 +83,9 @@ class TimeStep(
     # TODO(b/130243327): Explore performance impact and consider converting
     # dicts in the observation into ordered dicts in __new__ call.
     return hash(tuple(tf.nest.flatten(self)))
+
+  def __repr__(self):
+    return 'TimeStep(\n' + pprint.pformat(dict(self._asdict())) + ')'
 
 
 class StepType(object):

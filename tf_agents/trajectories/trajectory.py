@@ -22,6 +22,7 @@ from __future__ import print_function
 
 
 import functools
+import pprint
 from typing import NamedTuple, Optional
 
 import numpy as np
@@ -110,6 +111,9 @@ class Trajectory(
     """
     return self._replace(**kwargs)
 
+  def __repr__(self):
+    return 'Trajectory(\n' + pprint.pformat(dict(self._asdict())) + ')'
+
 
 # TODO(b/162101981): Move to its own file.
 class Transition(
@@ -172,6 +176,9 @@ class Transition(
       A new `Transition`.
     """
     return self._replace(**kwargs)
+
+  def __repr__(self):
+    return 'Transition(\n' + pprint.pformat(dict(self._asdict())) + ')'
 
 
 def _create_trajectory(
