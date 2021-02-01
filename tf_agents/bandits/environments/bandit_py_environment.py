@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-from typing import Optional
+from typing import Optional, Text
 import numpy as np
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -46,10 +46,12 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
   def __init__(self,
                observation_spec: types.NestedArray,
                action_spec: types.NestedArray,
-               reward_spec: Optional[types.NestedArray] = None):
+               reward_spec: Optional[types.NestedArray] = None,
+               name: Optional[Text] = None):
     self._observation_spec = observation_spec
     self._action_spec = action_spec
     self._reward_spec = reward_spec
+    self._name = name
     super(BanditPyEnvironment, self).__init__()
 
   def _reset(self) -> ts.TimeStep:
@@ -108,3 +110,7 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
   @abc.abstractmethod
   def _observe(self) -> types.NestedArray:
     """Returns an observation."""
+
+  @property
+  def name(self) -> Text:
+    return self._name
