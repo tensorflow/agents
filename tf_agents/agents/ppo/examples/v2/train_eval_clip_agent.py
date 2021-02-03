@@ -222,13 +222,13 @@ def train_eval(
         num_episodes=collect_episodes_per_iteration)
 
     def train_step():
-        ds = replay_buffer.as_dataset(
-            sample_batch_size=num_parallel_environments,
-            num_steps=replay_buffer.num_frames() // num_parallel_environments,
-            single_deterministic_pass=True
-        )
+      ds = replay_buffer.as_dataset(
+        sample_batch_size=num_parallel_environments,
+        num_steps=replay_buffer.num_frames() // num_parallel_environments,
+        single_deterministic_pass=True
+      )
 
-        return tf_agent.train(experience=iter(ds).get_next()[0])
+      return tf_agent.train(experience=iter(ds).get_next()[0])
 
 
     if use_tf_functions:
