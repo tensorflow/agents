@@ -72,7 +72,7 @@ flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 def create_q_network(num_actions):
   """Create a Q network following the architecture from Minh 15."""
 
-  kernel_initializer = tf.compat.v1.variance_scaling_initializer(scale=2.0)
+  kernel_initializer = tf.keras.initializers.VarianceScaling(scale=2.0)
   conv2d = functools.partial(
       tf.keras.layers.Conv2D,
       activation=tf.keras.activations.relu,
@@ -159,9 +159,9 @@ def train_eval(
       n_step_update=n_step_update,
       target_update_tau=target_update_tau,
       target_update_period=target_update_period,
-      optimizer=tf.compat.v1.train.RMSPropOptimizer(
+      optimizer=tf.keras.optimizers.RMSprop(
           learning_rate=learning_rate,
-          decay=0.95,
+          rho=0.95,
           momentum=0.95,
           epsilon=0.01,
           centered=True),
