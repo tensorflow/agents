@@ -27,8 +27,9 @@ from enum import Enum
 from typing import Optional, Sequence, Text, Tuple
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import linalg
@@ -295,6 +296,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
         accepts_per_arm_features=accepts_per_arm_features,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))
+
     training_data_spec = None
     if accepts_per_arm_features:
       training_data_spec = bandit_spec_utils.drop_arm_observation(
@@ -308,7 +310,10 @@ class LinearBanditAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_sequence_length=None)
+        train_sequence_length=None,
+        validate_args=False)
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   @property
   def num_actions(self):
@@ -572,6 +577,8 @@ class LinearBanditAgent(tf_agent.TFAgent):
         have been calculated with the weights.  Note that each Agent chooses
         its own method of applying weights.
     """
+    experience = self._as_trajectory(experience)
+
     if tf.distribute.has_strategy():
       return self._distributed_train_step(experience)
 

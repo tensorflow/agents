@@ -31,6 +31,12 @@ from tf_agents.utils import nest_utils
 from tensorflow.python.training.tracking import data_structures  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 
+# pylint: disable=invalid-name
+DictWrapper = data_structures.wrap_or_unwrap
+TupleWrapper = data_structures.wrap_or_unwrap
+# pylint: enable=invalid-name
+
+
 class NestedTensorsTest(tf.test.TestCase):
   """Tests functions related to nested tensors."""
 
@@ -779,12 +785,17 @@ class PruneExtraKeysTest(tf.test.TestCase):
              'c': 'c'}),
         {'a': {'aa': 'aa', 'ab': 'ab'}, 'b': {'ba': 'ba'}})
 
-    # Test with DictWrapper
-    module = tf.Module()
-    module.d = {'a': {'b': None}}
     self.assertEqual(
-        nest_utils.prune_extra_keys({'a': ()}, module.d),
+        nest_utils.prune_extra_keys(
+            {'a': ()},
+            DictWrapper({'a': DictWrapper({'b': None})})),
         {'a': ()})
+
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            {'a': 1, 'c': 2},
+            DictWrapper({'a': DictWrapper({'b': None})})),
+        {'a': {'b': None}})
 
   def testInvalidWide(self):
     self.assertEqual(nest_utils.prune_extra_keys(None, {'a': 1}), {'a': 1})
@@ -810,11 +821,6 @@ class PruneExtraKeysTest(tf.test.TestCase):
 
     class A(collections.namedtuple('A', ('a', 'b'))):
       pass
-
-    # pylint: disable=invalid-name
-    DictWrapper = data_structures.wrap_or_unwrap
-    TupleWrapper = data_structures.wrap_or_unwrap
-    # pylint: enable=invalid-name
 
     self.assertEqual(
         nest_utils.prune_extra_keys(

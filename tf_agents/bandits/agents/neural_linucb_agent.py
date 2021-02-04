@@ -35,8 +35,9 @@ from __future__ import print_function
 from typing import Optional, Sequence, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
 from tf_agents.bandits.agents import utils as bandit_utils
@@ -259,7 +260,11 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False)
+
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   @property
   def num_actions(self):
@@ -560,6 +565,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         have been calculated with the weights.  Note that each Agent chooses
         its own method of applying weights.
     """
+    experience = self._as_trajectory(experience)
+
     (observation, action,
      reward) = bandit_utils.process_experience_for_neural_agents(
          experience, self._accepts_per_arm_features, self.training_data_spec)

@@ -27,7 +27,7 @@ from __future__ import print_function
 from typing import Iterable, Optional, Text, Tuple
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.networks import heteroscedastic_q_network

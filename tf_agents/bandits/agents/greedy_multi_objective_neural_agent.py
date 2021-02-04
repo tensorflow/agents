@@ -26,6 +26,7 @@ from absl import logging
 import gin
 import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
@@ -167,7 +168,10 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False)
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
@@ -179,6 +183,8 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
 
   def _train(self, experience: types.NestedTensor,
              weights: types.Tensor) -> tf_agent.LossInfo:
+    experience = self._as_trajectory(experience)
+
     with tf.GradientTape() as tape:
       loss_info = self._loss(
           experience,
