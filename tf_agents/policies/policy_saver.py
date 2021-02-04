@@ -267,7 +267,7 @@ class PolicySaver(object):
         # TODO(b/156526399): Move this to just the policy.distribution() call
         # once tfp.experimental.as_composite() properly handles LinearOperator*
         # components as well as TransformedDistributions.
-        logging.warn(
+        logging.warning(
             'WARNING: Could not serialize policy.distribution() for policy '
             '"%s". Calling saved_model.distribution() will raise the following '
             'assertion error: %s', policy, e)
@@ -429,7 +429,7 @@ class PolicySaver(object):
       saved_policy._all_assets = policy._unconditional_checkpoint_dependencies  # pylint: disable=protected-access
     except AttributeError as e:
       if '_self_unconditional' in str(e):
-        logging.warn(
+        logging.warning(
             'Unable to capture all trackable objects in policy "%s".  This '
             'may be okay.  Error: %s', policy, e)
       else:
