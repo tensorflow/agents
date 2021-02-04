@@ -40,16 +40,16 @@ import tensorflow.compat.v2 as tf
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.environments import suite_gym
 from tf_agents.metrics import py_metrics
-from tf_agents.networks import q_network
+from tf_agents.networks import sequential
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.policies import random_py_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
+from tf_agents.specs import tensor_spec
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.train import actor
 from tf_agents.train import learner
 from tf_agents.train import triggers
-from tf_agents.train.utils import spec_utils
 from tf_agents.train.utils import train_utils
 from tf_agents.utils import common
 
@@ -97,15 +97,32 @@ def train_eval(
   collect_env = suite_gym.load(env_name)
   eval_env = suite_gym.load(env_name)
 
-  observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
-      spec_utils.get_tensor_specs(collect_env))
+  time_step_tensor_spec = tensor_spec.from_spec(collect_env.time_step_spec())
+  action_tensor_spec = tensor_spec.from_spec(collect_env.action_spec())
 
   train_step = train_utils.create_train_step()
+  num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
 
-  q_net = q_network.QNetwork(
-      observation_tensor_spec,
-      action_tensor_spec,
-      fc_layer_params=fc_layer_params)
+  # Define a helper function to create Dense layers configured with the right
+  # activation and kernel initializer.
+  def dense_layer(num_units):
+    return tf.keras.layers.Dense(
+        num_units,
+        activation=tf.keras.activations.relu,
+        kernel_initializer=tf.keras.initializers.VarianceScaling(
+            scale=2.0, mode='fan_in', distribution='truncated_normal'))
+
+  # QNetwork consists of a sequence of Dense layers followed by a dense layer
+  # with `num_actions` units to generate one q_value per available action as
+  # it's output.
+  dense_layers = [dense_layer(num_units) for num_units in fc_layer_params]
+  q_values_layer = tf.keras.layers.Dense(
+      num_actions,
+      activation=None,
+      kernel_initializer=tf.keras.initializers.RandomUniform(
+          minval=-0.03, maxval=0.03),
+      bias_initializer=tf.keras.initializers.Constant(-0.2))
+  q_net = sequential.Sequential(dense_layers + [q_values_layer])
 
   agent = dqn_agent.DqnAgent(
       time_step_tensor_spec,
@@ -115,7 +132,7 @@ def train_eval(
       n_step_update=n_step_update,
       target_update_tau=target_update_tau,
       target_update_period=target_update_period,
-      optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
+      optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
       td_errors_loss_fn=common.element_wise_squared_loss,
       gamma=gamma,
       reward_scale_factor=reward_scale_factor,
