@@ -30,6 +30,7 @@ import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
@@ -237,12 +238,16 @@ class ReinforceAgent(tf_agent.TFAgent):
         train_sequence_length=None,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False)
+    self._as_trajectory = data_converter.AsTrajectory(self.data_context)
 
   def _initialize(self):
     pass
 
   def _train(self, experience, weights=None):
+    experience = self._as_trajectory(experience)
+
     # Add a mask to ensure we reset the return calculation at episode
     # boundaries. This is needed in cases where episodes are truncated before
     # reaching a terminal state. Note experience is a batch of trajectories
