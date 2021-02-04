@@ -16,6 +16,11 @@
 # Lint as: python3
 r"""Example training DQN using actor/learner with RNNs in a gym environment.
 
+This example uses a modified version of the Gym Cartpole environment where the
+velocity components of the observation are masked out. This makes the task more
+challenging. A policy can only succeed at the task if it can correctly maintain
+some state to estimate velocities.
+
 To run DQN-RNNs on MaskedCartPole:
 
 ```bash
@@ -139,7 +144,7 @@ def train_eval(
       n_step_update=1,
       target_update_tau=target_update_tau,
       target_update_period=target_update_period,
-      optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
+      optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
       td_errors_loss_fn=common.element_wise_squared_loss,
       gamma=gamma,
       reward_scale_factor=reward_scale_factor,
@@ -249,13 +254,14 @@ def train_eval(
 logits = functools.partial(
     tf.keras.layers.Dense,
     activation=None,
-    kernel_initializer=tf.random_uniform_initializer(minval=-0.03, maxval=0.03),
-    bias_initializer=tf.constant_initializer(-0.2))
+    kernel_initializer=tf.keras.initializers.RandomUniform(
+        minval=-0.03, maxval=0.03),
+    bias_initializer=tf.keras.initializers.Constant(-0.2))
 
 dense = functools.partial(
     tf.keras.layers.Dense,
     activation=tf.keras.activations.relu,
-    kernel_initializer=tf.compat.v1.variance_scaling_initializer(
+    kernel_initializer=tf.keras.initializers.VarianceScaling(
         scale=2.0, mode='fan_in', distribution='truncated_normal'))
 
 
