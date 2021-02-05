@@ -22,6 +22,8 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.agents.sac import tanh_normal_projection_network
+from tf_agents.distributions import utils as distribution_utils
+from tf_agents.networks import sequential
 from tf_agents.specs import tensor_spec
 
 
@@ -65,6 +67,40 @@ class TanhNormalProjectionNetworkTest(tf.test.TestCase):
     self.assertEqual(2, len(network.trainable_variables))
     self.assertEqual((5, 4), network.trainable_variables[0].shape)
     self.assertEqual((4,), network.trainable_variables[1].shape)
+
+  def testSequentialNetwork(self):
+    output_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, 0, 1)
+    network = tanh_normal_projection_network.TanhNormalProjectionNetwork(
+        output_spec)
+
+    inputs = tf.random.stateless_uniform(shape=[3, 5], seed=[0, 0])
+    output, _ = network(inputs, outer_rank=1)
+
+    # Create a squashed distribution.
+    def create_dist(loc_and_scale):
+      ndims = output_spec.shape.num_elements()
+      loc = loc_and_scale[..., :ndims]
+      scale = tf.exp(loc_and_scale[..., ndims:])
+
+      distribution = tfp.distributions.MultivariateNormalDiag(
+          loc=loc,
+          scale_diag=scale,
+          validate_args=True,
+      )
+      return distribution_utils.scale_distribution_to_spec(
+          distribution, output_spec)
+
+    # Create a sequential network.
+    sequential_network = sequential.Sequential(
+        [network._projection_layer] + [tf.keras.layers.Lambda(create_dist)])
+    sequential_output, _ = sequential_network(inputs)
+
+    # Check that mode and standard deviation are the same.
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.assertAllClose(
+        self.evaluate(output.mode()), self.evaluate(sequential_output.mode()))
+    self.assertAllClose(
+        self.evaluate(output.stddev()), self.evaluate(output.stddev()))
 
 
 if __name__ == '__main__':
