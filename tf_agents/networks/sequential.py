@@ -105,12 +105,11 @@ class Sequential(network.Network):
 
     # Now we remove all of the empty state specs so if there are no RNN layers,
     # our state spec is empty.  layer_has_state is a list of bools telling us
-    # which layers have a state and which don't.
-    # TODO(b/158804957): tf.function changes "s in ((),)" to a tensor bool expr.
-    # pylint: disable=literal-comparison
-    layer_has_state = [s is not () for s in state_spec]
-    state_spec = tuple(s for s in state_spec if s is not ())
-    # pylint: enable=literal-comparison
+    # which layers have a non-empty state and which don't.
+    flattened_specs = [tf.nest.flatten(s) for s in state_spec]
+    layer_has_state = [bool(fs) for fs in flattened_specs]
+    state_spec = tuple(
+        s for s, has_state in zip(state_spec, layer_has_state) if has_state)
     super(Sequential, self).__init__(input_tensor_spec=input_spec,
                                      state_spec=state_spec,
                                      name=name)

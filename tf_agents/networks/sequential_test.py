@@ -31,6 +31,7 @@ import tensorflow_probability as tfp
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.keras_layers import inner_reshape
+from tf_agents.networks import nest_map
 from tf_agents.networks import network
 from tf_agents.networks import sequential as sequential_lib
 from tf_agents.policies import actor_policy
@@ -161,6 +162,15 @@ class SequentialTest(test_utils.TestCase):
     expected = np.dot(inputs, weights)
     expected[expected < 0] = 0
     self.assertAllClose(expected, out)
+
+  def testAllZeroLengthStateSpecsShowAsEmptyState(self):
+    sequential = sequential_lib.Sequential([
+        nest_map.NestMap({
+            'a': tf.keras.layers.Dense(2),
+            'b': tf.keras.layers.Dense(3),
+        })
+    ])
+    self.assertEqual(sequential.state_spec, ())
 
   def testTrainableVariables(self):
     sequential = sequential_lib.Sequential(
