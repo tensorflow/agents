@@ -85,12 +85,9 @@ def _create_agent(train_step: tf.Variable,
       action_tensor_spec,
       actor_network=actor_net,
       critic_network=critic_net,
-      actor_optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate),
-      critic_optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate),
-      alpha_optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate),
+      actor_optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+      critic_optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+      alpha_optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
       target_update_tau=0.005,
       target_update_period=1,
       td_errors_loss_fn=tf.math.squared_difference,
