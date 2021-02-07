@@ -22,6 +22,8 @@ from __future__ import print_function
 
 from typing import Union
 
+import numpy as np
+
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
 from tf_agents.environments import tf_py_environment
@@ -63,12 +65,15 @@ def validate_py_environment(environment: py_environment.PyEnvironment,
   while episode_count < episodes:
     if not array_spec.check_arrays_nest(time_step, time_step_spec):
       raise ValueError(
-          'Given `time_step`: %r does not match expected `time_step_spec`: %r' %
-          (time_step, time_step_spec))
+        'Given `time_step`: %r does not match expected `time_step_spec`: %r' %
+        (time_step, time_step_spec))
 
     action = random_policy.action(time_step).action
     time_step = environment.step(action)
 
-    if time_step.is_last():
+    is_last = time_step.is_last()
+    done = is_last if isinstance(is_last, bool) else np.all(is_last)
+
+    if done:
       episode_count += 1
       time_step = environment.reset()
