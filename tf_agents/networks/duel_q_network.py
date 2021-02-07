@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2021 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Sample Keras networks for DQN."""
+"""Sample Keras networks for Duel_DQN."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -79,9 +79,11 @@ class DuelQNetwork(network.Network):
         item is the L2-regularization strength applied to corresponding
         fully_connected layer.The weight decay parameters are interleaved with
         the fully connected layer, except if the list is None.
-        Crresponding to each branch:
-        a_weight_decay_params designed for the advantage branch,
-        v_weight_decay_params designed for the state branch,
+        Corresponding to each branch:
+        a_weight_decay_params for the advantage branch,
+                              same length as a_fc_layer_params
+        v_weight_decay_params for the state branch,
+                              same length as v_fc_layer_params
       *_dropout_layer_params: Optional list of dropout layer parameters, where
         each item is the fraction of input units to drop. The dropout layers are
         interleaved with the fully connected layers; there is a dropout layer
@@ -89,9 +91,9 @@ class DuelQNetwork(network.Network):
         None.
         Corresponding to each branch:
         a_dropout_layer_params for the advantage branch,
-                               same length of a_fc_layer_params
+                               same length as a_fc_layer_params
         v_dropout_layer_params for the state branch.
-                               same length of v_fc_layer_params
+                               same length as v_fc_layer_params
       activation_fn: Activation function, e.g. tf.keras.activations.relu.
       av_combine_fn: Function to produce q-value from advantage and state value
       kernel_initializer: Initializer to use for the kernels of the conv and
@@ -186,10 +188,7 @@ class DuelQNetwork(network.Network):
     self._v_encode_layers = v_encoder_layers
     self._v_value_layer = v_value_layer
 
-    if av_combine_fn is None:
-      av_combine_fn = self.av_combine_f
-
-    self._av_combine_fn = av_combine_fn
+    self._av_combine_fn = av_combine_fn or self.av_combine_f
 
   def create_branch_layers(self,
                           fc_layer_params,
