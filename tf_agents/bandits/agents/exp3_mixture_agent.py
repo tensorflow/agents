@@ -27,7 +27,7 @@ from __future__ import print_function
 from typing import List, Optional, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.agents import tf_agent

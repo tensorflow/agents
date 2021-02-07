@@ -85,12 +85,9 @@ def _create_agent(train_step: tf.Variable,
       action_tensor_spec,
       actor_network=actor_net,
       critic_network=critic_net,
-      actor_optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate),
-      critic_optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate),
-      alpha_optimizer=tf.compat.v1.train.AdamOptimizer(
-          learning_rate=learning_rate),
+      actor_optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+      critic_optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+      alpha_optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
       target_update_tau=0.005,
       target_update_period=1,
       td_errors_loss_fn=tf.math.squared_difference,
@@ -112,7 +109,7 @@ def train(
     # Training params
     learning_rate: float = 3e-4,
     batch_size: int = 256,
-    num_iterations: int = 10000000,
+    num_iterations: int = 2000000,
     learner_iterations_per_call: int = 1) -> None:
   """Trains a DQN agent."""
   # Get the specs from the environment.
@@ -174,8 +171,7 @@ def train(
       strategy=strategy)
 
   # Run the training loop.
-  # TODO(b/162440911) change the loop use train_step to handle preemptions
-  for _ in range(num_iterations):
+  while train_step.numpy() < num_iterations:
     sac_learner.run(iterations=learner_iterations_per_call)
     variable_container.push(variables)
 

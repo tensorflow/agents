@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 # Using Type Annotations.
 
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Text
 
 import gin
 import numpy as np
@@ -84,7 +84,8 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
                std_base: Sequence[float],
                mu_high: float,
                std_high: float,
-               batch_size: Optional[int] = None):
+               batch_size: Optional[int] = None,
+               name: Optional[Text] = 'wheel'):
     """Initializes the Wheel Bandit environment.
 
     Args:
@@ -100,6 +101,7 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
       std_high: (float) Reward std for optimal action if the context norm is
           above delta.
       batch_size: (optional) (int) Number of observations generated per call.
+      name: (optional) The name of this environment instance.
     """
     self._batch_size = 1 if batch_size is None else batch_size
     if (delta <= 0 or delta >= 1):
@@ -131,7 +133,8 @@ class WheelPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         shape=(_CONTEXT_DIM,), dtype=np.float32, name='observation')
     self._time_step_spec = ts.time_step_spec(observation_spec)
     self._observation = np.zeros((self._batch_size, _CONTEXT_DIM))
-    super(WheelPyEnvironment, self).__init__(observation_spec, action_spec)
+    super(WheelPyEnvironment, self).__init__(
+        observation_spec, action_spec, name=name)
 
   @property
   def batch_size(self) -> int:

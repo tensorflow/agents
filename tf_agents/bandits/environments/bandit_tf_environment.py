@@ -21,7 +21,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-from typing import Optional
+from typing import Optional, Text
 import six
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -63,7 +63,8 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
   def __init__(self,
                time_step_spec: Optional[types.NestedArray] = None,
                action_spec: Optional[types.NestedArray] = None,
-               batch_size: Optional[types.Int] = 1):
+               batch_size: Optional[types.Int] = 1,
+               name: Optional[Text] = None):
     """Initialize instances of `BanditTFEnvironment`.
 
     Args:
@@ -73,6 +74,7 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
       action_spec: A nest of BoundedTensorSpec representing the actions of the
         environment.
       batch_size: The batch size expected for the actions and observations.
+      name: The name of this environment instance.
     """
     self._reset_called = tf.compat.v2.Variable(
         False, trainable=False, name='reset_called')
@@ -89,6 +91,7 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
     ]
     self._time_step_variables = tf.nest.pack_sequence_as(
         time_step_spec, variables)
+    self._name = name
 
     super(BanditTFEnvironment, self).__init__(
         time_step_spec=time_step_spec,
@@ -132,3 +135,7 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
   @abc.abstractmethod
   def _observe(self) -> types.NestedTensor:
     """Returns an observation."""
+
+  @property
+  def name(self) -> Text:
+    return self._name

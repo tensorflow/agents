@@ -23,6 +23,7 @@ from __future__ import print_function
 from typing import Callable, Optional, Sequence, Text
 
 import gin
+import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.bandits.specs import utils as bandit_spec_utils
@@ -104,9 +105,18 @@ def create_feed_forward_common_tower_network(
       fc_layer_params=arm_layers,
       activation_fn=activation_fn,
       preprocessing_combiner=arm_preprocessing_combiner)
-  common_input_dim = global_layers[-1] + arm_layers[-1]
+
+  # When `global_layers` or `arm_layers` are empty, the corresponding encoding
+  # networks simply pass the inputs forward, so in such cases we get the output
+  # dimensions from the respective observation specs.
+  global_network_out_dim = global_layers[
+      -1] if global_layers else obs_spec_no_num_actions[
+          bandit_spec_utils.GLOBAL_FEATURE_KEY].shape[-1]
+  arm_network_out_dim = arm_layers[
+      -1] if arm_layers else obs_spec_no_num_actions[
+          bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[-1]
   common_input_spec = tensor_spec.TensorSpec(
-      shape=(common_input_dim,), dtype=tf.float32)
+      shape=(global_network_out_dim + arm_network_out_dim,), dtype=tf.float32)
   if output_dim == 1:
     common_network = q_network.QNetwork(
         input_tensor_spec=common_input_spec,
@@ -209,9 +219,21 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
     arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
     arm_output, arm_state = self._arm_network(
         arm_obs, step_type=step_type, network_state=network_state)
+
+    # Reshape arm output to rank 3 tensor.
     arm_output_shape = tf.shape(arm_output)
+    batch_size = arm_output_shape[0]
+    inner_dim = 1
+    outer_dim = arm_output_shape[-1]
+    if arm_output.shape.rank > 2:
+      # Cannot have undefined inner dimension in arm output shape.
+      inner_dims = arm_output.shape[1: -1]
+      if any(d is None for d in inner_dims):
+        raise ValueError('inner dimensions of arm output cannot be unknown; '
+                         f'arm_output.shape: {arm_output.shape}')
+      inner_dim = np.prod(inner_dims)
     arm_output = tf.reshape(
-        arm_output, shape=[arm_output_shape[0], -1, arm_output_shape[-1]])
+        arm_output, shape=[batch_size, inner_dim, outer_dim])
 
     global_output, global_state = self._global_network(
         global_obs, step_type=step_type, network_state=network_state)

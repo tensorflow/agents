@@ -25,7 +25,7 @@ import collections
 from typing import Dict, Optional, Text
 
 import six
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.agents import data_converter
 from tf_agents.policies import tf_policy
@@ -301,13 +301,33 @@ class TFAgent(tf.Module):
     # Data context for data passed to train().  May be different if
     # training_data_spec is provided.
     if training_data_spec is not None:
-      data_context_info_spec = training_data_spec.policy_info
+      # training_data_spec can be anything; so build a data_context
+      # via best-effort with fall-backs to the collect data spec.
+      training_discount_spec = getattr(
+          training_data_spec, "discount", time_step_spec.discount)
+      training_observation_spec = getattr(
+          training_data_spec, "observation", time_step_spec.observation)
+      training_reward_spec = getattr(
+          training_data_spec, "reward", time_step_spec.reward)
+      training_step_type_spec = getattr(
+          training_data_spec, "step_type", time_step_spec.step_type)
+      training_policy_info_spec = getattr(
+          training_data_spec, "policy_info", collect_policy.info_spec)
+      training_action_spec = getattr(
+          training_data_spec, "action", action_spec)
+      self._data_context = data_converter.DataContext(
+          time_step_spec=ts.TimeStep(
+              discount=training_discount_spec,
+              observation=training_observation_spec,
+              reward=training_reward_spec,
+              step_type=training_step_type_spec),
+          action_spec=training_action_spec,
+          info_spec=training_policy_info_spec)
     else:
-      data_context_info_spec = collect_policy.info_spec
-    self._data_context = data_converter.DataContext(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        info_spec=data_context_info_spec)
+      self._data_context = data_converter.DataContext(
+          time_step_spec=time_step_spec,
+          action_spec=action_spec,
+          info_spec=collect_policy.info_spec)
     if train_argspec is None:
       train_argspec = {}
     elif validate_args:

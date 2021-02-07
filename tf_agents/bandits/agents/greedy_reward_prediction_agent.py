@@ -24,8 +24,9 @@ from typing import Iterable, Optional, Text, Tuple
 from absl import logging
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.networks import heteroscedastic_q_network
@@ -188,7 +189,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_step_counter=train_step_counter)
+        train_step_counter=train_step_counter,
+        validate_args=False)
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
@@ -200,6 +204,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     return variables_to_train
 
   def _train(self, experience, weights):
+    experience = self._as_trajectory(experience)
+
     with tf.GradientTape() as tape:
       loss_info = self._loss(experience, weights=weights, training=True)
 

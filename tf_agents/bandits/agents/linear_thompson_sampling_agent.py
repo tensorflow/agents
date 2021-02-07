@@ -31,7 +31,7 @@ from __future__ import print_function
 from typing import Optional, Sequence, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.bandits.agents import linear_bandit_agent as lin_agent
 from tf_agents.typing import types

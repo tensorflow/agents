@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import copy
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.agents import test_util
 from tf_agents.agents import tf_agent
@@ -141,10 +141,11 @@ class TFAgentTest(tf.test.TestCase):
             observation={'obs': tf.TensorSpec([], tf.float32)},
             action=(),
             policy_info={'info': tf.TensorSpec([], tf.int32)},
-            reward=tf.TensorSpec([], tf.float32),
-            step_type=tf.TensorSpec([], tf.int32),
-            next_step_type=tf.TensorSpec([], tf.int32),
-            discount=tf.TensorSpec([], tf.float32),
+            reward=tf.TensorSpec([], tf.float32, name='reward'),
+            step_type=tf.TensorSpec([], tf.int32, name='step_type'),
+            next_step_type=tf.TensorSpec([], tf.int32, name='next_step_type'),
+            discount=tensor_spec.BoundedTensorSpec([], tf.float32, 0.0, 1.0,
+                                                   name='discount'),
         )))
     self.assertEqual(agent.data_context.time_step_spec,
                      ts.time_step_spec({'obs': tf.TensorSpec([], tf.float32)}))

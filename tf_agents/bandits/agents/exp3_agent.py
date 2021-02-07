@@ -30,8 +30,9 @@ from __future__ import print_function
 from typing import Optional, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import categorical_policy
 from tf_agents.bandits.policies import policy_utilities
@@ -119,7 +120,10 @@ class Exp3Agent(tf_agent.TFAgent):
                                     action_spec=policy.action_spec,
                                     policy=policy,
                                     collect_policy=policy,
-                                    train_sequence_length=None)
+                                    train_sequence_length=None,
+                                    validate_args=False)
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   @property
   def num_actions(self):
@@ -161,6 +165,7 @@ class Exp3Agent(tf_agent.TFAgent):
         its own method of applying weights.
     """
     del weights  # unused
+    experience = self._as_trajectory(experience)
     reward = experience.reward
     log_prob = policy_step.get_log_probability(experience.policy_info)
     action = experience.action

@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import collections
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
@@ -29,6 +29,12 @@ from tf_agents.utils import nest_utils
 
 # We use this to build {Dict,Tuple,List}Wrappers for testing nesting code.
 from tensorflow.python.training.tracking import data_structures  # pylint: disable=g-direct-tensorflow-import  # TF internal
+
+
+# pylint: disable=invalid-name
+DictWrapper = data_structures.wrap_or_unwrap
+TupleWrapper = data_structures.wrap_or_unwrap
+# pylint: enable=invalid-name
 
 
 class NestedTensorsTest(tf.test.TestCase):
@@ -760,6 +766,7 @@ class PruneExtraKeysTest(tf.test.TestCase):
 
   def testPruneExtraKeys(self):
     self.assertEqual(nest_utils.prune_extra_keys({}, {'a': 1}), {})
+    self.assertEqual(nest_utils.prune_extra_keys((), {'a': 1}), ())
     self.assertEqual(nest_utils.prune_extra_keys(
         {'a': 1}, {'a': 'a'}), {'a': 'a'})
     self.assertEqual(
@@ -768,12 +775,27 @@ class PruneExtraKeysTest(tf.test.TestCase):
         nest_utils.prune_extra_keys([{'a': 1}], [{'a': 'a', 'b': 2}]),
         [{'a': 'a'}])
     self.assertEqual(
+        nest_utils.prune_extra_keys({'a': (), 'b': None}, {'a': 1, 'b': 2}),
+        {'a': (), 'b': 2})
+    self.assertEqual(
         nest_utils.prune_extra_keys(
             {'a': {'aa': 1, 'ab': 2}, 'b': {'ba': 1}},
             {'a': {'aa': 'aa', 'ab': 'ab', 'ac': 'ac'},
              'b': {'ba': 'ba', 'bb': 'bb'},
              'c': 'c'}),
         {'a': {'aa': 'aa', 'ab': 'ab'}, 'b': {'ba': 'ba'}})
+
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            {'a': ()},
+            DictWrapper({'a': DictWrapper({'b': None})})),
+        {'a': ()})
+
+    self.assertEqual(
+        nest_utils.prune_extra_keys(
+            {'a': 1, 'c': 2},
+            DictWrapper({'a': DictWrapper({'b': None})})),
+        {'a': {'b': None}})
 
   def testInvalidWide(self):
     self.assertEqual(nest_utils.prune_extra_keys(None, {'a': 1}), {'a': 1})
@@ -799,11 +821,6 @@ class PruneExtraKeysTest(tf.test.TestCase):
 
     class A(collections.namedtuple('A', ('a', 'b'))):
       pass
-
-    # pylint: disable=invalid-name
-    DictWrapper = data_structures.wrap_or_unwrap
-    TupleWrapper = data_structures.wrap_or_unwrap
-    # pylint: enable=invalid-name
 
     self.assertEqual(
         nest_utils.prune_extra_keys(

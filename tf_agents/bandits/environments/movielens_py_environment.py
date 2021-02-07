@@ -18,7 +18,7 @@ from __future__ import absolute_import
 # Using Type Annotations.
 
 import random
-from typing import Text
+from typing import Optional, Text
 import gin
 import numpy as np
 
@@ -48,7 +48,8 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
                data_dir: Text,
                rank_k: int,
                batch_size: int = 1,
-               num_movies: int = 20):
+               num_movies: int = 20,
+               name: Optional[Text] = 'movielens'):
     """Initializes the MovieLens Bandit environment.
 
     Args:
@@ -57,6 +58,7 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
       batch_size: (int) Number of observations generated per call.
       num_movies: (int) Only the first `num_movies` movies will be used by the
         environment. The rest is cut out from the data.
+      name: The name of this environment instance.
     """
     self._num_actions = num_movies
     self._batch_size = batch_size
@@ -100,7 +102,7 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         self._approx_ratings_matrix, axis=1)
 
     super(MovieLensPyEnvironment, self).__init__(
-        observation_spec, self._action_spec)
+        observation_spec, self._action_spec, name=name)
 
   @property
   def batch_size(self):

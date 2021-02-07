@@ -22,8 +22,9 @@ from __future__ import print_function
 import abc
 from typing import List, Optional, Sequence, Text
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import mixture_policy
 from tf_agents.trajectories import trajectory
@@ -114,7 +115,10 @@ class MixtureAgent(tf_agent.TFAgent):
     policies = [agent.collect_policy for agent in agents]
     policy = mixture_policy.MixturePolicy(mixture_distribution, policies)
     super(MixtureAgent, self).__init__(
-        time_step_spec, action_spec, policy, policy, train_sequence_length=None)
+        time_step_spec, action_spec, policy, policy, train_sequence_length=None,
+        validate_args=False)
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=None)
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
@@ -130,6 +134,7 @@ class MixtureAgent(tf_agent.TFAgent):
 
   def _train(self, experience, weights=None):
     del weights  # unused
+    experience = self._as_trajectory(experience)
 
     reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.reward, self._time_step_spec.reward)
