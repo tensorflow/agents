@@ -71,9 +71,6 @@ def validate_py_environment(environment: py_environment.PyEnvironment,
     action = random_policy.action(time_step).action
     time_step = environment.step(action)
 
-    is_last = time_step.is_last()
-    done = is_last if isinstance(is_last, bool) else np.all(is_last)
-
-    if done:
+    if np.all(time_step.is_last()):
       episode_count += 1
       time_step = environment.reset()
