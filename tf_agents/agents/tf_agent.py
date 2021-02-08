@@ -273,7 +273,7 @@ class TFAgent(tf.Module):
 
     common.check_tf1_allowed()
     common.tf_agents_gauge.get_cell("TFAgent").set(True)
-    common.assert_members_are_not_overridden(base_cls=TFAgent, instance=self)
+    common.tf_agents_gauge.get_cell(str(type(self))).set(True)
     if not isinstance(time_step_spec, ts.TimeStep):
       raise TypeError(
           "The `time_step_spec` must be an instance of `TimeStep`, but is `{}`."
