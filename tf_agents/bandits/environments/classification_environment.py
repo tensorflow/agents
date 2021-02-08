@@ -20,7 +20,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Optional
+from typing import Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -69,7 +69,8 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
                shuffle_buffer_size: Optional[types.Int] = None,
                repeat_dataset: Optional[bool] = True,
                prefetch_size: Optional[types.Int] = None,
-               seed: Optional[types.Int] = None):
+               seed: Optional[types.Int] = None,
+               name: Optional[Text] = 'classification'):
     """Initialize `ClassificationBanditEnvironment`.
 
     Args:
@@ -89,6 +90,7 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
       prefetch_size: If None, do not prefetch.  Otherwise, a prefetch buffer
         of the specified size is used in the environment's `dataset`.
       seed: Used to make results deterministic.
+      name: The name of this environment instance.
     Raises:
       ValueError: if `reward_distribution` does not have an event shape with
         rank 2.
@@ -123,7 +125,8 @@ class ClassificationBanditEnvironment(bte.BanditTFEnvironment):
     super(ClassificationBanditEnvironment, self).__init__(
         action_spec=action_spec,
         time_step_spec=time_step_spec,
-        batch_size=batch_size)
+        batch_size=batch_size,
+        name=name)
 
     if shuffle_buffer_size:
       dataset = dataset.shuffle(buffer_size=shuffle_buffer_size,
