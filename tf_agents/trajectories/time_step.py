@@ -146,14 +146,8 @@ def restart(observation: types.NestedTensorOrArray,
       else:
         reward = tf.nest.map_structure(
             lambda r: np.zeros(r.shape, dtype=r.dtype), reward_spec)
-        # Infer the batch size.
-        first_reward = tf.nest.flatten(reward)[0]
-        if first_reward.shape:
-          step_type = np.tile(StepType.FIRST, first_reward.shape)
-        else:
-          step_type = StepType.FIRST
         return TimeStep(
-            step_type,
+            StepType.FIRST,
             reward,
             _as_float32_array(1.0),
             observation)
@@ -389,7 +383,6 @@ def time_step_spec(
   if observation_spec is None:
     return TimeStep(step_type=(), reward=(), discount=(), observation=())
 
-  step_type_shape = []
   first_observation_spec = tf.nest.flatten(observation_spec)[0]
   if reward_spec is not None:
     first_reward_spec = tf.nest.flatten(reward_spec)[0]
@@ -399,22 +392,15 @@ def time_step_spec(
           'Expected observation and reward specs to both be either tensor or '
           'array specs, but saw spec values {} vs. {}'
           .format(first_observation_spec, first_reward_spec))
-    reward = tf.nest.map_structure(
-      lambda r: np.zeros(r.shape, dtype=r.dtype), reward_spec)
-    # Infer the batch size.
-    first_reward = tf.nest.flatten(reward)[0]
-    if first_reward.shape:
-      step_type_shape = first_reward.shape
-
   if isinstance(first_observation_spec, tf.TypeSpec):
     return TimeStep(
-        step_type=tensor_spec.TensorSpec(step_type_shape, tf.int32, name='step_type'),
+        step_type=tensor_spec.TensorSpec([], tf.int32, name='step_type'),
         reward=reward_spec or tf.TensorSpec([], tf.float32, name='reward'),
         discount=tensor_spec.BoundedTensorSpec(
             [], tf.float32, minimum=0.0, maximum=1.0, name='discount'),
         observation=observation_spec)
   return TimeStep(
-      step_type=array_spec.ArraySpec(step_type_shape, np.int32, name='step_type'),
+      step_type=array_spec.ArraySpec([], np.int32, name='step_type'),
       reward=reward_spec or array_spec.ArraySpec([], np.float32, name='reward'),
       discount=array_spec.BoundedArraySpec(
           [], np.float32, minimum=0.0, maximum=1.0, name='discount'),
