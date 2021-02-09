@@ -18,23 +18,29 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from absl.testing.absltest import mock
+
 import numpy as np
+from absl.testing.absltest import mock
+
 from tf_agents.environments import utils
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
 
 
-def get_mock_env(action_spec, observation_spec, step_return):
+def get_mock_env(action_spec, observation_spec, step_return, reward_spec=None):
   env = mock.MagicMock()
 
   env.observation_spec = lambda: observation_spec
-  time_step_spec = ts.time_step_spec(observation_spec)
+  time_step_spec = ts.time_step_spec(observation_spec, reward_spec)
   env.time_step_spec = lambda: time_step_spec
   env.action_spec = lambda: action_spec
   env.step = lambda: step_return
   env.step.reset = lambda: step_return
+
+  if reward_spec:
+    env.reward_spec = lambda: reward_spec
+
   return env
 
 
@@ -63,6 +69,28 @@ class UtilsTest(test_utils.TestCase):
 
     env.step = step
     env.reset = lambda: ts.restart(sample_fn())
+
+    utils.validate_py_environment(env, episodes=2)
+
+  def testValidateWithArrayRewardOk(self):
+    reward_spec = array_spec.ArraySpec(shape=(2,), dtype=np.float32, name='reward')
+    env = get_mock_env(
+      self._action_spec,
+      self._observation_spec, None,
+      reward_spec=reward_spec
+    )
+    rng = np.random.RandomState()
+
+    sample_fn = lambda: array_spec.sample_spec_nest(env.observation_spec(), rng)
+
+    def step(unused_time_step):
+      if rng.rand() < 0.10:
+        return ts.termination(sample_fn(), np.array([0.0, 0.0]))  # pytype: disable=wrong-arg-types
+      else:
+        return ts.transition(sample_fn(), np.array([1.0, 1.0]))  # pytype: disable=wrong-arg-types
+
+    env.step = step
+    env.reset = lambda: ts.restart(sample_fn(), reward_spec=reward_spec)
 
     utils.validate_py_environment(env, episodes=2)
 
