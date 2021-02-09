@@ -91,7 +91,7 @@ def train_eval(
     fc_layer_params=(100,),
     a_fc_layer_params=(50,),
     v_fc_layer_params=(50,),
-    network_type='duel_q_network',
+    network_type='',
     # Params for QRnnNetwork
     input_fc_layer_params=(50,),
     lstm_size=(20,),
