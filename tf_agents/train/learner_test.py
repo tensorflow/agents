@@ -27,14 +27,19 @@ from absl.testing import parameterized
 
 import numpy as np
 from six.moves import range
-import tensorflow.compat.v2 as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
+from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
+from tf_agents.keras_layers import inner_reshape
+from tf_agents.networks import sequential
+from tf_agents.specs import tensor_spec
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.train import learner
 from tf_agents.train.utils import test_utils as dist_test_utils
 from tf_agents.train.utils import train_utils
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import test_utils
 
@@ -192,6 +197,32 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     with self.assertRaisesRegex(AssertionError,
                                 'Iterations must be greater or equal to 1'):
       test_learner.run(iterations=0)
+
+  def testLearnerRaiseExceptionOnMismatchingBatchSetup(self):
+    obs_spec = tensor_spec.TensorSpec([2], tf.float32)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)
+    flat_action_spec = tf.nest.flatten(action_spec)[0]
+    num_actions = flat_action_spec.maximum - flat_action_spec.minimum + 1
+
+    network = sequential.Sequential([
+        tf.keras.layers.Dense(num_actions, dtype=tf.float32),
+        inner_reshape.InnerReshape([None], [num_actions])
+    ])
+
+    agent = behavioral_cloning_agent.BehavioralCloningAgent(
+        time_step_spec, action_spec, cloning_network=network, optimizer=None)
+
+    with self.assertRaisesRegex(
+        RuntimeError,
+        (r'The slot variable initialization failed. The learner assumes all '
+         r'experience tensors required an `outer_rank = \(None, '
+         r'agent.train_sequence_length\)`\. If that\'s not the case for your '
+         r'agent try setting `run_optimizer_variable_init=False`\.')):
+      learner.Learner(
+          root_dir=os.path.join(self.create_tempdir().full_path, 'learner'),
+          train_step=train_utils.create_train_step(),
+          agent=agent)
 
   @parameterized.named_parameters(
       ('DQN_default', _DQN_AGENT_FN, _DEFAULT_STRATEGY_FN, 16),

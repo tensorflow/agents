@@ -21,6 +21,7 @@ from typing import Any, Tuple
 
 from absl import logging
 import gin
+import six
 import tensorflow.compat.v2 as tf
 
 from tf_agents.agents import tf_agent
@@ -158,6 +159,7 @@ class Learner(tf.Module):
         # Force a concrete function creation inside of the strategy scope to
         # ensure that all variables, including optimizer slot variables, are
         # created. This has to happen before the checkpointer is created.
+        # TODO(b/179694393): The add agent specific outer dimensions.
         batched_specs = tensor_spec.add_outer_dims_nest(
             self._agent.training_data_spec,
             (None, self._agent.train_sequence_length))
@@ -176,7 +178,14 @@ class Learner(tf.Module):
             return self.strategy.run(self._agent.train, kwargs=specs)
           return self.strategy.run(self._agent.train, args=(specs,))
 
-        _create_variables.get_concrete_function(batched_specs)
+        try:
+          _create_variables.get_concrete_function(batched_specs)
+        except Exception as e:  # pylint: disable=broad-except
+          six.reraise(type(e), RuntimeError(
+              'The slot variable initialization failed. The learner assumes '
+              'all experience tensors required an `outer_rank = (None, '
+              'agent.train_sequence_length)`. If that\'s not the case for your '
+              'agent try setting `run_optimizer_variable_init=False`.'))
 
       self._checkpointer = common.Checkpointer(
           checkpoint_dir,
