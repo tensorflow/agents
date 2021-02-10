@@ -953,9 +953,8 @@ def initialize_uninitialized_variables(session, var_list=None):
     if not flag:
       uninitialized_vars.append(v)
   if uninitialized_vars:
-    logging.info('uninitialized_vars:')
-    for v in uninitialized_vars:
-      logging.info(v)
+    logging.info('uninitialized_vars: %s',
+                 ', '.join([str(x) for x in uninitialized_vars]))
     session.run(tf.compat.v1.variables_initializer(uninitialized_vars))
 
 

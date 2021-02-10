@@ -285,8 +285,6 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(trained_optimizer_vars[0].numpy(), 1)  # Adam/iter:0
 
     # Not all of the values should be close to each other.
-    logging.info('Init vars: %s\nTrained vars: %s', initial_optimizer_vars,
-                 trained_optimizer_vars)
     num_asserts = 0
     for initial, after_train_step in zip(initial_optimizer_vars,
                                          trained_optimizer_vars):
@@ -369,8 +367,6 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(current_step_optimizer_vars[0].numpy(), 2)  # Adam/iter:0
 
     # Not all of the values should be close to each other.
-    logging.info('Prev step vars: %s\nCurrent step vars: %s',
-                 prev_step_optimizer_vars, current_step_optimizer_vars)
     num_asserts = 0
     for prev_step_var, current_step_var in zip(prev_step_optimizer_vars,
                                                current_step_optimizer_vars):
