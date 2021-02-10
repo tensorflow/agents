@@ -41,8 +41,8 @@ import tensorflow.compat.v2 as tf
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.environments import suite_mujoco
 from tf_agents.experimental.examples.ppo import ppo_learner
+from tf_agents.experimental.examples.ppo import train_eval_lib
 from tf_agents.metrics import py_metrics
-from tf_agents.networks import actor_distribution_network
 from tf_agents.networks import value_network
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
@@ -183,12 +183,8 @@ def train_eval(
 
   train_step = train_utils.create_train_step()
 
-  actor_net = actor_distribution_network.ActorDistributionNetwork(
-      observation_tensor_spec,
-      action_tensor_spec,
-      fc_layer_params=actor_fc_layers,
-      activation_fn=tf.nn.tanh,
-      kernel_initializer=tf.keras.initializers.Orthogonal())
+  actor_net = train_eval_lib.create_sequential_actor_net(
+      actor_fc_layers, action_tensor_spec)
   value_net = value_network.ValueNetwork(
       observation_tensor_spec,
       fc_layer_params=value_fc_layers,

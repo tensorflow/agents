@@ -27,7 +27,7 @@ import tensorflow as tf
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.experimental.examples.ppo import ppo_learner
-from tf_agents.networks import actor_distribution_network
+from tf_agents.experimental.examples.ppo import train_eval_lib
 from tf_agents.networks import value_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -43,19 +43,20 @@ class FakePPOAgent(ppo_agent.PPOAgent):
 
   def __init__(self):
 
-    actor_net = actor_distribution_network.ActorDistributionNetwork(
-        tensor_spec.TensorSpec(shape=[], dtype=tf.float32),
-        tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
-        fc_layer_params=(1,),
-        activation_fn=tf.nn.tanh)
+    observation_tensor_spec = tf.TensorSpec(
+        shape=[1], dtype=tf.float32)
+    action_tensor_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
+
+    actor_net = train_eval_lib.create_sequential_actor_net(
+        fc_layer_units=(1,),
+        action_tensor_spec=action_tensor_spec)
     value_net = value_network.ValueNetwork(
-        tensor_spec.TensorSpec(shape=[], dtype=tf.float32),
+        observation_tensor_spec,
         fc_layer_params=(1,))
 
     super(FakePPOAgent, self).__init__(
-        time_step_spec=ts.time_step_spec(
-            tensor_spec.TensorSpec(shape=[], dtype=tf.float32)),
-        action_spec=tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1),
+        time_step_spec=ts.time_step_spec(observation_tensor_spec),
+        action_spec=action_tensor_spec,
         actor_net=actor_net,
         value_net=value_net,
         # Ensures value_prediction, return and advantage are included as parts
@@ -89,6 +90,8 @@ def _create_trajectories(n_time_steps, batch_size):
   observation_array = np.asarray([
       np.arange(n_time_steps) + 10 * i for i in range(batch_size)
   ])
+  # Adding an inner most dimension to fit the observation spec defined above.
+  observation_array = np.expand_dims(observation_array, axis=2)
   observations = tf.convert_to_tensor(observation_array, dtype=tf.float32)
 
   default_tensor = tf.constant(
