@@ -19,12 +19,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import os
 import shutil
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.networks import actor_distribution_network
@@ -135,25 +136,6 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     ]
     self.assertAllEqual(['batch_size'], initial_state_signature_names)
 
-  def _convert_action_input_to_string_vector(self, action_input_tensors):
-    action_input_tensors_strings = tf.nest.map_structure(
-        tf.strings.as_string, action_input_tensors)
-
-    return tf.concat([
-        tf.expand_dims(action_input_tensors_strings[0].step_type, 1),
-        tf.expand_dims(action_input_tensors_strings[0].reward, 1),
-        tf.expand_dims(action_input_tensors_strings[0].discount, 1),
-        action_input_tensors_strings[0].observation
-    ], 1)
-
-  def _convert_string_vector_to_action_input(self, example):
-    return (ts.TimeStep(
-        step_type=tf.cast(
-            tf.strings.to_number(example[:, 0], tf.float32), tf.int32),
-        reward=tf.strings.to_number(example[:, 1], tf.float32),
-        discount=tf.strings.to_number(example[:, 2], tf.float32),
-        observation=tf.strings.to_number(example[:, 3:7], tf.float32)), ())
-
   @parameterized.named_parameters(
       ('NotSeededNoStateNoInputFn', False, False, False, False),
       ('NotSeededWithStateNoInputFn', False, True, False, False),
@@ -211,9 +193,10 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
         self.evaluate(tf.compat.v1.global_variables_initializer())
 
-        action_output_dict = dict(((spec.name, value) for (spec, value) in zip(
-            tf.nest.flatten(policy.policy_step_spec),
-            tf.nest.flatten(action_output))))
+        action_output_dict = collections.OrderedDict(
+            ((spec.name, value) for (spec, value) in zip(
+                tf.nest.flatten(policy.policy_step_spec),
+                tf.nest.flatten(action_output))))
 
         # Check output of the flattened signature call.
         (action_output_value, action_output_dict) = self.evaluate(
@@ -224,7 +207,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
         input_fn_and_spec = None
         if has_input_fn_and_spec:
-          input_fn_and_spec = (self._convert_string_vector_to_action_input,
+          input_fn_and_spec = (_convert_string_vector_to_action_input,
                                tf.TensorSpec((7,), tf.string, name='example'))
 
         saver = policy_saver.PolicySaver(
@@ -264,7 +247,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
                                                      action_input_values)
 
         action_input_spec = (self._time_step_spec, policy.policy_state_spec)
-        function_action_input_dict = dict(
+        function_action_input_dict = collections.OrderedDict(
             (spec.name, value) for (spec, value) in zip(
                 tf.nest.flatten(action_input_spec),
                 tf.nest.flatten(action_input_tensors)))
@@ -275,15 +258,12 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         # cases.
         self.assertEqual(reloaded_action.graph.seed, self._global_seed)
 
-        def match_dtype_shape(x, y, msg=None):
-          self.assertEqual(x.shape, y.shape, msg=msg)
-          self.assertEqual(x.dtype, y.dtype, msg=msg)
-
         # The seed= argument for the SavedModel action call was given at
         # creation of the PolicySaver.
         if has_input_fn_and_spec:
-          action_string_vector = self._convert_action_input_to_string_vector(
+          action_string_vector = _convert_action_input_to_string_vector(
               action_input_tensors)
+          action_string_vector_values = self.evaluate(action_string_vector)
           reloaded_action_output_dict = reloaded_action(action_string_vector)
           reloaded_action_output = reloaded.action(action_string_vector)
           reloaded_distribution_output = reloaded.distribution(
@@ -319,12 +299,12 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
             self.assertIsInstance(
                 reloaded_distribution_output_no_input_state.action,
                 tfp.distributions.Distribution)
-            tf.nest.map_structure(match_dtype_shape,
+            tf.nest.map_structure(self.match_dtype_shape,
                                   reloaded_action_output_no_input_state,
                                   reloaded_action_output)
 
             tf.nest.map_structure(
-                match_dtype_shape,
+                self.match_dtype_shape,
                 _sample_from_distributions(
                     reloaded_distribution_output_no_input_state),
                 _sample_from_distributions(reloaded_distribution_output))
@@ -347,7 +327,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
                 reloaded_action_output_dict[k],
                 msg='\nMismatched dict key: %s.' % k)
           else:
-            match_dtype_shape(
+            self.match_dtype_shape(
                 action_output_dict[k],
                 reloaded_action_output_dict[k],
                 msg='\nMismatch dict key: %s.' % k)
@@ -358,12 +338,59 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
           tf.nest.map_structure(self.assertAllClose, action_output_value,
                                 reloaded_action_output_value)
         else:
-          tf.nest.map_structure(match_dtype_shape, action_output_value,
+          tf.nest.map_structure(self.match_dtype_shape, action_output_value,
                                 reloaded_action_output_value)
 
         tf.nest.map_structure(self.assertAllClose,
                               distribution_output_value,
                               reloaded_distribution_output_value)
+
+    ## TFLite tests.
+
+    # The converter must run outside of a TF1 graph context, even in
+    # eager mode, to ensure the TF2 path is being executed.  Only
+    # works in TF2.
+    if tf.compat.v1.executing_eagerly_outside_functions():
+      tflite_converter = tf.lite.TFLiteConverter.from_saved_model(
+          path, signature_keys=['action'])
+      tflite_converter.target_spec.supported_ops = [
+          tf.lite.OpsSet.TFLITE_BUILTINS,
+          # TODO(b/111309333): Remove this when `has_input_fn_and_spec`
+          # is `False` once TFLite has native support for RNG ops, atan, etc.
+          tf.lite.OpsSet.SELECT_TF_OPS,
+      ]
+      tflite_serialized_model = tflite_converter.convert()
+
+      tflite_interpreter = tf.lite.Interpreter(
+          model_content=tflite_serialized_model)
+
+      tflite_runner = tflite_interpreter.get_signature_runner('action')
+      tflite_signature = tflite_interpreter.get_signature_list()['action']
+
+      if has_input_fn_and_spec:
+        tflite_action_input_dict = {
+            'example': action_string_vector_values,
+        }
+      else:
+        tflite_action_input_dict = collections.OrderedDict(
+            (spec.name, value) for (spec, value) in zip(
+                tf.nest.flatten(action_input_spec),
+                tf.nest.flatten(action_input_values)))
+
+      self.assertEqual(
+          set(tflite_signature['inputs']),
+          set(tflite_action_input_dict))
+      self.assertEqual(
+          set(tflite_signature['outputs']),
+          set(action_output_dict))
+
+      tflite_output = tflite_runner(**tflite_action_input_dict)
+
+      self.assertAllClose(tflite_output, action_output_dict)
+
+  def match_dtype_shape(self, x, y, msg=None):
+    self.assertEqual(x.shape, y.shape, msg=msg)
+    self.assertEqual(x.dtype, y.dtype, msg=msg)
 
   def testSaveGetInitialState(self):
     network = q_rnn_network.QRnnNetwork(
@@ -938,6 +965,27 @@ def _sample_from_distributions(x):
             else d)
 
   return tf.nest.map_structure(_convert, x)
+
+
+def _convert_action_input_to_string_vector(action_input_tensors):
+  action_input_tensors_strings = tf.nest.map_structure(
+      tf.strings.as_string, action_input_tensors)
+
+  return tf.concat([
+      tf.expand_dims(action_input_tensors_strings[0].step_type, 1),
+      tf.expand_dims(action_input_tensors_strings[0].reward, 1),
+      tf.expand_dims(action_input_tensors_strings[0].discount, 1),
+      action_input_tensors_strings[0].observation
+  ], 1)
+
+
+def _convert_string_vector_to_action_input(example):
+  return (ts.TimeStep(
+      step_type=tf.cast(
+          tf.strings.to_number(example[:, 0], tf.float32), tf.int32),
+      reward=tf.strings.to_number(example[:, 1], tf.float32),
+      discount=tf.strings.to_number(example[:, 2], tf.float32),
+      observation=tf.strings.to_number(example[:, 3:7], tf.float32)), ())
 
 
 if __name__ == '__main__':
