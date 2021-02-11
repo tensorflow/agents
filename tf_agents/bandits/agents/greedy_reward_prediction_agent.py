@@ -290,11 +290,16 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         loss += (self._laplacian_smoothing_weight * tf.reduce_mean(
             tf.linalg.tensor_diag_part(smoothness_batched) * sample_weights))
 
-      loss += self._error_loss_fn(
-          rewards,
-          action_predicted_values,
-          sample_weights,
-          reduction=tf.compat.v1.losses.Reduction.MEAN)
+      # Reduction is done outside of the loss function because non-scalar
+      # weights with unknown shapes may trigger shape validation that fails
+      # XLA compilation.
+      loss += tf.reduce_mean(
+          tf.multiply(
+              self._error_loss_fn(
+                  rewards,
+                  action_predicted_values,
+                  reduction=tf.compat.v1.losses.Reduction.NONE),
+              sample_weights))
 
     return loss
 

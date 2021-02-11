@@ -146,12 +146,16 @@ class NeuralConstraint(BaseConstraint):
       action_predicted_values = common.index_with_actions(
           predicted_values,
           tf.cast(actions, dtype=tf.int32))
-      loss = self._error_loss_fn(
-          rewards,
-          action_predicted_values,
-          sample_weights,
-          reduction=tf.compat.v1.losses.Reduction.MEAN)
-      return loss
+      # Reduction is done outside of the loss function because non-scalar
+      # weights with unknown shapes may trigger shape validation that fails
+      # XLA compilation.
+      return tf.reduce_mean(
+          tf.multiply(
+              self._error_loss_fn(
+                  rewards,
+                  action_predicted_values,
+                  reduction=tf.compat.v1.losses.Reduction.NONE),
+              sample_weights))
 
   def _reshape_and_broadcast(self, input_tensor: types.Tensor,
                              to_shape: types.Tensor) -> types.Tensor:
@@ -551,6 +555,3 @@ def construct_mask_from_multiple_sources(
     # Probabilistic masking.
     mask = tfp.distributions.Bernoulli(probs=feasibility_prob).sample()
   return mask
-
-
-

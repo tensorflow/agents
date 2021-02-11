@@ -270,9 +270,16 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
           predicted_values,
           tf.cast(actions, dtype=tf.int32))
 
-      loss += self._error_loss_fns[objective_idx](single_objective_values,
-                                                  action_predicted_values,
-                                                  sample_weights)
+      # Reduction is done outside of the loss function because non-scalar
+      # weights with unknown shapes may trigger shape validation that fails
+      # XLA compilation.
+      loss += tf.reduce_mean(
+          tf.multiply(
+              self._error_loss_fns[objective_idx](
+                  single_objective_values,
+                  action_predicted_values,
+                  reduction=tf.compat.v1.losses.Reduction.NONE),
+              sample_weights))
 
     return loss
 
