@@ -22,7 +22,7 @@ from __future__ import print_function
 import copy
 import functools
 import os
-from typing import Callable, Dict, Tuple, Optional, Text, cast
+from typing import Callable, Dict, Tuple, Optional, Text, cast, Sequence
 
 from absl import logging
 import tensorflow as tf
@@ -67,6 +67,12 @@ def _check_spec(spec):
         'Spec names: %s\n' %
         (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),))
 
+
+def add_batch_dim(spec, outer_dims):
+  return tf.TensorSpec(
+      shape=tf.TensorShape(outer_dims).concatenate(spec.shape),
+      name=spec.name,
+      dtype=spec.dtype)
 
 InputFnType = Callable[[types.NestedTensor], Tuple[types.NestedTensor,
                                                    types.NestedTensor]]
@@ -286,17 +292,12 @@ class PolicySaver(object):
     get_metadata_fn = common.function(
         lambda: saved_policy.metadata).get_concrete_function()
 
-    def add_batch_dim(spec):
-      return tf.TensorSpec(
-          shape=tf.TensorShape([batch_size]).concatenate(spec.shape),
-          name=spec.name,
-          dtype=spec.dtype)
-
-    batched_time_step_spec = tf.nest.map_structure(add_batch_dim,
-                                                   policy.time_step_spec)
+    batched_time_step_spec = tf.nest.map_structure(
+        lambda spec: add_batch_dim(spec, [batch_size]), policy.time_step_spec)
     batched_time_step_spec = cast(ts.TimeStep, batched_time_step_spec)
-    batched_policy_state_spec = tf.nest.map_structure(add_batch_dim,
-                                                      policy.policy_state_spec)
+    batched_policy_state_spec = tf.nest.map_structure(
+        lambda spec: add_batch_dim(spec, [batch_size]),
+        policy.policy_state_spec)
 
     policy_step_spec = policy.policy_step_spec
     policy_state_spec = policy.policy_state_spec
@@ -332,8 +333,8 @@ class PolicySaver(object):
             action_fn_input_spec, action_inputs)
         return distribution_fn(*action_inputs)
 
-      batched_input_spec = tf.nest.map_structure(add_batch_dim,
-                                                 input_fn_and_spec[1])
+      batched_input_spec = tf.nest.map_structure(
+          lambda spec: add_batch_dim(spec, [batch_size]), input_fn_and_spec[1])
       # We call get_concrete_function() for its side effect: to ensure the
       # proper ConcreteFunction is stored in the SavedModel.
       polymorphic_action_fn.get_concrete_function(example=batched_input_spec)
@@ -510,6 +511,37 @@ class PolicySaver(object):
       return {k: self._metadata[k].numpy() for k in self._metadata}
     else:
       return self._metadata
+
+  def register_function(self,
+                        name: str,
+                        fn: InputFnType,
+                        input_spec: types.NestedTensorSpec,
+                        outer_dims: Sequence[Optional[int]] = (None,)) -> None:
+    """Registers a function into the saved model.
+
+    Note: There is no easy way to generate polymorphic functions. This pattern
+    can be followed and the `get_concerete_function` can be called with named
+    parameters to register more complex signatures.
+
+    Args:
+      name: Name of the attribute to use for the saved fn.
+      fn: Function to register. Must be a callable following the input_spec as
+        a single parameter.
+      input_spec: A nest of tf.TypeSpec representing the time_steps.
+        Provided by the user.
+      outer_dims: The outer dimensions the saved fn will process at a time. By
+        default a batch dimension is added to the input_spec.
+    """
+    if getattr(self._policy, name, None) is not None:
+      raise ValueError('Policy already has an attribute registered with: %s' %
+                       name)
+
+    batched_spec = add_batch_dim(input_spec, outer_dims)
+    tf_fn = common.function(fn)
+    # We call get_concrete_function() for its side effect: to ensure the proper
+    # ConcreteFunction is stored in the SavedModel.
+    tf_fn.get_concrete_function(batched_spec)
+    setattr(self._policy, name, tf_fn)
 
   def save(self,
            export_dir: Text,

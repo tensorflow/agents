@@ -957,6 +957,35 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(kwargs, expected_input_spec_dict)
     self.assertEqual(function.structured_outputs, expected_output_spec_dict)
 
+  def testRegisterFunction(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in TF2.x. Step is required in TF1.x')
+
+    network = q_network.QNetwork(
+        input_tensor_spec=self._time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    saver = policy_saver.PolicySaver(policy, batch_size=None)
+    saver.register_function('q_network', network,
+                            self._time_step_spec.observation)
+
+    path = os.path.join(self.get_temp_dir(), 'save_model')
+    saver.save(path)
+    reloaded = tf.compat.v2.saved_model.load(path)
+
+    sample_input = self.evaluate(
+        tensor_spec.sample_spec_nest(
+            self._time_step_spec.observation, outer_dims=(3,)))
+    expected_output, _ = network(sample_input)
+    reloaded_output, _ = reloaded.q_network(sample_input)
+
+    self.assertAllClose(expected_output, reloaded_output)
+
 
 def _sample_from_distributions(x):
   def _convert(d):
