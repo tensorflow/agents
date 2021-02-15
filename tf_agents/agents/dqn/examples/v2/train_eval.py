@@ -75,6 +75,7 @@ flags.DEFINE_integer('num_iterations', 100000,
                      'Total number train/eval iterations to perform.')
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
+flags.DEFINE_string('network_type', None, 'Type of network to build q_net.')
 
 FLAGS = flags.FLAGS
 
@@ -166,19 +167,13 @@ def train_eval(
           num_actions)
     else:
       observation_spec = tf_env.time_step_spec().observation
-      action_spec = tf_env.action_spec()
-      if network_type == 'q_network':
-        q_net = create_q_network(observation_spec,
-                                 action_spec,
-                                 fc_layer_params)
-      elif network_type == 'duel_q_network':
-        q_net = create_duel_q_network(observation_spec,
-                                      action_spec,
-                                      fc_layer_params,
-                                      a_fc_layer_params,
-                                      v_fc_layer_params)
-      else:
-        q_net = create_feedforward_network(fc_layer_params, num_actions)
+      q_net = q_network_fn(observation_spec,
+                           action_spec,
+                           network_type,
+                           num_actions=num_actions,
+                           fc_layer_params=fc_layer_params,
+                           a_fc_layer_params=a_fc_layer_params,
+                           v_fc_layer_params=v_fc_layer_params)
       train_sequence_length = n_step_update
 
     # TODO(b/127301657): Decay epsilon based on global step, cf. cl/188907839
@@ -356,6 +351,31 @@ fused_lstm_cell = functools.partial(
     tf.keras.layers.LSTMCell, implementation=KERAS_LSTM_FUSED)
 
 
+def q_network_fn(observation_spec, action_spec, network_type, **kwargs):
+  q_net = None
+
+  if network_type == 'q_network':
+    fc_layer_params=kwargs['fc_layer_params']
+    q_net = create_q_network(observation_spec,
+                             action_spec,
+                             fc_layer_params)
+  elif network_type == 'duel_q_network':
+    fc_layer_params=kwargs['fc_layer_params']
+    a_fc_layer_params=kwargs['a_fc_layer_params']
+    v_fc_layer_params=kwargs['v_fc_layer_params']
+    q_net = create_duel_q_network(observation_spec,
+                                  action_spec,
+                                  fc_layer_params,
+                                  a_fc_layer_params,
+                                  v_fc_layer_params)
+  else:
+    fc_layer_params=kwargs['fc_layer_params']
+    num_actions=kwargs['num_actions']
+    q_net = create_feedforward_network(fc_layer_params, num_actions)
+
+  return q_net
+
+
 def create_q_network(observation_spec, action_spec, fc_layer_params):
   return q_network.QNetwork(
       observation_spec,
@@ -401,7 +421,8 @@ def main(_):
   logging.set_verbosity(logging.INFO)
   tf.compat.v1.enable_v2_behavior()
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
-  train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
+  train_eval(FLAGS.root_dir, network_type=FLAGS.network_type,
+             num_iterations=FLAGS.num_iterations)
 
 
 if __name__ == '__main__':
