@@ -156,7 +156,7 @@ def load_movielens_data(data_file):
   with tf.io.gfile.GFile(data_file, 'r') as infile:
     # The file is a csv with rows containing:
     # user id | item id | rating | timestamp
-    reader = csv.reader(infile)
+    reader = csv.reader(infile, delimiter='\t')
     for row in reader:
       user_id, item_id, rating, _ = row
       ratings_matrix[int(user_id) - 1, int(item_id) - 1] = float(rating)
