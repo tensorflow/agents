@@ -224,3 +224,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     # checkpoint to have additional variables. This helps sharing checkpoints
     # across policies.
     status.assert_existing_objects_matched().expect_partial()
+
+  def __getattr__(self, name: Text):
+    """Forward all other calls to the loaded policy."""
+    return getattr(self._policy, name)

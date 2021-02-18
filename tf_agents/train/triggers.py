@@ -19,7 +19,7 @@ See `interval_trigger.IntervalTrigger`.
 """
 
 import os
-from typing import Mapping, Optional, Text, Union
+from typing import Mapping, Optional, Sequence, Text, Tuple, Union
 
 from absl import logging
 import tensorflow.compat.v2 as tf
@@ -33,6 +33,7 @@ from tf_agents.policies import tf_policy
 from tf_agents.train import interval_trigger
 from tf_agents.train import learner
 from tf_agents.train import step_per_second_tracker
+from tf_agents.typing import types
 
 ENV_STEP_METADATA_KEY = 'env_step'
 
@@ -46,15 +47,18 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
   policies.
   """
 
-  def __init__(self,
-               saved_model_dir: Text,
-               agent: tf_agent.TFAgent,
-               train_step: tf.Variable,
-               interval: int,
-               async_saving: bool = False,
-               metadata_metrics: Optional[Mapping[Text,
-                                                  py_metric.PyMetric]] = None,
-               start: int = 0):
+  def __init__(
+      self,
+      saved_model_dir: Text,
+      agent: tf_agent.TFAgent,
+      train_step: tf.Variable,
+      interval: int,
+      async_saving: bool = False,
+      metadata_metrics: Optional[Mapping[Text, py_metric.PyMetric]] = None,
+      start: int = 0,
+      extra_functions: Optional[Sequence[Tuple[str, policy_saver.InputFnType,
+                                               types.NestedTensorSpec,
+                                               types.ShapeSequence]]] = None):
     """Initializes a PolicySavedModelTrigger.
 
     Args:
@@ -73,6 +77,10 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         when async_saving is False.
       start: Initial value for the trigger passed directly to the base class. It
         helps control from which train step the weigts of the model are saved.
+      extra_functions: Optional sequence of extra functions to register in the
+        policy savers. The sequence should consist of tuples with the parameters
+        for `policy_saver.register_function`. Each element in the sequence will
+        be registered in all saved models generaetd by this trigger.
     """
     if async_saving and metadata_metrics:
       raise NotImplementedError('Support for metadata_metrics is not '
@@ -103,6 +111,15 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
     raw_policy_specs_path = os.path.join(saved_model_dir,
                                          learner.RAW_POLICY_SAVED_MODEL_DIR,
                                          'policy_specs.pbtxt')
+
+    extra_functions = extra_functions or []
+    savers = [
+        collect_policy_saver, greedy_policy_saver, self._raw_policy_saver
+    ]
+    for saver in savers:
+      for name, fn, input_spec, outer_dims in extra_functions:
+        saver.register_function(name, fn, input_spec, outer_dims)
+
     # TODO(b/173815037): Use a TF-Agents util to check for whether a saved
     # policy already exists.
     if not tf.io.gfile.exists(raw_policy_specs_path):

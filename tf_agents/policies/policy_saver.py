@@ -536,7 +536,8 @@ class PolicySaver(object):
       raise ValueError('Policy already has an attribute registered with: %s' %
                        name)
 
-    batched_spec = add_batch_dim(input_spec, outer_dims)
+    batched_spec = tf.nest.map_structure(lambda s: add_batch_dim(s, outer_dims),
+                                         input_spec)
     tf_fn = common.function(fn)
     # We call get_concrete_function() for its side effect: to ensure the proper
     # ConcreteFunction is stored in the SavedModel.

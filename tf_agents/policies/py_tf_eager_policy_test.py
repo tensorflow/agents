@@ -181,14 +181,16 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     action_tensor_spec = tensor_spec.from_spec(self.action_spec)
     time_step_tensor_spec = tensor_spec.from_spec(self.time_step_spec)
 
-    actor_net = actor_network.ActorNetwork(
+    self._actor_net = actor_network.ActorNetwork(
         observation_tensor_spec,
         action_tensor_spec,
         fc_layer_params=(10,),
     )
 
     self.tf_policy = actor_policy.ActorPolicy(
-        time_step_tensor_spec, action_tensor_spec, actor_network=actor_net)
+        time_step_tensor_spec,
+        action_tensor_spec,
+        actor_network=self._actor_net)
 
   def testSavedModel(self):
     path = os.path.join(self.get_temp_dir(), 'saved_policy')
@@ -329,6 +331,18 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     tf.nest.map_structure(assert_np_all_equal, current_policy_action,
                           checkpoint_action)
 
+  def testRegisteredFunction(self):
+    path = os.path.join(self.get_temp_dir(), 'saved_policy')
+    saver = policy_saver.PolicySaver(self.tf_policy)
+    saver.register_function('actor_net', self._actor_net,
+                            self.time_step_spec.observation)
+    saver.save(path)
+
+    eager_py_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
+        path, self.time_step_spec, self.action_spec)
+    sample_observation = tensor_spec.sample_spec_nest(
+        tensor_spec.from_spec(self.time_step_spec.observation), outer_dims=(3,))
+    eager_py_policy.actor_net(sample_observation)
 
 if __name__ == '__main__':
   test_utils.main()

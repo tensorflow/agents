@@ -83,6 +83,7 @@ Float = Union[float, np.float16, np.float32, np.float64, Tensor, Array]
 FloatOrReturningFloat = Union[Float, Callable[[], Float]]
 
 Shape = Union[TensorOrArray, Sequence[Optional[int]], tf.TensorShape]
+ShapeSequence = Sequence[Optional[int]]
 
 Splitter = Optional[Callable[
     [NestedSpecTensorOrArray], Iterable[NestedSpecTensorOrArray]]]
