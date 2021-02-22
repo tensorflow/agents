@@ -28,7 +28,8 @@ import os
 
 from absl import logging
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import numpy as np
+import tensorflow as tf
 
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -547,9 +548,9 @@ def spec_means_and_magnitudes(action_spec):
       lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
   action_magnitudes = tf.nest.map_structure(
       lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec)
-  return tf.cast(
-      action_means, dtype=tf.float32), tf.cast(
-          action_magnitudes, dtype=tf.float32)
+  return np.array(
+      action_means, dtype=np.float32), np.array(
+          action_magnitudes, dtype=np.float32)
 
 
 def scale_to_spec(tensor, spec):

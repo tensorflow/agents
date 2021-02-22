@@ -23,6 +23,7 @@ from __future__ import print_function
 import inspect
 from typing import Any, Mapping, Type, Text
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -120,9 +121,8 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
     if not isinstance(other, SquashToSpecNormal):
       raise ValueError("other distribution should be of type "
                        "SquashToSpecNormal, got {}".format(other))
-    if (tf.reduce_any(tf.not_equal(self.action_means, other.action_means)) or
-        tf.reduce_any(
-            tf.not_equal(self.action_magnitudes, other.action_magnitudes))):
+    if (np.any(self.action_means != other.action_means) or
+        np.any(self.action_magnitudes != other.action_magnitudes)):
       raise ValueError("Other distribution does not have same action mean "
                        "and magnitude. This mean {}, this magnitude {}, "
                        "other mean {}, other magnitude {}.".format(
