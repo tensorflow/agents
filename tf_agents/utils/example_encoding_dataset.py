@@ -159,9 +159,6 @@ class TFRecordObserver(object):
     self._writer.close()
     logging.info('Closing TFRecord file at %s', self.output_path)
 
-  def __del__(self):
-    self.close()
-
   def __call__(self, data):
     """If not in py_mode Wraps write() into a TF op for eager execution."""
     if self._py_mode:
