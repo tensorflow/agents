@@ -82,8 +82,9 @@ class PpoSchulman17Return(PerfZeroBenchmark):
     output_dir = self._get_test_output_dir('training_env')
     start_time_sec = time.time()
     bindings = [
-        'train_eval.env_name= "{}"'.format(training_env),
-        'train_eval.eval_episodes = 100'
+        'schulman17.train_eval_lib.train_eval.env_name= "{}"'.format(
+            training_env),
+        'schulman17.train_eval_lib.train_eval.eval_episodes = 100'
     ]
     gin.parse_config(bindings)
     ppo_clip_train_eval.ppo_clip_train_eval(
