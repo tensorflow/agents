@@ -86,7 +86,7 @@ class PolicySaver(object):
   The SavedModel that is exported can be loaded via
   `tf.compat.v2.saved_model.load` (or `tf.saved_model.load` in TF2).  The
   following signatures (concrete functions) are available: `action`,
-  `get_initial_state`, `get_train_step`.
+  `get_initial_state`, and `get_train_step`.
 
   The attribute `model_variables` is also available when the saved_model is
   loaded which gives access to model variables in order to update them if
