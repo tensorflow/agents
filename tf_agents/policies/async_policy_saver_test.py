@@ -153,6 +153,8 @@ class AsyncPolicySaverTest(test_utils.TestCase):
     path = os.path.join(self.get_temp_dir(), 'save_model')
     async_saver.save(path)
     async_saver.flush()
+    async_saver.close()
+    self.assertFalse(async_saver._save_thread.is_alive())
     reloaded = tf.compat.v2.saved_model.load(path)
 
     sample_input = self.evaluate(
