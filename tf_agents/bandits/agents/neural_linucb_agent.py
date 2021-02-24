@@ -351,9 +351,9 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
           predicted_rewards,
           tf.cast(actions, dtype=tf.int32))
 
-      loss = self._error_loss_fn(rewards,
-                                 chosen_actions_predicted_rewards,
-                                 weights if weights else 1)
+      loss = self._error_loss_fn(
+          rewards, chosen_actions_predicted_rewards,
+          1 if weights is None else weights)
       if self._summarize_grads_and_vars:
         with tf.name_scope('Per_arm_loss/'):
           for k in range(self._num_models):
