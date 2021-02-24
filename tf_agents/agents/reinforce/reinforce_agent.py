@@ -238,8 +238,7 @@ class ReinforceAgent(tf_agent.TFAgent):
         train_sequence_length=None,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter,
-        validate_args=False)
+        train_step_counter=train_step_counter)
     self._as_trajectory = data_converter.AsTrajectory(self.data_context)
 
   def _initialize(self):

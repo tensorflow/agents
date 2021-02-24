@@ -310,8 +310,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_sequence_length=None,
-        validate_args=False)
+        train_sequence_length=None)
     self._as_trajectory = data_converter.AsTrajectory(
         self.data_context, sequence_length=None)
 

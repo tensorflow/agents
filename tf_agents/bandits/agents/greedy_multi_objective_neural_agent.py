@@ -168,8 +168,7 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
-        train_step_counter=train_step_counter,
-        validate_args=False)
+        train_step_counter=train_step_counter)
     self._as_trajectory = data_converter.AsTrajectory(
         self.data_context, sequence_length=None)
 

@@ -188,8 +188,7 @@ class DdpgAgent(tf_agent.TFAgent):
         train_sequence_length=2 if not self._actor_network.state_spec else None,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter,
-        validate_args=False)
+        train_step_counter=train_step_counter)
 
     self._as_transition = data_converter.AsTransition(
         self.data_context, squeeze_time_dim=not self._actor_network.state_spec)

@@ -84,8 +84,7 @@ class FixedPolicyAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
-        num_outer_dims=num_outer_dims,
-        validate_args=False)
+        num_outer_dims=num_outer_dims)
 
   def _initialize(self):
     pass

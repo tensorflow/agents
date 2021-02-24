@@ -23,6 +23,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 
+from tf_agents.agents import data_converter
 from tf_agents.agents import test_util
 from tf_agents.agents import tf_agent
 from tf_agents.policies import random_tf_policy
@@ -46,8 +47,6 @@ class MyAgent(tf_agent.TFAgent):
   def __init__(self,
                time_step_spec=None,
                action_spec=None,
-               validate_args=True,
-               train_argspec=None,
                training_data_spec=None,
                train_sequence_length=None):
     if time_step_spec is None:
@@ -61,11 +60,12 @@ class MyAgent(tf_agent.TFAgent):
         policy=policy,
         collect_policy=policy,
         train_sequence_length=train_sequence_length,
-        train_argspec=train_argspec,
-        training_data_spec=training_data_spec,
-        validate_args=validate_args)  # pytype: disable=wrong-arg-types
+        training_data_spec=training_data_spec)
+    self._as_trajectory = data_converter.AsTrajectory(
+        self.data_context, sequence_length=train_sequence_length)
 
   def _train(self, experience, weights=None, extra=None):
+    experience = self._as_trajectory(experience)
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
 
   def _loss(self, experience, weights=None, extra=None):
@@ -84,56 +84,6 @@ class TFAgentTest(tf.test.TestCase):
     with self.assertRaisesRegex(
         ValueError, 'The agent was configured'):
       agent.train(experience)
-
-  def testTrainArgspec(self):
-    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
-    agent = MyAgent(train_argspec=train_argspec)
-    extra = tf.ones(shape=[3, 4], dtype=tf.float32)
-    experience = tf.nest.map_structure(
-        lambda x: x[tf.newaxis, ...],
-        trajectory.from_episode(
-            observation={'obs': tf.constant([1.0])},
-            action=(),
-            policy_info=(),
-            reward=tf.constant([1.0])))
-    loss_info = agent.train(experience, extra=extra)
-    tf.nest.map_structure(
-        self.assertAllEqual, (experience, extra), loss_info.extra)
-    extra_newdim = tf.ones(shape=[2, 3, 4], dtype=tf.float32)
-    loss_info_newdim = agent.train(experience, extra=extra_newdim)
-    self.assertAllEqual(loss_info_newdim.extra[1], extra_newdim)
-    with self.assertRaisesRegex(
-        ValueError, 'Inconsistent dtypes or shapes between'):
-      agent.train(experience, extra=tf.ones(shape=[3, 5], dtype=tf.float32))
-    with self.assertRaisesRegex(
-        ValueError, 'Inconsistent dtypes or shapes between'):
-      agent.train(experience, extra=tf.ones(shape=[3, 4], dtype=tf.int32))
-
-  def testTrainIgnoresExtraFields(self):
-    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
-    agent = MyAgent(train_argspec=train_argspec)
-    extra = tf.ones(shape=[3, 4], dtype=tf.float32)
-    experience = tf.nest.map_structure(
-        lambda x: x[tf.newaxis, ...],
-        trajectory.from_episode(
-            observation={
-                'obs': tf.constant([1.0]), 'ignored': tf.constant([2.0])},
-            action=(),
-            policy_info=(),
-            reward=tf.constant([1.0])))
-    loss_info = agent.train(experience, extra=extra)
-    reduced_experience = experience._replace(
-        observation=copy.copy(experience.observation))
-    del reduced_experience.observation['ignored']
-    tf.nest.map_structure(
-        self.assertAllEqual, (reduced_experience, extra), loss_info.extra)
-
-  def testValidateArgsDisabled(self):
-    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
-    agent = MyAgent(validate_args=False, train_argspec=train_argspec)
-    loss_info = agent.train(experience='blah', extra=3)  # pytype: disable=wrong-arg-types
-    tf.nest.map_structure(
-        self.assertAllEqual, loss_info.extra, ('blah', 3))
 
   def testDataContext(self):
     agent = MyAgent(training_data_spec=(
@@ -157,9 +107,26 @@ class TFAgentTest(tf.test.TestCase):
                      {'info': tf.TensorSpec([], tf.int32)})
     self.assertEqual(agent.collect_data_context.info_spec, ())
 
+  def testTrainIgnoresExtraFields(self):
+    agent = MyAgent()
+    extra = tf.ones(shape=[3, 4], dtype=tf.float32)
+    experience = tf.nest.map_structure(
+        lambda x: x[tf.newaxis, ...],
+        trajectory.from_episode(
+            observation={
+                'obs': tf.constant([1.0]), 'ignored': tf.constant([2.0])},
+            action=(),
+            policy_info=(),
+            reward=tf.constant([1.0])))
+    loss_info = agent.train(experience, extra=extra)
+    reduced_experience = experience._replace(
+        observation=copy.copy(experience.observation))
+    del reduced_experience.observation['ignored']
+    tf.nest.map_structure(
+        self.assertAllEqual, (reduced_experience, extra), loss_info.extra)
+
   def testLoss(self):
-    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
-    agent = MyAgent(train_argspec=train_argspec)
+    agent = MyAgent()
     extra = tf.ones(shape=[3, 4], dtype=tf.float32)
     experience = tf.nest.map_structure(
         lambda x: x[tf.newaxis, ...],
@@ -182,8 +149,7 @@ class TFAgentTest(tf.test.TestCase):
       def _loss(self, experience, weights=None, extra=None):
         return tf_agent.LossInfo(loss=(), extra=(experience, ()))
 
-    train_argspec = {'extra': tf.TensorSpec(dtype=tf.float32, shape=[3, 4])}
-    agent = MyAgentWithLossNotMatching(train_argspec=train_argspec)
+    agent = MyAgentWithLossNotMatching()
     extra = tf.ones(shape=[3, 4], dtype=tf.float32)
     experience = tf.nest.map_structure(
         lambda x: x[tf.newaxis, ...],
@@ -214,13 +180,6 @@ class AgentSpecTest(test_utils.TestCase):
     with self.assertRaisesRegex(
         TypeError, 'time_step_spec has to contain TypeSpec'):
       MyAgent(time_step_spec=wrong_time_step_spec, action_spec=action_spec)
-
-  def testErrorOnWrongActionSpecWhenCreatingAgent(self):
-    time_step_spec = ts.time_step_spec(tensor_spec.TensorSpec([2], tf.float32))
-    wrong_action_spec = array_spec.BoundedArraySpec([1], np.float32, -1, 1)
-    with self.assertRaisesRegex(
-        TypeError, 'action_spec has to contain BoundedTensorSpec'):
-      MyAgent(time_step_spec=time_step_spec, action_spec=wrong_action_spec)
 
 
 if __name__ == '__main__':

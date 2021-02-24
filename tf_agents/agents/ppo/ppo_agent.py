@@ -397,8 +397,7 @@ class PPOAgent(tf_agent.TFAgent):
         training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter,
-        validate_args=False)
+        train_step_counter=train_step_counter)
 
     # This must be built after super() which sets up self.data_context.
     self._collected_as_transition = data_converter.AsTransition(

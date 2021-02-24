@@ -206,7 +206,6 @@ class Td3Agent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
-        validate_args=False
     )
 
     self._as_transition = data_converter.AsTransition(

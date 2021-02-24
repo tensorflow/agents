@@ -30,7 +30,7 @@ from __future__ import print_function
 from typing import Optional, Text
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.agents.dqn import dqn_agent
@@ -289,10 +289,6 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       ValueError:
         if the number of actions is greater than 1.
     """
-    # Check that `experience` includes two outer dimensions [B, T, ...]. This
-    # method requires a time dimension to compute the loss properly.
-    self._check_trajectory_dimensions(experience)
-
     squeeze_time_dim = not self._q_network.state_spec
     if self._n_step_update == 1:
       time_steps, policy_steps, next_time_steps = (

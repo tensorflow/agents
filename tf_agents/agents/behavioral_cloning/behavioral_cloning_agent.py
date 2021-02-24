@@ -198,7 +198,6 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         policy,
         collect_policy,
         train_sequence_length=None,
-        validate_args=False,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter)

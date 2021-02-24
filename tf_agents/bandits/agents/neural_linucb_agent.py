@@ -260,8 +260,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
         training_data_spec=training_data_spec,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=train_step_counter,
-        validate_args=False)
+        train_step_counter=train_step_counter)
 
     self._as_trajectory = data_converter.AsTrajectory(
         self.data_context, sequence_length=None)

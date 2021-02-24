@@ -120,8 +120,7 @@ class Exp3Agent(tf_agent.TFAgent):
                                     action_spec=policy.action_spec,
                                     policy=policy,
                                     collect_policy=policy,
-                                    train_sequence_length=None,
-                                    validate_args=False)
+                                    train_sequence_length=None)
     self._as_trajectory = data_converter.AsTrajectory(
         self.data_context, sequence_length=None)
 

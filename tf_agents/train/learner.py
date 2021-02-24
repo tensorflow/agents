@@ -115,7 +115,7 @@ class Learner(tf.Module):
         happens by building the Tensorflow graph. This is done by calling a
         `get_concrete_function` on the agent's `train` method which requires
         passing some input. Since, no real data is available at this point we
-        use the batched form of `training_data_spec` and `train_argspec` to
+        use the batched form of `training_data_spec` to
         achieve this (standard technique). The problem arises when the agent
         expects some agent specific batching of the input. In this case, there
         is no _general_ way at this point in the learner to batch the impacted
@@ -163,11 +163,9 @@ class Learner(tf.Module):
         batched_specs = tensor_spec.add_outer_dims_nest(
             self._agent.training_data_spec,
             (None, self._agent.train_sequence_length))
-        batched_train_argspec = tensor_spec.add_outer_dims_nest(
-            self._agent.train_argspec or {}, (None,))
         if self.use_kwargs_in_agent_train:
           batched_specs = dict(
-              experience=batched_specs, **batched_train_argspec)
+              experience=batched_specs)
 
         @common.function
         def _create_variables(specs):
