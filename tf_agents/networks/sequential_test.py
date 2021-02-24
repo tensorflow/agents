@@ -187,6 +187,23 @@ class SequentialTest(test_utils.TestCase):
     self.assertEmpty(sequential.trainable_variables)
     self.assertLen(sequential.variables, 4)
 
+  def testTrainableVariablesWithNonTrainableLayer(self):
+    non_trainable_layer = tf.keras.layers.Dense(4)
+    non_trainable_layer.trainable = False
+
+    sequential = sequential_lib.Sequential(
+        [tf.keras.layers.Dense(3), non_trainable_layer])
+    sequential.create_variables(tf.TensorSpec(shape=(3, 2)))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    variables = self.evaluate(sequential.trainable_variables)
+    self.assertLen(variables, 2)
+    self.assertLen(sequential.variables, 4)
+    self.assertTrue(sequential.trainable)
+    sequential.trainable = False
+    self.assertFalse(sequential.trainable)
+    self.assertEmpty(sequential.trainable_variables)
+    self.assertLen(sequential.variables, 4)
+
   def testTrainableVariablesNestedNetwork(self):
     sequential_inner = sequential_lib.Sequential(
         [tf.keras.layers.Dense(3),

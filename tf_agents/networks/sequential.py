@@ -222,7 +222,7 @@ class Sequential(network.Network):
 
   @property
   def trainable(self) -> bool:
-    return all([l.trainable for l in self._sequential_layers])
+    return any([l.trainable for l in self._sequential_layers])
 
   @trainable.setter
   def trainable(self, value: bool):
