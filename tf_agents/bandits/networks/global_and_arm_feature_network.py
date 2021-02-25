@@ -52,6 +52,7 @@ def _remove_num_actions_dim_from_spec(
   return obs_spec_no_num_actions
 
 
+@gin.configurable
 def create_feed_forward_common_tower_network(
     observation_spec: types.NestedTensorSpec,
     global_layers: Sequence[int],
