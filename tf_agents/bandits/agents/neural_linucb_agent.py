@@ -120,7 +120,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       emit_policy_info: Sequence[Text] = (),
       emit_log_probability: bool = False,
       dtype: tf.DType = tf.float64,
-      name: Optional[Text] = None):
+      name: Optional[Text] = 'neural_linucb_agent'):
     """Initialize an instance of `NeuralLinUCBAgent`.
 
     Args:
@@ -394,6 +394,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       loss_info = self._loss_using_reward_layer(
           observation, action, reward, weights, training=training)
     tf.debugging.check_numerics(loss_info[0], 'Loss is inf or nan')
+    tf.compat.v2.summary.scalar(
+        name='using_reward_layer', data=1, step=self.train_step_counter)
     if self._summarize_grads_and_vars:
       self.compute_summaries(loss_info.loss)
     variables_to_train = (self._encoding_network.trainable_weights +
@@ -471,6 +473,8 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
 
     loss_tensor = tf.cast(-1. * tf.reduce_sum(reward), dtype=tf.float32)
     loss_info = tf_agent.LossInfo(loss=loss_tensor, extra=())
+    tf.compat.v2.summary.scalar(
+        name='using_reward_layer', data=0, step=self.train_step_counter)
     self.train_step_counter.assign_add(1)
     return loss_info
 
