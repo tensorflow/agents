@@ -800,17 +800,22 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
   def __init__(self,
                env: py_environment.PyEnvironment,
                history_length: int = 3,
-               include_actions: bool = False):
+               include_actions: bool = False,
+               tile_first_step_obs: bool = False,
+               ):
     """Initializes a HistoryWrapper.
 
     Args:
       env: Environment to wrap.
       history_length: Length of the history to attach.
       include_actions: Whether actions should be included in the history.
+      tile_first_step_obs: If True the observation on reset is tiled to fill the
+       history.
     """
     super(HistoryWrapper, self).__init__(env)
     self._history_length = history_length
     self._include_actions = include_actions
+    self._tile_first_step_obs = tile_first_step_obs
 
     self._zero_observation = self._zeros_from_spec(env.observation_spec())
     self._zero_action = self._zeros_from_spec(env.action_spec())
@@ -861,12 +866,18 @@ class HistoryWrapper(PyEnvironmentBaseWrapper):
     return time_step._replace(observation=observation)
 
   def _reset(self):
-    self._observation_history.extend([self._zero_observation] *
-                                     (self._history_length - 1))
+    time_step = self._env.reset()
+
+    if self._tile_first_step_obs:
+      self._observation_history.extend([
+          time_step.observation.copy() for _ in range(self._history_length - 1)
+      ])
+    else:
+      self._observation_history.extend([self._zero_observation] *
+                                       (self._history_length - 1))
     self._action_history.extend([self._zero_action] *
                                 (self._history_length - 1))
 
-    time_step = self._env.reset()
     return self._add_history(time_step, self._zero_action)
 
   def _step(self, action):

@@ -987,6 +987,24 @@ class HistoryWrapperTest(test_utils.TestCase):
     time_step = history_env.step(0)
     self.assertEqual([1, 2, 3], time_step.observation.tolist())
 
+  def test_observation_tiled(self):
+    env = test_envs.CountingEnv()
+    # Force observations to be non zero for the test
+    env._episodes = 2
+    history_env = wrappers.HistoryWrapper(env, 3, tile_first_step_obs=True)
+    # Extra reset to make observations in base env not 0.
+    time_step = history_env.reset()
+    self.assertEqual([20, 20, 20], time_step.observation.tolist())
+
+    time_step = history_env.step(0)
+    self.assertEqual([20, 20, 21], time_step.observation.tolist())
+
+    time_step = history_env.step(0)
+    self.assertEqual([20, 21, 22], time_step.observation.tolist())
+
+    time_step = history_env.step(0)
+    self.assertEqual([21, 22, 23], time_step.observation.tolist())
+
   def test_observation_and_action_stacked(self):
     env = test_envs.CountingEnv()
     history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
