@@ -58,7 +58,9 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       start: int = 0,
       extra_functions: Optional[Sequence[Tuple[str, policy_saver.InputFnType,
                                                types.NestedTensorSpec,
-                                               types.ShapeSequence]]] = None):
+                                               types.ShapeSequence]]] = None,
+      batch_size: Optional[int] = None,
+  ):
     """Initializes a PolicySavedModelTrigger.
 
     Args:
@@ -81,6 +83,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         policy savers. The sequence should consist of tuples with the parameters
         for `policy_saver.register_function`. Each element in the sequence will
         be registered in all saved models generaetd by this trigger.
+      batch_size: The number of batch entries the policy will process at a time.
+        This must be either `None` (unknown batch size) or a python integer.
     """
     if async_saving and metadata_metrics:
       raise NotImplementedError('Support for metadata_metrics is not '
@@ -94,7 +98,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         for k, v in self._metadata_metrics.items()
     }
 
-    collect_policy_saver = self._build_saver(agent.collect_policy)
+    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size)
 
     # TODO(b/145754641): Fix how greedy/raw policies are built in agents.
     if isinstance(agent.policy, greedy_policy.GreedyPolicy):
@@ -102,9 +106,10 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
     else:
       greedy = greedy_policy.GreedyPolicy(agent.policy)
 
-    collect_policy_saver = self._build_saver(agent.collect_policy)
-    greedy_policy_saver = self._build_saver(greedy)
-    self._raw_policy_saver = self._build_saver(greedy.wrapped_policy)
+    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size)
+    greedy_policy_saver = self._build_saver(greedy, batch_size)
+    self._raw_policy_saver = self._build_saver(greedy.wrapped_policy,
+                                               batch_size)
 
     # Save initial saved_model if they do not exist yet. These can be updated
     # from the policy_checkpoints.
@@ -136,10 +141,15 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         interval, self._save_fn, start=start)
 
   def _build_saver(
-      self, policy: tf_policy.TFPolicy
+      self,
+      policy: tf_policy.TFPolicy,
+      batch_size: Optional[int] = None
   ) -> Union[policy_saver.PolicySaver, async_policy_saver.AsyncPolicySaver]:
     saver = policy_saver.PolicySaver(
-        policy, train_step=self._train_step, metadata=self._metadata)
+        policy,
+        batch_size=batch_size,
+        train_step=self._train_step,
+        metadata=self._metadata)
     if self._async_saving:
       saver = async_policy_saver.AsyncPolicySaver(saver)
     return saver
