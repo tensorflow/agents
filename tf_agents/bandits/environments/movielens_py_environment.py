@@ -49,6 +49,7 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
                rank_k: int,
                batch_size: int = 1,
                num_movies: int = 20,
+               csv_delimiter: Text = ',',
                name: Optional[Text] = 'movielens'):
     """Initializes the MovieLens Bandit environment.
 
@@ -58,6 +59,7 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
       batch_size: (int) Number of observations generated per call.
       num_movies: (int) Only the first `num_movies` movies will be used by the
         environment. The rest is cut out from the data.
+      csv_delimiter: (string) The delimiter to use in loading the data csv file.
       name: The name of this environment instance.
     """
     self._num_actions = num_movies
@@ -65,7 +67,8 @@ class MovieLensPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     self._context_dim = rank_k
 
     # Compute the matrix factorization.
-    self._data_matrix = dataset_utilities.load_movielens_data(data_dir)
+    self._data_matrix = dataset_utilities.load_movielens_data(
+        data_dir, delimiter=csv_delimiter)
     # Keep only the first items.
     self._data_matrix = self._data_matrix[:, :num_movies]
     # Filter the users with no iterm rated.

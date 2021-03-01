@@ -150,13 +150,13 @@ def convert_covertype_dataset(file_path, buffer_size=40000):
       (context_tensor, label_tensor)).repeat().shuffle(buffer_size=buffer_size)
 
 
-def load_movielens_data(data_file):
+def load_movielens_data(data_file, delimiter=','):
   """Loads the movielens data and returns the ratings matrix."""
   ratings_matrix = np.zeros([MOVIELENS_NUM_USERS, MOVIELENS_NUM_MOVIES])
   with tf.io.gfile.GFile(data_file, 'r') as infile:
     # The file is a csv with rows containing:
     # user id | item id | rating | timestamp
-    reader = csv.reader(infile)
+    reader = csv.reader(infile, delimiter=delimiter)
     for row in reader:
       user_id, item_id, rating, _ = row
       ratings_matrix[int(user_id) - 1, int(item_id) - 1] = float(rating)

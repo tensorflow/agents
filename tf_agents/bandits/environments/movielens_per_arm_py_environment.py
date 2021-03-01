@@ -57,6 +57,7 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
                rank_k: int,
                batch_size: int = 1,
                num_actions: int = 50,
+               csv_delimiter=',',
                name: Optional[Text] = 'movielens_per_arm'):
     """Initializes the Per-arm MovieLens Bandit environment.
 
@@ -66,6 +67,7 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         also be the feature dimension of both the user and the movie features.
       batch_size: (int) Number of observations generated per call.
       num_actions: (int) How many movies to choose from per round.
+      csv_delimiter: (string) The delimiter to use in loading the data csv file.
       name: (string) The name of this environment instance.
     """
     self._batch_size = batch_size
@@ -73,7 +75,8 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     self._num_actions = num_actions
 
     # Compute the matrix factorization.
-    self._data_matrix = dataset_utilities.load_movielens_data(data_dir)
+    self._data_matrix = dataset_utilities.load_movielens_data(
+        data_dir, delimiter=csv_delimiter)
     self._num_users, self._num_movies = self._data_matrix.shape
 
     # Compute the SVD.
