@@ -36,9 +36,9 @@ from typing import Callable, Optional, Text
 import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
+from tf_agents.distributions import utils as distribution_utils
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import epsilon_greedy_policy
@@ -48,7 +48,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
-
 import typing_extensions
 
 
@@ -179,7 +178,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
           'discrete action or a single (scalar or non-scalar) continuous '
           'action.')
 
-    cloning_network.create_variables(time_step_spec.observation)
+    self._network_output_spec = cloning_network.create_variables(
+        time_step_spec.observation)
 
     # If there is a mix of continuous and discrete actions we want to use an
     # actor policy so we can use the `setup_as_continuous` method as long as the
@@ -216,11 +216,17 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
         tf.shape(experience.step_type)[0])
 
     network_state = self._cloning_network.get_initial_state(batch_size)
-    bc_logits, _ = self._cloning_network(
+    action, _ = self._cloning_network(
         experience.observation,
         step_type=experience.step_type,
         training=True,
         network_state=network_state)
+
+    # Get logits if the output of the cloning network is a distribution.
+    if isinstance(action, tfp.distributions.Distribution):
+      bc_logits = action.logits_parameter()
+    else:
+      bc_logits = action
 
     def loss(action, bc_logits, spec):
       # Subtract the minimum so that we get a proper cross entropy loss on
@@ -256,16 +262,22 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   def _setup_as_discrete(self, time_step_spec, action_spec, loss_fn,
                          epsilon_greedy):
     self._bc_loss_fn = loss_fn or self._discrete_loss
-    # Unlike DQN, we support continuous action spaces - in which case
-    # the policy just emits the network output.  In that case, we
-    # don't care if the action_spec is a scalar integer value.
-    policy = q_policy.QPolicy(
-        time_step_spec, action_spec, q_network=self._cloning_network,
-        validate_action_spec_and_network=False,
-    )
+
+    if isinstance(self._network_output_spec,
+                  distribution_utils.DistributionSpecV2):
+      # If the output of the cloning network is a distribution.
+      base_policy = actor_policy.ActorPolicy(time_step_spec, action_spec,
+                                             self._cloning_network)
+    else:
+      # If the output of the cloning network is logits.
+      base_policy = q_policy.QPolicy(
+          time_step_spec,
+          action_spec,
+          q_network=self._cloning_network,
+          validate_action_spec_and_network=False)
+    policy = greedy_policy.GreedyPolicy(base_policy)
     collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        policy, epsilon=epsilon_greedy)
-    policy = greedy_policy.GreedyPolicy(policy)
+        base_policy, epsilon=epsilon_greedy)
     return policy, collect_policy
 
   def _setup_as_continuous(self, time_step_spec, action_spec, loss_fn):

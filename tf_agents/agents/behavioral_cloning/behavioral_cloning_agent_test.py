@@ -22,10 +22,11 @@ from __future__ import print_function
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-
+import tensorflow_probability as tfp
 from tf_agents.agents import test_util
 from tf_agents.agents.behavioral_cloning import behavioral_cloning_agent
 from tf_agents.keras_layers import inner_reshape
+from tf_agents.networks import expand_dims_layer
 from tf_agents.networks import q_network
 from tf_agents.networks import q_rnn_network
 from tf_agents.networks import sequential
@@ -204,16 +205,29 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         agent=agent,
         experience=experience)
 
-  @parameterized.named_parameters(('TrainOnMultipleSteps', False),
-                                  ('TrainOnSingleStep', True))
-  def testTrainWithNN(self, is_convert):
+  @parameterized.named_parameters(
+      ('TrainOnMultipleStepsDist', False, True),
+      ('TrainOnMultipleStepsLogits', False, False),
+      ('TrainOnSingleStepsDist', True, True),
+      ('TrainOnSingleStepsLogits', True, False),
+  )
+  def testTrainWithNN(self, is_convert, is_distribution_network):
     # Hard code a trajectory shaped (time=6, batch=1, ...).
     traj, time_step_spec, action_spec = create_arbitrary_trajectory()
 
     if is_convert:
       # Convert to single step trajectory of shapes (batch=6, 1, ...).
       traj = tf.nest.map_structure(common.transpose_batch_time, traj)
-    cloning_net = q_network.QNetwork(time_step_spec.observation, action_spec)
+
+    if is_distribution_network:
+      cloning_net = sequential.Sequential([
+          expand_dims_layer.ExpandDims(-1),
+          tf.keras.layers.Dense(action_spec.maximum - action_spec.minimum + 1),
+          tf.keras.layers.Lambda(
+              lambda t: tfp.distributions.Categorical(logits=t)),
+      ])
+    else:
+      cloning_net = q_network.QNetwork(time_step_spec.observation, action_spec)
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
         time_step_spec,
         action_spec,
