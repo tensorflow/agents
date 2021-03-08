@@ -654,8 +654,9 @@ class SacAgent(tf_agent.TFAgent):
       common.generate_tensor_summaries('actor_loss', actor_loss,
                                        self.train_step_counter)
       try:
-        common.generate_tensor_summaries('actions', actions,
-                                         self.train_step_counter)
+        for name, action in nest_utils.flatten_with_joined_paths(actions):
+          common.generate_tensor_summaries(name, action,
+                                           self.train_step_counter)
       except ValueError:
         pass  # Guard against internal SAC variants that do not directly
         # generate actions.
@@ -683,9 +684,11 @@ class SacAgent(tf_agent.TFAgent):
         common.generate_tensor_summaries('act_mode', action_distribution.mode(),
                                          self.train_step_counter)
       try:
-        common.generate_tensor_summaries('entropy_action',
-                                         action_distribution.entropy(),
-                                         self.train_step_counter)
+        for name, action_dist in nest_utils.flatten_with_joined_paths(
+            action_distribution):
+          common.generate_tensor_summaries('entropy_' + name,
+                                           action_dist.entropy(),
+                                           self.train_step_counter)
       except NotImplementedError:
         pass  # Some distributions do not have an analytic entropy.
 
