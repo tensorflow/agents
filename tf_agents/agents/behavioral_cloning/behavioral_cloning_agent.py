@@ -263,9 +263,9 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
                          epsilon_greedy):
     self._bc_loss_fn = loss_fn or self._discrete_loss
 
-    if isinstance(self._network_output_spec,
-                  distribution_utils.DistributionSpecV2):
-      # If the output of the cloning network is a distribution.
+    if any(isinstance(d, distribution_utils.DistributionSpecV2) for
+           d in tf.nest.flatten([self._network_output_spec])):
+      # If the output of the cloning network contains a distribution.
       base_policy = actor_policy.ActorPolicy(time_step_spec, action_spec,
                                              self._cloning_network)
     else:
