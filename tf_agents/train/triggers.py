@@ -60,6 +60,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
                                                types.NestedTensorSpec,
                                                types.ShapeSequence]]] = None,
       batch_size: Optional[int] = None,
+      use_nest_path_signatures: bool = True,
   ):
     """Initializes a PolicySavedModelTrigger.
 
@@ -68,9 +69,9 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       agent: Agent to extract policies from.
       train_step: `tf.Variable` which keeps track of the number of train steps.
       interval: How often, in train_steps, the trigger will save. Note that as
-        long as the >= `interval` number of steps have passed since the
-        last trigger, the event gets triggered. The current value is not
-        necessarily `interval` steps away from the last triggered value.
+        long as the >= `interval` number of steps have passed since the last
+        trigger, the event gets triggered. The current value is not necessarily
+        `interval` steps away from the last triggered value.
       async_saving: If True saving will be done asynchronously in a separate
         thread. Note if this is on the variable values in the saved
         checkpoints/models are not deterministic.
@@ -85,6 +86,9 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         be registered in all saved models generaetd by this trigger.
       batch_size: The number of batch entries the policy will process at a time.
         This must be either `None` (unknown batch size) or a python integer.
+      use_nest_path_signatures: SavedModel spec signatures will be created based
+        on the sructure of the specs. Otherwise all specs must have unique
+        names.
     """
     if async_saving and metadata_metrics:
       raise NotImplementedError('Support for metadata_metrics is not '
@@ -98,7 +102,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         for k, v in self._metadata_metrics.items()
     }
 
-    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size)
+    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
+                                             use_nest_path_signatures)
 
     # TODO(b/145754641): Fix how greedy/raw policies are built in agents.
     if isinstance(agent.policy, greedy_policy.GreedyPolicy):
@@ -106,10 +111,13 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
     else:
       greedy = greedy_policy.GreedyPolicy(agent.policy)
 
-    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size)
-    greedy_policy_saver = self._build_saver(greedy, batch_size)
+    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
+                                             use_nest_path_signatures)
+    greedy_policy_saver = self._build_saver(greedy, batch_size,
+                                            use_nest_path_signatures)
     self._raw_policy_saver = self._build_saver(greedy.wrapped_policy,
-                                               batch_size)
+                                               batch_size,
+                                               use_nest_path_signatures)
 
     # Save initial saved_model if they do not exist yet. These can be updated
     # from the policy_checkpoints.
@@ -118,9 +126,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
                                          'policy_specs.pbtxt')
 
     extra_functions = extra_functions or []
-    savers = [
-        collect_policy_saver, greedy_policy_saver, self._raw_policy_saver
-    ]
+    savers = [collect_policy_saver, greedy_policy_saver, self._raw_policy_saver]
     for saver in savers:
       for name, fn, input_spec, outer_dims in extra_functions:
         saver.register_function(name, fn, input_spec, outer_dims)
@@ -143,13 +149,16 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
   def _build_saver(
       self,
       policy: tf_policy.TFPolicy,
-      batch_size: Optional[int] = None
+      batch_size: Optional[int] = None,
+      use_nest_path_signatures: bool = True,
   ) -> Union[policy_saver.PolicySaver, async_policy_saver.AsyncPolicySaver]:
     saver = policy_saver.PolicySaver(
         policy,
         batch_size=batch_size,
         train_step=self._train_step,
-        metadata=self._metadata)
+        metadata=self._metadata,
+        use_nest_path_signatures=use_nest_path_signatures,
+    )
     if self._async_saving:
       saver = async_policy_saver.AsyncPolicySaver(saver)
     return saver
@@ -171,9 +180,9 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
     Args:
       train_step: `tf.Variable` which keeps track of the number of train steps.
       interval: How often, in train_steps, the trigger will save. Note that as
-        long as the >= `interval` number of steps have passed since the
-        last trigger, the event gets triggered. The current value is not
-        necessarily `interval` steps away from the last triggered value.
+        long as the >= `interval` number of steps have passed since the last
+        trigger, the event gets triggered. The current value is not necessarily
+        `interval` steps away from the last triggered value.
     """
     self._train_step = train_step
     self._step_timer = step_per_second_tracker.StepPerSecondTracker(train_step)
@@ -185,9 +194,5 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
     steps_per_sec = self._step_timer.steps_per_second()
     self._step_timer.restart()
     step = self._train_step.numpy()
-    logging.info('Step: %d, %.3f steps/sec', step,
-                 steps_per_sec)
-    tf.summary.scalar(
-        name='train_steps_per_sec',
-        data=steps_per_sec,
-        step=step)
+    logging.info('Step: %d, %.3f steps/sec', step, steps_per_sec)
+    tf.summary.scalar(name='train_steps_per_sec', data=steps_per_sec, step=step)
