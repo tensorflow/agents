@@ -42,6 +42,8 @@ flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_string('variable_container_server_address', None,
                     'Variable container server address.')
+flags.DEFINE_integer(
+    'task', 0, 'Identifier of the collect task. Must be unique in a job.')
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
@@ -82,9 +84,8 @@ def evaluate(
     eval_interval: If set, eval is done at the given step interval or as close
       as possible based on polling.
     eval_episodes: Number of episodes to eval.
-    return_reporting_fn: Optional callback function of the form
-      `fn(train_step, average_return)` which reports the average return to a
-      custom destination.
+    return_reporting_fn: Optional callback function of the form `fn(train_step,
+      average_return)` which reports the average return to a custom destination.
   """
   additional_metrics = additional_metrics or []
   is_running = is_running or (lambda: True)
@@ -161,8 +162,7 @@ def run_eval(
       average_return)` which reports the average return to a custom destination.
   """
   # Wait for the greedy policy to become available, then load it.
-  greedy_policy_dir = os.path.join(root_dir,
-                                   learner.POLICY_SAVED_MODEL_DIR,
+  greedy_policy_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR,
                                    learner.GREEDY_POLICY_SAVED_MODEL_DIR)
   policy = train_utils.wait_for_policy(
       greedy_policy_dir, load_specs_from_pbtxt=True)
@@ -173,9 +173,13 @@ def run_eval(
       FLAGS.variable_container_server_address,
       table_names=[reverb_variable_container.DEFAULT_TABLE])
 
+  # Prepare summary directory.
+  summary_dir = os.path.join(FLAGS.root_dir, learner.TRAIN_DIR, 'eval',
+                             str(FLAGS.task))
+
   # Run the evaluation.
   evaluate(
-      summary_dir=os.path.join(root_dir, learner.TRAIN_DIR, 'eval'),
+      summary_dir=summary_dir,
       environment_name=gin.REQUIRED,
       policy=policy,
       variable_container=variable_container,
@@ -188,6 +192,7 @@ def main(unused_argv: Sequence[Text]) -> None:
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
 
   run_eval(FLAGS.root_dir)
+
 
 if __name__ == '__main__':
   flags.mark_flags_as_required(
