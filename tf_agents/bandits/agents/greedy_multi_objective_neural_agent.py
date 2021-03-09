@@ -177,7 +177,7 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
 
   def _variables_to_train(self):
     variables_to_train = tf.nest.flatten(
-        [net.variables for net in self._objective_networks])
+        [net.trainable_variables for net in self._objective_networks])
     return variables_to_train
 
   def _train(self, experience: types.NestedTensor,
