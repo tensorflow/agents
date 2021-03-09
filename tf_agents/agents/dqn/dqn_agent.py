@@ -101,9 +101,9 @@ class DqnAgent(tf_agent.TFAgent):
       optimizer: types.Optimizer,
       observation_and_action_constraint_splitter: Optional[
           types.Splitter] = None,
-      epsilon_greedy: types.FloatOrReturningFloat = 0.1,
+      epsilon_greedy: Optional[types.FloatOrReturningFloat] = 0.1,
       n_step_update: int = 1,
-      boltzmann_temperature: Optional[types.Int] = None,
+      boltzmann_temperature: Optional[types.FloatOrReturningFloat] = None,
       emit_log_probability: bool = False,
       # Params for target network updates
       target_q_network: Optional[network.Network] = None,
@@ -149,7 +149,8 @@ class DqnAgent(tf_agent.TFAgent):
         constraints are not applied.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
-        the collect_policy method).
+        the collect_policy method). Only one of epsilon_greedy and
+        boltzmann_temperature should be provided.
       n_step_update: The number of steps to consider when computing TD error and
         TD loss. Defaults to single-step updates. Note that this requires the
         user to call train on Trajectory objects with a time dimension of
@@ -158,7 +159,8 @@ class DqnAgent(tf_agent.TFAgent):
         `q_network.state_spec`).
       boltzmann_temperature: Temperature value to use for Boltzmann sampling of
         the actions during data collection. The closer to 0.0, the higher the
-        probability of choosing the best action.
+        probability of choosing the best action. Only one of epsilon_greedy and
+        boltzmann_temperature should be provided.
       emit_log_probability: Whether policies emit log probabilities or not.
       target_q_network: (Optional.)  A `tf_agents.network.Network`
         to be used as the target network during Q learning.  Every
