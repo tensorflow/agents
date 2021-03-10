@@ -20,7 +20,7 @@ import time
 import tensorflow as tf
 from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
-from tf_agents.experimental.examples.dqn.mnih15 import dqn_train_eval_atari
+from tf_agents.examples.dqn.mnih15 import dqn_train_eval_atari
 
 
 class DqnMnih15Return(PerfZeroBenchmark):
