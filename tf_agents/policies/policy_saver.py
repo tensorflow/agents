@@ -22,7 +22,7 @@ from __future__ import print_function
 import copy
 import functools
 import os
-from typing import Callable, Dict, Tuple, Optional, Text, cast, Sequence
+from typing import Any, Callable, Dict, Tuple, Optional, Text, cast, Sequence
 
 from absl import logging
 import tensorflow as tf
@@ -34,6 +34,10 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
+
+# pylint:disable=g-direct-tensorflow-import
+from tensorflow.python.eager import def_function  # TF internal
+# pylint:enable=g-direct-tensorflow-import
 
 
 POLICY_SPECS_PBTXT = 'policy_specs.pbtxt'
@@ -457,6 +461,10 @@ class PolicySaver(object):
     return self._action_input_spec
 
   @property
+  def policy(self):
+    return self._policy
+
+  @property
   def policy_step_spec(self) -> types.NestedTensorSpec:
     """Spec that describes the output of `action` in the SavedModel.
 
@@ -521,7 +529,8 @@ class PolicySaver(object):
 
     Note: There is no easy way to generate polymorphic functions. This pattern
     can be followed and the `get_concerete_function` can be called with named
-    parameters to register more complex signatures.
+    parameters to register more complex signatures. Those functions can then be
+    passed to the `register_concrete_function` method.
 
     Args:
       name: Name of the attribute to use for the saved fn.
@@ -543,6 +552,37 @@ class PolicySaver(object):
     # ConcreteFunction is stored in the SavedModel.
     tf_fn.get_concrete_function(batched_spec)
     setattr(self._policy, name, tf_fn)
+
+  def register_concrete_function(
+      self,
+      name: str,
+      fn: def_function.Function,
+      assets: Optional[Any] = None
+  ) -> None:
+    """Registers a function into the saved model.
+
+    This gives you the flexibility to register any kind of polymorphic function
+    by creating the concrete function that you wish to register.
+
+    Args:
+      name: Name of the attribute to use for the saved fn.
+      fn: Function to register. Must be a callable following the input_spec as
+        a single parameter.
+      assets: Any extra checkpoint dependencies that must be captured in the
+        module. Note variables are automatically captured.
+    """
+    if getattr(self._policy, name, None) is not None:
+      raise ValueError('Policy already has an attribute registered with: %s' %
+                       name)
+
+    setattr(self._policy, name, fn)
+
+    # TODO(b/182272788): Make `._list_all_concrete_functions` public.
+    for i, concrete_fn in enumerate(fn._list_all_concrete_functions()):  # pylint: disable=protected-access
+      setattr(self._policy, name + '__variables_%d' % i, concrete_fn.variables)
+
+    if assets:
+      setattr(self._policy, name + '__assets', assets)
 
   def save(self,
            export_dir: Text,

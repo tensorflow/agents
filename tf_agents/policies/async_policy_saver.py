@@ -17,12 +17,11 @@
 """Async helper for the policy saver."""
 
 import threading
-from typing import Optional, Text, Sequence
+from typing import Text
 from absl import logging
 
 
 from tf_agents.policies import policy_saver as policy_saver_module
-from tf_agents.typing import types
 
 
 class AsyncPolicySaver(object):
@@ -148,25 +147,7 @@ class AsyncPolicySaver(object):
       self._save_condition_variable.notify()
     self._save_thread.join()
 
-  def register_function(self,
-                        name: str,
-                        fn: policy_saver_module.InputFnType,
-                        input_spec: types.NestedTensorSpec,
-                        outer_dims: Sequence[Optional[int]] = (None,)) -> None:
-    """Registers a function into the saved model.
+  def __getattr__(self, name: Text):
+    """Forward all other calls to the base saver."""
+    return getattr(self._policy_saver, name)
 
-    Note: There is no easy way to generate polymorphic functions. This pattern
-    can be followed and the `get_concerete_function` can be called with named
-    parameters to register more complex signatures.
-
-    Args:
-      name: Name of the attribute to use for the saved fn.
-      fn: Function to register. Must be a callable following the input_spec as
-        a single parameter.
-      input_spec: A nest of tf.TypeSpec representing the time_steps.
-        Provided by the user.
-      outer_dims: The outer dimensions the saved fn will process at a time. By
-        default a batch dimension is added to the input_spec.
-    """
-    self._policy_saver.register_function(
-        name=name, fn=fn, input_spec=input_spec, outer_dims=outer_dims)

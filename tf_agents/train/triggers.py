@@ -33,7 +33,6 @@ from tf_agents.policies import tf_policy
 from tf_agents.train import interval_trigger
 from tf_agents.train import learner
 from tf_agents.train import step_per_second_tracker
-from tf_agents.typing import types
 
 ENV_STEP_METADATA_KEY = 'env_step'
 
@@ -56,9 +55,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       async_saving: bool = False,
       metadata_metrics: Optional[Mapping[Text, py_metric.PyMetric]] = None,
       start: int = 0,
-      extra_functions: Optional[Sequence[Tuple[str, policy_saver.InputFnType,
-                                               types.NestedTensorSpec,
-                                               types.ShapeSequence]]] = None,
+      extra_concrete_functions: Optional[Sequence[
+          Tuple[str, policy_saver.def_function.Function]]] = None,
       batch_size: Optional[int] = None,
       use_nest_path_signatures: bool = True,
   ):
@@ -80,10 +78,10 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         when async_saving is False.
       start: Initial value for the trigger passed directly to the base class. It
         helps control from which train step the weigts of the model are saved.
-      extra_functions: Optional sequence of extra functions to register in the
-        policy savers. The sequence should consist of tuples with the parameters
-        for `policy_saver.register_function`. Each element in the sequence will
-        be registered in all saved models generaetd by this trigger.
+      extra_concrete_functions: Optional sequence of extra concrete functions to
+        register in the policy savers. The sequence should consist of tuples
+        with string name for the function and the tf.function to register. Note
+        this does not support adding extra assets.
       batch_size: The number of batch entries the policy will process at a time.
         This must be either `None` (unknown batch size) or a python integer.
       use_nest_path_signatures: SavedModel spec signatures will be created based
@@ -125,11 +123,11 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
                                          learner.RAW_POLICY_SAVED_MODEL_DIR,
                                          'policy_specs.pbtxt')
 
-    extra_functions = extra_functions or []
+    extra_concrete_functions = extra_concrete_functions or []
     savers = [collect_policy_saver, greedy_policy_saver, self._raw_policy_saver]
     for saver in savers:
-      for name, fn, input_spec, outer_dims in extra_functions:
-        saver.register_function(name, fn, input_spec, outer_dims)
+      for name, fn in extra_concrete_functions:
+        saver.register_concrete_function(name, fn)
 
     # TODO(b/173815037): Use a TF-Agents util to check for whether a saved
     # policy already exists.

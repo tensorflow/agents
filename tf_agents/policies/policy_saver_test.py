@@ -986,6 +986,39 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     self.assertAllClose(expected_output, reloaded_output)
 
+  def testRegisterConcreteFunction(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in TF2.x. Step is required in TF1.x')
+
+    network = q_network.QNetwork(
+        input_tensor_spec=self._time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    saver = policy_saver.PolicySaver(policy, batch_size=None)
+
+    tf_var = tf.Variable(3)
+
+    def add(b):
+      return tf_var + b
+
+    add_fn = common.function(add)
+    # Called for side effect.
+    add_fn.get_concrete_function(
+        tf.TensorSpec((), dtype=tf.int32))
+
+    saver.register_concrete_function(name='add', fn=add_fn)
+
+    path = os.path.join(self.get_temp_dir(), 'save_model')
+    saver.save(path)
+    reloaded = tf.compat.v2.saved_model.load(path)
+
+    self.assertAllClose(7, reloaded.add(4))
+
 
 def _sample_from_distributions(x):
   def _convert(d):
