@@ -23,9 +23,9 @@ from absl import flags
 from absl import logging
 import tensorflow as tf
 
-from tf_agents.experimental.examples.ppo import ppo_learner
-from tf_agents.experimental.examples.ppo import ppo_learner_test_utils
 from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.train import ppo_learner
+from tf_agents.train import ppo_learner_test_utils
 from tf_agents.utils import test_utils
 
 FLAGS = flags.FLAGS

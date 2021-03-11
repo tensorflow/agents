@@ -40,7 +40,6 @@ import tensorflow.compat.v2 as tf
 
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.environments import suite_mujoco
-from tf_agents.experimental.examples.ppo import ppo_learner
 from tf_agents.experimental.examples.ppo import train_eval_lib
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import value_network
@@ -49,6 +48,7 @@ from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.train import actor
 from tf_agents.train import learner
+from tf_agents.train import ppo_learner
 from tf_agents.train import triggers
 from tf_agents.train.utils import spec_utils
 from tf_agents.train.utils import train_utils

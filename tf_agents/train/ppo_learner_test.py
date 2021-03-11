@@ -26,10 +26,10 @@ import tensorflow as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent
-from tf_agents.experimental.examples.ppo import ppo_learner
 from tf_agents.experimental.examples.ppo import train_eval_lib
 from tf_agents.networks import value_network
 from tf_agents.specs import tensor_spec
+from tf_agents.train import ppo_learner
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import test_utils
