@@ -408,6 +408,22 @@ class TFAgent(tf.Module):
       common.summarize_scalar_dict(
           dict_losses, step=self.train_step_counter, name_scope="Losses/")
 
+  def post_process_policy(self) -> tf_policy.TFPolicy:
+    """Post process policies after training.
+
+    The policies of some agents require expensive post processing after training
+    before they can be used. e.g. A Recommender agent might require rebuilding
+    an index of actions. For such agents, this method will return a post
+    processed version of the policy. The post processing may either update the
+    existing policies in place or create a new policy, depnding on the agent.
+    The default implementation for agents that do not want to override this
+    method is to return agent.policy.
+
+    Returns:
+      The post processed policy.
+    """
+    return self.policy
+
   @property
   def time_step_spec(self) -> ts.TimeStep:
     """Describes the `TimeStep` tensors expected by the agent.
