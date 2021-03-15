@@ -43,7 +43,9 @@ DistributionSpecV2 = ForwardRef(
     'tf_agents.distributions.utils.DistributionSpecV2')  # pylint: disable=invalid-name
 
 Tensor = Union[tf.Tensor, tf.SparseTensor, tf.RaggedTensor, EagerTensor]
-Array = Union[np.ndarray, int, float, str, bool]   # pylint: disable=invalid-name
+# Note: EagerTensor is array-like because it supports __array__.  We
+# can replace this with np.typing.ArrayLike once we/tf require numpy v1.21+.
+Array = Union[np.ndarray, int, float, str, bool, EagerTensor]   # pylint: disable=invalid-name
 TensorOrArray = Union[Tensor, Array]
 Distribution = tfp.distributions.Distribution
 
