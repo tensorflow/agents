@@ -59,6 +59,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
           Tuple[str, policy_saver.def_function.Function]]] = None,
       batch_size: Optional[int] = None,
       use_nest_path_signatures: bool = True,
+      save_greedy_policy=True,
   ):
     """Initializes a PolicySavedModelTrigger.
 
@@ -87,6 +88,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       use_nest_path_signatures: SavedModel spec signatures will be created based
         on the sructure of the specs. Otherwise all specs must have unique
         names.
+      save_greedy_policy: Disable when an agent's policy distribution method
+        does not support mode.
     """
     if async_saving and metadata_metrics:
       raise NotImplementedError('Support for metadata_metrics is not '
@@ -100,22 +103,28 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         for k, v in self._metadata_metrics.items()
     }
 
-    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
-                                             use_nest_path_signatures)
-
-    # TODO(b/145754641): Fix how greedy/raw policies are built in agents.
+    greedy = None
     if isinstance(agent.policy, greedy_policy.GreedyPolicy):
+      raw_policy = agent.policy.wrapped_policy
       greedy = agent.policy
     else:
-      greedy = greedy_policy.GreedyPolicy(agent.policy)
+      raw_policy = agent.policy
+      if save_greedy_policy:
+        greedy = greedy_policy.GreedyPolicy(agent.policy)
 
+    self._raw_policy_saver = self._build_saver(raw_policy, batch_size,
+                                               use_nest_path_signatures)
     collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
                                              use_nest_path_signatures)
-    greedy_policy_saver = self._build_saver(greedy, batch_size,
-                                            use_nest_path_signatures)
-    self._raw_policy_saver = self._build_saver(greedy.wrapped_policy,
-                                               batch_size,
-                                               use_nest_path_signatures)
+
+    savers = [(self._raw_policy_saver, learner.RAW_POLICY_SAVED_MODEL_DIR),
+              (collect_policy_saver, learner.COLLECT_POLICY_SAVED_MODEL_DIR)]
+
+    if save_greedy_policy:
+      greedy_policy_saver = self._build_saver(greedy, batch_size,
+                                              use_nest_path_signatures)
+      savers.append(
+          (greedy_policy_saver, learner.GREEDY_POLICY_SAVED_MODEL_DIR))
 
     # Save initial saved_model if they do not exist yet. These can be updated
     # from the policy_checkpoints.
@@ -124,23 +133,19 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
                                          'policy_specs.pbtxt')
 
     extra_concrete_functions = extra_concrete_functions or []
-    savers = [collect_policy_saver, greedy_policy_saver, self._raw_policy_saver]
-    for saver in savers:
+    for saver, _ in savers:
       for name, fn in extra_concrete_functions:
         saver.register_concrete_function(name, fn)
+
+    self._checkpoint_dir = os.path.join(saved_model_dir,
+                                        learner.POLICY_CHECKPOINT_DIR)
 
     # TODO(b/173815037): Use a TF-Agents util to check for whether a saved
     # policy already exists.
     if not tf.io.gfile.exists(raw_policy_specs_path):
-      collect_policy_saver.save(
-          os.path.join(saved_model_dir, learner.COLLECT_POLICY_SAVED_MODEL_DIR))
-      greedy_policy_saver.save(
-          os.path.join(saved_model_dir, learner.GREEDY_POLICY_SAVED_MODEL_DIR))
-      self._raw_policy_saver.save(
-          os.path.join(saved_model_dir, learner.RAW_POLICY_SAVED_MODEL_DIR))
+      for saver, path in savers:
+        saver.save(os.path.join(saved_model_dir, path))
 
-    self._checkpoint_dir = os.path.join(saved_model_dir,
-                                        learner.POLICY_CHECKPOINT_DIR)
     super(PolicySavedModelTrigger, self).__init__(
         interval, self._save_fn, start=start)
 
