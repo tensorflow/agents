@@ -74,6 +74,9 @@ class CountingEnv(py_environment.PyEnvironment):
     self._current_step = np.array(0, dtype=np.int32)
     return ts.restart(self._get_observation())
 
+  def get_info(self):
+    return {}
+
 
 @gin.configurable
 class EpisodeCountingEnv(py_environment.PyEnvironment):

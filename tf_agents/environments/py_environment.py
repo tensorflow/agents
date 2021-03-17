@@ -259,7 +259,7 @@ class PyEnvironment(object):
     del seed  # unused
     raise NotImplementedError('No seed support for this environment.')
 
-  def get_info(self) -> Any:
+  def get_info(self) -> types.NestedArray:
     """Returns the environment info returned on the last step.
 
     Returns:
