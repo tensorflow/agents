@@ -1328,7 +1328,12 @@ def aggregate_losses(per_example_loss=None,
       if weight_rank > 0 and loss_rank > weight_rank:
         for dim in range(weight_rank, loss_rank):
           sample_weight = tf.expand_dims(sample_weight, dim)
-      per_example_loss = tf.math.multiply(per_example_loss, sample_weight)
+      # Sometimes we have an episode boundary or similar, and at this location
+      # the loss is nonsensical (i.e., inf or nan); and sample_weight is zero.
+      # In this case, we should respect the zero sample_weight and ignore the
+      # frame.
+      per_example_loss = tf.math.multiply_no_nan(
+          per_example_loss, sample_weight)
 
     if loss_rank is not None and loss_rank == 0:
       err_msg = (
