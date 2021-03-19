@@ -35,7 +35,7 @@ import tensorflow as tf
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import categorical_policy
-from tf_agents.bandits.policies import policy_utilities
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.trajectories import policy_step
 from tf_agents.typing import types
 from tf_agents.utils import common

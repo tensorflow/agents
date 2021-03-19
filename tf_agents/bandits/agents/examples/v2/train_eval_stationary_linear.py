@@ -33,9 +33,9 @@ from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import environment_utilities
 from tf_agents.bandits.environments import stationary_stochastic_py_environment as sspe
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
+from tf_agents.policies import utils as policy_utilities
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

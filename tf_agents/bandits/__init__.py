@@ -13,4 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""TF-Agents Bandits."""
 
+from tf_agents.bandits import agents
+from tf_agents.bandits import drivers
+from tf_agents.bandits import environments
+from tf_agents.bandits import metrics
+from tf_agents.bandits import multi_objective
+from tf_agents.bandits import networks
+from tf_agents.bandits import policies
+from tf_agents.bandits import specs

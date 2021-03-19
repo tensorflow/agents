@@ -28,11 +28,10 @@ from typing import Optional, Text
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import random_tf_policy
 from tf_agents.policies import tf_policy
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.trajectories import policy_step
 from tf_agents.typing import types
 from tf_agents.utils import nest_utils

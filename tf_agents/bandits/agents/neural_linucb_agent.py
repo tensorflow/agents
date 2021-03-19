@@ -42,8 +42,8 @@ from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import linear_bandit_agent as linear_agent
 from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.policies import neural_linucb_policy
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils

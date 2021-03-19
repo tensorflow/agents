@@ -29,8 +29,8 @@ from tf_agents.bandits.agents import mixture_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.policies import mixture_policy
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.networks import q_network
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step

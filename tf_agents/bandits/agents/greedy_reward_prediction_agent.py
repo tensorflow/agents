@@ -32,8 +32,8 @@ from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import constraints as constr
 from tf_agents.bandits.policies import greedy_reward_prediction_policy as greedy_reward_policy
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import eager_utils

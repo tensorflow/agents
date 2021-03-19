@@ -93,6 +93,7 @@ Seed = Union[int, Sequence[int], Tensor, Array]
 
 TimeStep = ForwardRef('tf_agents.trajectories.time_step.TimeStep')  # pylint: disable=invalid-name
 PolicyStep = ForwardRef('tf_agents.trajectories.policy_step.PolicyStep')  # pylint: disable=invalid-name
+Trajectory = ForwardRef('tf_agents.trajectories.trajectory.Trajectory')  # pylint: disable=invalid-name
 
 GymEnv = ForwardRef('gym.Env')  # pylint: disable=invalid-name
 GymEnvWrapper = Callable[[GymEnv], GymEnv]

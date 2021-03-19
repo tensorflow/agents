@@ -30,9 +30,9 @@ from tf_agents.bandits.agents import neural_linucb_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import stationary_stochastic_structured_py_environment as sspe
 from tf_agents.bandits.networks import global_and_arm_feature_network
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.environments import tf_py_environment
+from tf_agents.policies import utils as policy_utilities
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')

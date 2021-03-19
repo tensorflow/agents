@@ -31,9 +31,9 @@ from tf_agents.bandits.environments import environment_utilities
 from tf_agents.bandits.environments import stationary_stochastic_py_environment
 from tf_agents.bandits.environments import wheel_py_environment
 from tf_agents.bandits.networks import global_and_arm_feature_network
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
+from tf_agents.policies import utils as policy_utilities
 
 tfd = tfp.distributions
 

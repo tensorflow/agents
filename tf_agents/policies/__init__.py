@@ -32,4 +32,4 @@ from tf_agents.policies import random_tf_policy
 from tf_agents.policies import scripted_py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.policies import tf_py_policy
-
+from tf_agents.policies import utils

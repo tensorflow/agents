@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utilities for bandit policies."""
+"""Utilities for policies."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -23,9 +23,9 @@ from __future__ import print_function
 import collections
 from typing import Optional, Sequence, Text, Union
 
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
-from tf_agents.bandits.specs import utils as bandit_spec_utils
+from tf_agents.specs import bandit_spec_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.typing import types

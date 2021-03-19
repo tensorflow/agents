@@ -32,9 +32,9 @@ from tf_agents.bandits.agents import utils as bandit_utils
 from tf_agents.bandits.multi_objective import multi_objective_scalarizer
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_multi_objective_neural_policy as greedy_multi_objective_policy
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks.network import Network
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common

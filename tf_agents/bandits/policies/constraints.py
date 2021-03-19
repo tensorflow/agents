@@ -22,15 +22,15 @@ from __future__ import print_function
 
 import abc
 import functools
-from typing import Iterable, Callable, Optional, Text
+from typing import Callable, Iterable, Optional, Text
 import six
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.bandits.policies import loss_utils
-from tf_agents.bandits.policies import policy_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common

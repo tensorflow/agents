@@ -28,7 +28,7 @@ from tf_agents.bandits.agents import exp3_mixture_agent
 from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.policies import mixture_policy
-from tf_agents.bandits.policies import policy_utilities
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step

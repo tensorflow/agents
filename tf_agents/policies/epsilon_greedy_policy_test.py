@@ -23,10 +23,10 @@ import collections
 import math
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-from tf_agents.bandits.policies import policy_utilities as policy_util
+import tensorflow as tf
 from tf_agents.policies import epsilon_greedy_policy
 from tf_agents.policies import fixed_policy
+from tf_agents.policies import utils as policy_util
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
