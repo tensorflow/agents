@@ -250,12 +250,9 @@ class SacAgent(tf_agent.TFAgent):
         self.data_context, squeeze_time_dim=(train_sequence_length == 2))
 
   def _check_action_spec(self, action_spec):
-    flat_action_spec = tf.nest.flatten(action_spec)
-    for spec in flat_action_spec:
-      if spec.dtype.is_integer:
-        raise NotImplementedError(
-            'SacAgent does not currently support discrete actions. '
-            'Action spec: {}'.format(action_spec))
+    # The original SAC implementation would throw an error here if there were discrete actions,
+    # but the Hybrid variation of SAC does support discrete actions.
+    pass
 
   def _get_default_target_entropy(self, action_spec):
     # If target_entropy was not passed, set it to -dim(A)/2.0

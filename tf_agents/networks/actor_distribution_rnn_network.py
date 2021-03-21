@@ -180,7 +180,47 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         observation, step_type=step_type, network_state=network_state,
         training=training)
     outer_rank = nest_utils.get_outer_rank(observation, self.input_tensor_spec)
-    output_actions = tf.nest.map_structure(
-        lambda proj_net: proj_net(state, outer_rank, training=training)[0],
-        self._projection_networks)
+
+    discrete_actions_distributions = tf.nest.map_structure(
+        lambda proj_net, out_spec: proj_net(state, outer_rank, training=training)[0] if tensor_spec.is_discrete(out_spec) else None,
+        self._projection_networks, self._output_tensor_spec)
+
+    # Isolate the discrete action distributions. There may be none.
+    discrete_actions_distributions_pruned = tf.nest.flatten(discrete_actions_distributions)
+    discrete_actions_distributions_pruned = [action for action in discrete_actions_distributions_pruned if action is not None]
+
+    if discrete_actions_distributions_pruned:
+        if not training:
+            # Turn discrete action logits into one-hots.
+            discrete_actions = tf.nest.map_structure(
+                lambda d_actions_distribution: tf.one_hot(tf.argmax(d_actions_distribution.logits, axis=1),
+                                                          tf.shape(d_actions_distribution.logits)[-1],
+                                                          axis=1,
+                                                          dtype=d_actions_distribution.dtype) if d_actions_distribution else None,
+                discrete_actions_distributions_pruned)
+        else:
+            # Use logits to train.
+            discrete_actions = tf.nest.map_structure(
+                lambda d_actions_distribution: tf.nn.softmax(d_actions_distribution.logits) if d_actions_distribution else None,
+                discrete_actions_distributions_pruned)
+
+        # Reshape to match the batch of state.
+        discrete_actions = tf.concat(tf.nest.flatten(discrete_actions), axis=-1)
+
+        # Cast to the state's dtype.
+        discrete_actions = tf.cast(discrete_actions, state.dtype)
+
+        # Concatenate the discrete actions to the original state.
+        state = tf.concat((state, discrete_actions), axis=-1, name='state_and_discrete_actions')
+
+    # Isolate the continuous action distributions.
+    continuous_actions_distributions = tf.nest.map_structure(
+        lambda proj_net, out_spec: proj_net(state, outer_rank, training=training)[0] if tensor_spec.is_continuous(out_spec) else None,
+        self._projection_networks, self._output_tensor_spec)
+
+    # Now we have a list of discrete actions (if any) and a list of continous actions.
+    # Next, go through the output spec and pick the right action from these two disjoint lists.
+    output_actions = tf.nest.map_structure(lambda d_action, c_action, out_spec: d_action if tensor_spec.is_discrete(out_spec) else c_action,
+                                           discrete_actions_distributions, continuous_actions_distributions, self._output_tensor_spec)
+
     return output_actions, network_state
