@@ -199,7 +199,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
                                                           dtype=d_actions_distribution.dtype) if d_actions_distribution else None,
                 discrete_actions_distributions_pruned)
         else:
-            # Use logits to train.
+            # Use logits to train. 
             discrete_actions = tf.nest.map_structure(
                 lambda d_actions_distribution: tf.nn.softmax(d_actions_distribution.logits) if d_actions_distribution else None,
                 discrete_actions_distributions_pruned)
