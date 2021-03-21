@@ -218,7 +218,7 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         lambda proj_net, out_spec: proj_net(state, outer_rank, training=training)[0] if tensor_spec.is_continuous(out_spec) else None,
         self._projection_networks, self._output_tensor_spec)
 
-    # Now we have a list of discrete actions (if any) and a list of continous actions.
+    # Now we have a list of discrete actions (if any) and a list of continuous actions.
     # Next, go through the output spec and pick the right action from these two disjoint lists.
     output_actions = tf.nest.map_structure(lambda d_action, c_action, out_spec: d_action if tensor_spec.is_discrete(out_spec) else c_action,
                                            discrete_actions_distributions, continuous_actions_distributions, self._output_tensor_spec)
