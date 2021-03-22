@@ -19,9 +19,9 @@ r"""Example training DQN using actor/learner in a gym environment.
 To run DQN on CartPole:
 
 ```bash
-tensorboard --logdir $HOME/tmp/dqn/gym/CartPole-v0/ --port 2223 &
-python tf_agents/experimental/examples/dqn/dqn_train_eval.py \
-  --root_dir=/tmp/dqn_cartpole
+tensorboard --logdir $HOME/tmp/dqn_cartpole --port 2223 &
+python tf_agents/examples/dqn/dqn_train_eval.py \
+  --root_dir=$HOME/tmp/dqn_cartpole
 ```
 
 """
