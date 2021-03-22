@@ -83,7 +83,7 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
       objective_networks: Sequence[Network],
       observation_and_action_constraint_splitter: types.Splitter = None,
       accepts_per_arm_features: bool = False,
-      emit_policy_info: Tuple[Text] = (),
+      emit_policy_info: Tuple[Text, ...] = (),
       name: Optional[Text] = None):
     """Builds a GreedyMultiObjectiveNeuralPolicy based on multiple networks.
 

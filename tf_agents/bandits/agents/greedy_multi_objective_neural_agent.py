@@ -68,7 +68,7 @@ class GreedyMultiObjectiveNeuralAgent(tf_agent.TFAgent):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       enable_summaries: bool = True,
-      emit_policy_info: Tuple[Text] = (),
+      emit_policy_info: Tuple[Text, ...] = (),
       train_step_counter: Optional[tf.Variable] = None,
       name: Optional[Text] = None):
     """Creates a Greedy Multi-objective Neural Agent.
