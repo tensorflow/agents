@@ -204,11 +204,16 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
                 lambda d_actions_distribution: tf.nn.softmax(d_actions_distribution.logits) if d_actions_distribution else None,
                 discrete_actions_distributions_pruned)
 
-        # Reshape to match the batch of state.
-        discrete_actions = tf.concat(tf.nest.flatten(discrete_actions), axis=-1)
+        # Flatten and concatenate all discrete actions.
+        discrete_actions = tf.nest.flatten(discrete_actions)
+        discrete_actions = tf.nest.map_structure(lambda tensor: tf.reshape(tensor, [tensor.shape[0], -1]), discrete_actions)
+        discrete_actions = tf.concat(discrete_actions, axis=-1)
 
         # Cast to the state's dtype.
         discrete_actions = tf.cast(discrete_actions, state.dtype)
+
+        # Flatten state
+        state = tf.reshape(state, [state.shape[0], -1])
 
         # Concatenate the discrete actions to the original state.
         state = tf.concat((state, discrete_actions), axis=-1, name='state_and_discrete_actions')
