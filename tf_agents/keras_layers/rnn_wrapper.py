@@ -20,11 +20,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-import tensorflow.compat.v2 as tf
-
-# pylint:disable=g-direct-tensorflow-import
-from tensorflow.python.keras import layers  # TF internal
-# pylint:enable=g-direct-tensorflow-import
+import tensorflow as tf
 
 __all__ = ['RNNWrapper']
 
@@ -96,7 +92,7 @@ class RNNWrapper(tf.keras.layers.Layer):
 
   @classmethod
   def from_config(cls, config, custom_objects=None):
-    internal_layer = layers.deserialize(
+    internal_layer = tf.keras.layers.deserialize(
         config.pop('layer'), custom_objects=custom_objects)
     layer = cls(internal_layer, **config)
     return layer

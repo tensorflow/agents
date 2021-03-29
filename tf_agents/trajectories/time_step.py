@@ -24,7 +24,7 @@ import pprint
 from typing import NamedTuple, Optional
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec

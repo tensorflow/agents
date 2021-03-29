@@ -22,3 +22,8 @@ from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.replay_buffers import table
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
+
+from tf_agents.replay_buffers.reverb_replay_buffer import ReverbReplayBuffer
+from tf_agents.replay_buffers.reverb_utils import ReverbAddEpisodeObserver
+from tf_agents.replay_buffers.reverb_utils import ReverbAddTrajectoryObserver
+from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer

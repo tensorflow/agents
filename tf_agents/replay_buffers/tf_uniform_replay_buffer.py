@@ -31,7 +31,7 @@ from __future__ import print_function
 import collections
 import gin
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.replay_buffers import table

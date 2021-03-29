@@ -25,7 +25,7 @@ from typing import Optional, Text
 from absl import logging
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.policies import policy_saver
 from tf_agents.policies import py_policy

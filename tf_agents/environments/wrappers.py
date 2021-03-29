@@ -32,7 +32,7 @@ from typing import Any, Callable, Optional, Sequence, Text, Union
 import gin
 import numpy as np
 import six
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec
