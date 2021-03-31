@@ -13,48 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tensor normalizer classses.
-
-These encapsulate variables and function for tensor normalization.
-
-Example usage:
-
-observation = tf.placeholder(tf.float32, shape=[])
-tensor_normalizer = StreamingTensorNormalizer(
-    tensor_spec.TensorSpec([], tf.float32), scope='normalize_observation')
-normalized_observation = tensor_normalizer.normalize(observation)
-update_normalization = tensor_normalizer.update(observation)
-
-with tf.Session() as sess:
-  for o in observation_list:
-    # Compute normalized observation given current observation vars.
-    normalized_observation_ = sess.run(
-        normalized_observation, feed_dict = {observation: o})
-
-    # Update normalization params for next normalization op.
-    sess.run(update_normalization, feed_dict = {observation: o})
-
-    # Do something with normalized_observation_
-    ...
-"""
+"""Tensor statistics and normalization."""
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import abc
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from typing import Tuple
 
+import six
+import tensorflow as tf
+
+from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
-
-from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 create_variable = common.create_variable
 
 
+@six.add_metaclass(abc.ABCMeta)
 class TensorNormalizer(tf.Module):
-  """Encapsulates tensor normalization and owns normalization variables."""
+  """Encapsulates tensor normalization and owns normalization variables.
+
+  Example usage:
+
+  ```
+  tensor_normalizer = StreamingTensorNormalizer(
+      tf.TensorSpec([], tf.float32))
+  observation_list = [list of float32 scalars or batches]
+  normalized_list = []
+
+  for o in observation_list:
+    normalized_list.append(tensor_normalizer.normalize(o))
+    tensor_normalizer.update(o)
+  ```
+  """
 
   def __init__(self, tensor_spec, scope='normalize_tensor'):
     super(TensorNormalizer, self).__init__(name=scope)
@@ -137,7 +131,7 @@ class TensorNormalizer(tf.Module):
             variance_epsilon=variance_epsilon,
             name='normalized_tensor')
 
-      normalized_tensor = nest.map_structure_up_to(
+      normalized_tensor = nest_utils.map_structure_up_to(
           self._flat_tensor_spec,
           _normalize_single_tensor,
           tensor,
@@ -322,12 +316,14 @@ class StreamingTensorNormalizer(TensorNormalizer):
 
   def _get_mean_var_estimates(self):
     """Returns this normalizer's current estimates for mean & variance."""
-    mean_estimate = nest.map_structure_up_to(self._flat_tensor_spec,
-                                             lambda a, b: a / b, self._mean_sum,
-                                             self._count)
-    var_estimate = nest.map_structure_up_to(self._flat_tensor_spec,
-                                            lambda a, b: a / b, self._var_sum,
-                                            self._count)
+    mean_estimate = nest_utils.map_structure_up_to(
+        self._flat_tensor_spec,
+        lambda a, b: a / b, self._mean_sum,
+        self._count)
+    var_estimate = nest_utils.map_structure_up_to(
+        self._flat_tensor_spec,
+        lambda a, b: a / b, self._var_sum,
+        self._count)
     return mean_estimate, var_estimate
 
   def reset(self):
@@ -345,3 +341,50 @@ class StreamingTensorNormalizer(TensorNormalizer):
     ]
 
     return reset_ops
+
+
+def parallel_variance_calculation(
+    n_a: types.Int,
+    avg_a: types.Float,
+    m2_a: types.Float,
+    n_b: types.Int,
+    avg_b: types.Float,
+    m2_b: types.Float
+) -> Tuple[types.Int, types.Float, types.Float]:
+  """Calculate the sufficient statistics (average & second moment) of two sets.
+
+  For more details, see the parallel algorithm of Chan et al. at:
+  https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
+
+  Takes in the sufficient statistics for sets `A` and `B` and calculates the
+  variance and sufficient statistics for the union of `A` and `B`.
+
+  If e.g. `B` is a single observation `x_b`, use `n_b=1`, `avg_b = x_b`, and
+  `m2_b = 0`.
+
+  To get `avg_a` and `m2_a` from a tensor `x` of shape `[n_a, ...]`, use:
+
+  ```
+  n_a = tf.shape(x)[0]
+  avg_a, var_a = tf.nn.moments(x, axes=[0])
+  m2_a = var_a * n_a
+  ```
+
+  Args:
+    n_a: Number of elements in `A`.
+    avg_a: The sample average of `A`.
+    m2_a: The sample second moment of `A`.
+    n_b: Number of elements in `B`.
+    avg_b: The sample average of `B`.
+    m2_b: The sample second moment of `B`.
+
+  Returns:
+    A tuple `(n_ab, avg_ab, m2_ab)` such that `var_ab`, the variance of `A|B`,
+    may be calculated via `var_ab = m2_ab / n_ab`, and the sample variance
+    may be calculated as `sample_var_ab = m2_ab / (n_ab - 1)`.
+  """
+  n_ab = n_a + n_b
+  delta = avg_b - avg_a
+  avg_ab = (n_a*avg_a + n_b*avg_b) / n_ab
+  m2_ab = m2_a + m2_b + (delta**2) * n_a * n_b / n_ab
+  return n_ab, avg_ab, m2_ab

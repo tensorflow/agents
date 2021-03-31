@@ -21,10 +21,58 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import tensor_normalizer
+
+
+class ParallelVarianceTest(tf.test.TestCase):
+
+  def testParallelVarianceOneAtATime(self):
+    x = np.random.randn(5, 10)
+    n, avg, m2 = 1, x[0], 0
+    for row in range(1, 5):
+      n, avg, m2 = tensor_normalizer.parallel_variance_calculation(
+          n_a=n, avg_a=avg, m2_a=m2,
+          n_b=1, avg_b=x[row], m2_b=0)
+    var = m2 / n
+    self.assertAllClose(avg, x.mean(axis=0))
+    self.assertAllClose(var, x.var(axis=0))
+
+  def testParallelVarianceForOneGroup(self):
+    x = tf.constant(np.random.randn(5, 10))
+    n = 5
+    avg, var = tf.nn.moments(x, axes=[0])
+    m2 = var * n
+    new_n, new_avg, new_m2 = tensor_normalizer.parallel_variance_calculation(
+        n, avg, m2,
+        n_b=0, avg_b=0, m2_b=0)
+    new_var = new_m2 / n
+    (avg, var, new_avg, new_var) = self.evaluate(
+        (avg, var, new_avg, new_var))
+    self.assertEqual(new_n, 5)
+    self.assertAllClose(new_avg, avg)
+    self.assertAllClose(new_var, var)
+
+  def testParallelVarianceCombinesGroups(self):
+    x1 = tf.constant(np.random.randn(5, 10))
+    x2 = tf.constant(np.random.randn(15, 10))
+    n1 = 5
+    n2 = 15
+    avg1, var1 = tf.nn.moments(x1, axes=[0])
+    avg2, var2 = tf.nn.moments(x2, axes=[0])
+    m2_1 = var1 * n1
+    m2_2 = var2 * n2
+    n, avg, m2 = tensor_normalizer.parallel_variance_calculation(
+        n1, avg1, m2_1,
+        n2, avg2, m2_2)
+    var = m2 / n
+    avg_true, var_true = tf.nn.moments(tf.concat((x1, x2), axis=0), axes=[0])
+    avg, var, avg_true, var_true = self.evaluate((
+        avg, var, avg_true, var_true))
+    self.assertAllClose(avg, avg_true)
+    self.assertAllClose(var, var_true)
 
 
 class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
