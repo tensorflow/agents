@@ -782,7 +782,19 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
 
 
 def get_outer_shape(nested_tensor, spec):
-  """Runtime batch dims of tensor's batch dimension `dim`."""
+  """Runtime batch dims of tensor's batch dimension `dim`.
+
+  Args:
+    nested_tensor: Nest of tensors.
+    spec: The nested spec.
+
+  Returns:
+    A `Tensor` containing the outer shape.
+
+  Raises:
+    ValueError: If `nested_tensor` and `spec` have different structures.
+    TypeError: If `nested_tensor` and `spec` structures have differing types.
+  """
   assert_same_structure(
       nested_tensor,
       spec,
@@ -794,7 +806,7 @@ def get_outer_shape(nested_tensor, spec):
   num_outer_dims = (len(first_tensor.shape) - len(first_spec.shape))
   if not is_batched_nested_tensors(
       nested_tensor, spec, num_outer_dims=num_outer_dims):
-    return []
+    return tf.constant([], dtype=tf.int32)
 
   return tf.shape(input=first_tensor)[:num_outer_dims]
 

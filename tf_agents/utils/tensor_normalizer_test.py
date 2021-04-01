@@ -19,6 +19,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import functools
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
@@ -207,165 +209,92 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
   def testGetVariables(self):
-    count_var, means_var, variances_var = (self._tensor_normalizer.variables)
+    count_var, avg_var, m2_var, var_var = (self._tensor_normalizer.variables)
     self.assertAllEqual(count_var.shape, self._tensor_spec.shape)
-    self.assertAllEqual(means_var.shape, self._tensor_spec.shape)
-    self.assertAllEqual(variances_var.shape, self._tensor_spec.shape)
-
-  def testUpdateVariables(self):
-    # Get original mean and variance.
-    original_count, original_mean_sum, original_variance_sum = self.evaluate(
-        self._tensor_normalizer.variables)
-
-    # Construct and evaluate normalized tensor. Should update mean &
-    #   variance.
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
-    tensor = tf.constant(np_array, dtype=tf.float32)
-    update_norm_vars = self._tensor_normalizer.update(tensor)
-    self.evaluate(update_norm_vars)
-
-    # Get new mean and variance, and make sure they changed.
-    new_count, new_mean_sum, new_variance_sum = self.evaluate(
-        self._tensor_normalizer.variables)
-
-    self.assertAllEqual(new_count,
-                        np.array([3, 3, 3], dtype=np.float32) + original_count)
-    self.assertAllClose(new_mean_sum,
-                        np.sum(np_array, axis=0) + original_mean_sum)
-    self.assertAllClose(
-        new_variance_sum,
-        np.sum(np.square(np_array - original_mean_sum), axis=0) +
-        original_variance_sum)
+    self.assertAllEqual(avg_var.shape, self._tensor_spec.shape)
+    self.assertAllEqual(m2_var.shape, self._tensor_spec.shape)
+    self.assertAllEqual(var_var.shape, self._tensor_spec.shape)
 
   def testReset(self):
     # Get original mean and variance.
-    original_count, original_mean_sum, original_variance_sum = self.evaluate(
-        self._tensor_normalizer.variables)
+    original_vars = self.evaluate(self._tensor_normalizer.variables)
 
-    # Construct and evaluate normalized tensor. Should update mean &
-    #   variance.
+    # Construct and evaluate normalized tensor. Updates statistics.
     np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
                         np.float32)
     tensor = tf.constant(np_array, dtype=tf.float32)
     update_norm_vars = self._tensor_normalizer.update(tensor)
     self.evaluate(update_norm_vars)
 
-    # Get new mean and variance, and make sure they changed.
-    new_count, new_mean_sum, new_variance_sum = self.evaluate(
-        self._tensor_normalizer.variables)
-
-    self.assertAllEqual(new_count,
-                        np.array([3, 3, 3], dtype=np.float32) + original_count)
-    self.assertAllClose(new_mean_sum,
-                        np.sum(np_array, axis=0) + original_mean_sum)
-    self.assertAllClose(
-        new_variance_sum,
-        np.sum(np.square(np_array - original_mean_sum), axis=0) +
-        original_variance_sum)
-
-    # Verify that the count, mean and variance have been successfully reset.
+    # Verify that the internal variables have been successfully reset.
     self.evaluate(self._tensor_normalizer.reset())
+    reset_vars = self.evaluate(self._tensor_normalizer.variables)
+    self.assertAllClose(original_vars, reset_vars)
 
-    new_count, new_mean_sum, new_variance_sum = self.evaluate(
-        self._tensor_normalizer.variables)
-    self.assertAllEqual(new_count, original_count)
-    self.assertAllClose(new_mean_sum, original_mean_sum)
-    self.assertAllClose(new_variance_sum, original_variance_sum)
-
-  def testUpdateVariablesDictNest(self):
-    # Get original mean and variance.
-    original_count, original_mean_sum, original_variance_sum = self.evaluate(
-        self._dict_tensor_normalizer.variables)
-
+  def testUpdate(self):
     # Construct and evaluate normalized tensor. Should update mean &
     #   variance.
     np_array = np.array([[1.3, 4.2, 7.5],
                          [8.3, 2.2, 9.5],
                          [3.3, 5.2, 6.5]], np.float32)
-    tensor = {'a': tf.constant(np_array, dtype=tf.float32),
-              'b': tf.constant(np_array, dtype=tf.float32)}
-    update_norm_vars = self._dict_tensor_normalizer.update(tensor)
+    tensors = {'a': tf.constant(np_array, dtype=tf.float32),
+               'b': tf.constant(np_array, dtype=tf.float32)}
+
+    def _compare(data):
+      n = data.shape[0]
+      expected_avg = data.mean(axis=0)
+      expected_var = data.var(axis=0)
+      expected_m2 = expected_var * n
+      expected_count = np.array([n] * 3)
+
+      new_count, new_avg, new_m2, new_var = self.evaluate(
+          self._dict_tensor_normalizer.variables)
+
+      tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_count),
+                            new_count)
+      tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_avg),
+                            new_avg)
+      tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_var),
+                            new_var)
+      tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_m2),
+                            new_m2)
+
+    update_norm_vars = self._dict_tensor_normalizer.update(tensors)
     self.evaluate(update_norm_vars)
+    _compare(data=np_array)
 
-    # Get new mean and variance, and make sure they changed.
-    new_count, new_mean_sum, new_variance_sum = self.evaluate(
-        self._dict_tensor_normalizer.variables)
+    update_norm_vars = self._dict_tensor_normalizer.update(
+        tf.nest.map_structure(lambda t: t + 1.0, tensors))
+    self.evaluate(update_norm_vars)
+    _compare(data=np.concatenate((np_array, np_array + 1.0), axis=0))
 
-    expected_count = {k: (np.array([3, 3, 3], dtype=np.float32) +
-                          original_count[k]) for k in original_count}
-    expected_mean_sum = {k: (np.sum(np_array, axis=0) +
-                             original_mean_sum[k]) for k in original_mean_sum}
-    expected_variance_sum = {
-        k: (np.sum(np.square(np_array - original_mean_sum[k]), axis=0) +
-            original_variance_sum[k]) for k in original_variance_sum}
+    update_norm_vars = self._dict_tensor_normalizer.update(
+        tf.nest.map_structure(lambda t: t - 1.0, tensors))
+    self.evaluate(update_norm_vars)
+    _compare(
+        data=np.concatenate((np_array, np_array + 1.0, np_array - 1.0), axis=0))
 
-    def _assert_dicts_close(dict1, dict2):
-      self.assertAllEqual(sorted(dict1.keys()), sorted(dict2.keys()))
-      self.assertAllClose([dict1[k] for k in dict1.keys()],
-                          [dict2[k] for k in dict1.keys()])
+  def testNormalization(self):
+    as_tensor = functools.partial(tf.convert_to_tensor, dtype=tf.float32)
+    norm_obs = {'a': np.random.randn(6, 2, 3),
+                'b': np.random.randn(6, 2, 3)}
+    norm_obs_t = tf.nest.map_structure(as_tensor, norm_obs)
+    view_obs = {'a': np.random.randn(4, 3),
+                'b': np.random.randn(4, 3)}
+    view_obs_t = tf.nest.map_structure(as_tensor, view_obs)
+    self.evaluate(self._dict_tensor_normalizer.update(norm_obs_t))
+    observed = self.evaluate(
+        self._dict_tensor_normalizer.normalize(
+            view_obs_t, clip_value=-1, variance_epsilon=1e-6))
+    norm_obs_avg = tf.nest.map_structure(
+        lambda a: a.mean(axis=(0, 1)), norm_obs)
+    norm_obs_std = tf.nest.map_structure(
+        lambda a: a.std(axis=(0, 1)), norm_obs)
+    expected = tf.nest.map_structure(
+        lambda obs, avg, std: (obs - avg)/std,
+        view_obs, norm_obs_avg, norm_obs_std)
+    self.assertAllClose(observed, expected)
 
-    _assert_dicts_close(new_count, expected_count)
-    _assert_dicts_close(new_mean_sum, expected_mean_sum)
-    _assert_dicts_close(new_variance_sum, expected_variance_sum)
-
-  @parameterized.named_parameters(
-      ('OneReduceAxis', 1),
-      ('TwoReduceAxes', 2),
-  )
-  def testNormalization(self, num_outer_dims):
-    count_var, means_var, variance_var = self._tensor_normalizer.variables
-    self.evaluate([
-        tf.compat.v1.assign(count_var, [1.0] * 3),
-        tf.compat.v1.assign(means_var, [10.0] * 3),
-        tf.compat.v1.assign(variance_var, [0.1] * 3)
-    ])
-
-    vector = [9.0, 10.0, 11.0]
-    # Above, the estimated mean was set to 10, and variance to 0.1. Thus the
-    # estimated stddev is sqrt(0.1) = 0.3162.
-    # The middle sample falls on the mean, so should be normalized to 0.0. Each
-    # of the other samples is 1 away from the mean. 1 / 0.3162 = 3.162
-    expected = [-3.1622776601, 0.0, 3.1622776601]
-    for _ in range(num_outer_dims - 1):
-      vector = [vector] * 2
-      expected = [expected] * 2
-    tensor = tf.constant(vector)
-
-    norm_obs = self._tensor_normalizer.normalize(
-        tensor, variance_epsilon=0.0)
-    self.assertAllClose(expected, self.evaluate(norm_obs), atol=0.0001)
-
-  def testNormalizationDictNest(self):
-    count_var, means_var, variance_var = self._dict_tensor_normalizer.variables
-    self.evaluate(  # For each var in nest, assign initial value.
-        [tf.compat.v1.assign(var, [1.0] * 3) for var in count_var.values()] +
-        [tf.compat.v1.assign(var, [10.0] * 3) for var in means_var.values()] +
-        [tf.compat.v1.assign(var, [.1] * 3) for var in variance_var.values()])
-
-    vector = [9.0, 10.0, 11.0]
-    expected = {'a': [-3.1622776601, 0.0, 3.1622776601],
-                'b': [-3.1622776601, 0.0, 3.1622776601]}
-    tensor = {'a': tf.constant(vector), 'b': tf.constant(vector)}
-
-    norm_obs = self._dict_tensor_normalizer.normalize(
-        tensor, variance_epsilon=0.0)
-    self.assertAllClose(expected, self.evaluate(norm_obs), atol=0.0001)
-
-  def testShouldNotCenterMean(self):
-    count_var, means_var, variance_var = self._tensor_normalizer.variables
-    self.evaluate([
-        tf.compat.v1.assign(count_var, [1.0] * 3),
-        tf.compat.v1.assign(means_var, [10.0] * 3),
-        tf.compat.v1.assign(variance_var, [0.01] * 3)
-    ])
-    tensor = tf.constant([[9.0, 10.0, 11.0]])
-    norm_obs = self._tensor_normalizer.normalize(
-        tensor, center_mean=False,
-        variance_epsilon=0.0, clip_value=0.0)
-    expected = [[90.0, 100.0, 110.0]]
-    self.assertAllClose(expected, self.evaluate(norm_obs))
 
 if __name__ == '__main__':
   tf.test.main()

@@ -134,7 +134,7 @@ class NestedTensorsTest(tf.test.TestCase):
     tensor = tf.zeros([2, 3], dtype=tf.float32)
     spec = tensor_spec.TensorSpec([2, 3], dtype=tf.float32)
     batch_size = nest_utils.get_outer_shape(tensor, spec)
-    self.assertEqual(self.evaluate(batch_size), [])
+    self.assertAllEqual(self.evaluate(batch_size), [])
 
   def testGetOuterShapeOneDim(self):
     tensor = tf.zeros([5, 2, 3], dtype=tf.float32)
@@ -158,7 +158,7 @@ class NestedTensorsTest(tf.test.TestCase):
     spec = tensor_spec.TensorSpec([None, 1], dtype=tf.float32)
     tensor = tf.convert_to_tensor(value=[[0.0]] * 8)
     batch_size = self.evaluate(nest_utils.get_outer_shape(tensor, spec))
-    self.assertEqual(batch_size, [])
+    self.assertAllEqual(batch_size, [])
 
   def testGetOuterDimsSingleTensorUnbatched(self):
     tensor = tf.zeros([2, 3], dtype=tf.float32)
