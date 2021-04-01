@@ -22,7 +22,7 @@ from __future__ import print_function
 
 import abc
 import copy
-from typing import Dict, NamedTuple, Sequence, Union
+from typing import Dict, NamedTuple, Sequence, Union, Callable, Optional
 
 import numpy as np
 import six
@@ -112,7 +112,7 @@ class Scalarizer(tf.Module):
       raise ValueError(
           'The number of input objectives should be {}, but is {}.'.format(
               self._num_of_objectives, multi_objectives.shape.dims[1]))
-    return self.call(multi_objectives)
+    return self._scalarize(self._transform(multi_objectives))
 
   def _validate_scalarization_parameters(self, params: Dict[str, tf.Tensor]):
     """Validates the scalarization parameters.
@@ -140,9 +140,13 @@ class Scalarizer(tf.Module):
                                                 self._num_of_objectives,
                                                 param.shape.dims[-1]))
 
+  # Identity transform. Subclasses can override.
+  def _transform(self, multiobjectives: tf.Tensor) -> tf.Tensor:
+    return multiobjectives
+
   # Subclasses must implement these methods.
   @abc.abstractmethod
-  def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
+  def _scalarize(self, transformed_multi_objectives: tf.Tensor) -> tf.Tensor:
     """Implementation of scalarization logic by subclasses."""
 
   @abc.abstractmethod
@@ -158,20 +162,14 @@ class LinearScalarizer(Scalarizer):
 
     Args:
       weights: A `Sequence` of weights for linearly combining the objectives.
-
-    Raises:
-      TypeError: if `not isinstance(weights, Sequence)`.
     """
-    if not isinstance(weights, Sequence):
-      raise TypeError(
-          'weights should be a Sequence, but is {}.'.format(weights))
     self._weights = copy.deepcopy(weights)
     super(LinearScalarizer, self).__init__(len(self._weights))
 
-  def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
-    _validate_scalarization_parameter_shape(multi_objectives,
+  def _scalarize(self, transformed_multi_objectives: tf.Tensor) -> tf.Tensor:
+    _validate_scalarization_parameter_shape(transformed_multi_objectives,
                                             {'weights': self._weights})
-    return tf.reduce_sum(multi_objectives * self._weights, axis=1)
+    return tf.reduce_sum(transformed_multi_objectives * self._weights, axis=1)
 
   def set_parameters(self, weights: tf.Tensor):
     """Set the scalarization parameter of the LinearScalarizer.
@@ -211,15 +209,8 @@ class ChebyshevScalarizer(Scalarizer):
       reference_point: A `Sequence` of coordinates for the reference point.
 
     Raises:
-      TypeError: if `not isinstance(weights, Sequence)`.
-      TypeError: if `not isinstance(reference_point, Sequence)`.
       ValueError: if `len(weights) != len(reference_point)`.
     """
-    if not isinstance(weights, Sequence):
-      raise TypeError('weights should be a Sequence, but is {}'.format(weights))
-    if not isinstance(reference_point, Sequence):
-      raise TypeError(
-          'reference should be a Sequence, but is {}'.format(reference_point))
     if len(weights) != len(reference_point):
       raise ValueError(
           'weights has {} elements but reference_point has {}.'.format(
@@ -228,13 +219,14 @@ class ChebyshevScalarizer(Scalarizer):
     self._reference_point = reference_point
     super(ChebyshevScalarizer, self).__init__(len(self._weights))
 
-  def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
-    _validate_scalarization_parameter_shape(multi_objectives, {
+  def _scalarize(self, transformed_multi_objectives: tf.Tensor) -> tf.Tensor:
+    _validate_scalarization_parameter_shape(transformed_multi_objectives, {
         'weights': self._weights,
         'reference_point': self._reference_point
     })
     return tf.reduce_min(
-        (multi_objectives - self._reference_point) * self._weights, axis=1)
+        (transformed_multi_objectives - self._reference_point) * self._weights,
+        axis=-1)
 
   def set_parameters(self, weights: tf.Tensor, reference_point: tf.Tensor):
     """Set the scalarization parameters for the ChebyshevScalarizer.
@@ -278,8 +270,12 @@ class HyperVolumeScalarizer(Scalarizer):
                                  (OFFSET_KEY, ScalarFloat)])
   ALMOST_ZERO = 1e-16
 
-  def __init__(self, direction: Sequence[ScalarFloat],
-               transform_params: Sequence[PARAMS]):
+  def __init__(self,
+               direction: Sequence[ScalarFloat],
+               transform_params: Sequence[PARAMS],
+               multi_objective_transform: Optional[Callable[
+                   [tf.Tensor, Sequence[ScalarFloat], Sequence[ScalarFloat]],
+                   tf.Tensor]] = None):
     """Initialize the HyperVolumeScalarizer.
 
     Args:
@@ -290,18 +286,18 @@ class HyperVolumeScalarizer(Scalarizer):
       transform_params: A `Sequence` of namedtuples
         `HyperVolumeScalarizer.PARAMS`, each containing a slope and an offset
         for transforming an objective to be non-negative.
+      multi_objective_transform: A `Optional` `Callable` that takes in a
+        `tf.Tensor` of multiple objective values, a `Sequence` of slopes, and a
+        `Sequence` of offsets, and returns a `tf.Tensor` of transformed multiple
+        objectives. If unset, the transform is defaulted to the standard
+        transform multiple_objectives * slopes + offsets.
 
     Raises:
-      TypeError: if `not isinstance(direction, Sequence)`.
       ValueError: if `any([x < 0 for x in direction])`.
       ValueError: if the 2-norm of `direction` is less than
         `HyperVolumeScalarizer.ALMOST_ZERO`.
-      TypeError: if `not isinstance(transform_params, Sequence)`.
       ValueError: if `len(transform_params) != len(self._direction)`.
     """
-    if not isinstance(direction, Sequence):
-      raise TypeError(
-          'direction should be a Sequence, but is {}.'.format(direction))
     if any([x < 0 for x in direction]):
       raise ValueError(
           'direction should be in the positive orthant, but has negative '
@@ -311,33 +307,42 @@ class HyperVolumeScalarizer(Scalarizer):
       raise ValueError(
           'direction found to be a nearly-zero vector, but should not be.')
     self._direction = [x / length for x in direction]
-    if not isinstance(transform_params, Sequence):
-      raise TypeError(
-          'transform_params should be a Sequence, but is {}.'.format(
-              transform_params))
     if len(transform_params) != len(self._direction):
       raise ValueError(
           'direction has {} elements but transform_params has {}.'.format(
               len(direction), len(transform_params)))
     self._slopes, self._offsets = zip(*[(p.slope, p.offset)
                                         for p in transform_params])
-    super(HyperVolumeScalarizer, self).__init__(len(self._direction))
 
-  def call(self, multi_objectives: tf.Tensor) -> tf.Tensor:
+    if multi_objective_transform is None:
+      multi_objective_transform = self._default_hv_transform
+
+    self._transformer = multi_objective_transform
+    super(HyperVolumeScalarizer, self).__init__(len(self._direction),)
+
+  @staticmethod
+  def _default_hv_transform(multi_objectives: tf.Tensor,
+                            slopes: Sequence[ScalarFloat],
+                            offsets: Sequence[ScalarFloat]) -> tf.Tensor:
+    return multi_objectives * slopes + offsets
+
+  def _transform(self, multi_objectives: tf.Tensor) -> tf.Tensor:
     _validate_scalarization_parameter_shape(
         multi_objectives, {
             self.DIRECTION_KEY: self._direction,
             self.SLOPE_KEY: self._slopes,
             self.OFFSET_KEY: self._offsets
         })
-    transformed_objectives = tf.maximum(
-        multi_objectives * self._slopes + self._offsets, 0)
+    return self._transformer(multi_objectives, self._slopes, self._offsets)
+
+  def _scalarize(self, transformed_multi_objectives: tf.Tensor) -> tf.Tensor:
+    transformed_multi_objectives = tf.maximum(transformed_multi_objectives, 0)
     nonzero_mask = tf.broadcast_to(
         tf.cast(tf.abs(self._direction) >= self.ALMOST_ZERO, dtype=tf.bool),
-        tf.shape(multi_objectives))
+        tf.shape(transformed_multi_objectives))
     return tf.reduce_min(
-        tf.where(nonzero_mask, transformed_objectives / self._direction,
-                 multi_objectives.dtype.max),
+        tf.where(nonzero_mask, transformed_multi_objectives / self._direction,
+                 transformed_multi_objectives.dtype.max),
         axis=1)
 
   def set_parameters(self, direction: tf.Tensor,

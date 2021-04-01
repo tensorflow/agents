@@ -27,7 +27,7 @@ from tf_agents.bandits.multi_objective import multi_objective_scalarizer
 
 class DummyScalarizer(multi_objective_scalarizer.Scalarizer):
 
-  def call(self, multi_objectives):
+  def _scalarize(self, multi_objectives):
     pass
 
   def set_parameters(self):
@@ -254,6 +254,21 @@ class HyperVolumeScalarizerTest(tf.test.TestCase):
       self.assertAllClose(
           self.evaluate(scalarizer(self._batch_multi_objectives)),
           self.evaluate(tf.constant([1.5, 6], dtype=tf.float32)))
+
+  def testCustomTransform(self):
+    transform = lambda m, s, o: m * s + o
+    scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        [1, 0, 0], self._hv_params, transform)
+    self.assertAllClose(
+        self.evaluate(scalarizer(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([3, 6], dtype=tf.float32)))
+
+    transform2 = lambda m, s, o: tf.multiply(m, m) * s + o
+    scalarizer2 = multi_objective_scalarizer.HyperVolumeScalarizer(
+        [0.1, 0.2, 0.2], self._hv_params, transform2)
+    self.assertAllClose(
+        self.evaluate(scalarizer2(self._batch_multi_objectives)),
+        self.evaluate(tf.constant([1.5, 24.], dtype=tf.float32)))
 
   def testNegativeObjectives(self):
     direction = [1, 0, 0]
