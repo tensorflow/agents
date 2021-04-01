@@ -33,6 +33,7 @@ from tf_agents.policies import tf_policy
 from tf_agents.train import interval_trigger
 from tf_agents.train import learner
 from tf_agents.train import step_per_second_tracker
+from tf_agents.typing import types
 
 ENV_STEP_METADATA_KEY = 'env_step'
 
@@ -199,3 +200,28 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
     step = self._train_step.numpy()
     logging.info('Step: %d, %.3f steps/sec', step, steps_per_sec)
     tf.summary.scalar(name='train_steps_per_sec', data=steps_per_sec, step=step)
+
+
+class ReverbCheckpointTrigger(interval_trigger.IntervalTrigger):
+  """Checkpoints data from Reverb replay buffer."""
+
+  def __init__(self, train_step: tf.Variable, interval: int,
+               reverb_client: types.ReverbClient):
+    """Initializes a StepPerSecondLogTrigger.
+
+    Args:
+      train_step: `tf.Variable` which keeps track of the number of train steps.
+      interval: How often, in train_steps, the trigger will save. Note that as
+        long as the >= `interval` number of steps have passed since the last
+        trigger, the event gets triggered. The current value is not necessarily
+        `interval` steps away from the last triggered value.
+      reverb_client: the Reverb client required for checkpointing.
+    """
+    self._train_step = train_step
+    self._reverb_client = reverb_client
+
+    super(ReverbCheckpointTrigger, self).__init__(interval, self._save_fn)
+
+  def _save_fn(self) -> None:
+    checkpoint_path = self._reverb_client.checkpoint()
+    logging.info('Checkpointing Reverb data to %s', checkpoint_path)

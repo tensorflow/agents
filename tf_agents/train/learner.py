@@ -36,6 +36,7 @@ COLLECT_POLICY_SAVED_MODEL_DIR = 'collect_policy'
 GREEDY_POLICY_SAVED_MODEL_DIR = 'greedy_policy'
 RAW_POLICY_SAVED_MODEL_DIR = 'policy'
 POLICY_CHECKPOINT_DIR = 'checkpoints'
+REPLAY_BUFFER_CHECKPOINT_DIR = 'replay_buffer_checkpoints'
 
 ExperienceAndSampleInfo = Tuple[types.NestedTensor, Tuple[Any, ...]]
 

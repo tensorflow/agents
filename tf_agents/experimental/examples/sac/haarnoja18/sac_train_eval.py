@@ -86,9 +86,8 @@ def train_eval(
     reverb_port=None,
     replay_capacity=1000000,
     # Others
-    # Defaults to not checkpointing saved policy. If you wish to enable this,
-    # please note the caveat explained in README.md.
-    policy_save_interval=-1,
+    policy_save_interval=10000,
+    replay_buffer_save_interval=100000,
     eval_interval=10000,
     eval_episodes=30,
     debug_summaries=False,
@@ -147,7 +146,13 @@ def train_eval(
       remover=reverb.selectors.Fifo(),
       rate_limiter=reverb.rate_limiters.MinSize(1))
 
-  reverb_server = reverb.Server([table], port=reverb_port)
+  reverb_checkpoint_dir = os.path.join(root_dir, learner.TRAIN_DIR,
+                                       learner.REPLAY_BUFFER_CHECKPOINT_DIR)
+  reverb_checkpointer = reverb.platform.checkpointers_lib.DefaultCheckpointer(
+      path=reverb_checkpoint_dir)
+  reverb_server = reverb.Server([table],
+                                port=reverb_port,
+                                checkpointer=reverb_checkpointer)
   reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
       agent.collect_data_spec,
       sequence_length=2,
@@ -172,6 +177,11 @@ def train_eval(
           train_step,
           interval=policy_save_interval,
           metadata_metrics={triggers.ENV_STEP_METADATA_KEY: env_step_metric}),
+      triggers.ReverbCheckpointTrigger(
+          train_step,
+          interval=replay_buffer_save_interval,
+          reverb_client=reverb_replay.py_client),
+      # TODO(b/165023684): Add SIGTERM handler to checkpoint before preemption.
       triggers.StepPerSecondLogTrigger(train_step, interval=1000),
   ]
 
