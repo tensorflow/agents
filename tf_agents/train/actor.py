@@ -85,6 +85,8 @@ class Actor(object):
     self._policy = policy
     self._train_step = train_step
     self._observers = observers or []
+    # Create a copy of the list to avoid modifying the user provided list.
+    self._observers = list(self._observers)
     self._metrics = metrics or []
     self._observers.extend(self._metrics)
     self._reference_metrics = reference_metrics or []
