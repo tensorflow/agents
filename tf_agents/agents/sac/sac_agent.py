@@ -333,7 +333,7 @@ class SacAgent(tf_agent.TFAgent):
                                          'optimize.')
       tape.watch(trainable_actor_variables)
       actor_loss = self._actor_loss_weight*self.actor_loss(
-          time_steps, weights=weights)
+          time_steps, weights=weights, training=True)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
     actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
     self._apply_gradients(actor_grads, trainable_actor_variables,
@@ -372,6 +372,8 @@ class SacAgent(tf_agent.TFAgent):
             weights: Optional[types.Tensor] = None):
     """Returns the loss of the provided experience.
 
+    This method is only used at test time!
+
     Args:
       experience: A time-stacked trajectory object.
       weights: Optional scalar or elementwise (per-batch-entry) importance
@@ -395,7 +397,7 @@ class SacAgent(tf_agent.TFAgent):
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
 
     actor_loss = self._actor_loss_weight * self.actor_loss(
-        time_steps, weights=weights)
+        time_steps, weights=weights, training=False)
     tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
 
     alpha_loss = self._alpha_loss_weight * self.alpha_loss(
@@ -472,13 +474,17 @@ class SacAgent(tf_agent.TFAgent):
 
       return common.Periodically(update, period, 'update_targets')
 
-  def _actions_and_log_probs(self, time_steps):
+  def _actions_and_log_probs(self, time_steps, training=False):
     """Get actions and corresponding log probabilities from policy."""
     # Get raw action distribution from policy, and initialize bijectors list.
     batch_size = nest_utils.get_outer_shape(time_steps, self._time_step_spec)[0]
     policy_state = self._train_policy.get_initial_state(batch_size)
-    action_distribution = self._train_policy.distribution(
-        time_steps, policy_state=policy_state).action
+    if training:
+      action_distribution = self._train_policy.distribution(
+          time_steps, policy_state=policy_state).action
+    else:
+      action_distribution = self._policy.distribution(
+          time_steps, policy_state=policy_state).action
 
     # Sample actions and log_pis from transformed distribution.
     actions = tf.nest.map_structure(lambda d: d.sample(), action_distribution)
@@ -518,7 +524,8 @@ class SacAgent(tf_agent.TFAgent):
       nest_utils.assert_same_structure(time_steps, self.time_step_spec)
       nest_utils.assert_same_structure(next_time_steps, self.time_step_spec)
 
-      next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps)
+      next_actions, next_log_pis = self._actions_and_log_probs(next_time_steps,
+                                                               training=False)
       target_input = (next_time_steps.observation, next_actions)
       target_q_values1, unused_network_state1 = self._target_critic_network_1(
           target_input, step_type=next_time_steps.step_type, training=False)
@@ -560,13 +567,15 @@ class SacAgent(tf_agent.TFAgent):
 
   def actor_loss(self,
                  time_steps: ts.TimeStep,
-                 weights: Optional[types.Tensor] = None) -> types.Tensor:
+                 weights: Optional[types.Tensor] = None,
+                 training: Optional[bool] = True) -> types.Tensor:
     """Computes the actor_loss for SAC training.
 
     Args:
       time_steps: A batch of timesteps.
       weights: Optional scalar or elementwise (per-batch-entry) importance
         weights.
+      training: Whether training should be applied.
 
     Returns:
       actor_loss: A scalar actor loss.
@@ -574,7 +583,8 @@ class SacAgent(tf_agent.TFAgent):
     with tf.name_scope('actor_loss'):
       nest_utils.assert_same_structure(time_steps, self.time_step_spec)
 
-      actions, log_pi = self._actions_and_log_probs(time_steps)
+      actions, log_pi = self._actions_and_log_probs(time_steps,
+                                                    training=training)
       target_input = (time_steps.observation, actions)
       target_q_values1, _ = self._critic_network_1(
           target_input, step_type=time_steps.step_type, training=False)
@@ -613,7 +623,8 @@ class SacAgent(tf_agent.TFAgent):
     with tf.name_scope('alpha_loss'):
       nest_utils.assert_same_structure(time_steps, self.time_step_spec)
 
-      unused_actions, log_pi = self._actions_and_log_probs(time_steps)
+      unused_actions, log_pi = self._actions_and_log_probs(time_steps,
+                                                           training=False)
       entropy_diff = tf.stop_gradient(-log_pi - self._target_entropy)
       if self._use_log_alpha_in_alpha_loss:
         alpha_loss = (self._log_alpha * entropy_diff)
