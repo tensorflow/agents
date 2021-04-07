@@ -59,10 +59,10 @@ def validate_py_environment(
   action_spec = environment.action_spec()
 
   random_policy = random_py_policy.RandomPyPolicy(
-      time_step_spec=time_step_spec, 
+      time_step_spec=time_step_spec,
       action_spec=action_spec,
       observation_and_action_constraint_splitter=(
-        observation_and_action_constraint_splitter))
+          observation_and_action_constraint_splitter))
 
   episode_count = 0
   time_step = environment.reset()
