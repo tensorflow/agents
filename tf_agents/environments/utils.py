@@ -20,13 +20,14 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Union
+from typing import Optional, Sequence, Union
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
 from tf_agents.environments import tf_py_environment
 from tf_agents.policies import random_py_policy
 from tf_agents.specs import array_spec
+from tf_agents.typing import types
 
 
 def get_tf_env(
@@ -49,13 +50,18 @@ def get_tf_env(
 
 
 def validate_py_environment(environment: py_environment.PyEnvironment,
-                            episodes: int = 5):
+                            episodes: int = 5,
+                            seed: Optional[types.Seed] = None,
+                            observation_and_action_constraint_splitter: Optional[
+                                types.Splitter] = None):
   """Validates the environment follows the defined specs."""
   time_step_spec = environment.time_step_spec()
   action_spec = environment.action_spec()
 
   random_policy = random_py_policy.RandomPyPolicy(
-      time_step_spec=time_step_spec, action_spec=action_spec)
+      time_step_spec=time_step_spec, action_spec=action_spec,
+      seed=seed,
+      observation_and_action_constraint_splitter=observation_and_action_constraint_splitter)
 
   episode_count = 0
   time_step = environment.reset()
