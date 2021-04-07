@@ -8,3 +8,5 @@ __pycache__
 *.swp
 .vscode/
 .idea/
+.eggs/
+*.egg-info/
