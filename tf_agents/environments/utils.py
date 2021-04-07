@@ -52,7 +52,6 @@ def get_tf_env(
 def validate_py_environment(
     environment: py_environment.PyEnvironment,
     episodes: int = 5,
-    seed: Optional[types.Seed] = None,
     observation_and_action_constraint_splitter: Optional[
         types.Splitter] = None):
   """Validates the environment follows the defined specs."""
@@ -60,8 +59,8 @@ def validate_py_environment(
   action_spec = environment.action_spec()
 
   random_policy = random_py_policy.RandomPyPolicy(
-      time_step_spec=time_step_spec, action_spec=action_spec,
-      seed=seed,
+      time_step_spec=time_step_spec, 
+      action_spec=action_spec,
       observation_and_action_constraint_splitter=(
         observation_and_action_constraint_splitter))
 
