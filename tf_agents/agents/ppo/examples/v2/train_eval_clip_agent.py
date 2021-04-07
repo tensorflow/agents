@@ -91,6 +91,7 @@ def train_eval(
     actor_fc_layers=(200, 100),
     value_fc_layers=(200, 100),
     use_rnns=False,
+    lstm_size=(20,),
     # Params for collect
     num_environment_steps=25000000,
     collect_episodes_per_iteration=30,
@@ -147,7 +148,8 @@ def train_eval(
           tf_env.observation_spec(),
           tf_env.action_spec(),
           input_fc_layer_params=actor_fc_layers,
-          output_fc_layer_params=None)
+          output_fc_layer_params=None,
+          lstm_size=lstm_size)
       value_net = value_rnn_network.ValueRnnNetwork(
           tf_env.observation_spec(),
           input_fc_layer_params=value_fc_layers,
