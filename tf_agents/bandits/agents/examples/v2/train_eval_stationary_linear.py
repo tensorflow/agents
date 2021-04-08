@@ -34,6 +34,7 @@ from tf_agents.bandits.environments import environment_utilities
 from tf_agents.bandits.environments import stationary_stochastic_py_environment as sspe
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 from tf_agents.environments import tf_py_environment
+from tf_agents.environments import wrappers
 from tf_agents.networks import q_network
 from tf_agents.policies import utils as policy_utilities
 
@@ -47,6 +48,9 @@ flags.DEFINE_enum(
 flags.DEFINE_bool('normalize_reward_fns', False, 'Whether to normalize the '
                   'reward functions so that rewards are close to being in '
                   '[0, 1].')
+flags.DEFINE_integer(
+    'num_disabled_actions', 0,
+    'If non-zero, there will be extra actions that are always disabled.')
 
 FLAGS = flags.FLAGS
 
@@ -83,6 +87,11 @@ def main(unused_argv):
             context_dim=CONTEXT_DIM),
         action_reward_fns,
         batch_size=BATCH_SIZE)
+    mask_split_fn = None
+    if FLAGS.num_disabled_actions > 0:
+      mask_split_fn = lambda x: (x[0], x[1])
+      env = wrappers.ExtraDisabledActionsWrapper(env,
+                                                 FLAGS.num_disabled_actions)
     environment = tf_py_environment.TFPyEnvironment(env)
 
     optimal_reward_fn = functools.partial(
@@ -93,8 +102,20 @@ def main(unused_argv):
         environment_utilities.tf_compute_optimal_action,
         per_action_reward_fns=action_reward_fns)
 
+    network_input_spec = environment.time_step_spec().observation
+    if FLAGS.num_disabled_actions > 0:
+
+      def _apply_only_to_observation(fn):
+        def result_fn(obs):
+          return fn(obs[0])
+        return result_fn
+
+      optimal_action_fn = _apply_only_to_observation(optimal_action_fn)
+      optimal_reward_fn = _apply_only_to_observation(optimal_reward_fn)
+      network_input_spec = network_input_spec[0]
+
     network = q_network.QNetwork(
-        input_tensor_spec=environment.time_step_spec().observation,
+        input_tensor_spec=network_input_spec,
         action_spec=environment.action_spec(),
         fc_layer_params=LAYERS)
 
@@ -103,21 +124,27 @@ def main(unused_argv):
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           alpha=AGENT_ALPHA,
-          dtype=tf.float32)
+          dtype=tf.float32,
+          observation_and_action_constraint_splitter=mask_split_fn)
     elif FLAGS.agent == 'LinTS':
       agent = lin_ts_agent.LinearThompsonSamplingAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           alpha=AGENT_ALPHA,
-          dtype=tf.float32)
+          dtype=tf.float32,
+          observation_and_action_constraint_splitter=mask_split_fn)
     elif FLAGS.agent == 'epsGreedy':
       agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           reward_network=network,
           optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
-          epsilon=EPSILON)
+          epsilon=EPSILON,
+          observation_and_action_constraint_splitter=mask_split_fn)
     elif FLAGS.agent == 'Mix':
+      assert FLAGS.num_disabled_actions == 0, (
+          'Extra actions with mixture agent not supported.')
+
       emit_policy_info = policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN
       agent_linucb = lin_ucb_agent.LinearUCBAgent(
           time_step_spec=environment.time_step_spec(),
