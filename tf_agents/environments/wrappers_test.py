@@ -1217,5 +1217,27 @@ class OneHotActionWrapperTest(test_utils.TestCase):
         mock_env.step.call_args[0][0]['continuous'])
 
 
+class ExtraDisabledActionsWrapperTest(test_utils.TestCase):
+
+  def testSameReward(self):
+    obs_spec = collections.OrderedDict({
+        'obs1': array_spec.ArraySpec((1,), np.int32),
+        'obs2': array_spec.ArraySpec((2,), np.int32),
+    })
+    action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
+    def reward_fn(unused_step_type, action, unused_observation):
+      return action
+
+    orig_env = random_py_environment.RandomPyEnvironment(
+        obs_spec, action_spec, reward_fn=reward_fn, batch_size=5)
+    wrapped_env = wrappers.ExtraDisabledActionsWrapper(orig_env, 25)
+    wrapped_env.reset()
+    action = np.array([3, -7, 4, 2, 6])
+    new_timestep = wrapped_env.step(action)
+    expected_mask = [[1] * 21 + [0] * 25] * 5
+    self.assertAllEqual(new_timestep.observation[1], expected_mask)
+    self.assertAllEqual(new_timestep.reward, action)
+
+
 if __name__ == '__main__':
   test_utils.main()

@@ -26,6 +26,7 @@ from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.drivers import driver
 from tf_agents.environments import tf_py_environment
+from tf_agents.environments import wrappers
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
@@ -36,6 +37,8 @@ def is_bandit_env(env):
   actual_env = env
   if isinstance(env, tf_py_environment.TFPyEnvironment):
     actual_env = env.pyenv
+    if isinstance(actual_env, wrappers.PyEnvironmentBaseWrapper):
+      actual_env = actual_env.wrapped_env()
   is_bandit = (
       isinstance(actual_env, bandit_py_environment.BanditPyEnvironment) or
       isinstance(actual_env, bandit_tf_environment.BanditTFEnvironment))
