@@ -19,6 +19,7 @@ r"""Train and Eval SAC.
 All hyperparameters come from the SAC paper
 https://arxiv.org/pdf/1812.05905.pdf
 """
+import functools
 import os
 
 from absl import app
@@ -27,14 +28,15 @@ from absl import logging
 
 import gin
 import reverb
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
-from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import sac_agent
 from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.environments import suite_mujoco
+from tf_agents.keras_layers import inner_reshape
 from tf_agents.metrics import py_metrics
-from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import nest_map
+from tf_agents.networks import sequential
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.policies import random_py_policy
@@ -60,6 +62,88 @@ flags.DEFINE_integer(
     'Number of train steps between evaluations. Set to 0 to skip.')
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
+
+
+dense = functools.partial(
+    tf.keras.layers.Dense,
+    activation=tf.keras.activations.relu,
+    kernel_initializer='glorot_uniform')
+
+
+def create_fc_network(layer_units):
+  return sequential.Sequential([dense(num_units) for num_units in layer_units])
+
+
+def create_identity_layer():
+  return tf.keras.layers.Lambda(lambda x: x)
+
+
+def create_sequential_critic_network(obs_fc_layer_units,
+                                     action_fc_layer_units,
+                                     joint_fc_layer_units):
+  """Create a sequential critic network."""
+  # Split the inputs into observations and actions.
+  def split_inputs(inputs):
+    return {'observation': inputs[0], 'action': inputs[1]}
+
+  # Create an observation network.
+  obs_network = (create_fc_network(obs_fc_layer_units) if obs_fc_layer_units
+                 else create_identity_layer())
+
+  # Create an action network.
+  action_network = (create_fc_network(action_fc_layer_units)
+                    if action_fc_layer_units else create_identity_layer())
+
+  # Create a joint network.
+  joint_network = (create_fc_network(joint_fc_layer_units)
+                   if joint_fc_layer_units else create_identity_layer())
+
+  # Final layer.
+  value_layer = tf.keras.layers.Dense(1, kernel_initializer='glorot_uniform')
+
+  return sequential.Sequential([
+      tf.keras.layers.Lambda(split_inputs),
+      nest_map.NestMap({
+          'observation': obs_network,
+          'action': action_network
+      }),
+      nest_map.NestFlatten(),
+      tf.keras.layers.Concatenate(),
+      joint_network,
+      value_layer,
+      inner_reshape.InnerReshape(current_shape=[1], new_shape=[])
+  ], name='sequential_critic')
+
+
+class _TanhNormalProjectionNetworkWrapper(
+    tanh_normal_projection_network.TanhNormalProjectionNetwork):
+  """Wrapper to pass predefined `outer_rank` to underlying projection net."""
+
+  def __init__(self, sample_spec, predefined_outer_rank=1):
+    super(_TanhNormalProjectionNetworkWrapper, self).__init__(sample_spec)
+    self.predefined_outer_rank = predefined_outer_rank
+
+  def call(self, inputs, network_state=(), **kwargs):
+    kwargs['outer_rank'] = self.predefined_outer_rank
+    if 'step_type' in kwargs:
+      del kwargs['step_type']
+    return super(_TanhNormalProjectionNetworkWrapper,
+                 self).call(inputs, **kwargs)
+
+
+def create_sequential_actor_network(actor_fc_layers, action_tensor_spec):
+  """Create a sequential actor network."""
+  def tile_as_nest(non_nested_output):
+    return tf.nest.map_structure(lambda _: non_nested_output,
+                                 action_tensor_spec)
+
+  return sequential.Sequential(
+      [dense(num_units) for num_units in actor_fc_layers] +
+      [tf.keras.layers.Lambda(tile_as_nest)] + [
+          nest_map.NestMap(
+              tf.nest.map_structure(_TanhNormalProjectionNetworkWrapper,
+                                    action_tensor_spec))
+      ])
 
 
 @gin.configurable
@@ -97,24 +181,18 @@ def train_eval(
   collect_env = suite_mujoco.load(env_name)
   eval_env = suite_mujoco.load(env_name)
 
-  observation_tensor_spec, action_tensor_spec, time_step_tensor_spec = (
+  _, action_tensor_spec, time_step_tensor_spec = (
       spec_utils.get_tensor_specs(collect_env))
 
   train_step = train_utils.create_train_step()
 
-  actor_net = actor_distribution_network.ActorDistributionNetwork(
-      observation_tensor_spec,
-      action_tensor_spec,
-      fc_layer_params=actor_fc_layers,
-      continuous_projection_net=tanh_normal_projection_network
-      .TanhNormalProjectionNetwork)
-  critic_net = critic_network.CriticNetwork(
-      (observation_tensor_spec, action_tensor_spec),
-      observation_fc_layer_params=critic_obs_fc_layers,
-      action_fc_layer_params=critic_action_fc_layers,
-      joint_fc_layer_params=critic_joint_fc_layers,
-      kernel_initializer='glorot_uniform',
-      last_kernel_initializer='glorot_uniform')
+  actor_net = create_sequential_actor_network(
+      actor_fc_layers=actor_fc_layers, action_tensor_spec=action_tensor_spec)
+
+  critic_net = create_sequential_critic_network(
+      obs_fc_layer_units=critic_obs_fc_layers,
+      action_fc_layer_units=critic_action_fc_layers,
+      joint_fc_layer_units=critic_joint_fc_layers)
 
   agent = sac_agent.SacAgent(
       time_step_tensor_spec,
@@ -248,7 +326,7 @@ def train_eval(
 
 def main(_):
   logging.set_verbosity(logging.INFO)
-  tf.enable_v2_behavior()
+  tf.compat.v1.enable_v2_behavior()
 
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
 
