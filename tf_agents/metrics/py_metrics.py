@@ -73,6 +73,14 @@ class NumpyDeque(numpy_storage.NumpyState):
     for value in values:
       self.add(value)
 
+  @property
+  def last(self):
+    if not self._len > 0:
+      raise RuntimeError('Attempting to access empty NumpyDeque.')
+
+    last_index = int((self._start_index + self._len - 1) % self._maxlen)
+    return self._buffer[last_index]
+
   def __len__(self) -> types.Int:
     return self._len
 
@@ -114,6 +122,10 @@ class StreamingMetric(py_metric.PyStepMetric):
   def add_to_buffer(self, values: Iterable[Any]):
     """Appends new values to the buffer."""
     self._buffer.extend(values)
+
+  @property
+  def data(self):
+    return self._buffer
 
   def result(self) -> np.float32:
     """Returns the value of this metric."""
