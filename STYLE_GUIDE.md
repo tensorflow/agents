@@ -7,8 +7,8 @@ number of errors, and promote consistency.
 ## TensorFlow Style
 
 Follow the [TensorFlow style guide](
-https://www.tensorflow.org/community/style_guide) and
-[documentation guide](https://www.tensorflow.org/community/documentation). Below
+https://www.tensorflow.org/community/contribute/code_style) and
+[documentation guide](https://www.tensorflow.org/community/contribute/docs_style). Below
 are additional TensorFlow conventions not noted in those guides. (In the future,
 these noted conventions may be moved upstream.)
 
