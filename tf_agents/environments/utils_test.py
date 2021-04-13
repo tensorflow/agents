@@ -18,8 +18,11 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 from absl.testing.absltest import mock
+
 import numpy as np
+from tf_agents.environments import random_py_environment
 from tf_agents.environments import utils
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
@@ -35,6 +38,7 @@ def get_mock_env(action_spec, observation_spec, step_return):
   env.action_spec = lambda: action_spec
   env.step = lambda: step_return
   env.step.reset = lambda: step_return
+  env.batch_size = None
   return env
 
 
@@ -116,6 +120,13 @@ class UtilsTest(test_utils.TestCase):
     env.step = step
     env.reset = lambda: ts.restart(sample_fn())
     utils.validate_py_environment(env, episodes=1)
+
+  def testValidateWithBatchSize(self):
+    batch_size = 2
+    obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
+    env = random_py_environment.RandomPyEnvironment(
+        obs_spec, batch_size=batch_size)
+    utils.validate_py_environment(env)
 
 
 if __name__ == "__main__":
