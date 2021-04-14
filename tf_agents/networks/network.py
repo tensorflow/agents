@@ -168,11 +168,14 @@ class Network(tf.keras.layers.Layer):
     # Required for summary() to work.
     self._is_graph_network = False
 
-    self._input_tensor_spec = input_tensor_spec
+    self._input_tensor_spec = (
+        tensor_spec.from_spec(input_tensor_spec)
+        if input_tensor_spec is not None
+        else None)
     # NOTE(ebrevdo): Would have preferred to call this output_tensor_spec, but
     # looks like keras.Layer already reserves that one.
     self._network_output_spec = None
-    self._state_spec = state_spec
+    self._state_spec = tensor_spec.from_spec(state_spec)
 
   @property
   def state_spec(self):
