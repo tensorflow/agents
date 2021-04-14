@@ -98,6 +98,18 @@ PPOLossInfo = collections.namedtuple('PPOLossInfo', (
 ))
 
 
+def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
+  adv_mean, adv_var = tf.nn.moments(advantages, axes=axes, keepdims=True)
+  normalized_advantages = tf.nn.batch_normalization(
+      advantages,
+      adv_mean,
+      adv_var,
+      offset=None,
+      scale=None,
+      variance_epsilon=variance_epsilon)
+  return normalized_advantages
+
+
 @gin.configurable
 class PPOAgent(tf_agent.TFAgent):
   """A PPO Agent."""
@@ -339,6 +351,7 @@ class PPOAgent(tf_agent.TFAgent):
           tensor_normalizer.StreamingTensorNormalizer(
               time_step_spec.observation, scope='normalize_observations'))
 
+    # TODO(b/185252273) Remove.
     self._advantage_normalizer = tensor_normalizer.StreamingTensorNormalizer(
         tensor_spec.TensorSpec([], tf.float32), scope='normalize_advantages')
 
@@ -437,20 +450,18 @@ class PPOAgent(tf_agent.TFAgent):
     """
     # Arg value_preds was appended with final next_step value. Make tensors
     #   next_value_preds by stripping first and last elements respectively.
-    final_value_pred = value_preds[:, -1]
     value_preds = value_preds[:, :-1]
-
-    if not self._use_gae:
-      with tf.name_scope('empirical_advantage'):
-        advantages = returns - value_preds
-    else:
+    if self._use_gae:
       advantages = value_ops.generalized_advantage_estimation(
           values=value_preds,
-          final_value=final_value_pred,
+          final_value=value_preds[:, -1],
           rewards=rewards,
           discounts=discounts,
           td_lambda=self._lambda,
           time_major=False)
+    else:
+      with tf.name_scope('empirical_advantage'):
+        advantages = returns - value_preds
 
     return advantages
 
@@ -809,16 +820,17 @@ class PPOAgent(tf_agent.TFAgent):
         observation=processed_experience.observation)
     actions = processed_experience.action
     returns = processed_experience.policy_info['return']
+    advantages = processed_experience.policy_info['advantage']
 
     if self.update_normalizers_in_train:
-      self._reset_advantage_normalizer()
-      self._update_advantage_normalizer(
-          processed_experience.policy_info['advantage'])
-    normalized_advantages = self._advantage_normalizer.normalize(
-        processed_experience.policy_info['advantage'],
-        clip_value=0,
-        center_mean=True,
-        variance_epsilon=1e-8)
+      normalized_advantages = _normalize_advantages(advantages,
+                                                    variance_epsilon=1e-8)
+    else:
+      normalized_advantages = self._advantage_normalizer.normalize(
+          advantages,
+          clip_value=0,
+          center_mean=True,
+          variance_epsilon=1e-8)
     # TODO(b/171573175): remove the condition once histograms are
     # supported on TPUs.
     if self._debug_summaries and not tf.config.list_logical_devices('TPU'):
