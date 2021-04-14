@@ -98,21 +98,21 @@ class GnarlyNetwork(network.Network):
 class NetworkTest(tf.test.TestCase):
 
   def test_copy_works(self):
-    network1 = MockNetwork(0, 1)
+    network1 = MockNetwork((), 1)
     network2 = network1.copy()
 
     self.assertNotEqual(network1, network2)
-    self.assertEqual(0, network2.param1)
+    self.assertEqual((), network2.param1)
     self.assertEqual(1, network2.param2)
     self.assertEqual(2, network2.kwarg1)
     self.assertEqual(3, network2.kwarg2)
 
   def test_noinit_copy_works(self):
-    network1 = NoInitNetwork(0, 1)
+    network1 = NoInitNetwork((), 1)
     network2 = network1.copy()
 
     self.assertNotEqual(network1, network2)
-    self.assertEqual(0, network2.param1)
+    self.assertEqual((), network2.param1)
     self.assertEqual(1, network2.param2)
     self.assertEqual(2, network2.kwarg1)
     self.assertEqual(3, network2.kwarg2)

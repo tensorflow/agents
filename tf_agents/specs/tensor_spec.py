@@ -19,15 +19,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from typing import Union
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+
 from tf_agents.specs import array_spec
+from tf_agents.typing import types
 
 from google.protobuf import text_format
-from tensorflow.core.protobuf import struct_pb2  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.framework import tensor_spec as ts  # pylint:disable=g-direct-tensorflow-import  # TF internal
-from tensorflow.python.saved_model import nested_structure_coder  # pylint:disable=g-direct-tensorflow-import  # TF internal
+# pylint:disable=g-direct-tensorflow-import
+from tensorflow.core.protobuf import struct_pb2  # TF internal
+from tensorflow.python.framework import tensor_spec as ts  # TF internal
+from tensorflow.python.saved_model import nested_structure_coder  # TF internal
+# pylint:enable=g-direct-tensorflow-import
 
 tfd = tfp.distributions
 
@@ -58,38 +64,48 @@ def from_spec(spec):
 
   def _convert_to_tensor_spec(s):
     # Need to check bounded first as non bounded specs are base class.
+    if isinstance(s, tf.TypeSpec):
+      return s
     if isinstance(s, (array_spec.BoundedArraySpec, BoundedTensorSpec)):
       return BoundedTensorSpec.from_spec(s)
-    elif isinstance(s, (array_spec.ArraySpec, TensorSpec)):
+    elif isinstance(s, array_spec.ArraySpec):
       return TensorSpec.from_spec(s)
     else:
-      raise ValueError("No known conversion from type `%s` to a TensorSpec" %
-                       type(s))
+      raise ValueError(
+          "No known conversion from type `%s` to a TensorSpec.  Saw:\n  %s"
+          % (type(s), s))
 
   return tf.nest.map_structure(_convert_to_tensor_spec, spec)
 
 
-def to_array_spec(tensor_spec):
+def to_array_spec(
+    tensor_spec: Union[types.NestedArraySpec, types.NestedTensorSpec]
+) -> types.NestedArraySpec:
   """Converts TensorSpec into ArraySpec."""
-  if isinstance(tensor_spec, array_spec.ArraySpec):
-    return tensor_spec
+  def _convert(s):
+    if isinstance(s, array_spec.ArraySpec):
+      return s
 
-  if hasattr(tensor_spec, "minimum") and hasattr(tensor_spec, "maximum"):
-    return array_spec.BoundedArraySpec(
-        tensor_spec.shape.as_list(),
-        tensor_spec.dtype.as_numpy_dtype,
-        minimum=tensor_spec.minimum,
-        maximum=tensor_spec.maximum,
-        name=tensor_spec.name)
-  else:
-    return array_spec.ArraySpec(tensor_spec.shape.as_list(),
-                                tensor_spec.dtype.as_numpy_dtype,
-                                tensor_spec.name)
+    if hasattr(s, "minimum") and hasattr(s, "maximum"):
+      return array_spec.BoundedArraySpec(
+          s.shape.as_list(),
+          s.dtype.as_numpy_dtype,
+          minimum=s.minimum,
+          maximum=s.maximum,
+          name=s.name)
+    else:
+      return array_spec.ArraySpec(s.shape.as_list(),
+                                  s.dtype.as_numpy_dtype,
+                                  s.name)
+
+  return tf.nest.map_structure(_convert, tensor_spec)
 
 
-def to_nest_array_spec(nest_array_spec):
-  """Converted a nest of TensorSpecs to a nest of matching ArraySpecs."""
-  return tf.nest.map_structure(to_array_spec, nest_array_spec)
+def to_nest_array_spec(
+    nest_array_spec: Union[types.NestedArraySpec, types.NestedTensorSpec]
+) -> types.NestedArraySpec:
+  """(Deprecated) Alias for `to_array_spec`."""
+  return to_array_spec(nest_array_spec)
 
 
 def to_placeholder(spec, outer_dims=()):

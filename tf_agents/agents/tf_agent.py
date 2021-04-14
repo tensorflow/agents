@@ -29,6 +29,7 @@ import tensorflow as tf
 
 from tf_agents.agents import data_converter
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import common
@@ -193,6 +194,8 @@ class TFAgent(tf.Module):
     if num_outer_dims not in [1, 2]:
       raise ValueError("num_outer_dims must be in [1, 2].")
 
+    time_step_spec = tensor_spec.from_spec(time_step_spec)
+    action_spec = tensor_spec.from_spec(action_spec)
     self._time_step_spec = time_step_spec
     self._action_spec = action_spec
     self._policy = policy
@@ -205,12 +208,13 @@ class TFAgent(tf.Module):
     self._training_data_spec = training_data_spec
     # Data context for data collected directly from the collect policy.
     self._collect_data_context = data_converter.DataContext(
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
         info_spec=collect_policy.info_spec)
     # Data context for data passed to train().  May be different if
     # training_data_spec is provided.
     if training_data_spec is not None:
+      training_data_spec = tensor_spec.from_spec(training_data_spec)
       # training_data_spec can be anything; so build a data_context
       # via best-effort with fall-backs to the collect data spec.
       training_discount_spec = getattr(

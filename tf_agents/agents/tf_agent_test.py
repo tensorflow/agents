@@ -173,13 +173,13 @@ class TFAgentTest(tf.test.TestCase):
 
 class AgentSpecTest(test_utils.TestCase):
 
-  def testErrorOnWrongTimeStepSpecWhenCreatingAgent(self):
-    wrong_time_step_spec = ts.time_step_spec(
+  def testConvertToProperTimeStepSpecWhenCreatingAgent(self):
+    py_time_step_spec = ts.time_step_spec(
         array_spec.ArraySpec([2], np.float32))
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32, -1, 1)
-    with self.assertRaisesRegex(
-        TypeError, 'time_step_spec has to contain TypeSpec'):
-      MyAgent(time_step_spec=wrong_time_step_spec, action_spec=action_spec)
+    agent = MyAgent(time_step_spec=py_time_step_spec, action_spec=action_spec)
+    self.assertIsInstance(
+        agent.time_step_spec.observation, tensor_spec.TensorSpec)
 
 
 if __name__ == '__main__':
