@@ -21,7 +21,6 @@ from __future__ import print_function
 from absl.testing.absltest import mock
 from tf_agents.policies import py_epsilon_greedy_policy
 from tf_agents.trajectories import policy_step
-from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import test_utils
 
 
@@ -31,17 +30,10 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase):
     super(EpsilonGreedyPolicyTest, self).setUp()
     self.greedy_policy = mock.MagicMock()
     self.random_policy = mock.MagicMock()
-    self.greedy_policy.time_step_spec = ts.time_step_spec()
-    self.greedy_policy.action_spec = ()
-    self.greedy_policy.info_spec = ()
-    self.greedy_policy.policy_state_spec = ()
-    self.random_policy.time_step_spec = ts.time_step_spec()
-    self.random_policy.action_spec = ()
-    self.random_policy.info_spec = ()
-    self.random_policy.policy_state_spec = ()
     self.random_policy.action.return_value = policy_step.PolicyStep(0, ())
 
   def testCtorAutoRandomPolicy(self):
+    self.greedy_policy.action_spec = mock.MagicMock()
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
         self.greedy_policy, 0.5)
     self.assertEqual(self.greedy_policy.action_spec,

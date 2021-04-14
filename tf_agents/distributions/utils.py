@@ -28,7 +28,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import tanh_bijector_stable
-from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
@@ -617,8 +616,7 @@ def assert_specs_are_compatible(
     ValueError: If the specs don't match.
   """
   def to_event(s):
-    return (s.event_spec if isinstance(s, DistributionSpecV2)
-            else tensor_spec.from_spec(s))
+    return s.event_spec if isinstance(s, DistributionSpecV2) else s
 
   event_spec = tf.nest.map_structure(to_event, network_output_spec)
 

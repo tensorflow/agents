@@ -26,8 +26,7 @@ from typing import Optional
 
 import numpy as np
 import six
-import tensorflow as tf
-from tf_agents.specs import tensor_spec
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
@@ -104,11 +103,11 @@ class PyPolicy(object):
     """
     common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
     common.assert_members_are_not_overridden(base_cls=PyPolicy, instance=self)
-    self._time_step_spec = tensor_spec.to_array_spec(time_step_spec)
-    self._action_spec = tensor_spec.to_array_spec(action_spec)
+    self._time_step_spec = time_step_spec
+    self._action_spec = action_spec
     # TODO(kbanoop): rename policy_state to state.
-    self._policy_state_spec = tensor_spec.to_array_spec(policy_state_spec)
-    self._info_spec = tensor_spec.to_array_spec(info_spec)
+    self._policy_state_spec = policy_state_spec
+    self._info_spec = info_spec
     self._setup_specs()
     self._observation_and_action_constraint_splitter = (
         observation_and_action_constraint_splitter)

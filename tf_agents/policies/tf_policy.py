@@ -24,7 +24,7 @@ import abc
 from typing import Optional, Text, Sequence
 
 import six
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import reparameterized_sampling
@@ -186,9 +186,9 @@ class TFPolicy(tf.Module):
           'The `time_step_spec` must be an instance of `TimeStep`, but is `{}`.'
           .format(type(time_step_spec)))
 
-    self._time_step_spec = tensor_spec.from_spec(time_step_spec)
-    self._action_spec = tensor_spec.from_spec(action_spec)
-    self._policy_state_spec = tensor_spec.from_spec(policy_state_spec)
+    self._time_step_spec = time_step_spec
+    self._action_spec = action_spec
+    self._policy_state_spec = policy_state_spec
     self._emit_log_probability = emit_log_probability
     self._validate_args = validate_args
 
@@ -201,10 +201,10 @@ class TFPolicy(tf.Module):
           name='log_probability')
       log_probability_spec = tf.nest.map_structure(
           lambda _: log_probability_spec, action_spec)
-      info_spec = policy_step.set_log_probability(
-          info_spec, log_probability_spec)  # pytype: disable=wrong-arg-types
+      info_spec = policy_step.set_log_probability(info_spec,
+                                                  log_probability_spec)  # pytype: disable=wrong-arg-types
 
-    self._info_spec = tensor_spec.from_spec(info_spec)
+    self._info_spec = info_spec
     self._setup_specs()
     self._clip = clip
     self._action_fn = common.function_in_tf1()(self._action)

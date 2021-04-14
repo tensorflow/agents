@@ -223,7 +223,7 @@ class TfPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(1, self.evaluate(distribution["inp"].sample()))
 
   def testValidateArgsDisabled(self):
-    action_spec = {"blah": ()}
+    action_spec = "blah"
     time_step_spec = ts.time_step_spec(observation_spec=None)
     policy = TfPassThroughPolicy(
         time_step_spec, action_spec, validate_args=False, clip=False)
