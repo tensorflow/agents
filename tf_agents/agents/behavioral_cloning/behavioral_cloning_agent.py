@@ -73,8 +73,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   For discrete actions the agent uses:
 
   ```python
-  def discrete_loss(agent, experience, training=False):
-    bc_logits = self._cloning_network(experience.observation, training=training)
+  def discrete_loss(agent, experience):
+    bc_logits = self._cloning_network(experience.observation)
 
     return tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=experience.action - action_spec.minimum, logits=bc_logits)
@@ -84,11 +84,11 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   continuous actions a simple MSE loss is used by default:
 
   ```python
-  def continuous_loss_fn(agent, experience, training=False):
+  def continuous_loss_fn(agent, experience):
     bc_output, _ = self._cloning_network(
         experience.observation,
         step_type=experience.step_type,
-        training=training,
+        training=True,
         network_state=network_state)
 
     if isinstance(bc_output, tfp.distributions.Distribution):
@@ -112,7 +112,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       optimizer: types.Optimizer,
       num_outer_dims: Literal[1, 2] = 1,  # pylint: disable=bad-whitespace
       epsilon_greedy: types.Float = 0.1,
-      loss_fn: Callable[[types.NestedTensor, bool], types.Tensor] = None,
+      loss_fn: Callable[[types.Tnest], types.Tensor] = None,
       gradient_clipping: Optional[types.Float] = None,
       # Params for debugging.
       debug_summaries: bool = False,
@@ -141,8 +141,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       loss_fn: A function for computing the error between the output of the
         cloning network and the action that was taken. If None, the loss
         depends on the action dtype. The `loss_fn` is called with parameters:
-        `(experience, training)`, and must return a loss value for each element
-        of the batch.
+        `agent, experience`, and must return a loss value for each element of
+        the batch.
       gradient_clipping: Norm length to clip gradients.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
@@ -210,7 +210,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   def cloning_network(self):
     return self._cloning_network
 
-  def _discrete_loss(self, experience, training=False):
+  def _discrete_loss(self, experience):
     batch_size = (
         tf.compat.dimension_value(experience.step_type.shape[0]) or
         tf.shape(experience.step_type)[0])
@@ -219,7 +219,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     action, _ = self._cloning_network(
         experience.observation,
         step_type=experience.step_type,
-        training=training,
+        training=True,
         network_state=network_state)
 
     # Get logits if the output of the cloning network is a distribution.
@@ -239,7 +239,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     losses = tf.nest.flatten(losses)
     return tf.add_n(losses)
 
-  def _continuous_loss_fn(self, experience, training: bool = False):
+  def _continuous_loss_fn(self, experience):
     batch_size = (
         tf.compat.dimension_value(experience.step_type.shape[0]) or
         tf.shape(experience.step_type)[0])
@@ -247,7 +247,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     bc_output, _ = self._cloning_network(
         experience.observation,
         step_type=experience.step_type,
-        training=training,
+        training=True,
         network_state=network_state)
 
     if isinstance(bc_output, tfp.distributions.Distribution):
@@ -287,10 +287,10 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     policy = greedy_policy.GreedyPolicy(collect_policy)
     return policy, collect_policy
 
-  def _loss(self, experience, weights=None, training: bool = False):
+  def _loss(self, experience, weights=None):
     experience = self._as_trajectory(experience)
 
-    per_example_loss = self._bc_loss_fn(experience, training=training)
+    per_example_loss = self._bc_loss_fn(experience)
     aggregated_losses = common.aggregate_losses(
         per_example_loss=per_example_loss,
         sample_weight=weights,
@@ -304,7 +304,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     experience = self._as_trajectory(experience)
 
     with tf.GradientTape() as tape:
-      per_example_loss = self._bc_loss_fn(experience, training=True)
+      per_example_loss = self._bc_loss_fn(experience)
 
       aggregated_losses = common.aggregate_losses(
           per_example_loss=per_example_loss,

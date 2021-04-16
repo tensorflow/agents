@@ -341,7 +341,6 @@ class TFAgent(tf.Module):
   def loss(self,
            experience: types.NestedTensor,
            weights: Optional[types.Tensor] = None,
-           training: bool = False,
            **kwargs) -> LossInfo:
     """Gets loss from the agent.
 
@@ -361,8 +360,6 @@ class TFAgent(tf.Module):
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
         but the implementation is up to the Agent.
-      training: Explicit argument to pass to `loss`. This typically affects
-        network computation paths like dropout and batch normalization.
       **kwargs: Any additional data as args to `loss`.
 
     Returns:
@@ -379,10 +376,9 @@ class TFAgent(tf.Module):
 
     if self._enable_functions:
       loss_info = self._loss_fn(
-          experience=experience, weights=weights, training=training, **kwargs)
+          experience=experience, weights=weights, **kwargs)
     else:
-      loss_info = self._loss(
-          experience=experience, weights=weights, training=training, **kwargs)
+      loss_info = self._loss(experience=experience, weights=weights, **kwargs)
 
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
@@ -553,9 +549,7 @@ class TFAgent(tf.Module):
     return experience
 
   def _loss(self, experience: types.NestedTensor,
-            weights: types.Tensor,
-            training: bool,
-            **kwargs) -> Optional[LossInfo]:
+            weights: types.Tensor) -> Optional[LossInfo]:
     """Computes loss.
 
     This method does not increment self.train_step_counter or upgrade gradients.
@@ -571,10 +565,6 @@ class TFAgent(tf.Module):
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
         but the implementation is up to the Agent.
-      training: Whether this `loss` calculation is being used as part of
-        training.  This affects layer computation paths like dropout and batch
-        normalization.
-      **kwargs: Additional arguments to `loss`.
 
     Returns:
         A `LossInfo` containing the loss *before* the training step is taken.
@@ -594,7 +584,7 @@ class TFAgent(tf.Module):
     """Returns an op to train the agent.
 
     This method *must* increment self.train_step_counter exactly once.
-    TODO(b/126271669): Consider automatically incrementing this.
+    TODO(b/126271669): Consider automatically incrementing this
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
