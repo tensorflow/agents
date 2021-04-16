@@ -68,7 +68,7 @@ class MyAgent(tf_agent.TFAgent):
     experience = self._as_trajectory(experience)
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
 
-  def _loss(self, experience, weights=None, extra=None):
+  def _loss(self, experience, weights=None, extra=None, training=False):
     return tf_agent.LossInfo(loss=(), extra=(experience, extra))
 
   def _initialize(self):
@@ -146,7 +146,7 @@ class TFAgentTest(tf.test.TestCase):
 
     class MyAgentWithLossNotMatching(MyAgent):
 
-      def _loss(self, experience, weights=None, extra=None):
+      def _loss(self, experience, weights=None, extra=None, training=False):
         return tf_agent.LossInfo(loss=(), extra=(experience, ()))
 
     agent = MyAgentWithLossNotMatching()
