@@ -1069,7 +1069,7 @@ def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,
   return spec
 
 
-def _tile_batch(t, multiplier):
+def _tile_batch(t, multiplier, ensure_shape=True):
   """Core single-tensor implementation of tile_batch."""
   t = tf.convert_to_tensor(t, name='t')
   shape_t = tf.shape(t)
@@ -1077,20 +1077,21 @@ def _tile_batch(t, multiplier):
     raise ValueError('t must have statically known rank')
   tiling = [1] * (t.shape.ndims + 1)
   tiling[1] = multiplier
+  num_batch_dims = tf.compat.dimension_value(t.shape.dims[0])
   tiled_static_batch_size = (
-      t.shape.dims[0].value * multiplier
-      if t.shape.dims[0].value is not None else None)
+      num_batch_dims * multiplier if num_batch_dims is not None else None)
   tiled = tf.tile(tf.expand_dims(t, 1), tiling)
   tiled = tf.reshape(tiled,
-                     tf.concat(
-                         ([shape_t[0] * multiplier], shape_t[1:]), 0))
-  tiled.set_shape(
-      tf.TensorShape([tiled_static_batch_size]).concatenate(
-          t.shape[1:]))
+                     tf.concat(([shape_t[0] * multiplier], shape_t[1:]), 0))
+
+  if ensure_shape:
+    tiled = tf.ensure_shape(
+        tiled,
+        tf.TensorShape([tiled_static_batch_size]).concatenate(t.shape[1:]))
   return tiled
 
 
-def tile_batch(tensors, multiplier):
+def tile_batch(tensors: types.NestedTensor, multiplier: types.Int):
   """Tile the batch dimension of a (possibly nested structure of) tensor(s).
 
   Copied from tensorflow/contrib/seq2seq/python/ops/beam_search_decoder.py
@@ -1104,7 +1105,8 @@ def tile_batch(tensors, multiplier):
 
   Args:
     tensors: A nested structure of `Tensor` shaped `[batch_size, ...]`.
-    multiplier: Python int.
+    multiplier: Python int or a Tensor. Note that if the multiplier is a tensor
+      the shape can not be ensured.
 
   Returns:
     A (possibly nested structure of) `Tensor` shaped
@@ -1114,7 +1116,9 @@ def tile_batch(tensors, multiplier):
     ValueError: if tensor(s) `t` do not have a statically known rank or
     the rank is < 1.
   """
-  return tf.nest.map_structure(lambda t_: _tile_batch(t_, multiplier), tensors)
+  ensure_shape = False if tf.is_tensor(multiplier) else True
+  return tf.nest.map_structure(
+      lambda t: _tile_batch(t, multiplier, ensure_shape=ensure_shape), tensors)
 
 
 def assert_value_spec(
