@@ -101,6 +101,9 @@ class ActorPolicy(tf_policy.TFPolicy):
       NotImplementedError: if `observation_and_action_constraint_splitter` is
         not None but `action_spec` is not discrete.
     """
+    time_step_spec = tensor_spec.from_spec(time_step_spec)
+    action_spec = tensor_spec.from_spec(action_spec)
+
     if not isinstance(actor_network, network.Network):
       raise ValueError('actor_network must be a network.Network. Found '
                        '{}.'.format(type(actor_network)))

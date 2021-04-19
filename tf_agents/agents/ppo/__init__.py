@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """PPO Agents."""
+from tf_agents.agents.ppo import ppo_actor_network
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.agents.ppo import ppo_kl_penalty_agent

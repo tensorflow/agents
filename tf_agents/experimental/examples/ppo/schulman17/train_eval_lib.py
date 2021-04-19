@@ -38,9 +38,9 @@ import gin
 import reverb
 import tensorflow.compat.v2 as tf
 
+from tf_agents.agents.ppo import ppo_actor_network
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.environments import suite_mujoco
-from tf_agents.experimental.examples.ppo import train_eval_lib
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import value_network
 from tf_agents.policies import py_tf_eager_policy
@@ -183,7 +183,7 @@ def train_eval(
 
   train_step = train_utils.create_train_step()
 
-  actor_net = train_eval_lib.create_sequential_actor_net(
+  actor_net = ppo_actor_network.create_sequential_actor_net(
       actor_fc_layers, action_tensor_spec)
   value_net = value_network.ValueNetwork(
       observation_tensor_spec,

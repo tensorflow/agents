@@ -19,22 +19,18 @@ r"""Train and Eval PPOClipAgent in the Mujoco environments.
 All hyperparameters come from the PPO paper
 https://arxiv.org/abs/1707.06347.pdf
 """
-import functools
 import os
 
 from absl import logging
 
 import gin
-import numpy as np
 import reverb
 import tensorflow.compat.v2 as tf
-import tensorflow_probability as tfp
 
+from tf_agents.agents.ppo import ppo_actor_network
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.environments import suite_mujoco
 from tf_agents.metrics import py_metrics
-from tf_agents.networks import nest_map
-from tf_agents.networks import sequential
 from tf_agents.networks import value_network
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
@@ -45,57 +41,6 @@ from tf_agents.train import ppo_learner
 from tf_agents.train import triggers
 from tf_agents.train.utils import spec_utils
 from tf_agents.train.utils import train_utils
-
-
-def create_sequential_actor_net(fc_layer_units, action_tensor_spec):
-  """Helper function for creating the actor network."""
-
-  def create_dist(loc_and_scale):
-
-    ndims = action_tensor_spec.shape.num_elements()
-    return tfp.distributions.MultivariateNormalDiag(
-        loc=loc_and_scale[..., :ndims],
-        scale_diag=tf.math.softplus(loc_and_scale[..., ndims:]),
-        validate_args=True)
-
-  def means_layers():
-    # TODO(b/179510447): align these parameters with Schulman 17.
-    return tf.keras.layers.Dense(
-        action_tensor_spec.shape.num_elements(),
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
-            scale=0.1),
-        name='means_projection_layer')
-
-  def std_layers():
-    # TODO(b/179510447): align these parameters with Schulman 17.
-    std_kernel_initializer_scale = 0.1
-    std_bias_initializer_value = np.log(np.exp(0.35) - 1)
-    return tf.keras.layers.Dense(
-        action_tensor_spec.shape.num_elements(),
-        kernel_initializer=tf.keras.initializers.VarianceScaling(
-            scale=std_kernel_initializer_scale),
-        bias_initializer=tf.keras.initializers.Constant(
-            value=std_bias_initializer_value))
-
-  dense = functools.partial(
-      tf.keras.layers.Dense,
-      activation=tf.nn.tanh,
-      kernel_initializer=tf.keras.initializers.Orthogonal())
-
-  return sequential.Sequential(
-      [dense(num_units) for num_units in fc_layer_units] +
-      [tf.keras.layers.Lambda(
-          lambda x: {'loc': x, 'scale': x})] +
-      [nest_map.NestMap({
-          'loc': means_layers(),
-          'scale': std_layers()
-      })] +
-      [nest_map.NestFlatten()] +
-      # Concatenate the maen and standard deviation output to feed into the
-      # distribution layer.
-      [tf.keras.layers.Concatenate(axis=-1)] +
-      # Create the output distribution from the mean and standard deviation.
-      [tf.keras.layers.Lambda(create_dist)])
 
 
 @gin.configurable
@@ -197,7 +142,8 @@ def train_eval(
       dtype=tf.float32, shape=observation_tensor_spec.shape)
 
   train_step = train_utils.create_train_step()
-  actor_net = create_sequential_actor_net(actor_fc_layers, action_tensor_spec)
+  actor_net = ppo_actor_network.create_sequential_actor_net(
+      actor_fc_layers, action_tensor_spec)
   value_net = value_network.ValueNetwork(
       observation_tensor_spec,
       fc_layer_params=value_fc_layers,

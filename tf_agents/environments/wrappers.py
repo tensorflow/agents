@@ -935,3 +935,59 @@ class OneHotActionWrapper(PyEnvironmentBaseWrapper):
         convert_back, action, self._one_hot_action_spec,
         self._env.action_spec())
     return self._env.step(action)
+
+
+@gin.configurable
+class ExtraDisabledActionsWrapper(PyEnvironmentBaseWrapper):
+  r"""Adds extra unavailable actions.
+
+  This wrapper introduces new actions to the environment, but these actions are
+  always disabled via action masking. That is, if the original observation is
+  `obs`, the new observation will be
+  ```
+  new_obs = (obs, [1, 1, ..., 1, 0, 0, 0, ..., 0])
+                   \----v----/   \------v------/
+                   num_actions    num_extra_actions
+  ```
+  where the second element of the above tuple is the mask. Note that the above
+  example does not include the batch dimension.
+  """
+
+  def __init__(self, env: py_environment.PyEnvironment, num_extra_actions: int):
+    """Initializes an instance of `ExtraDisabledActionsWrapper`.
+
+    Args:
+      env: The environment to wrap.
+      num_extra_actions: The number of extra actions to add.
+    """
+    super(ExtraDisabledActionsWrapper, self).__init__(env)
+    orig_action_spec = env.action_spec()
+    self._action_spec = array_spec.BoundedArraySpec(
+        shape=orig_action_spec.shape,
+        dtype=orig_action_spec.dtype,
+        minimum=orig_action_spec.minimum,
+        maximum=orig_action_spec.maximum + num_extra_actions)
+    mask_spec = array_spec.ArraySpec(
+        shape=[self._action_spec.maximum - self._action_spec.minimum + 1],
+        dtype=np.int64)
+    self._masked_observation_spec = (env.observation_spec(), mask_spec)
+    self._constant_mask = np.array(
+        [[1] * (orig_action_spec.maximum - orig_action_spec.minimum + 1) +
+         [0] * num_extra_actions] * self.batch_size)
+
+  def action_spec(self) -> types.NestedArraySpec:
+    return self._action_spec
+
+  def observation_spec(self) -> types.NestedArraySpec:
+    return self._masked_observation_spec
+
+  def _add_mask_to_observation(self, timestep):
+    return ts.TimeStep(
+        timestep.step_type, timestep.reward, timestep.discount,
+        (timestep.observation, self._constant_mask))
+
+  def _step(self, action):
+    return self._add_mask_to_observation(self._env.step(action))
+
+  def _reset(self):
+    return self._add_mask_to_observation(self._env.reset())

@@ -262,6 +262,19 @@ class NumpyDequeTest(tf.test.TestCase):
     buf.add(6)
     self.assertEqual(5, buf.mean())
 
+  def testLast(self):
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+
+    buf.add(2)
+    self.assertEqual(2, buf.last)
+
+    buf.add(3)
+    self.assertEqual(3, buf.last)
+    buf.clear()
+
+    buf.add(5)
+    self.assertEqual(5, buf.mean())
+
 
 if __name__ == '__main__':
   tf.test.main()

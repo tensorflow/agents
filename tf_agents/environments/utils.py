@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import print_function
 
 from typing import Optional, Union
+import numpy as np
 
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
@@ -64,18 +65,22 @@ def validate_py_environment(
       observation_and_action_constraint_splitter=(
           observation_and_action_constraint_splitter))
 
+  if environment.batch_size is not None:
+    batched_time_step_spec = array_spec.add_outer_dims_nest(
+        time_step_spec, outer_dims=(environment.batch_size,))
+  else:
+    batched_time_step_spec = time_step_spec
+
   episode_count = 0
   time_step = environment.reset()
 
   while episode_count < episodes:
-    if not array_spec.check_arrays_nest(time_step, time_step_spec):
+    if not array_spec.check_arrays_nest(time_step, batched_time_step_spec):
       raise ValueError(
-          'Given `time_step`: %r does not match expected `time_step_spec`: %r' %
-          (time_step, time_step_spec))
+          'Given `time_step`: %r does not match expected '
+          '`time_step_spec`: %r' % (time_step, batched_time_step_spec))
 
     action = random_policy.action(time_step).action
     time_step = environment.step(action)
 
-    if time_step.is_last():
-      episode_count += 1
-      time_step = environment.reset()
+    episode_count += np.sum(time_step.is_last())
