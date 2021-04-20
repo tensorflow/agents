@@ -20,6 +20,7 @@ All hyperparameters come from the SAC paper
 https://arxiv.org/pdf/1812.05905.pdf
 """
 import functools
+import getpass
 import os
 
 from absl import app
@@ -227,7 +228,8 @@ def train_eval(
   reverb_checkpoint_dir = os.path.join(root_dir, learner.TRAIN_DIR,
                                        learner.REPLAY_BUFFER_CHECKPOINT_DIR)
   reverb_checkpointer = reverb.platform.checkpointers_lib.DefaultCheckpointer(
-      path=reverb_checkpoint_dir)
+      path=reverb_checkpoint_dir,
+      group=getpass.getuser())
   reverb_server = reverb.Server([table],
                                 port=reverb_port,
                                 checkpointer=reverb_checkpointer)
