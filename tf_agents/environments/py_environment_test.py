@@ -51,6 +51,22 @@ class PyEnvironmentTest(tf.test.TestCase):
     current_time_step = random_env.current_time_step()
     tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
 
+  def testAutoReset(self):
+    obs_spec = array_spec.BoundedArraySpec((1,), np.int32)
+    action_spec = array_spec.BoundedArraySpec((1,), np.int32)
+
+    random_env = random_py_environment.RandomPyEnvironment(
+        observation_spec=obs_spec, action_spec=action_spec)
+
+    time_step = random_env.reset()
+    while not time_step.is_last():
+      time_step = random_env.step(action=np.ones((1,)))
+    # End of episode
+    self.assertTrue(time_step.is_last())
+    # Automatic reset
+    time_step = random_env.step(action=np.ones((1,)))
+    self.assertTrue(time_step.is_first())
+
 
 if __name__ == '__main__':
   tf.test.main()

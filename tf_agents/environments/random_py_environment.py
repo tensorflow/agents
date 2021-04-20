@@ -46,6 +46,7 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
                discount: types.Float = 1.0,
                reward_fn: Optional[RewardFn] = None,
                batch_size: Optional[types.Int] = None,
+               auto_reset: bool = True,
                seed: types.Seed = 42,
                render_size: Sequence[int] = (2, 2, 3),
                min_duration: types.Int = 0,
@@ -66,6 +67,8 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
         If this value is not `None`, then all actions are expected to
         have an additional major axis of size `batch_size`, and all outputs
         will have an additional major axis of size `batch_size`.
+      auto_reset: Bool, whether the random environment will auto reset when it
+        reaches the end of the episode. By default it will.
       seed: Seed to use for rng used in observation generation.
       render_size: Size of the random render image to return when calling
         render.
@@ -108,7 +111,7 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
     self._max_duration = max_duration
     self._rng = np.random.RandomState(seed)
     self._render_size = render_size
-    super(RandomPyEnvironment, self).__init__()
+    super(RandomPyEnvironment, self).__init__(handle_auto_reset=auto_reset)
 
   def observation_spec(self) -> types.NestedArraySpec:
     return self._observation_spec
@@ -140,9 +143,6 @@ class RandomPyEnvironment(py_environment.PyEnvironment):
                        (np.asarray(reward).shape, self._batch_size))
 
   def _step(self, action):
-    if self._done:
-      return self.reset()
-
     if self._action_spec:
       nest_utils.assert_same_structure(self._action_spec, action)
 

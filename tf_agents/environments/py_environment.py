@@ -46,9 +46,19 @@ class PyEnvironment(object):
   If the environment can run multiple steps at the same time and take a batched
   set of actions and return a batched set of observations, it should overwrite
   the property batched to True.
+
+  Environments are assumed to auto reset once they reach the end of the episode,
+  if prefer that the base class handle auto_reset set `handle_auto_reset=True`.
   """
 
-  def __init__(self):
+  def __init__(self, handle_auto_reset: bool = False):
+    """Base class for Python RL environments.
+
+    Args:
+      handle_auto_reset: When `True` the base class will handle auto_reset of
+        the Environment.
+    """
+    self._handle_auto_reset = handle_auto_reset
     self._current_time_step = None
     common.assert_members_are_not_overridden(
         base_cls=PyEnvironment, instance=self, denylist=('reset', 'step'))
@@ -66,6 +76,8 @@ class PyEnvironment(object):
 
     When batched, the left-most dimension is not part of the action_spec
     or the observation_spec and corresponds to the batch dimension.
+
+    When batched and handle_auto_reset, it checks `np.all(steps.is_last())`.
 
     Returns:
       A boolean indicating whether the environment is batched or not.
@@ -89,6 +101,20 @@ class PyEnvironment(object):
           'Environment %s marked itself as batched but did not override the '
           'batch_size property' % type(self))
     return None
+
+  def should_reset(self, current_time_step: ts.TimeStep) -> bool:
+    """Whether the Environmet should reset given the current timestep.
+
+    By default it only resets when all time_steps are `LAST`.
+
+    Args:
+      current_time_step: The current `TimeStep`.
+
+    Returns:
+      A bool indicating whether the Environment should reset or not.
+    """
+    handle_auto_reset = getattr(self, '_handle_auto_reset', False)
+    return handle_auto_reset and np.all(current_time_step.is_last())
 
   @abc.abstractmethod
   def observation_spec(self) -> types.NestedArraySpec:
@@ -181,6 +207,9 @@ class PyEnvironment(object):
     has been constructed and `reset` has not been called. In this case
     `action` will be ignored.
 
+    If `should_reset(current_time_step)` is True, then this method will `reset`
+    by itself. In this case `action` will be ignored.
+
     Note: Subclasses cannot override this directly. Subclasses implement
     _step() which will be called by this method. The output of _step() will be
     cached and made available through current_time_step().
@@ -197,7 +226,8 @@ class PyEnvironment(object):
         observation: A NumPy array, or a nested dict, list or tuple of arrays
           corresponding to `observation_spec()`.
     """
-    if self._current_time_step is None:
+    if (self._current_time_step is None or
+        self.should_reset(self._current_time_step)):
       return self.reset()
 
     self._current_time_step = self._step(action)
