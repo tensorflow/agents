@@ -271,7 +271,6 @@ class PPOLearner(object):
     def _update(traj):
       self._agent.update_observation_normalizer(traj.observation)
       self._agent.update_reward_normalizer(traj.reward)
-      self._agent._update_advantage_normalizer(traj.policy_info['advantage'])  # pylint: disable=protected-access
       if traj.reward.shape:
 
         outer_shape = nest_utils.get_outer_shape(traj.reward, reward_spec)
