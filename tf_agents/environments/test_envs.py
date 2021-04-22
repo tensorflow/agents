@@ -46,7 +46,7 @@ class CountingEnv(py_environment.PyEnvironment):
 
     self._episodes = 0
     self._current_step = np.array(0, dtype=np.int32)
-    super(CountingEnv, self).__init__()
+    super(CountingEnv, self).__init__(handle_auto_reset=True)
 
   def observation_spec(self) -> types.NestedArraySpec:
     return specs.BoundedArraySpec((), dtype=np.int32)
@@ -56,8 +56,6 @@ class CountingEnv(py_environment.PyEnvironment):
 
   def _step(self, action):
     del action  # Unused.
-    if self._current_time_step.is_last():
-      return self._reset()
     self._current_step = np.array(1 + self._current_step, dtype=np.int32)
     if self._current_step < self._steps_per_episode:
       return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
@@ -90,7 +88,7 @@ class EpisodeCountingEnv(py_environment.PyEnvironment):
 
     self._episodes = 0
     self._steps = 0
-    super(EpisodeCountingEnv, self).__init__()
+    super(EpisodeCountingEnv, self).__init__(handle_auto_reset=True)
 
   def observation_spec(self):
     return (specs.BoundedArraySpec((), dtype=np.int32),
@@ -101,8 +99,6 @@ class EpisodeCountingEnv(py_environment.PyEnvironment):
 
   def _step(self, action):
     del action  # Unused.
-    if self._current_time_step.is_last():
-      return self._reset()
     self._steps += 1
     if self._steps < self._steps_per_episode:
       return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
@@ -138,7 +134,7 @@ class NestedCountingEnv(py_environment.PyEnvironment):
     self._episodes = 0
     self._current_step = np.array(0, dtype=np.int32)
     self._nested_action = nested_action
-    super(NestedCountingEnv, self).__init__()
+    super(NestedCountingEnv, self).__init__(handle_auto_reset=True)
 
   def observation_spec(self) -> types.NestedArraySpec:
     return {
@@ -159,8 +155,6 @@ class NestedCountingEnv(py_environment.PyEnvironment):
 
   def _step(self, action):
     del action  # Unused.
-    if self._current_time_step.is_last():
-      return self._reset()
     self._current_step = np.array(1 + self._current_step, dtype=np.int32)
     if self._current_step < self._steps_per_episode:
       return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types

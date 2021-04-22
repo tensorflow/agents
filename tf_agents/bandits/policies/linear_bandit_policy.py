@@ -350,6 +350,11 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         self._emit_policy_info):
       predicted_rewards_mean = tensor_spec.TensorSpec([self._num_actions],
                                                       dtype=self._dtype)
+    predicted_rewards_optimistic = ()
+    if (policy_utilities.InfoFields.PREDICTED_REWARDS_OPTIMISTIC in
+        self._emit_policy_info):
+      predicted_rewards_optimistic = tensor_spec.TensorSpec([self._num_actions],
+                                                            dtype=self._dtype)
     predicted_rewards_sampled = ()
     if (policy_utilities.InfoFields.PREDICTED_REWARDS_SAMPLED in
         self._emit_policy_info):
@@ -362,11 +367,13 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
               observation_spec))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
+          predicted_rewards_optimistic=predicted_rewards_optimistic,
           predicted_rewards_sampled=predicted_rewards_sampled,
           chosen_arm_features=chosen_arm_features_info)
     else:
       info_spec = policy_utilities.PolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
+          predicted_rewards_optimistic=predicted_rewards_optimistic,
           predicted_rewards_sampled=predicted_rewards_sampled)
     return info_spec
 

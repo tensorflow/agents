@@ -214,11 +214,8 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
         time_step_spec, action_spec, cloning_network=network, optimizer=None)
 
     with self.assertRaisesRegex(
-        RuntimeError,
-        (r'The slot variable initialization failed. The learner assumes all '
-         r'experience tensors required an `outer_rank = \(None, '
-         r'agent.train_sequence_length\)`\. If that\'s not the case for your '
-         r'agent try setting `run_optimizer_variable_init=False`\.')):
+        ValueError,
+        'All of the Tensors in `value` must have one outer dimension.'):
       learner.Learner(
           root_dir=os.path.join(self.create_tempdir().full_path, 'learner'),
           train_step=train_utils.create_train_step(),

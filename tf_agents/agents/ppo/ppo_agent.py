@@ -351,10 +351,6 @@ class PPOAgent(tf_agent.TFAgent):
           tensor_normalizer.StreamingTensorNormalizer(
               time_step_spec.observation, scope='normalize_observations'))
 
-    # TODO(b/185252273) Remove.
-    self._advantage_normalizer = tensor_normalizer.StreamingTensorNormalizer(
-        tensor_spec.TensorSpec([], tf.float32), scope='normalize_advantages')
-
     policy = greedy_policy.GreedyPolicy(
         ppo_policy.PPOPolicy(
             time_step_spec=time_step_spec,
@@ -822,15 +818,9 @@ class PPOAgent(tf_agent.TFAgent):
     returns = processed_experience.policy_info['return']
     advantages = processed_experience.policy_info['advantage']
 
-    if self.update_normalizers_in_train:
-      normalized_advantages = _normalize_advantages(advantages,
-                                                    variance_epsilon=1e-8)
-    else:
-      normalized_advantages = self._advantage_normalizer.normalize(
-          advantages,
-          clip_value=0,
-          center_mean=True,
-          variance_epsilon=1e-8)
+    normalized_advantages = _normalize_advantages(advantages,
+                                                  variance_epsilon=1e-8)
+
     # TODO(b/171573175): remove the condition once histograms are
     # supported on TPUs.
     if self._debug_summaries and not tf.config.list_logical_devices('TPU'):
@@ -994,13 +984,6 @@ class PPOAgent(tf_agent.TFAgent):
   def update_reward_normalizer(self, batched_rewards):
     if self._reward_normalizer:
       self._reward_normalizer.update(batched_rewards, outer_dims=[0, 1])
-
-  def _update_advantage_normalizer(self, batched_advantages):
-    if self._advantage_normalizer:
-      self._advantage_normalizer.update(batched_advantages, outer_dims=[0, 1])
-
-  def _reset_advantage_normalizer(self):
-    self._advantage_normalizer.reset()
 
   def l2_regularization_loss(self,
                              debug_summaries: bool = False) -> types.Tensor:

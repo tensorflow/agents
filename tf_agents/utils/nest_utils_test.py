@@ -866,6 +866,7 @@ class TileBatchTest(tf.test.TestCase):
         [[1., 2., 3.], [1., 2., 3.], [4., 5., 6.], [4., 5., 6.]])
     self.assertAllEqual(
         self.evaluate(expected_t_tile_batched), self.evaluate(t_tile_batched))
+    self.assertAllEqual((4, 3), t_tile_batched.shape)
 
 
 if __name__ == '__main__':

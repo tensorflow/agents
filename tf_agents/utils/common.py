@@ -25,6 +25,7 @@ import distutils.version
 import functools
 import importlib
 import os
+from typing import Dict, Optional, Text
 
 from absl import logging
 
@@ -33,6 +34,7 @@ import tensorflow as tf
 
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
@@ -903,6 +905,18 @@ def generate_tensor_summaries(tag, tensor, step):
         name='max', data=tf.reduce_max(input_tensor=tensor), step=step)
     tf.compat.v2.summary.scalar(
         name='min', data=tf.reduce_min(input_tensor=tensor), step=step)
+
+
+def summarize_tensor_dict(tensor_dict: Dict[Text, types.Tensor],
+                          step: Optional[types.Tensor]):
+  """Generates summaries of all tensors in `tensor_dict`.
+
+  Args:
+    tensor_dict: A dictionary {name, tensor} to summarize.
+    step: The global step
+  """
+  for tag in tensor_dict:
+    generate_tensor_summaries(tag, tensor_dict[tag], step)
 
 
 # TODO(kbanoop): Support batch mode

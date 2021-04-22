@@ -354,9 +354,9 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
   def test_get_info(self):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
-    self.assertEqual(None, env.get_info())
+    self.assertIsNone(env.get_info())
     env.reset()
-    self.assertEqual(None, env.get_info())
+    self.assertIsNone(None, env.get_info())
     env.step(np.array(0, dtype=np.int32))
     self.assertEqual({}, env.get_info())
 

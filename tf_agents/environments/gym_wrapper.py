@@ -152,15 +152,13 @@ class GymWrapper(py_environment.PyEnvironment):
                simplify_box_bounds: bool = True,
                render_kwargs: Optional[Dict[str, Any]] = None,
                ):
-    super(GymWrapper, self).__init__()
+    super(GymWrapper, self).__init__(auto_reset)
 
     self._gym_env = gym_env
     self._discount = discount
     self._action_is_discrete = isinstance(self._gym_env.action_space,
                                           gym.spaces.Discrete)
     self._match_obs_space_dtype = match_obs_space_dtype
-    # TODO(sfishman): Add test for auto_reset param.
-    self._auto_reset = auto_reset
     self._observation_spec = spec_from_gym_space(
         self._gym_env.observation_space, spec_dtype_map, simplify_box_bounds,
         'observation')
@@ -201,10 +199,6 @@ class GymWrapper(py_environment.PyEnvironment):
     return self._done
 
   def _step(self, action):
-    # Automatically reset the environments on step if they need to be reset.
-    if self._auto_reset and self._done:
-      return self.reset()
-
     # Some environments (e.g. FrozenLake) use the action as a key to the
     # transition probability so it has to be hashable. In the case of discrete
     # actions we have a numpy scalar (e.g array(2)) which is not hashable

@@ -54,10 +54,9 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
         empty space.
       discount: Discount for reward.
     """
-    super(TicTacToeEnvironment, self).__init__()
+    super(TicTacToeEnvironment, self).__init__(handle_auto_reset=True)
     self._rng = rng
     self._discount = np.asarray(discount, dtype=np.float32)
-
     self._states = None
 
   def action_spec(self):
@@ -94,9 +93,6 @@ class TicTacToeEnvironment(py_environment.PyEnvironment):
     self._states = time_step.observation
 
   def _step(self, action: np.ndarray):
-    if self._current_time_step.is_last():
-      return self._reset()
-
     action = tuple(action)
     if self._states[action] != 0:
       return TimeStep(StepType.LAST, TicTacToeEnvironment.REWARD_ILLEGAL_MOVE,

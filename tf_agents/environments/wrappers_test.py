@@ -69,7 +69,7 @@ class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
     cartpole_env = gym.spec('CartPole-v1').make()
     env = gym_wrapper.GymWrapper(cartpole_env)
     self.assertFalse(env.batched)
-    self.assertEqual(env.batch_size, None)
+    self.assertIsNone(env.batch_size)
     wrap_env = wrappers.PyEnvironmentBaseWrapper(env)
     self.assertEqual(wrap_env.batched, env.batched)
     self.assertEqual(wrap_env.batch_size, env.batch_size)
@@ -131,7 +131,7 @@ class TimeLimitWrapperTest(test_utils.TestCase):
     env = gym_wrapper.GymWrapper(cartpole_env)
     env = wrappers.TimeLimit(env, 2)
 
-    self.assertEqual(None, env.get_info())
+    self.assertIsNone(env.get_info())
     env.reset()
     env.step(np.array(0, dtype=np.int32))
     self.assertEqual({}, env.get_info())
@@ -430,7 +430,7 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec, auto_reset=False)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -454,7 +454,7 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec, auto_reset=False)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -542,7 +542,7 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec, auto_reset=False)
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -597,7 +597,7 @@ class ActionClipWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec, auto_reset=False)
       env = wrappers.ActionClipWrapper(env)
       env.reset()
 
@@ -637,7 +637,7 @@ class ActionClipWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec, auto_reset=False)
       env = wrappers.ActionClipWrapper(env)
       env.reset()
 
