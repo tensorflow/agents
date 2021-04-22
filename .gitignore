@@ -10,4 +10,4 @@ __pycache__
 .idea/
 .eggs/
 *.egg-info/
-/.vs
+.vs/
