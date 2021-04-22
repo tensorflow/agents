@@ -157,6 +157,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     self._optimizer = optimizer
     self._gradient_clipping = gradient_clipping
 
+    action_spec = tensor_spec.from_spec(action_spec)
     flat_action_spec = tf.nest.flatten(action_spec)
     continuous_specs = [tensor_spec.is_continuous(s) for s in flat_action_spec]
 

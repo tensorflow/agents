@@ -30,6 +30,7 @@ from tf_agents.distributions import shifted_categorical
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.policies import tf_policy
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -89,6 +90,9 @@ class QPolicy(tf_policy.TFPolicy):
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec`.
     """
+    action_spec = tensor_spec.from_spec(action_spec)
+    time_step_spec = tensor_spec.from_spec(time_step_spec)
+
     network_action_spec = getattr(q_network, 'action_spec', None)
 
     if network_action_spec is not None:

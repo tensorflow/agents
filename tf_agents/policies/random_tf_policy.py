@@ -88,6 +88,7 @@ class RandomTFPolicy(tf_policy.TFPolicy):
             'RandomTFPolicy only supports action constraints for '
             'BoundedTensorSpec action specs.')
 
+      action_spec = tensor_spec.from_spec(action_spec)
       action_spec = cast(tensor_spec.BoundedTensorSpec, action_spec)
       scalar_shape = action_spec.shape.rank == 0
       single_dim_shape = (
@@ -113,7 +114,8 @@ class RandomTFPolicy(tf_policy.TFPolicy):
       observation, mask = observation_and_action_constraint_splitter(
           time_step.observation)
 
-      action_spec = cast(tensor_spec.BoundedTensorSpec, self.action_spec)
+      action_spec = tensor_spec.from_spec(self.action_spec)
+      action_spec = cast(tensor_spec.BoundedTensorSpec, action_spec)
       zero_logits = tf.cast(tf.zeros_like(mask), tf.float32)
       masked_categorical = masked.MaskedCategorical(zero_logits, mask)
       action_ = tf.cast(masked_categorical.sample() + action_spec.minimum,

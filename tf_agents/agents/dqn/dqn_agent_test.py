@@ -98,6 +98,18 @@ class DqnAgentTest(test_utils.TestCase):
         optimizer=None)
     self.assertIsNotNone(agent.policy)
 
+  def testCreateAgentWithArraySpecs(self, agent_class):
+    observation_spec = tensor_spec.to_array_spec(self._observation_spec)
+    action_spec = tensor_spec.to_array_spec(self._action_spec)
+    time_step_spec = tensor_spec.to_array_spec(self._time_step_spec)
+    q_net = DummyNet(observation_spec, action_spec)
+    agent = agent_class(
+        time_step_spec,
+        action_spec,
+        q_network=q_net,
+        optimizer=None)
+    self.assertIsNotNone(agent.policy)
+
   def testCreateAgentWithPrebuiltPreprocessingLayers(self, agent_class):
     dense_layer = tf.keras.layers.Dense(2)
     q_net = networks_test_utils.KerasLayersNet(self._observation_spec,

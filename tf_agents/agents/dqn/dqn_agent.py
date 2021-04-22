@@ -217,6 +217,7 @@ class DqnAgent(tf_agent.TFAgent):
     """
     tf.Module.__init__(self, name=name)
 
+    action_spec = tensor_spec.from_spec(action_spec)
     self._check_action_spec(action_spec)
 
     if epsilon_greedy is not None and boltzmann_temperature is not None:
