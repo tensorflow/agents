@@ -289,8 +289,8 @@ class ReinforceAgent(tf_agent.TFAgent):
       eager_utils.add_gradients_summaries(grads_and_vars,
                                           self.train_step_counter)
 
-    self._optimizer.apply_gradients(
-        grads_and_vars, global_step=self.train_step_counter)
+    self._optimizer.apply_gradients(grads_and_vars)
+    self.train_step_counter.assign_add(1)
 
     return tf.nest.map_structure(tf.identity, loss_info)
 
