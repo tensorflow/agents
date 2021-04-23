@@ -1,16 +1,14 @@
 # AI at Google: our principles
 
-# AI at Google: our principles
-
 - [Be socially beneficial.](#user-content-be-socially-beneficial)
 - [Avoid creating or reinforcing unfair bias.](#user-content-avoid-creating-or-reinforcing-unfair-bias)
-- [Be built and tested for safety.](#Be-built-and-tested-for-safety.)
-- [Be accountable to people.](#Be-accountable-to-people.)
-- [Incorporate privacy design principles.](#Incorporate-privacy-design-principles.)
-- [Uphold high standards of scientific excellence.](#Uphold-high-standards-of-scientific-excellence.)
-- [Be made available for uses that accord with these principles.](#Be-made-available-for-uses-that-accord-with-these-principles.)
-- [AI applications we will not pursue.](#AI-applications-we-will-not-pursue.)
-- [AI for the long term.](#AI-for-the-long-term.)
+- [Be built and tested for safety.](#user-content-be-built-and-tested-for-safety)
+- [Be accountable to people.](#user-content-be-accountable-to-people)
+- [Incorporate privacy design principles.](#user-content-incorporate-privacy-design-principles)
+- [Uphold high standards of scientific excellence.](#user-content-uphold-high-standards-of-scientific-excellence)
+- [Be made available for uses that accord with these principles.](#user-content-be-made-available-for-uses-that-accord-with-these-principles)
+- [AI applications we will not pursue.](#user-content-ai-applications-we-will-not-pursue)
+- [AI for the long term.](#user-content-ai-for-the-long-term)
 
 At its heart, AI is computer programming that learns and adapts. It can't solve
 every problem, but its potential to improve our lives is profound. At Google, we
