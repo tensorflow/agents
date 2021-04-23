@@ -2,8 +2,8 @@
 
 # AI at Google: our principles
 
-- [Be socially beneficial.](#Be-socially-beneficial)
-- [Avoid creating or reinforcing unfair bias.](#Avoid-creating-or-reinforcing-unfair-bias.)
+- [Be socially beneficial.](#user-content-be-socially-beneficial)
+- [Avoid creating or reinforcing unfair bias.](#user-content-avoid-creating-or-reinforcing-unfair-bias)
 - [Be built and tested for safety.](#Be-built-and-tested-for-safety.)
 - [Be accountable to people.](#Be-accountable-to-people.)
 - [Incorporate privacy design principles.](#Incorporate-privacy-design-principles.)
