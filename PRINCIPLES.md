@@ -1,6 +1,16 @@
 # AI at Google: our principles
 
-[TOC]
+# AI at Google: our principles
+
+- [Be socially beneficial.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Be-socially-beneficial)
+- [Avoid creating or reinforcing unfair bias.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Avoid-creating-or-reinforcing-unfair-bias.)
+- [Be built and tested for safety.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Be-built-and-tested-for-safety.)
+- [Be accountable to people.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Be-accountable-to-people.)
+- [Incorporate privacy design principles.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Incorporate-privacy-design-principles.)
+- [Uphold high standards of scientific excellence.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Uphold-high-standards-of-scientific-excellence.)
+- [Be made available for uses that accord with these principles.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#Be-made-available-for-uses-that-accord-with-these-principles.)
+- [AI applications we will not pursue.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#AI-applications-we-will-not-pursue.)
+- [AI for the long term.](https://github.com/tensorflow/agents/blob/master/PRINCIPLES.md#AI-for-the-long-term.)
 
 At its heart, AI is computer programming that learns and adapts. It can't solve
 every problem, but its potential to improve our lives is profound. At Google, we
