@@ -32,7 +32,8 @@ class RandomTFEnvironmentTest(test_utils.TestCase):
 
   def setUp(self):
     self.observation_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
-    self.time_step_spec = ts.time_step_spec(self.observation_spec)
+    self.reward_spec = tensor_spec.TensorSpec((2,), tf.float32)
+    self.time_step_spec = ts.time_step_spec(self.observation_spec, reward_spec=self.reward_spec)
     self.action_spec = tensor_spec.TensorSpec((2,), tf.float32)
     self.random_env = random_tf_environment.RandomTFEnvironment(
         self.time_step_spec, self.action_spec)
