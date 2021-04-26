@@ -442,6 +442,27 @@ def add_outer_dims_nest(specs, outer_dims):
   return tf.nest.map_structure(add_outer_dims, specs)
 
 
+def with_dtype(specs, dtype):
+  """Updates dtypes of all specs in the input spec.
+
+  Args:
+    specs: Nested list/tuple/dict of TensorSpecs/ArraySpecs, describing the
+      shape of tensors.
+    dtype: dtype to update the specs to.
+
+  Returns:
+    Nested TensorSpecs with the udpated dtype.
+  """
+
+  def update_dtype(spec):
+    if hasattr(spec, "minimum") and hasattr(spec, "maximum"):
+      return BoundedTensorSpec(spec.shape, dtype, spec.minimum, spec.maximum,
+                               spec.name)
+    return TensorSpec(spec.shape, dtype, name=spec.name)
+
+  return tf.nest.map_structure(update_dtype, specs)
+
+
 def remove_outer_dims_nest(specs, outer_dims):
   """Removes the specified number of outer dimensions from the input spec nest.
 

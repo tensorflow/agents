@@ -276,16 +276,20 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 
   def testNormalization(self):
     as_tensor = functools.partial(tf.convert_to_tensor, dtype=tf.float32)
+
+    # Update with some initial values.
     norm_obs = {'a': np.random.randn(6, 2, 3),
                 'b': np.random.randn(6, 2, 3)}
     norm_obs_t = tf.nest.map_structure(as_tensor, norm_obs)
+    self.evaluate(self._dict_tensor_normalizer.update(norm_obs_t))
+
     view_obs = {'a': np.random.randn(4, 3),
                 'b': np.random.randn(4, 3)}
     view_obs_t = tf.nest.map_structure(as_tensor, view_obs)
-    self.evaluate(self._dict_tensor_normalizer.update(norm_obs_t))
     observed = self.evaluate(
         self._dict_tensor_normalizer.normalize(
             view_obs_t, clip_value=-1, variance_epsilon=1e-6))
+
     norm_obs_avg = tf.nest.map_structure(
         lambda a: a.mean(axis=(0, 1)), norm_obs)
     norm_obs_std = tf.nest.map_structure(
@@ -293,6 +297,36 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     expected = tf.nest.map_structure(
         lambda obs, avg, std: (obs - avg)/std,
         view_obs, norm_obs_avg, norm_obs_std)
+
+    self.assertAllClose(observed, expected)
+
+  def testNormalizationFloat64(self):
+    spec = tensor_spec.TensorSpec([3], tf.float64, 'obs')
+    dict_tensor_spec = {'a': spec, 'b': spec}
+    dict_tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=dict_tensor_spec)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    as_tensor = functools.partial(tf.convert_to_tensor, dtype=tf.float64)
+    # Update with some initial values.
+    norm_obs = {'a': np.random.randn(6, 2, 3), 'b': np.random.randn(6, 2, 3)}
+    norm_obs_t = tf.nest.map_structure(as_tensor, norm_obs)
+
+    self.evaluate(dict_tensor_normalizer.update(norm_obs_t))
+
+    view_obs = {'a': np.random.randn(4, 3), 'b': np.random.randn(4, 3)}
+    view_obs_t = tf.nest.map_structure(as_tensor, view_obs)
+
+    observed = self.evaluate(
+        dict_tensor_normalizer.normalize(
+            view_obs_t, clip_value=-1, variance_epsilon=1e-6))
+
+    norm_obs_avg = tf.nest.map_structure(lambda a: a.mean(axis=(0, 1)),
+                                         norm_obs)
+    norm_obs_std = tf.nest.map_structure(lambda a: a.std(axis=(0, 1)), norm_obs)
+    expected = tf.nest.map_structure(lambda obs, avg, std: (obs - avg) / std,
+                                     view_obs, norm_obs_avg, norm_obs_std)
+
     self.assertAllClose(observed, expected)
 
 

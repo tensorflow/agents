@@ -25,6 +25,7 @@ from typing import Tuple
 import six
 import tensorflow as tf
 
+from tf_agents.specs import tensor_spec as tensor_spec_lib
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
@@ -53,7 +54,7 @@ class TensorNormalizer(tf.Module):
   def __init__(self, tensor_spec, scope='normalize_tensor'):
     super(TensorNormalizer, self).__init__(name=scope)
     self._scope = scope
-    self._tensor_spec = tensor_spec
+    self._tensor_spec = tensor_spec_lib.with_dtype(tensor_spec, tf.float32)
     self._flat_tensor_spec = tf.nest.flatten(tensor_spec)
     self._create_variables()
 
@@ -102,11 +103,11 @@ class TensorNormalizer(tf.Module):
     Returns:
       normalized_tensor: Tensor after applying normalization.
     """
+    tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
     nest_utils.assert_matching_dtypes_and_inner_shapes(
         tensor, self._tensor_spec, caller=self,
         tensors_name='tensors', specs_name='tensor_spec')
     tensor = tf.nest.flatten(tensor)
-    tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
 
     with tf.name_scope(self._scope + '/normalize'):
       mean_estimate, var_estimate = self._get_mean_var_estimates()
@@ -116,6 +117,7 @@ class TensorNormalizer(tf.Module):
 
       def _normalize_single_tensor(single_tensor, single_mean, single_var):
         return tf.nn.batch_normalization(
+
             single_tensor,
             single_mean,
             single_var,
