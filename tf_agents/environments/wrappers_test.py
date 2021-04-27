@@ -179,6 +179,165 @@ class TimeLimitWrapperTest(test_utils.TestCase):
     self.assertTrue(last_time_step.is_last())
 
 
+class FixedLengthWrapperTest(test_utils.TestCase):
+
+  def test_wrapped_env_forwards_calls(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(env, 10)
+
+    action_spec = env.action_spec()
+    self.assertEqual((), action_spec.shape)
+    self.assertEqual(0, action_spec.minimum)
+    self.assertEqual(1, action_spec.maximum)
+
+    observation_spec = env.observation_spec()
+    self.assertEqual((4,), observation_spec.shape)
+    high = np.array([
+        4.8,
+        np.finfo(np.float32).max, 2 / 15.0 * math.pi,
+        np.finfo(np.float32).max
+    ])
+    np.testing.assert_array_almost_equal(-high, observation_spec.minimum)
+    np.testing.assert_array_almost_equal(high, observation_spec.maximum)
+
+  def test_truncate_episode_at_fixed_length(self):
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(env, 2)
+
+    env.reset()
+    env.step(np.array(0, dtype=np.int32))
+    time_step = env.step(np.array(0, dtype=np.int32))
+
+    self.assertTrue(time_step.is_last())
+    self.assertNotEqual(None, time_step.discount)
+    self.assertNotEqual(0.0, time_step.discount)
+
+  def test_pad_short_episode_upto_fixed_length(self):
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(wrappers.TimeLimit(env, 2), 3)
+
+    time_step = env.reset()
+    self.assertTrue(time_step.is_first())
+    self.assertEqual(1.0, time_step.discount)
+
+    # Normal Step
+    time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(time_step.is_mid())
+    self.assertEqual(1.0, time_step.discount)
+
+    # TimeLimit truncated.
+    time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(time_step.is_last())
+    self.assertEqual(1.0, time_step.discount)
+
+    # Padded with discount 0.
+    time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(time_step.is_last())
+    self.assertEqual(0.0, time_step.discount)
+
+    # Restart episode after fix length.
+    time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(time_step.is_first())
+    self.assertEqual(1.0, time_step.discount)
+
+  def test_get_info(self):
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(env, 2)
+
+    self.assertIsNone(env.get_info())
+    env.reset()
+    env.step(np.array(0, dtype=np.int32))
+    self.assertEqual({}, env.get_info())
+
+  def test_automatic_reset(self):
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(env, 2)
+
+    # Episode 1
+    first_time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(first_time_step.is_first())
+    mid_time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(mid_time_step.is_mid())
+    last_time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(last_time_step.is_last())
+
+    # Episode 2
+    first_time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(first_time_step.is_first())
+    mid_time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(mid_time_step.is_mid())
+    last_time_step = env.step(np.array(0, dtype=np.int32))
+    self.assertTrue(last_time_step.is_last())
+
+  def test_fixed_length(self):
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(env, 1000)
+
+    time_step = env.reset()
+    for _ in range(5):
+      num_steps = 0
+      # Step until termination occurs.
+      while not time_step.is_last():
+        time_step = env.step(np.array(1, dtype=np.int32))
+        num_steps += 1
+      self.assertTrue(time_step.is_last())
+      self.assertLess(num_steps, env.fix_length)
+
+      # Pad until fixed length.
+      while time_step.is_last():
+        self.assertEqual(0.0, time_step.discount)
+        time_step = env.step(np.array(1, dtype=np.int32))
+        num_steps += 1
+      # Verify episode length.
+      self.assertTrue(num_steps, env.fix_length)
+
+      # it should automatically reset.
+      self.assertTrue(time_step.is_first())
+      self.assertEqual(1.0, time_step.discount)
+
+  def test_expected_returns_dont_change(self):
+
+    def compute_returns(rewards, discounts):
+      """Python implementation of computing discounted returns."""
+      returns = np.zeros(len(rewards))
+      next_state_return = 0.0
+      for t in range(len(returns) - 1, -1, -1):
+        returns[t] = rewards[t] + discounts[t] * next_state_return
+        next_state_return = returns[t]
+      return returns.astype(np.float32)
+
+    cartpole_env = gym.make('CartPole-v1')
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    env = wrappers.FixedLength(env, 1000)
+
+    time_step = env.reset()
+    for _ in range(5):
+      # Step until termination occurs.
+      rewards, discounts = [], []
+      while not time_step.is_last():
+        time_step = env.step(np.array(1, dtype=np.int32))
+        rewards.append(time_step.reward)
+        discounts.append(time_step.discount)
+
+      returns = compute_returns(rewards, discounts)
+      # Pad until fixed length.
+      while time_step.is_last():
+        rewards.append(time_step.reward)
+        discounts.append(time_step.discount)
+        time_step = env.step(np.array(1, dtype=np.int32))
+      # Verify episode length.
+      final_returns = compute_returns(rewards, discounts)
+
+      self.assertAllEqual(final_returns[:len(returns)], returns)
+      self.assertEqual(final_returns[len(returns):].sum(), 1.0)
+
+
 class ActionRepeatWrapperTest(test_utils.TestCase):
 
   def _get_mock_env_episode(self):

@@ -131,6 +131,55 @@ class TimeLimit(PyEnvironmentBaseWrapper):
 
 
 @gin.configurable
+class FixedLength(PyEnvironmentBaseWrapper):
+  """Truncates long episodes and pads short episodes to have a fixed length.
+
+  If the episode is short it will pad with the last step and set discount to 0.
+  """
+
+  def __init__(self, env: py_environment.PyEnvironment, fix_length: types.Int):
+    super(FixedLength, self).__init__(env)
+    self._fix_length = fix_length
+    self._num_steps = None
+    self._episode_ended = False
+
+  def _reset(self):
+    self._num_steps = 0
+    self._episode_ended = False
+    return self._env.reset()
+
+  def _step(self, action):
+    if self._num_steps is None:
+      return self.reset()
+
+    time_step = self.current_time_step()
+    if time_step.is_last():
+      if self._num_steps < self._fix_length:
+        self._num_steps += 1
+        if self._episode_ended:
+          return time_step
+        else:
+          self._episode_ended = True
+          return time_step._replace(discount=0.0, reward=0. * time_step.reward)
+      else:
+        return self.reset()
+
+    else:
+      time_step = self._env.step(action)
+
+      self._num_steps += 1
+      if self._num_steps >= self._fix_length:
+        time_step = time_step._replace(step_type=ts.StepType.LAST)
+        self._num_steps = None
+
+      return time_step
+
+  @property
+  def fix_length(self) -> types.Int:
+    return self._fix_length
+
+
+@gin.configurable
 class PerformanceProfiler(PyEnvironmentBaseWrapper):
   """End episodes after specified number of steps."""
 
