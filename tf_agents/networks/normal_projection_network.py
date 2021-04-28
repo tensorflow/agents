@@ -18,6 +18,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
@@ -58,6 +60,8 @@ class NormalProjectionNetwork(network.DistributionNetwork):
                std_transform=tf.nn.softplus,
                state_dependent_std=False,
                scale_distribution=False,
+               seed=None,
+               seed_stream_class=tfp.util.SeedStream,
                name='NormalProjectionNetwork'):
     """Creates an instance of NormalProjectionNetwork.
 
@@ -79,6 +83,10 @@ class NormalProjectionNetwork(network.DistributionNetwork):
         distributions to match the sample spec. Note the TransformedDistribution
         does not support certain operations required by some agents or policies
         such as KL divergence calculations or Mode.
+      seed: seed used for Keras kernal initializers.
+      seed_stream_class: The seed stream class. This is almost always
+        tfp.util.SeedStream, except for in unit testing, when one may want to
+        seed all the layers deterministically.
       name: A string representing name of the network.
     """
     if len(tf.nest.flatten(sample_spec)) != 1:
@@ -98,22 +106,31 @@ class NormalProjectionNetwork(network.DistributionNetwork):
     self._mean_transform = mean_transform
     self._std_transform = std_transform
     self._state_dependent_std = state_dependent_std
-
+    seed_stream = seed_stream_class(
+        seed=seed, salt='tf_agents_normal_projection_network')
+    mean_seed = seed_stream()
+    if mean_seed is not None:
+      mean_seed = mean_seed % sys.maxsize
     self._means_projection_layer = tf.keras.layers.Dense(
         sample_spec.shape.num_elements(),
         activation=activation_fn,
-        kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-            scale=init_means_output_factor),
+        kernel_initializer=tf.keras.initializers.VarianceScaling(
+            scale=init_means_output_factor,
+            seed=mean_seed),
         bias_initializer=tf.keras.initializers.Zeros(),
         name='means_projection_layer')
 
     self._stddev_projection_layer = None
     if self._state_dependent_std:
+      std_seed = seed_stream()
+      if std_seed is not None:
+        std_seed = std_seed % sys.maxsize
       self._stddev_projection_layer = tf.keras.layers.Dense(
           sample_spec.shape.num_elements(),
           activation=activation_fn,
           kernel_initializer=tf.compat.v1.keras.initializers.VarianceScaling(
-              scale=init_means_output_factor),
+              scale=init_means_output_factor,
+              seed=std_seed),
           bias_initializer=tf.constant_initializer(
               value=std_bias_initializer_value),
           name='stddev_projection_layer')

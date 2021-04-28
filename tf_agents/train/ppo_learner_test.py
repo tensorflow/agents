@@ -47,7 +47,8 @@ class FakePPOAgent(ppo_agent.PPOAgent):
         shape=[1], dtype=tf.float32)
     action_tensor_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
 
-    actor_net = ppo_actor_network.create_sequential_actor_net(
+    actor_net_builder = ppo_actor_network.PPOActorNetwork()
+    actor_net = actor_net_builder.create_sequential_actor_net(
         fc_layer_units=(1,),
         action_tensor_spec=action_tensor_spec)
     value_net = value_network.ValueNetwork(

@@ -21,7 +21,8 @@ from __future__ import print_function
 
 import gin
 import numpy as np
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
+import tensorflow_probability as tfp
 
 from tf_agents.networks import categorical_projection_network
 from tf_agents.networks import encoding_network
@@ -38,14 +39,18 @@ def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):
 
 def _normal_projection_net(action_spec,
                            init_action_stddev=0.35,
-                           init_means_output_factor=0.1):
+                           init_means_output_factor=0.1,
+                           seed_stream_class=tfp.util.SeedStream,
+                           seed=None):
   std_bias_initializer_value = np.log(np.exp(init_action_stddev) - 1)
 
   return normal_projection_network.NormalProjectionNetwork(
       action_spec,
       init_means_output_factor=init_means_output_factor,
       std_bias_initializer_value=std_bias_initializer_value,
-      scale_distribution=False)
+      scale_distribution=False,
+      seed_stream_class=seed_stream_class,
+      seed=seed)
 
 
 @gin.configurable
@@ -68,6 +73,8 @@ class ActorDistributionNetwork(network.DistributionNetwork):
                dropout_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
+               seed_stream_class=tfp.util.SeedStream,
+               seed=None,
                batch_squash=True,
                dtype=tf.float32,
                discrete_projection_net=_categorical_projection_net,
@@ -104,7 +111,11 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         have the same length of fc_layer_params, or be None.
       activation_fn: Activation function, e.g. tf.nn.relu, slim.leaky_relu, ...
       kernel_initializer: Initializer to use for the kernels of the conv and
-        dense layers. If none is provided a default glorot_uniform
+        dense layers. If none is provided a default glorot_uniform.
+      seed_stream_class: The seed stream class. This is almost always
+        tfp.util.SeedStream, except for in unit testing, when one may want to
+        seed all the layers deterministically.
+      seed: seed used for Keras kernal initializers for NormalProjectionNetwork.
       batch_squash: If True the outer_ranks of the observation are squashed into
         the batch dimension. This allow encoding networks to be used with
         observations with shape [BxTx...].
@@ -140,7 +151,11 @@ class ActorDistributionNetwork(network.DistributionNetwork):
       if tensor_spec.is_discrete(spec):
         return discrete_projection_net(spec)
       else:
-        return continuous_projection_net(spec)
+        kwargs = {}
+        if continuous_projection_net is _normal_projection_net:
+          kwargs['seed'] = seed
+          kwargs['seed_stream_class'] = seed_stream_class
+        return continuous_projection_net(spec, **kwargs)
 
     projection_networks = tf.nest.map_structure(map_proj, output_tensor_spec)
     output_spec = tf.nest.map_structure(lambda proj_net: proj_net.output_spec,

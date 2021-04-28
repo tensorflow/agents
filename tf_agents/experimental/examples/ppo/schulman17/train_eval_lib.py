@@ -183,7 +183,8 @@ def train_eval(
 
   train_step = train_utils.create_train_step()
 
-  actor_net = ppo_actor_network.create_sequential_actor_net(
+  actor_net_builder = ppo_actor_network.PPOActorNetwork()
+  actor_net = actor_net_builder.create_sequential_actor_net(
       actor_fc_layers, action_tensor_spec)
   value_net = value_network.ValueNetwork(
       observation_tensor_spec,
