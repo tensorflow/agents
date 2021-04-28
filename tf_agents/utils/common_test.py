@@ -759,6 +759,18 @@ class ComputeReturnsTest(test_utils.TestCase):
     returns = self.evaluate(returns)
     self.assertAllClose(returns, expected_returns)
 
+  def testBatchedReturns(self):
+    rewards = tf.constant(np.ones([2, 9]), dtype=tf.float32)
+    discounts = tf.constant([[1, 1, 1, 1, 0, 0.9, 0.9, 0.9, 0],
+                             [1, 1, 1, 1, 0, 0.5, 0.5, 0.5, 0]],
+                            dtype=tf.float32)
+    returns = common.compute_returns(rewards, discounts)
+    expected_returns = [[5, 4, 3, 2, 1, 3.439, 2.71, 1.9, 1],
+                        [5, 4, 3, 2, 1, 1.875, 1.75, 1.5, 1]]
+
+    returns = self.evaluate(returns)
+    self.assertAllClose(returns, expected_returns)
+
   def testComputeReturnsRandomized(self):
     rewards = tf.constant(np.random.random([20]), dtype=tf.float32)
     discounts = tf.constant(np.random.random([20]), dtype=tf.float32)

@@ -919,14 +919,17 @@ def summarize_tensor_dict(tensor_dict: Dict[Text, types.Tensor],
     generate_tensor_summaries(tag, tensor_dict[tag], step)
 
 
-# TODO(kbanoop): Support batch mode
-def compute_returns(rewards, discounts):
+def compute_returns(rewards: types.Tensor,
+                    discounts: types.Tensor,
+                    time_major: bool = False):
   """Compute the return from each index in an episode.
 
   Args:
-    rewards: Tensor of per-timestep reward in the episode.
-    discounts: Tensor of per-timestep discount factor. Should be 0 for final
-      step of each episode.
+    rewards: Tensor `[T]`, `[B, T]`, `[T, B]` of per-timestep reward.
+    discounts: Tensor `[T]`, `[B, T]`, `[T, B]` of per-timestep discount factor.
+      Should be `0`. for final step of each episode.
+    time_major: Bool, when batched inputs setting it to `True`, inputs are
+      expected to be time-major: `[T, B]` otherwise, batch-major: `[B, T]`.
 
   Returns:
     Tensor of per-timestep cumulative returns.
@@ -934,26 +937,28 @@ def compute_returns(rewards, discounts):
   rewards.shape.assert_is_compatible_with(discounts.shape)
   if (not rewards.shape.is_fully_defined() or
       not discounts.shape.is_fully_defined()):
-    check_shape = tf.compat.v1.assert_equal(
-        tf.shape(input=rewards), tf.shape(input=discounts))
-  else:
-    check_shape = tf.no_op()
-  with tf.control_dependencies([check_shape]):
-    # Reverse the rewards and discounting for accumulation.
-    rewards, discounts = tf.reverse(rewards, [0]), tf.reverse(discounts, [0])
+    tf.debugging.assert_equal(tf.shape(input=rewards),
+                              tf.shape(input=discounts))
 
   def discounted_accumulate_rewards(next_step_return, reward_and_discount):
     reward, discount = reward_and_discount
     return next_step_return * discount + reward
 
+  # Support batched rewards and discount via transpose.
+  if rewards.shape.rank > 1 and not time_major:
+    rewards = tf.transpose(rewards, perm=[1, 0])
+    discounts = tf.transpose(discounts, perm=[1, 0])
   # Cumulatively sum discounted reward R_t.
   #   R_t = r_t + discount * (r_t+1 + discount * (r_t+2 * discount( ...
   # As discount is 0 for terminal states, ends of episode will not include
   #   reward from subsequent timesteps.
   returns = tf.scan(
       discounted_accumulate_rewards, [rewards, discounts],
-      initializer=tf.constant(0, dtype=discounts.dtype))
-  returns = tf.reverse(returns, [0])
+      initializer=tf.zeros_like(rewards[0]),
+      reverse=True)
+  # Reverse transpose if needed.
+  if returns.shape.rank > 1 and not time_major:
+    returns = tf.transpose(returns, perm=[1, 0])
   return returns
 
 
