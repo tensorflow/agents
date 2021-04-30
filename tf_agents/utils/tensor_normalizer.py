@@ -32,6 +32,8 @@ from tf_agents.utils import nest_utils
 
 create_variable = common.create_variable
 
+_EPS = 1e-8
+
 
 @six.add_metaclass(abc.ABCMeta)
 class TensorNormalizer(tf.Module):
@@ -226,27 +228,33 @@ class EMATensorNormalizer(TensorNormalizer):
 class StreamingTensorNormalizer(TensorNormalizer):
   """Normalizes mean & variance based on full history of tensor values."""
 
+  @property
+  def dtype(self):
+    """Overwrite to use tf.float64.
+
+    Current implemtation gets same precision with tf.float32 as with tf.float64
+    """
+    return tf.float32
+
   def _create_variables(self):
     """Create all variables needed for the normalizer."""
     self._count = [
-        create_variable('count_%d' % i, 1e-8, spec.shape, tf.float32,
+        create_variable('count_%d' % i, _EPS, spec.shape, self.dtype,
                         trainable=False)
         for i, spec in enumerate(self._flat_tensor_spec)
     ]
     self._avg = [
-        create_variable('avg_%d' % i, 0, spec.shape, tf.float32,
+        create_variable('avg_%d' % i, 0, spec.shape, self.dtype,
                         trainable=False)
         for i, spec in enumerate(self._flat_tensor_spec)
     ]
     self._m2 = [
-        create_variable('m2_%d' % i, 0, spec.shape, tf.float32,
+        create_variable('m2_%d' % i, 0, spec.shape, self.dtype,
                         trainable=False)
         for i, spec in enumerate(self._flat_tensor_spec)
     ]
-    # var is just m2 / count, but we include it for efficiency and to
-    # force a hard break for old checkpoints.
-    self._var = [
-        create_variable('var_%d' % i, 0, spec.shape, tf.float32,
+    self._m2_carry = [
+        create_variable('m2_carry_%d' % i, 0, spec.shape, self.dtype,
                         trainable=False)
         for i, spec in enumerate(self._flat_tensor_spec)
     ]
@@ -257,7 +265,7 @@ class StreamingTensorNormalizer(TensorNormalizer):
     return (tf.nest.pack_sequence_as(self._tensor_spec, self._count),
             tf.nest.pack_sequence_as(self._tensor_spec, self._avg),
             tf.nest.pack_sequence_as(self._tensor_spec, self._m2),
-            tf.nest.pack_sequence_as(self._tensor_spec, self._var))
+            tf.nest.pack_sequence_as(self._tensor_spec, self._m2_carry))
 
   def _update_ops(self, tensors, outer_dims):
     """Returns a list of ops which update normalizer variables for tensor.
@@ -282,43 +290,48 @@ class StreamingTensorNormalizer(TensorNormalizer):
         list(range(outer_rank_static)) if outer_rank_static is not None else
         tf.range(tf.size(outer_shape)))
 
-    n_a = tf.cast(tf.reduce_prod(outer_shape), tf.float32)
+    n_a = tf.cast(tf.reduce_prod(outer_shape), self.dtype)
 
     flat_tensors = tf.nest.flatten(tensors)
 
     update_ops = []
 
     for i, t in enumerate(flat_tensors):
-      avg_a, var_a = tf.nn.moments(t, axes=outer_axes)
-      m2_a = var_a * n_a
+      t = tf.cast(t, self.dtype)
+      avg_a = tf.math.reduce_mean(t, outer_axes)
+      m2_a = tf.math.reduce_sum(tf.math.squared_difference(t, avg_a),
+                                outer_axes)
       n_b = self._count[i]
       avg_b = self._avg[i]
       m2_b = self._m2[i]
-      n_ab, avg_ab, m2_ab = parallel_variance_calculation(
-          n_a, avg_a, m2_a, n_b, avg_b, m2_b)
-      with tf.control_dependencies([n_ab, avg_ab, m2_ab]):
+      m2_b_c = self._m2_carry[i]
+
+      n_ab, avg_ab, m2_ab, m2_ab_c = parallel_variance_calculation(
+          n_a, avg_a, m2_a, n_b, avg_b, m2_b, m2_b_c)
+      with tf.control_dependencies([n_ab, avg_ab, m2_ab, m2_ab_c]):
         update_ops.extend([
             self._count[i].assign(n_ab),
             self._avg[i].assign(avg_ab),
             self._m2[i].assign(m2_ab),
-            self._var[i].assign(m2_ab / n_ab)
+            self._m2_carry[i].assign(m2_ab_c),
         ])
 
     return update_ops
 
   def _get_mean_var_estimates(self):
     """Returns this normalizer's current estimates for mean & var (flat)."""
-    return (self._avg, self._var)
+    var = [m2_ab / n_ab for (m2_ab, n_ab) in zip(self._m2, self._count)]
+    return (self._avg, var)
 
   def reset(self):
     """Reset the count, mean and variance to its initial state."""
     reset_ops = []
     for i in range(len(self._count)):
       reset_ops.extend([
-          self._count[i].assign(1e-8*tf.ones_like(self._count[i])),
+          self._count[i].assign(_EPS * tf.ones_like(self._count[i])),
           self._avg[i].assign(tf.zeros_like(self._avg[i])),
           self._m2[i].assign(tf.zeros_like(self._m2[i])),
-          self._var[i].assign(tf.zeros_like(self._var[i])),
+          self._m2_carry[i].assign(tf.zeros_like(self._m2_carry[i])),
       ])
 
     return reset_ops
@@ -330,12 +343,15 @@ def parallel_variance_calculation(
     m2_a: types.Float,
     n_b: types.Int,
     avg_b: types.Float,
-    m2_b: types.Float
-) -> Tuple[types.Int, types.Float, types.Float]:
+    m2_b: types.Float,
+    m2_b_c: types.Float
+) -> Tuple[types.Int, types.Float, types.Float, types.Float]:
   """Calculate the sufficient statistics (average & second moment) of two sets.
 
   For more details, see the parallel algorithm of Chan et al. at:
   https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
+
+  For stability we use `kahan_summation` to accumulate second moments.
 
   Takes in the sufficient statistics for sets `A` and `B` and calculates the
   variance and sufficient statistics for the union of `A` and `B`.
@@ -347,8 +363,9 @@ def parallel_variance_calculation(
 
   ```
   n_a = tf.shape(x)[0]
-  avg_a, var_a = tf.nn.moments(x, axes=[0])
-  m2_a = var_a * n_a
+  avg_a = tf.math.reduce_mean(x, axis=[0])
+  m2_a = tf.math.reduce_sum(tf.math.squared_difference(t, avg_a), axis=[0])
+
   ```
 
   Args:
@@ -358,14 +375,41 @@ def parallel_variance_calculation(
     n_b: Number of elements in `B`.
     avg_b: The sample average of `B`.
     m2_b: The sample second moment of `B`.
+    m2_b_c: Carry for accumulation of the sample second moment of `B`.
 
   Returns:
-    A tuple `(n_ab, avg_ab, m2_ab)` such that `var_ab`, the variance of `A|B`,
-    may be calculated via `var_ab = m2_ab / n_ab`, and the sample variance
-    may be calculated as `sample_var_ab = m2_ab / (n_ab - 1)`.
+    A tuple `(n_ab, avg_ab, m2_ab, m2_ab_c)` such that `var_ab`,
+    the variance of `A|B`, may be calculated via `var_ab = m2_ab / n_ab`,
+    and the sample variance  as`sample_var_ab = m2_ab / (n_ab - 1)`.
   """
   n_ab = n_a + n_b
   delta = avg_b - avg_a
-  avg_ab = (n_a*avg_a + n_b*avg_b) / n_ab
-  m2_ab = m2_a + m2_b + (delta**2) * n_a * n_b / n_ab
-  return n_ab, avg_ab, m2_ab
+  s_delta = delta * n_b / n_ab
+  avg_ab = avg_a + s_delta
+  m2_ab, m2_ab_c = kahan_summation(m2_b, m2_b_c, m2_a + (delta * n_a * s_delta))
+  return n_ab, avg_ab, m2_ab, m2_ab_c
+
+
+def kahan_summation(accumulator: types.Float,
+                    carry: types.Float,
+                    value: types.Float
+                    ) -> Tuple[types.Float, types.Float]:
+  """Calculate stable acculated sum using compensation for low-bits.
+
+  For more details:
+  https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+
+
+  Args:
+    accumulator: Accumulator.
+    carry: Carry for lost low-order bits.
+    value: New value to accumlate.
+
+  Returns:
+    A tuple `(accumulator, carry)` such that `accumulator` is the new
+    accumulated value and `carry` is the new compensation value.
+  """
+  delta = value - carry
+  new_accumulator = accumulator + delta
+  carry = (new_accumulator - accumulator) - delta
+  return new_accumulator, carry

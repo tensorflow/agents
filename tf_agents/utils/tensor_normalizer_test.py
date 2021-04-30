@@ -33,11 +33,11 @@ class ParallelVarianceTest(tf.test.TestCase):
 
   def testParallelVarianceOneAtATime(self):
     x = np.random.randn(5, 10)
-    n, avg, m2 = 1, x[0], 0
+    n, avg, m2, m2_c = 1, x[0], 0, 0
     for row in range(1, 5):
-      n, avg, m2 = tensor_normalizer.parallel_variance_calculation(
+      n, avg, m2, m2_c = tensor_normalizer.parallel_variance_calculation(
           n_a=n, avg_a=avg, m2_a=m2,
-          n_b=1, avg_b=x[row], m2_b=0)
+          n_b=1, avg_b=x[row], m2_b=0, m2_b_c=m2_c)
     var = m2 / n
     self.assertAllClose(avg, x.mean(axis=0))
     self.assertAllClose(var, x.var(axis=0))
@@ -47,9 +47,8 @@ class ParallelVarianceTest(tf.test.TestCase):
     n = 5
     avg, var = tf.nn.moments(x, axes=[0])
     m2 = var * n
-    new_n, new_avg, new_m2 = tensor_normalizer.parallel_variance_calculation(
-        n, avg, m2,
-        n_b=0, avg_b=0, m2_b=0)
+    new_n, new_avg, new_m2, _ = tensor_normalizer.parallel_variance_calculation(
+        n, avg, m2, n_b=0, avg_b=0, m2_b=0, m2_b_c=0)
     new_var = new_m2 / n
     (avg, var, new_avg, new_var) = self.evaluate(
         (avg, var, new_avg, new_var))
@@ -62,13 +61,14 @@ class ParallelVarianceTest(tf.test.TestCase):
     x2 = tf.constant(np.random.randn(15, 10))
     n1 = 5
     n2 = 15
-    avg1, var1 = tf.nn.moments(x1, axes=[0])
-    avg2, var2 = tf.nn.moments(x2, axes=[0])
-    m2_1 = var1 * n1
-    m2_2 = var2 * n2
-    n, avg, m2 = tensor_normalizer.parallel_variance_calculation(
+    avg1 = tf.math.reduce_mean(x1, axis=[0])
+    m2_1 = tf.math.reduce_sum(tf.math.squared_difference(x1, avg1), axis=[0])
+    avg2 = tf.math.reduce_mean(x2, axis=[0])
+    m2_2 = tf.math.reduce_sum(tf.math.squared_difference(x2, avg2), axis=[0])
+    m2_c = m2_2 * 0.
+    n, avg, m2, _ = tensor_normalizer.parallel_variance_calculation(
         n1, avg1, m2_1,
-        n2, avg2, m2_2)
+        n2, avg2, m2_2, m2_c)
     var = m2 / n
     avg_true, var_true = tf.nn.moments(tf.concat((x1, x2), axis=0), axes=[0])
     avg, var, avg_true, var_true = self.evaluate((
@@ -209,11 +209,12 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
   def testGetVariables(self):
-    count_var, avg_var, m2_var, var_var = (self._tensor_normalizer.variables)
+    count_var, avg_var, m2_var, m2_carry_var = (
+        self._tensor_normalizer.variables)
     self.assertAllEqual(count_var.shape, self._tensor_spec.shape)
     self.assertAllEqual(avg_var.shape, self._tensor_spec.shape)
+    self.assertAllEqual(m2_carry_var.shape, self._tensor_spec.shape)
     self.assertAllEqual(m2_var.shape, self._tensor_spec.shape)
-    self.assertAllEqual(var_var.shape, self._tensor_spec.shape)
 
   def testReset(self):
     # Get original mean and variance.
@@ -247,15 +248,13 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
       expected_m2 = expected_var * n
       expected_count = np.array([n] * 3)
 
-      new_count, new_avg, new_m2, new_var = self.evaluate(
+      new_count, new_avg, new_m2, _ = self.evaluate(
           self._dict_tensor_normalizer.variables)
 
       tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_count),
                             new_count)
       tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_avg),
                             new_avg)
-      tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_var),
-                            new_var)
       tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_m2),
                             new_m2)
 
@@ -328,6 +327,106 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
                                      view_obs, norm_obs_avg, norm_obs_std)
 
     self.assertAllClose(observed, expected)
+
+  def testNormalizeVSNumpy(self):
+    np_array = np.array([[1.3, 4.2, 7.5],
+                         [8.3, 2.2, 9.5],
+                         [3.3, 5.2, 6.5]], np.float32)
+    tensor = tf.constant(np_array, dtype=tf.float32)
+    self.evaluate(self._tensor_normalizer.update(tensor))
+
+    epsilon = 1e-6
+    # Get new mean and variance, and make sure they changed.
+    norm_obs = self._tensor_normalizer.normalize(tensor,
+                                                 variance_epsilon=epsilon)
+
+    exp_obs = ((np_array - np_array.mean(axis=0)) /
+               (np_array.std(axis=0) + epsilon))
+
+    self.assertAllClose(norm_obs, exp_obs)
+
+  def testMeanVariance(self):
+    np_array = np.array([[1.3, 4.2, 7.5],
+                         [8.3, 2.2, 9.5],
+                         [3.3, 5.2, 6.5]], np.float32)
+    tensor = tf.constant(np_array, dtype=tf.float32)
+    self.evaluate(self._tensor_normalizer.update(tensor))
+
+    # Get new mean and variance, and make sure they changed.
+    new_mean, new_variance = self.evaluate(
+        self._tensor_normalizer._get_mean_var_estimates())
+
+    self.assertAllClose(np_array.mean(axis=0), new_mean[0])
+
+    self.assertAllClose(np_array.var(axis=0), new_variance[0])
+
+  def testIncrementalMean(self):
+    np_array = np.array([[1.3, 4.2, 7.5],
+                         [8.3, 2.2, 9.5],
+                         [3.3, 5.2, 6.5]], np.float32)
+    # It fails when run more than 62 iterations.
+    for i in range(62):
+      tensor = tf.constant(np_array + 100*i, dtype=tf.float32)
+      update_norm_vars = self._tensor_normalizer.update(tensor)
+      self.evaluate(update_norm_vars)
+
+      # Get new mean and variance, and make sure they changed.
+      new_mean, _ = self.evaluate(
+          self._tensor_normalizer._get_mean_var_estimates())
+      new_array = np.concatenate([np_array + 100*j for j in range(i+1)], axis=0)
+
+      self.assertAllClose(new_array.mean(axis=0), new_mean[0])
+
+  def testFixedMean(self):
+    np_array = np.array([[1.3, 4.2, 7.5],
+                         [8.3, 2.2, 9.5],
+                         [3.3, 5.2, 6.5]], np.float32)
+    # It fails when run more than 41 iterations.
+    for i in range(41):
+      tensor = tf.constant(np_array, dtype=tf.float32)
+      update_norm_vars = self._tensor_normalizer.update(tensor)
+      self.evaluate(update_norm_vars)
+
+      # Get new mean and variance, and make sure they changed.
+      new_mean, _ = self.evaluate(
+          self._tensor_normalizer._get_mean_var_estimates())
+      new_array = np.concatenate([np_array for _ in range(i+1)], axis=0)
+
+      self.assertAllClose(new_array.mean(axis=0), new_mean[0])
+
+  def testIncrementalVariance(self):
+    np_array = np.array([[1.3, 4.2, 7.5],
+                         [8.3, 2.2, 9.5],
+                         [3.3, 5.2, 6.5]], np.float32)
+    # It fails when run more than 383 iterations.
+    for i in range(383):
+      tensor = tf.constant(np_array + 100*i, dtype=tf.float32)
+      update_norm_vars = self._tensor_normalizer.update(tensor)
+      self.evaluate(update_norm_vars)
+
+      # Get new mean and variance, and make sure they changed.
+      _, new_variance = self.evaluate(
+          self._tensor_normalizer._get_mean_var_estimates())
+      new_array = np.concatenate([np_array + 100*j for j in range(i+1)], axis=0)
+
+      self.assertAllClose(new_array.var(axis=0), new_variance[0])
+
+  def testFixedVariance(self):
+    np_array = np.array([[-1.3, 4.2, 7.5],
+                         [8.3, -2.2, 9.5],
+                         [3.3, 5.2, -6.5]], np.float32)
+    # It fails done more than 54 iterations.
+    for i in range(54):
+      tensor = tf.constant(np_array, dtype=tf.float32)
+      update_norm_vars = self._tensor_normalizer.update(tensor)
+      self.evaluate(update_norm_vars)
+
+      # Get new mean and variance, and make sure they changed.
+      _, new_variance = self.evaluate(
+          self._tensor_normalizer._get_mean_var_estimates())
+      new_array = np.concatenate([np_array for _ in range(i+1)], axis=0)
+
+      self.assertAllClose(new_array.var(axis=0), new_variance[0])
 
 
 if __name__ == '__main__':
