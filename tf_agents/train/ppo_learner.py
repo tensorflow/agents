@@ -59,7 +59,7 @@ class PPOLearner(object):
                shuffle_buffer_size: Optional[int] = None,
                after_train_strategy_step_fn: Optional[Callable[
                    [types.NestedTensor, tf_agent.LossInfo], None]] = None,
-               triggers: Callable[..., None] = None,
+               triggers: Optional[Callable[..., None]] = None,
                checkpoint_interval: int = 100000,
                summary_interval: int = 1000,
                use_kwargs_in_agent_train: bool = False,

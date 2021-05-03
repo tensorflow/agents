@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.google.experimental.examples.ppo.ppo_learner.
+# Lint as: python2, python3
+"""Tests for tf_agents.agents.ppo.ppo_actor_network."""
 
-Verifies that the expected training data is passed into the agent from the
-PPO learner in different settings.
-"""
 from absl import flags
 from absl.testing import parameterized
 import numpy as np

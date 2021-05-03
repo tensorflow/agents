@@ -24,7 +24,6 @@ from typing import Optional
 
 import gin
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 from tf_agents.agents.ppo import ppo_utils
 from tf_agents.distributions import utils as distribution_utils
@@ -36,9 +35,6 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
-
-
-tfd = tfp.distributions
 
 
 @gin.configurable(module='tf_agents')

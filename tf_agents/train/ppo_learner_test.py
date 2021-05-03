@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.google.experimental.examples.ppo.ppo_learner.
+"""Tests for tf_agents.train.ppo_learner.
 
 Verifies that the expected training data is passed into the agent from the
 PPO learner in different settings.
@@ -65,7 +65,7 @@ class FakePPOAgent(ppo_agent.PPOAgent):
         compute_value_and_advantage_in_train=False,
         update_normalizers_in_train=False,
     )
-    # There is an artifical call on `_train` during the initialization which
+    # There is an artificial call on `_train` during the initialization which
     # ensures that the variables of the optimizer are initialized. This is
     # excluded from the call count.
     self.train_called_times = -1
@@ -133,8 +133,8 @@ def _concat_and_flatten(traj, multiplier):
     a flattened `Trajectory` shaped [multiplier * batch_size * num_steps, ...].
   """
   def concat_and_flatten_tensor(tensor):
-    multipled_component_list = [tensor] * multiplier
-    concat_tensor = tf.concat(multipled_component_list, axis=0)
+    multiplied_component_list = [tensor] * multiplier
+    concat_tensor = tf.concat(multiplied_component_list, axis=0)
 
     first_dim = multiplier * tensor.shape[0] * tensor.shape[1]
     other_dims = tensor.shape[2:]

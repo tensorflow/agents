@@ -107,8 +107,8 @@ class DummyActorNet(network.DistributionNetwork):
     del step_type
     hidden_state = tf.cast(tf.nest.flatten(inputs), tf.float32)[0]
 
-    # Calls coming from agent.train() has a time dimension. Direct loss calls
-    # may not have a time dimension. It order to make BatchSquash work, we need
+    # Calls coming from agent.train() have a time dimension. Direct loss calls
+    # may not have a time dimension. In order to make BatchSquash work, we need
     # to specify the outer dimension properly.
     has_time_dim = nest_utils.get_outer_rank(inputs,
                                              self.input_tensor_spec) == 2

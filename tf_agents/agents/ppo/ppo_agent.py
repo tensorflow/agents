@@ -239,15 +239,15 @@ class PPOAgent(tf_agent.TFAgent):
           ```
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
-      kl_cutoff_factor: Only meaningful when `kl_cutoff_coef > 0.0`. A multipler
-        used for calculating the KL cutoff ( =
+      kl_cutoff_factor: Only meaningful when `kl_cutoff_coef > 0.0`. A
+        multiplier used for calculating the KL cutoff ( =
         `kl_cutoff_factor * adaptive_kl_target`). If policy KL averaged across
         the batch changes more than the cutoff, a squared cutoff loss would
         be added to the loss function.
       kl_cutoff_coef: kl_cutoff_coef and kl_cutoff_factor are additional params
         if one wants to use a KL cutoff loss term in addition to the adaptive KL
         loss term. Default to 0.0 to disable the KL cutoff loss term as this was
-        not used in the paper.  kl_cutoff_coef is the coefficient to mulitply by
+        not used in the paper.  kl_cutoff_coef is the coefficient to multiply by
         the KL cutoff loss term, before adding to the total loss function.
       initial_adaptive_kl_beta: Initial value for beta coefficient of adaptive
         KL penalty. This initial value is not important in practice because the
@@ -672,7 +672,7 @@ class PPOAgent(tf_agent.TFAgent):
     Returns:
       The processed experience which has normalized_advantages and returns
       filled in its policy info. The advantages and returns for the last
-      transition is filled with 0s as they cannot be calculated.
+      transition are filled with 0s as they cannot be calculated.
     """
     # Try to be agnostic about the input type of experience before we call
     # to_transition() below.
@@ -757,8 +757,8 @@ class PPOAgent(tf_agent.TFAgent):
     Returns:
       A post processed `Trajectory` with the same shape as the input, with
         `return` and `normalized_advantage` stored inside of the policy info
-        dictionary. The advantages and returns for the last transition is filled
-        with 0s as they cannot be calculated.
+        dictionary. The advantages and returns for the last transition are
+        filled with 0s as they cannot be calculated.
     """
     if self._compute_value_and_advantage_in_train:
       return experience
