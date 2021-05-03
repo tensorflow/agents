@@ -35,7 +35,8 @@ def run_test(target_call,
              strategy,
              batch_size=None,
              log_steps=100,
-             num_steps_per_batch=1):
+             num_steps_per_batch=1,
+             iterator=None):
   """Run benchmark and return TimeHistory object with stats.
 
   Args:
@@ -46,6 +47,7 @@ def run_test(target_call,
     log_steps: Interval of steps between logging of stats.
     num_steps_per_batch: Number of steps per batch. Used to account for total
       number of transitions or examples processed per iteration.
+    iterator: Iterator for each execute step
 
   Returns:
     TimeHistory object containing step performance stats.
@@ -55,9 +57,15 @@ def run_test(target_call,
   for _ in range(num_steps):
     history.on_batch_begin()
     if strategy:
-      strategy.run(target_call)
+      if iterator:
+        strategy.run(target_call, args=(next(iterator),))
+      else:
+        strategy.run(target_call)
     else:
-      target_call()
+      if iterator:
+        target_call(next(iterator))
+      else:
+        target_call()
     history.on_batch_end()
 
   return history

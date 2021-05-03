@@ -116,8 +116,8 @@ class DqnCartPoleAgentBenchmark(tf.test.Benchmark):
       else:
         iterator = iter(dataset)
 
-      def train_step():
-        experience, _ = next(iterator)
+      def train_step(inputs):
+        experience, _ = inputs
         return tf_agent.train(experience)
 
       if tf_function:
@@ -127,7 +127,8 @@ class DqnCartPoleAgentBenchmark(tf.test.Benchmark):
           strategy,
           batch_size,
           train_steps=train_steps,
-          log_steps=log_steps)
+          log_steps=log_steps,
+          iterator=iterator)
 
     utils.check_values_changed(tf_agent, initial_values, check_values)
 
@@ -136,7 +137,8 @@ class DqnCartPoleAgentBenchmark(tf.test.Benchmark):
                      strategy,
                      batch_size,
                      train_steps=110,
-                     log_steps=10):
+                     log_steps=10,
+                     iterator=None):
     """Run function provided and report results per `tf.test.Benchmark`.
 
     Args:
@@ -145,6 +147,7 @@ class DqnCartPoleAgentBenchmark(tf.test.Benchmark):
       batch_size: Total batch_size.
       train_steps: Number of steps to run.
       log_steps: How often to log step statistics, e.g. step time.
+      iterator: Iterator to dataset to pass to train_step.
 
     Returns:
       `TimeHistory` object with statistics about the throughput perforamnce.
@@ -154,7 +157,8 @@ class DqnCartPoleAgentBenchmark(tf.test.Benchmark):
         train_steps,
         strategy,
         batch_size=batch_size,
-        log_steps=log_steps)
+        log_steps=log_steps,
+        iterator=iterator)
     print('Avg step time:{}'.format(history.get_average_step_time()))
     print('Avg exp/sec:{}'.format(history.get_average_examples_per_second()))
     metrics = []
