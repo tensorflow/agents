@@ -415,11 +415,11 @@ def assert_matching_dtypes_and_inner_shapes(tensors,
                          get_shapes(specs)))
 
 
-def is_batched_nested_tensors(
-    tensors,
-    specs,
-    num_outer_dims=1,
-    allow_extra_fields=False):
+def is_batched_nested_tensors(tensors,
+                              specs,
+                              num_outer_dims=1,
+                              allow_extra_fields=False,
+                              check_dtypes=True):
   """Compares tensors to specs to determine if all tensors are batched or not.
 
   For each tensor, it checks the dimensions and dtypes with respect to specs.
@@ -438,19 +438,17 @@ def is_batched_nested_tensors(
       shape of unbatched tensors.
     num_outer_dims: The integer number of dimensions that are considered batch
       dimensions.  Default 1.
-    allow_extra_fields: If `True`, then `tensors` may have extra
-      subfields which are not in specs.  In this case, the extra subfields
-      will not be checked.  For example:
-
-      ```python
+    allow_extra_fields: If `True`, then `tensors` may have extra subfields which
+      are not in specs.  In this case, the extra subfields
+      will not be checked.  For example:  ```python
       tensors = {"a": tf.zeros((3, 4), dtype=tf.float32),
                  "b": tf.zeros((5, 6), dtype=tf.float32)}
-      specs = {"a": tf.TensorSpec(shape=(4,), dtype=tf.float32)}
-      assert is_batched_nested_tensors(tensors, specs, allow_extra_fields=True)
-      ```
-
-      The above example would raise a ValueError if `allow_extra_fields`
-      was False.
+      specs = {"a": tf.TensorSpec(shape=(4,), dtype=tf.float32)} assert
+        is_batched_nested_tensors(tensors, specs, allow_extra_fields=True) ```
+        The above example would raise a ValueError if `allow_extra_fields` was
+        False.
+    check_dtypes: If `True` will validate that tensors and specs have the same
+      dtypes.
 
   Returns:
     True if all Tensors are batched and False if all Tensors are unbatched.
@@ -486,8 +484,9 @@ def is_batched_nested_tensors(
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
                      (tf.nest.pack_sequence_as(specs, tensor_shapes),))
 
-  if any(s_dtype != t_dtype
-         for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)):
+  if (check_dtypes and
+      any(s_dtype != t_dtype
+          for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes))):
     raise TypeError('Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}'
                     .format(tf.nest.pack_sequence_as(specs, tensor_dtypes),
                             tf.nest.pack_sequence_as(specs, spec_dtypes)))
@@ -805,7 +804,7 @@ def get_outer_shape(nested_tensor, spec):
   # Check tensors have same batch shape.
   num_outer_dims = (len(first_tensor.shape) - len(first_spec.shape))
   if not is_batched_nested_tensors(
-      nested_tensor, spec, num_outer_dims=num_outer_dims):
+      nested_tensor, spec, num_outer_dims=num_outer_dims, check_dtypes=False):
     return tf.constant([], dtype=tf.int32)
 
   return tf.shape(input=first_tensor)[:num_outer_dims]

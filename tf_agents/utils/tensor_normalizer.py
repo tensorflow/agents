@@ -34,6 +34,15 @@ create_variable = common.create_variable
 
 _EPS = 1e-8
 
+_DTYPE_CONVERSION = {
+    tf.int32: tf.float32,
+    tf.int64: tf.float64,
+    tf.float16: tf.float32,  # Use increased precision.
+    tf.bfloat16: tf.float32,  # Use increased precision.
+    tf.float32: tf.float32,
+    tf.float64: tf.float64
+}
+
 
 @six.add_metaclass(abc.ABCMeta)
 class TensorNormalizer(tf.Module):
@@ -51,14 +60,39 @@ class TensorNormalizer(tf.Module):
     normalized_list.append(tensor_normalizer.normalize(o))
     tensor_normalizer.update(o)
   ```
+
+  For float64 inputs do:
+  ```
+  tensor_normalizer = StreamingTensorNormalizer(
+      tf.TensorSpec([], tf.float64), dtype=tf.float64)
+  observation_list = [list of float64 scalars or batches]
+
+  for o in observation_list:
+    normalized_list.append(tensor_normalizer.normalize(o))
+    tensor_normalizer.update(o)
   """
 
   def __init__(self, tensor_spec, scope='normalize_tensor'):
+    """Initialize TensorNormalizer.
+
+    Args:
+      tensor_spec: The specs of the tensors to normalize.
+      scope: Scope for the `tf.Module`.
+    """
+
     super(TensorNormalizer, self).__init__(name=scope)
     self._scope = scope
-    self._tensor_spec = tensor_spec_lib.with_dtype(tensor_spec, tf.float32)
-    self._flat_tensor_spec = tf.nest.flatten(tensor_spec)
+    self._tensor_spec = tensor_spec
+    self._flat_variable_spec = [
+        self._map_spec_dtype(s) for s in tf.nest.flatten(tensor_spec)
+    ]
     self._create_variables()
+
+  def map_dtype(self, dtype):
+    return _DTYPE_CONVERSION[dtype]
+
+  def _map_spec_dtype(self, spec):
+    return tensor_spec_lib.with_dtype(spec, self.map_dtype(spec.dtype))
 
   @abc.abstractmethod
   def _create_variables(self):
@@ -85,7 +119,15 @@ class TensorNormalizer(tf.Module):
 
   def update(self, tensor, outer_dims=(0,)):
     """Updates tensor normalizer variables."""
-    tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
+    nest_utils.assert_matching_dtypes_and_inner_shapes(
+        tensor,
+        self._tensor_spec,
+        caller=self,
+        tensors_name='tensor',
+        specs_name='tensor_spec')
+    tensor = tf.nest.map_structure(
+        lambda t: tf.cast(t, self.map_dtype(t.dtype)), tensor)
+
     return tf.group(self._update_ops(tensor, outer_dims))
 
   def normalize(self,
@@ -105,11 +147,12 @@ class TensorNormalizer(tf.Module):
     Returns:
       normalized_tensor: Tensor after applying normalization.
     """
-    tensor = tf.nest.map_structure(lambda t: tf.cast(t, tf.float32), tensor)
     nest_utils.assert_matching_dtypes_and_inner_shapes(
         tensor, self._tensor_spec, caller=self,
         tensors_name='tensors', specs_name='tensor_spec')
-    tensor = tf.nest.flatten(tensor)
+    tensor = [
+        tf.cast(t, self.map_dtype(t.dtype)) for t in tf.nest.flatten(tensor)
+    ]
 
     with tf.name_scope(self._scope + '/normalize'):
       mean_estimate, var_estimate = self._get_mean_var_estimates()
@@ -129,7 +172,7 @@ class TensorNormalizer(tf.Module):
             name='normalized_tensor')
 
       normalized_tensor = nest_utils.map_structure_up_to(
-          self._flat_tensor_spec,
+          self._flat_variable_spec,
           _normalize_single_tensor,
           tensor,
           mean,
@@ -146,6 +189,9 @@ class TensorNormalizer(tf.Module):
 
     normalized_tensor = tf.nest.pack_sequence_as(self._tensor_spec,
                                                  normalized_tensor)
+    normalized_tensor = tf.nest.map_structure(
+        lambda t, spec: tf.cast(t, spec.dtype), normalized_tensor,
+        self._tensor_spec)
     return normalized_tensor
 
 
@@ -163,11 +209,11 @@ class EMATensorNormalizer(TensorNormalizer):
   def _create_variables(self):
     """Creates the variables needed for EMATensorNormalizer."""
     self._mean_moving_avg = tf.nest.map_structure(
-        lambda spec: create_variable('mean', 0, spec.shape, tf.float32),
-        self._flat_tensor_spec)
+        lambda spec: create_variable('mean', 0, spec.shape, spec.dtype),
+        self._flat_variable_spec)
     self._var_moving_avg = tf.nest.map_structure(
-        lambda spec: create_variable('var', 1, spec.shape, tf.float32),
-        self._flat_tensor_spec)
+        lambda spec: create_variable('var', 1, spec.shape, spec.dtype),
+        self._flat_variable_spec)
 
   @property
   def variables(self):
@@ -199,9 +245,9 @@ class EMATensorNormalizer(TensorNormalizer):
       """Make update ops for a single non-nested tensor."""
       # Take the moments across batch dimension. Calculate variance with
       #   moving avg mean, so that this works even with batch size 1.
-      mean = tf.reduce_mean(input_tensor=single_tensor, axis=outer_dims)
+      mean = tf.reduce_mean(single_tensor, axis=outer_dims)
       var = tf.reduce_mean(
-          input_tensor=tf.square(single_tensor - mean_var), axis=outer_dims)
+          tf.math.squared_difference(single_tensor, mean_var), axis=outer_dims)
 
       # Ops to update moving average. Make sure that all stats are computed
       #   before updates are performed.
@@ -228,35 +274,27 @@ class EMATensorNormalizer(TensorNormalizer):
 class StreamingTensorNormalizer(TensorNormalizer):
   """Normalizes mean & variance based on full history of tensor values."""
 
-  @property
-  def dtype(self):
-    """Overwrite to use tf.float64.
-
-    Current implemtation gets same precision with tf.float32 as with tf.float64
-    """
-    return tf.float32
-
   def _create_variables(self):
     """Create all variables needed for the normalizer."""
     self._count = [
-        create_variable('count_%d' % i, _EPS, spec.shape, self.dtype,
-                        trainable=False)
-        for i, spec in enumerate(self._flat_tensor_spec)
+        create_variable(
+            'count_%d' % i, _EPS, spec.shape, spec.dtype, trainable=False)
+        for i, spec in enumerate(self._flat_variable_spec)
     ]
     self._avg = [
-        create_variable('avg_%d' % i, 0, spec.shape, self.dtype,
-                        trainable=False)
-        for i, spec in enumerate(self._flat_tensor_spec)
+        create_variable(
+            'avg_%d' % i, 0, spec.shape, spec.dtype, trainable=False)
+        for i, spec in enumerate(self._flat_variable_spec)
     ]
     self._m2 = [
-        create_variable('m2_%d' % i, 0, spec.shape, self.dtype,
-                        trainable=False)
-        for i, spec in enumerate(self._flat_tensor_spec)
+        create_variable(
+            'm2_%d' % i, 0, spec.shape, spec.dtype, trainable=False)
+        for i, spec in enumerate(self._flat_variable_spec)
     ]
     self._m2_carry = [
-        create_variable('m2_carry_%d' % i, 0, spec.shape, self.dtype,
-                        trainable=False)
-        for i, spec in enumerate(self._flat_tensor_spec)
+        create_variable(
+            'm2_carry_%d' % i, 0, spec.shape, spec.dtype, trainable=False)
+        for i, spec in enumerate(self._flat_variable_spec)
     ]
 
   @property
@@ -281,23 +319,20 @@ class StreamingTensorNormalizer(TensorNormalizer):
     """
     del outer_dims
 
-    nest_utils.assert_matching_dtypes_and_inner_shapes(
-        tensors, self._tensor_spec, caller=self,
-        tensors_name='tensors', specs_name='tensor_spec')
     outer_shape = nest_utils.get_outer_shape(tensors, self._tensor_spec)
     outer_rank_static = tf.compat.dimension_value(outer_shape.shape[0])
     outer_axes = (
         list(range(outer_rank_static)) if outer_rank_static is not None else
         tf.range(tf.size(outer_shape)))
 
-    n_a = tf.cast(tf.reduce_prod(outer_shape), self.dtype)
+    outer_n = tf.reduce_prod(outer_shape)
 
     flat_tensors = tf.nest.flatten(tensors)
 
     update_ops = []
 
     for i, t in enumerate(flat_tensors):
-      t = tf.cast(t, self.dtype)
+      n_a = tf.cast(outer_n, self._count[i].dtype)
       avg_a = tf.math.reduce_mean(t, outer_axes)
       m2_a = tf.math.reduce_sum(tf.math.squared_difference(t, avg_a),
                                 outer_axes)
@@ -347,6 +382,9 @@ def parallel_variance_calculation(
     m2_b_c: types.Float
 ) -> Tuple[types.Int, types.Float, types.Float, types.Float]:
   """Calculate the sufficient statistics (average & second moment) of two sets.
+
+  For better precision if sets are of different sizes, `a` should be the smaller
+  and `b` the bigger.
 
   For more details, see the parallel algorithm of Chan et al. at:
   https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm

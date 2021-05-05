@@ -197,49 +197,63 @@ class EMATensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 
 class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 
-  def setUp(self):
-    super(StreamingTensorNormalizerTest, self).setUp()
-    tf.compat.v1.reset_default_graph()
-    self._tensor_spec = tensor_spec.TensorSpec([3], tf.float32, 'obs')
-    self._tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
-        tensor_spec=self._tensor_spec)
-    self._dict_tensor_spec = {'a': self._tensor_spec, 'b': self._tensor_spec}
-    self._dict_tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
-        tensor_spec=self._dict_tensor_spec)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testGetVariables(self, dtype):
+    spec = tensor_spec.TensorSpec([3], dtype, 'obs')
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(spec)
     self.evaluate(tf.compat.v1.global_variables_initializer())
+    variables = t_normalizer.variables
+    for var in variables:
+      self.assertEqual(var.shape, spec.shape)
+      self.assertEqual(var.dtype, spec.dtype)
 
-  def testGetVariables(self):
-    count_var, avg_var, m2_var, m2_carry_var = (
-        self._tensor_normalizer.variables)
-    self.assertAllEqual(count_var.shape, self._tensor_spec.shape)
-    self.assertAllEqual(avg_var.shape, self._tensor_spec.shape)
-    self.assertAllEqual(m2_carry_var.shape, self._tensor_spec.shape)
-    self.assertAllEqual(m2_var.shape, self._tensor_spec.shape)
-
-  def testReset(self):
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testReset(self, dtype):
     # Get original mean and variance.
-    original_vars = self.evaluate(self._tensor_normalizer.variables)
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    original_vars = self.evaluate(t_normalizer.variables)
 
     # Construct and evaluate normalized tensor. Updates statistics.
     np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
-                        np.float32)
-    tensor = tf.constant(np_array, dtype=tf.float32)
-    update_norm_vars = self._tensor_normalizer.update(tensor)
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
+    update_norm_vars = t_normalizer.update(tensor)
     self.evaluate(update_norm_vars)
 
     # Verify that the internal variables have been successfully reset.
-    self.evaluate(self._tensor_normalizer.reset())
-    reset_vars = self.evaluate(self._tensor_normalizer.variables)
+    self.evaluate(t_normalizer.reset())
+    reset_vars = self.evaluate(t_normalizer.variables)
     self.assertAllClose(original_vars, reset_vars)
 
-  def testUpdate(self):
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testUpdate(self, dtype):
     # Construct and evaluate normalized tensor. Should update mean &
     #   variance.
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
-    tensors = {'a': tf.constant(np_array, dtype=tf.float32),
-               'b': tf.constant(np_array, dtype=tf.float32)}
+    spec = tensor_spec.TensorSpec([3], dtype, 'obs')
+    dict_tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec={
+            'a': spec,
+            'b': spec
+        })
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        dtype.as_numpy_dtype)
+    tensors = {
+        'a': tf.constant(np_array, dtype=dtype),
+        'b': tf.constant(np_array, dtype=dtype)
+    }
 
     def _compare(data):
       n = data.shape[0]
@@ -249,7 +263,7 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
       expected_count = np.array([n] * 3)
 
       new_count, new_avg, new_m2, _ = self.evaluate(
-          self._dict_tensor_normalizer.variables)
+          dict_tensor_normalizer.variables)
 
       tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_count),
                             new_count)
@@ -258,35 +272,46 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
       tf.nest.map_structure(lambda v: self.assertAllClose(v, expected_m2),
                             new_m2)
 
-    update_norm_vars = self._dict_tensor_normalizer.update(tensors)
+    update_norm_vars = dict_tensor_normalizer.update(tensors)
     self.evaluate(update_norm_vars)
     _compare(data=np_array)
 
-    update_norm_vars = self._dict_tensor_normalizer.update(
+    update_norm_vars = dict_tensor_normalizer.update(
         tf.nest.map_structure(lambda t: t + 1.0, tensors))
     self.evaluate(update_norm_vars)
     _compare(data=np.concatenate((np_array, np_array + 1.0), axis=0))
 
-    update_norm_vars = self._dict_tensor_normalizer.update(
+    update_norm_vars = dict_tensor_normalizer.update(
         tf.nest.map_structure(lambda t: t - 1.0, tensors))
     self.evaluate(update_norm_vars)
     _compare(
         data=np.concatenate((np_array, np_array + 1.0, np_array - 1.0), axis=0))
 
-  def testNormalization(self):
-    as_tensor = functools.partial(tf.convert_to_tensor, dtype=tf.float32)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testNormalization(self, dtype):
+    spec = tensor_spec.TensorSpec([3], dtype, 'obs')
+    dict_tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec={
+            'a': spec,
+            'b': spec
+        })
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    as_tensor = functools.partial(tf.convert_to_tensor, dtype=dtype)
 
     # Update with some initial values.
     norm_obs = {'a': np.random.randn(6, 2, 3),
                 'b': np.random.randn(6, 2, 3)}
     norm_obs_t = tf.nest.map_structure(as_tensor, norm_obs)
-    self.evaluate(self._dict_tensor_normalizer.update(norm_obs_t))
+    self.evaluate(dict_tensor_normalizer.update(norm_obs_t))
 
     view_obs = {'a': np.random.randn(4, 3),
                 'b': np.random.randn(4, 3)}
     view_obs_t = tf.nest.map_structure(as_tensor, view_obs)
     observed = self.evaluate(
-        self._dict_tensor_normalizer.normalize(
+        dict_tensor_normalizer.normalize(
             view_obs_t, clip_value=-1, variance_epsilon=1e-6))
 
     norm_obs_avg = tf.nest.map_structure(
@@ -299,131 +324,129 @@ class StreamingTensorNormalizerTest(tf.test.TestCase, parameterized.TestCase):
 
     self.assertAllClose(observed, expected)
 
-  def testNormalizationFloat64(self):
-    spec = tensor_spec.TensorSpec([3], tf.float64, 'obs')
-    dict_tensor_spec = {'a': spec, 'b': spec}
-    dict_tensor_normalizer = tensor_normalizer.StreamingTensorNormalizer(
-        tensor_spec=dict_tensor_spec)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testNormalizeVSNumpy(self, dtype):
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
     self.evaluate(tf.compat.v1.global_variables_initializer())
-
-    as_tensor = functools.partial(tf.convert_to_tensor, dtype=tf.float64)
-    # Update with some initial values.
-    norm_obs = {'a': np.random.randn(6, 2, 3), 'b': np.random.randn(6, 2, 3)}
-    norm_obs_t = tf.nest.map_structure(as_tensor, norm_obs)
-
-    self.evaluate(dict_tensor_normalizer.update(norm_obs_t))
-
-    view_obs = {'a': np.random.randn(4, 3), 'b': np.random.randn(4, 3)}
-    view_obs_t = tf.nest.map_structure(as_tensor, view_obs)
-
-    observed = self.evaluate(
-        dict_tensor_normalizer.normalize(
-            view_obs_t, clip_value=-1, variance_epsilon=1e-6))
-
-    norm_obs_avg = tf.nest.map_structure(lambda a: a.mean(axis=(0, 1)),
-                                         norm_obs)
-    norm_obs_std = tf.nest.map_structure(lambda a: a.std(axis=(0, 1)), norm_obs)
-    expected = tf.nest.map_structure(lambda obs, avg, std: (obs - avg) / std,
-                                     view_obs, norm_obs_avg, norm_obs_std)
-
-    self.assertAllClose(observed, expected)
-
-  def testNormalizeVSNumpy(self):
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
-    tensor = tf.constant(np_array, dtype=tf.float32)
-    self.evaluate(self._tensor_normalizer.update(tensor))
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
+    self.evaluate(t_normalizer.update(tensor))
 
     epsilon = 1e-6
     # Get new mean and variance, and make sure they changed.
-    norm_obs = self._tensor_normalizer.normalize(tensor,
-                                                 variance_epsilon=epsilon)
+    norm_obs = t_normalizer.normalize(tensor, variance_epsilon=epsilon)
 
     exp_obs = ((np_array - np_array.mean(axis=0)) /
                (np_array.std(axis=0) + epsilon))
 
     self.assertAllClose(norm_obs, exp_obs)
 
-  def testMeanVariance(self):
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
-    tensor = tf.constant(np_array, dtype=tf.float32)
-    self.evaluate(self._tensor_normalizer.update(tensor))
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testMeanVariance(self, dtype):
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
+    self.evaluate(t_normalizer.update(tensor))
 
     # Get new mean and variance, and make sure they changed.
     new_mean, new_variance = self.evaluate(
-        self._tensor_normalizer._get_mean_var_estimates())
+        t_normalizer._get_mean_var_estimates())
 
     self.assertAllClose(np_array.mean(axis=0), new_mean[0])
 
     self.assertAllClose(np_array.var(axis=0), new_variance[0])
 
-  def testIncrementalMean(self):
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testIncrementalMean(self, dtype):
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
     # It fails when run more than 62 iterations.
     for i in range(62):
-      tensor = tf.constant(np_array + 100*i, dtype=tf.float32)
-      update_norm_vars = self._tensor_normalizer.update(tensor)
-      self.evaluate(update_norm_vars)
+      self.evaluate(t_normalizer.update(tensor + 100 * i))
 
       # Get new mean and variance, and make sure they changed.
-      new_mean, _ = self.evaluate(
-          self._tensor_normalizer._get_mean_var_estimates())
+      new_mean, _ = self.evaluate(t_normalizer._get_mean_var_estimates())
       new_array = np.concatenate([np_array + 100*j for j in range(i+1)], axis=0)
 
       self.assertAllClose(new_array.mean(axis=0), new_mean[0])
 
-  def testFixedMean(self):
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testFixedMean(self, dtype):
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
     # It fails when run more than 41 iterations.
     for i in range(41):
-      tensor = tf.constant(np_array, dtype=tf.float32)
-      update_norm_vars = self._tensor_normalizer.update(tensor)
-      self.evaluate(update_norm_vars)
+      self.evaluate(t_normalizer.update(tensor))
 
       # Get new mean and variance, and make sure they changed.
-      new_mean, _ = self.evaluate(
-          self._tensor_normalizer._get_mean_var_estimates())
+      new_mean, _ = self.evaluate(t_normalizer._get_mean_var_estimates())
       new_array = np.concatenate([np_array for _ in range(i+1)], axis=0)
 
       self.assertAllClose(new_array.mean(axis=0), new_mean[0])
 
-  def testIncrementalVariance(self):
-    np_array = np.array([[1.3, 4.2, 7.5],
-                         [8.3, 2.2, 9.5],
-                         [3.3, 5.2, 6.5]], np.float32)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testIncrementalVariance(self, dtype):
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    np_array = np.array([[1.3, 4.2, 7.5], [8.3, 2.2, 9.5], [3.3, 5.2, 6.5]],
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
     # It fails when run more than 383 iterations.
     for i in range(383):
-      tensor = tf.constant(np_array + 100*i, dtype=tf.float32)
-      update_norm_vars = self._tensor_normalizer.update(tensor)
-      self.evaluate(update_norm_vars)
+      self.evaluate(t_normalizer.update(tensor + 100 * i))
 
       # Get new mean and variance, and make sure they changed.
-      _, new_variance = self.evaluate(
-          self._tensor_normalizer._get_mean_var_estimates())
+      _, new_variance = self.evaluate(t_normalizer._get_mean_var_estimates())
       new_array = np.concatenate([np_array + 100*j for j in range(i+1)], axis=0)
 
       self.assertAllClose(new_array.var(axis=0), new_variance[0])
 
-  def testFixedVariance(self):
-    np_array = np.array([[-1.3, 4.2, 7.5],
-                         [8.3, -2.2, 9.5],
-                         [3.3, 5.2, -6.5]], np.float32)
+  @parameterized.named_parameters(
+      ('float32', tf.float32),
+      ('float64', tf.float64),
+  )
+  def testFixedVariance(self, dtype):
+    t_normalizer = tensor_normalizer.StreamingTensorNormalizer(
+        tensor_spec=tensor_spec.TensorSpec([3], dtype, 'obs'))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    np_array = np.array([[-1.3, 4.2, 7.5], [8.3, -2.2, 9.5], [3.3, 5.2, -6.5]],
+                        dtype.as_numpy_dtype)
+    tensor = tf.constant(np_array, dtype=dtype)
     # It fails done more than 54 iterations.
     for i in range(54):
-      tensor = tf.constant(np_array, dtype=tf.float32)
-      update_norm_vars = self._tensor_normalizer.update(tensor)
-      self.evaluate(update_norm_vars)
+      self.evaluate(t_normalizer.update(tensor))
 
       # Get new mean and variance, and make sure they changed.
-      _, new_variance = self.evaluate(
-          self._tensor_normalizer._get_mean_var_estimates())
+      _, new_variance = self.evaluate(t_normalizer._get_mean_var_estimates())
       new_array = np.concatenate([np_array for _ in range(i+1)], axis=0)
 
       self.assertAllClose(new_array.var(axis=0), new_variance[0])
