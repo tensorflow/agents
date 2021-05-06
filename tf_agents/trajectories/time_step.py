@@ -117,7 +117,9 @@ def restart(observation: types.NestedTensorOrArray,
   Args:
     observation: A NumPy array, tensor, or a nested dict, list or tuple of
       arrays or tensors.
-    batch_size: (Optional) A python or tensorflow integer scalar.
+    batch_size: (Optional) A python or tensorflow integer scalar. If not
+      provided, the environment will not be considered as a batched
+      environment.
     reward_spec: If provided, the reward in the returned `TimeStep` will be
       compatible with the provided `reward_spec`.
 
@@ -198,7 +200,8 @@ def transition(observation: types.NestedTensorOrArray,
       arrays or tensors.
     discount: (optional) A scalar, or 1D NumPy array, or tensor.
     outer_dims: (optional) If provided, it will be used to determine the
-      batch dimensions.
+      batch dimensions. If not, the batch dimensions will be inferred by
+      reward's shape.
 
   Returns:
     A `TimeStep`.
@@ -258,7 +261,8 @@ def termination(observation: types.NestedTensorOrArray,
     reward: A NumPy array, tensor, or a nested dict, list or tuple of
       arrays or tensors.
     outer_dims: (optional) If provided, it will be used to determine the
-      batch dimensions.
+      batch dimensions. If not, the batch dimensions will be inferred by
+      reward's shape.
   Returns:
     A `TimeStep`.
 
@@ -320,7 +324,8 @@ def truncation(observation: types.NestedTensorOrArray,
       arrays or tensors.
     discount: (optional) A scalar, or 1D NumPy array, or tensor.
     outer_dims: (optional) If provided, it will be used to determine the
-      batch dimensions.
+      batch dimensions. If not, the batch dimensions will be inferred by
+      reward's shape.
 
   Returns:
     A `TimeStep`.
