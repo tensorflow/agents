@@ -21,10 +21,11 @@ returned.
 """
 
 import gin
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.networks import network
 from tf_agents.networks import utils
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
 
@@ -78,6 +79,8 @@ class ActorNetwork(network.Network):
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
         name=name)
+
+    output_tensor_spec = tensor_spec.from_spec(output_tensor_spec)
 
     if len(tf.nest.flatten(input_tensor_spec)) > 1:
       raise ValueError('Only a single observation is supported by this network')
