@@ -259,16 +259,47 @@ class HyperVolumeScalarizerTest(tf.test.TestCase):
     transform = lambda m, s, o: m * s + o
     scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
         [1, 0, 0], self._hv_params, transform)
-    self.assertAllClose(
-        self.evaluate(scalarizer(self._batch_multi_objectives)),
-        self.evaluate(tf.constant([3, 6], dtype=tf.float32)))
+    self.assertAllClose(scalarizer(self._batch_multi_objectives), [3, 6])
 
     transform2 = lambda m, s, o: tf.multiply(m, m) * s + o
     scalarizer2 = multi_objective_scalarizer.HyperVolumeScalarizer(
         [0.1, 0.2, 0.2], self._hv_params, transform2)
+    self.assertAllClose(scalarizer2(self._batch_multi_objectives), [1.5, 24.])
+
+    def default_transform(metrics, slopes, offsets):
+      transformed_metrics = metrics
+      return transformed_metrics * slopes + offsets
+
+    scalarizer3 = multi_objective_scalarizer.HyperVolumeScalarizer(
+        [0.1, 0.2, 0.2], self._hv_params, default_transform)
+    default_scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        [0.1, 0.2, 0.2], self._hv_params)
     self.assertAllClose(
-        self.evaluate(scalarizer2(self._batch_multi_objectives)),
-        self.evaluate(tf.constant([1.5, 24.], dtype=tf.float32)))
+        self.evaluate(scalarizer3(self._batch_multi_objectives)),
+        self.evaluate(default_scalarizer(self._batch_multi_objectives)))
+
+    # Apply sigmoid to the 2nd metric.
+    sigmoid_metric_mask = [False, True, False]
+    batch_size = self._batch_multi_objectives.shape[0]
+    sigmoid_batch_mask = tf.reshape(
+        tf.tile(sigmoid_metric_mask, [batch_size]),
+        [batch_size, len(sigmoid_metric_mask)])
+
+    def sigmoid_metric_transform(metrics: tf.Tensor, slopes, offsets):
+      transformed_values = tf.where(sigmoid_batch_mask, tf.sigmoid(metrics),
+                                    metrics)
+      return transformed_values * slopes + offsets
+
+    sigmoid_scalarizer = multi_objective_scalarizer.HyperVolumeScalarizer(
+        [0.1, 0.2, 0.2], self._hv_params, sigmoid_metric_transform)
+
+    self.assertAllClose(
+        sigmoid_scalarizer(self._batch_multi_objectives), [1.321196, 1.489961])
+
+    sigmoid_scalarizer2 = multi_objective_scalarizer.HyperVolumeScalarizer(
+        [0, 1.0, 0], self._hv_params, sigmoid_metric_transform)
+    self.assertAllClose(
+        sigmoid_scalarizer2(self._batch_multi_objectives), [0.880797, 0.993307])
 
   def testNegativeObjectives(self):
     direction = [1, 0, 0]
