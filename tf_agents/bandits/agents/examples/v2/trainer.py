@@ -182,10 +182,11 @@ def train(root_dir,
 
   summary_writer = tf.summary.create_file_writer(root_dir)
   summary_writer.set_as_default()
-  for _ in range(training_loops):
+  for i in range(training_loops):
     training_loop()
     metric_utils.log_metrics(metrics)
     for metric in metrics:
       metric.tf_summaries(train_step=step_metric.result())
     checkpoint_manager.save()
-    saver.save(os.path.join(root_dir, 'policy_%d' % step_metric.result()))
+    if i % 100 == 0:
+      saver.save(os.path.join(root_dir, 'policy_%d' % step_metric.result()))
