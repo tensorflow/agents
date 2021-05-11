@@ -101,6 +101,8 @@ GymEnvWrapper = Callable[[GymEnv], GymEnv]
 PyEnv = ForwardRef('tf_agents.environments.py_environment.PyEnvironment')  # pylint: disable=invalid-name
 PyEnvWrapper = Callable[[PyEnv], PyEnv]
 
+Observer = Callable[[Trajectory], None]
+
 ComparatorFn = Callable[[Float, Float], Bool]
 LossFn = Callable[..., Tensor]
 
