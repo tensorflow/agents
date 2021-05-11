@@ -41,35 +41,37 @@ class CountingEnv(py_environment.PyEnvironment):
   observation count may go down.
   """
 
-  def __init__(self, steps_per_episode: types.Int = 10):
+  def __init__(self, steps_per_episode: types.Int = 10, dtype=np.int32):
     self._steps_per_episode = steps_per_episode
-
+    self._dtype = np.dtype(dtype)
     self._episodes = 0
-    self._current_step = np.array(0, dtype=np.int32)
+    self._current_step = np.array(0, dtype=self._dtype)
     super(CountingEnv, self).__init__(handle_auto_reset=True)
 
   def observation_spec(self) -> types.NestedArraySpec:
-    return specs.BoundedArraySpec((), dtype=np.int32)
+    return specs.BoundedArraySpec((), dtype=self._dtype)
 
   def action_spec(self) -> types.NestedArraySpec:
-    return specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
+    return specs.BoundedArraySpec((), dtype=self._dtype, minimum=0, maximum=1)
 
   def _step(self, action):
     del action  # Unused.
-    self._current_step = np.array(1 + self._current_step, dtype=np.int32)
+    self._current_step = np.array(1 + self._current_step,
+                                  dtype=self._dtype)
     if self._current_step < self._steps_per_episode:
       return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
     return ts.termination(self._get_observation(), 1)  # pytype: disable=wrong-arg-types
 
   def _get_observation(self):
     if self._episodes:
-      return np.array(10 * self._episodes + self._current_step, dtype=np.int32)
+      return np.array(10 * self._episodes + self._current_step,
+                      dtype=self._dtype)
     return self._current_step
 
   def _reset(self):
     if self._current_time_step and self._current_time_step.is_last():
       self._episodes += 1
-    self._current_step = np.array(0, dtype=np.int32)
+    self._current_step = np.array(0, dtype=self._dtype)
     return ts.restart(self._get_observation())
 
   def get_info(self):

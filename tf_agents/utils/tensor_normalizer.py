@@ -34,11 +34,10 @@ create_variable = common.create_variable
 
 _EPS = 1e-8
 
+# Use tf.float32 by default
 _DTYPE_CONVERSION = {
     tf.int32: tf.float32,
     tf.int64: tf.float64,
-    tf.float16: tf.float32,  # Use increased precision.
-    tf.bfloat16: tf.float32,  # Use increased precision.
     tf.float32: tf.float32,
     tf.float64: tf.float64
 }
@@ -89,7 +88,8 @@ class TensorNormalizer(tf.Module):
     self._create_variables()
 
   def map_dtype(self, dtype):
-    return _DTYPE_CONVERSION[dtype]
+    # Use tf.float32 by default
+    return _DTYPE_CONVERSION.get(dtype, tf.float32)
 
   def _map_spec_dtype(self, spec):
     return tensor_spec_lib.with_dtype(spec, self.map_dtype(spec.dtype))
