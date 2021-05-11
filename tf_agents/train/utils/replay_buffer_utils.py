@@ -16,6 +16,8 @@
 # Lint as: python3
 """Utils for using replay buffers."""
 
+import tensorflow as tf
+
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.utils import lazy_loader
@@ -88,11 +90,15 @@ def get_reverb_buffer(data_spec,
     Note: the if local server is created, it is not returned. It can be
       retrieved by calling local_server() on the returned replay buffer.
   """
+  table_signature = tf.nest.map_structure(
+      lambda s: tf.TensorSpec((sequence_length,) + s.shape, s.dtype, s.name),
+      data_spec)
+
   if reverb_server_address is None:
     if table is None:
       table = _create_uniform_table(
           table_name,
-          data_spec,
+          table_signature,
           table_capacity=replay_capacity,
           min_size_limiter_size=min_size_limiter_size)
 

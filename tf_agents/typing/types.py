@@ -114,6 +114,7 @@ ReverbTable = ForwardRef('reverb.Table')
 ReverbClient = ForwardRef('reverb.Client')
 ReverbTFClient = ForwardRef('reverb.TFClient')
 ReverbSampleInfo = ForwardRef('reverb.replay_sample.SampleInfo')
+ReverbReplaySample = ForwardRef('reverb.replay_sample.ReplaySample')
 
 LookupLayer = Union[
     tf.compat.v2.keras.layers.experimental.preprocessing.IntegerLookup,

@@ -16,7 +16,6 @@
 # Lint as: python3
 """Utilities for working with a reverb replay buffer."""
 
-
 from __future__ import absolute_import
 from __future__ import division
 # Using Type Annotations.
@@ -108,8 +107,8 @@ class ReverbAddEpisodeObserver(object):
     self._priority = priority
 
     self._py_client = py_client
-    self._writer = py_client.writer(
-        max_sequence_length=self._max_sequence_length)
+    self._writer = py_client.trajectory_writer(
+        num_keep_alive_refs=self._max_sequence_length + 1)
     self._cached_steps = 0
     self._bypass_partial_episodes = bypass_partial_episodes
     self._overflow_episode = False
@@ -177,10 +176,12 @@ class ReverbAddEpisodeObserver(object):
 
     **Note**: The method does not clear the cache.
     """
+    # No need to truncate since the truncation is done in the class.
+    trajectory = tf.nest.map_structure(lambda h: h[:], self._writer.history)
     for table_name in self._table_names:
       self._writer.create_item(
           table=table_name,
-          num_timesteps=self._cached_steps,
+          trajectory=trajectory,
           priority=self._priority)
 
   def reset(self, write_cached_steps: bool = True) -> None:
@@ -206,8 +207,8 @@ class ReverbAddEpisodeObserver(object):
   def open(self) -> None:
     """Open the writer of the observer. This is a no-op if it's already open."""
     if self._writer is None:
-      self._writer = self._py_client.writer(
-          max_sequence_length=self._max_sequence_length)
+      self._writer = self._py_client.trajectory_writer(
+          num_keep_alive_refs=self._max_sequence_length + 1)
 
   def close(self) -> None:
     """Closes the writer of the observer.
@@ -217,6 +218,8 @@ class ReverbAddEpisodeObserver(object):
     """
 
     if self._writer is not None:
+      self._writer.end_episode()
+      self._writer.flush()
       self._writer.close()
       self._writer = None
 
@@ -290,7 +293,8 @@ class ReverbAddTrajectoryObserver(object):
     # TODO(b/153700282): Use a single writer with max_sequence_length=max(...)
     # once Reverb Dataset with emit_timesteps=True returns properly shaped
     # sequences.
-    self._writer = py_client.writer(max_sequence_length=sequence_length)
+    self._writer = py_client.trajectory_writer(
+        num_keep_alive_refs=sequence_length + 1)
     self._cached_steps = 0
     self._last_trajectory = None
 
@@ -331,10 +335,12 @@ class ReverbAddTrajectoryObserver(object):
     """
 
     if self._sequence_lengths_reached():
+      trajectory = tf.nest.map_structure(
+          lambda d: d[-self._sequence_length:], self._writer.history)
       for table_name in self._table_names:
         self._writer.create_item(
             table=table_name,
-            num_timesteps=self._sequence_length,
+            trajectory=trajectory,
             priority=self._priority)
 
     return None
@@ -393,8 +399,8 @@ class ReverbAddTrajectoryObserver(object):
   def open(self) -> None:
     """Open the writer of the observer."""
     if self._writer is None:
-      self._writer = self._py_client.writer(
-          max_sequence_length=self._sequence_length)
+      self._writer = self._py_client.trajectory_writer(
+          num_keep_alive_refs=self._sequence_length + 1)
       self._cached_steps = 0
 
   def close(self) -> None:
@@ -404,6 +410,8 @@ class ReverbAddTrajectoryObserver(object):
       supported.
     """
     if self._writer is not None:
+      self._writer.end_episode()
+      self._writer.flush()
       self._writer.close()
       self._writer = None
 

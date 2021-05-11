@@ -342,6 +342,10 @@ def create_reverb_server_for_replay_buffer_and_variable_container(
   # Create the signature for the replay buffer holding observed experience.
   replay_buffer_signature = tensor_spec.from_spec(
       collect_policy.collect_data_spec)
+  # Prefix a time axis for trajectories.
+  replay_buffer_signature = tf.nest.map_structure(
+      lambda s: tf.TensorSpec((None,) + s.shape, s.dtype, s.name),
+      replay_buffer_signature)
 
   # Crete and start the replay buffer and variable container server.
   server = reverb.Server(

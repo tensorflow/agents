@@ -18,7 +18,7 @@
 from typing import Callable, Optional, Text
 
 import gin
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_agent

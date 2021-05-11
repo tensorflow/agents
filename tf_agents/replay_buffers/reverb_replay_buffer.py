@@ -461,18 +461,29 @@ def make_reverb_dataset(server_address: str,
   # TODO(b/144858901): Validate Tableinfo when it's available from reverb.
 
   def generate_reverb_dataset(_):
-    dataset = reverb.ReplayDataset(
+    dataset = reverb.TrajectoryDataset(
         server_address,
         table,
         dtypes,
         shapes,
         max_in_flight_samples_per_worker=max_in_flight_samples_per_worker,
-        sequence_length=sequence_length,
         num_workers_per_iterator=num_workers_per_iterator,
         max_samples_per_stream=max_samples_per_stream,
-        emit_timesteps=False,
         rate_limiter_timeout_ms=rate_limiter_timeout_ms,
     )
+
+    def broadcast_info(
+        info_traj: types.ReverbReplaySample
+    ) -> types.ReverbReplaySample:
+      # Assumes that the first element of traj is shaped
+      # (sequence_length, ...); and we extract this length.
+      info, traj = info_traj
+      first_elem = tf.nest.flatten(traj)[0]
+      length = first_elem.shape[0] or tf.shape(first_elem)[0]
+      info = tf.nest.map_structure(lambda t: tf.repeat(t, [length]), info)
+      return reverb.ReplaySample(info, traj)
+
+    dataset = dataset.map(broadcast_info)
 
     if per_sequence_fn:
       dataset = dataset.map(per_sequence_fn)
@@ -509,7 +520,7 @@ def truncate_reshape_rows_by_num_steps(sample, num_steps):
   the tensor's outer dimension to be the highest possible multiple of
   `num_steps`.
 
-  This is done by first calculating `rows = tf.shape(t) // num_steps`, then
+  This is done by first calculating `rows = tf.shape(t[0]) // num_steps`, then
   truncating the `tensor` to shape `t_trunc = t[: (rows * num_steps), ...]`.
   For each tensor, it returns `tf.reshape(t_trunc, [rows, num_steps, ...])`.
 
