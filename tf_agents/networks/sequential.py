@@ -149,7 +149,7 @@ class Sequential(network.Network):
     return type(self)(**new_kwargs)
 
   def call(self, inputs, network_state=(), **kwargs):
-    if not network_state:
+    if not tf.is_tensor(network_state) and not network_state:
       network_state = ((),) * len(self.state_spec)
     next_network_state = [()] * len(self.state_spec)
 

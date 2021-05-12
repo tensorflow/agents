@@ -432,11 +432,15 @@ def add_outer_dims_nest(specs, outer_dims):
     raise ValueError("outer_dims must be a tuple or list of dimensions")
 
   def add_outer_dims(spec):
-    name = spec.name
+    # TODO(b/187478998) Use spec.name when tf.SparseTensorSpec supports it.
+    name = getattr(spec, "name", None)
     shape = outer_dims + spec.shape
     if hasattr(spec, "minimum") and hasattr(spec, "maximum"):
       return BoundedTensorSpec(shape, spec.dtype, spec.minimum, spec.maximum,
                                name)
+    elif isinstance(specs, tf.SparseTensorSpec):
+      # TODO(b/187478998) Add name when tf.SparseTensorSpec supports it.
+      return tf.SparseTensorSpec(shape, spec.dtype)
     return TensorSpec(shape, spec.dtype, name=name)
 
   return tf.nest.map_structure(add_outer_dims, specs)
@@ -463,41 +467,45 @@ def with_dtype(specs, dtype):
   return tf.nest.map_structure(update_dtype, specs)
 
 
-def remove_outer_dims_nest(specs, outer_dims):
+def remove_outer_dims_nest(specs, num_outer_dims):
   """Removes the specified number of outer dimensions from the input spec nest.
 
   Args:
     specs: Nested list/tuple/dict of TensorSpecs/ArraySpecs, describing the
       shape of tensors.
-    outer_dims: (int) Number of outer dimensions to remove.
+    num_outer_dims: (int) Number of outer dimensions to remove.
 
   Returns:
     Nested TensorSpecs with outer dimensions removed from the input specs.
 
   Raises:
-    Value error if a spec in the nest has shape rank less than `outer_dims`.
+    Value error if a spec in the nest has shape rank less than `num_outer_dims`.
   """
 
   def remove_outer_dims(spec):
-    """Removes the outer_dims of a tensor spec."""
-    name = spec.name
-    if len(spec.shape) < outer_dims:
+    """Removes the num_outer_dims of a tensor spec."""
+    # TODO(b/187478998) Use spec.name when tf.SparseTensorSpec supports it.
+    name = getattr(spec, "name", None)
+    if len(spec.shape) < num_outer_dims:
       raise ValueError("The shape of spec {} has rank lower than the specified "
-                       "outer_dims {}".format(spec, outer_dims))
-    shape = list(spec.shape)[outer_dims:]
+                       "num_outer_dims {}".format(spec, num_outer_dims))
+    shape = list(spec.shape)[num_outer_dims:]
     if hasattr(spec, "minimum") and hasattr(spec, "maximum"):
       if isinstance(spec.minimum,
                     (tuple, list)) and len(spec.minimum) == len(spec.shape):
-        minimum = spec.minimum[outer_dims:]
+        minimum = spec.minimum[num_outer_dims:]
       else:
         minimum = spec.minimum
       if isinstance(spec.maximum,
                     (tuple, list)) and len(spec.maximum) == len(spec.shape):
-        maximum = spec.maximum[outer_dims:]
+        maximum = spec.maximum[num_outer_dims:]
       else:
         maximum = spec.maximum
 
       return BoundedTensorSpec(shape, spec.dtype, minimum, maximum, name)
+    elif isinstance(spec, tf.SparseTensorSpec):
+      # TODO(b/187478998) Add name when tf.SparseTensorSpec supports it.
+      return tf.SparseTensorSpec(shape, spec.dtype)
     return TensorSpec(shape, spec.dtype, name=name)
 
   return tf.nest.map_structure(remove_outer_dims, specs)

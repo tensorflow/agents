@@ -343,7 +343,7 @@ def assert_tensors_matching_dtypes_and_shapes(tensors_1, tensors_2, caller,
                                                     get_shapes(tensors_2)))
 
 
-def assert_matching_dtypes_and_inner_shapes(tensors,
+def assert_matching_dtypes_and_inner_shapes(tensors_or_specs,
                                             specs,
                                             caller,
                                             tensors_name,
@@ -352,7 +352,7 @@ def assert_matching_dtypes_and_inner_shapes(tensors,
   """Returns `True` if tensors and specs have matching dtypes and inner shapes.
 
   Args:
-    tensors: A nest of tensor objects.
+    tensors_or_specs: A nest of `Tensor` like or `tf.TypeSpec` objects.
     specs: A nest of `tf.TypeSpec` objects.
     caller: The object calling `assert...`.
     tensors_name: (str) Name to use for the tensors in case of an error.
@@ -365,19 +365,21 @@ def assert_matching_dtypes_and_inner_shapes(tensors,
       shapes do not match the specs' shapes.
   """
   if allow_extra_fields:
-    tensors = prune_extra_keys(specs, tensors)
+    tensors_or_specs = prune_extra_keys(specs, tensors_or_specs)
   assert_same_structure(
-      tensors,
+      tensors_or_specs,
       specs,
       message=('{}: {} and {} do not have matching structures'.format(
           caller, tensors_name, specs_name)))
 
-  flat_tensors = nest.flatten(tensors)
+  flat_tensors = nest.flatten(tensors_or_specs)
   flat_specs = tf.nest.flatten(specs)
-  flat_tensors = [
-      tf.convert_to_tensor(t, dtype_hint=s.dtype) if not tf.is_tensor(t) else t
-      for (t, s) in zip(flat_tensors, flat_specs)
-  ]
+  def _convert(t, s):
+    if not isinstance(t, tf.TypeSpec) and not tf.is_tensor(t):
+      t = tf.convert_to_tensor(t, dtype_hint=s.dtype)
+    return t
+
+  flat_tensors = [_convert(t, s) for (t, s) in zip(flat_tensors, flat_specs)]
 
   tensor_shapes = [t.shape for t in flat_tensors]
   tensor_dtypes = [t.dtype for t in flat_tensors]
@@ -409,9 +411,9 @@ def assert_matching_dtypes_and_inner_shapes(tensors,
                          caller,
                          tensors_name,
                          specs_name,
-                         get_dtypes(tensors),
+                         get_dtypes(tensors_or_specs),
                          get_dtypes(specs),
-                         get_shapes(tensors),
+                         get_shapes(tensors_or_specs),
                          get_shapes(specs)))
 
 

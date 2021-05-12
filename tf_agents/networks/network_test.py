@@ -316,5 +316,86 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(state_spec, expected_state_spec)
 
 
+class MockStateFullNetwork(BaseNetwork):
+
+  def __init__(self, input_spec, state_spec):
+    super(MockStateFullNetwork, self).__init__(input_spec,
+                                               state_spec=state_spec,
+                                               name='statefullmock')
+
+  def build(self, *args, **kwargs):
+    self.var = common.create_variable(
+        'trainable_variable', dtype=tf.float32, trainable=True)
+    self.state = common.create_variable(
+        'state', dtype=tf.float32, trainable=False)
+
+  def call(self, observations, network_state=None):
+    return self.var + observations, self.state + network_state
+
+
+class StateFullNetworkTest(tf.test.TestCase):
+
+  def test_specs(self):
+    input_spec = tf.TensorSpec([], tf.float32, 'inputs')
+    state_spec = tf.TensorSpec([], tf.float32, 'state')
+    net = MockStateFullNetwork(input_spec, state_spec)
+    self.assertEqual(input_spec, net.input_tensor_spec)
+    self.assertEqual(state_spec, net.state_spec)
+
+  def test_empty_state(self):
+    input_spec = tf.TensorSpec([], tf.float32, 'inputs')
+    net = MockStateFullNetwork(input_spec, ())
+    self.assertEqual(input_spec, net.input_tensor_spec)
+    self.assertEqual((), net.state_spec)
+    net.create_variables()
+
+  def test_wrong_new_state(self):
+    input_spec = tf.TensorSpec([], tf.float32, 'inputs')
+    net = MockStateFullNetwork(input_spec, ((), ()))
+    self.assertEqual(input_spec, net.input_tensor_spec)
+    self.assertEqual(((), ()), net.state_spec)
+    with self.assertRaises(ValueError):
+      net.create_variables()
+
+  def test_copy_works(self):
+    input_spec = tf.TensorSpec([], tf.float32, 'inputs')
+    state_spec = tf.TensorSpec([], tf.float32, 'state')
+    network1 = MockStateFullNetwork(input_spec, state_spec)
+    network2 = network1.copy()
+
+    self.assertNotEqual(network1, network2)
+    self.assertEqual(network1.input_tensor_spec, network2.input_tensor_spec)
+    self.assertEqual(network1.state_spec, network2.state_spec)
+
+  def test_create_variables(self):
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    action_spec = specs.TensorSpec([1], tf.float32, 'action')
+    input_spec = (observation_spec, action_spec)
+    state_spec = tf.TensorSpec([], tf.float32, 'state')
+    net = MockStateFullNetwork(input_spec, state_spec)
+    self.assertFalse(net.built)
+    with self.assertRaises(ValueError):
+      net.variables  # pylint: disable=pointless-statement
+    output_spec = net.create_variables()
+
+    self.assertEqual(output_spec, tf.TensorSpec([1, 1], dtype=tf.float32))
+    self.assertTrue(net.built)
+    self.assertLen(net.variables, 2)
+    self.assertLen(net.trainable_variables, 1)
+
+  def test_call(self):
+    observation_spec = specs.TensorSpec([1], tf.float32, 'observation')
+    state_spec = tf.TensorSpec([], tf.float32, 'state')
+    net = MockStateFullNetwork(observation_spec, state_spec)
+
+    initial_state = net._get_initial_state(batch_size=1)
+    observation = tf.constant([1.0])
+    outputs, new_state = net(observation, initial_state)
+    # Only needed for TF1
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    self.assertEqual(self.evaluate(outputs), 1.0)
+    self.assertEqual(self.evaluate(new_state), 0.0)
+
 if __name__ == '__main__':
   tf.test.main()

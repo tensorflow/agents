@@ -199,7 +199,7 @@ class Network(tf.keras.layers.Layer):
     Returns:
       Output specs - a nested spec calculated from the outputs (excluding any
       batch dimensions).  If any of the output elements is a tfp `Distribution`,
-      the associated spec entry returned is `None`.
+      the associated spec entry returned is a `DistributionSpec`.
 
     Raises:
       ValueError: If no `input_tensor_spec` is provided, and the network did
@@ -226,6 +226,13 @@ class Network(tf.keras.layers.Layer):
         **kwargs)
 
     def _calc_unbatched_spec(x):
+      """Build Network output spec by removing previously added batch dimension.
+
+      Args:
+        x: tfp.distributions.Distribution or Tensor.
+      Returns:
+        Specs without batch dimension representing x.
+      """
       if isinstance(x, tfp.distributions.Distribution):
         parameters = distribution_utils.get_parameters(x)
         parameter_specs = _convert_to_spec_and_remove_singleton_batch_dim(
@@ -234,8 +241,8 @@ class Network(tf.keras.layers.Layer):
             event_shape=x.event_shape, dtype=x.dtype,
             parameters=parameter_specs)
       else:
-        return nest_utils.remove_singleton_batch_spec_dim(
-            tf.type_spec_from_value(x), outer_ndim=1)
+        return tensor_spec.remove_outer_dims_nest(
+            tf.type_spec_from_value(x), num_outer_dims=1)
 
     self._network_output_spec = tf.nest.map_structure(
         _calc_unbatched_spec, outputs[0])
@@ -409,7 +416,9 @@ class Network(tf.keras.layers.Layer):
     if "step_type" not in call_argspec.args and not call_argspec.keywords:
       normalized_kwargs.pop("step_type", None)
 
-    if (network_state in (None, ())
+    # network_state can be a (), None, Tensor or NestedTensors.
+    if (not tf.is_tensor(network_state)
+        and network_state in (None, ())
         and "network_state" not in call_argspec.args
         and not call_argspec.keywords):
       normalized_kwargs.pop("network_state", None)
@@ -529,8 +538,8 @@ def _convert_to_spec_and_remove_singleton_batch_dim(
     if isinstance(p, distribution_utils.Params):
       return _convert_to_spec_and_remove_singleton_batch_dim(p, outer_ndim)
     elif tf.is_tensor(p):
-      return nest_utils.remove_singleton_batch_spec_dim(
-          tf.type_spec_from_value(p), outer_ndim=outer_ndim)
+      return tensor_spec.remove_outer_dims_nest(
+          tf.type_spec_from_value(p), num_outer_dims=outer_ndim)
     else:
       return p
 
@@ -620,8 +629,8 @@ def create_variables(module: typing.Union[Network, tf.keras.layers.Layer],
           event_shape=x.event_shape, dtype=x.dtype,
           parameters=parameter_specs)
     else:
-      return nest_utils.remove_singleton_batch_spec_dim(
-          tf.type_spec_from_value(x), outer_ndim=outer_ndim)
+      return tensor_spec.remove_outer_dims_nest(
+          tf.type_spec_from_value(x), num_outer_dims=outer_ndim)
 
   # pylint: disable=protected-access
   module._network_output_spec = tf.nest.map_structure(_calc_unbatched_spec,
