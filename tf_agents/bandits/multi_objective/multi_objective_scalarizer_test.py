@@ -112,6 +112,24 @@ class LinearScalarizerTest(tf.test.TestCase):
                       dtype=tf.float32))
       self.evaluate(self._scalarizer(self._batch_multi_objectives))
 
+  def testCustomTransform(self):
+    # Test applying sigmoid to the 2nd and 4th metrics.
+    sigmoid_metric_mask = [False, True, False, True]
+
+    def sigmoid_metric_transform(metrics: tf.Tensor):
+      batch_size = tf.shape(tf.nest.flatten(metrics)[0])[0]
+      sigmoid_batch_mask = tf.reshape(
+          tf.tile(sigmoid_metric_mask, [batch_size]),
+          [batch_size, len(sigmoid_metric_mask)])
+      return tf.where(sigmoid_batch_mask, tf.sigmoid(metrics), metrics)
+
+    sigmoid_scalarizer = multi_objective_scalarizer.LinearScalarizer(
+        [1, 2, 3, -1], sigmoid_metric_transform)
+
+    self.assertAllClose(
+        sigmoid_scalarizer(self._batch_multi_objectives),
+        [10.77958, 26.995390, -9.7795804])
+
 
 class ChebyShevScalarizerTest(tf.test.TestCase):
 
