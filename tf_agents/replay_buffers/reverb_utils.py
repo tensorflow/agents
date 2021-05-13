@@ -112,6 +112,7 @@ class ReverbAddEpisodeObserver(object):
     self._cached_steps = 0
     self._bypass_partial_episodes = bypass_partial_episodes
     self._overflow_episode = False
+    self._writer_has_data = False
 
   def update_priority(self, priority: Union[float, int]) -> None:
     """Update the table priority.
@@ -165,6 +166,7 @@ class ReverbAddEpisodeObserver(object):
 
     if not self._overflow_episode:
       self._writer.append(trajectory)
+      self._writer_has_data = True
       self._cached_steps += 1
 
       # At the end of an episode, write the item to Reverb and clear the cache.
@@ -172,17 +174,21 @@ class ReverbAddEpisodeObserver(object):
         self.reset(write_cached_steps=True)
 
   def _write_cached_steps(self) -> None:
-    """Writes the cached steps into the writer.
+    """Writes the cached steps into Reverb.
 
     **Note**: The method does not clear the cache.
     """
-    # No need to truncate since the truncation is done in the class.
-    trajectory = tf.nest.map_structure(lambda h: h[:], self._writer.history)
-    for table_name in self._table_names:
-      self._writer.create_item(
-          table=table_name,
-          trajectory=trajectory,
-          priority=self._priority)
+    # Only writes to Reverb when the writer has cached trajectories.
+    if self._writer_has_data:
+      trajectory = tf.nest.map_structure(lambda h: h[:], self._writer.history)
+      for table_name in self._table_names:
+        self._writer.create_item(
+            table=table_name,
+            trajectory=trajectory,
+            priority=self._priority)
+      self._writer_has_data = False
+    else:
+      logging.info("Skipped writing to Reverb because the writer is empty.")
 
   def reset(self, write_cached_steps: bool = True) -> None:
     """Resets the state of the observer.
@@ -222,6 +228,7 @@ class ReverbAddEpisodeObserver(object):
       self._writer.flush()
       self._writer.close()
       self._writer = None
+      self._writer_has_data = False
 
 
 class ReverbAddTrajectoryObserver(object):
