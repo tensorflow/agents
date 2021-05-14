@@ -212,7 +212,7 @@ class Learner(tf.Module):
     save_fn = lambda: self._checkpointer.save(self.train_step)
     return interval_trigger.IntervalTrigger(checkpoint_interval, save_fn)
 
-  def run(self, iterations=1, iterator=None):
+  def run(self, iterations=1, iterator=None, parallel_iterations=10):
     """Runs `iterations` iterations of training.
 
     Args:
@@ -221,6 +221,9 @@ class Learner(tf.Module):
         Final aggregated losses will be returned.
       iterator: The iterator to the dataset to use for training. If not
         specified, `self._experience_iterator` is used.
+      parallel_iterations: Maximum number of train iterations to allow running
+        in parallel. This value is forwarded directly to the training tf.while
+        loop.
 
     Returns:
       The total loss computed before running the final step.
@@ -235,7 +238,7 @@ class Learner(tf.Module):
          tf.compat.v2.summary.record_if(_summary_record_if), \
          self.strategy.scope():
       iterator = iterator or self._experience_iterator
-      loss_info = self._train(iterations, iterator)
+      loss_info = self._train(iterations, iterator, parallel_iterations)
 
       train_step_val = self.train_step.numpy()
       for trigger in self.triggers:
@@ -246,7 +249,7 @@ class Learner(tf.Module):
   # Use tf.config.experimental_run_functions_eagerly(True) if you want to
   # disable use of tf.function.
   @common.function(autograph=True)
-  def _train(self, iterations, iterator):
+  def _train(self, iterations, iterator, parallel_iterations):
     assert iterations >= 1, (
         'Iterations must be greater or equal to 1, was %d' % iterations)
     # Call run explicitly once to get loss info shape for autograph. Because the
@@ -255,6 +258,8 @@ class Learner(tf.Module):
     loss_info = self.single_train_step(iterator)
 
     for _ in tf.range(iterations - 1):
+      tf.autograph.experimental.set_loop_options(
+          parallel_iterations=parallel_iterations)
       loss_info = self.single_train_step(iterator)
 
     def _reduce_loss(loss):
