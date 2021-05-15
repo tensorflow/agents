@@ -161,12 +161,12 @@ class Actor(object):
       for m in self._metrics:
         tag = m.name
         tf.summary.scalar(
-            name=os.path.join(self._name, tag),
+            name=os.path.join("Metrics/", self._name, tag),
             data=m.result(),
             step=self._train_step)
         # Generate summaries against the reference_metrics
         for reference_metric in self._reference_metrics:
-          tag = "{}/{}".format(m.name, reference_metric.name)
+          tag = "Metrics/{}/{}".format(m.name, reference_metric.name)
           tf.summary.scalar(
               name=os.path.join(self._name, tag),
               data=m.result(),

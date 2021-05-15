@@ -83,7 +83,7 @@ class EvalJobTest(test_utils.TestCase):
           is_running=_NTimesReturnTrue(n=11))
 
       summary_count = self.count_summary_scalar_tags_in_call_list(
-          mock_scalar_summary, 'eval_actor/AverageReturn')
+          mock_scalar_summary, 'Metrics/eval_actor/AverageReturn')
       self.assertEqual(summary_count, 3)
 
   def test_eval_job_constant_eval(self):
@@ -132,7 +132,7 @@ class EvalJobTest(test_utils.TestCase):
           is_running=_NTimesReturnTrue(n=2))
 
       summary_count = self.count_summary_scalar_tags_in_call_list(
-          mock_scalar_summary, 'eval_actor/AverageReturn')
+          mock_scalar_summary, 'Metrics/eval_actor/AverageReturn')
       self.assertEqual(summary_count, 2)
 
   def count_summary_scalar_tags_in_call_list(self, mock_summary_scalar, tag):
