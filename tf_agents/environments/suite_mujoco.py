@@ -85,5 +85,8 @@ def load(
   Returns:
     A PyEnvironmentBase instance.
   """
+  if spec_dtype_map is None:
+    # Use float32 for Observations.
+    spec_dtype_map = {gym.spaces.Box: np.float32}
   return suite_gym.load(environment_name, discount, max_episode_steps,
                         gym_env_wrappers, env_wrappers, spec_dtype_map)
