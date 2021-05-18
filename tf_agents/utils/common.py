@@ -1408,14 +1408,6 @@ def soft_device_placement():
     Sets `tf.config.set_soft_device_placement(True)` within the context
   """
   original_setting = tf.config.get_soft_device_placement()
-
-  if original_setting:
-    # We're already using soft device placement, avoid switching the
-    # flag which causes a reset in some TF internals that force
-    # some recalculation on each call to tf.function.
-    yield
-    return
-
   try:
     tf.config.set_soft_device_placement(True)
     yield
