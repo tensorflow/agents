@@ -55,12 +55,10 @@ class ReverbTableTests(test_utils.TestCase):
         sequence_length=1,
         dataset_buffer_size=1)
 
-    with replay.py_client.trajectory_writer(num_keep_alive_refs=1) as writer:
+    with replay.py_client.writer(max_sequence_length=1) as writer:
       for i in range(3):
         writer.append(i)
-        trajectory = writer.history[-1:]
-        writer.create_item(
-            table_name, trajectory=trajectory, priority=1)
+        writer.create_item(table=table_name, num_timesteps=1, priority=1)
 
     dataset = replay.as_dataset(
         sample_batch_size=1, num_steps=None, num_parallel_calls=1)
@@ -87,12 +85,10 @@ class ReverbTableTests(test_utils.TestCase):
         sequence_length=1,
         dataset_buffer_size=1)
 
-    with replay.py_client.trajectory_writer(num_keep_alive_refs=1) as writer:
+    with replay.py_client.writer(max_sequence_length=1) as writer:
       for i in range(3):
         writer.append(i)
-        trajectory = writer.history[-1:]
-        writer.create_item(
-            table_name, trajectory=trajectory, priority=1)
+        writer.create_item(table=table_name, num_timesteps=1, priority=1)
 
     dataset = replay.as_dataset(
         sample_batch_size=1, num_steps=None, num_parallel_calls=1)
@@ -126,11 +122,10 @@ class ReverbTableTests(test_utils.TestCase):
         sequence_length=1,
         dataset_buffer_size=1)
 
-    with replay.py_client.trajectory_writer(1) as writer:
+    with replay.py_client.writer(max_sequence_length=1) as writer:
       for i in range(3):
         writer.append(i)
-        writer.create_item(table_name, trajectory=writer.history[-1:],
-                           priority=1)
+        writer.create_item(table_name, num_timesteps=1, priority=1)
 
     dataset = replay.as_dataset(sample_batch_size=3, num_parallel_calls=3)
 
@@ -165,11 +160,10 @@ class ReverbTableTests(test_utils.TestCase):
         local_server=reverb_server,
         dataset_buffer_size=1)
 
-    with replay.py_client.trajectory_writer(1) as writer:
+    with replay.py_client.writer(max_sequence_length=1) as writer:
       for i in range(3):
         writer.append(i)
-        writer.create_item(table_name, trajectory=writer.history[-1:],
-                           priority=i)
+        writer.create_item(table=table_name, num_timesteps=1, priority=i)
 
     dataset = replay.as_dataset(
         sample_batch_size=1, num_steps=None, num_parallel_calls=1)
@@ -202,11 +196,10 @@ class ReverbTableTests(test_utils.TestCase):
         local_server=reverb_server,
         dataset_buffer_size=1)
 
-    with replay.py_client.trajectory_writer(1) as writer:
+    with replay.py_client.writer(max_sequence_length=1) as writer:
       for i in range(3):
         writer.append(i)
-        writer.create_item(table_name, trajectory=writer.history[-1:],
-                           priority=i)
+        writer.create_item(table_name, num_timesteps=1, priority=i)
 
     dataset = replay.as_dataset(sample_batch_size=3, num_parallel_calls=3)
 
@@ -279,7 +272,7 @@ class ReverbObserverTest(parameterized.TestCase):
     super().setUp()
     self._client = mock.MagicMock()
     self._writer = mock.MagicMock()
-    self._client.trajectory_writer = self._writer
+    self._client.writer = self._writer
     self._writer.return_value = self._writer
 
   @parameterized.named_parameters(

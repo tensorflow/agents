@@ -56,9 +56,8 @@ class ReverbReplayBufferTest(parameterized.TestCase, test_utils.TestCase):
         reward=tensor_time_step_spec.reward,
         discount=tensor_time_step_spec.discount,
     )
-    table_spec = tf.nest.map_structure(
-        lambda s: tf.TensorSpec(dtype=s.dtype, shape=(None,) + s.shape),
-        self._data_spec)
+    # TODO(b/188427258) Add time dimension when using Reverb.TrajectoryWriters.
+    # table_signature = tensor_spec.add_outer_dim(self._data_spec)
     self._array_data_spec = tensor_spec.to_nest_array_spec(self._data_spec)
 
     # Initialize and start a Reverb server (and set up a client to it).
@@ -69,7 +68,7 @@ class ReverbReplayBufferTest(parameterized.TestCase, test_utils.TestCase):
         sampler=reverb.selectors.Uniform(),
         remover=reverb.selectors.Fifo(),
         rate_limiter=reverb.rate_limiters.MinSize(1),
-        signature=table_spec,
+        # signature=table_signature,
     )
     self._server = reverb.Server([uniform_table])
     self._py_client = reverb.Client('localhost:{}'.format(self._server.port))
@@ -130,7 +129,6 @@ class ReverbReplayBufferTest(parameterized.TestCase, test_utils.TestCase):
 
   def test_dataset_with_variable_sequence_length_truncates(self):
     spec = tf.TensorSpec((), tf.int64)
-    table_spec = tf.TensorSpec((None,), tf.int64)
     table = reverb.Table(
         name=self._table_name,
         sampler=reverb.selectors.Fifo(),
@@ -138,27 +136,25 @@ class ReverbReplayBufferTest(parameterized.TestCase, test_utils.TestCase):
         max_times_sampled=1,
         max_size=100,
         rate_limiter=reverb.rate_limiters.MinSize(1),
-        signature=table_spec,
+        signature=spec,
     )
     server = reverb.Server([table])
     py_client = reverb.Client('localhost:{}'.format(server.port))
 
     # Insert two episodes: one of length 3 and one of length 5
-    with py_client.trajectory_writer(10) as writer:
+    with py_client.writer(max_sequence_length=10) as writer:
       writer.append(1)
       writer.append(2)
       writer.append(3)
-      writer.create_item(
-          self._table_name, trajectory=writer.history[-3:], priority=5)
+      writer.create_item(self._table_name, num_timesteps=3, priority=5)
 
-    with py_client.trajectory_writer(10) as writer:
+    with py_client.writer(max_sequence_length=10) as writer:
       writer.append(10)
       writer.append(20)
       writer.append(30)
       writer.append(40)
       writer.append(50)
-      writer.create_item(
-          self._table_name, trajectory=writer.history[-5:], priority=5)
+      writer.create_item(self._table_name, num_timesteps=5, priority=5)
 
     replay = reverb_replay_buffer.ReverbReplayBuffer(
         spec, self._table_name, local_server=server, sequence_length=None,
