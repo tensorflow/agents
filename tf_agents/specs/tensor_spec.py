@@ -446,6 +446,22 @@ def add_outer_dims_nest(specs, outer_dims):
   return tf.nest.map_structure(add_outer_dims, specs)
 
 
+def add_outer_dim(specs, dim=None):
+  """Adds an outer dimension to the shape of input specs.
+
+  Args:
+    specs: Nested list/tuple/dict of TensorSpecs/ArraySpecs, describing the
+      shape of tensors.
+    dim: Int, representing the outer dimension to be added to the TensorSpecs in
+      specs.
+
+  Returns:
+    Nested TensorSpecs with outer dimensions added to the shape of input specs.
+
+  """
+  return add_outer_dims_nest(specs, outer_dims=(dim,))
+
+
 def with_dtype(specs, dtype):
   """Updates dtypes of all specs in the input spec.
 

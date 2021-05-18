@@ -191,6 +191,24 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     with self.assertRaises(ValueError):
       tensor_spec.remove_outer_dims_nest(nested_spec, 10)
 
+  def testAddOuterDimToSpecs(self, dtype):
+    if dtype == tf.string:
+      self.skipTest("Not compatible with string type.")
+    nested_spec = example_nested_tensor_spec(dtype)
+    outer_dim = 4
+    self.assertEqual(
+        tensor_spec.add_outer_dim(nested_spec, outer_dim),
+        example_nested_tensor_spec(dtype, (outer_dim,)))
+
+  def testAddOuterDimNoneToSpecs(self, dtype):
+    if dtype == tf.string:
+      self.skipTest("Not compatible with string type.")
+    nested_spec = example_nested_tensor_spec(dtype)
+    outer_dim = None
+    self.assertEqual(
+        tensor_spec.add_outer_dim(nested_spec, outer_dim),
+        example_nested_tensor_spec(dtype, (outer_dim,)))
+
   def testNestSample(self, dtype):
     if dtype == tf.string:
       self.skipTest("Not compatible with string type.")
@@ -355,10 +373,10 @@ class TensorSpecZeroTest(tf.test.TestCase, parameterized.TestCase):
 
   def testOnlyTensorSpecIsSupported(self, dtype):
     sparse_spec = tf.SparseTensorSpec([1], tf.int32)
-    with self.assertRaisesRegexp(NotImplementedError, "not supported.*Sparse"):
+    with self.assertRaisesRegex(NotImplementedError, "not supported.*Sparse"):
       _ = tensor_spec.zero_spec_nest(sparse_spec)
     ragged_spec = tf.RaggedTensorSpec(ragged_rank=0, shape=[3, 5])
-    with self.assertRaisesRegexp(NotImplementedError, "not supported.*Ragged"):
+    with self.assertRaisesRegex(NotImplementedError, "not supported.*Ragged"):
       _ = tensor_spec.zero_spec_nest(ragged_spec)
 
   def testEmptySpec(self, dtype):
