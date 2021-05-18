@@ -190,6 +190,16 @@ class ReverbAddEpisodeObserver(object):
     else:
       logging.info("Skipped writing to Reverb because the writer is empty.")
 
+  def flush(self):
+    """Ensures that items are pushed to the service.
+
+    Note: The items are not always immediately pushed. This method is often
+    needed when `rate_limiter_timeout_ms` is set for the replay buffer.
+    By calling this method before the `learner.run()`, we ensure that there is
+    enough data to be consumed.
+    """
+    self._writer.flush()
+
   def reset(self, write_cached_steps: bool = True) -> None:
     """Resets the state of the observer.
 
@@ -342,8 +352,8 @@ class ReverbAddTrajectoryObserver(object):
     """
 
     if self._sequence_lengths_reached():
-      trajectory = tf.nest.map_structure(
-          lambda d: d[-self._sequence_length:], self._writer.history)
+      trajectory = tf.nest.map_structure(lambda d: d[-self._sequence_length:],
+                                         self._writer.history)
       for table_name in self._table_names:
         self._writer.create_item(
             table=table_name,
@@ -351,6 +361,16 @@ class ReverbAddTrajectoryObserver(object):
             priority=self._priority)
 
     return None
+
+  def flush(self):
+    """Ensures that items are pushed to the service.
+
+    Note: The items are not always immediately pushed. This method is often
+    needed when `rate_limiter_timeout_ms` is set for the replay buffer.
+    By calling this method before the `learner.run()`, we ensure that there is
+    enough data to be consumed.
+    """
+    self._writer.flush()
 
   def _get_padding_step(
       self, example_trajectory: trajectory_lib.Trajectory
@@ -448,6 +468,9 @@ class ReverbTrajectorySequenceObserver(ReverbAddTrajectoryObserver):
         trajectory object or a flattened version of a trajectory. It assumes
         there is *no* batch dimension.
     """
+    # We record the last step called to generate the padding step when padding
+    # is enabled.
+    self._last_trajectory = trajectory
     self._writer.append(trajectory)
     self._cached_steps += 1
 

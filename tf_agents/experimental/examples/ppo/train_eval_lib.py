@@ -300,10 +300,7 @@ def train_eval(
   last_eval_step = 0
   for i in range(num_iterations):
     collect_actor.run()
-    # TODO(b/159615593): Update to use observer.flush.
-    # Reset the reverb observer to make sure the data collected is flushed and
-    # written to the RB.
-    rb_observer.reset()
+    rb_observer.flush()
     agent_learner.run()
     reverb_replay_train.clear()
     reverb_replay_normalization.clear()
