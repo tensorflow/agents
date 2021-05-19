@@ -178,7 +178,10 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
 class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
   """Logs train_steps_per_second."""
 
-  def __init__(self, train_step: tf.Variable, interval: int):
+  def __init__(self,
+               train_step: tf.Variable,
+               interval: int,
+               log_to_terminal: bool = True):
     """Initializes a StepPerSecondLogTrigger.
 
     Args:
@@ -187,8 +190,10 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
         long as the >= `interval` number of steps have passed since the last
         trigger, the event gets triggered. The current value is not necessarily
         `interval` steps away from the last triggered value.
+      log_to_terminal: If True ouputs steps/sec to logging.info.
     """
     self._train_step = train_step
+    self._log_to_terminal = log_to_terminal
     self._step_timer = step_per_second_tracker.StepPerSecondTracker(train_step)
 
     super(StepPerSecondLogTrigger, self).__init__(interval,
@@ -198,7 +203,8 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
     steps_per_sec = self._step_timer.steps_per_second()
     self._step_timer.restart()
     step = self._train_step.numpy()
-    logging.info('Step: %d, %.3f steps/sec', step, steps_per_sec)
+    if self._log_to_terminal:
+      logging.info('Step: %d, %.3f steps/sec', step, steps_per_sec)
     with tf.compat.v2.summary.record_if(True):
       tf.summary.scalar(name='train_steps_per_sec',
                         data=steps_per_sec,
