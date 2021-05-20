@@ -242,9 +242,13 @@ class PPOLearner(object):
         self._train_dataset = make_dataset(0)
       self._train_iterator = iter(self._train_dataset)
 
-  def run(self):
+  def run(self, parallel_iterations=10):
     """Train `num_batches` batches repeating for `num_epochs` of iterations.
 
+    Args:
+      parallel_iterations: Maximum number of train iterations to allow running
+        in parallel. This value is forwarded directly to the training tf.while
+        loop.
     Returns:
       The total loss computed before running the final step.
     """
@@ -259,7 +263,10 @@ class PPOLearner(object):
       num_total_batches = self._num_batches * self._num_epochs
 
     iterations = int(num_total_batches / self.num_replicas)
-    loss_info = self._generic_learner.run(iterations, self._train_iterator)
+    loss_info = self._generic_learner.run(
+        iterations,
+        self._train_iterator,
+        parallel_iterations=parallel_iterations)
 
     return loss_info
 

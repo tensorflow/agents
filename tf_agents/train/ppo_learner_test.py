@@ -297,6 +297,52 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         received_traj = fake_agent.experiences[i]
         tf.nest.map_structure(self.assertAllClose, received_traj, expected_traj)
 
+  @parameterized.named_parameters(
+      ('SequentialIterations', 1),
+      ('ParallelIterations', 4)
+      )
+  def test_parallel_iterations_run(self, parallel_iterations):
+    num_episodes = 3
+    # Create a dataset with three elements. Each element represents an collected
+    # episode of length 40.
+    get_shape = lambda x: x.shape
+    get_dtype = lambda x: tf.as_dtype(x.dtype)
+    traj = _create_trajectories(n_time_steps=40, batch_size=1)
+    unused_info = ()
+    shapes = tf.nest.map_structure(get_shape, (traj, unused_info))
+    dtypes = tf.nest.map_structure(get_dtype, (traj, unused_info))
+
+    def generate_data():
+      for _ in range(num_episodes):
+        yield (traj, unused_info)
+
+    def dataset_fn():
+      return tf.data.Dataset.from_generator(
+          generate_data,
+          dtypes,
+          output_shapes=shapes,
+      )
+
+    fake_agent = FakePPOAgent()
+
+    learner = ppo_learner.PPOLearner(
+        root_dir=FLAGS.test_tmpdir,
+        train_step=tf.Variable(0, dtype=tf.int32),
+        agent=fake_agent,
+        experience_dataset_fn=dataset_fn,
+        normalization_dataset_fn=dataset_fn,
+        num_batches=num_episodes,
+        num_epochs=4,
+        minibatch_size=10,
+        # Disable shuffling to have deterministic input into agent.train.
+        shuffle_buffer_size=1,
+        triggers=None)
+    loss = learner.run(parallel_iterations=parallel_iterations)
+
+    # Check that fake agent was called the expected number of times.
+    self.assertEqual(fake_agent.train_called_times, 48)
+
+    self.assertAllEqual(loss, (0.0, 0.0))
 
 if __name__ == '__main__':
   tf.compat.v1.enable_v2_behavior()
