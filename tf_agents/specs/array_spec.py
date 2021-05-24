@@ -217,6 +217,9 @@ class ArraySpec(object):
     else:
       return False
 
+  def __reduce__(self):
+    return (ArraySpec, (self.shape, self.dtype, self.name))
+
   @staticmethod
   def from_array(array, name=None):
     """Construct a spec from the given array or number."""
@@ -393,6 +396,10 @@ class BoundedArraySpec(ArraySpec):
     maximum = self.maximum if maximum is None else maximum
     name = self.name if name is None else name
     return BoundedArraySpec(shape, dtype, minimum, maximum, name)
+
+  def __reduce__(self):
+    return (BoundedArraySpec, (self.shape, self.dtype, self.minimum,
+                               self.maximum, self.name))
 
 
 def is_bounded(spec):
