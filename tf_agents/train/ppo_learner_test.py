@@ -203,7 +203,7 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         agent=fake_agent,
         experience_dataset_fn=dataset_fn,
         normalization_dataset_fn=dataset_fn,
-        num_batches=1,
+        num_samples=1,
         num_epochs=num_epochs,
         minibatch_size=minibatch_size,
         # Disable shuffling to have deterministic input into agent.train.
@@ -270,7 +270,7 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         agent=fake_agent,
         experience_dataset_fn=dataset_fn,
         normalization_dataset_fn=dataset_fn,
-        num_batches=num_episodes,
+        num_samples=num_episodes,
         num_epochs=num_epochs,
         minibatch_size=minibatch_size,
         # Disable shuffling to have deterministic input into agent.train.
@@ -331,7 +331,7 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         agent=fake_agent,
         experience_dataset_fn=dataset_fn,
         normalization_dataset_fn=dataset_fn,
-        num_batches=num_episodes,
+        num_samples=num_episodes,
         num_epochs=4,
         minibatch_size=10,
         # Disable shuffling to have deterministic input into agent.train.

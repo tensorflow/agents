@@ -296,7 +296,7 @@ def train_eval(
       agent,
       experience_dataset_fn=training_dataset_fn,
       normalization_dataset_fn=normalization_dataset_fn,
-      num_batches=1,
+      num_samples=1,
       num_epochs=num_epochs,
       minibatch_size=minibatch_size,
       shuffle_buffer_size=collect_sequence_length,

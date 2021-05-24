@@ -53,7 +53,7 @@ class PPOLearner(object):
                agent: ppo_agent.PPOAgent,
                experience_dataset_fn: Callable[..., tf.data.Dataset],
                normalization_dataset_fn: Callable[..., tf.data.Dataset],
-               num_batches: int,
+               num_samples: int,
                num_epochs: int = 1,
                minibatch_size: Optional[int] = None,
                shuffle_buffer_size: Optional[int] = None,
@@ -101,21 +101,32 @@ class PPOLearner(object):
         `replay_buffer.as_dataset`.
       experience_dataset_fn: a function that will create an instance of a
         tf.data.Dataset used to sample experience for training. Each element
-        in the dataset is a (Trajectory, SampleInfo) pair.
+        in the dataset is a (Trajectory, SampleInfo) pair. Note that each
+        Trajectory in itself might represent an episode (variable length) or a
+        collection of transitions depending on how the replay buffer and hence
+        the `experience_dataset_fn` was set up.
       normalization_dataset_fn: a function that will create an instance of a
         tf.data.Dataset used for normalization. This dataset is often from a
         separate reverb table that is synchronized with the table used in
         experience_dataset_fn. Each element in the dataset is a (Trajectory,
-        SampleInfo) pair.
-      num_batches: The number of batches to sample for training and
-        normalization. If fewer than this amount of batches exists in the
-        dataset, the learner will wait for more data to be added, or until the
-        reverb timeout is reached.
+        SampleInfo) pair. Note that each Trajectory in itself might represent an
+        episode (variable length) or a collection of transitions depending on
+        how the replay buffer and hence the `experience_dataset_fn` was set up.
+      num_samples: The number of samples used for training and normalization.
+        A sample here means one reading of the experience_dataset_fn which in
+        turn might  have more than 1 Trajectories (For ex. if this is coming
+        from a  `reverb_replay_buffer` with `sample_batch_size` = 2, then one
+        sample means 2 trajectories, and the trainer will pull in num_samples *
+        2 trajectories for one iteration of training). If fewer than this amount
+        of batches exists in the dataset, the learner will wait for more data to
+        be added, or until the reverb timeout is reached.
       num_epochs: The number of iterations to go through the same sequences.
-      minibatch_size: The minibatch size. The dataset used for training is
-        shaped `[minibatch_size, 1, ...]`. If None, full sequences will be fed
-        into the agent. Please set this parameter to None for RNN networks which
-        requires full sequences.
+      minibatch_size: The minibatch size. If set, the input data set will be
+        flattened, and the dataset used for training is shaped
+        `[minibatch_size, 1, ...]`, where each element in the dataset represents
+        a single step. If None, full sequences will be fed into the agent.
+        Please set this parameter to None for RNN networks which requires full
+        sequences.
       shuffle_buffer_size: The buffer size for shuffling the trajectories before
         splitting them into mini batches. Only required when mini batch
         learning is enabled (minibatch_size is set). Otherwise it is ignored.
@@ -181,7 +192,7 @@ class PPOLearner(object):
     self._num_epochs = num_epochs
     self._experience_dataset_fn = experience_dataset_fn
     self._normalization_dataset_fn = normalization_dataset_fn
-    self._num_batches = num_batches
+    self._num_samples = num_samples
 
     self._generic_learner = learner.Learner(
         root_dir,
@@ -203,7 +214,7 @@ class PPOLearner(object):
     """Create the training dataset and iterator."""
 
     def _make_dataset(_):
-      train_dataset = self._experience_dataset_fn().take(self._num_batches)
+      train_dataset = self._experience_dataset_fn().take(self._num_samples)
 
       # We take the current batches, repeat for `num_epochs` times and exhaust
       # this data in the current learner run. The next time learner runs, new
@@ -243,7 +254,7 @@ class PPOLearner(object):
       self._train_iterator = iter(self._train_dataset)
 
   def run(self, parallel_iterations=10):
-    """Train `num_batches` batches repeating for `num_epochs` of iterations.
+    """Train `num_samples` batches repeating for `num_epochs` of iterations.
 
     Args:
       parallel_iterations: Maximum number of train iterations to allow running
@@ -260,7 +271,7 @@ class PPOLearner(object):
       num_total_batches = int(self.num_frames_for_training.numpy() /
                               self._minibatch_size) * self._num_epochs
     else:
-      num_total_batches = self._num_batches * self._num_epochs
+      num_total_batches = self._num_samples * self._num_epochs
 
     iterations = int(num_total_batches / self.num_replicas)
     loss_info = self._generic_learner.run(
@@ -292,7 +303,7 @@ class PPOLearner(object):
     traj, _ = next(iterator)
     num_frames += _update(traj)
 
-    for _ in tf.range(1, self._num_batches):
+    for _ in tf.range(1, self._num_samples):
       traj, _ = next(iterator)
       num_frames += _update(traj)
 
