@@ -263,7 +263,16 @@ class Learner(tf.Module):
       loss_info = self.single_train_step(iterator)
 
     def _reduce_loss(loss):
-      return self.strategy.reduce(tf.distribute.ReduceOp.SUM, loss, axis=None)
+      rank = None
+      if isinstance(loss, tf.distribute.DistributedValues):
+        # If loss is distributed get the rank from the first replica.
+        rank = loss.values[0].shape.rank
+      elif tf.is_tensor(loss):
+        rank = loss.shape.rank
+      axis = None
+      if rank:
+        axis = tuple(range(0, rank))
+      return self.strategy.reduce(tf.distribute.ReduceOp.SUM, loss, axis=axis)
 
     # We assume all data can be reduced in the loss_info. This means no
     # string dtypes are currently allowed as LossInfo Fields.
@@ -353,7 +362,15 @@ class Learner(tf.Module):
             args=((experience, sample_info), loss_info))
 
     def _reduce_loss(loss):
-      return self.strategy.reduce(reduce_op, loss, axis=None)
+      rank = None
+      if isinstance(loss, tf.distribute.DistributedValues):
+        rank = loss.values[0].shape.rank
+      elif tf.is_tensor(loss):
+        rank = loss.shape.rank
+      axis = None
+      if rank:
+        axis = tuple(range(0, rank))
+      return self.strategy.reduce(reduce_op, loss, axis=axis)
 
     # We assume all data can be reduced in the loss_info. This means no
     # string dtypes are currently allowed as LossInfo Fields.
