@@ -274,6 +274,11 @@ class PPOLearner(object):
       num_total_batches = self._num_samples * self._num_epochs
 
     iterations = int(num_total_batches / self.num_replicas)
+    if iterations == 0:
+      raise ValueError('Cannot distribute {} batches across {} replicas. '
+                       'Please increase PPOLearner.num_samples. See PPOLeaner.'
+                       'num_samples documentation for more details.'.format(
+                           num_total_batches, self.num_replicas))
     loss_info = self._generic_learner.run(
         iterations,
         self._train_iterator,
