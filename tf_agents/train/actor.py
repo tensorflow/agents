@@ -160,17 +160,26 @@ class Actor(object):
       # Generate summaries against the train_step
       for m in self._metrics:
         tag = m.name
-        tf.summary.scalar(
-            name=os.path.join("Metrics/", self._name, tag),
-            data=m.result(),
-            step=self._train_step)
+        try:
+          tf.summary.scalar(
+              name=os.path.join("Metrics/", self._name, tag),
+              data=m.result(),
+              step=self._train_step)
+        except ValueError:
+          logging.error("Scalar summary could not be written for metric %s",
+                        m)
         # Generate summaries against the reference_metrics
         for reference_metric in self._reference_metrics:
           tag = "Metrics/{}/{}".format(m.name, reference_metric.name)
-          tf.summary.scalar(
-              name=os.path.join(self._name, tag),
-              data=m.result(),
-              step=reference_metric.result())
+          try:
+            tf.summary.scalar(
+                name=os.path.join(self._name, tag),
+                data=m.result(),
+                step=reference_metric.result())
+          except ValueError:
+            logging.error(
+                "Scalar summary could not be written for reference_metric %s",
+                m)
 
   def log_metrics(self):
     """Logs metric results to stdout."""
