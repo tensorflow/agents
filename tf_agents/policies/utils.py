@@ -165,6 +165,8 @@ class BanditPolicyType(object):
   # Random decision for exploration made by epsilon-greedy agent sampled from
   # uniform distribution over actions.
   UNIFORM = 2
+  # Decision made by Boltzmann exploration.
+  BOLTZMANN = 3
 
 
 def create_bandit_policy_type_tensor_spec(
