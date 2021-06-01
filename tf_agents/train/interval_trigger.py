@@ -66,3 +66,6 @@ class IntervalTrigger(object):
   def reset(self) -> None:
     """Resets the trigger interval."""
     self._last_trigger_value = self._original_start_value
+
+  def set_start(self, start: int) -> None:
+    self._last_trigger_value = start

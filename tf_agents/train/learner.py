@@ -192,6 +192,8 @@ class Learner(tf.Module):
           train_step=self.train_step)
       self._checkpointer.initialize_or_restore()  # pytype: disable=attribute-error
 
+    for trigger in self.triggers:
+      trigger.set_start(self.train_step.numpy())
     self.triggers.append(self._get_checkpoint_trigger(checkpoint_interval))
     self.summary_interval = tf.constant(summary_interval, dtype=tf.int64)
 
@@ -210,7 +212,8 @@ class Learner(tf.Module):
       return lambda _, force_trigger=False: None
 
     save_fn = lambda: self._checkpointer.save(self.train_step)
-    return interval_trigger.IntervalTrigger(checkpoint_interval, save_fn)
+    return interval_trigger.IntervalTrigger(
+        checkpoint_interval, save_fn, start=self.train_step.numpy())
 
   def run(self, iterations=1, iterator=None, parallel_iterations=10):
     """Runs `iterations` iterations of training.
