@@ -28,6 +28,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.agents import exp3_mixture_agent
 from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_agent
+from tf_agents.bandits.agents import neural_boltzmann_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.agents.examples.v2 import trainer
 from tf_agents.bandits.environments import environment_utilities
@@ -41,7 +42,7 @@ from tf_agents.policies import utils as policy_utilities
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_enum(
-    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'Mix'],
+    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'Mix', 'Boltzmann'],
     'Which agent to use. Possible values are `LinUCB` and `LinTS`, `epsGreedy`,'
     ' and `Mix`.'
 )
@@ -61,6 +62,7 @@ REWARD_NOISE_VARIANCE = 0.01
 TRAINING_LOOPS = 2000
 STEPS_PER_LOOP = 2
 AGENT_ALPHA = 0.1
+TEMPERATURE = 0.1
 
 EPSILON = 0.05
 LAYERS = (50, 50, 50)
@@ -141,6 +143,26 @@ def main(unused_argv):
           optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
           epsilon=EPSILON,
           observation_and_action_constraint_splitter=mask_split_fn)
+    elif FLAGS.agent == 'Boltzmann':
+      train_step_counter = tf.compat.v1.train.get_or_create_global_step()
+      boundaries = [500]
+      temp_values = [1000.0, TEMPERATURE]
+      temp_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+          boundaries, temp_values)
+      def _temperature_fn():
+        # Any variable used in the function needs to be saved in the policy.
+        # This is true by default for the `train_step_counter`.
+        return temp_schedule(train_step_counter)
+      agent = neural_boltzmann_agent.NeuralBoltzmannAgent(
+          time_step_spec=environment.time_step_spec(),
+          action_spec=environment.action_spec(),
+          reward_network=network,
+          temperature=_temperature_fn,
+          optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
+          observation_and_action_constraint_splitter=mask_split_fn,
+          train_step_counter=train_step_counter)
+      # This is needed, otherwise the PolicySaver complains.
+      agent.policy.step = train_step_counter
     elif FLAGS.agent == 'Mix':
       assert FLAGS.num_disabled_actions == 0, (
           'Extra actions with mixture agent not supported.')

@@ -178,7 +178,8 @@ def train(root_dir,
       driver, replay_buffer, agent, steps_per_loop)
   checkpoint_manager = restore_and_get_checkpoint_manager(
       root_dir, agent, metrics, step_metric)
-  saver = policy_saver.PolicySaver(agent.policy)
+  train_step_counter = tf.compat.v1.train.get_or_create_global_step()
+  saver = policy_saver.PolicySaver(agent.policy, train_step=train_step_counter)
 
   summary_writer = tf.summary.create_file_writer(root_dir)
   summary_writer.set_as_default()
