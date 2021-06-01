@@ -21,7 +21,7 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
-from typing import Any, List, Mapping, Sequence, Text, Tuple, Union
+from typing import Any, List, Mapping, Optional, Sequence, Text, Tuple, Union
 
 import tensorflow as tf
 
@@ -68,8 +68,8 @@ class Sequential(network.Network):
 
   def __init__(self,
                layers: Sequence[tf.keras.layers.Layer],
-               input_spec: types.NestedTensorSpec = None,
-               name: Text = None):
+               input_spec: Optional[types.NestedTensorSpec] = None,
+               name: Optional[Text] = None):
     """Create a Sequential Network.
 
     Args:

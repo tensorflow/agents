@@ -17,7 +17,7 @@
 """Learner implementation for Agents. Refer to the examples dir."""
 
 import os
-from typing import Any, Tuple
+from typing import Any, Optional, Tuple
 
 from absl import logging
 import gin
@@ -302,7 +302,7 @@ class Learner(tf.Module):
 
   def loss(
       self,
-      experience_and_sample_info: ExperienceAndSampleInfo = None,
+      experience_and_sample_info: Optional[ExperienceAndSampleInfo] = None,
       reduce_op: tf.distribute.ReduceOp = tf.distribute.ReduceOp.SUM,
   ) -> tf_agent.LossInfo:
     """Computes loss for the experience.

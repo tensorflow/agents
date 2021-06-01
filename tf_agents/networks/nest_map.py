@@ -73,8 +73,8 @@ class NestMap(network.Network):
 
   def __init__(self,
                nested_layers: types.NestedLayer,
-               input_spec: types.NestedTensorSpec = None,
-               name: typing.Text = None):
+               input_spec: typing.Optional[types.NestedTensorSpec] = None,
+               name: typing.Optional[typing.Text] = None):
     """Create a Sequential Network.
 
     Args:

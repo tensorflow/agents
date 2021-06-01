@@ -112,7 +112,8 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
       optimizer: types.Optimizer,
       num_outer_dims: Literal[1, 2] = 1,  # pylint: disable=bad-whitespace
       epsilon_greedy: types.Float = 0.1,
-      loss_fn: Callable[[types.NestedTensor, bool], types.Tensor] = None,
+      loss_fn: Optional[Callable[[types.NestedTensor, bool],
+                                 types.Tensor]] = None,
       gradient_clipping: Optional[types.Float] = None,
       # Params for debugging.
       debug_summaries: bool = False,

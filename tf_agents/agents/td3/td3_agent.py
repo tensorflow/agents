@@ -82,7 +82,7 @@ class Td3Agent(tf_agent.TFAgent):
                debug_summaries: bool = False,
                summarize_grads_and_vars: bool = False,
                train_step_counter: Optional[tf.Variable] = None,
-               name: Text = None):
+               name: Optional[Text] = None):
     """Creates a Td3Agent Agent.
 
     Args:
@@ -475,7 +475,7 @@ class Td3Agent(tf_agent.TFAgent):
 
   def actor_loss(self,
                  time_steps: ts.TimeStep,
-                 weights: types.Tensor = None,
+                 weights: Optional[types.Tensor] = None,
                  training: bool = False) -> types.Tensor:
     """Computes the actor_loss for TD3 training.
 
