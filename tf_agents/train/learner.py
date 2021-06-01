@@ -193,7 +193,9 @@ class Learner(tf.Module):
       self._checkpointer.initialize_or_restore()  # pytype: disable=attribute-error
 
     for trigger in self.triggers:
-      trigger.set_start(self.train_step.numpy())
+      if hasattr(trigger, 'set_start'):
+        trigger.set_start(self.train_step.numpy())
+
     self.triggers.append(self._get_checkpoint_trigger(checkpoint_interval))
     self.summary_interval = tf.constant(summary_interval, dtype=tf.int64)
 
