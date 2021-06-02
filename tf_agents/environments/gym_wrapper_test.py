@@ -436,6 +436,13 @@ class GymWrapperOnCartpoleTest(test_utils.TestCase):
     time_step = env.reset()
     self.assertEqual(env.observation_spec().dtype, time_step.observation.dtype)
 
+  def test_reward_range(self):
+    cartpole_env = gym.spec('CartPole-v1').make()
+    cartpole_env.reward_range = (-3.0, 5.0)
+    env = gym_wrapper.GymWrapper(cartpole_env)
+    self.assertEqual(env.reward_spec().minimum, -3.0)
+    self.assertEqual(env.reward_spec().maximum, 5.0)
+
 
 if __name__ == '__main__':
   test_utils.main()

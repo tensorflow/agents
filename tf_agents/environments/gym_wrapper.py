@@ -165,6 +165,8 @@ class GymWrapper(py_environment.PyEnvironment):
     self._action_spec = spec_from_gym_space(self._gym_env.action_space,
                                             spec_dtype_map, simplify_box_bounds,
                                             'action')
+    self._reward_spec = specs.BoundedArraySpec(
+        shape=(), dtype=np.float64, minimum=gym_env.reward_range[0], maximum=gym_env.reward_range[1], name='reward')
     self._flat_obs_spec = tf.nest.flatten(self._observation_spec)
     self._render_kwargs = render_kwargs or {}
     self._info = None
@@ -247,6 +249,9 @@ class GymWrapper(py_environment.PyEnvironment):
 
   def action_spec(self) -> types.NestedArraySpec:
     return self._action_spec
+
+  def reward_spec(self) -> types.NestedArraySpec:
+    return self._reward_spec
 
   def close(self) -> None:
     return self._gym_env.close()
