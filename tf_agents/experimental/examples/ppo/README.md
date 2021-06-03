@@ -65,8 +65,10 @@ on a bare metal workstation setup as well.
 
 In order to execute ~1M environment steps, we run 489 iterations
 (`--num_iterations=489`) which results in 1,001,472 environment steps. Each
-iteration results in 320 training steps and 2,048 environment steps. Thus 489 *
-2,048 = 1,001,472 environment steps and 489 * 320 = 156,480 training steps.
+iteration results in 320 training steps (or 320 gradient updates, this is
+calulated from environemnt_steps * num_epochs / minibatch_size) and 2,048
+environment steps. Thus 489 *2,048 = 1,001,472 environment steps and 489 * 320 =
+156,480 training steps.
 
 The graphs below were generated with [Seaborn](https://seaborn.pydata.org/) and
 our own [script](https://github.com/tensorflow/agents/blob/master/tools/graph_builder.py)
