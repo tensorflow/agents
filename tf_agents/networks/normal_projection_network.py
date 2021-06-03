@@ -141,15 +141,13 @@ class NormalProjectionNetwork(network.DistributionNetwork):
 
   def _output_distribution_spec(self, sample_spec, network_name):
     is_multivariate = sample_spec.shape.ndims > 0
-    input_param_shapes = (
-        tfp.distributions.Normal.param_static_shapes(sample_spec.shape))
-
-    input_param_spec = {
-        name: tensor_spec.TensorSpec(  # pylint: disable=g-complex-comprehension
-            shape=shape,
+    param_properties = tfp.distributions.Normal.parameter_properties()
+    input_param_spec = {  # pylint: disable=g-complex-comprehension
+        name: tensor_spec.TensorSpec(
+            shape=properties.shape_fn(sample_spec.shape),
             dtype=sample_spec.dtype,
             name=network_name + '_' + name)
-        for name, shape in input_param_shapes.items()
+        for name, properties in param_properties.items()
     }
 
     def distribution_builder(*args, **kwargs):
