@@ -85,6 +85,12 @@ def get_example_encoder(spec, compress_image=False, image_quality=95):
 
   def _example_encoder(features_nest):
     flat_features = tf.nest.flatten(features_nest)
+    if len(flat_features) != len(feature_encoders):
+      raise ValueError(
+          'Encoding failed: The number of items to encode does not match the '
+          'number of encoders generated. Num features %d, num_encoders:%d' %
+          (len(flat_features), len(feature_encoders)))
+
     feature_dict = {
         path: feature_encoder(feature)
         for feature, (path,
@@ -143,6 +149,11 @@ def get_example_decoder(example_spec,
       decoded_features = []
 
       dtypes = [s.dtype for s in tf.nest.flatten(example_spec)]
+      if len(parsers) != len(dtypes):
+        raise ValueError(
+            'Decoding failed: Number of parsers (%d) does not match the number '
+            'of items in the example_spec (%d)' % (len(parsers), len(dtypes)))
+
       for (path, parser), dtype in zip(parsers, dtypes):
         decoded_features.append(
             tf.map_fn(parser, raw_features[path], dtype=dtype))
