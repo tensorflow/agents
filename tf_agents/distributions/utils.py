@@ -283,7 +283,7 @@ def get_parameters(value: Any) -> Params:
       return p
 
   if getattr(value, "parameters"):
-    default_values = inspect.signature(type_).parameters.items()
+    default_values = inspect.signature(type_.__init__).parameters.items()
     default_values = {
         k: v.default
         for (k, v) in default_values

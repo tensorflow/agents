@@ -68,6 +68,7 @@ class MaskedCategorical(tfp.distributions.Categorical):
     logits = tf.convert_to_tensor(value=logits)
     mask = tf.convert_to_tensor(value=mask)
     self._mask = tf.cast(mask, tf.bool)  # Nonzero values are True
+    self._neg_inf = neg_inf
     if probs is not None:
       raise ValueError('Must provide masked predictions as logits.'
                        ' Probs are accepted for API compatibility with '
