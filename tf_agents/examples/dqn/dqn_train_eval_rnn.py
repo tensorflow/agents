@@ -168,7 +168,8 @@ def train_eval(
       table_name,
       sequence_length=sequence_length,
       stride_length=1,
-      pad_end_of_episodes=True)
+      pad_end_of_episodes=True,
+      tile_end_of_episodes=True)
 
   def experience_dataset_fn():
     return reverb_replay.as_dataset(

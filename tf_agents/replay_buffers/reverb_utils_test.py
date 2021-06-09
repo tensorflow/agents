@@ -309,7 +309,8 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table',
               sequence_length=4,
               stride_length=1,
-              pad_end_of_episodes=True),
+              pad_end_of_episodes=True,
+              tile_end_of_episodes=True),
           _env_creator(5),
           12,  # expected_items
           3,  # writer_call_counts
@@ -322,7 +323,8 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table',
               sequence_length=4,
               stride_length=2,
-              pad_end_of_episodes=True),
+              pad_end_of_episodes=True,
+              tile_end_of_episodes=True),
           _env_creator(5),
           6,  # expected_items
           3,  # writer_call_counts
@@ -335,7 +337,8 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table',
               sequence_length=4,
               stride_length=3,
-              pad_end_of_episodes=True),
+              pad_end_of_episodes=True,
+              tile_end_of_episodes=True),
           _env_creator(5),
           4,  # expected_items
           3,  # writer_call_counts
@@ -348,7 +351,8 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table',
               sequence_length=4,
               stride_length=4,
-              pad_end_of_episodes=True),
+              pad_end_of_episodes=True,
+              tile_end_of_episodes=True),
           _env_creator(5),
           4,  # expected_items
           3,  # writer_call_counts
@@ -395,10 +399,26 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table',
               sequence_length=4,
               stride_length=4,
-              pad_end_of_episodes=True),
+              pad_end_of_episodes=True,
+              tile_end_of_episodes=True),
           True,  # reset_with_write_cached_steps
           19,  # append_count
           4,  # expected_items
+          3,  # append_count_from_reset
+          1,  # expected_items_from_reset
+      ),
+      (
+          'add_trajectory_observer_reset_writing_cache_padding_no_tile',
+          _create_add_trajectory_observer_fn(
+              table_name='test_table',
+              sequence_length=4,
+              stride_length=4,
+              pad_end_of_episodes=True,
+              tile_end_of_episodes=False,
+          ),
+          True,  # reset_with_write_cached_steps
+          13,  # append_count
+          2,  # expected_items
           3,  # append_count_from_reset
           1,  # expected_items_from_reset
       ),

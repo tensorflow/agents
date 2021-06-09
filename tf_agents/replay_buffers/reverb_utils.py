@@ -260,7 +260,8 @@ class ReverbAddTrajectoryObserver(object):
                sequence_length: int,
                stride_length: int = 1,
                priority: Union[float, int] = 1,
-               pad_end_of_episodes: bool = False):
+               pad_end_of_episodes: bool = False,
+               tile_end_of_episodes: bool = False):
     """Creates an instance of the ReverbAddTrajectoryObserver.
 
     If multiple table_names and sequence lengths are provided data will only be
@@ -284,17 +285,27 @@ class ReverbAddTrajectoryObserver(object):
       pad_end_of_episodes: At the end of an episode, the cache is dropped by
         default. When `pad_end_of_episodes = True`, the cache gets padded with
         boundary steps (last->first) with `0` values everywhere and padded items
-        of `sequence_length` are written to Reverb. The last padded item starts
-        with a boundary step from the episode. This ensures that the last few
-        steps are not less likely to get sampled compared to middle steps, this
-        is most useful for environments that have useful rewards at the end of
-        episodes. Note: because we do not pad at the beginning of an episode,
-        for `sequence_length = N > 1` scenarios, the first `N-1` steps in an
-        episode are sampled less frequently than all other steps. This generally
-        does not impact training performance. However, if you have an
-        environment where the only meaningful rewards are at the beginning of
-        the episodes, you may consider filing a feature request to support
-        padding in the front as well.
+        of `sequence_length` are written to Reverb.
+      tile_end_of_episodes: If `pad_end_of_episodes` is True then, the last
+        padded item starts with a boundary step from the episode.
+
+        When this option is True the following items will be generated:
+
+        F, M, L, P
+        M, L, P, P
+        L, P, P, P
+
+        If False, only a single one will be generated:
+
+        F, M, L, P
+
+        For training recurrent models on environments where required information
+        is only available at the start of the episode it is useful to set
+        `tile_end_of_episodes=False` and the `sequence_length` to be the length
+        of the longest episode.
+    Raises:
+      ValueError: If `tile_end_of_episodes` is set without
+        `pad_end_of_episodes`.
     """
     if isinstance(table_name, Text):
       self._table_names = [table_name]
@@ -304,6 +315,11 @@ class ReverbAddTrajectoryObserver(object):
     self._stride_length = stride_length
     self._priority = priority
     self._pad_end_of_episodes = pad_end_of_episodes
+    self._tile_end_of_episodes = tile_end_of_episodes
+
+    if tile_end_of_episodes and not pad_end_of_episodes:
+      raise ValueError("Must set `pad_end_of_episodes=True` when using "
+                       "`tile_end_of_episodes`")
 
     self._py_client = py_client
     # TODO(b/153700282): Use a single writer with max_sequence_length=max(...)
@@ -399,7 +415,13 @@ class ReverbAddTrajectoryObserver(object):
       # enabled and `write_cached_steps` is set to `True`.
       if self._pad_end_of_episodes:
         zero_step = self._get_padding_step(self._last_trajectory)
-        for _ in range(self._sequence_length - 1):
+
+        if self._tile_end_of_episodes:
+          pad_range = range(self._sequence_length - 1)
+        else:
+          pad_range = range(self._sequence_length - self._cached_steps)
+
+        for _ in pad_range:
           self._writer.append(zero_step)
           self._cached_steps += 1
           self._write_cached_steps()
