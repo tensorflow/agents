@@ -46,6 +46,7 @@ from tf_agents.train import actor
 from tf_agents.train import learner
 from tf_agents.train import triggers
 from tf_agents.train.utils import spec_utils
+from tf_agents.train.utils import strategy_utils
 from tf_agents.train.utils import train_utils
 
 FLAGS = flags.FLAGS
@@ -149,6 +150,7 @@ def create_sequential_actor_network(actor_fc_layers, action_tensor_spec):
 @gin.configurable
 def train_eval(
     root_dir,
+    strategy: tf.distribute.Strategy,
     env_name='HalfCheetah-v2',
     # Training params
     initial_collect_steps=10000,
@@ -184,8 +186,6 @@ def train_eval(
   _, action_tensor_spec, time_step_tensor_spec = (
       spec_utils.get_tensor_specs(collect_env))
 
-  train_step = train_utils.create_train_step()
-
   actor_net = create_sequential_actor_network(
       actor_fc_layers=actor_fc_layers, action_tensor_spec=action_tensor_spec)
 
@@ -194,27 +194,29 @@ def train_eval(
       action_fc_layer_units=critic_action_fc_layers,
       joint_fc_layer_units=critic_joint_fc_layers)
 
-  agent = sac_agent.SacAgent(
-      time_step_tensor_spec,
-      action_tensor_spec,
-      actor_network=actor_net,
-      critic_network=critic_net,
-      actor_optimizer=tf.keras.optimizers.Adam(
-          learning_rate=actor_learning_rate),
-      critic_optimizer=tf.keras.optimizers.Adam(
-          learning_rate=critic_learning_rate),
-      alpha_optimizer=tf.keras.optimizers.Adam(
-          learning_rate=alpha_learning_rate),
-      target_update_tau=target_update_tau,
-      target_update_period=target_update_period,
-      td_errors_loss_fn=tf.math.squared_difference,
-      gamma=gamma,
-      reward_scale_factor=reward_scale_factor,
-      gradient_clipping=None,
-      debug_summaries=debug_summaries,
-      summarize_grads_and_vars=summarize_grads_and_vars,
-      train_step_counter=train_step)
-  agent.initialize()
+  with strategy.scope():
+    train_step = train_utils.create_train_step()
+    agent = sac_agent.SacAgent(
+        time_step_tensor_spec,
+        action_tensor_spec,
+        actor_network=actor_net,
+        critic_network=critic_net,
+        actor_optimizer=tf.keras.optimizers.Adam(
+            learning_rate=actor_learning_rate),
+        critic_optimizer=tf.keras.optimizers.Adam(
+            learning_rate=critic_learning_rate),
+        alpha_optimizer=tf.keras.optimizers.Adam(
+            learning_rate=alpha_learning_rate),
+        target_update_tau=target_update_tau,
+        target_update_period=target_update_period,
+        td_errors_loss_fn=tf.math.squared_difference,
+        gamma=gamma,
+        reward_scale_factor=reward_scale_factor,
+        gradient_clipping=None,
+        debug_summaries=debug_summaries,
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=train_step)
+    agent.initialize()
 
   table_name = 'uniform_table'
   table = reverb.Table(
@@ -268,7 +270,8 @@ def train_eval(
       train_step,
       agent,
       experience_dataset_fn,
-      triggers=learning_triggers)
+      triggers=learning_triggers,
+      strategy=strategy)
 
   random_policy = random_py_policy.RandomPyPolicy(
       collect_env.time_step_spec(), collect_env.action_spec())
@@ -330,8 +333,11 @@ def main(_):
 
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
 
+  strategy = strategy_utils.get_strategy(FLAGS.tpu, FLAGS.use_gpu)
+
   train_eval(
       FLAGS.root_dir,
+      strategy=strategy,
       num_iterations=FLAGS.num_iterations,
       reverb_port=FLAGS.reverb_port,
       eval_interval=FLAGS.eval_interval)
