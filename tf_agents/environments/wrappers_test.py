@@ -406,6 +406,75 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
     self.assertEqual([3], time_step.observation)
 
 
+class FlattenActionWrapperTest(test_utils.TestCase):
+
+  def setUp(self):
+    super(FlattenActionWrapperTest, self).setUp()
+    self._observation_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
+
+  def test_flattens_spec(self):
+    action_spec = (
+        array_spec.ArraySpec((3,), dtype=np.float32),
+        array_spec.ArraySpec((), dtype=np.float32),
+        array_spec.ArraySpec((5,), dtype=np.float32),
+    )
+    env = random_py_environment.RandomPyEnvironment(
+        self._observation_spec, action_spec=action_spec)
+    env = wrappers.FlattenActionWrapper(env)
+    flat_action_spec = env.action_spec()
+
+    self.assertEqual((9,), flat_action_spec.shape)
+    self.assertEqual(np.float32, flat_action_spec.dtype)
+
+  def test_bounds_computed(self):
+    action_spec = (
+        array_spec.BoundedArraySpec((3,),
+                                    dtype=np.float32,
+                                    minimum=-1,
+                                    maximum=1),
+        array_spec.BoundedArraySpec((), dtype=np.float32, minimum=-2,
+                                    maximum=2),
+        array_spec.BoundedArraySpec((5,),
+                                    dtype=np.float32,
+                                    minimum=-3,
+                                    maximum=3),
+    )
+    env = random_py_environment.RandomPyEnvironment(
+        self._observation_spec, action_spec=action_spec)
+    env = wrappers.FlattenActionWrapper(env)
+    flat_action_spec = env.action_spec()
+
+    self.assertEqual((9,), flat_action_spec.shape)
+    self.assertEqual(np.float32, flat_action_spec.dtype)
+    self.assertAllEqual([-1, -1, -1, -2, -3, -3, -3, -3, -3],
+                        flat_action_spec.minimum)
+    self.assertAllEqual([1, 1, 1, 2, 3, 3, 3, 3, 3],
+                        flat_action_spec.maximum)
+
+  def test_env_step(self):
+    action_spec = (
+        array_spec.BoundedArraySpec((3,),
+                                    dtype=np.float32,
+                                    minimum=-1,
+                                    maximum=1),
+        array_spec.BoundedArraySpec((), dtype=np.float32, minimum=-2,
+                                    maximum=2),
+        array_spec.BoundedArraySpec((5,),
+                                    dtype=np.float32,
+                                    minimum=-3,
+                                    maximum=3),
+    )
+    env = random_py_environment.RandomPyEnvironment(
+        self._observation_spec, action_spec=action_spec)
+    flat_env = wrappers.FlattenActionWrapper(env)
+
+    rng = np.random.RandomState()
+    action = array_spec.sample_spec_nest(flat_env.action_spec(), rng)
+    # RandomPyEnvironment validates the action
+    flat_env.reset()
+    flat_env.step(action)
+
+
 class ObservationFilterWrapperTest(test_utils.TestCase):
 
   def _get_mock_env_step(self):
