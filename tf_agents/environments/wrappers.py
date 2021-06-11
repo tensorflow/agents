@@ -272,10 +272,10 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
 
 @gin.configurable
 class FlattenActionWrapper(PyEnvironmentBaseWrapper):
-  """Flattens the action_spec."""
+  """Flattens the action."""
 
   def __init__(self, env: py_environment.PyEnvironment, flat_dtype=None):
-    """Creates an FlattenActionWrapper.
+    """Creates a FlattenActionWrapper.
 
     Args:
       env: Environment to wrap.
