@@ -34,6 +34,7 @@ import gin
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.keras_layers import permanent_variable_rate_dropout
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.utils import nest_utils
@@ -279,7 +280,9 @@ class EncodingNetwork(network.Network):
           dropout_params = {'rate': dropout_params} if dropout_params else None
 
         if dropout_params is not None:
-          layers.append(utils.maybe_permanent_dropout(**dropout_params))
+          layers.append(
+              permanent_variable_rate_dropout.PermanentVariableRateDropout(
+                  **dropout_params))
 
     super(EncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec, state_spec=(), name=name)
