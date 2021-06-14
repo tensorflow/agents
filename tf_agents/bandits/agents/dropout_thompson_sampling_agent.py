@@ -54,7 +54,7 @@ class DropoutThompsonSamplingAgent(
       action_spec: types.BoundedTensorSpec,
       optimizer: types.Optimizer,
       # Network params.
-      dropout_rate: float,
+      dropout_rate: types.FloatOrReturningFloat,
       network_layers: Tuple[int, ...],
       dropout_only_top_layer: bool = True,
       observation_and_action_constraint_splitter: Optional[
@@ -82,7 +82,9 @@ class DropoutThompsonSamplingAgent(
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
       optimizer: The optimizer to use for training.
-      dropout_rate: Float in `(0, 1)`, the dropout rate.
+      dropout_rate: Float in `(0, 1)`, or a function that takes no arguments and
+        returns a float in `(0,1)`. It represents the dropout rate used by the
+        model.
       network_layers: Tuple of ints determining the sizes of the network layers.
       dropout_only_top_layer: Boolean parameter determining if dropout should be
         done only in the top layer. True by default.
@@ -128,6 +130,7 @@ class DropoutThompsonSamplingAgent(
       ValueError: If the action spec contains more than one action or or it is
       not a bounded scalar int32 spec with minimum 0.
     """
+    self._dropout_rate = dropout_rate
     fc_layer_params = network_layers
     dropout_param = {'rate': dropout_rate, 'permanent': True}
     if dropout_only_top_layer:
@@ -172,3 +175,12 @@ class DropoutThompsonSamplingAgent(
         laplacian_matrix=laplacian_matrix,
         laplacian_smoothing_weight=laplacian_smoothing_weight,
         name=name)
+
+  def _train(self, experience, weights):
+    if callable(self._dropout_rate):
+      dropout = self._dropout_rate()
+    else:
+      dropout = self._dropout_rate
+    tf.compat.v2.summary.scalar(
+        name='dropout', data=dropout, step=self.train_step_counter)
+    return super(DropoutThompsonSamplingAgent, self)._train(experience, weights)

@@ -128,10 +128,17 @@ def main(unused_argv):
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
         epsilon=EPSILON)
   elif FLAGS.agent == 'DropoutTS':
+    train_step_counter = tf.compat.v1.train.get_or_create_global_step()
+    def dropout_fn():
+      return tf.math.maximum(
+          tf.math.reciprocal_no_nan(1.01 +
+                                    tf.cast(train_step_counter, tf.float32)),
+          0.0003)
+
     agent = dropout_ts_agent.DropoutThompsonSamplingAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
-        dropout_rate=DROPOUT_RATE,
+        dropout_rate=dropout_fn,
         network_layers=LAYERS,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR))
 
