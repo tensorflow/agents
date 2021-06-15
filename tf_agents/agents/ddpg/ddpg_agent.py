@@ -271,6 +271,22 @@ class DdpgAgent(tf_agent.TFAgent):
     return tf_agent.LossInfo(total_loss,
                              DdpgInfo(actor_loss, critic_loss))
 
+  def _loss(self, experience, weights=None, training=False):
+    transition = self._as_transition(experience)
+    time_steps, policy_steps, next_time_steps = transition
+    actions = policy_steps.action
+
+    critic_loss = self.critic_loss(time_steps, actions, next_time_steps,
+                                   weights=weights, training=training)
+    tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
+
+    actor_loss = self.actor_loss(time_steps, weights=weights, training=training)
+    tf.debugging.check_numerics(actor_loss, 'Actor loss is inf or nan.')
+
+    total_loss = actor_loss + critic_loss
+    return tf_agent.LossInfo(total_loss,
+                             DdpgInfo(actor_loss, critic_loss))
+
   def _apply_gradients(self, gradients, variables, optimizer):
     # Tuple is used for py3, where zip is a generator producing values once.
     grads_and_vars = tuple(zip(gradients, variables))
