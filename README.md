@@ -28,6 +28,7 @@ Feedback and comments are welcome.
 <a href='#Contributing'>Contributing</a><br>
 <a href='#Releases'>Releases</a><br>
 <a href='#Principles'>Principles</a><br>
+<a href='#Contributors'>Contributors</a><br>
 <a href='#Citation'>Citation</a><br>
 <a href='#Disclaimer'>Disclaimer</a><br>
 
@@ -173,6 +174,7 @@ last release compatible with Python 2.
 Release | Branch / Tag                                               | TensorFlow Version
 ------- | ---------------------------------------------------------- | ------------------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
+0.8.0   | [v0.8.0](https://github.com/tensorflow/agents/tree/v0.8.0) | 2.5.0
 0.7.1   | [v0.7.1](https://github.com/tensorflow/agents/tree/v0.7.1) | 2.4.0
 0.6.0   | [v0.6.0](https://github.com/tensorflow/agents/tree/v0.6.0) | 2.3.0
 0.5.0   | [v0.5.0](https://github.com/tensorflow/agents/tree/v0.5.0) | 2.2.0
@@ -186,6 +188,30 @@ Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightl
 This project adheres to [Google's AI principles](PRINCIPLES.md). By
 participating, using or contributing to this project you are expected to adhere
 to these principles.
+
+
+<a id='Contributors'></a>
+
+## Contributors
+
+
+We would like to recognize the following individuals for their code
+contributions, discussions, and other work to make the TF-Agents library.
+
+* James Davidson
+* Ethan Holly
+* Toby Boyd
+* Summer Yue
+* Robert Ormandi
+* Kuang-Huei Lee
+* Alexa Greenberg
+* Amir Yazdanbakhsh
+* Yao Lu
+* Gaurav Jain
+* Christof Angermueller
+* Mark Daoust
+* Adam Wood
+
 
 <a id='Citation'></a>
 
