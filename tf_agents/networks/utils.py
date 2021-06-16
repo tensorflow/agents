@@ -23,7 +23,6 @@ import typing
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-from tf_agents.keras_layers import permanent_variable_rate_dropout
 from tf_agents.typing import types
 from tf_agents.utils import composite
 
@@ -40,6 +39,28 @@ def check_single_floating_network_output(
         'Expected {} to emit a floating point tensor with inner dims '
         '{}; but saw network output spec: {}'
         .format(label, expected_output_shape, output_spec))
+
+
+def maybe_permanent_dropout(rate, noise_shape=None, seed=None, permanent=False):
+  """Adds a Keras dropout layer with the option of applying it at inference.
+
+  Args:
+    rate: the probability of dropping an input.
+    noise_shape: 1D integer tensor representing the dropout mask multiplied to
+      the input.
+    seed: A Python integer to use as random seed.
+    permanent: If set, applies dropout during inference and not only during
+      training. This flag is used for approximated Bayesian inference.
+  Returns:
+    A function adding a dropout layer according to the parameters for the given
+      input.
+  """
+  if permanent:
+    def _keras_dropout(x):
+      return tf.nn.dropout(
+          x, rate=rate, noise_shape=noise_shape, seed=seed)
+    return tf.keras.layers.Lambda(_keras_dropout)
+  return tf.keras.layers.Dropout(rate, noise_shape, seed)
 
 
 class BatchSquash(object):
@@ -203,8 +224,6 @@ def mlp_layers(conv_layer_params=None,
         dropout_params = {'rate': dropout_params} if dropout_params else None
 
       if dropout_params is not None:
-        layers.append(
-            permanent_variable_rate_dropout.PermanentVariableRateDropout(
-                **dropout_params))
+        layers.append(maybe_permanent_dropout(**dropout_params))
 
   return layers
