@@ -384,9 +384,12 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
           set(tflite_signature['outputs']),
           set(action_output_dict))
 
-      tflite_output = tflite_runner(**tflite_action_input_dict)
+      if not tf.test.is_gpu_available():
+        # TODO(b/191406764): This segfaults due to GPU+Flex ops in
+        # Python interpreter.  Allow to run with GPU once bug is fixed.
+        tflite_output = tflite_runner(**tflite_action_input_dict)
 
-      self.assertAllClose(tflite_output, action_output_dict)
+        self.assertAllClose(tflite_output, action_output_dict)
 
   def match_dtype_shape(self, x, y, msg=None):
     self.assertEqual(x.shape, y.shape, msg=msg)
