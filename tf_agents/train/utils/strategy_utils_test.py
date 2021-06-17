@@ -32,7 +32,7 @@ class StrategyUtilsTest(test_utils.TestCase):
     strategy = strategy_utils.get_strategy(tpu=False, use_gpu=False)
     self.assertIsInstance(strategy, type(default_strategy))
 
-  @mock.patch.object(tf.distribute.experimental, 'TPUStrategy')
+  @mock.patch.object(tf.distribute, 'TPUStrategy')
   @mock.patch.object(tf.tpu.experimental, 'initialize_tpu_system')
   @mock.patch.object(tf.config, 'experimental_connect_to_cluster')
   @mock.patch.object(tf.distribute.cluster_resolver, 'TPUClusterResolver')

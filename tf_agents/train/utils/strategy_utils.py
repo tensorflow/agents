@@ -49,7 +49,7 @@ def get_strategy(tpu, use_gpu):
       tf.config.experimental_connect_to_cluster(resolver)
       tf.tpu.experimental.initialize_tpu_system(resolver)
 
-      strategy = tf.distribute.experimental.TPUStrategy(resolver)
+      strategy = tf.distribute.TPUStrategy(resolver)
     else:
       strategy = tf.distribute.MirroredStrategy()
     logging.info('Devices after getting strategy:\n%s',
