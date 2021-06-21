@@ -301,6 +301,7 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(input_shape, output.shape)
 
   def testKerasIntegerLookup(self):
+    self.skipTest('Re-enable this test after cl/362119497 on tf-nightly.')
     if not tf.executing_eagerly():
       self.skipTest('This test is TF2 only.')
 
@@ -308,9 +309,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     vocab_list = [2, 3, 4]
 
     keras_input = tf.keras.Input(shape=(1,), name=key, dtype=tf.dtypes.int32)
-    id_input = keras_preprocessing.IntegerLookup(vocabulary=vocab_list)
-    encoded_input = keras_preprocessing.CategoryEncoding(
-        max_tokens=len(vocab_list))
+    id_input = keras_preprocessing.IntegerLookup(
+        vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot')
 
     state_input = [3, 2, 2, 4, 3]
     state = {key: tf.expand_dims(state_input, -1)}
@@ -318,14 +318,14 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
     network = encoding_network.EncodingNetwork(
         input_spec,
-        preprocessing_combiner=tf.keras.Sequential(
-            [keras_input, id_input, encoded_input]))
+        preprocessing_combiner=tf.keras.Sequential([keras_input, id_input]))
 
     output, _ = network(state)
     expected_shape = (len(state_input), len(vocab_list))
     self.assertEqual(expected_shape, output.shape)
 
   def testCombinedKerasPreprocessingLayers(self):
+    self.skipTest('Re-enable this test after cl/362119497 on tf-nightly.')
     if not tf.executing_eagerly():
       self.skipTest('This test is TF2 only.')
 
@@ -339,10 +339,9 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     vocab_list = [2, 3, 4]
     inputs[indicator_key] = tf.keras.Input(
         shape=(1,), dtype=tf.dtypes.int32, name=indicator_key)
-    id_input = keras_preprocessing.IntegerLookup(
-        vocabulary=vocab_list)(inputs[indicator_key])
-    features[indicator_key] = keras_preprocessing.CategoryEncoding(
-        max_tokens=len(vocab_list))(id_input)
+    features[indicator_key] = keras_preprocessing.IntegerLookup(
+        vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot')(
+            inputs[indicator_key])
     state_input = [3, 2, 2, 4, 3]
     tensors[indicator_key] = tf.expand_dims(state_input, -1)
     specs[indicator_key] = tensor_spec.TensorSpec([1], tf.int32)
@@ -354,7 +353,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     inputs[embedding_key] = tf.keras.Input(
         shape=(1,), dtype=tf.dtypes.int32, name=embedding_key)
     id_input = keras_preprocessing.IntegerLookup(
-        vocabulary=vocab_list)(inputs[embedding_key])
+        vocabulary=vocab_list, num_oov_indices=0)(
+            inputs[embedding_key])
     embedding_input = tf.keras.layers.Embedding(
         input_dim=len(vocab_list),
         output_dim=embedding_dim)(id_input)
