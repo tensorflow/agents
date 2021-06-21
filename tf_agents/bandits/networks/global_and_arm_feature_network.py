@@ -62,8 +62,8 @@ def create_feed_forward_common_tower_network(
     global_preprocessing_combiner: Optional[Callable[..., types.Tensor]] = None,
     arm_preprocessing_combiner: Optional[Callable[..., types.Tensor]] = None,
     activation_fn: Callable[[types.Tensor],
-                            types.Tensor] = tf.keras.activations.relu
-) -> types.Network:
+                            types.Tensor] = tf.keras.activations.relu,
+    name: Optional[str] = None) -> types.Network:
   """Creates a common tower network with feedforward towers.
 
   The network produced by this function can be used either in
@@ -87,6 +87,7 @@ def create_feed_forward_common_tower_network(
     arm_preprocessing_combiner: Preprocessing combiner for the arm features.
     activation_fn: A keras activation, specifying the activation function used
       in all layers. Defaults to relu.
+    name: The network name to use. Shows up in Tensorboard losses.
 
   Returns:
     A network that takes observations adhering observation_spec and outputs
@@ -130,8 +131,12 @@ def create_feed_forward_common_tower_network(
         input_tensor_spec=common_input_spec,
         fc_layer_params=list(common_layers) + [output_dim],
         activation_fn=activation_fn)
-  return GlobalAndArmCommonTowerNetwork(obs_spec_no_num_actions, global_network,
-                                        arm_network, common_network)
+  return GlobalAndArmCommonTowerNetwork(
+      obs_spec_no_num_actions,
+      global_network,
+      arm_network,
+      common_network,
+      name=name)
 
 
 def create_feed_forward_dot_product_network(
@@ -228,7 +233,7 @@ class GlobalAndArmCommonTowerNetwork(network.Network):
     outer_dim = arm_output_shape[-1]
     if arm_output.shape.rank > 2:
       # Cannot have undefined inner dimension in arm output shape.
-      inner_dims = arm_output.shape[1: -1]
+      inner_dims = arm_output.shape[1:-1]
       if any(d is None for d in inner_dims):
         raise ValueError('inner dimensions of arm output cannot be unknown; '
                          f'arm_output.shape: {arm_output.shape}')
