@@ -126,7 +126,9 @@ def main(unused_argv):
         action_spec=environment.action_spec(),
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
-        epsilon=EPSILON)
+        epsilon=EPSILON,
+        emit_policy_info='predicted_rewards_mean',
+        info_fields_to_inherit_from_greedy=['predicted_rewards_mean'])
   elif FLAGS.agent == 'DropoutTS':
     train_step_counter = tf.compat.v1.train.get_or_create_global_step()
     def dropout_fn():

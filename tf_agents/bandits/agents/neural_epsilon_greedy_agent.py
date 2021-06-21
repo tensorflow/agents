@@ -25,7 +25,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Iterable, Optional, Text, Tuple
+from typing import Iterable, Optional, Sequence, Text, Tuple
 
 import gin
 import tensorflow as tf
@@ -68,6 +68,7 @@ class NeuralEpsilonGreedyAgent(
       train_step_counter: Optional[tf.Variable] = None,
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
+      info_fields_to_inherit_from_greedy: Sequence[Text] = (),
       name: Optional[Text] = None):
     """Creates a Neural Epsilon Greedy Agent.
 
@@ -123,6 +124,8 @@ class NeuralEpsilonGreedyAgent(
       laplacian_smoothing_weight: A float that determines the weight of the
         regularization term. Note that this has no effect if `laplacian_matrix`
         above is `None`.
+      info_fields_to_inherit_from_greedy: List  of info fields that are reported
+        from the greedy policy even when exploratory action is taken.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
 
@@ -150,5 +153,7 @@ class NeuralEpsilonGreedyAgent(
         laplacian_smoothing_weight=laplacian_smoothing_weight,
         name=name)
     self._policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        self._policy, epsilon=epsilon)
+        self._policy,
+        epsilon=epsilon,
+        info_fields_to_inherit_from_greedy=info_fields_to_inherit_from_greedy)
     self._collect_policy = self._policy
