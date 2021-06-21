@@ -169,3 +169,54 @@ class ConstraintViolationsMetric(tf_metric.TFStepMetric):
 
   def result(self):
     return tf.identity(self.constraint_violations, name=self.name)
+
+
+@gin.configurable
+class DistanceFromGreedyMetric(tf_metric.TFStepMetric):
+  """Difference between the estimated reward of the chosen and the best action.
+
+  This metric measures how 'safely' the agent explores: it calculates the
+  difference between what the agent thinks it would have gotten had it chosen
+  the best looking action, vs the action it actually took. This metric is not
+  equivalent to the regret, because the regret is calculated as a distance from
+  optimality, while here everything calculated is based on the policy's
+  'belief'.
+  """
+
+  def __init__(self,
+               estimated_reward_fn: Callable[[types.Tensor], types.Tensor],
+               name: Optional[Text] = 'DistanceFromGreedyMetric',
+               dtype: float = tf.float32):
+    """Init function for the metric.
+
+    Args:
+      estimated_reward_fn: A function that takes the observation as input and
+        computes the estimated rewards that the greedy policy uses.
+      name: (str) name of the metric
+      dtype: dtype of the metric value.
+    """
+    self._estimated_reward_fn = estimated_reward_fn
+    self.dtype = dtype
+    self.safe_explore = common.create_variable(
+        initial_value=0, dtype=self.dtype, shape=(), name='safe_explore')
+    super(DistanceFromGreedyMetric, self).__init__(name=name)
+
+  def call(self, trajectory):
+    """Update the metric value.
+
+    Args:
+      trajectory: A tf_agents.trajectory.Trajectory
+
+    Returns:
+      The arguments, for easy chaining.
+    """
+    all_estimated_rewards = self._estimated_reward_fn(trajectory.observation)
+    max_estimated_rewards = tf.reduce_max(all_estimated_rewards, axis=-1)
+    estimated_action_rewards = tf.gather(
+        all_estimated_rewards, trajectory.action, batch_dims=1)
+    self.safe_explore.assign(
+        tf.reduce_mean(max_estimated_rewards - estimated_action_rewards))
+    return trajectory
+
+  def result(self):
+    return tf.identity(self.safe_explore, name=self.name)

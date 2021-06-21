@@ -184,6 +184,22 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
     result_ = self.evaluate(result)
     self.assertEqual(result_, expected_result)
 
+  def testDistanceFromGreedyMetric(self):
+    batch_size = 11
+    num_actions = 12
+    traj = self._create_batched_trajectory(batch_size)
+    def estimated_reward_fn(unused_observation):
+      return tf.stack([tf.range(num_actions, dtype=tf.float32)] * batch_size)
+
+    metric = tf_metrics.DistanceFromGreedyMetric(estimated_reward_fn)
+    self.evaluate(metric.init_variables())
+    traj_out = metric(traj)
+    deps = tf.nest.flatten(traj_out)
+    with tf.control_dependencies(deps):
+      result = metric.result()
+    result_ = self.evaluate(result)
+    self.assertEqual(result_, 6)
+
 
 if __name__ == '__main__':
   tf.test.main()
