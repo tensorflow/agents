@@ -172,5 +172,61 @@ class EpsilonGreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
     self.checkBanditPolicyTypeShape(step.info.bandit_policy_type, batch_size=2)
 
+  def testInfoFromGreedy(self):
+    PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
+        'PolicyInfo',
+        ('log_probability', 'predicted_rewards', 'bandit_policy_type'))
+    # Set default empty tuple for all fields.
+    PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
+
+    info_spec = PolicyInfo(
+        bandit_policy_type=self._bandit_policy_type_spec,
+        log_probability=tensor_spec.BoundedTensorSpec(
+            shape=(),
+            dtype=tf.float32,
+            maximum=0,
+            minimum=-float('inf'),
+            name='log_probability'))
+
+    policy_with_info_spec = fixed_policy.FixedPolicy(
+        np.asarray(self._greedy_action, dtype=np.int32),
+        self._time_step_spec,
+        self._action_spec,
+        policy_info=PolicyInfo(bandit_policy_type=self._bandit_policy_type),
+        info_spec=info_spec)
+
+    epsilon = 0.2
+    policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
+        policy_with_info_spec,
+        epsilon=epsilon,
+        info_fields_to_inherit_from_greedy=['log_probability'])
+    self.assertEqual(policy.time_step_spec, self._time_step_spec)
+    self.assertEqual(policy.action_spec, self._action_spec)
+
+    time_step = tf.nest.map_structure(tf.convert_to_tensor, self._time_step)
+
+    @common.function
+    def action_step_fn(time_step=time_step):
+      return policy.action(time_step, policy_state=(), seed=54)
+
+    tf.nest.assert_same_structure(
+        self._action_spec,
+        self.evaluate(action_step_fn(time_step)).action)
+
+    if tf.executing_eagerly():
+      action_step = action_step_fn
+    else:
+      action_step = action_step_fn()
+
+    step = self.evaluate(action_step)
+    tf.nest.assert_same_structure(
+        info_spec,
+        step.info)
+
+    self.checkBanditPolicyTypeShape(step.info.bandit_policy_type, batch_size=2)
+    self.assertAllEqual(step.info.log_probability,
+                        tf.zeros_like(step.info.log_probability))
+
+
 if __name__ == '__main__':
   tf.test.main()

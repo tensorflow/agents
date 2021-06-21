@@ -23,7 +23,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Optional, Text
+from typing import Optional, Sequence, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -46,6 +46,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
   def __init__(self,
                policy: tf_policy.TFPolicy,
                epsilon: types.FloatOrReturningFloat,
+               info_fields_to_inherit_from_greedy: Sequence[Text] = (),
                name: Optional[Text] = None):
     """Builds an epsilon-greedy MixturePolicy wrapping the given policy.
 
@@ -54,6 +55,9 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
       epsilon: The probability of taking the random action represented as a
         float scalar, a scalar Tensor of shape=(), or a callable that returns a
         float scalar or Tensor.
+      info_fields_to_inherit_from_greedy: A list of policy info fields which
+        should be copied over from the greedy action's info, even if the random
+        action was taken.
       name: The name of this policy.
 
     Raises:
@@ -70,6 +74,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
       accepts_per_arm_features = False
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
+    self.info_fields_to_inherit_from_greedy = info_fields_to_inherit_from_greedy
     self._random_policy = random_tf_policy.RandomTFPolicy(
         policy.time_step_spec,
         policy.action_spec,
@@ -158,6 +163,11 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
             info.bandit_policy_type, mask=random_policy_mask)  # pytype: disable=attribute-error
         info = policy_utilities.set_bandit_policy_type(
             info, bandit_policy_type)
+      info = info._replace(
+          **{
+              f: getattr(greedy_action.info, f)
+              for f in self.info_fields_to_inherit_from_greedy
+          })
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
