@@ -285,7 +285,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
           encoded_observation, k)
       model_index = policy_utilities.get_model_index(
           k, self._accepts_per_arm_features)
-      a_inv_x = linalg.conjugate_gradient_solve(
+      a_inv_x = linalg.conjugate_gradient(
           self._cov_matrix[model_index] +
           tf.eye(self._encoding_dim, dtype=self._dtype),
           tf.linalg.matrix_transpose(encoded_observation_for_arm))

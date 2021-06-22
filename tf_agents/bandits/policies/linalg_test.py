@@ -117,7 +117,7 @@ class ConjugateGradientTest(tf.test.TestCase, parameterized.TestCase):
         np.random.rand(n, rhs), dtype=tf.float32, shape=[n, rhs])
     b_mat = tf.matmul(a_mat, x_exact)
     x_approx = self.evaluate(
-        linalg.conjugate_gradient_solve(a_mat, b_mat))
+        linalg.conjugate_gradient(a_mat, b_mat))
     x_exact_numpy = self.evaluate(x_exact)
     self.assertAllClose(x_exact_numpy, x_approx, rtol=1e-4, atol=1e-4)
 
@@ -142,7 +142,7 @@ class ConjugateGradientTest(tf.test.TestCase, parameterized.TestCase):
 
     x_exact_numpy = self.evaluate(x_exact)
     with self.cached_session() as sess:
-      x_approx = linalg.conjugate_gradient_solve(a_mat_ph, b_mat_ph)
+      x_approx = linalg.conjugate_gradient(a_mat_ph, b_mat_ph)
       x_approx_value = sess.run(
           x_approx,
           feed_dict={a_mat_ph: a_mat_value, b_mat_ph: b_mat_value})

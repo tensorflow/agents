@@ -356,7 +356,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
     for k in range(self._num_models):
       thetas.append(
           tf.squeeze(
-              linalg.conjugate_gradient_solve(
+              linalg.conjugate_gradient(
                   self._cov_matrix_list[k] + self._tikhonov_weight *
                   tf.eye(self._overall_context_dim, dtype=self._dtype),
                   tf.expand_dims(self._data_vector_list[k], axis=-1)),

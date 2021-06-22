@@ -264,7 +264,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         a_inv_x = tf.matmul(self._eig_matrix[model_index],
                             tf.einsum('j,jk->jk', lambda_inv, q_t_b))
       else:
-        a_inv_x = linalg.conjugate_gradient_solve(
+        a_inv_x = linalg.conjugate_gradient(
             self._cov_matrix[model_index] + self._tikhonov_weight *
             tf.eye(self._overall_context_dim, dtype=self._dtype),
             tf.linalg.matrix_transpose(current_observation))

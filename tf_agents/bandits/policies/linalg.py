@@ -25,85 +25,23 @@ from tf_agents.typing import types
 from tf_agents.utils import common
 
 
-def _cg_check_shapes(a_mat, b):
+def _cg_check_shapes(a_mat, b_mat):
   if a_mat.shape[0] != a_mat.shape[1] or a_mat.shape.rank != 2:
     raise ValueError('`a_mat` must be rank 2 square matrix; '
                      'got shape {}.'.format(a_mat.shape))
-  if a_mat.shape[1] != b.shape[0]:
-    raise ValueError('The dims of `a_mat` and `b` are not compatible; '
-                     'got shapes {} and {}.'.format(a_mat.shape, b.shape))
+  if a_mat.shape[1] != b_mat.shape[0]:
+    raise ValueError('The dims of `a_mat` and `b_mat` are not compatible; '
+                     'got shapes {} and {}.'.format(a_mat.shape, b_mat.shape))
 
 
 @common.function
 def conjugate_gradient(a_mat: types.Tensor,
-                       b: types.Tensor,
+                       b_mat: types.Tensor,
                        tol: float = 1e-10) -> types.Float:
-  """Returns `x` such that `A * x = b`.
+  """Returns `X` such that `A * X = B`.
 
   Implements the Conjugate Gradient method.
   https://en.wikipedia.org/wiki/Conjugate_gradient_method
-
-  Args:
-    a_mat: a Symmetric Positive Definite matrix, represented as a `Tensor` of
-      shape `[n, n]`.
-    b: a `Tensor` of shape `[n, 1]`.
-    tol: (float) desired tolerance on the residual.
-
-  Returns:
-    x: `Tensor` `x` of shape `[n, 1]` such that `A * x = b`.
-
-  Raises:
-    ValueError: if `a_mat` is not square or `a_mat` and `b` have incompatible
-    shapes.
-  """
-  _cg_check_shapes(a_mat, b)
-  n = tf.shape(b)[0]
-  x = tf.zeros_like(b)
-
-  r = b - tf.matmul(a_mat, x)
-  p = r
-  rs_old = tf.reduce_sum(r * r)
-  rs_new = rs_old
-
-  def body_fn(i, x, p, r, rs_old, rs_new):
-    """One iteration of CG."""
-    a_x_p = tf.matmul(a_mat, p)
-    alpha = rs_old / tf.reduce_sum(p * a_x_p)
-    x = x + alpha * p
-    r = r - alpha * a_x_p
-    rs_new = tf.reduce_sum(r * r)
-    p = r + (rs_new / rs_old) * p
-    rs_old = rs_new
-    i = i + 1
-    return i, x, p, r, rs_old, rs_new
-
-  def while_exit_cond(i, x, p, r, rs_old, rs_new):
-    """Exit the loop when n is reached or when the residual becomes small."""
-    del x  # unused
-    del p  # unused
-    del r  # unused
-    del rs_old  # unused
-    i_cond = tf.less(i, n)
-    residual_cond = tf.greater(tf.sqrt(rs_new), tol)
-    return tf.logical_and(i_cond, residual_cond)
-
-  _, x, _, _, _, _ = tf.while_loop(
-      while_exit_cond,
-      body_fn,
-      [tf.constant(0), x, p, r, rs_old, rs_new],
-      parallel_iterations=1)
-  return x
-
-
-@common.function
-def conjugate_gradient_solve(a_mat: types.Tensor,
-                             b_mat: types.Tensor,
-                             tol: float = 1e-10) -> types.Tensor:
-  """Returns `X` such that `A * X = B`.
-
-  Uses Conjugate Gradient to solve many linear systems of equations with the
-  same matrix `a_mat` and multiple right hand sides provided as columns in
-  the matrix `b_mat`.
 
   Args:
     a_mat: a Symmetric Positive Definite matrix, represented as a `Tensor` of
@@ -118,30 +56,51 @@ def conjugate_gradient_solve(a_mat: types.Tensor,
     ValueError: if `a_mat` is not square or `a_mat` and `b_mat` have
     incompatible shapes.
   """
-  # Allows for flexible shape handling. If the shape is statically known, it
-  # will use the first part. If the shape is not statically known, tf.shape()
-  # will be used.
-  n = tf.compat.dimension_value(b_mat.shape[0]) or tf.shape(b_mat)[0]
-  k = tf.compat.dimension_value(b_mat.shape[1]) or tf.shape(b_mat)[1]
+  _cg_check_shapes(a_mat, b_mat)
+  n = tf.shape(b_mat)[0]
   x = tf.zeros_like(b_mat)
 
-  def body_fn(i, x):
-    """Solve one linear system of equations with the `i`-th column of b_mat."""
-    b_vec = tf.slice(b_mat, begin=[0, i], size=[n, 1])
-    x_sol = conjugate_gradient(a_mat, b_vec, tol)
-    indices = tf.concat([tf.reshape(tf.range(n, dtype=tf.int32), [n, 1]),
-                         i * tf.ones([n, 1], dtype=tf.int32)], axis=-1)
-    x = tf.tensor_scatter_nd_update(
-        tensor=x, indices=indices, updates=tf.squeeze(x_sol, 1))
-    x.set_shape(b_mat.shape)
-    i = i + 1
-    return i, x
+  r = b_mat - tf.matmul(a_mat, x)
+  p = r
+  rs_old = tf.reduce_sum(r * r, axis=0)
+  rs_new = rs_old
 
-  _, x = tf.while_loop(
-      lambda i, _: i < k,
+  def body_fn(i, x, p, r, rs_old, rs_new):
+    """One iteration of CG."""
+    # Create a boolean mask shaped as [k] indicating the active columns, i.e.,
+    # columns corresponding to large residuals. We only update variables
+    # corresponding to those columns to avoid numerical issues.
+    active_columns_mask = (rs_old > tol)
+    # Replicate the mask along axis 0 to be of shape [n, k].
+    active_columns_tiled_mask = tf.tile(
+        tf.expand_dims(active_columns_mask, axis=0),
+        multiples=[tf.shape(b_mat)[0], 1])
+    a_x_p = tf.matmul(a_mat, p)
+    alpha_diag = tf.linalg.diag(rs_old / tf.reduce_sum(p * a_x_p, axis=0))
+    x = tf.where(active_columns_tiled_mask, x + tf.matmul(p, alpha_diag), x)
+    r = tf.where(active_columns_tiled_mask, r - tf.matmul(a_x_p, alpha_diag), r)
+    rs_new = tf.where(active_columns_mask, tf.reduce_sum(r * r, axis=0), rs_new)
+    p = tf.where(active_columns_tiled_mask,
+                 r + tf.matmul(p, tf.linalg.diag(rs_new / rs_old)), p)
+    rs_old = tf.where(active_columns_mask, rs_new, rs_old)
+    i = i + 1
+    return i, x, p, r, rs_old, rs_new
+
+  def while_exit_cond(i, x, p, r, rs_old, rs_new):
+    """Exit the loop when n is reached or when the residual becomes small."""
+    del x  # unused
+    del p  # unused
+    del r  # unused
+    del rs_old  # unused
+    i_cond = tf.less(i, n)
+    residual_cond = tf.greater(tf.reduce_max(tf.sqrt(rs_new)), tol)
+    return tf.logical_and(i_cond, residual_cond)
+
+  _, x, _, _, _, _ = tf.while_loop(
+      while_exit_cond,
       body_fn,
-      loop_vars=[tf.constant(0), x],
-      parallel_iterations=10)
+      [tf.constant(0), x, p, r, rs_old, rs_new],
+      parallel_iterations=1)
   return x
 
 
