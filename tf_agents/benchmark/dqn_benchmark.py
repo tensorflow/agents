@@ -55,7 +55,7 @@ class DqnMnih15Return(PerfZeroBenchmark):
     wall_time_sec = time.time() - start_time_sec
     event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
     values, _ = utils.extract_event_log_values(
-        event_file, 'AverageReturn/EnvironmentSteps')
+        event_file, 'Metrics/AverageReturn/EnvironmentSteps')
     # Min/Max ranges are very large to only hard fail if very broken. The system
     # monitoring the results owns looking for anomalies.
     metric_3m = self.build_metric(
