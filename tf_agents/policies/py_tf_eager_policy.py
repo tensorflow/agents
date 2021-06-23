@@ -87,6 +87,8 @@ class PyTFEagerPolicyBase(py_policy.PyPolicy):
     return tf.nest.map_structure(lambda t: t.numpy(), self._policy.variables())
 
   def _get_initial_state(self, batch_size):
+    if batch_size is None:
+      batch_size = 0
     return self._policy.get_initial_state(batch_size=batch_size)
 
   def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):

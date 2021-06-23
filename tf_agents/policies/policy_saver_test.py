@@ -1022,6 +1022,47 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
 
     self.assertAllClose(7, reloaded.add(4))
 
+  def test_initial_state_non_stateful(self):
+    if not common.has_eager_been_enabled():
+      self.skipTest('Only supported in TF2.x.')
+
+    network = q_network.QNetwork(
+        input_tensor_spec=self._time_step_spec.observation,
+        action_spec=self._action_spec)
+
+    policy = q_policy.QPolicy(
+        time_step_spec=self._time_step_spec,
+        action_spec=self._action_spec,
+        q_network=network)
+
+    # Call the policy to force variable creation.
+    batch_size = 3
+    action_inputs = tensor_spec.sample_spec_nest(
+        (self._time_step_spec, policy.policy_state_spec),
+        outer_dims=(batch_size,),
+        seed=4)
+    action_input_values = self.evaluate(action_inputs)
+    action_input_tensors = tf.nest.map_structure(tf.convert_to_tensor,
+                                                 action_input_values)
+    policy.action(*action_input_tensors)
+
+    # Check this doesn't fail.
+    policy.get_initial_state(batch_size=None)
+
+    train_step = common.create_variable('train_step', initial_value=7)
+    saver = policy_saver.PolicySaver(
+        policy, train_step=train_step, batch_size=None)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+
+    path = os.path.join(self.get_temp_dir(), 'save_model_action')
+    saver.save(path)
+
+    reloaded = tf.compat.v2.saved_model.load(path)
+    # Make sure get_initial_state is a polymorphic function.
+    reloaded.get_initial_state(batch_size=0)
+    reloaded.get_initial_state(0)
+
 
 def _sample_from_distributions(x):
   def _convert(d):
