@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 from typing import Union
 
 import numpy as np
@@ -558,6 +559,8 @@ def from_packed_proto(spec_packed_proto):
 def to_pbtxt_file(output_path, spec):
   """Saves a spec encoded as a struct_pb2.StructuredValue in a pbtxt file."""
   spec_proto = to_proto(spec)
+  dir_path = os.path.split(output_path)[0]
+  tf.io.gfile.makedirs(dir_path)
   with tf.io.gfile.GFile(output_path, "wb") as f:
     f.write(text_format.MessageToString(spec_proto))
 
