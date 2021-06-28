@@ -301,7 +301,6 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(input_shape, output.shape)
 
   def testKerasIntegerLookup(self):
-    self.skipTest('Re-enable this test after cl/362119497 on tf-nightly.')
     if not tf.executing_eagerly():
       self.skipTest('This test is TF2 only.')
 
@@ -325,7 +324,6 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     self.assertEqual(expected_shape, output.shape)
 
   def testCombinedKerasPreprocessingLayers(self):
-    self.skipTest('Re-enable this test after cl/362119497 on tf-nightly.')
     if not tf.executing_eagerly():
       self.skipTest('This test is TF2 only.')
 
