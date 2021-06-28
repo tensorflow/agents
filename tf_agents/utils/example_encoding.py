@@ -262,7 +262,7 @@ def _get_feature_encoder(shape, dtype, compress_image=False, image_quality=95):
       value = np.asarray(value)
       _check_shape_and_dtype(value, shape, dtype)
       bytes_list_value = np.require(
-          value, dtype=le_dtype, requirements='C').tostring()
+          value, dtype=le_dtype, requirements='C').tobytes()
       return tf.train.Feature(
           bytes_list=tf.train.BytesList(value=[bytes_list_value]))
 

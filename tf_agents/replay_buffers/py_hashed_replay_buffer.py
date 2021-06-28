@@ -53,7 +53,7 @@ class FrameBuffer(tf.train.experimental.PythonState):
     Returns:
       A deduplicated frame.
     """
-    h = hash(frame.tostring())
+    h = hash(frame.tobytes())
     if h in self._frames:
       _, refcount = self._frames[h]
       self._frames[h] = (frame, refcount + 1)
