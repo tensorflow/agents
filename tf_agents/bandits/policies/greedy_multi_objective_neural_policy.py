@@ -163,6 +163,11 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
     if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
       predicted_rewards_mean = tensor_spec.TensorSpec(
           [self._num_objectives, self._expected_num_actions])
+    scalarized_predicted_rewards_mean = ()
+    if (policy_utilities.InfoFields
+        .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN in emit_policy_info):
+      scalarized_predicted_rewards_mean = tensor_spec.TensorSpec(
+          [self._expected_num_actions])
     bandit_policy_type = ()
     if policy_utilities.InfoFields.BANDIT_POLICY_TYPE in emit_policy_info:
       bandit_policy_type = (
@@ -178,11 +183,13 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
               time_step_spec.observation))
       info_spec = policy_utilities.PerArmPolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
+          multiobjective_scalarized_predicted_rewards_mean=scalarized_predicted_rewards_mean,
           bandit_policy_type=bandit_policy_type,
           chosen_arm_features=chosen_arm_features_info)
     else:
       info_spec = policy_utilities.PolicyInfo(
           predicted_rewards_mean=predicted_rewards_mean,
+          multiobjective_scalarized_predicted_rewards_mean=scalarized_predicted_rewards_mean,
           bandit_policy_type=bandit_policy_type)
 
     self._accepts_per_arm_features = accepts_per_arm_features
@@ -298,24 +305,34 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
           gather_observation,
           observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
       policy_info = policy_utilities.PerArmPolicyInfo(
-          log_probability=tf.zeros([batch_size], tf.float32) if
-          policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info
-          else (),
+          log_probability=tf.zeros([batch_size], tf.float32)
+          if policy_utilities.InfoFields.LOG_PROBABILITY
+          in self._emit_policy_info else (),
           predicted_rewards_mean=(
-              predicted_objective_values_tensor if policy_utilities.InfoFields
-              .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
+              predicted_objective_values_tensor
+              if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN
+              in self._emit_policy_info else ()),
+          multiobjective_scalarized_predicted_rewards_mean=(
+              scalarized_reward if policy_utilities.InfoFields
+              .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN
+              in self._emit_policy_info else ()),
           bandit_policy_type=(bandit_policy_values
                               if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
                               in self._emit_policy_info else ()),
           chosen_arm_features=chosen_arm_features)
     else:
       policy_info = policy_utilities.PolicyInfo(
-          log_probability=tf.zeros([batch_size], tf.float32) if
-          policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info
-          else (),
+          log_probability=tf.zeros([batch_size], tf.float32)
+          if policy_utilities.InfoFields.LOG_PROBABILITY
+          in self._emit_policy_info else (),
           predicted_rewards_mean=(
-              predicted_objective_values_tensor if policy_utilities.InfoFields
-              .PREDICTED_REWARDS_MEAN in self._emit_policy_info else ()),
+              predicted_objective_values_tensor
+              if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN
+              in self._emit_policy_info else ()),
+          multiobjective_scalarized_predicted_rewards_mean=(
+              scalarized_reward if policy_utilities.InfoFields
+              .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN
+              in self._emit_policy_info else ()),
           bandit_policy_type=(bandit_policy_values
                               if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
                               in self._emit_policy_info else ()))

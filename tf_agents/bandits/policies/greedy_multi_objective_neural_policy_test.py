@@ -31,6 +31,7 @@ from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import greedy_multi_objective_neural_policy as greedy_multi_objective_policy
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
+from tf_agents.policies import utils as policy_utilities
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -203,7 +204,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         self._scalarizer,
         objective_networks,
         accepts_per_arm_features=True,
-        emit_policy_info=('predicted_rewards_mean',))
+        emit_policy_info=(policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,
+                          policy_utilities.InfoFields
+                          .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN))
     action_feature = tf.cast(
         tf.reshape(tf.random.shuffle(tf.range(24)), shape=[2, 4, 3]),
         dtype=tf.float32)
@@ -392,7 +395,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         self._action_spec,
         self._scalarizer,
         self._create_objective_networks(),
-        emit_policy_info=('predicted_rewards_mean',))
+        emit_policy_info=(policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,
+                          policy_utilities.InfoFields
+                          .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN))
     observations = tf.constant([[1, 2], [2, 1]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step)
@@ -408,8 +413,15 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
                                                  [[5, 8, 11], [10, 5, 9],
                                                   [8, 11, 5]]])
     p_info = self.evaluate(action_step.info)
-    self.assertAllClose(p_info.predicted_rewards_mean,
-                        predicted_rewards_expected_array)
+    predicted_rewards = getattr(
+        p_info, policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
+    self.assertAllClose(predicted_rewards, predicted_rewards_expected_array)
+    self.assertAllClose(
+        getattr(
+            p_info, policy_utilities.InfoFields
+            .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN),
+        greedy_multi_objective_policy.scalarize_objectives(
+            predicted_rewards, policy.scalarizer))
 
   def testNoneTimeStepSpecForPerArmFeaturesRaisesError(self):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
@@ -442,10 +454,18 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
     ])
     self.assertAllEqual(action.shape, [2])
-    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3, 4])
-    self.assertAllEqual(p_info.chosen_arm_features.shape, [2, 3])
+    predicted_rewards = getattr(
+        p_info, policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
+    self.assertAllEqual(predicted_rewards.shape, [2, 3, 4])
+    scalarized_predicted_rewards = getattr(
+        p_info, policy_utilities.InfoFields
+        .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN)
+    self.assertAllEqual(scalarized_predicted_rewards.shape, [2, 4])
+    chosen_arm_features = getattr(
+        p_info, policy_utilities.InfoFields.CHOSEN_ARM_FEATURES)
+    self.assertAllEqual(chosen_arm_features.shape, [2, 3])
     first_action = action[0]
-    self.assertAllEqual(p_info.chosen_arm_features[0],
+    self.assertAllEqual(chosen_arm_features[0],
                         first_arm_features[first_action])
 
     # Check that zeroing out some of the actions does not affect the predicted
@@ -465,8 +485,15 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
     time_step = ts.restart(observations, batch_size=2)
     padded_action_step = policy.action(time_step)
     padded_p_info = self.evaluate(padded_action_step.info)
-    self.assertAllEqual(p_info.predicted_rewards_mean[:, :, 0],
-                        padded_p_info.predicted_rewards_mean[:, :, 0])
+    self.assertAllEqual(
+        predicted_rewards[:, :, 0],
+        getattr(padded_p_info,
+                policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)[:, :, 0])
+    self.assertAllEqual(
+        scalarized_predicted_rewards[:, 0],
+        getattr(
+            padded_p_info, policy_utilities.InfoFields
+            .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN)[:, 0])
 
   def testPerArmRewardsVariableNumActions(self):
     policy, observations = self._create_arm_policy_and_observations()
@@ -483,11 +510,20 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         observations[bandit_spec_utils.PER_ARM_FEATURE_KEY][0]
     ])
     self.assertAllEqual(action.shape, [2])
-    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3, 4])
-    self.assertAllEqual(p_info.chosen_arm_features.shape, [2, 3])
+    self.assertAllEqual(
+        getattr(p_info,
+                policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN).shape,
+        [2, 3, 4])
+    self.assertAllEqual(
+        getattr(
+            p_info, policy_utilities.InfoFields
+            .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN).shape, [2, 4])
+    chosen_arm_features = getattr(
+        p_info, policy_utilities.InfoFields.CHOSEN_ARM_FEATURES)
+    self.assertAllEqual(chosen_arm_features.shape, [2, 3])
     first_action = action[0]
     self.assertEqual(first_action, 0)
-    self.assertAllEqual(p_info.chosen_arm_features[0],
+    self.assertAllEqual(chosen_arm_features[0],
                         first_arm_features[first_action])
     self.assertEqual(action[1], 0)
 
@@ -530,7 +566,9 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         self._scalarizer,
         objective_networks,
         accepts_per_arm_features=True,
-        emit_policy_info=('predicted_rewards_mean',))
+        emit_policy_info=(policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,
+                          policy_utilities.InfoFields
+                          .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN))
     observations = {
         'global': {
             'sport': tf.constant(['snooker', 'chess'])
@@ -559,11 +597,20 @@ class GreedyRewardPredictionPolicyTest(test_utils.TestCase):
         observations[bandit_spec_utils.PER_ARM_FEATURE_KEY]['name'][0]
     ])
     self.assertAllEqual(action.shape, [2])
-    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3, 3])
-    self.assertAllEqual(p_info.chosen_arm_features['name'].shape, [2])
-    self.assertAllEqual(p_info.chosen_arm_features['fruit'].shape, [2])
+    self.assertAllEqual(
+        getattr(p_info,
+                policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN).shape,
+        [2, 3, 3])
+    self.assertAllEqual(
+        getattr(
+            p_info, policy_utilities.InfoFields
+            .MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN).shape, [2, 3])
+    chosen_arm_features = getattr(
+        p_info, policy_utilities.InfoFields.CHOSEN_ARM_FEATURES)
+    self.assertAllEqual(chosen_arm_features['name'].shape, [2])
+    self.assertAllEqual(chosen_arm_features['fruit'].shape, [2])
     first_action = action[0]
-    self.assertAllEqual(p_info.chosen_arm_features['name'][0],
+    self.assertAllEqual(chosen_arm_features['name'][0],
                         first_arm_name_feature[first_action])
 
 

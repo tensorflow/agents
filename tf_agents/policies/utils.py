@@ -68,6 +68,12 @@ class InfoFields(object):
   LOG_PROBABILITY = policy_step.CommonFields.LOG_PROBABILITY
   # Mean of predicted rewards (per arm).
   PREDICTED_REWARDS_MEAN = 'predicted_rewards_mean'
+  # For multi-objective policies, this field stores the scalarized predicted
+  # mean rewards that the policy uses to choose an arm, whereas
+  # `PREDICTED_REWARDS_MEAN` stores the predicted mean rewards for all
+  # objectives.
+  MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN = (
+      'multiobjective_scalarized_predicted_rewards_mean')
   # Optimistic estimates of predicted rewards (per arm).
   PREDICTED_REWARDS_OPTIMISTIC = 'predicted_rewards_optimistic'
   # Samples of predicted rewards (per arm).
@@ -80,22 +86,20 @@ class InfoFields(object):
 
 PolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PolicyInfo',
-    (InfoFields.LOG_PROBABILITY,
-     InfoFields.PREDICTED_REWARDS_MEAN,
+    (InfoFields.LOG_PROBABILITY, InfoFields.PREDICTED_REWARDS_MEAN,
+     InfoFields.MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN,
      InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
-     InfoFields.PREDICTED_REWARDS_SAMPLED,
-     InfoFields.BANDIT_POLICY_TYPE))
+     InfoFields.PREDICTED_REWARDS_SAMPLED, InfoFields.BANDIT_POLICY_TYPE))
 # Set default empty tuple for all fields.
 PolicyInfo.__new__.__defaults__ = ((),) * len(PolicyInfo._fields)
 
 
 PerArmPolicyInfo = collections.namedtuple(  # pylint: disable=invalid-name
     'PerArmPolicyInfo',
-    (InfoFields.LOG_PROBABILITY,
-     InfoFields.PREDICTED_REWARDS_MEAN,
+    (InfoFields.LOG_PROBABILITY, InfoFields.PREDICTED_REWARDS_MEAN,
+     InfoFields.MULTIOBJECTIVE_SCALARIZED_PREDICTED_REWARDS_MEAN,
      InfoFields.PREDICTED_REWARDS_OPTIMISTIC,
-     InfoFields.PREDICTED_REWARDS_SAMPLED,
-     InfoFields.BANDIT_POLICY_TYPE,
+     InfoFields.PREDICTED_REWARDS_SAMPLED, InfoFields.BANDIT_POLICY_TYPE,
      InfoFields.CHOSEN_ARM_FEATURES))
 # Set default empty tuple for all fields.
 PerArmPolicyInfo.__new__.__defaults__ = ((),) * len(PerArmPolicyInfo._fields)
