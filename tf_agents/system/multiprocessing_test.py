@@ -46,6 +46,10 @@ def execute_pickled_fn(ra, queue):
   pickle.loads(ra)(queue)
 
 
+def pickleable_sqr(x):
+  return x * x
+
+
 class MultiprocessingTest(test_utils.TestCase):
 
   def testGinBindingsInOtherProcess(self):
@@ -82,6 +86,12 @@ class MultiprocessingTest(test_utils.TestCase):
     x = 1
     values = p.map(x.__add__, [3, 4, 5, 6, 6])
     self.assertEqual(values, [4, 5, 6, 7, 7])
+
+  def testPoolWithClause(self):
+    ctx = multiprocessing.get_context()
+    with ctx.Pool(3) as p:
+      res = p.map(pickleable_sqr, [1, 2, 3, 4])
+    self.assertEqual(res, [1, 4, 9, 16])
 
   def testArgExpected(self):
     no_argument_main_fn = lambda: None

@@ -218,6 +218,12 @@ class _PoolWrapper:
   def __getattr__(self, k):
     return getattr(self._pool, k)
 
+  def __enter__(self):
+    return self._pool.__enter__()
+
+  def __exit__(self, *exc):
+    return self._pool.__exit__(*exc)
+
 
 class _ContextWrapper:
   """Wrapper for a multiprocessing Context that overrides Process and Pool."""
