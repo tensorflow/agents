@@ -1,0 +1,8 @@
+train_eval.bc_steps = 10000
+train_eval.reward_scale_factor = 4.0
+train_eval.reward_shift = -0.5
+train_eval.critic_learning_rate = 3e-4
+train_eval.actor_learning_rate = 1e-4
+train_eval.cql_tau = 5.0
+train_eval.reward_noise_variance = 0.1
+train_eval.log_cql_alpha_clipping = (-1, 100.0)
