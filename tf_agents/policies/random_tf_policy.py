@@ -162,8 +162,15 @@ class RandomTFPolicy(tf_policy.TFPolicy):
             chosen_arm_features=chosen_arm_features)
 
     # TODO(b/78181147): Investigate why this control dependency is required.
+    def _maybe_convert_sparse_tensor(t):
+      if isinstance(t, tf.SparseTensor):
+        return tf.sparse.to_dense(t)
+      else:
+        return t
     if time_step is not None:
-      with tf.control_dependencies(tf.nest.flatten(time_step)):
+      with tf.control_dependencies(
+          tf.nest.flatten(tf.nest.map_structure(_maybe_convert_sparse_tensor,
+                                                time_step))):
         action_ = tf.nest.map_structure(tf.identity, action_)
 
     if self.emit_log_probability:
