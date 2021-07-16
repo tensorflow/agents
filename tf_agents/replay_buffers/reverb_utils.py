@@ -48,6 +48,9 @@ class ReverbAddEpisodeObserver(object):
 
   Unfinished episodes remain in the cache and do not get written until
   `reset(write_cached_steps=True)` is called.
+
+  TODO(b/176261664): Note that this observer only supports batch_size=1 from the
+  consumer, if your episodes have variable lengths.
   """
 
   def __init__(self,
