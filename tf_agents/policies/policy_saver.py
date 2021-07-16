@@ -441,6 +441,8 @@ class PolicySaver(object):
         raise e
 
     self._policy = saved_policy
+    self._raw_policy = policy
+    self._batch_size = batch_size
     self._signatures = signatures
     self._action_input_spec = action_input_spec
     self._policy_step_spec = policy_step_spec
