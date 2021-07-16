@@ -1,6 +1,6 @@
 # CqlSacAgent
 
-`CqlSacAgent` implements the CQL algorithm for continuous control domains from
+[CqlSacAgent](https://github.com/tensorflow/agents/tree/master/tf_agents/agents/cql/cql_sac_agent.py)  implements the CQL algorithm for continuous control domains from
 ["Conservative Q-Learning for Offline Reinforcement Learning"](https://arxiv.org/abs/2006.04779)
 (Kumar, 20).
 
