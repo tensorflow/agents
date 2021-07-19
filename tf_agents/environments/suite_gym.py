@@ -118,7 +118,7 @@ def wrap_env(
     gym_env: An instance of OpenAI gym environment.
     discount: Discount to use for the environment.
     max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied
-      if set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load.
+      if set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load`.
     gym_env_wrappers: Iterable with references to wrapper classes to use
       directly on the gym environment.
     time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to
