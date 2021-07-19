@@ -77,6 +77,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       optimizer: Optional[types.Optimizer] = None,
       actor_net: Optional[network.Network] = None,
       value_net: Optional[network.Network] = None,
+      greedy_eval: bool = True,
       importance_ratio_clipping: types.Float = 0.0,
       lambda_value: types.Float = 0.95,
       discount_factor: types.Float = 0.99,
@@ -115,6 +116,9 @@ class PPOClipAgent(ppo_agent.PPOAgent):
       value_net: A function value_net(time_steps) that returns value tensor from
         neural net predictions for each observation. Takes nested observation
         and returns batch of value_preds.
+      greedy_eval: Whether to use argmax/greedy action selection or sample from
+        original action distribution for the evaluation policy. For environments
+        such as ProcGen, stochastic is much better than greedy.
       importance_ratio_clipping: Epsilon in clipped, surrogate PPO objective.
         For more detail, see explanation at the top of the doc.
       lambda_value: Lambda parameter for TD-lambda computation.
@@ -202,6 +206,7 @@ class PPOClipAgent(ppo_agent.PPOAgent):
         optimizer,
         actor_net,
         value_net,
+        greedy_eval,
         importance_ratio_clipping,
         lambda_value,
         discount_factor,

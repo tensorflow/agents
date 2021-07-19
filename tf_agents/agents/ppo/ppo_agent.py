@@ -121,6 +121,7 @@ class PPOAgent(tf_agent.TFAgent):
       optimizer: Optional[types.Optimizer] = None,
       actor_net: Optional[network.Network] = None,
       value_net: Optional[network.Network] = None,
+      greedy_eval: bool = True,
       importance_ratio_clipping: types.Float = 0.0,
       lambda_value: types.Float = 0.95,
       discount_factor: types.Float = 0.99,
@@ -165,6 +166,9 @@ class PPOAgent(tf_agent.TFAgent):
       value_net: A `Network` which returns the value prediction for input
         states, with `call(observation, step_type, network_state)`. Commonly, it
         is set to `value_network.ValueNetwork`.
+      greedy_eval: Whether to use argmax/greedy action selection or sample from
+        original action distribution for the evaluation policy. For environments
+        such as ProcGen, stochastic is much better than greedy.
       importance_ratio_clipping: Epsilon in clipped, surrogate PPO objective.
         For more detail, see explanation at the top of the doc.
       lambda_value: Lambda parameter for TD-lambda computation.
@@ -351,15 +355,16 @@ class PPOAgent(tf_agent.TFAgent):
           tensor_normalizer.StreamingTensorNormalizer(
               time_step_spec.observation, scope='normalize_observations'))
 
-    policy = greedy_policy.GreedyPolicy(
-        ppo_policy.PPOPolicy(
-            time_step_spec=time_step_spec,
-            action_spec=action_spec,
-            actor_network=actor_net,
-            value_network=value_net,
-            observation_normalizer=self._observation_normalizer,
-            clip=False,
-            collect=False))
+    policy = ppo_policy.PPOPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        actor_network=actor_net,
+        value_network=value_net,
+        observation_normalizer=self._observation_normalizer,
+        clip=False,
+        collect=False)
+    if greedy_eval:
+      policy = greedy_policy.GreedyPolicy(policy)
 
     collect_policy = ppo_policy.PPOPolicy(
         time_step_spec=time_step_spec,
