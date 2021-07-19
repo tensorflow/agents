@@ -178,8 +178,10 @@ class PyPolicyMock(py_policy.PyPolicy):
     self._initial_policy_state = initial_policy_state
     super(PyPolicyMock, self).__init__(time_step_spec, action_spec,
                                        policy_state_spec, policy_info_spec)
+    self.get_initial_state_call_count = 0
 
   def _get_initial_state(self, batch_size=None):
+    self.get_initial_state_call_count += 1
     return self._initial_policy_state
 
   def _action(self, time_step, policy_state):

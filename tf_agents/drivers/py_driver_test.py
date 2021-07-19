@@ -92,7 +92,6 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     self.assertLen(transitions[0], 3)
 
   def testMultipleRunMaxSteps(self):
-
     num_steps = 3
     num_expected_steps = 4
 
@@ -116,7 +115,6 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
 
   def testMultipleRunMaxEpisodes(self):
-
     num_episodes = 2
     num_expected_steps = 6
 
@@ -138,6 +136,29 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
       time_step, policy_state = driver.run(time_step, policy_state)
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
+
+  def testPolicyStateReset(self):
+    num_episodes = 2
+    num_expected_steps = 6
+
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    replay_buffer_observer = MockReplayBufferObserver()
+    driver = py_driver.PyDriver(
+        env,
+        policy,
+        observers=[replay_buffer_observer],
+        max_steps=None,
+        max_episodes=num_episodes,
+    )
+
+    time_step = env.reset()
+    policy_state = policy.get_initial_state()
+    time_step, policy_state = driver.run(time_step, policy_state)
+    trajectories = replay_buffer_observer.gather_all()
+    self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
+    self.assertEqual(num_episodes, policy.get_initial_state_call_count)
 
   @parameterized.named_parameters([
       ('NoneStepsNoneEpisodes', None, None),

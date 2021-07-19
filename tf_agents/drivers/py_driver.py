@@ -104,6 +104,10 @@ class PyDriver(driver.Driver):
     num_steps = 0
     num_episodes = 0
     while num_steps < self._max_steps and num_episodes < self._max_episodes:
+      # For now we reset the policy_state for non batched envs.
+      if not self.env.batched and time_step.is_first() and num_episodes > 0:
+        policy_state = self._policy.get_initial_state(self.env.batch_size or 1)
+
       action_step = self.policy.action(time_step, policy_state)
       next_time_step = self.env.step(action_step.action)
 

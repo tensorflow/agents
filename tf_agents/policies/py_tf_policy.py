@@ -189,7 +189,8 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
   def _get_initial_state(self, batch_size):
     if not self._built:
       self.initialize(batch_size)
-    if batch_size != self._batch_size:
+
+    if batch_size not in [self._batch_size, self._batch_size or 1]:
       raise ValueError(
           '`batch_size` argument is different from the batch size provided '
           'previously. Expected {}, but saw {}.'.format(self._batch_size,
