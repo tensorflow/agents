@@ -622,5 +622,27 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     capacity = self.evaluate(replay_buffer._capacity)
     self.assertEqual(capacity, num_frames_value)
 
+  def testGetNext(self):
+    max_length = 3
+    spec = specs.TensorSpec([], tf.int64, 'observation')
+    replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+        spec, batch_size=2, max_length=max_length)
+
+    @common.function(autograph=True)
+    def add_data():
+      for t in range(4):
+        obs = np.array([t, t + max_length], dtype=np.int64)
+        replay_buffer.add_batch(obs)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(add_data())
+
+    experience, _ = replay_buffer.get_next(sample_batch_size=256, num_steps=2,
+                                           time_stacked=True)
+    correct_next_state = tf.equal(experience[:, 0] + 1, experience[:, 1])
+    all_correct = self.evaluate(tf.reduce_all(correct_next_state))
+    self.assertTrue(all_correct)
+
+
 if __name__ == '__main__':
   tf.test.main()

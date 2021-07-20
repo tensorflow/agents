@@ -258,10 +258,9 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
         batch_offsets = tf.random.uniform(
             rows_shape, minval=0, maxval=self._batch_size, dtype=tf.int64)
         batch_offsets *= self._max_length
-        ids += batch_offsets
 
         if num_steps is None:
-          rows_to_get = tf.math.mod(ids, self._capacity)
+          rows_to_get = tf.math.mod(ids, self._max_length) + batch_offsets
           data = self._data_table.read(rows_to_get)
           data_ids = self._id_table.read(rows_to_get)
         else:
@@ -271,17 +270,20 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
               step_range = tf.reshape(step_range, [1, num_steps])
               step_range = tf.tile(step_range, [sample_batch_size, 1])
               ids = tf.tile(tf.expand_dims(ids, -1), [1, num_steps])
+              batch_offsets = batch_offsets[:, None]
             else:
               step_range = tf.reshape(step_range, [num_steps])
 
-            rows_to_get = tf.math.mod(step_range + ids, self._capacity)
+            rows_to_get = tf.math.mod(step_range + ids,
+                                      self._max_length) + batch_offsets
             data = self._data_table.read(rows_to_get)
             data_ids = self._id_table.read(rows_to_get)
           else:
             data = []
             data_ids = []
             for step in range(num_steps):
-              steps_to_get = tf.math.mod(ids + step, self._capacity)
+              steps_to_get = tf.math.mod(ids + step,
+                                         self._max_length) + batch_offsets
               items = self._data_table.read(steps_to_get)
               data.append(items)
               data_ids.append(self._id_table.read(steps_to_get))
