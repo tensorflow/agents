@@ -537,7 +537,7 @@ def is_batched_nested_tensors(tensors,
 
 def spec_shape(t):
   if isinstance(t, tf.SparseTensor):
-    rank = tf.dimension_value(t.dense_shape.shape[0])
+    rank = tf.compat.dimension_value(t.dense_shape.shape[0])
     return tf.TensorShape([None] * rank)
   else:
     return t.shape
@@ -764,20 +764,26 @@ def flatten_multi_batched_nested_tensors(tensors, specs):
       specs,
       message='Tensors and specs do not have matching structures')
   flat_tensors = tf.nest.flatten(tensors)
-  flat_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
+  flat_spec_shapes = [spec_shape(s) for s in tf.nest.flatten(specs)]
   out_tensors = []
   batch_dims = []
-  for i, (tensor, shape) in enumerate(zip(flat_tensors, flat_shapes)):
+  for i, (tensor, sp_shape) in enumerate(zip(flat_tensors, flat_spec_shapes)):
     if i == 0:  # Set batch_dims based on first tensor.
-      batch_dims = tensor.shape[:tensor.shape.rank - shape.rank]
+      batch_dims = tensor.shape[:tensor.shape.rank - sp_shape.rank]
       if batch_dims.is_fully_defined():
         batch_dims = batch_dims.as_list()
         batch_prod = np.prod(batch_dims)
         batch_dims = tf.constant(batch_dims, dtype=tf.int64)
       else:
-        batch_dims = tf.shape(tensor)[:tensor.shape.rank - shape.rank]
+        batch_dims = tf.shape(tensor)[:tensor.shape.rank - sp_shape.rank]
         batch_prod = tf.reduce_prod(batch_dims)
-    reshaped_dims = [batch_prod] + shape.as_list()
+    if not sp_shape.is_fully_defined():
+      # When shape of spec is not fully defined, we do not rely on it to
+      # reshape the tensor but retain the original non-batch dims of tensors.
+      non_batch_dims = tf.shape(tensor)[tensor.shape.rank - sp_shape.rank:]
+      reshaped_dims = tf.concat([[batch_prod], non_batch_dims], 0)
+    else:
+      reshaped_dims = [batch_prod] + sp_shape.as_list()
     out_tensors.append(composite.reshape(tensor, reshaped_dims))
   return tf.nest.pack_sequence_as(tensors, out_tensors), batch_dims
 

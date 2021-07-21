@@ -120,11 +120,13 @@ class NestedTensorsTest(tf.test.TestCase):
     tensors = []
     for s in tf.nest.flatten(spec):
       if isinstance(s, tf.SparseTensorSpec):
-        raise NotImplementedError(
-            'Support for SparseTensor placeholders not implemented.')
+        shape = tf.TensorShape([None]).concatenate(s.shape)
+        tensors.append(
+            tf.sparse.from_dense(
+                tf.compat.v1.placeholder(dtype=s.dtype, shape=shape)))
       elif isinstance(s, tf.TensorSpec):
         shape = tf.TensorShape([None]).concatenate(s.shape)
-        tensors.append(tf.placeholder(dtype=s.dtype, shape=shape))
+        tensors.append(tf.compat.v1.placeholder(dtype=s.dtype, shape=shape))
       else:
         raise TypeError('Unexpected spec type: {}'.format(s))
 
@@ -564,7 +566,6 @@ class NestedTensorsTest(tf.test.TestCase):
     shape = [2, 3]
     specs = self.nest_spec(shape)
     tensors = self.zeros_from_spec(specs, batch_size=7, extra_sizes=[5])
-
     (batch_flattened_tensors,
      batch_dims) = nest_utils.flatten_multi_batched_nested_tensors(
          tensors, specs)
@@ -591,6 +592,40 @@ class NestedTensorsTest(tf.test.TestCase):
 
     tf.nest.assert_same_structure(specs, batch_flattened_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [None, 2, 3])
+    tf.nest.map_structure(assert_shapes, batch_flattened_tensors)
+
+  def testFlattenMultiBatchedNestedTensorsWithSparseTensor(self):
+    if tf.executing_eagerly():
+      self.skipTest('Do not check nest processing of data in eager mode. '
+                    'Placeholders are not compatible with eager execution.')
+    shape = [2, 3]
+    specs = self.nest_spec(shape)
+    tensors = self.zeros_from_spec(specs, batch_size=7, extra_sizes=[5])
+
+    (batch_flattened_tensors,
+     _) = nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    tf.nest.assert_same_structure(specs, batch_flattened_tensors)
+    assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [35, 2, 3])
+    tf.nest.map_structure(assert_shapes, batch_flattened_tensors)
+
+  def testFlattenMultiBatchedNestedTensorsWithPartiallyKnownSparseTensor(self):
+    if tf.executing_eagerly():
+      self.skipTest('Do not check nest processing of data in eager mode. '
+                    'Placeholders are not compatible with eager execution.')
+    shape = [2, None]
+    specs = self.nest_spec(shape)
+    tensors = self.placeholders_from_spec(specs)
+
+    (batch_flattened_tensors,
+     _) = nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    tf.nest.assert_same_structure(specs, batch_flattened_tensors)
+
+    def assert_shapes(t):
+      if isinstance(t, tf.SparseTensor):
+        self.assertEqual(t.shape.rank, 3)
+      else:
+        self.assertEqual(t.shape.as_list(), [None, 2, None])
+
     tf.nest.map_structure(assert_shapes, batch_flattened_tensors)
 
 
