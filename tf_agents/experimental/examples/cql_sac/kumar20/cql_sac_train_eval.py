@@ -104,6 +104,7 @@ def train_eval(
     include_critic_entropy_term=False,
     use_lagrange_cql_alpha=True,
     log_cql_alpha_clipping=None,
+    softmax_temperature=1.0,
     # Data params
     reward_shift=0.0,
     action_clipping=None,
@@ -206,6 +207,7 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=None,
         log_cql_alpha_clipping=log_cql_alpha_clipping,
+        softmax_temperature=softmax_temperature,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step)
