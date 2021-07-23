@@ -23,7 +23,7 @@ Implements Conservative Q Learning from
 """
 # Using Type Annotations.
 
-from typing import Callable, NamedTuple, Optional, Text, Tuple, Union
+from typing import Callable, Dict, NamedTuple, Optional, Text, Tuple, Union
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -89,6 +89,7 @@ class CqlSacAgent(sac_agent.SacAgent):
                gradient_clipping: Optional[types.Float] = None,
                log_cql_alpha_clipping: Optional[Tuple[types.Float,
                                                       types.Float]] = None,
+               softmax_temperature: types.Float = 1.0,
                debug_summaries: bool = False,
                summarize_grads_and_vars: bool = False,
                train_step_counter: Optional[tf.Variable] = None,
@@ -156,6 +157,8 @@ class CqlSacAgent(sac_agent.SacAgent):
         default value is negative of the total number of actions.
       gradient_clipping: Norm length to clip gradients.
       log_cql_alpha_clipping: (Minimum, maximum) values to clip log CQL alpha.
+      softmax_temperature: Temperature value which weights Q-values before
+        the `cql_loss` logsumexp calculation.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
@@ -210,6 +213,7 @@ class CqlSacAgent(sac_agent.SacAgent):
     self._reward_noise_variance = reward_noise_variance
     self._num_bc_steps = num_bc_steps
     self._log_cql_alpha_clipping = log_cql_alpha_clipping
+    self._softmax_temperature = softmax_temperature
 
   def _check_action_spec(self, action_spec):
     super(CqlSacAgent, self)._check_action_spec(action_spec)
@@ -323,10 +327,11 @@ class CqlSacAgent(sac_agent.SacAgent):
           name='alpha_loss', data=alpha_loss, step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='cql_loss', data=cql_loss, step=self.train_step_counter)
-      tf.compat.v2.summary.scalar(
-          name='cql_alpha_loss',
-          data=cql_alpha_loss,
-          step=self.train_step_counter)
+      if self._use_lagrange_cql_alpha:
+        tf.compat.v2.summary.scalar(
+            name='cql_alpha_loss',
+            data=cql_alpha_loss,
+            step=self.train_step_counter)
     tf.compat.v2.summary.scalar(
         name='cql_alpha', data=cql_alpha, step=self.train_step_counter)
     tf.compat.v2.summary.scalar(
@@ -457,6 +462,17 @@ class CqlSacAgent(sac_agent.SacAgent):
     q_values2 = tf.expand_dims(q_values2, axis=-1)
     return q_values1, q_values2
 
+  def _cql_loss_debug_summaries(self, debug_summaries_dict: Dict[str,
+                                                                 types.Tensor]):
+    """Generates summaries for _cql_loss."""
+    if self._debug_summaries:
+      with tf.name_scope('cql_loss'):
+        for key in debug_summaries_dict:
+          tf.compat.v2.summary.scalar(
+              name=key,
+              data=debug_summaries_dict[key],
+              step=self.train_step_counter)
+
   def _cql_loss(self, time_steps: ts.TimeStep, actions: types.Tensor,
                 training: Optional[bool] = False) -> types.Tensor:
     """Computes CQL loss for SAC training in continuous action spaces.
@@ -501,6 +517,9 @@ class CqlSacAgent(sac_agent.SacAgent):
         step_type,
         reshape_batch_size=batch_size,
         training=False)
+    debug_summaries_dict = {}
+    debug_summaries_dict['q_estimates1'] = tf.reduce_mean(q_estimates1)
+    debug_summaries_dict['q_estimates2'] = tf.reduce_mean(q_estimates2)
 
     # We're supposed to be taking an unweighted sum of Q-values of actions
     # from the policy and uniform distributions. We correct for the fact that
@@ -512,8 +531,10 @@ class CqlSacAgent(sac_agent.SacAgent):
     # q_value_pi =   \sum_{a_i~\pi(a|s)}^{N} [exp(Q(s, a_i)) / \pi(a|s)]
     # log_sum_exp(Q(s, a')) = log((1/2N * q_value_unif) + (1/2N  * q_value_pi))
     # ```
-    policy_log_probs1 = q_estimates1 - sampled_actions_log_probs[..., None]
-    policy_log_probs2 = q_estimates2 - sampled_actions_log_probs[..., None]
+    policy_log_probs1 = (q_estimates1 * self._softmax_temperature
+                        ) - sampled_actions_log_probs[..., None]
+    policy_log_probs2 = (q_estimates2 * self._softmax_temperature
+                        ) - sampled_actions_log_probs[..., None]
 
     # Sample self._num_cql_samples from the uniform-at-random distribution.
     flattened_action_spec = tf.nest.flatten(self.action_spec)[0]
@@ -525,6 +546,8 @@ class CqlSacAgent(sac_agent.SacAgent):
     target_input = (observation, uniform_actions)
     q_uniform1, q_uniform2 = self._get_q_values(target_input, step_type,
                                                 batch_size, training=False)
+    debug_summaries_dict['q_uniform1'] = tf.reduce_mean(q_uniform1)
+    debug_summaries_dict['q_uniform2'] = tf.reduce_mean(q_uniform2)
 
     # Uniform density is `(1/range)^dimension`, so the log probability of the
     # uniform distribution is `-log(range)*dimension`.
@@ -533,8 +556,10 @@ class CqlSacAgent(sac_agent.SacAgent):
     uniform_actions_log_probs = tf.reduce_sum(-tf.math.log(
         flattened_action_spec.maximum -
         flattened_action_spec.minimum)) * flattened_action_spec.shape[0]
-    uniform_log_probs1 = q_uniform1 - uniform_actions_log_probs
-    uniform_log_probs2 = q_uniform2 - uniform_actions_log_probs
+    uniform_log_probs1 = (q_uniform1 *
+                          self._softmax_temperature) - uniform_actions_log_probs
+    uniform_log_probs2 = (q_uniform2 *
+                          self._softmax_temperature) - uniform_actions_log_probs
 
     # Importance sampled estimate of the Q-value sum. We do this since we
     # can't tractably compute the exact Q-value in a continuous action space.
@@ -546,8 +571,10 @@ class CqlSacAgent(sac_agent.SacAgent):
     combined_log_probs2 = tf.concat([policy_log_probs2, uniform_log_probs2],
                                     axis=1)
 
-    logsumexp1 = tf.math.reduce_logsumexp(combined_log_probs1, axis=1)
-    logsumexp2 = tf.math.reduce_logsumexp(combined_log_probs2, axis=1)
+    logsumexp1 = tf.math.reduce_logsumexp(
+        combined_log_probs1, axis=1) * 1.0 / self._softmax_temperature
+    logsumexp2 = tf.math.reduce_logsumexp(
+        combined_log_probs2, axis=1) * 1.0 / self._softmax_temperature
 
     target_input = (time_steps.observation, actions)
     q_original1, q_original2 = self._get_q_values(
@@ -555,9 +582,13 @@ class CqlSacAgent(sac_agent.SacAgent):
         time_steps.step_type,
         reshape_batch_size=None,
         training=training)
+    debug_summaries_dict['q_original1'] = tf.reduce_mean(q_original1)
+    debug_summaries_dict['q_original2'] = tf.reduce_mean(q_original2)
 
     cql_loss = tf.reduce_mean((logsumexp1 - q_original1) +
                               (logsumexp2 - q_original2)) / 2.0
+
+    self._cql_loss_debug_summaries(debug_summaries_dict)
 
     return cql_loss
 
