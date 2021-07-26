@@ -90,6 +90,7 @@ class CqlSacAgent(sac_agent.SacAgent):
                log_cql_alpha_clipping: Optional[Tuple[types.Float,
                                                       types.Float]] = None,
                softmax_temperature: types.Float = 1.0,
+               bc_debug_mode: bool = False,
                debug_summaries: bool = False,
                summarize_grads_and_vars: bool = False,
                train_step_counter: Optional[tf.Variable] = None,
@@ -159,6 +160,9 @@ class CqlSacAgent(sac_agent.SacAgent):
       log_cql_alpha_clipping: (Minimum, maximum) values to clip log CQL alpha.
       softmax_temperature: Temperature value which weights Q-values before
         the `cql_loss` logsumexp calculation.
+      bc_debug_mode: Whether to run a behavioral cloning mode where the critic
+        loss only depends on CQL loss. Useful when debugging and checking that
+        CQL loss can be driven down to zero.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If True, gradient and network variable summaries
         will be written during training.
@@ -214,6 +218,7 @@ class CqlSacAgent(sac_agent.SacAgent):
     self._num_bc_steps = num_bc_steps
     self._log_cql_alpha_clipping = log_cql_alpha_clipping
     self._softmax_temperature = softmax_temperature
+    self._bc_debug_mode = bc_debug_mode
 
   def _check_action_spec(self, action_spec):
     super(CqlSacAgent, self)._check_action_spec(action_spec)
@@ -267,7 +272,10 @@ class CqlSacAgent(sac_agent.SacAgent):
       cql_alpha = self._get_cql_alpha()
       cql_loss = self._cql_loss(time_steps, actions, training=True)
 
-      cql_critic_loss = critic_loss + (cql_loss * cql_alpha)
+      if self._bc_debug_mode:
+        cql_critic_loss = cql_loss * cql_alpha
+      else:
+        cql_critic_loss = critic_loss + (cql_loss * cql_alpha)
 
     tf.debugging.check_numerics(critic_loss, 'Critic loss is inf or nan.')
     tf.debugging.check_numerics(cql_loss, 'CQL loss is inf or nan.')
