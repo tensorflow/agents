@@ -59,6 +59,15 @@ class GymWrapperSpecTest(test_utils.TestCase):
     np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
     np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
 
+  def test_spec_from_gym_space_multi_binary_2d(self):
+    multi_binary_space = gym.spaces.MultiBinary((8, 8))
+    spec = gym_wrapper.spec_from_gym_space(multi_binary_space)
+
+    self.assertEqual((8, 8), spec.shape)
+    self.assertEqual(np.int32, spec.dtype)
+    np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
+    np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
+
   def test_spec_from_gym_space_box_scalars(self):
     for dtype in (np.float32, np.float64):
       box_space = gym.spaces.Box(-1.0, 1.0, (3, 4), dtype=dtype)

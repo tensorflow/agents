@@ -100,7 +100,11 @@ def spec_from_gym_space(space: gym.Space,
         shape=space.shape, dtype=dtype, minimum=0, maximum=maximum, name=name)
   elif isinstance(space, gym.spaces.MultiBinary):
     dtype = dtype_map.get(gym.spaces.MultiBinary, np.int32)
-    shape = (space.n,)
+    # Can remove this once we update gym.
+    if isinstance(space.n, int):
+      shape = (space.n,)
+    else:
+      shape = tuple(space.n)
     return specs.BoundedArraySpec(
         shape=shape, dtype=dtype, minimum=0, maximum=1, name=name)
   elif isinstance(space, gym.spaces.Box):
