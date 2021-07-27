@@ -105,7 +105,7 @@ $ pip install --user tf-agents[reverb]
 # Use this tag get the matching examples and colabs.
 $ git clone https://github.com/tensorflow/agents.git
 $ cd agents
-$ git checkout v0.6.0
+$ git checkout v0.8.0
 ```
 
 If you want to install TF-Agents with versions of Tensorflow or
