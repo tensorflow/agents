@@ -190,4 +190,4 @@ To validate whether CQL is likely to work on your problem, especially if cql_los
 Initialize the agent with `debug_summaries=True` to track the Q-values. If Q-values become too negative, then CQL will not work well. This debugging enabled us to discover softmax_temperature when we saw that Q-values were decreasing too much in initial MuJoCo experiments.
 
 # Citation
-If you use this code, please cite it using [this guideline](/third_party/py/tf_agents/opensource/g3doc/README.oss.md#citation).
+If you use this code, please cite it using [this guideline](https://github.com/tensorflow/agents#citation).
