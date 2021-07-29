@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.agents.dqn.examples.v2.train_eval."""
+"""Tests for tf_agents.experimental.examples.cql_sac.kumar20.cql_sac_train_eval."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -32,9 +32,6 @@ ENV_NAME = 'antmaze-medium-play-v0'
 class CqlSacTrainEval(tf.test.TestCase):
 
   def testBasic(self):
-    if not tf.executing_eagerly():
-      self.skipTest('Binary is eager-only.')
-
     root_dir = self.get_temp_dir()
     cql_sac_train_eval.train_eval(
         root_dir,
