@@ -16,6 +16,7 @@
 """Module importing all agents."""
 from tf_agents.agents import behavioral_cloning
 from tf_agents.agents import categorical_dqn
+from tf_agents.agents import cql
 from tf_agents.agents import data_converter
 from tf_agents.agents import ddpg
 from tf_agents.agents import dqn
@@ -27,6 +28,7 @@ from tf_agents.agents import tf_agent
 
 from tf_agents.agents.behavioral_cloning.behavioral_cloning_agent import BehavioralCloningAgent
 from tf_agents.agents.categorical_dqn.categorical_dqn_agent import CategoricalDqnAgent
+from tf_agents.agents.cql.cql_sac_agent import CqlSacAgent
 from tf_agents.agents.ddpg.ddpg_agent import DdpgAgent
 from tf_agents.agents.dqn.dqn_agent import DqnAgent
 from tf_agents.agents.ppo.ppo_agent import PPOAgent
