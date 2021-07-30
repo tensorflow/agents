@@ -44,7 +44,6 @@ from tf_agents.train.utils import strategy_utils
 from tf_agents.train.utils import train_utils
 from tf_agents.trajectories import trajectory
 
-
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
@@ -62,14 +61,12 @@ flags.DEFINE_integer('num_gradient_updates', 1000000,
 flags.DEFINE_float(
     'reward_shift', 0.0, 'Value to add to reward. Useful for sparse rewards, '
     'e.g. set to -0.5 for optimal performance on AntMaze environments which '
-    'have rewards of 0 (most often) or 1 (when the target position is reached)'
-)
+    'have rewards of 0 (most often) or 1 (when the target position is reached)')
 flags.DEFINE_multi_float(
     'action_clipping', None, 'Optional (min, max) values to clip actions. '
     'e.g. set to (-0.995, 0.995) when actions are close to -1 and 1 since'
     'tanh_distribution.log_prob(actions) will yield -inf and inf and make '
-    'actor loss NaN. '
-)
+    'actor loss NaN. ')
 flags.DEFINE_bool(
     'use_trajectories', False,
     'Whether dataset samples are stored as trajectories. '
