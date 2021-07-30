@@ -56,8 +56,10 @@ def main(_):
   d4rl_dataset = d4rl_env.get_dataset()
   root_dir = os.path.join(FLAGS.root_dir, FLAGS.env_name)
 
-  dataset_dict = dataset_utils.create_episode_dataset(d4rl_dataset,
-                                                      FLAGS.exclude_timeouts)
+  dataset_dict = dataset_utils.create_episode_dataset(
+      d4rl_dataset,
+      FLAGS.exclude_timeouts,
+      observation_dtype=d4rl_env.observation_space.dtype)
   num_episodes = len(dataset_dict['episode_start_index'])
   logging.info('Found %d episodes, %s total steps.', num_episodes,
                len(dataset_dict['states']))

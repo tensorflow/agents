@@ -69,8 +69,10 @@ def create_collect_data_spec(
         next_time_step=time_step_spec)
 
 
-def create_episode_dataset(d4rl_dataset: Dict[str, D4RLListType],
-                           exclude_timeouts: bool) -> EpisodeDictType:
+def create_episode_dataset(
+    d4rl_dataset: Dict[str, D4RLListType],
+    exclude_timeouts: bool,
+    observation_dtype: np.dtype = np.float32) -> EpisodeDictType:
   """Create a dataset of episodes."""
   dataset = dict(
       states=[], actions=[], rewards=[], discounts=[], episode_start_index=[])
@@ -94,6 +96,7 @@ def create_episode_dataset(d4rl_dataset: Dict[str, D4RLListType],
     new_episode = is_terminal or is_timeout
 
   for key, value in dataset.items():
-    dataset[key] = np.asarray(value, np.float32)
+    dtype = observation_dtype if key == 'states' else np.float32
+    dataset[key] = np.asarray(value, dtype)
 
   return dataset
