@@ -1,0 +1,31 @@
+# Docker for running tf-agents with D4RL.
+#
+# Example usage:
+#  This docker builds on the MuJoCo tf-agents docker.
+#
+#  Build a docker with nightly version of TF-Agents and Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
+#    -f ubuntu_1804_tf_agents .
+#
+#    docker build -t tf_agents/mujoco -f ubuntu_1804_mujoco .
+#
+#    docker build -t tf_agents/mujoco/d4rl -f ubuntu_1804_d4rl .
+#
+#
+#  Build a docker with latest stable TF-Agents and Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents[reverb] \
+#    --build-arg tensorflow_pip_spec=tensorflow -f ubuntu_1804_tf_agents .
+#
+#    docker build -t tf_agents/mujoco -f ubuntu_1804_mujoco .
+#
+#    docker build -t tf_agents/mujoco/d4rl -f ubuntu_1804_d4rl .
+#
+FROM tf_agents/mujoco as d4rl
+
+# Symlink to MuJoCo that is needed for D4RL installation.
+RUN ln -s /root/.mujoco/mujoco200 /root/.mujoco/mujoco200_linux
+
+# Install D4RL.
+RUN pip install git+https://github.com/rail-berkeley/d4rl@master#egg=d4rl
