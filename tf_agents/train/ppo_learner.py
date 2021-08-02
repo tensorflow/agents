@@ -244,6 +244,12 @@ class PPOLearner(object):
     def make_dataset(_):
       return tf.data.experimental.Counter().flat_map(_make_dataset)
 
+    def _make_normalization_dataset(_):
+      return self._normalization_dataset_fn()
+    self._normalization_dataset = tf.data.experimental.Counter().flat_map(
+        _make_normalization_dataset)
+    self._normalization_iterator = iter(self._normalization_dataset)
+
     with strategy.scope():
 
       if strategy.num_replicas_in_sync > 1:
@@ -263,7 +269,6 @@ class PPOLearner(object):
     Returns:
       The total loss computed before running the final step.
     """
-    self._normalization_iterator = iter(self._normalization_dataset_fn())
     num_frames = self._update_normalizers(self._normalization_iterator)
     self.num_frames_for_training.assign(num_frames)
 
