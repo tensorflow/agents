@@ -61,6 +61,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       batch_size: Optional[int] = None,
       use_nest_path_signatures: bool = True,
       save_greedy_policy=True,
+      save_collect_policy=True
   ):
     """Initializes a PolicySavedModelTrigger.
 
@@ -91,6 +92,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         names.
       save_greedy_policy: Disable when an agent's policy distribution method
         does not support mode.
+      save_collect_policy: Disable when not saving collect policy.
     """
     if async_saving and metadata_metrics:
       raise NotImplementedError('Support for metadata_metrics is not '
@@ -115,11 +117,14 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
 
     self._raw_policy_saver = self._build_saver(raw_policy, batch_size,
                                                use_nest_path_signatures)
-    collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
-                                             use_nest_path_signatures)
+    savers = [(self._raw_policy_saver, learner.RAW_POLICY_SAVED_MODEL_DIR)]
 
-    savers = [(self._raw_policy_saver, learner.RAW_POLICY_SAVED_MODEL_DIR),
-              (collect_policy_saver, learner.COLLECT_POLICY_SAVED_MODEL_DIR)]
+    if save_collect_policy:
+      collect_policy_saver = self._build_saver(agent.collect_policy, batch_size,
+                                               use_nest_path_signatures)
+
+      savers.append(
+          (collect_policy_saver, learner.COLLECT_POLICY_SAVED_MODEL_DIR))
 
     if save_greedy_policy:
       greedy_policy_saver = self._build_saver(greedy, batch_size,
