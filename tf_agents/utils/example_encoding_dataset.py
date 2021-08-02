@@ -175,7 +175,8 @@ def load_tfrecord_dataset(dataset_files,
                           add_batch_dim=True,
                           decoder=None,
                           num_parallel_reads=None,
-                          compress_image=False):
+                          compress_image=False,
+                          spec=None):
   """Loads a TFRecord dataset from file, sequencing samples as Trajectories.
 
   Args:
@@ -198,6 +199,8 @@ def load_tfrecord_dataset(dataset_files,
     compress_image: Whether to decompress image. It is assumed that any uint8
       tensor of rank 3 with shape (w,h,c) is an image.
       If the tensor was compressed in the encoder, it needs to be decompressed.
+    spec: Optional, the dataspec of the TFRecord dataset to be parsed. If not
+      provided, parses the dataspec of the TFRecord directly.
 
   Returns:
     A dataset of type tf.data.Dataset. Samples follow the dataset's spec nested
@@ -208,15 +211,19 @@ def load_tfrecord_dataset(dataset_files,
   """
 
   if not decoder:
-    specs = []
-    for dataset_file in dataset_files:
-      spec_path = dataset_file + _SPEC_FILE_EXTENSION
-      dataset_spec = parse_encoded_spec_from_file(spec_path)
-      specs.append(dataset_spec)
-      if not all([dataset_spec == spec for spec in specs]):
-        raise IOError('One or more of the encoding specs do not match.')
+    if spec is None:
+      specs = []
+      for dataset_file in dataset_files:
+        spec_path = dataset_file + _SPEC_FILE_EXTENSION
+        dataset_spec = parse_encoded_spec_from_file(spec_path)
+        specs.append(dataset_spec)
+        if not all([dataset_spec == spec for spec in specs]):
+          raise IOError('One or more of the encoding specs do not match.')
+      spec = specs[0]
+
     decoder = example_encoding.get_example_decoder(
-        specs[0], compress_image=compress_image)
+        spec, compress_image=compress_image)
+
   logging.info('Loading TFRecord dataset...')
   if not num_parallel_reads:
     num_parallel_reads = len(dataset_files)
