@@ -58,15 +58,6 @@ flags.DEFINE_integer('eval_interval', 10000, 'Evaluation interval.')
 flags.DEFINE_integer('summary_interval', 1000, 'Summary interval.')
 flags.DEFINE_integer('num_gradient_updates', 1000000,
                      'Total number of train iterations to perform.')
-flags.DEFINE_float(
-    'reward_shift', 0.0, 'Value to add to reward. Useful for sparse rewards, '
-    'e.g. set to -0.5 for optimal performance on AntMaze environments which '
-    'have rewards of 0 (most often) or 1 (when the target position is reached)')
-flags.DEFINE_multi_float(
-    'action_clipping', None, 'Optional (min, max) values to clip actions. '
-    'e.g. set to (-0.995, 0.995) when actions are close to -1 and 1 since'
-    'tanh_distribution.log_prob(actions) will yield -inf and inf and make '
-    'actor loss NaN. ')
 flags.DEFINE_bool(
     'use_trajectories', False,
     'Whether dataset samples are stored as trajectories. '
@@ -274,8 +265,6 @@ def main(_):
       eval_interval=FLAGS.eval_interval,
       summary_interval=FLAGS.summary_interval,
       learner_iterations_per_call=FLAGS.learner_iterations_per_call,
-      reward_shift=FLAGS.reward_shift,
-      action_clipping=FLAGS.action_clipping,
       use_trajectories=FLAGS.use_trajectories)
 
 
