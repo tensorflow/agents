@@ -189,5 +189,99 @@ To validate whether CQL is likely to work on your problem, especially if cql_los
 ## Debug summaries
 Initialize the agent with `debug_summaries=True` to track the Q-values. If Q-values become too negative, then CQL will not work well. This debugging enabled us to discover softmax_temperature when we saw that Q-values were decreasing too much in initial MuJoCo experiments.
 
+
+# Reproduce results
+
+We ran a series of experiments for the environments referenced in the CQL paper.
+To reproduce our results we suggest using the commands below, which is using the
+`head` of TF-Agents.
+
+**Step 1:** Create a
+[Google Deep Learning VM instance](https://cloud.google.com/ai-platform/deep-learning-vm/docs/tensorflow_start_instance).
+The only things used from the Deep Learning VM is Docker and optionally
+tensorboard which is used outside the Docker container. We are using the image
+because it also includes NVIDIA Drivers and we use the same VM for GPU testing.
+
+```shell
+$  export IMAGE="c6-deeplearning-tf2-ent-2-3-cu110-v20200826-debian-9"
+$  export ZONE=<Your Zone, e.g. europe-west2-b>
+$  export PROJECT=<Your Project>
+$  export INSTANCE_NAME=cql-sac-training
+
+# 16 vCPU
+$  gcloud compute instances create $INSTANCE_NAME \
+    --project=$PROJECT \
+    --zone=$ZONE \
+    --machine-type=n1-standard-16 \
+    --maintenance-policy=TERMINATE \
+    --image=$IMAGE \
+    --image-project=ml-images \
+    --boot-disk-size=100GB \
+    --boot-disk-type=pd-ssd \
+    --scopes=https://www.googleapis.com/auth/cloud-platform
+
+# It may take a couple minutes for the VM to be available
+# This copies your MuJoCo key to the instance from your local machine.
+$  gcloud compute scp --zone $ZONE --project $PROJECT $HOME/.mujoco/mjkey.txt $INSTANCE_NAME:/home/$USER/
+
+# Login to the cloud instance.
+$  gcloud compute ssh --zone $ZONE --project $PROJECT $INSTANCE_NAME
+```
+
+**Step 2:** Build a
+[Docker](https://github.com/tensorflow/agents/tree/master/tools/docker) with
+MuJoCo and D4RL to be used for the experiment. These steps take place on the
+instance that was created in step 1.
+
+```shell
+$  git clone https://github.com/tensorflow/agents.git && cd agents
+# Moves MuJoco key scp'd in step 1 into location for docker build.
+$  mv ../mjkey.txt .
+
+# Core tf-agents docker.
+$  docker build -t tf_agents/core \
+     --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
+     -f tools/docker/ubuntu_1804_tf_agents .
+
+# Extends tf_agents/core to create a docker with MuJoCo.
+$  docker build -t tf_agents/mujoco -f tools/docker/ubuntu_1804_mujoco .
+
+# Extends tf_agents/mujoco to create a docker with D4RL.
+$  docker build -t tf_agents/mujoco/d4rl -f tools/docker/ubuntu_1804_d4rl .
+```
+
+**Step 3:** Create a tmux session and start the train and eval.
+
+```shell
+# Using tmux keeps the experiment running if the connection drops.
+$  tmux new -s bench
+
+# Runs the Antmaze-Medium-Play example in the docker image. Includes data generation and training.
+$  NUM_REPLICAS=10
+$  DATA_ROOT_DIR=./tmp/d4rl_dataset
+$  ENV_NAME=antmaze-medium-play-v0
+$  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
+
+# Run `docker run --rm -it --gpus all -v` instead for GPU support.
+$  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/mujoco/d4rl bash -c \
+"python tf_agents/experimental/examples/cql_sac/kumar20/dataset/dataset_generator --replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR && python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval --env_name=$ENV_NAME --root_dir=$TRAIN_EVAL_ROOT_DIR --dataset_path=$DATA_ROOT_DIR --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin --alsologtostderr"
+```
+
+**Step 4 (Optional):** Use [tensorboard.dev](https://tensorboard.dev/) to track
+progress.
+
+```shell
+# To upload the results to tensorboard.dev (public) exit out of the tmux session
+# and start another session to upload the results. This command is run outside
+# of Docker and assumes tensorboard is installed on the host system.
+# Hint: `ctrl + b` followed by `d` will detach from the session.
+$  ENV_NAME=antmaze-medium-play-v0
+$  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
+
+$  tmux new -s tensorboard
+$  tensorboard dev upload --logdir=$TRAIN_EVAL_ROOT_DIR
+```
+
+
 # Citation
 If you use this code, please cite it using [this guideline](https://github.com/tensorflow/agents#citation).
