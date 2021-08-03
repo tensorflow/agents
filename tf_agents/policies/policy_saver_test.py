@@ -522,7 +522,7 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
         )
     ])
 
-    renamed_spec = policy_saver._rename_spec_with_nest_paths(time_step_spec)
+    renamed_spec = policy_saver.rename_spec_with_nest_paths(time_step_spec)
 
     new_names = [s.name for s in tf.nest.flatten(renamed_spec)]
     self.assertAllEqual(

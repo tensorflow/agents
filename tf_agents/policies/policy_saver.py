@@ -50,7 +50,7 @@ def _true_if_missing_or_collision(spec, spec_names):
   return False
 
 
-def _rename_spec_with_nest_paths(spec):
+def rename_spec_with_nest_paths(spec):
   renamed_spec = [
       tf.TensorSpec(shape=s.shape, name=path, dtype=s.dtype)
       for path, s in nest_utils.flatten_with_joined_paths(spec)
@@ -208,9 +208,11 @@ class PolicySaver(object):
           'Expected batch_size == None or python int > 0, saw: %s' %
           (batch_size,))
 
+    self._use_nest_path_signatures = use_nest_path_signatures
+
     action_fn_input_spec = (policy.time_step_spec, policy.policy_state_spec)
     if use_nest_path_signatures:
-      action_fn_input_spec = _rename_spec_with_nest_paths(action_fn_input_spec)
+      action_fn_input_spec = rename_spec_with_nest_paths(action_fn_input_spec)
     else:
       _check_spec(action_fn_input_spec)
 
@@ -307,12 +309,12 @@ class PolicySaver(object):
     policy_state_spec = policy.policy_state_spec
 
     if use_nest_path_signatures:
-      batched_time_step_spec = _rename_spec_with_nest_paths(
+      batched_time_step_spec = rename_spec_with_nest_paths(
           batched_time_step_spec)
-      batched_policy_state_spec = _rename_spec_with_nest_paths(
+      batched_policy_state_spec = rename_spec_with_nest_paths(
           batched_policy_state_spec)
-      policy_step_spec = _rename_spec_with_nest_paths(policy_step_spec)
-      policy_state_spec = _rename_spec_with_nest_paths(policy_state_spec)
+      policy_step_spec = rename_spec_with_nest_paths(policy_step_spec)
+      policy_state_spec = rename_spec_with_nest_paths(policy_state_spec)
     else:
       _check_spec(batched_time_step_spec)
       _check_spec(batched_policy_state_spec)
