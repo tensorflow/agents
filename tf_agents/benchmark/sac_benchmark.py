@@ -44,8 +44,10 @@ class SacHaarnoja18Return(PerfZeroBenchmark):
     output_dir = self._get_test_output_dir('halfcheetah_v2')
     start_time_sec = time.time()
     # TODO(b/172017027): Use halfcheetah gin config.
+    strategy = tf.distribute.get_strategy()
     sac_train_eval.train_eval(
         output_dir,
+        strategy,
         initial_collect_steps=10000,
         env_name='HalfCheetah-v2',
         eval_interval=50000,
