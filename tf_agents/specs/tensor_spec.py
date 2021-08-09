@@ -296,7 +296,11 @@ def sample_bounded_spec(spec, seed=None, outer_dims=None):
   return res
 
 
-def sample_spec_nest(structure, seed=None, outer_dims=()):
+def sample_spec_nest(structure,
+                     seed=None,
+                     outer_dims=(),
+                     minimum=None,
+                     maximum=None):
   """Samples the given nest of specs.
 
   Args:
@@ -304,6 +308,9 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
     seed: A seed used for sampling ops
     outer_dims: An optional `Tensor` specifying outer dimensions to add to the
       spec shape before sampling.
+    minimum: An optional numeric value. If set, numeric specs within the nest
+      (both bounded and unbounded) will be restricted to this minimum.
+    maximum: Similar to the above but with maximums.
 
   Returns:
     A nest of sampled values following the ArraySpec definition.
@@ -368,10 +375,25 @@ def sample_spec_nest(structure, seed=None, outer_dims=()):
             sample_bounded_spec(
                 sample_spec, outer_dims=outer_dims, seed=seed_stream()))
       else:
+        bounded_spec = BoundedTensorSpec.from_spec(spec)
+
+        spec_max = bounded_spec.maximum
+        if maximum is not None:
+          spec_max = min(maximum, spec_max)
+
+        spec_min = bounded_spec.minimum
+        if minimum is not None:
+          spec_min = max(minimum, spec_min)
+        bounded_spec = BoundedTensorSpec(
+            shape=bounded_spec.shape,
+            dtype=bounded_spec.dtype,
+            minimum=spec_min,
+            maximum=spec_max)
         return sample_bounded_spec(
-            BoundedTensorSpec.from_spec(spec),
+            bounded_spec,
             outer_dims=outer_dims,
-            seed=seed_stream())
+            seed=seed_stream(),
+        )
     else:
       raise TypeError("Spec type not supported: '{}'".format(spec))
 
