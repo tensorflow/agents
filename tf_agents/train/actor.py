@@ -99,7 +99,7 @@ class Actor(object):
       self._summary_writer = tf.summary.create_file_writer(
           summary_dir, flush_millis=10000)
     else:
-      self._summary_writer = NullSummaryWriter()
+      self._summary_writer = tf.summary.create_noop_writer()
 
     self._summary_interval = summary_interval
     # In order to write summaries at `train_step=0` as well.
@@ -212,13 +212,3 @@ def eval_metrics(buffer_size):
       py_metrics.AverageReturnMetric(buffer_size=buffer_size),
       py_metrics.AverageEpisodeLengthMetric(buffer_size=buffer_size),
   ]
-
-
-class NullSummaryWriter(object):
-  """Class to fake a context manager object when no SummaryWriter is needed."""
-
-  def __enter__(self):
-    pass
-
-  def __exit__(self, *args):
-    pass
