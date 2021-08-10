@@ -7,7 +7,7 @@ port number:
 1) Reverb server:
 
 ```shell
-  python tf_agents/experimental/distributed/examples/sac/sac_reverb_server.py \
+  python tf_agents/experimental/distributed/examples/sac/sac_reverb_server.py -- \
   --root_dir=/tmp/sac_train/ \
   --port=8008 \
   --alsologtostderr
@@ -16,7 +16,7 @@ port number:
 2) Collect job:
 
 ```shell
-$  python tf_agents/experimental/distributed/examples/sac/sac_collect.py \
+$  python tf_agents/experimental/distributed/examples/sac/sac_collect.py -- \
      --root_dir=/tmp/sac_train/ \
      --gin_bindings='collect.environment_name="HalfCheetah-v2"' \
      --replay_buffer_server_address=localhost:8008 \
@@ -27,7 +27,7 @@ $  python tf_agents/experimental/distributed/examples/sac/sac_collect.py \
 3) Train job:
 
 ```shell
-$  python tf_agents/experimental/distributed/examples/sac/sac_train.py \
+$  python tf_agents/experimental/distributed/examples/sac/sac_train.py -- \
      --root_dir=/tmp/sac_train/ \
      --gin_bindings='train.environment_name="HalfCheetah-v2"' \
      --gin_bindings='train.learning_rate=0.0003' \
@@ -45,9 +45,8 @@ assumed the environment dependencies are already provided), then evaluates the
 policy iteratively on policy parameters provided by the variable container.
 
 ```shell
-$  python tf_agents/experimental/distributed/examples/eval_job.py -- \
+$  python tf_agents/experimental/distributed/examples/ckpt_evaluator.py -- \
      --root_dir=/tmp/sac_train/ \
-     --variable_container_server_address=localhost:8008 \
-     --gin_bindings='evaluate.environment_name="HalfCheetah-v2"' \
+     --env_name='HalfCheetah-v2' \
      --alsologtostderr
 ```
