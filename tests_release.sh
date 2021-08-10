@@ -194,8 +194,17 @@ run_tests() {
   # unittest TF-Agents, e.g. Jupiter Notebook. It is assumed the base system
   # will have these required packages, which are part of the TF-Agents docker.
   if [ "$TEST_COLABS" = "true" ]; then
+    COLAB_TMP=$(mktemp -d)
+    # Creates and activates a virtualenv to run the build and unit tests in.
+    COLAB_VENV_PATH=${COLAB_TMP}/virtualenv/$1
+    virtualenv -p "${PYTHON_BIN_PATH}" "${COLAB_VENV_PATH}"
+    source ${COLAB_VENV_PATH}/bin/activate
     pip install ${WHL_PATH}[reverb]
+    pip install jupyter
+    pip install ipykernel
+    pip install matplot
     python ./tools/test_colabs.py
+    deactivate
   fi
 }
 
