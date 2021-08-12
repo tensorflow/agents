@@ -190,12 +190,20 @@ run_tests() {
   mkdir -p ./dist
   cp ${WHL_PATH} ./dist/
 
-  # Testing the Colabs requires packages beyond what is needed to build and
-  # unittest TF-Agents, e.g. Jupiter Notebook. It is assumed the base system
-  # will have these required packages, which are part of the TF-Agents docker.
+  # Testing the Colabs is done in a virtualenv due to the docker container used
+  # for builds ending up in an unreliable state when installing non-nightly
+  # versions for Tensorflow.
   if [ "$TEST_COLABS" = "true" ]; then
+    COLAB_TMP=$(mktemp -d)
+    COLAB_VENV_PATH=${COLAB_TMP}/virtualenv/$1
+    virtualenv -p "${PYTHON_BIN_PATH}" "${COLAB_VENV_PATH}"
+    source ${COLAB_VENV_PATH}/bin/activate
     pip install ${WHL_PATH}[reverb]
+    pip install jupyter
+    pip install ipykernel
+    pip install matplot
     python ./tools/test_colabs.py
+    deactivate
   fi
 }
 
