@@ -40,11 +40,11 @@ import version as tf_agents_version  # pylint: disable=g-import-not-at-top
 
 # Default versions for packages we often override for testing and release
 # candidates. These can all be overridden with flags.
-TFP_VERSION = 'tensorflow-probability>=0.11.0'
+TFP_VERSION = 'tensorflow-probability>=0.13.0'
 TFP_NIGHTLY = 'tfp-nightly'
-TENSORFLOW_VERSION = 'tensorflow>=2.3.0'
+TENSORFLOW_VERSION = 'tensorflow>=2.6.0'
 TENSORFLOW_NIGHTLY = 'tf-nightly'
-REVERB_VERSION = 'dm-reverb>=0.1.0'
+REVERB_VERSION = 'dm-reverb>=0.4.0'
 REVERB_NIGHTLY = 'dm-reverb-nightly'
 
 
