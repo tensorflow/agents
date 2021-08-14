@@ -51,6 +51,7 @@ class Actor(object):
                steps_per_run=None,
                episodes_per_run=None,
                observers=None,
+               transition_observers=None,
                metrics=None,
                reference_metrics=None,
                summary_dir=None,
@@ -69,6 +70,10 @@ class Actor(object):
       episodes_per_run: Number of episodes evaluated per run call.
       observers: A list of observers that are notified after every step in the
         environment. Each observer is a callable(trajectory.Trajectory).
+      transition_observers: A list of observers that are updated after every
+        step in the environment. Each observer is a callable((TimeStep,
+        PolicyStep, NextTimeStep)). The transition is shaped just as
+        trajectories are for regular observers.
       metrics: A list of metric observers.
       reference_metrics: Optional list of metrics for which other metrics are
         plotted against. As an example passing in a metric that tracks number of
@@ -92,6 +97,7 @@ class Actor(object):
     self._reference_metrics = reference_metrics or []
     # Make sure metrics are not repeated.
     self._observers = list(set(self._observers))
+    self._transition_observers = list(transition_observers or [])
 
     self._write_summaries = bool(summary_dir)  # summary_dir is not None
 
@@ -112,6 +118,7 @@ class Actor(object):
           env,
           policy,
           self._observers,
+          transition_observers=self._transition_observers,
           max_steps=steps_per_run,
           max_episodes=episodes_per_run)
     elif isinstance(env, tf_environment.TFEnvironment):
