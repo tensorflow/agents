@@ -69,7 +69,8 @@ class Learner(tf.Module):
                max_checkpoints_to_keep=3,
                use_kwargs_in_agent_train=False,
                strategy=None,
-               run_optimizer_variable_init=True):
+               run_optimizer_variable_init=True,
+               use_reverb_v2=False):
     """Initializes a Learner instance.
 
     Args:
@@ -122,6 +123,9 @@ class Learner(tf.Module):
         specs properly. To avoid breaking the code in these specific cases, we
         recommend turning off initialization of the optimizer variables by
         setting the value of this field to `False`.
+      use_reverb_v2: If True then we expect the dataset samples to return a
+        named_tuple with a data and an info field. If False we expect a
+        tuple(data, info).
     """
     if checkpoint_interval < 0:
       logging.warning(
@@ -131,6 +135,7 @@ class Learner(tf.Module):
       )
 
     self._train_dir = os.path.join(root_dir, TRAIN_DIR)
+    self._use_reverb_v2 = use_reverb_v2
     self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
         self._train_dir, flush_millis=10000)
 
@@ -161,8 +166,11 @@ class Learner(tf.Module):
         # ensure that all variables, including optimizer slot variables, are
         # created. This has to happen before the checkpointer is created.
         if dataset is not None:
-          # Assumes (experience, sample_info) = next(iterator)
-          batched_specs, _ = dataset.element_spec
+          if use_reverb_v2:
+            batched_specs = dataset.element_spec.data
+          else:
+            # Assumes (experience, sample_info) = next(iterator)
+            batched_specs, _ = dataset.element_spec
         else:
           batched_specs = tensor_spec.add_outer_dims_nest(
               self._agent.training_data_spec,
@@ -285,7 +293,11 @@ class Learner(tf.Module):
     return reduced_loss_info
 
   def single_train_step(self, iterator):
-    (experience, sample_info) = next(iterator)
+    sample = next(iterator)
+    if self._use_reverb_v2:
+      experience, sample_info = sample.data, sample.info
+    else:
+      experience, sample_info = sample
 
     if self.use_kwargs_in_agent_train:
       loss_info = self.strategy.run(self._agent.train, kwargs=experience)
@@ -334,8 +346,14 @@ class Learner(tf.Module):
          common.soft_device_placement(), \
          tf.compat.v2.summary.record_if(_summary_record_if), \
          self.strategy.scope():
-      experience_and_sample_info = experience_and_sample_info or next(
-          self._experience_iterator)
+
+      if experience_and_sample_info is None:
+        sample = next(self._experience_iterator)
+        if self._use_reverb_v2:
+          experience_and_sample_info = (sample.data, sample.info)
+        else:
+          experience_and_sample_info = sample
+
       loss_info = self._loss(experience_and_sample_info, reduce_op)
 
       return loss_info
