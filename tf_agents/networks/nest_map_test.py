@@ -87,7 +87,7 @@ class NestMapTest(test_utils.TestCase):
         ({
             'inp1': (),
             'inp2': (),
-            'inp3': (2 * [tf.TensorSpec(shape=(8,), dtype=tf.float32)],),
+            'inp3': (2 * (tf.TensorSpec(shape=(8,), dtype=tf.float32),),),
         },))
     output_spec = net.create_variables(
         {
@@ -109,7 +109,7 @@ class NestMapTest(test_utils.TestCase):
         ({
             'inp1': (),
             'inp2': (),
-            'inp3': (2 * [tf.TensorShape([8, 8])],),
+            'inp3': (2 * (tf.TensorShape([8, 8]),),),
         },))
 
     # Test passing in a state.
@@ -120,7 +120,7 @@ class NestMapTest(test_utils.TestCase):
         ({
             'inp1': (),
             'inp2': (),
-            'inp3': (2 * [tf.TensorShape([8, 8])],),
+            'inp3': (2 * (tf.TensorShape([8, 8]),),),
         },))
 
   def testNestedNest(self):
@@ -142,7 +142,7 @@ class NestMapTest(test_utils.TestCase):
     # Sequential and NestMap to use that instead of singleton Sequential.
     out, state = net(
         (tf.ones((1, 2)), {'a': {'b': tf.ones((1, 2))}}),
-        network_state=((), {'a': {'b': ([tf.ones((1, 8)), tf.ones((1, 8))],)}}))
+        network_state=((), {'a': {'b': ((tf.ones((1, 8)), tf.ones((1, 8))),)}}))
     nest_utils.assert_matching_dtypes_and_inner_shapes(
         out,
         (
@@ -154,8 +154,8 @@ class NestMapTest(test_utils.TestCase):
         state,
         (
             (),
-            {'a': {'b': ([tf.TensorSpec(dtype=tf.float32, shape=(8,)),
-                          tf.TensorSpec(dtype=tf.float32, shape=(8,))],)}}
+            {'a': {'b': ((tf.TensorSpec(dtype=tf.float32, shape=(8,)),
+                          tf.TensorSpec(dtype=tf.float32, shape=(8,))),)}}
         ),
         caller=self, tensors_name='state', specs_name='state_expected')
 

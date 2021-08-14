@@ -31,17 +31,30 @@ from tf_agents.typing import types
 
 
 def _infer_state_specs(
-    layers: Sequence[tf.keras.layers.Layer]) -> types.NestedTensorSpec:
+    layers: Sequence[tf.keras.layers.Layer]
+) -> Tuple[types.NestedTensorSpec, List[bool]]:
   """Infer the state spec of a sequence of keras Layers and Networks.
 
   Args:
     layers: A list of Keras layers and Network.
 
   Returns:
-    `state_spec`, a tuple of the state specs of length `len(layers)`.
+    A tuple with `state_spec`, a tuple of the state specs of length
+    `len(layers)` and a list of bools indicating if the corresponding layer
+    has lists in it's state.
   """
-  state_specs = tuple(network.get_state_spec(layer) for layer in layers)
-  return state_specs  # pytype: disable=bad-return-type
+  state_specs = []
+  layer_state_is_list = []
+  for layer in layers:
+    spec = network.get_state_spec(layer)
+    if isinstance(spec, list):
+      layer_state_is_list.append(True)
+      state_specs.append(tuple(spec))
+    else:
+      state_specs.append(spec)
+      layer_state_is_list.append(False)
+
+  return tuple(state_specs), layer_state_is_list
 
 
 class Sequential(network.Network):
@@ -57,7 +70,10 @@ class Sequential(network.Network):
   Stateful Keras layers (e.g. LSTMCell, RNN, LSTM, TF-Agents DynamicUnroll)
   are all supported.  The `state_spec` of `Sequential` is a tuple whose
   length matches the number of stateful layers passed.  If no stateful layers
-  or networks are passed to `Sequential` then `state_spec == ()`.
+  or networks are passed to `Sequential` then `state_spec == ()`. Given that
+  the replay buffers do not support specs with lists due to tf.nest vs
+  tf.data.nest conflicts `Sequential` will also guarantee that all specs do not
+  contain lists.
 
   Usage:
   ```python
@@ -101,7 +117,7 @@ class Sequential(network.Network):
         for layer in layers
     ]
 
-    state_spec = _infer_state_specs(layers)
+    state_spec, self._layer_state_is_list = _infer_state_specs(layers)
 
     # Now we remove all of the empty state specs so if there are no RNN layers,
     # our state spec is empty.  layer_has_state is a list of bools telling us
@@ -161,10 +177,21 @@ class Sequential(network.Network):
     for i, layer in enumerate(self.layers):
       if isinstance(layer, network.Network):
         if self._layer_has_state[i]:
-          inputs, next_network_state[stateful_layer_idx] = layer(
+          input_state = network_state[stateful_layer_idx]
+
+          if input_state is not None and self._layer_state_is_list[i]:
+            input_state = list(input_state)
+
+          inputs, next_state = layer(
               inputs,
               network_state=network_state[stateful_layer_idx],
               **kwargs)
+
+          if self._layer_state_is_list[i]:
+            next_network_state[stateful_layer_idx] = tuple(next_state)
+          else:
+            next_network_state[stateful_layer_idx] = next_state
+
           stateful_layer_idx += 1
         else:
           inputs, _ = layer(inputs, **kwargs)
@@ -174,11 +201,24 @@ class Sequential(network.Network):
           # The layer maintains state.  If a state was provided at input to
           # `call`, then use it.  Otherwise ask for an initial state.
           maybe_network_state = network_state[stateful_layer_idx]
-          input_state = (maybe_network_state
-                         if maybe_network_state is not None
-                         else layer.get_initial_state(inputs))
+
+          input_state = maybe_network_state
+
+          # pylint: disable=literal-comparison
+          if maybe_network_state is None:
+            input_state = layer.get_initial_state(inputs)
+          elif input_state is not () and self._layer_state_is_list[i]:
+            input_state = list(input_state)
+          # pylint: enable=literal-comparison
+
           outputs = layer(inputs, input_state, **layer_kwargs)
-          inputs, next_network_state[stateful_layer_idx] = outputs
+          inputs, next_state = outputs
+
+          if self._layer_state_is_list[i]:
+            next_network_state[stateful_layer_idx] = tuple(next_state)
+          else:
+            next_network_state[stateful_layer_idx] = next_state
+
           stateful_layer_idx += 1
         else:
           # Does not maintain state.

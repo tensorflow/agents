@@ -124,10 +124,10 @@ class SequentialTest(test_utils.TestCase):
         self.assertEqual,
         sequential.state_spec,
         (
-            [  # LSTM
+            (  # LSTM
                 tf.TensorSpec((2,), tf.float32),
                 tf.TensorSpec((2,), tf.float32),
-            ],
+            ),
             (  # RNN(StackedRNNCells)
                 [
                     tf.TensorSpec((1,), tf.float32),
@@ -140,10 +140,10 @@ class SequentialTest(test_utils.TestCase):
             ),
             # GRU
             tf.TensorSpec((2,), tf.float32),
-            [  # DynamicUnroll
+            (  # DynamicUnroll
                 tf.TensorSpec((2,), tf.float32),
                 tf.TensorSpec((2,), tf.float32),
-            ]))
+            )))
 
     inputs = tf.ones((8, 10, 3), dtype=tf.float32)
     dist, _ = sequential(inputs)
