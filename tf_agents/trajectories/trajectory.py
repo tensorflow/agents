@@ -153,7 +153,7 @@ class Transition(
     time_step: The initial state, reward, and discount.
     action_step: The action, policy info, and possibly policy state taken.
       (Note, `action_step.state` should not typically be stored in e.g.
-      a replay buffer, except a copy inside `policy_steep.info` as a special
+      a replay buffer, except a copy inside `policy_step.info` as a special
       case for algorithms that choose to do this).
     next_time_step: The final state, reward, and discount.
   """
