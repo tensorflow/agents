@@ -163,11 +163,14 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
             info.bandit_policy_type, mask=random_policy_mask)  # pytype: disable=attribute-error
         info = policy_utilities.set_bandit_policy_type(
             info, bandit_policy_type)
-      info = info._replace(
-          **{
-              f: getattr(greedy_action.info, f)
-              for f in self.info_fields_to_inherit_from_greedy
-          })
+
+      # TODO(b/196644931): Should not assume info is a named tuple.
+      if self.info_fields_to_inherit_from_greedy:
+        info = info._replace(
+            **{
+                f: getattr(greedy_action.info, f)
+                for f in self.info_fields_to_inherit_from_greedy
+            })
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
