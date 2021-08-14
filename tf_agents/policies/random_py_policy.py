@@ -38,6 +38,7 @@ class RandomPyPolicy(py_policy.PyPolicy):
   def __init__(self,
                time_step_spec: ts.TimeStep,
                action_spec: types.NestedArraySpec,
+               policy_state_spec: types.NestedArraySpec = (),
                info_spec: types.NestedArraySpec = (),
                seed: Optional[types.Seed] = None,
                outer_dims: Optional[Sequence[int]] = None,
@@ -51,6 +52,8 @@ class RandomPyPolicy(py_policy.PyPolicy):
         given time_step when action is called.
       action_spec: A nest of BoundedArraySpec representing the actions to sample
         from.
+      policy_state_spec: Nest of `tf.TypeSpec` representing the data in the
+        policy state field.
       info_spec: Nest of `tf.TypeSpec` representing the data in the policy
         info field.
       seed: Optional seed used to instantiate a random number generator.
@@ -102,6 +105,7 @@ class RandomPyPolicy(py_policy.PyPolicy):
     super(RandomPyPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
+        policy_state_spec=policy_state_spec,
         info_spec=info_spec,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter))
