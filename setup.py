@@ -174,6 +174,7 @@ def get_required_packages():
       'gin-config >= 0.4.0',
       'gym >= 0.17.0',
       'numpy >= 1.13.3',
+      'pillow',
       'six >= 1.10.0',
       'protobuf >= 3.11.3',
       'wrapt >= 1.11.1',
