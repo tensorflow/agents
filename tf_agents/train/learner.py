@@ -17,7 +17,7 @@
 """Learner implementation for Agents. Refer to the examples dir."""
 
 import os
-from typing import Any, Optional, Tuple
+from typing import Any, NamedTuple, Optional, Tuple, Union, cast
 
 from absl import logging
 import gin
@@ -38,6 +38,9 @@ POLICY_CHECKPOINT_DIR = 'checkpoints'
 REPLAY_BUFFER_CHECKPOINT_DIR = 'replay_buffer_checkpoints'
 
 ExperienceAndSampleInfo = Tuple[types.NestedTensor, Tuple[Any, ...]]
+ExperienceAndSampleInfoV2 = NamedTuple(
+    'ExperienceAndSampleInfo',
+    [('data', types.NestedTensor), ('info', Tuple[Any, ...])])
 
 
 @gin.configurable
@@ -319,7 +322,8 @@ class Learner(tf.Module):
 
   def loss(
       self,
-      experience_and_sample_info: Optional[ExperienceAndSampleInfo] = None,
+      experience_and_sample_info: Optional[Union[
+          ExperienceAndSampleInfo, ExperienceAndSampleInfoV2]] = None,
       reduce_op: tf.distribute.ReduceOp = tf.distribute.ReduceOp.SUM,
   ) -> tf_agent.LossInfo:
     """Computes loss for the experience.
@@ -363,10 +367,19 @@ class Learner(tf.Module):
   @common.function(autograph=True)
   def _loss(
       self,
-      experience_and_sample_info: ExperienceAndSampleInfo,
+      experience_and_sample_info: Union[
+          ExperienceAndSampleInfo, ExperienceAndSampleInfoV2],
       reduce_op: tf.distribute.ReduceOp,
   ) -> tf_agent.LossInfo:
-    (experience, sample_info) = experience_and_sample_info
+    if self._use_reverb_v2:
+      experience_and_sample_info = cast(
+          ExperienceAndSampleInfoV2, experience_and_sample_info)
+      experience, sample_info = (
+          experience_and_sample_info.data, experience_and_sample_info.info)
+    else:
+      experience_and_sample_info = cast(
+          ExperienceAndSampleInfo, experience_and_sample_info)
+      (experience, sample_info) = experience_and_sample_info
 
     if self.use_kwargs_in_agent_train:
       loss_info = self.strategy.run(self._agent.loss, kwargs=experience)
