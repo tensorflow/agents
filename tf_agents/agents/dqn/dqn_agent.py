@@ -418,9 +418,20 @@ class DqnAgent(tf_agent.TFAgent):
 
     return loss_info
 
+  def _td_loss(self, q_values, next_q_values, rewards, discounts):
+
+    # This applies to any value of n_step_update and also in the RNN-DQN case.
+    # In the RNN-DQN case, inputs and outputs contain a time dimension.
+    td_targets = compute_td_targets(
+        next_q_values, rewards=rewards, discounts=discounts)
+    td_error = (td_targets - q_values)
+    td_loss = self._td_errors_loss_fn(td_targets, q_values)
+
+    return td_loss, td_error
+
   def _loss(self,
             experience,
-            td_errors_loss_fn=common.element_wise_huber_loss,
+            td_errors_loss_fn=None,
             gamma=1.0,
             reward_scale_factor=1.0,
             weights=None,
@@ -453,6 +464,8 @@ class DqnAgent(tf_agent.TFAgent):
     transition = self._as_transition(experience)
     time_steps, policy_steps, next_time_steps = transition
     actions = policy_steps.action
+    # TODO(b/195943557) remove td_errors_loss_fn input to _loss
+    self._td_errors_loss_fn = td_errors_loss_fn or self._td_errors_loss_fn
 
     with tf.name_scope('loss'):
       q_values = self._compute_q_values(time_steps, actions, training=training)
@@ -460,17 +473,16 @@ class DqnAgent(tf_agent.TFAgent):
       next_q_values = self._compute_next_q_values(
           next_time_steps, policy_steps.info)
 
-      # This applies to any value of n_step_update and also in the RNN-DQN case.
-      # In the RNN-DQN case, inputs and outputs contain a time dimension.
-      td_targets = compute_td_targets(
-          next_q_values,
-          rewards=reward_scale_factor * next_time_steps.reward,
-          discounts=gamma * next_time_steps.discount)
+      rewards = reward_scale_factor * next_time_steps.reward
+      discounts = gamma * next_time_steps.discount
+
+      td_loss, td_error = self._td_loss(q_values, next_q_values, rewards,
+                                        discounts)
 
       valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
-      td_error = valid_mask * (td_targets - q_values)
+      td_error = valid_mask * td_error
 
-      td_loss = valid_mask * td_errors_loss_fn(td_targets, q_values)
+      td_loss = valid_mask * td_loss
 
       if nest_utils.is_batched_nested_tensors(
           time_steps, self.time_step_spec, num_outer_dims=2):
