@@ -152,7 +152,8 @@ def future_in_eager_mode(func_or_method):
     loss = loss_fn(inputs)
     # Now loss is a Future callable.
     loss_value = loss()
-
+  ```
+  
   Args:
     func_or_method: A function or method to decorate.
 
