@@ -9,7 +9,7 @@ DQNAgent implements the deep Q-network (DQN) algorithm algorithm from
 Here is an example of training and evaluating DQN in the Pong-v0 environment:
 
 ```shell
-$  python tf_agents/experimental/examples/dqn/mnih15/dqn_train_eval_atari.py  \
+$  python tf_agents/examples/dqn/mnih15/dqn_train_eval_atari.py  \
      --num_iterations=12500000 \
      --root_dir=$HOME/tmp/dqn/pong_v0/
 
@@ -44,12 +44,12 @@ Pong-v0 (Atari)         | 18.8@50M      | [tensorboard.dev](https://tensorboard.
 
 ## Reproduce results
 
-To reproduce the numbers we suggest using the commands below, which is using the
+To reproduce the numbers we suggest using the commands below, which use the
 `head` of TF-Agents.
 
 **Step 1:** Create a
 [Google Deep Learning VM instance](https://cloud.google.com/ai-platform/deep-learning-vm/docs/tensorflow_start_instance).
-The only things used from the Deep Learning VM is Docker and optionally
+The only things used from the Deep Learning VM are Docker and optionally
 tensorboard which is used outside the Docker container. We are using the image
 because it also includes NVIDIA Drivers and we use the same VM for GPU testing.
 
@@ -90,20 +90,53 @@ $  docker build -t tf_agents/core \
 
 ```
 
-**Step 3:** Create a tmux session and start the train and eval.
+**Step 3:** Download ROMs and extend core image to include them.
+
+For current details on installing ROMs for atari-py read
+[the OpenAI instructions](https://github.com/openai/atari-py/blob/master/README.md).
+As of 12-AUG-2021 the suggestion from OpenAI is to:
+
+```shell
+# Need to install unrar from the non-free Debian Repo.
+$  sudo apt-add-repository non-free
+$  sudo apt-get update
+
+# Get all available ROMs.
+$  wget http://www.atarimania.com/roms/Roms.rar && unrar x Roms.rar \
+$    && unzip ROMS.zip && unzip HC\ ROMS.zip
+
+# After unzipping the Pong ROM is located at:
+#  `HC ROMS/BY ALPHABET/S-Z/Video Olympics - Pong Sports.bin`
+$  mkdir ./tools/docker/roms
+$  mv HC\ ROMS ./tools/docker/roms
+
+```
+
+The ROMs need to be moved to `./tools/docker/roms` to be picked up by the docker
+build process.
+
+```shell
+# Extend the core image to include atari ROMs.
+# Note that the ROMs need to have already been downloaded and put into
+# ./tools/docker/roms
+$  docker build -t tf_agents/atari -f ./tools/docker/ubuntu_1804_atari \
+     ./tools/docker
+```
+
+**Step 4:** Create a tmux session and start the train and eval.
 
 ```shell
 # Using tmux keeps the experiment running if the connection drops.
 $  tmux new -s bench
 
 # Runs DQN on Pong in the docker instance.
-$  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/core \
-     python3 tf_agents/experimental/examples/dqn/mnih15/dqn_train_eval_atari.py  \
+$  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/atari \
+     python3 tf_agents/examples/dqn/mnih15/dqn_train_eval_atari.py  \
        --num_iterations=12500000 \
        --root_dir=./logs/dqn_pong_01/
 ```
 
-**Step 4 (Optional):** Use [tensorboard.dev](https://tensorboard.dev/) to track
+**Step 5 (Optional):** Use [tensorboard.dev](https://tensorboard.dev/) to track
 progress and save the results.
 
 ```shell
@@ -118,7 +151,8 @@ $  tensorboard dev upload --logdir=./logs/
 **Addendum**
 
 Below is the git hash and version of TensorFlow used to get the results above.
-This is here as an audit trail.
+This is here as an audit trail. The files have since moved making using this
+hash even less advisable.
 
 ```shell
 # After checking out the code above and before building the docker execute the following:
