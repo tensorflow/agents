@@ -34,6 +34,39 @@ from tf_agents.utils import nest_utils
 import typing_extensions as te
 
 
+def _is_transition_like(value):
+  """Helper to identify values that are transition like."""
+  if isinstance(value, trajectory.Transition):
+    return True
+
+  fields = getattr(value, '_fields', None)
+  if fields and trajectory.Transition._fields == fields:
+    return True
+
+  return False
+
+
+def _is_trajectory_like(value):
+  """Helper to identify values that are trajectory like."""
+  if isinstance(value, trajectory.Trajectory):
+    return True
+
+  fields = getattr(value, '_fields', None)
+  if fields and trajectory.Trajectory._fields == fields:
+    return True
+
+  return False
+
+
+def _as_tfa_transition(value: typing.Tuple[typing.Any, typing.Any, typing.Any]):
+  """Makes sure the transition and its values are TFA types."""
+  time_step, action_step, next_time_step = value
+  time_step = ts.TimeStep(*time_step)
+  action_step = policy_step.PolicyStep(*action_step)
+  next_time_step = ts.TimeStep(*next_time_step)
+  return trajectory.Transition(time_step, action_step, next_time_step)
+
+
 class DataContext(tf.Module):
   """A class that stores useful data for performing data conversions."""
 
@@ -278,7 +311,7 @@ class AsTransition(tf.Module):
       debug_str_1 = tf.nest.map_structure(
           lambda tp: tp.shape, value)
       debug_str_2 = tf.nest.map_structure(
-          lambda spec: spec.shape, self._data_context.trajectory_spec)
+          lambda spec: spec.shape, self._data_context.transition_spec)
       raise ValueError(
           'All of the Tensors in `value` must have a single outer (batch size) '
           'dimension. Specifically, tensors must have {} outer dimensions.'
@@ -314,9 +347,9 @@ class AsTransition(tf.Module):
       ValueError: If `squeeze_time_dim=True` and `value` is a `Trajectory`
         with a time dimension having value other than `T=2`.
     """
-    if isinstance(value, trajectory.Transition):
-      pass
-    elif isinstance(value, trajectory.Trajectory):
+    if _is_transition_like(value):
+      value = _as_tfa_transition(value)
+    elif _is_trajectory_like(value):
       required_sequence_length = 2 if self._squeeze_time_dim else None
       _validate_trajectory(
           value,
@@ -413,9 +446,9 @@ class AsNStepTransition(tf.Module):
       ValueError: If `n != None` and `value` is a `Trajectory`
         with a time dimension having value other than `T=n + 1`.
     """
-    if isinstance(value, trajectory.Transition):
-      pass
-    elif isinstance(value, trajectory.Trajectory):
+    if _is_transition_like(value):
+      value = _as_tfa_transition(value)
+    elif _is_trajectory_like(value):
       _validate_trajectory(
           value,
           self._data_context.trajectory_spec,
