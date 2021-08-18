@@ -1,6 +1,6 @@
-# Docker for running tf-agents with mujoco.
+# Docker for running tf-agents with MuJoCo.
 #
-# Mujoco requires a license. A permanent or trial license is available from
+# MuJoCo requires a license. A permanent or trial license is available from
 # their site: https://www.roboti.us/license.html
 #
 # Example usage:
@@ -24,24 +24,12 @@
 FROM tf_agents/core as mujoco
 ARG mujoco_license=mjkey.txt
 
-# Add google-cloud-sdk to the source list
-# Nightly tests are on google cloud and need the SDK.
-RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-$(lsb_release -c -s) main" | \
-  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-
-# Prerequisites for Mujoco and installs google-cloud for nightly tests.
+# Prerequisites for MuJoCo.
 RUN apt-get update && apt-get install -y \
   --no-install-recommends \
   libglew-dev \
   libosmesa6-dev \
-  patchelf \
-  google-cloud-sdk
-
-# Needed to upload results from nightly test runs.
-RUN pip install \
-  google-cloud-bigquery \
-  psutil
+  patchelf
 
 RUN mkdir -p /root/.mujoco \
     && wget https://www.roboti.us/download/mujoco200_linux.zip -O mujoco.zip \
@@ -52,14 +40,15 @@ RUN mkdir -p /root/.mujoco \
 # On some hosts LD_LIBRARY_PATH is unset when running the container. After hours
 # of internet research along with trial and error, a root cause was not found.
 # It works fine on google cloud instances but fails on my workstation, which
-# worked fine on my workstation a few months ago. `docker inspect` shows it is
-# in the container config. If you are getting the error:
+# worked fine on my workstation a few months ago. `docker inspect` shows
+# LD_LIBRARY_PATH is set in the container config. If you get the following
+# message when trying to use MuJoCo, use the work around below:
 #
 #       Please add following line to .bashrc:
 #       export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/.mujoco/mujoco200/bin
 #
-# This seems to be the best workaround and worked when LD_LIBRARY_PATH would not
-# stay sticky is:
+# Starting docker with the arguments below resolved the issue when
+# LD_LIBRARY_PATH would not stay set:
 #    docker run --rm -it tf_agents/mujoco /bin/bash -c \
 #    "LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin python3 foo.py --bar 10"
 ENV LD_LIBRARY_PATH "/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}"

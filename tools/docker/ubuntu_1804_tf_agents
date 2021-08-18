@@ -33,9 +33,6 @@ RUN pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
 RUN pip install ${tensorflow_pip_spec}
 RUN pip install ${tf_agents_pip_spec}
 
-# Needs to run before installing tzdata and other apps below.
-RUN apt-get update
-
 # See http://bugs.python.org/issue19846
 ENV LANG C.UTF-8
 
@@ -44,8 +41,14 @@ RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
+# Add google-cloud-sdk to the source list
+# Nightly tests are on google cloud and need the SDK.
+RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-$(lsb_release -c -s) main" | \
+  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
 # Pick up some TF dependencies
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
       cmake \
       zlib1g-dev \
       libpng-dev \
@@ -59,7 +62,8 @@ RUN apt-get install -y --no-install-recommends \
       xvfb \
       freeglut3-dev \
       ffmpeg \
-      python-opencv
+      python-opencv \
+      google-cloud-sdk  # Only used for nightly testing.
 
 
 # Upgrade pip, need to use pip3 and then pip after this or an error
@@ -74,18 +78,19 @@ RUN pip install wheel \
       virtualenv \
       matplot \
       absl-py \
-      mock
+      mock \
+# Only used for nightly testing.
+      google-cloud-bigquery \
+      psutil
 
 # Avoids constant errors of "No module named 'keyring.util.escape'"."
 # Not needed when installing jupyter does not throw the error/warning.
 RUN pip install --upgrade keyrings.alt
 
-
 ######################################################
-# Jupyter notebook ipykernel downgrade is needed due to
-# https://github.com/ipython/ipykernel/issues/422
+# Installs Jupyter notebook.
 ######################################################
 RUN pip install jupyter
-RUN pip install ipykernel==5.1.1
+RUN pip install ipykernel
 
 RUN pip freeze
