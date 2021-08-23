@@ -170,9 +170,11 @@ class PpoActorNetworkTest(parameterized.TestCase, test_utils.TestCase):
   def test_same_initialization(self):
     if not tf.executing_eagerly():
       self.skipTest('Skipping test: sequential networks not supported in TF1')
+    tf.random.set_seed(111)
     agent_seq = PPOAgentSequential()
     seq_variables = agent_seq._actor_net.trainable_weights
 
+    tf.random.set_seed(111)
     agent_act_dist = PPOAgentActorDist()
     act_dist_variables = agent_act_dist._actor_net.trainable_weights
 
@@ -223,8 +225,10 @@ class PpoActorNetworkTest(parameterized.TestCase, test_utils.TestCase):
         seed=1)
 
     sample_observation = tf.constant([[1], [2]], dtype=tf.float32)
+    tf.random.set_seed(111)
     sequential_output_dist, _ = actor_net_sequential(
         sample_observation, step_type=ts.StepType.MID, network_state=())
+    tf.random.set_seed(111)
     actor_dist_output_dist, _ = actor_net_actor_dist(
         sample_observation, step_type=ts.StepType.MID, network_state=())
     self.assertAllEqual(sequential_output_dist.mean(),
@@ -254,12 +258,14 @@ class PpoActorNetworkTest(parameterized.TestCase, test_utils.TestCase):
         seed_stream_class=DeterministicSeedStream,
         seed=1)
 
+    tf.random.set_seed(111)
     seq_policy = ppo_policy.PPOPolicy(
         ts.time_step_spec(observation_tensor_spec),
         action_tensor_spec,
         actor_net_sequential,
         value_net,
         collect=True)
+    tf.random.set_seed(111)
     actor_dist_policy = ppo_policy.PPOPolicy(
         ts.time_step_spec(observation_tensor_spec),
         action_tensor_spec,
@@ -286,7 +292,9 @@ class PpoActorNetworkTest(parameterized.TestCase, test_utils.TestCase):
     if not tf.executing_eagerly():
       self.skipTest('Skipping test: sequential networks not supported in TF1')
 
+    tf.random.set_seed(111)
     agent_seq = PPOAgentSequential()
+    tf.random.set_seed(111)
     agent_act_dist = PPOAgentActorDist()
     batch_size = 2
     n_time_steps = 3
