@@ -25,13 +25,8 @@ LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
 ARG tf_agents_pip_spec="tf-agents-nightly[reverb]"
 ARG tensorflow_pip_spec="tf-nightly"
 ARG local_tf_agents_pip_spec=""
+ARG python_version="python3"
 COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
-
-# Removes TensorFlow so specific version can be installed.
-RUN pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
-
-RUN pip install ${tensorflow_pip_spec}
-RUN pip install ${tf_agents_pip_spec}
 
 # See http://bugs.python.org/issue19846
 ENV LANG C.UTF-8
@@ -40,6 +35,10 @@ ENV LANG C.UTF-8
 RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
 RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+# Avoids "No module named six" coming from the keyrings module. This should not
+# get triggered when using python3.7 vs. the default (python3) but it does.
+RUN pip install --upgrade keyrings.alt
 
 # Add google-cloud-sdk to the source list
 # Nightly tests are on google cloud and need the SDK.
@@ -63,13 +62,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       freeglut3-dev \
       ffmpeg \
       python-opencv \
+      python3.7-dev \
       google-cloud-sdk  # Only used for nightly testing.
 
+RUN curl -O https://bootstrap.pypa.io/get-pip.py
 
-# Upgrade pip, need to use pip3 and then pip after this or an error
-# is thrown for no main found.
-RUN pip install --upgrade pip setuptools
-RUN pip install wheel \
+RUN $python_version get-pip.py
+
+# Removes default TensorFlow so a specific version can be installed.
+RUN $python_version -m pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
+
+RUN $python_version -m pip install ${tensorflow_pip_spec}
+RUN $python_version -m pip install ${tf_agents_pip_spec}
+RUN $python_version -m pip install wheel \
       opencv-python \
       gym \
       atari-py \
@@ -83,14 +88,10 @@ RUN pip install wheel \
       google-cloud-bigquery \
       psutil
 
-# Avoids constant errors of "No module named 'keyring.util.escape'"."
-# Not needed when installing jupyter does not throw the error/warning.
-RUN pip install --upgrade keyrings.alt
-
 ######################################################
 # Installs Jupyter notebook.
 ######################################################
-RUN pip install jupyter
-RUN pip install ipykernel
+RUN $python_version -m pip install jupyter
+RUN $python_version -m pip install ipykernel
 
-RUN pip freeze
+RUN $python_version -m pip freeze

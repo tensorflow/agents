@@ -23,6 +23,7 @@
 #
 FROM tf_agents/core as mujoco
 ARG mujoco_license=mjkey.txt
+ARG python_version="python3"
 
 # Prerequisites for MuJoCo.
 RUN apt-get update && apt-get install -y \
@@ -60,4 +61,4 @@ COPY ${mujoco_license} /root/.mujoco/mjkey.txt
 
 # LD_LIBRARY_PATH is redunanty but needed on hosts where LD_LIBRARY_PATH is
 # not sticky. See comments above.
-RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin pip install -U 'mujoco-py<2.1,>=2.0'
+RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin $python_version -m pip install -U 'mujoco-py<2.1,>=2.0'

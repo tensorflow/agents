@@ -39,9 +39,10 @@
 #
 FROM tf_agents/core as tf_agents_core
 ARG rom_dir=roms
+ARG python_version="python3"
 
 # Copies ROMs into image.
 COPY ${rom_dir} /roms
 
 # Installs the ROMs into the atari python package.
-RUN python3 -m atari_py.import_roms /roms
+RUN $python_version -m atari_py.import_roms /roms
