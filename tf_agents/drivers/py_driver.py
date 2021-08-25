@@ -111,9 +111,14 @@ class PyDriver(driver.Driver):
       action_step = self.policy.action(time_step, policy_state)
       next_time_step = self.env.step(action_step.action)
 
-      traj = trajectory.from_transition(time_step, action_step, next_time_step)
+      # When using observer (for the purpose of training), only the previous
+      # policy_state is useful. Therefore substitube it in the PolicyStep and
+      # consume it w/ the observer.
+      action_step_with_previous_state = action_step._replace(state=policy_state)
+      traj = trajectory.from_transition(
+          time_step, action_step_with_previous_state, next_time_step)
       for observer in self._transition_observers:
-        observer((time_step, action_step, next_time_step))
+        observer((time_step, action_step_with_previous_state, next_time_step))
       for observer in self.observers:
         observer(traj)
 

@@ -40,9 +40,11 @@ class PolicyStep(
   Attributes:
    action: An action tensor or action distribution for `TFPolicy`, or numpy
      array for `PyPolicy`.
-   state: State of the policy to be fed back into the next call to
-     policy.action() or policy.distribution(), e.g. an RNN state. For stateless
-     policies, this will be an empty tuple.
+   state: During inference, it will hold the state of the policy to be fed back
+     into the next  call to policy.action() or policy.distribution(), e.g. an
+     RNN state. During the training, it will hold the state that is input to
+     policy.action() or policy.distribution() For stateless policies, this will
+     be an empty tuple.
    info: Auxiliary information emitted by the policy, e.g. log probabilities of
      the actions. For policies without info this will be an empty tuple.
   """
