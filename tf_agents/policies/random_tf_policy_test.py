@@ -210,6 +210,92 @@ class RandomTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllClose(step.info.log_probability,
                         tf.constant(np.log(1. / 3), shape=[batch_size]))
 
+  def testStationaryMask(self, dtype):
+    if not dtype.is_integer:
+      self.skipTest('testStationaryMask only applies to integer dtypes')
+
+    batch_size = 1000
+
+    action_spec = tensor_spec.BoundedTensorSpec((), dtype, -5, 5)
+    time_step_spec, time_step = self.create_time_step()
+    time_step = self.create_batch(time_step, batch_size)
+
+    mask = [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        emit_log_probability=True,
+        stationary_mask=mask)
+
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
+    step = self.evaluate(action_step)
+    action_ = step.action
+    self.assertTrue(np.all(action_ >= -5))
+    self.assertTrue(np.all(action_ <= 5))
+    self.assertAllEqual(np.array(mask)[action_ - action_spec.minimum],
+                        np.ones([batch_size]))
+
+    # Ensure that all valid actions occur somewhere within the batch. Because we
+    # sample 1000 times, the chance of this failing for any particular action is
+    # (2/3)^1000, roughly 1e-176.
+    for index in range(action_spec.minimum, action_spec.maximum + 1):
+      if mask[index - action_spec.minimum]:
+        self.assertIn(index, action_)
+
+    # With only three valid actions, all of the probabilities should be 1/3.
+    self.assertAllClose(step.info.log_probability,
+                        tf.constant(np.log(1. / 3), shape=[batch_size]))
+
+  def testBothDynamicAndStationaryMask(self, dtype):
+    if not dtype.is_integer:
+      self.skipTest('testStationaryMask only applies to integer dtypes')
+
+    batch_size = 1000
+
+    action_spec = tensor_spec.BoundedTensorSpec((), dtype, -5, 5)
+    time_step_spec, time_step = self.create_time_step()
+    time_step = self.create_batch(time_step, batch_size)
+
+    stationary_mask = [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+    dynamic_mask = [0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0]
+    tf_dynamic_mask = tf.constant([dynamic_mask for _ in range(batch_size)])
+    intersect_mask = [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0]
+    policy = random_tf_policy.RandomTFPolicy(
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        emit_log_probability=True,
+        stationary_mask=stationary_mask,
+        observation_and_action_constraint_splitter=
+        lambda obs: (obs, tf_dynamic_mask))
+
+    action_step = policy.action(time_step)
+    tf.nest.assert_same_structure(action_spec, action_step.action)
+
+    # Sample from the policy 1000 times, and ensure that actions considered
+    # invalid according to the mask are never chosen.
+    step = self.evaluate(action_step)
+    action_ = step.action
+    self.assertTrue(np.all(action_ >= -5))
+    self.assertTrue(np.all(action_ <= 5))
+    self.assertAllEqual(np.array(intersect_mask)[action_ - action_spec.minimum],
+                        np.ones([batch_size]))
+
+    # Ensure that all valid actions occur somewhere within the batch. Because we
+    # sample 1000 times, the chance of this failing for any particular action is
+    # (2/3)^1000, roughly 1e-176.
+    for index in range(action_spec.minimum, action_spec.maximum + 1):
+      if intersect_mask[index - action_spec.minimum]:
+        self.assertIn(index, action_)
+
+    # With only three valid actions, all of the probabilities should be 1/3.
+    self.assertAllClose(step.info.log_probability,
+                        tf.constant(np.log(1. / 2), shape=[batch_size]))
+
   def testNumActions(self, dtype):
     if not dtype.is_integer:
       self.skipTest('testNumActions only applies to integer dtypes')

@@ -46,6 +46,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
   def __init__(self,
                policy: tf_policy.TFPolicy,
                epsilon: types.FloatOrReturningFloat,
+               exploration_mask: Optional[Sequence[int]] = None,
                info_fields_to_inherit_from_greedy: Sequence[Text] = (),
                name: Optional[Text] = None):
     """Builds an epsilon-greedy MixturePolicy wrapping the given policy.
@@ -55,6 +56,8 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
       epsilon: The probability of taking the random action represented as a
         float scalar, a scalar Tensor of shape=(), or a callable that returns a
         float scalar or Tensor.
+      exploration_mask: A `[0, 1]` vector describing which actions should be in
+        the set of exploratory actions.
       info_fields_to_inherit_from_greedy: A list of policy info fields which
         should be copied over from the greedy action's info, even if the random
         action was taken.
@@ -74,6 +77,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
       accepts_per_arm_features = False
     self._greedy_policy = greedy_policy.GreedyPolicy(policy)
     self._epsilon = epsilon
+    self._exploration_mask = exploration_mask
     self.info_fields_to_inherit_from_greedy = info_fields_to_inherit_from_greedy
     self._random_policy = random_tf_policy.RandomTFPolicy(
         policy.time_step_spec,
@@ -82,6 +86,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
         accepts_per_arm_features=accepts_per_arm_features,
+        stationary_mask=exploration_mask,
         info_spec=policy.info_spec)
     super(EpsilonGreedyPolicy, self).__init__(
         policy.time_step_spec,
