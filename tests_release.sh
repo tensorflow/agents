@@ -2,7 +2,6 @@
 
 # Test nightly release: ./tests_release.sh
 # Test stable release: ./tests_release.sh --type stable
-# Test using PyEnv: ./tests_release.sh --pyenv true
 
 # Exits if any process returns non-zero status.
 set -e
@@ -11,7 +10,6 @@ set -x
 
 # Flags
 RELEASE_TYPE=nightly
-USE_PYENV=false
 TEST_COLABS=false
 TF_INSTALL=false
 TF_DEP_OVERRIDE=false
@@ -19,6 +17,7 @@ REVERB_INSTALL=false
 REVERB_DEP_OVERRIDE=false
 TFP_INSTALL=false
 TFP_DEP_OVERRIDE=false
+PYTHON_VERSION=python3.7
 
 if [[ $# -lt 1 ]] ; then
   echo "Usage:"
@@ -33,7 +32,7 @@ if [[ $# -lt 1 ]] ; then
   echo "--reverb_install      [Version of Reverb to install]"
   echo "--tfp_install         [Version of TensorFlow probability to install]"
   echo "--test_colabs         [true to run colab tests.]"
-  echo "--pyenv               [true, use pyenv (Being deprecated)]"
+  echo "--python_version    [python3.7(default), Python binary to use.]"
   exit 1
 fi
 
@@ -44,10 +43,6 @@ while [[ $# -gt -0 ]]; do
   case $key in
       --type)
       RELEASE_TYPE="$2" # Type of release stable or nightly
-      shift
-      ;;
-    --pyenv)
-      USE_PYENV="$2"  # If true, use pyenv (Being deprecated)
       shift
       ;;
     --test_colabs)
@@ -78,6 +73,10 @@ while [[ $# -gt -0 ]]; do
       TFP_DEP_OVERRIDE="$2"  # Setup.py is told this is the required tf-probability.
       shift
       ;;
+    --python_version)
+      PYTHON_VERSION="$2"  # Python binary to use for the build.
+      shift
+      ;;
     *)
       echo "Unknown flag: $key"
       ;;
@@ -87,28 +86,28 @@ done
 
 install_optional_dependencies() {
   if [ "$TF_INSTALL" != "false" ]; then
-    pip install $TF_INSTALL
+    $PYTHON_VERSION -mpip install $TF_INSTALL
   else
-    pip install $1
+    $PYTHON_VERSION -mpip install $1
   fi
 
   if [ "$REVERB_INSTALL" != "false" ]; then
-    pip install $REVERB_INSTALL
+    $PYTHON_VERSION -mpip install $REVERB_INSTALL
   else
-    pip install $2
+    $PYTHON_VERSION -mpip install $2
   fi
 
   if [ "$TFP_INSTALL" != "false" ]; then
-    pip install $TFP_INSTALL
+    $PYTHON_VERSION -mpip install $TFP_INSTALL
   else
-    pip install $3
+    $PYTHON_VERSION -mpip install $3
   fi
 }
 
 run_tests() {
   echo "run_tests:"
   echo "    type:${RELEASE_TYPE}"
-  echo "    pyenv:${USE_PYENV}"
+  echo "    python_version:${PYTHON_VERSION}"
   echo "    test_colabs:${TEST_COLABS}"
   echo "    tf_installs:${TF_INSTALL}"
   echo "    reverb_install:${REVERB_INSTALL}"
@@ -117,20 +116,7 @@ run_tests() {
   echo "    reverb_dep_override:${REVERB_DEP_OVERRIDE}"
   echo "    tfp_dep_override:${TFP_DEP_OVERRIDE}"
 
-  PYTHON_BIN_PATH=$(which python)
-  if [ "$USE_PYENV" = "true" ]; then
-    PYTHON_VERSION="3.6.1"
-    # Sets up system to use pyenv instead of existing python install.
-    if ! stat -t ~/.pyenv/versions/${PYTHON_VERSION}/lib/libpython*m.so > /dev/null 2>&1; then
-      # Uninstall current version if there's no libpython file.
-      yes | pyenv uninstall $PYTHON_VERSION
-    fi
-    # We need pyenv to build/install a libpython3.Xm.so file for reverb.
-    PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s $PYTHON_VERSION
-    pyenv global $PYTHON_VERSION
-    PYTHON_BIN_PATH=~/.pyenv/versions/${PYTHON_VERSION}/bin/python
-  fi
-
+  PYTHON_BIN_PATH=$(which $PYTHON_VERSION)
   TMP=$(mktemp -d)
   # Creates and activates a virtualenv to run the build and unittests in.
   VENV_PATH=${TMP}/virtualenv/$1
@@ -138,9 +124,9 @@ run_tests() {
   source ${VENV_PATH}/bin/activate
 
   # Print the version of python
-  python --version
-  which pip
-
+  $PYTHON_VERSION --version
+  # Used by pip_pig.sh
+  export PYTHON_VERSION
   # Extra args to pass to setup.py
   EXTRA_ARGS=""
   if [ "$TF_DEP_OVERRIDE" != "false" ]; then
@@ -158,17 +144,17 @@ run_tests() {
     install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly"
 
     # Run the tests
-    python setup.py test $EXTRA_ARGS
+    $PYTHON_VERSION setup.py test $EXTRA_ARGS
 
-    # Install tf_agents package.
+    # Builds tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/ $EXTRA_ARGS
   elif [ "$RELEASE_TYPE" = "stable" ]; then
     install_optional_dependencies "tensorflow" "dm-reverb" "tensorflow-probability"
     # Run the tests
-    python setup.py test --release $EXTRA_ARGS
+    $PYTHON_VERSION setup.py test --release $EXTRA_ARGS
 
-    # Install tf_agents package.
+    # Builds tf_agents package.
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/ --release $EXTRA_ARGS
   else
@@ -177,10 +163,10 @@ run_tests() {
   fi
 
   WHL_PATH=$(find ${WHEEL_PATH} -path \*tf_agents\*.whl)
-  pip install ${WHL_PATH}
+  $PYTHON_VERSION -mpip install ${WHL_PATH}
   # Simple import test. Move away from repo directory so "import tf_agents"
   # refers to the installed wheel and not to the local fs.
-  (cd $(mktemp -d) && python -c 'import tf_agents')
+  (cd $(mktemp -d) && $PYTHON_VERSION -c 'import tf_agents')
 
   # Tests after this run outside the virtual env and depend on packages
   # installed at the system level.
@@ -198,11 +184,9 @@ run_tests() {
     COLAB_VENV_PATH=${COLAB_TMP}/virtualenv/$1
     virtualenv -p "${PYTHON_BIN_PATH}" "${COLAB_VENV_PATH}"
     source ${COLAB_VENV_PATH}/bin/activate
-    pip install ${WHL_PATH}[reverb]
-    pip install jupyter
-    pip install ipykernel
-    pip install matplot
-    python ./tools/test_colabs.py
+    $PYTHON_VERSION -m pip install ${WHL_PATH}[reverb]
+    $PYTHON_VERSION -m pip install jupyter ipykernel matplot
+    $PYTHON_VERSION ./tools/test_colabs.py
     deactivate
   fi
 }
