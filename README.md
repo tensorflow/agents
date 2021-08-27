@@ -168,8 +168,9 @@ uphold this code.
 TF Agents has stable and nightly releases. The nightly releases are often fine
 but can have issues due to upstream libraries being in flux. The table below
 lists the version(s) of TensorFlow tested with each TF Agents' release to help
-users that may be locked into a specific version of TensorFlow. 0.3.0 was the
-last release compatible with Python 2.
+users that may be locked into a specific version of TensorFlow. 0.9.0 was the
+last release compatible with Python 3.6. 0.3.0 was the last release compatible
+with Python 2.
 
 Release | Branch / Tag                                               | TensorFlow Version
 ------- | ---------------------------------------------------------- | ------------------
