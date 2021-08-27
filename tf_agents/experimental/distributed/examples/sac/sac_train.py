@@ -49,6 +49,7 @@ from tf_agents.typing import types
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string('env_name', None, 'Name of the environment')
 flags.DEFINE_string('replay_buffer_server_address', None,
                     'Replay buffer server address.')
 flags.DEFINE_string('variable_container_server_address', None,
@@ -111,7 +112,7 @@ def train(
     batch_size: int = 256,
     num_iterations: int = 2000000,
     learner_iterations_per_call: int = 1) -> None:
-  """Trains a DQN agent."""
+  """Trains a SAC agent."""
   # Get the specs from the environment.
   logging.info('Training SAC with learning rate: %f', learning_rate)
   env = suite_load_fn(environment_name)
@@ -186,7 +187,7 @@ def main(_):
 
   train(
       root_dir=FLAGS.root_dir,
-      environment_name=gin.REQUIRED,
+      environment_name=FLAGS.env_name,
       strategy=strategy,
       replay_buffer_server_address=FLAGS.replay_buffer_server_address,
       variable_container_server_address=FLAGS.variable_container_server_address)
@@ -194,7 +195,7 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flags_as_required([
-      'root_dir', 'replay_buffer_server_address',
+      'root_dir', 'env_name', 'replay_buffer_server_address',
       'variable_container_server_address'
   ])
   multiprocessing.handle_main(lambda _: app.run(main))
