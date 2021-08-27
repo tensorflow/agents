@@ -88,7 +88,8 @@ class RandomTFEnvironment(tf_environment.TFEnvironment):
   def _reset(self):
     """Resets the environment and returns the current time_step."""
     obs, _ = self._sample_obs_and_reward()
-    time_step = ts.restart(obs, self._batch_size)
+    time_step = ts.restart(
+        obs, self._batch_size, reward_spec=self._time_step_spec.reward)
     self._update_time_step(time_step)
     return self._current_time_step()
 
