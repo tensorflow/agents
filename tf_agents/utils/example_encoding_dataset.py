@@ -242,13 +242,13 @@ def load_tfrecord_dataset(dataset_files,
     return nest_utils.batch_nested_tensors(sample)
 
   if as_experience:
-    dataset = dataset.map(decode_fn，num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(2, drop_remainder=True)
+    dataset = dataset.map(decode_fn,num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(2, drop_remainder=True)
   elif add_batch_dim:
-    dataset = dataset.map(decode_and_batch_fn)
+    dataset = dataset.map(decode_and_batch_fn,num_parallel_calls=tf.data.experimental.AUTOTUNE)
   else:
-    dataset = dataset.map(decode_fn)
+    dataset = dataset.map(decode_fn,num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
   if as_trajectories:
     as_trajectories_fn = lambda sample: trajectory.Trajectory(*sample)
-    dataset = dataset.map(as_trajectories_fn)
+    dataset = dataset.map(as_trajectories_fn,num_parallel_calls=tf.data.experimental.AUTOTUNE)
   return dataset
