@@ -23,7 +23,7 @@
 #    docker build -t tf_agents/mujoco/d4rl -f ubuntu_1804_d4rl .
 #
 FROM tf_agents/mujoco as d4rl
-ARG python_version="python3"
+ARG python_version="python3.7"
 
 # Symlink to MuJoCo that is needed for D4RL installation.
 RUN ln -s /root/.mujoco/mujoco200 /root/.mujoco/mujoco200_linux

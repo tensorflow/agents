@@ -23,7 +23,7 @@
 #
 FROM tf_agents/core as mujoco
 ARG mujoco_license=mjkey.txt
-ARG python_version="python3"
+ARG python_version="python3.7"
 
 # Prerequisites for MuJoCo.
 RUN apt-get update && apt-get install -y \

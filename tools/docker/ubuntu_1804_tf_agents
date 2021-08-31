@@ -25,7 +25,7 @@ LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
 ARG tf_agents_pip_spec="tf-agents-nightly[reverb]"
 ARG tensorflow_pip_spec="tf-nightly"
 ARG local_tf_agents_pip_spec=""
-ARG python_version="python3"
+ARG python_version="python3.7"
 COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
 
 # See http://bugs.python.org/issue19846

@@ -39,7 +39,7 @@
 #
 FROM tf_agents/core as tf_agents_core
 ARG rom_dir=roms
-ARG python_version="python3"
+ARG python_version="python3.7"
 
 # Copies ROMs into image.
 COPY ${rom_dir} /roms
