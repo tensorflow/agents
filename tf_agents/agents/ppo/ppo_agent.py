@@ -98,7 +98,7 @@ PPOLossInfo = collections.namedtuple('PPOLossInfo', (
 ))
 
 
-def _normalize_advantages(advantages, axes=(0,), variance_epsilon=1e-8):
+def _normalize_advantages(advantages, axes=(0, 1), variance_epsilon=1e-8):
   adv_mean, adv_var = tf.nn.moments(advantages, axes=axes, keepdims=True)
   normalized_advantages = tf.nn.batch_normalization(
       advantages,
