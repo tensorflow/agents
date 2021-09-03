@@ -244,9 +244,9 @@ def train_eval(
       sequence_length=2,
       stride_length=1)
 
-  dataset = reverb_replay.as_dataset(
-      sample_batch_size=batch_size, num_steps=2).prefetch(50)
-  experience_dataset_fn = lambda: dataset
+  def experience_dataset_fn():
+    return reverb_replay.as_dataset(
+        sample_batch_size=batch_size, num_steps=2).prefetch(50)
 
   saved_model_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR)
   env_step_metric = py_metrics.EnvironmentSteps()
