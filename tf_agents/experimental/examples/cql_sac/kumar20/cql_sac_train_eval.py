@@ -36,6 +36,7 @@ from tf_agents.experimental.examples.cql_sac.kumar20.d4rl_utils import load_d4rl
 from tf_agents.experimental.examples.cql_sac.kumar20.data_utils import create_tf_record_dataset
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import actor_distribution_network
+from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.train import actor
 from tf_agents.train import learner
@@ -225,8 +226,9 @@ def train_eval(
       strategy=strategy)
 
   # Create actor for evaluation.
+  tf_greedy_policy = greedy_policy.GreedyPolicy(agent.policy)
   eval_greedy_policy = py_tf_eager_policy.PyTFEagerPolicy(
-      agent.policy, use_tf_function=True)
+      tf_greedy_policy, use_tf_function=True)
   eval_actor = actor.Actor(
       env,
       eval_greedy_policy,
