@@ -196,7 +196,11 @@ class TFMultiMetricStepMetric(TFStepMetric):
     Returns:
       A list of scalar summaries.
     """
-    result_list = self.result()
+    result_list = tf.nest.flatten(self.result())
+    if len(result_list) == 1:
+      # For the special case when the multiple metrics come from a single but
+      # non-scalar tensor.
+      result_list = result_list[0]
     prefix = self._prefix
     single_metric_name = 'Metric'
     # In case there is a single name (e.g., `Reward`) for all metrics, store it

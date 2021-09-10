@@ -338,7 +338,11 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         tensor_spec.TensorSpec((), tf.float32, 'r2')], [9.0, 9.0]),
       ('testAverageReturnMultiMetricRewardSpecListEager', context.eager_mode, 6,
        [tensor_spec.TensorSpec((), tf.float32, 'r1'),
-        tensor_spec.TensorSpec((), tf.float32, 'r2')], [9.0, 9.0])
+        tensor_spec.TensorSpec((), tf.float32, 'r2')], [9.0, 9.0]),
+      ('testAverageReturnMultiMetricRewardSpecDictEager', context.eager_mode, 6,
+       {'a': tensor_spec.TensorSpec((), tf.float32, 'r1'),
+        'b': tensor_spec.TensorSpec((), tf.float32, 'r2')},
+       {'a': 9.0, 'b': 9.0})
   ])
   def testAverageReturnMultiMetric(self, run_mode, num_trajectories,
                                    reward_spec, expected_result):
@@ -348,6 +352,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       for traj in trajectories:
         if isinstance(reward_spec, list):
           new_reward = [traj.reward, traj.reward]
+        elif isinstance(reward_spec, dict):
+          new_reward = {'a': traj.reward, 'b': traj.reward}
         else:
           new_reward = tf.stack([traj.reward, traj.reward], axis=1)
         new_traj = trajectory.Trajectory(
@@ -366,9 +372,10 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       for i in range(num_trajectories):
         self.evaluate(metric(multi_trajectories[i]))
 
-      self.assertAllEqual(expected_result, self.evaluate(metric.result()))
+      self.assertAllClose(expected_result, self.evaluate(metric.result()))
       self.evaluate(metric.reset())
-      self.assertAllEqual([0.0, 0.0], self.evaluate(metric.result()))
+      reset_result = tf.nest.map_structure(tf.zeros_like, expected_result)
+      self.assertAllClose(reset_result, self.evaluate(metric.result()))
 
   @parameterized.named_parameters([
       ('testAverageReturnMultiMetricTimeMisalignedGraph', context.graph_mode, 3,
