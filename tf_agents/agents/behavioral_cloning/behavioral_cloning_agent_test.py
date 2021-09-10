@@ -109,6 +109,35 @@ def get_dummy_net(action_spec, observation_spec=None):
   ], input_spec=observation_spec)
 
 
+def get_mock_hybrid_loss(actor_net, action_spec):
+  def hybrid_loss(experience, training=False):
+    del training
+    batch_size = (
+        tf.compat.dimension_value(experience.step_type.shape[0]) or
+        tf.shape(experience.step_type)[0])
+    network_state = actor_net.get_initial_state(batch_size)
+    # actor may define random ops like cropping. Pass training=False to disable.
+    bc_output, _ = actor_net(
+        experience.observation,
+        step_type=experience.step_type,
+        training=False,
+        network_state=network_state)
+    def _compute_loss(dist, label, spec):
+      prediction = dist.mean()
+      if spec.dtype.is_integer:
+        cross_entropy = tf.keras.losses.CategoricalCrossentropy(
+            reduction=tf.keras.losses.Reduction.NONE)
+        return cross_entropy(label, prediction)
+      else:
+        return tf.reduce_sum(
+            tf.math.squared_difference(label, prediction), axis=-1)
+    losses_dict = tf.nest.map_structure(
+        _compute_loss, bc_output, experience.action,
+        action_spec)
+    return tf.add_n(tf.nest.flatten(losses_dict))
+  return hybrid_loss
+
+
 class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
@@ -166,6 +195,104 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
           action_spec,
           cloning_network=cloning_net,
           optimizer=None)
+
+  def verifyVariableAssignAndRestore(self,
+                                     observation_spec,
+                                     action_spec,
+                                     actor_net,
+                                     loss_fn=None):
+    strategy = tf.distribute.get_strategy()
+    time_step_spec = ts.time_step_spec(observation_spec)
+    with strategy.scope():
+      # Use BehaviorCloningAgent instead of AWRAgent to test the network.
+      agent = behavioral_cloning_agent.BehavioralCloningAgent(
+          time_step_spec,
+          action_spec,
+          cloning_network=actor_net,
+          optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+          loss_fn=loss_fn)
+    # Assign all vars to 0.
+    for var in tf.nest.flatten(agent.variables):
+      var.assign(tf.zeros_like(var))
+    # Save checkpoint
+    ckpt_dir = self.create_tempdir()
+    checkpointer = common.Checkpointer(
+        ckpt_dir=ckpt_dir, agent=agent)
+    global_step = tf.constant(0)
+    checkpointer.save(global_step)
+    # Assign all vars to 1.
+    for var in tf.nest.flatten(agent.variables):
+      var.assign(tf.ones_like(var))
+    # Restore to 0.
+    checkpointer._checkpoint.restore(checkpointer._manager.latest_checkpoint)
+    for var in tf.nest.flatten(agent.variables):
+      value = var.numpy()
+      if isinstance(value, np.int64):
+        self.assertEqual(value, 0)
+      else:
+        self.assertAllEqual(
+            value, np.zeros_like(value),
+            msg='{} has var mean {}, expected 0.'.format(var.name, value))
+
+  def verifyTrainAndRestore(self,
+                            observation_spec,
+                            action_spec,
+                            actor_net,
+                            loss_fn=None):
+    """Helper function for testing correct variable updating and restoring."""
+    batch_size = 2
+    observations = tensor_spec.sample_spec_nest(
+        observation_spec, outer_dims=(batch_size,))
+    actions = tensor_spec.sample_spec_nest(
+        action_spec, outer_dims=(batch_size,))
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+    experience = trajectory.first(
+        observation=observations,
+        action=actions,
+        policy_info=(),
+        reward=rewards,
+        discount=discounts)
+    time_step_spec = ts.time_step_spec(observation_spec)
+    strategy = tf.distribute.get_strategy()
+    with strategy.scope():
+      # Use BehaviorCloningAgent instead of AWRAgent to test the network.
+      agent = behavioral_cloning_agent.BehavioralCloningAgent(
+          time_step_spec,
+          action_spec,
+          cloning_network=actor_net,
+          optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+          loss_fn=loss_fn)
+    loss_before_train = agent.loss(experience).loss
+    # Check loss is stable.
+    self.assertEqual(loss_before_train, agent.loss(experience).loss)
+    # Train 1 step, verify that loss is decreased for the same input.
+    agent.train(experience)
+    loss_after_train = agent.loss(experience).loss
+    self.assertLessEqual(loss_after_train, loss_before_train)
+    # Assert loss evaluation is still stable, e.g. deterministic.
+    self.assertLessEqual(loss_after_train, agent.loss(experience).loss)
+    # Save checkpoint
+    ckpt_dir = self.create_tempdir()
+    checkpointer = common.Checkpointer(ckpt_dir=ckpt_dir, agent=agent)
+    global_step = tf.constant(1)
+    checkpointer.save(global_step)
+    # Assign all vars to 0.
+    for var in tf.nest.flatten(agent.variables):
+      var.assign(tf.zeros_like(var))
+    loss_after_zero = agent.loss(experience).loss
+    self.assertEqual(loss_after_zero, agent.loss(experience).loss)
+    self.assertNotEqual(loss_after_zero, loss_after_train)
+    # Restore
+    checkpointer._checkpoint.restore(checkpointer._manager.latest_checkpoint)
+    loss_after_restore = agent.loss(experience).loss
+    self.assertNotEqual(loss_after_restore, loss_after_zero)
+    self.assertEqual(loss_after_restore, loss_after_train)
+
+  def testAssignAndRestore(self):
+    cloning_net = get_dummy_net(self._action_spec)
+    self.verifyVariableAssignAndRestore(
+        self._observation_spec, self._action_spec, cloning_net)
 
   # TODO(kbanoop): Add a test where the target network has different values.
   def testLoss(self):
