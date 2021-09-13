@@ -18,6 +18,7 @@ REVERB_DEP_OVERRIDE=false
 TFP_INSTALL=false
 TFP_DEP_OVERRIDE=false
 PYTHON_VERSION=python3.7
+BROKEN_TESTS=false
 
 if [[ $# -lt 1 ]] ; then
   echo "Usage:"
@@ -33,6 +34,7 @@ if [[ $# -lt 1 ]] ; then
   echo "--tfp_install         [Version of TensorFlow probability to install]"
   echo "--test_colabs         [true to run colab tests.]"
   echo "--python_version    [python3.7(default), Python binary to use.]"
+  echo "--broken_tests   [Broken tests file]"
   exit 1
 fi
 
@@ -77,6 +79,10 @@ while [[ $# -gt -0 ]]; do
       PYTHON_VERSION="$2"  # Python binary to use for the build.
       shift
       ;;
+    --broken_tests)
+      BROKEN_TESTS="$2"  # Python binary to use for the build.
+      shift
+      ;;
     *)
       echo "Unknown flag: $key"
       ;;
@@ -115,6 +121,7 @@ run_tests() {
   echo "    tf_dep_override:${REVERB_DEP_OVERRIDE}"
   echo "    reverb_dep_override:${REVERB_DEP_OVERRIDE}"
   echo "    tfp_dep_override:${TFP_DEP_OVERRIDE}"
+  echo "    broken_tests:${BROKEN_TESTS}"
 
   PYTHON_BIN_PATH=$(which $PYTHON_VERSION)
   TMP=$(mktemp -d)
@@ -138,6 +145,10 @@ run_tests() {
   if [ "$TFP_DEP_OVERRIDE" != "false" ]; then
     EXTRA_ARGS="${EXTRA_ARGS} --tfp-version ${TFP_DEP_OVERRIDE}"
   fi
+  if [ "$BROKEN_TESTS" != "false" ]; then
+    EXTRA_ARGS="${EXTRA_ARGS} --broken_tests ${BROKEN_TESTS}"
+  fi
+
   # TensorFlow is not set as a dependency of TF-Agents because there are many
   # different TensorFlow versions a user might want and installed.
   if [ "$RELEASE_TYPE" = "nightly" ]; then

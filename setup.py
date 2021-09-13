@@ -113,7 +113,7 @@ class Test(TestCommandBase):
             gpu, [tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
 
       run_separately = load_test_list('test_individually.txt')
-      broken_tests = load_test_list('broken_tests.txt')
+      broken_tests = load_test_list(FLAGS.broken_tests)
 
       test_loader = TestLoader(exclude_list=run_separately + broken_tests)
       test_suite = test_loader.discover('tf_agents', pattern='*_test.py')
@@ -327,6 +327,11 @@ if __name__ == '__main__':
       default=None,
       help='Overrides tfp version required, e.g. '
       'tensorflow-probability==0.11.0rc0')
+  parser.add_argument(
+      '--broken_tests',
+      type=str,
+      default='broken_tests.txt',
+      help='Broken tests file to use.')
   FLAGS, unparsed = parser.parse_known_args()
   # Go forward with only non-custom flags.
   sys.argv.clear()
