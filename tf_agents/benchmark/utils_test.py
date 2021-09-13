@@ -48,6 +48,16 @@ class UtilsTest(test_utils.TestCase):
     # Verifies event value at 1M.
     self.assertAlmostEqual(values[1000000], 3791.88696, places=4)
 
+  def test_extract_value_1m_only_start_at_1k(self):
+    """Tests extracting data starting at step 1k."""
+    values, walltime = utils.extract_event_log_values(
+        os.path.join(TEST_DATA, 'event_log_3m/events.out.tfevents.1599310762'),
+        'AverageReturn', 1000000, start_step=10000)
+    # Verifies only 1M records were examined 0-1M = 101.
+    self.assertLen(values, 100)
+    # Wall time is less than if counting started at step 0.
+    self.assertAlmostEqual(walltime, 366.92087, places=4)
+
   def test_more_than_one_eventlog_per_dir(self):
     """Tests that an exception is thrown if more than one log file is found."""
     with self.assertRaises(AssertionError):

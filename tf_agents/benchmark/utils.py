@@ -254,13 +254,15 @@ def find_event_log(eventlog_dir: str,
 def extract_event_log_values(
     event_file: str,
     event_tag: str,
-    end_step: Optional[int] = None) -> Tuple[Dict[int, np.generic], float]:
+    end_step: Optional[int] = None,
+    start_step: Optional[int] = 0) -> Tuple[Dict[int, np.generic], float]:
   """Extracts the event values for the `event_tag` and total wall time.
 
   Args:
     event_file: Path to the event log.
     event_tag: Event to extract from the logs.
     end_step: If set, processing of the event log ends on this step.
+    start_step: First step to look for in event log, defaults to 0.
 
   Returns:
     Tuple with a dict of int: np.generic (step: event value) and the total
@@ -270,7 +272,6 @@ def extract_event_log_values(
     ValueError: If no events are found or the final step is smaller than the
       `end_step` requested.
   """
-  start_step = 0
   current_step = 0
   start_time = 0
   max_wall_time = 0.0
@@ -282,13 +283,14 @@ def extract_event_log_values(
     for value in summary.summary.value:
       if value.tag == event_tag:
         ndarray = tf.make_ndarray(value.tensor)
-        event_values[summary.step] = ndarray.item(0)
-        if current_step == start_step:
-          start_time = summary.wall_time
-          logging.info(
-              'training start (step %d): %s', current_step,
-              datetime.datetime.fromtimestamp(
-                  summary.wall_time).strftime('%Y-%m-%d %H:%M:%S.%f'))
+        if current_step >= start_step:
+          event_values[summary.step] = ndarray.item(0)
+          if current_step == start_step:
+            start_time = summary.wall_time
+            logging.info(
+                'training start (step %d): %s', current_step,
+                datetime.datetime.fromtimestamp(
+                    summary.wall_time).strftime('%Y-%m-%d %H:%M:%S.%f'))
         # Avoids issue of summaries not recorded in order.
         max_wall_time = max(summary.wall_time, max_wall_time)
     if end_step and summary.step >= end_step:
