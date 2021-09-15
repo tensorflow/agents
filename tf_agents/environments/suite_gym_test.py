@@ -69,12 +69,12 @@ class SuiteGymTest(test_utils.TestCase):
     self.assertIsInstance(env, wrappers.TimeLimit)
 
   def test_gym_kwargs_argument(self):
-    env = suite_gym.load('KellyCoinflip-v0', gym_kwargs={'initial_wealth': 21})
-    self.assertEqual(env.unwrapped.initial_wealth, 21)
+    env = suite_gym.load('MountainCar-v0', gym_kwargs={'goal_velocity': 21})
+    self.assertEqual(env.unwrapped.goal_velocity, 21)
 
-    env = suite_gym.load('KellyCoinflip-v0',
-                         gym_kwargs={'initial_wealth': 50})
-    self.assertEqual(env.unwrapped.initial_wealth, 50)
+    env = suite_gym.load('MountainCar-v0',
+                         gym_kwargs={'goal_velocity': 50})
+    self.assertEqual(env.unwrapped.goal_velocity, 50)
 
   def test_load_gym_render_kwargs(self):
     env = suite_gym.load('CartPole-v1',
