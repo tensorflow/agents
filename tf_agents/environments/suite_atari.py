@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from typing import Dict, Optional, Sequence, Text
 
-import atari_py  # pylint: disable=unused-import
+import ale_py  # pylint: disable=unused-import
 import gin
 import gym
 import numpy as np
