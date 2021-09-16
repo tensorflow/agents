@@ -9,21 +9,24 @@
 #  Build a docker with nightly version of TF-Agents and Tensorflow.
 #    docker build --pull -t tf_agents/core \
 #    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
-#    -f ubuntu_1804_tf_agents .
+#    -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
-#    docker build -t tf_agents/mujoco -f ubuntu_1804_mujoco .
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#      ./tools/docker
 #
 #
 #  Build a docker with latest stable TF-Agents and Tensorflow.
 #    docker build --pull -t tf_agents/core \
 #    --build-arg tf_agents_pip_spec=tf-agents[reverb] \
-#    --build-arg tensorflow_pip_spec=tensorflow -f ubuntu_1804_tf_agents .
+#    --build-arg tensorflow_pip_spec=tensorflow \
+#    -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
-#    docker build -t tf_agents/mujoco -f ubuntu_1804_mujoco .
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#      ./tools/docker
 #
 FROM tf_agents/core as mujoco
 ARG mujoco_license=mjkey.txt
-ARG python_version="python3.7"
+ARG python_version="python3"
 
 # Prerequisites for MuJoCo.
 RUN apt-get update && apt-get install -y \

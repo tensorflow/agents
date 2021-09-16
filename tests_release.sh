@@ -17,7 +17,7 @@ REVERB_INSTALL=false
 REVERB_DEP_OVERRIDE=false
 TFP_INSTALL=false
 TFP_DEP_OVERRIDE=false
-PYTHON_VERSION=python3.7
+PYTHON_VERSION=python3
 BROKEN_TESTS=false
 
 if [[ $# -lt 1 ]] ; then

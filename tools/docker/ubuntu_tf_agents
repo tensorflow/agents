@@ -3,21 +3,23 @@
 #
 # Example usage:
 #
+#  Note: Commands are to be run from the root of the repo.
+#
 #  Builds a docker with the most recent nightly version of TF-Agents.
-#    docker build -t tf_agents/release_test \
-#      -f ubuntu_1804_tf_agents .
+#    docker build -t tf_agents/core \
+#      -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
 #  Builds a docker without TF-Agents. Used to build TF-Agents.
 #    docker build -t tf_agents/release_build \
 #      --build-arg tensorflow_pip_spec=noop \
 #      --build-arg tf_agents_pip_spec=noop \
-#      -f tools/docker/ubuntu_1804_tf_agents .
+#      -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
 #  Builds a docker with a local TF-Agents .whl file.
 #    docker build -t tf_agents/release_test \
 #      --build-arg local_tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl \
 #      --build-arg tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl  \
-#      -f ubuntu_1804_tf_agents .
+#      -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
 FROM tensorflow/tensorflow:nightly-gpu as base
 
@@ -25,26 +27,8 @@ LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
 ARG tf_agents_pip_spec="tf-agents-nightly[reverb]"
 ARG tensorflow_pip_spec="tf-nightly"
 ARG local_tf_agents_pip_spec=""
-ARG python_version="python3.7"
+ARG python_version="python3"
 COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
-
-# See http://bugs.python.org/issue19846
-ENV LANG C.UTF-8
-
-# Resolves tzdata asking for the timezone. python-opencv depends on tzdata.
-RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-RUN dpkg-reconfigure --frontend noninteractive tzdata
-
-# Avoids "No module named six" coming from the keyrings module. This should not
-# get triggered when using python3.7 vs. the default (python3) but it does.
-RUN pip install --upgrade keyrings.alt
-
-# Add google-cloud-sdk to the source list
-# Nightly tests are on google cloud and need the SDK.
-RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-$(lsb_release -c -s) main" | \
-  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
 # Pick up some TF dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -61,9 +45,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       xvfb \
       freeglut3-dev \
       ffmpeg \
-      python-opencv \
-      python3.7-dev \
-      google-cloud-sdk  # Only used for nightly testing.
+      python3-opencv \
+      gfortran \
+      libopenblas-dev \
+      liblapack-dev
+
+# Install google-cloud-sdk which is only used for nightly testing.
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg]" \
+  " http://packages.cloud.google.com/apt cloud-sdk main" | \
+  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+  curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
+  apt-key --keyring /usr/share/keyrings/cloud.google.gpg  add - && \
+  apt-get update -y && apt-get install google-cloud-sdk -y
 
 RUN curl -O https://bootstrap.pypa.io/get-pip.py
 
