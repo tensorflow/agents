@@ -21,7 +21,7 @@ import functools
 from absl import logging
 import numpy as np
 import reverb
-import tensorflow.compat.v2 as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow as tf
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.ppo import ppo_clip_agent
@@ -342,8 +342,7 @@ def create_reverb_server_for_replay_buffer_and_variable_container(
   # Create the signature for the replay buffer holding observed experience.
   replay_buffer_signature = tensor_spec.from_spec(
       collect_policy.collect_data_spec)
-  # TODO(b/188427258) Add time dimension when using Reverb.TrajectoryWriters.
-  # replay_buffer_signature = tensor_spec.add_outer_dim(replay_buffer_signature)
+  replay_buffer_signature = tensor_spec.add_outer_dim(replay_buffer_signature)
 
   # Crete and start the replay buffer and variable container server.
   server = reverb.Server(

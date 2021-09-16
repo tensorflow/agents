@@ -461,7 +461,7 @@ def make_reverb_dataset(server_address: str,
   # TODO(b/144858901): Validate Tableinfo when it's available from reverb.
 
   def generate_reverb_dataset(_):
-    dataset = reverb.ReplayDataset(
+    dataset = reverb.TrajectoryDataset(
         server_address,
         table,
         dtypes,
@@ -470,9 +470,20 @@ def make_reverb_dataset(server_address: str,
         num_workers_per_iterator=num_workers_per_iterator,
         max_samples_per_stream=max_samples_per_stream,
         rate_limiter_timeout_ms=rate_limiter_timeout_ms,
-        sequence_length=sequence_length,
-        emit_timesteps=False,
     )
+
+    def broadcast_info(
+        info_traj: types.ReverbReplaySample
+    ) -> types.ReverbReplaySample:
+      # Assumes that the first element of traj is shaped
+      # (sequence_length, ...); and we extract this length.
+      info, traj = info_traj
+      first_elem = tf.nest.flatten(traj)[0]
+      length = first_elem.shape[0] or tf.shape(first_elem)[0]
+      info = tf.nest.map_structure(lambda t: tf.repeat(t, [length]), info)
+      return reverb.ReplaySample(info, traj)
+
+    dataset = dataset.map(broadcast_info)
 
     if per_sequence_fn:
       dataset = dataset.map(per_sequence_fn)

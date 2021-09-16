@@ -16,9 +16,9 @@
 # Lint as: python3
 """Utils for using replay buffers."""
 
-# from tf_agents.specs import tensor_spec
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import lazy_loader
 
 # Lazy loading since not all users have the reverb package installed.
@@ -91,9 +91,7 @@ def get_reverb_buffer(data_spec,
     Note: the if local server is created, it is not returned. It can be
       retrieved by calling local_server() on the returned replay buffer.
   """
-  table_signature = data_spec
-  # TODO(b/188427258) Add time dimension when using Reverb.TrajectoryWriters.
-  # table_signature = tensor_spec.add_outer_dim(data_spec, sequence_length)
+  table_signature = tensor_spec.add_outer_dim(data_spec, sequence_length)
 
   if reverb_server_address is None:
     if table is None:
