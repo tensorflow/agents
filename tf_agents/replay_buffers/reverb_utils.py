@@ -185,7 +185,7 @@ class ReverbAddEpisodeObserver(object):
     # Only writes to Reverb when the writer has cached trajectories.
     if self._writer_has_data:
       # No need to truncate since the truncation is done in the class.
-      trajectory = self._writer.history
+      trajectory = tf.nest.map_structure(lambda h: h[:], self._writer.history)
       for table_name in self._table_names:
         self._writer.create_item(
             table=table_name,
