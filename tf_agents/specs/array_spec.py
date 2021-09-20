@@ -33,7 +33,7 @@ def sample_bounded_spec(spec, rng):
     rng: A numpy RandomState to use for the sampling.
 
   Returns:
-    An np.array sample of the requested space.
+    An np.array sample of the requested spec.
   """
   tf_dtype = tf.as_dtype(spec.dtype)
   low = spec.minimum
