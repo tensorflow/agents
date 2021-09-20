@@ -23,6 +23,7 @@ from __future__ import print_function
 import contextlib
 import functools
 
+import time
 from absl.testing import parameterized
 import mock
 import reverb
@@ -275,17 +276,27 @@ class ReverbObserverTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._client = mock.MagicMock()
-    self._writer = mock.MagicMock()
-    self._client.trajectory_writer = self._writer
-    self._writer.return_value = self._writer
+    self._mock_client = mock.MagicMock()
+    self._mock_writer = mock.MagicMock()
+    self._mock_client.trajectory_writer = self._mock_writer
+    self._mock_writer.return_value = self._mock_writer
+
+    self._table_name = 'uniform_table'
+    self._table = reverb.Table(
+        self._table_name,
+        max_size=100,
+        sampler=reverb.selectors.Uniform(),
+        remover=reverb.selectors.Fifo(),
+        rate_limiter=reverb.rate_limiters.MinSize(1))
+    self._reverb_server = reverb.Server([self._table], port=None)
+    self._reverb_client = self._reverb_server.localhost_client()
 
   @parameterized.named_parameters(
       (
           'add_trajectory_observer',
           _create_add_trajectory_observer_fn(
               table_name='test_table', sequence_length=2),
-          _env_creator(3),
+          _env_creator(episode_len=3),
           3,  # expected_items
           2,  # writer_call_counts
           4,  # max_steps
@@ -294,7 +305,7 @@ class ReverbObserverTest(parameterized.TestCase):
           'add_trajectory_episode_observer',
           _create_add_episode_observer_fn(
               table_name='test_table', max_sequence_length=8, priority=3),
-          _env_creator(3),
+          _env_creator(episode_len=3),
           2,  # expected_items
           3,  # writer_call_counts
           8,  # max_steps
@@ -303,7 +314,7 @@ class ReverbObserverTest(parameterized.TestCase):
           'add_trajectory_observer_stride2',
           _create_add_trajectory_observer_fn(
               table_name='test_table', sequence_length=2, stride_length=2),
-          _env_creator(3),
+          _env_creator(episode_len=3),
           2,  # expected_items
           2,  # writer_call_counts
           4,  # max_steps
@@ -316,7 +327,7 @@ class ReverbObserverTest(parameterized.TestCase):
               stride_length=1,
               pad_end_of_episodes=True,
               tile_end_of_episodes=True),
-          _env_creator(5),
+          _env_creator(episode_len=5),
           12,  # expected_items
           3,  # writer_call_counts
           11,  # max_steps
@@ -330,7 +341,7 @@ class ReverbObserverTest(parameterized.TestCase):
               stride_length=2,
               pad_end_of_episodes=True,
               tile_end_of_episodes=True),
-          _env_creator(5),
+          _env_creator(episode_len=5),
           6,  # expected_items
           3,  # writer_call_counts
           11,  # max_steps
@@ -344,7 +355,7 @@ class ReverbObserverTest(parameterized.TestCase):
               stride_length=3,
               pad_end_of_episodes=True,
               tile_end_of_episodes=True),
-          _env_creator(5),
+          _env_creator(episode_len=5),
           4,  # expected_items
           3,  # writer_call_counts
           11,  # max_steps
@@ -358,7 +369,7 @@ class ReverbObserverTest(parameterized.TestCase):
               stride_length=4,
               pad_end_of_episodes=True,
               tile_end_of_episodes=True),
-          _env_creator(5),
+          _env_creator(episode_len=5),
           4,  # expected_items
           3,  # writer_call_counts
           11,  # max_steps
@@ -368,7 +379,7 @@ class ReverbObserverTest(parameterized.TestCase):
           'add_sequence_observer',
           _create_add_sequence_observer_fn(
               table_name='test_table', sequence_length=2, stride_length=2),
-          _env_creator(3),
+          _env_creator(episode_len=3),
           2,  # expected_items
           1,  # writer_call_counts
           4,  # max_steps
@@ -377,15 +388,15 @@ class ReverbObserverTest(parameterized.TestCase):
   def test_observer_writes(self, create_observer_fn, env_fn, expected_items,
                            writer_call_counts, max_steps, append_count):
     env = env_fn()
-    with create_observer_fn(self._client) as observer:
+    with create_observer_fn(self._mock_client) as observer:
       policy = _create_random_policy_from_env(env)
       driver = py_driver.PyDriver(
           env, policy, observers=[observer], max_steps=max_steps)
       driver.run(env.reset())
 
-    self.assertEqual(writer_call_counts, self._writer.call_count)
-    self.assertEqual(append_count, self._writer.append.call_count)
-    self.assertEqual(expected_items, self._writer.create_item.call_count)
+    self.assertEqual(writer_call_counts, self._mock_writer.call_count)
+    self.assertEqual(append_count, self._mock_writer.append.call_count)
+    self.assertEqual(expected_items, self._mock_writer.create_item.call_count)
 
   @parameterized.named_parameters(
       (
@@ -433,19 +444,19 @@ class ReverbObserverTest(parameterized.TestCase):
                            expected_items, append_count_from_reset,
                            expected_items_from_reset):
     env = _env_creator(5)()
-    with create_observer_fn(self._client) as observer:
+    with create_observer_fn(self._mock_client) as observer:
       policy = _create_random_policy_from_env(env)
       driver = py_driver.PyDriver(
           env, policy, observers=[observer], max_steps=11)
       driver.run(env.reset())
 
-      self.assertEqual(append_count, self._writer.append.call_count)
-      self.assertEqual(expected_items, self._writer.create_item.call_count)
+      self.assertEqual(append_count, self._mock_writer.append.call_count)
+      self.assertEqual(expected_items, self._mock_writer.create_item.call_count)
       observer.reset(write_cached_steps=reset_with_write_cached_steps)
       self.assertEqual(append_count + append_count_from_reset,
-                       self._writer.append.call_count)
+                       self._mock_writer.append.call_count)
       self.assertEqual(expected_items + expected_items_from_reset,
-                       self._writer.create_item.call_count)
+                       self._mock_writer.create_item.call_count)
 
   def test_observer_writes_multi_tables(self):
     episode_length = 3
@@ -456,22 +467,40 @@ class ReverbObserverTest(parameterized.TestCase):
         sequence_length=episode_length,
         stride_length=episode_length)
     env = _env_creator(episode_length)()
-    with create_observer_fn(self._client) as observer:
+    with create_observer_fn(self._mock_client) as observer:
       policy = _create_random_policy_from_env(env)
       driver = py_driver.PyDriver(
           env, policy, observers=[observer], max_steps=collect_step_count)
       driver.run(env.reset())
 
     self.assertEqual(table_count * int(collect_step_count / episode_length),
-                     self._writer.create_item.call_count)
+                     self._mock_writer.create_item.call_count)
+
+  def test_trajectory_observer_no_mock(self):
+    create_observer_fn = _create_add_trajectory_observer_fn(
+        table_name=self._table_name,
+        sequence_length=2)
+    env = _env_creator(episode_len=6)()
+
+    self._reverb_client.reset(self._table_name)
+    with create_observer_fn(self._reverb_client) as observer:
+      policy = _create_random_policy_from_env(env)
+      driver = py_driver.PyDriver(
+          env, policy, observers=[observer], max_steps=5)
+      driver.run(env.reset())
+      # Give it some time for the items to reach Reverb.
+      time.sleep(1)
+
+      self.assertEqual(observer._cached_steps, 5)
+      self.assertEqual(self._table.info.current_size, 4)
 
   def test_episodic_observer_overflow_episode_bypass(self):
-    env1 = _env_creator(3)()
-    env2 = _env_creator(4)()
+    env1 = _env_creator(episode_len=3)()
+    env2 = _env_creator(episode_len=4)()
     with _create_add_episode_observer_fn(
         table_name='test_table', max_sequence_length=4,
         priority=1,
-        bypass_partial_episodes=True)(self._client) as observer:
+        bypass_partial_episodes=True)(self._mock_client) as observer:
       policy = _create_random_policy_from_env(env1)
       # env1 -> writes only ONE episode. Note that `max_sequence_length`
       # must be one more than episode length. As in TF-Agents, we append
@@ -485,13 +514,13 @@ class ReverbObserverTest(parameterized.TestCase):
       driver = py_driver.PyDriver(
           env2, policy, observers=[observer], max_steps=6)
       driver.run(env2.reset())
-    self.assertEqual(1, self._writer.create_item.call_count)
+    self.assertEqual(1, self._mock_writer.create_item.call_count)
 
   def test_episodic_observer_overflow_episode_raise_value_error(self):
-    env = _env_creator(3)()
+    env = _env_creator(episode_len=3)()
     with _create_add_episode_observer_fn(
         table_name='test_table', max_sequence_length=2,
-        priority=1)(self._client) as observer:
+        priority=1)(self._mock_client) as observer:
       policy = _create_random_policy_from_env(env)
       driver = py_driver.PyDriver(
           env, policy, observers=[observer], max_steps=4)
@@ -501,14 +530,14 @@ class ReverbObserverTest(parameterized.TestCase):
   def test_episodic_observer_assert_sequence_length_positive(self):
     with self.assertRaises(ValueError):
       _ = reverb_utils.ReverbAddEpisodeObserver(
-          self._client,
+          self._mock_client,
           table_name='test_table',
           max_sequence_length=-1,
           priority=3)
 
   def test_episodic_observer_update_priority(self):
     observer = reverb_utils.ReverbAddEpisodeObserver(
-        self._client,
+        self._mock_client,
         table_name='test_table',
         max_sequence_length=1,
         priority=3)
@@ -516,20 +545,25 @@ class ReverbObserverTest(parameterized.TestCase):
     observer.update_priority(4)
     self.assertEqual(observer._priority, 4)
 
-  def test_episodic_observer_num_steps(self):
+  def test_episodic_observer_no_mock(self):
     create_observer_fn = _create_add_episode_observer_fn(
-        table_name='test_table',
+        table_name=self._table_name,
         max_sequence_length=8,
         priority=3)
-    env = _env_creator(3)()
-    with create_observer_fn(self._client) as observer:
+    env = _env_creator(episode_len=3)()
+
+    self._reverb_client.reset(self._table_name)
+    with create_observer_fn(self._reverb_client) as observer:
       policy = _create_random_policy_from_env(env)
       driver = py_driver.PyDriver(
           env, policy, observers=[observer], max_steps=10)
       driver.run(env.reset())
-      # After each episode, we reset `cached_steps`.
+      # Give it some time for the items to reach Reverb.
+      time.sleep(1)
+
       # We run the driver for 3 full episode and one step.
       self.assertEqual(observer._cached_steps, 1)
+      self.assertEqual(self._table.info.current_size, 3)
 
 
 if __name__ == '__main__':
