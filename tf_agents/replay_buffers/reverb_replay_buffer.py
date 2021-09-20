@@ -168,18 +168,44 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
     """
     return self.get_table_info().current_size
 
-  def _add_batch(self, items):
-    """Adds a batch of items to the replay buffer."""
+  def add_batch(self, items):
+    """Adds a batch of items to the replay buffer.
+
+    ***Warning***: `ReverbReplayBuffer` does not support `add_batch`. See
+    `reverb_utils.ReverbObserver` for more information on how to add data
+    to the buffer.
+
+    Args:
+      items: Ignored.
+
+    Returns:
+      Nothing.
+
+    Raises: NotImplementedError
+    """
     raise NotImplementedError(
         'ReverbReplayBuffer does not support `add_batch`. See '
         '`reverb_utils.ReverbObserver` for more information on how to add data '
         'to the buffer.')
 
-  def _get_next(self,
-                sample_batch_size=None,
-                num_steps=None,
-                time_stacked=True):
-    """Returns an item or batch of items from the buffer."""
+  def get_next(self, sample_batch_size=None, num_steps=None, time_stacked=True):
+    """Returns an item or batch of items from the buffer.
+
+    ***Warning***: `ReverbReplayBuffer` does not support `get_next`. See
+    `reverb_utils.ReverbObserver` for more information on how to retrieve data
+    from the buffer.
+
+    Args:
+      sample_batch_size: Ignored.
+      num_steps: Ignored.
+      time_stacked: Ignored.
+
+    Returns:
+      Nothing.
+
+    Raises:
+      NotImplementedError
+    """
     raise NotImplementedError('ReverbReplayBuffer does not support `get_next`.')
 
   def _as_dataset(self,
@@ -372,8 +398,20 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
 
     return dataset
 
-  def _gather_all(self):
-    """Returns all the items in buffer."""
+  def gather_all(self):
+    """Returns all the items in buffer.
+
+    ***Warning***: `ReverbReplayBuffer` does not support `gather_all`. See
+    `reverb_utils.ReverbObserver` for more information on how to retrieve data
+    from the buffer.
+
+    Returns:
+      Nothing.
+
+    Raises:
+      NotImplementedError
+
+    """
     raise NotImplementedError(
         'ReverbReplayBuffer does not support `gather_all`.')
 
