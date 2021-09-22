@@ -61,7 +61,8 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       batch_size: Optional[int] = None,
       use_nest_path_signatures: bool = True,
       save_greedy_policy=True,
-      save_collect_policy=True
+      save_collect_policy=True,
+      input_fn_and_spec: Optional[policy_saver.InputFnAndSpecType] = None,
   ):
     """Initializes a PolicySavedModelTrigger.
 
@@ -93,11 +94,18 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       save_greedy_policy: Disable when an agent's policy distribution method
         does not support mode.
       save_collect_policy: Disable when not saving collect policy.
+      input_fn_and_spec: A `(input_fn, tensor_spec)` tuple where input_fn is a
+        function that takes inputs according to tensor_spec and converts them to
+        the `(time_step, policy_state)` tuple that is used as the input to the
+        action_fn. When `input_fn_and_spec` is set, `tensor_spec` is the input
+        for the action signature. When `input_fn_and_spec is None`, the action
+        signature takes as input `(time_step, policy_state)`.
     """
     if async_saving and metadata_metrics:
       raise NotImplementedError('Support for metadata_metrics is not '
                                 'implemented for async policy saver.')
 
+    self._agent = agent
     self._train_step = train_step
     self._async_saving = async_saving
     self._metadata_metrics = metadata_metrics or {}
@@ -105,6 +113,7 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         k: tf.Variable(0, dtype=v.result().dtype, shape=v.result().shape)
         for k, v in self._metadata_metrics.items()
     }
+    self._input_fn_and_spec = input_fn_and_spec
 
     greedy = None
     if isinstance(agent.policy, greedy_policy.GreedyPolicy):
@@ -167,12 +176,14 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
         train_step=self._train_step,
         metadata=self._metadata,
         use_nest_path_signatures=use_nest_path_signatures,
+        input_fn_and_spec=self._input_fn_and_spec,
     )
     if self._async_saving:
       saver = async_policy_saver.AsyncPolicySaver(saver)
     return saver
 
   def _save_fn(self) -> None:
+    self._agent.post_process_policy()
     for k, v in self._metadata_metrics.items():
       self._metadata[k].assign(v.result())
     self._raw_policy_saver.save_checkpoint(
