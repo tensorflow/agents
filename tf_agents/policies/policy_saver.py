@@ -72,6 +72,16 @@ def _check_spec(spec):
         (tf.nest.map_structure(lambda s: s.name or '<MISSING>', spec),))
 
 
+def _check_compatible(spec, tensor, ignore_outer_dims=True):
+  """Checks if `spec` is compatible with `tensor`, maybe ignoring outer dims."""
+  if ignore_outer_dims:
+    tensor = tensor_spec.remove_outer_dims_nest(
+        tensor, tensor.shape.ndims - spec.shape.ndims)
+  if not spec.is_compatible_with(tensor):
+    raise ValueError('Tensor is incompatible with spec. spec = {0}, '
+                     'tensor = {1}'.format(spec, tensor))
+
+
 def add_batch_dim(spec, outer_dims):
   return tf.TensorSpec(
       shape=tf.TensorShape(outer_dims).concatenate(spec.shape),
@@ -326,17 +336,15 @@ class PolicySaver(object):
       @common.function()
       def polymorphic_action_fn(example):
         action_inputs = input_fn_and_spec[0](example)
-        tf.nest.map_structure(
-            lambda spec, t: tf.Assert(spec.is_compatible_with(t[0]), [t]),
-            action_fn_input_spec, action_inputs)
+        tf.nest.map_structure(_check_compatible, action_fn_input_spec,
+                              action_inputs)
         return action_fn(*action_inputs)
 
       @common.function()
       def polymorphic_distribution_fn(example):
         action_inputs = input_fn_and_spec[0](example)
-        tf.nest.map_structure(
-            lambda spec, t: tf.Assert(spec.is_compatible_with(t[0]), [t]),
-            action_fn_input_spec, action_inputs)
+        tf.nest.map_structure(_check_compatible, action_fn_input_spec,
+                              action_inputs)
         return distribution_fn(*action_inputs)
 
       batched_input_spec = tf.nest.map_structure(
