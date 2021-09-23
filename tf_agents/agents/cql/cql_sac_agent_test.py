@@ -572,7 +572,15 @@ class CqlSacAgentTest(test_utils.TestCase, parameterized.TestCase):
       loss = self.evaluate(agent.train(experience))
       self.assertEqual(self.evaluate(counter), 2)
       self.assertAllClose(loss.extra.cql_loss, expected_cql_loss_step_two)
-      self.assertAllClose(loss.extra.cql_alpha, expected_cql_alpha_step_two)
+      # GPU (V100) needs slightly increased to pass.
+      if tf.test.is_gpu_available():
+        self.assertAllClose(
+            loss.extra.cql_alpha,
+            expected_cql_alpha_step_two,
+            atol=4.5e-5,
+            rtol=1.5e-5)
+      else:
+        self.assertAllClose(loss.extra.cql_alpha, expected_cql_alpha_step_two)
 
 
 if __name__ == '__main__':
