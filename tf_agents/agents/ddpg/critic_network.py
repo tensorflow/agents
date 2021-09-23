@@ -39,6 +39,7 @@ class CriticNetwork(network.Network):
                output_activation_fn=None,
                kernel_initializer=None,
                last_kernel_initializer=None,
+               last_layer=None,
                name='CriticNetwork'):
     """Creates an instance of `CriticNetwork`.
 
@@ -91,6 +92,7 @@ class CriticNetwork(network.Network):
         regression layer. If None, a VarianceScaling initializer will be used.
       last_kernel_initializer: kernel initializer for the value regression
          layer. If None, a RandomUniform initializer will be used.
+      last_layer: An optional custom last layer.
       name: A string representing name of the network.
 
     Raises:
@@ -144,12 +146,13 @@ class CriticNetwork(network.Network):
         kernel_initializer=kernel_initializer,
         name='joint_mlp')
 
-    self._joint_layers.append(
-        tf.keras.layers.Dense(
-            1,
-            activation=output_activation_fn,
-            kernel_initializer=last_kernel_initializer,
-            name='value'))
+    if not last_layer:
+      last_layer = tf.keras.layers.Dense(
+          1,
+          activation=output_activation_fn,
+          kernel_initializer=last_kernel_initializer,
+          name='value')
+    self._joint_layers.append(last_layer)
 
   def call(self, inputs, step_type=(), network_state=(), training=False):
     observations, actions = inputs
