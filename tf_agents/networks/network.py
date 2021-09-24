@@ -423,7 +423,7 @@ class Network(tf.keras.layers.Layer):
         and not call_argspec.keywords):
       normalized_kwargs.pop("network_state", None)
 
-    outputs, new_state = super(Network, self).__call__(**normalized_kwargs)
+    outputs, new_state = super(Network, self).__call__(**normalized_kwargs)  # pytype: disable=attribute-error  # typed-keras
 
     nest_utils.assert_matching_dtypes_and_inner_shapes(
         new_state,
