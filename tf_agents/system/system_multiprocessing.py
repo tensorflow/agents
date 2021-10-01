@@ -263,7 +263,8 @@ class GinStateSaver(multiprocessing_core.StateSaver):
     return gin.config.config_str()
 
   def restore_state(self, state):
-    gin.config.parse_config(state)
+    with gin.unlock_config():
+      gin.config.parse_config(state)
 
 
 class OpenAIGymStateSaver(multiprocessing_core.StateSaver):
