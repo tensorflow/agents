@@ -345,7 +345,7 @@ def train_eval(
     # added to Reverb for training. We throw away those extra steps without
     # padding to align with the paper implementation which never collects them
     # in the first place.
-    rb_observer.reset(write_cached_steps=False)
+    rb_observer.reset(write_cached_steps=False, restart_writer=False)
     agent_learner.run()
     reverb_replay_train.clear()
     reverb_replay_normalization.clear()

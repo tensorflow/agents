@@ -21,7 +21,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Text, Union, Sequence
+from typing import Text, Union, Sequence, Optional
 
 from absl import logging
 import tensorflow as tf
@@ -205,7 +205,9 @@ class ReverbAddEpisodeObserver(object):
     """
     self._writer.flush()
 
-  def reset(self, write_cached_steps: bool = True) -> None:
+  def reset(self,
+            write_cached_steps: bool = True,
+            restart_writer: Optional[bool] = True) -> None:
     """Resets the state of the observer.
 
     **Note**: Reset should be called only after all collection has finished
@@ -215,6 +217,9 @@ class ReverbAddEpisodeObserver(object):
       write_cached_steps: By default, if there is remaining data in the cache,
         write them to Reverb before clearing the cache. If `write_cached_steps`
         is `False`, throw away the cached data instead.
+      restart_writer: A boolean. Whether to just end_episode and flush, or fully
+        close and reopen the writer. For TrajectoryWriter is recommended to just
+        end episode since closing and re-opening is expensive.
     """
     if write_cached_steps:
       self._write_cached_steps()
@@ -222,8 +227,12 @@ class ReverbAddEpisodeObserver(object):
     self._cached_steps = 0
     self._overflow_episode = False
 
-    self.close()
-    self.open()
+    if self._writer is not None and not restart_writer:
+      self._writer.end_episode()
+      self._writer.flush()
+    else:
+      self.close()
+      self.open()
 
   def open(self) -> None:
     """Open the writer of the observer. This is a no-op if it's already open."""
@@ -407,7 +416,9 @@ class ReverbAddTrajectoryObserver(object):
     )
     return zero_step
 
-  def reset(self, write_cached_steps: bool = True) -> None:
+  def reset(self,
+            write_cached_steps: bool = True,
+            restart_writer: Optional[bool] = True) -> None:
     """Resets the state of the observer.
 
     **Note**: Reset should be called only after all collection has finished
@@ -418,6 +429,9 @@ class ReverbAddTrajectoryObserver(object):
         cached trajectory. When this argument is True, the function attempts to
         write the cached data before resetting (optionally with padding).
         Otherwise, the cached data gets dropped.
+      restart_writer: A boolean. Whether to just end_episode and flush, or fully
+        close and reopen the writer. For TrajectoryWriter is recommended to just
+        end episode since closing and re-opening is expensive.
     """
     # Write the cached steps if requested and if the cache is not empty.
     if write_cached_steps and self._last_trajectory is not None:
@@ -448,8 +462,12 @@ class ReverbAddTrajectoryObserver(object):
     self._cached_steps = 0
     self._last_trajectory = None
 
-    self.close()
-    self.open()
+    if self._writer is not None and not restart_writer:
+      self._writer.end_episode()
+      self._writer.flush()
+    else:
+      self.close()
+      self.open()
 
   def open(self) -> None:
     """Open the writer of the observer."""
