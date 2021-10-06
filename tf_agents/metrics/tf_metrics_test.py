@@ -374,7 +374,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
 
       self.assertAllClose(expected_result, self.evaluate(metric.result()))
       self.evaluate(metric.reset())
-      reset_result = tf.nest.map_structure(tf.zeros_like, expected_result)
+      reset_result = self.evaluate(
+          tf.nest.map_structure(tf.zeros_like, expected_result))
       self.assertAllClose(reset_result, self.evaluate(metric.result()))
 
   @parameterized.named_parameters([
