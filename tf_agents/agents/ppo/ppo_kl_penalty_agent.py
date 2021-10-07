@@ -101,6 +101,7 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
       # clients onto Reverb.
       compute_value_and_advantage_in_train: bool = True,
       update_normalizers_in_train: bool = True,
+      aggregate_losses_across_replicas: bool = True,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
       name: Optional[Text] = None):
@@ -230,6 +231,10 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         `update_reward_normalizer` and `update_observation_normalizer` methods
         after all iterations of the same trajectory are done. This ensures that
         normalizers are updated in the same way as (Schulman, 2017).
+      aggregate_losses_across_replicas: only applicable to setups using multiple
+        relicas. Default to aggregating across multiple cores using tf_agents.
+        common.aggregate_losses. If set to `False`, use `reduce_mean` directly,
+        which is faster but may impact learning results.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
@@ -277,6 +282,7 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         debug_summaries=debug_summaries,
         compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
         update_normalizers_in_train=update_normalizers_in_train,
+        aggregate_losses_across_replicas=aggregate_losses_across_replicas,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
         name=name,

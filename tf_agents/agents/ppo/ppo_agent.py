@@ -149,6 +149,7 @@ class PPOAgent(tf_agent.TFAgent):
       # clients onto Reverb.
       compute_value_and_advantage_in_train: bool = True,
       update_normalizers_in_train: bool = True,
+      aggregate_losses_across_replicas: bool = True,
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
@@ -282,6 +283,10 @@ class PPOAgent(tf_agent.TFAgent):
         the same trajectories. In that case, you would need to use `PPOLearner`
         (which updates all the normalizers outside of the agent). This ensures
         that normalizers are updated in the same way as (Schulman, 2017).
+      aggregate_losses_across_replicas: only applicable to setups using multiple
+        relicas. Default to aggregating across multiple cores using tf_agents.
+        common.aggregate_losses. If set to `False`, use `reduce_mean` directly,
+        which is faster but may impact learning results.
       debug_summaries: A bool to gather debug summaries.
       summarize_grads_and_vars: If true, gradient summaries will be written.
       train_step_counter: An optional counter to increment every time the train
@@ -330,6 +335,7 @@ class PPOAgent(tf_agent.TFAgent):
     self._check_numerics = check_numerics
     self._compute_value_and_advantage_in_train = (
         compute_value_and_advantage_in_train)
+    self._aggregate_losses_across_replicas = aggregate_losses_across_replicas
     self.update_normalizers_in_train = update_normalizers_in_train
     if not isinstance(self._optimizer, tf.keras.optimizers.Optimizer):
       logging.warning(
@@ -1057,9 +1063,14 @@ class PPOAgent(tf_agent.TFAgent):
             common.entropy(current_policy_distribution, self.action_spec),
             tf.float32)
 
-        entropy_reg_loss = common.aggregate_losses(
-            per_example_loss=-entropy,
-            sample_weight=weights).total_loss * self._entropy_regularization
+        if self._aggregate_losses_across_replicas:
+          entropy_reg_loss = common.aggregate_losses(
+              per_example_loss=-entropy,
+              sample_weight=weights).total_loss * self._entropy_regularization
+        else:
+          entropy_reg_loss = (
+              tf.math.reduce_mean(-entropy * weights) *
+              self._entropy_regularization)
 
         if self._check_numerics:
           entropy_reg_loss = tf.debugging.check_numerics(
@@ -1145,10 +1156,15 @@ class PPOAgent(tf_agent.TFAgent):
       value_estimation_error = tf.maximum(value_estimation_error,
                                           clipped_value_estimation_error)
 
-    value_estimation_loss = (
-        common.aggregate_losses(
-            per_example_loss=value_estimation_error,
-            sample_weight=weights).total_loss * self._value_pred_loss_coef)
+    if self._aggregate_losses_across_replicas:
+      value_estimation_loss = (
+          common.aggregate_losses(
+              per_example_loss=value_estimation_error,
+              sample_weight=weights).total_loss * self._value_pred_loss_coef)
+    else:
+      value_estimation_loss = tf.math.reduce_mean(
+          value_estimation_error * weights) * self._value_pred_loss_coef
+
     if debug_summaries:
       tf.compat.v2.summary.scalar(
           name='value_pred_avg',
@@ -1244,8 +1260,12 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       policy_gradient_loss = -per_timestep_objective
 
-    policy_gradient_loss = common.aggregate_losses(
-        per_example_loss=policy_gradient_loss, sample_weight=weights).total_loss
+    if self._aggregate_losses_across_replicas:
+      policy_gradient_loss = common.aggregate_losses(
+          per_example_loss=policy_gradient_loss,
+          sample_weight=weights).total_loss
+    else:
+      policy_gradient_loss = tf.math.reduce_mean(policy_gradient_loss * weights)
 
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
