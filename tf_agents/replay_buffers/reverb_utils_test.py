@@ -298,7 +298,7 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table', sequence_length=2),
           _env_creator(episode_len=3),
           3,  # expected_items
-          2,  # writer_call_counts
+          1,  # writer_call_counts
           4,  # max_steps
           5),  # append_count
       (
@@ -307,7 +307,7 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table', max_sequence_length=8, priority=3),
           _env_creator(episode_len=3),
           2,  # expected_items
-          3,  # writer_call_counts
+          1,  # writer_call_counts
           8,  # max_steps
           10),  # append_count
       (
@@ -316,7 +316,7 @@ class ReverbObserverTest(parameterized.TestCase):
               table_name='test_table', sequence_length=2, stride_length=2),
           _env_creator(episode_len=3),
           2,  # expected_items
-          2,  # writer_call_counts
+          1,  # writer_call_counts
           4,  # max_steps
           5),  # append_count
       (
@@ -329,7 +329,7 @@ class ReverbObserverTest(parameterized.TestCase):
               tile_end_of_episodes=True),
           _env_creator(episode_len=5),
           12,  # expected_items
-          3,  # writer_call_counts
+          1,   # writer_call_counts
           11,  # max_steps
           19,  # append_count
       ),
@@ -343,7 +343,7 @@ class ReverbObserverTest(parameterized.TestCase):
               tile_end_of_episodes=True),
           _env_creator(episode_len=5),
           6,  # expected_items
-          3,  # writer_call_counts
+          1,  # writer_call_counts
           11,  # max_steps
           19,  # append_count
       ),
@@ -357,7 +357,7 @@ class ReverbObserverTest(parameterized.TestCase):
               tile_end_of_episodes=True),
           _env_creator(episode_len=5),
           4,  # expected_items
-          3,  # writer_call_counts
+          1,  # writer_call_counts
           11,  # max_steps
           19,  # append_count
       ),
@@ -371,7 +371,7 @@ class ReverbObserverTest(parameterized.TestCase):
               tile_end_of_episodes=True),
           _env_creator(episode_len=5),
           4,  # expected_items
-          3,  # writer_call_counts
+          1,  # writer_call_counts
           11,  # max_steps
           19,  # append_count
       ),
