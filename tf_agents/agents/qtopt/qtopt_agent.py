@@ -684,7 +684,8 @@ class QtOptAgent(tf_agent.TFAgent):
     if not self._in_graph_bellman_update:
       return info['target_q']
 
-    next_action_policy_step = self._policy.action(next_time_steps)
+    next_action_policy_step = self._policy.action(
+        next_time_steps, network_state)
 
     if self._enable_td3:
       q_values_target_delayed, _ = self._target_q_network_delayed(
