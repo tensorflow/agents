@@ -116,7 +116,6 @@ class CEMPolicy(tf_policy.TFPolicy):
                preprocess_state_action: bool = True,
                training: bool = False,
                weights: types.NestedTensorOrArray = None,
-               multi_task_multi_head: bool = False,
                name: Optional[str] = None):
     """Builds a CEM-Policy given a network and a sampler.
 
@@ -144,10 +143,6 @@ class CEMPolicy(tf_policy.TFPolicy):
         happen after a few layers inside the network.
       training: Whether it is in training mode or inference mode.
       weights: A nested structure of weights w/ the same structure as action.
-      multi_task_multi_head: Multi_task support. Assuming 1) a one_hot vector
-        'task_id' exists in observation. 2) Q_network is a multi_head network,
-        with each head representing a separate task. Using 'task_id' to select
-        Q value for each task.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -165,10 +160,9 @@ class CEMPolicy(tf_policy.TFPolicy):
             (action_spec, network_action_spec))
 
     if q_network:
-      if not multi_task_multi_head:
-        network_utils.check_single_floating_network_output(
-            q_network.create_variables(),
-            expected_output_shape=(), label=str(q_network))
+      network_utils.check_single_floating_network_output(
+          q_network.create_variables(),
+          expected_output_shape=(), label=str(q_network))
       policy_state_spec = q_network.state_spec
     else:
       policy_state_spec = ()
@@ -184,7 +178,6 @@ class CEMPolicy(tf_policy.TFPolicy):
     self._observation_spec = time_step_spec.observation
     self._training = training
     self._preprocess_state_action = preprocess_state_action
-    self._multi_task_multi_head = multi_task_multi_head
     self._weights = weights
 
     super(CEMPolicy, self).__init__(
@@ -374,10 +367,6 @@ class CEMPolicy(tf_policy.TFPolicy):
       policy_state: A Tensor, or a nested dict, list or tuple of Tensors
         representing the previous policy_state.
 
-    Raises:
-      ValueError: If `task_id` is not in `observation` when the policy is in
-        multi_task_multi_head mode.
-
     Returns:
       a tensor of shape [B, N] representing the scores for the actions.
     """
@@ -399,15 +388,6 @@ class CEMPolicy(tf_policy.TFPolicy):
 
     scores, next_policy_state = self.compute_target_q(
         observation, sample_actions, step_type, policy_state)  # [BxN]
-
-    if self._multi_task_multi_head:
-      if 'task_id' not in observation:
-        raise ValueError('In order to support multi_task_multi_head, a one_hot'
-                         ' task_id field is required in observation.')
-
-      task_id = nest_utils.tile_batch(
-          tf.argmax(observation['task_id'], axis=-1), self._num_samples)
-      scores = tf.gather(scores, task_id, batch_dims=1)
 
     if self._preprocess_state_action:
       next_policy_state = tf.nest.map_structure(

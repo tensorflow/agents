@@ -124,7 +124,6 @@ class QtOptAgent(tf_agent.TFAgent):
       debug_summaries=False,
       summarize_grads_and_vars=False,
       train_step_counter=None,
-      multi_task_multi_head=False,
       info_spec=None,
       name=None):
     """Creates a Qtopt Agent.
@@ -209,10 +208,6 @@ class QtOptAgent(tf_agent.TFAgent):
         will be written during training.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
-      multi_task_multi_head: Multi_task support. Assuming 1) a one_hot vector
-        'task_id' exists in observation. 2) Q_network is a multi_head network,
-        with each head representing a separate task. Using 'task_id' to select
-        Q value for each task.
       info_spec: If not None, the policy info spec is set to this spec.
       name: The name of this agent. All variables in this module will fall under
         that name. Defaults to the class name.
@@ -241,7 +236,6 @@ class QtOptAgent(tf_agent.TFAgent):
         }
     else:
       self._info_spec = ()
-    self._multi_task_multi_head = multi_task_multi_head
 
     self._q_network = q_network
     net_observation_spec = (time_step_spec.observation, action_spec)
@@ -336,10 +330,6 @@ class QtOptAgent(tf_agent.TFAgent):
   def enable_td3(self):
     return self._enable_td3
 
-  @property
-  def multi_task_multi_head(self):
-    return self._multi_task_multi_head
-
   def _setup_data_converter(self, q_network, gamma, n_step_update):
     if q_network.state_spec:
       if not self._in_graph_bellman_update:
@@ -392,7 +382,6 @@ class QtOptAgent(tf_agent.TFAgent):
         num_elites=self._num_elites_cem,
         num_iterations=self._num_iter_cem,
         emit_log_probability=emit_log_probability,
-        multi_task_multi_head=self._multi_task_multi_head,
         training=False)
 
     collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
@@ -401,8 +390,6 @@ class QtOptAgent(tf_agent.TFAgent):
     return policy, collect_policy
 
   def _check_network_output(self, net, label):
-    if self._multi_task_multi_head:
-      return
     network_utils.check_single_floating_network_output(
         net.create_variables(), expected_output_shape=(), label=label)
 
@@ -671,13 +658,6 @@ class QtOptAgent(tf_agent.TFAgent):
                                   network_state=network_state,
                                   training=training)
 
-    if self._multi_task_multi_head:
-      if 'task_id' not in time_steps.observation:
-        raise ValueError('In order to support multi_task_multi_head, a one_hot'
-                         ' task_id field is required in observation.')
-      task_id = tf.argmax(time_steps.observation['task_id'], axis=-1)
-      q_values = tf.gather(q_values, task_id, batch_dims=1)
-
     return q_values
 
   def _compute_next_q_values(self, next_time_steps, info, network_state=()):
@@ -700,15 +680,6 @@ class QtOptAgent(tf_agent.TFAgent):
           network_state=network_state,
           training=False)
 
-      if self._multi_task_multi_head:
-        if 'task_id' not in next_time_steps.observation:
-          raise ValueError('In order to support multi_task_multi_head, a '
-                           'one_hot task_id field is required in observation.')
-        task_id = tf.argmax(next_time_steps.observation['task_id'], axis=-1)
-        q_values_target_delayed = tf.gather(
-            q_values_target_delayed, task_id, batch_dims=1)
-        q_values_target_delayed_2 = tf.gather(
-            q_values_target_delayed_2, task_id, batch_dims=1)
       q_next_state = tf.minimum(q_values_target_delayed_2,
                                 q_values_target_delayed)
     else:
