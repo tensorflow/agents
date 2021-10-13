@@ -79,6 +79,7 @@ def main(_):
   # Create the signature for the replay buffer holding observed experience.
   replay_buffer_signature = tensor_spec.from_spec(
       collect_policy.collect_data_spec)
+  replay_buffer_signature = tensor_spec.add_outer_dim(replay_buffer_signature)
   logging.info('Signature of experience: \n%s', replay_buffer_signature)
 
   if samples_per_insert is not None:
