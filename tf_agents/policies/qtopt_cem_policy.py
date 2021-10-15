@@ -107,6 +107,7 @@ class CEMPolicy(tf_policy.TFPolicy):
                sampler: cem_actions_sampler.ActionsSampler,
                init_mean: types.NestedArray,
                init_var: types.NestedArray,
+               actor_policy: Optional[tf_policy.TFPolicy] = None,
                minimal_var: float = 0.0001,
                info_spec: types.NestedSpecTensorOrArray = (),
                num_samples: int = 32,
@@ -127,6 +128,7 @@ class CEMPolicy(tf_policy.TFPolicy):
       sampler: Samples the actions needed for the CEM.
       init_mean: A list or tuple or scalar, reprenting initial mean for actions.
       init_var: A list or tuple or scalar, reprenting initial var for actions.
+      actor_policy: Optional actor policy.
       minimal_var: Minimal variance to prevent CEM distributon collapsing.
       info_spec: A policy info spec.
       num_samples: Number of samples to sample each round.
@@ -167,6 +169,7 @@ class CEMPolicy(tf_policy.TFPolicy):
     else:
       policy_state_spec = ()
 
+    self._actor_policy = actor_policy
     self._q_network = q_network
     self._init_mean = init_mean
     self._init_var = init_var
@@ -497,15 +500,37 @@ class CEMPolicy(tf_policy.TFPolicy):
 
     best_action = tf.nest.map_structure(select_best_action, best_actions)
 
+    best_action_consider_actor = best_action
+    best_score_consider_actor = best_scores[..., 0]
+    if self._actor_policy is not None:
+      potential_best_action = self._actor_policy.action(time_step).action
+      potential_best_q, _ = self.compute_target_q(
+          time_step.observation, potential_best_action)
+      use_cem = tf.cast(
+          best_score_consider_actor > potential_best_q, tf.float32)
+      best_score_consider_actor = (
+          best_score_consider_actor * use_cem +
+          (tf.ones_like(use_cem, tf.float32) - use_cem) * potential_best_q)
+
+      def select_best_action_consider_actor(action1, action2):
+        use_cem_expanded = tf.expand_dims(
+            tf.cast(use_cem, action1.dtype), axis=-1)
+        return (action1 * use_cem_expanded +
+                action2 * (tf.ones_like(use_cem_expanded, action1.dtype)
+                           - use_cem_expanded))
+      best_action_consider_actor = tf.nest.map_structure(
+          select_best_action_consider_actor,
+          best_action_consider_actor, potential_best_action)
+
     distribution = tf.nest.map_structure(tfp.distributions.Deterministic,
-                                         best_action)
+                                         best_action_consider_actor)
     if self._info_spec and 'target_q' in self._info_spec:
       batch_size = nest_utils.get_outer_shape(
           time_step, self._time_step_spec)[0]
       info = tf.nest.map_structure(
           lambda spec: tf.zeros(tf.concat([[batch_size], spec.shape], axis=-1)),
           self._info_spec)
-      info['target_q'] = best_scores[..., 0]
+      info['target_q'] = best_score_consider_actor
     else:
       batch_size = nest_utils.get_outer_shape(
           time_step, self._time_step_spec)[0]
