@@ -561,14 +561,12 @@ def to_proto(spec):
   """
   # Make sure spec is a tensor_spec.
   spec = from_spec(spec)
-  signature_encoder = nested_structure_coder.StructureCoder()
-  return signature_encoder.encode_structure(spec)
+  return nested_structure_coder.encode_structure(spec)
 
 
 def from_proto(spec_proto):
   """Decodes a struct_pb2.StructuredValue proto into a nested spec."""
-  signature_encoder = nested_structure_coder.StructureCoder()
-  return signature_encoder.decode_proto(spec_proto)
+  return nested_structure_coder.decode_proto(spec_proto)
 
 
 def from_packed_proto(spec_packed_proto):

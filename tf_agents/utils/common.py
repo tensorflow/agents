@@ -1169,9 +1169,8 @@ def save_spec(spec, file_path):
     spec: A nested structure of TensorSpecs.
     file_path: Path to save the encoded spec to.
   """
-  signature_encoder = nested_structure_coder.StructureCoder()
   spec = tensor_spec.from_spec(spec)
-  spec_proto = signature_encoder.encode_structure(spec)
+  spec_proto = nested_structure_coder.encode_structure(spec)
 
   dir_path = os.path.dirname(file_path)
   if not tf.io.gfile.exists(dir_path):
@@ -1200,8 +1199,7 @@ def load_spec(file_path):
   with tf.compat.v2.io.gfile.GFile(file_path, 'rb') as gfile:
     signature_proto = struct_pb2.StructuredValue.FromString(gfile.read())
 
-  signature_encoder = nested_structure_coder.StructureCoder()
-  return signature_encoder.decode_proto(signature_proto)
+  return nested_structure_coder.decode_proto(signature_proto)
 
 
 def extract_shared_variables(variables_1, variables_2):
