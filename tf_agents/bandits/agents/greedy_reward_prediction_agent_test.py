@@ -505,6 +505,37 @@ class AgentTest(tf.test.TestCase):
     agent.train(experience, None)
     self.evaluate(tf.compat.v1.initialize_all_variables())
 
+  def testNumSamplesList(self):
+    if not tf.executing_eagerly():
+      return
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    num_samples_list = []
+    for k in range(3):
+      num_samples_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+    agent = greedy_agent.GreedyRewardPredictionAgent(
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        optimizer=optimizer,
+        num_samples_list=num_samples_list)
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
+    rewards = np.array([0.5, 3.0], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, rewards)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    _, _ = agent.train(experience, None)
+    _, _ = agent.train(experience, None)
+    # Action 0 and 1 have 2 samples. Action 2 has 0 samples.
+    self.assertEqual(self.evaluate(num_samples_list[0].read_value()), 2)
+    self.assertEqual(self.evaluate(num_samples_list[1].read_value()), 2)
+    self.assertEqual(self.evaluate(num_samples_list[2].read_value()), 0)
+
   def testTrainPerArmAgentWithConstraint(self):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
     reward_spec = {

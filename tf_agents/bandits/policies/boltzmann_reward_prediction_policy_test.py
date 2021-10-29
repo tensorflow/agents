@@ -249,6 +249,33 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
     p_info = self.evaluate(action_step.info)
     self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3])
 
+  def testBoltzmannGumbelPredictedRewards(self):
+    tf.compat.v1.set_random_seed(1)
+    num_samples_list = []
+    for k in range(3):
+      num_samples_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+    num_samples_list[0].assign_add(2)
+    num_samples_list[1].assign_add(4)
+    num_samples_list[2].assign_add(1)
+    policy = boltzmann_reward_policy.BoltzmannRewardPredictionPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=DummyNet(self._obs_spec),
+        boltzmann_gumbel_exploration_constant=10.0,
+        emit_policy_info=('predicted_rewards_mean',),
+        num_samples_list=num_samples_list)
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
+    action_step = policy.action(time_step, seed=1)
+    self.assertEqual(action_step.action.shape.as_list(), [2])
+    self.assertEqual(action_step.action.dtype, tf.int32)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    p_info = self.evaluate(action_step.info)
+    self.assertAllEqual(p_info.predicted_rewards_mean.shape, [2, 3])
+
   def testPerArmRewards(self):
     tf.compat.v1.set_random_seed(3000)
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)

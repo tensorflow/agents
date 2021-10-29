@@ -20,7 +20,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Iterable, Optional, Text, Tuple
+from typing import Iterable, Optional, Text, Tuple, Sequence
 from absl import logging
 
 import gin
@@ -66,6 +66,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       enable_summaries: bool = True,
       emit_policy_info: Tuple[Text, ...] = (),
       train_step_counter: Optional[tf.Variable] = None,
+      num_samples_list: Sequence[tf.Variable] = (),
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
       name: Optional[Text] = None):
@@ -123,6 +124,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
+      num_samples_list: An optional list or tuple of tf.Variable's. It holds the
+        number of samples per action. If provided, it will be populated.
       laplacian_matrix: A float `Tensor` or a numpy array shaped
         `[num_actions, num_actions]`. This holds the Laplacian matrix used to
         regularize the smoothness of the estimated expected reward function.
@@ -147,6 +150,12 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
         action_spec)
     self._accepts_per_arm_features = accepts_per_arm_features
     self._constraints = constraints
+    if num_samples_list:
+      if len(num_samples_list) != self._num_actions:
+        ValueError('num_samples_list is expected to have length equal to the ',
+                   'number of actions: ', self._num_actions,
+                   ' , but found to be', len(num_samples_list))
+    self._num_samples_list = num_samples_list
 
     reward_network.create_variables()
     self._reward_network = reward_network
@@ -193,6 +202,10 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._as_trajectory = data_converter.AsTrajectory(
         self.data_context, sequence_length=None)
 
+  @property
+  def num_samples(self):
+    return self._num_samples_list
+
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
 
@@ -228,6 +241,19 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
 
     self._optimizer.apply_gradients(grads_and_vars)
     self.train_step_counter.assign_add(1)
+    if not self._accepts_per_arm_features and self._num_samples_list:
+      # Compute the number of samples for each action in the current batch.
+      actions_flattened = tf.reshape(experience.action, [-1])
+      num_samples_per_action_current = tf.unstack(
+          tf.reshape(
+              tf.math.bincount(
+                  actions_flattened,
+                  minlength=self._num_actions, maxlength=self._num_actions,
+                  dtype=tf.int32),
+              [self._num_actions]), axis=-1)
+      # Update the number of samples for each action.
+      self._num_samples_list = [a.assign_add(b) for a, b in zip(
+          self._num_samples_list, num_samples_per_action_current)]
 
     return loss_info
 

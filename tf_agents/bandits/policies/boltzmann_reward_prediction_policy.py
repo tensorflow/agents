@@ -20,7 +20,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Optional, Text, Tuple
+from typing import Optional, Text, Tuple, Sequence
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -46,11 +46,14 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
                action_spec: types.NestedTensorSpec,
                reward_network: types.Network,
                temperature: types.FloatOrReturningFloat = 1.0,
+               boltzmann_gumbel_exploration_constant: Optional[
+                   types.Float] = None,
                observation_and_action_constraint_splitter: Optional[
                    types.Splitter] = None,
                accepts_per_arm_features: bool = False,
                constraints: Tuple[constr.NeuralConstraint, ...] = (),
                emit_policy_info: Tuple[Text, ...] = (),
+               num_samples_list: Sequence[tf.Variable] = (),
                name: Optional[Text] = None):
     """Builds a BoltzmannRewardPredictionPolicy given a reward network.
 
@@ -65,6 +68,10 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
         callable via `network(observation, step_type) -> (output, final_state)`.
       temperature: float or callable that returns a float. The temperature used
         in the Boltzmann exploration.
+      boltzmann_gumbel_exploration_constant: optional positive float. When
+        provided, the policy implements Neural Bandit with Boltzmann-Gumbel
+        exploration from the paper:
+        N. Cesa-Bianchi et al., "Boltzmann Exploration Done Right", NIPS 2017.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -80,6 +87,8 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
       emit_policy_info: (tuple of strings) what side information we want to get
         as part of the policy info. Allowed values can be found in
         `policy_utilities.PolicyInfo`.
+      num_samples_list: list or tuple of tf.Variable's. Used only in
+        Boltzmann-Gumbel exploration. Otherwise, empty.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -108,6 +117,27 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
     reward_network.create_variables()
     self._reward_network = reward_network
     self._constraints = constraints
+
+    self._boltzmann_gumbel_exploration_constant = (
+        boltzmann_gumbel_exploration_constant)
+    self._num_samples_list = num_samples_list
+    if self._boltzmann_gumbel_exploration_constant is not None:
+      if self._boltzmann_gumbel_exploration_constant <= 0.0:
+        raise ValueError(
+            'The Boltzmann-Gumbel exploration constant is expected to be ',
+            'positive. Found: ', self._boltzmann_gumbel_exploration_constant)
+      if self._action_offset > 0:
+        raise NotImplementedError('Action offset is not supported when ',
+                                  'Boltzmann-Gumbel exploration is enabled.')
+      if accepts_per_arm_features:
+        raise NotImplementedError(
+            'Boltzmann-Gumbel exploration is not supported ',
+            'for arm features case.')
+      if len(self._num_samples_list) != self._expected_num_actions:
+        raise ValueError(
+            'Size of num_samples_list: ', len(self._num_samples_list),
+            ' does not match the expected number of actions:',
+            self._expected_num_actions)
 
     self._emit_policy_info = emit_policy_info
     predicted_rewards_mean = ()
@@ -189,27 +219,53 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
         time_step.observation, self._observation_and_action_constraint_splitter,
         self._constraints, self._expected_num_actions)
 
-    # Apply the temperature scaling, needed for Boltzmann exploration.
-    logits = predicted_reward_values / self._get_temperature_value()
+    if self._boltzmann_gumbel_exploration_constant is not None:
+      logits = predicted_reward_values
 
-    # Apply masking if needed. Overwrite the logits for invalid actions to
-    # logits.dtype.min.
-    if mask is not None:
-      almost_neg_inf = tf.constant(logits.dtype.min, dtype=logits.dtype)
-      logits = tf.compat.v2.where(
-          tf.cast(mask, tf.bool), logits, almost_neg_inf)
+      # Apply masking if needed. Overwrite the logits for invalid actions to
+      # logits.dtype.min.
+      if mask is not None:
+        almost_neg_inf = tf.constant(logits.dtype.min, dtype=logits.dtype)
+        logits = tf.compat.v2.where(
+            tf.cast(mask, tf.bool), logits, almost_neg_inf)
 
-    if self._action_offset != 0:
-      distribution = shifted_categorical.ShiftedCategorical(
-          logits=logits,
-          dtype=self._action_spec.dtype,
-          shift=self._action_offset)
+      gumbel_dist = tfp.distributions.Gumbel(loc=0., scale=1.)
+      gumbel_samples = gumbel_dist.sample(tf.shape(logits))
+      num_samples_list_float = tf.stack(
+          [tf.cast(x.read_value(), tf.float32) for x in self._num_samples_list],
+          axis=-1)
+      exploration_weights = tf.math.divide_no_nan(
+          self._boltzmann_gumbel_exploration_constant,
+          tf.sqrt(num_samples_list_float))
+      final_logits = logits + exploration_weights * gumbel_samples
+      actions = tf.cast(
+          tf.math.argmax(final_logits, axis=1), self._action_spec.dtype)
+      # Log probability is not available in closed form. We treat this as a
+      # deterministic policy at the moment.
+      log_probability = tf.zeros([batch_size], tf.float32)
     else:
-      distribution = tfp.distributions.Categorical(
-          logits=logits,
-          dtype=self._action_spec.dtype)
+      # Apply the temperature scaling, needed for Boltzmann exploration.
+      logits = predicted_reward_values / self._get_temperature_value()
 
-    actions = distribution.sample()
+      # Apply masking if needed. Overwrite the logits for invalid actions to
+      # logits.dtype.min.
+      if mask is not None:
+        almost_neg_inf = tf.constant(logits.dtype.min, dtype=logits.dtype)
+        logits = tf.compat.v2.where(
+            tf.cast(mask, tf.bool), logits, almost_neg_inf)
+
+      if self._action_offset != 0:
+        distribution = shifted_categorical.ShiftedCategorical(
+            logits=logits,
+            dtype=self._action_spec.dtype,
+            shift=self._action_offset)
+      else:
+        distribution = tfp.distributions.Categorical(
+            logits=logits,
+            dtype=self._action_spec.dtype)
+
+      actions = distribution.sample()
+      log_probability = distribution.log_prob(actions)
 
     bandit_policy_values = tf.fill([batch_size, 1],
                                    policy_utilities.BanditPolicyType.BOLTZMANN)
@@ -223,7 +279,7 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
           gather_observation,
           observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
       policy_info = policy_utilities.PerArmPolicyInfo(
-          log_probability=distribution.log_prob(actions) if
+          log_probability=log_probability if
           policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info
           else (),
           predicted_rewards_mean=(
@@ -235,7 +291,7 @@ class BoltzmannRewardPredictionPolicy(tf_policy.TFPolicy):
           chosen_arm_features=chosen_arm_features)
     else:
       policy_info = policy_utilities.PolicyInfo(
-          log_probability=distribution.log_prob(actions) if
+          log_probability=log_probability if
           policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info
           else (),
           predicted_rewards_mean=(

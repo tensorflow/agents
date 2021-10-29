@@ -25,7 +25,7 @@ from __future__ import division
 # Using Type Annotations.
 from __future__ import print_function
 
-from typing import Iterable, Optional, Text, Tuple
+from typing import Iterable, Optional, Text, Tuple, Sequence
 
 import gin
 import tensorflow as tf
@@ -52,6 +52,7 @@ class NeuralBoltzmannAgent(
       reward_network: types.Network,
       optimizer: types.Optimizer,
       temperature: types.FloatOrReturningFloat = 1.0,
+      boltzmann_gumbel_exploration_constant: Optional[types.Float] = None,
       observation_and_action_constraint_splitter: Optional[
           types.Splitter] = None,
       accepts_per_arm_features: bool = False,
@@ -65,6 +66,7 @@ class NeuralBoltzmannAgent(
       enable_summaries: bool = True,
       emit_policy_info: Tuple[Text, ...] = (),
       train_step_counter: Optional[tf.Variable] = None,
+      num_samples_list: Sequence[tf.Variable] = (),
       name: Optional[Text] = None):
     """Creates a Neural Boltzmann Agent.
 
@@ -82,6 +84,10 @@ class NeuralBoltzmannAgent(
       optimizer: The optimizer to use for training.
       temperature: float or callable that returns a float. The temperature used
         in the Boltzmann exploration.
+      boltzmann_gumbel_exploration_constant: optional positive float. When
+        provided, the agent implements Neural Bandit with Boltzmann-Gumbel
+        exploration from the paper:
+        N. Cesa-Bianchi et al., "Boltzmann Exploration Done Right", NIPS 2017.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -109,6 +115,8 @@ class NeuralBoltzmannAgent(
         `policy_utilities.PolicyInfo`.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
+      num_samples_list: list or tuple of tf.Variable's. Used only in
+        Boltzmann-Gumbel exploration. Otherwise, empty.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
 
@@ -132,15 +140,18 @@ class NeuralBoltzmannAgent(
         enable_summaries=enable_summaries,
         emit_policy_info=emit_policy_info,
         train_step_counter=train_step_counter,
+        num_samples_list=num_samples_list,
         name=name)
     self._policy = boltzmann_policy.BoltzmannRewardPredictionPolicy(
         time_step_spec,
         action_spec,
         reward_network,
         temperature,
+        boltzmann_gumbel_exploration_constant,
         observation_and_action_constraint_splitter,
         constraints=constraints,
         accepts_per_arm_features=accepts_per_arm_features,
-        emit_policy_info=emit_policy_info)
+        emit_policy_info=emit_policy_info,
+        num_samples_list=num_samples_list)
 
     self._collect_policy = self._policy

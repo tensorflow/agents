@@ -83,6 +83,32 @@ class AgentTest(tf.test.TestCase):
     self.assertIn(actions[0], [0, 1, 2])
     self.assertIn(actions[1], [0, 1, 2])
 
+  def testPolicyWithNeuralBoltzmannGumbel(self):
+    reward_net = DummyNet(self._observation_spec, self._action_spec)
+    num_samples_list = []
+    for k in range(3):
+      num_samples_list.append(
+          tf.compat.v2.Variable(
+              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+    agent = neural_boltzmann_agent.NeuralBoltzmannAgent(
+        self._time_step_spec,
+        self._action_spec,
+        reward_network=reward_net,
+        temperature=0.1,
+        boltzmann_gumbel_exploration_constant=1.0,
+        optimizer=None,
+        num_samples_list=num_samples_list)
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    time_steps = ts.restart(observations, batch_size=2)
+    policy = agent.policy
+    action_step = policy.action(time_steps)
+    # Batch size 2.
+    self.assertAllEqual([2], action_step.action.shape)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    actions = self.evaluate(action_step.action)
+    self.assertIn(actions[0], [0, 1, 2])
+    self.assertIn(actions[1], [0, 1, 2])
+
   def testPolicyWithBoltzmannAndActionMask(self):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     obs_spec = (tensor_spec.TensorSpec([2], tf.float32),
