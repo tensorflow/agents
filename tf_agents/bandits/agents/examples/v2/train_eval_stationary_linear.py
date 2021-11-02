@@ -42,7 +42,8 @@ from tf_agents.policies import utils as policy_utilities
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
 flags.DEFINE_enum(
-    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'Mix', 'Boltzmann'],
+    'agent', 'LinUCB',
+    ['LinUCB', 'LinTS', 'epsGreedy', 'Mix', 'Boltzmann', 'BoltzmannGumbel'],
     'Which agent to use. Possible values are `LinUCB` and `LinTS`, `epsGreedy`,'
     ' and `Mix`.'
 )
@@ -163,6 +164,18 @@ def main(unused_argv):
           train_step_counter=train_step_counter)
       # This is needed, otherwise the PolicySaver complains.
       agent.policy.step = train_step_counter
+    elif FLAGS.agent == 'BoltzmannGumbel':
+      num_samples_list = [tf.compat.v2.Variable(
+          0, dtype=tf.int32,
+          name='num_samples_{}'.format(k)) for k in range(NUM_ACTIONS)]
+      agent = neural_boltzmann_agent.NeuralBoltzmannAgent(
+          time_step_spec=environment.time_step_spec(),
+          action_spec=environment.action_spec(),
+          reward_network=network,
+          boltzmann_gumbel_exploration_constant=250.0,
+          optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
+          observation_and_action_constraint_splitter=mask_split_fn,
+          num_samples_list=num_samples_list)
     elif FLAGS.agent == 'Mix':
       assert FLAGS.num_disabled_actions == 0, (
           'Extra actions with mixture agent not supported.')

@@ -252,8 +252,8 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
                   dtype=tf.int32),
               [self._num_actions]), axis=-1)
       # Update the number of samples for each action.
-      self._num_samples_list = [a.assign_add(b) for a, b in zip(
-          self._num_samples_list, num_samples_per_action_current)]
+      for a, b in zip(self._num_samples_list, num_samples_per_action_current):
+        tf.compat.v1.assign_add(a, b)
 
     return loss_info
 
