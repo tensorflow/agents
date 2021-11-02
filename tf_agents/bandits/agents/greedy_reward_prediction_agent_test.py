@@ -514,7 +514,7 @@ class AgentTest(tf.test.TestCase):
     for k in range(3):
       num_samples_list.append(
           tf.compat.v2.Variable(
-              tf.zeros([], dtype=tf.int32), name='num_samples_{}'.format(k)))
+              tf.zeros([], dtype=tf.int64), name='num_samples_{}'.format(k)))
     agent = greedy_agent.GreedyRewardPredictionAgent(
         self._time_step_spec,
         self._action_spec,

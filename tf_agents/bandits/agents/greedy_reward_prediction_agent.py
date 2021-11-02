@@ -245,7 +245,7 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       # Compute the number of samples for each action in the current batch.
       actions_flattened = tf.reshape(experience.action, [-1])
       num_samples_per_action_current = [
-          tf.reduce_sum(tf.cast(tf.equal(actions_flattened, k), tf.int32))
+          tf.reduce_sum(tf.cast(tf.equal(actions_flattened, k), tf.int64))
           for k in range(self._num_actions)]
       # Update the number of samples for each action.
       for a, b in zip(self._num_samples_list, num_samples_per_action_current):
