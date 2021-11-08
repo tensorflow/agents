@@ -149,7 +149,7 @@ class Scalarizer(tf.Module):
     """Implementation of scalarization logic by subclasses."""
 
   @abc.abstractmethod
-  def set_parameters(self):
+  def set_parameters(self, **kwargs):
     """Setter method for scalarization parameters."""
 
 
