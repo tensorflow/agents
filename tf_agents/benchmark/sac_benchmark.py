@@ -20,7 +20,7 @@ import time
 import tensorflow as tf
 from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
-from tf_agents.experimental.examples.sac.haarnoja18 import sac_train_eval
+from tf_agents.examples.sac.haarnoja18 import sac_train_eval
 
 
 class SacHaarnoja18Return(PerfZeroBenchmark):

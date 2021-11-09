@@ -20,9 +20,9 @@ Here is a simple example to train and evaluate SACAgent in the HalfCheetah
 environment:
 
 ```shell
-$  python tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+$  python tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
      --root_dir=$HOME/tmp/sac/HalfCheetah-v2/ \
-     --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/half_cheetah.gin \
+     --gin_file=tf_agents/examples/sac/haarnoja18/configs/half_cheetah.gin \
      --num_iterations=3000000 \
      --alsologtostderr
 
@@ -37,7 +37,7 @@ Those modifications provide a slight benefit in the more difficult gym-mujoco
 environments. Optimal reward scaling is likely to be different for other
 environment suites. We provide gin files to config train_eval hyperparameter
 arguments for several gym-mujoco environments in the
-[configs](https://github.com/tensorflow/agents/tree/master/tf_agents/experimental/examples/sac/haarnoja18/configs)
+[configs](https://github.com/tensorflow/agents/tree/master/tf_agents/examples/sac/haarnoja18/configs)
 directory.
 
 Note: [Issue #475](https://github.com/tensorflow/agents/issues/475):
@@ -80,9 +80,9 @@ on a bare metal workstation setup as well.
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/halfcheetah-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+$  python3 tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
      --root_dir=./logs/HalfCheetah-v2_00/ \
-     --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/half_cheetah.gin \
+     --gin_file=tf_agents/examples/sac/haarnoja18/configs/half_cheetah.gin \
      --num_iterations=3000000 \
      --alsologtostderr
 ```
@@ -92,9 +92,9 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/hopper-v2_graph.png "Hopper-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+$  python3 tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
      --root_dir=./logs/Hopper-v2_00/ \
-     --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/hopper.gin \
+     --gin_file=tf_agents/examples/sac/haarnoja18/configs/hopper.gin \
      --num_iterations=1000000 \
      --alsologtostderr
 ```
@@ -104,9 +104,9 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/walker2d-v2_graph.png "Walker2d-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+$  python3 tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
      --root_dir=./logs/Walker2d-v2_00/ \
-     --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/walker_2d.gin \
+     --gin_file=tf_agents/examples/sac/haarnoja18/configs/walker_2d.gin \
      --num_iterations=3000000 \
      --alsologtostderr
 ```
@@ -116,9 +116,9 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/ant-v2_graph.png "Ant-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+$  python3 tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
      --root_dir=./logs/Ant-v2_00/ \
-     --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/ant.gin \
+     --gin_file=tf_agents/examples/sac/haarnoja18/configs/ant.gin \
      --num_iterations=3000000 \
      --alsologtostderr
 ```
@@ -128,9 +128,9 @@ $  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/sac_readme/humanoid-v2_graph.png "Humanoid-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+$  python3 tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
      --root_dir=./logs/Humanoid-v2_00/ \
-     --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/humanoid.gin \
+     --gin_file=tf_agents/examples/sac/haarnoja18/configs/humanoid.gin \
      --num_iterations=10000000 \
      --alsologtostderr
 ```
@@ -200,9 +200,9 @@ $  tmux new -s bench
 # Runs the HalfCheetah-v2 example in the docker instance. The details sections
 # contain commands for the other environments.
 $  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/mujoco \
-     python3 tf_agents/experimental/examples/sac/haarnoja18/sac_train_eval.py \
+     python3 tf_agents/examples/sac/haarnoja18/sac_train_eval.py \
        --root_dir=./logs/HalfCheetah-v2_00/ \
-       --gin_file=tf_agents/experimental/examples/sac/haarnoja18/configs/half_cheetah.gin \
+       --gin_file=tf_agents/examples/sac/haarnoja18/configs/half_cheetah.gin \
        --num_iterations=3000000 \
        --alsologtostderr
 ```
