@@ -274,7 +274,7 @@ class CEMPolicy(tf_policy.TFPolicy):
       var = tf.nest.map_structure(
           lambda v: tf.maximum(v, self._minimal_var), var)
 
-      # Sample a batch of actions with the shape of [B, N, A]
+      # Sample a batch of actions with the shape of [B, N, A] or [BxT, N, A]
       actions = self._actions_sampler.sample_batch_and_clip(
           self._num_samples, mean, var, observation)
 
