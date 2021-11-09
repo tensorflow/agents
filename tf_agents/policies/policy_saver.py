@@ -441,7 +441,9 @@ class PolicySaver(object):
     # objects (once it's available).  For now, we have no other way of tracking
     # objects like Tables, Vocabulary files, etc.
     try:
-      saved_policy._all_assets = policy._unconditional_checkpoint_dependencies  # pylint: disable=protected-access
+      saved_policy._all_assets = {
+          name: ref
+          for name, ref in policy._unconditional_checkpoint_dependencies}  # pylint: disable=protected-access
     except AttributeError as e:
       if '_self_unconditional' in str(e):
         logging.warning(
