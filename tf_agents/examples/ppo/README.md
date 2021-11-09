@@ -20,9 +20,9 @@ Here is a simple example to train and evaluate PPOClipAgent in the HalfCheetah
 environment:
 
 ```shell
-$  python tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
      --root_dir=$HOME/tmp/ppo/HalfCheetah-v2/ \
-     --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/half_cheetah.gin \
+     --gin_file=tf_agents/examples/ppo/schulman17/configs/half_cheetah.gin \
      --alsologtostderr
 
 # To view progress in TensorBoard use another terminal and execute.
@@ -31,7 +31,7 @@ $  tensorboard --logdir $HOME/tmp/ppo/HalfCheetah-v2/
 
 We set default hyperparameters according to the PPO paper. We provide gin files
 to config train_eval hyperparameter arguments for several gym-mujoco
-environments in the [configs](https://github.com/tensorflow/agents/tree/master/tf_agents/experimental/examples/ppo/schulman17/configs)
+environments in the [configs](https://github.com/tensorflow/agents/tree/master/tf_agents/examples/ppo/schulman17/configs)
 directory.
 
 # Validation and Performance
@@ -80,9 +80,9 @@ that reads the same logs processed by Tensorboard.
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/halfcheetah-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/half_cheetah_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/half_cheetah.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/half_cheetah.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -95,9 +95,9 @@ $  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/hopper-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/hopper_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/hopper.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/hopper.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -109,9 +109,9 @@ $  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/walker2d-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/walker_2d_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/walker_2d.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/walker_2d.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -123,9 +123,9 @@ $  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/reacher-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/reacher_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/reacher.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/reacher.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -137,9 +137,9 @@ $  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/swimmer-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/swimmer_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/swimmer.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/swimmer.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -152,9 +152,9 @@ $  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/invertedpendulum-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/inverted_pendulum_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/inverted_pendulum.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/inverted_pendulum.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -166,9 +166,9 @@ $  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/ppo_readme/inverteddoublependulum-v2_graph.png "HalfCheetah-v2 Mean and min/max graph.")
 
 ```shell
-$  python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+$  python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/inverted_double_pendulum_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/inverted_double_pendulum.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/inverted_double_pendulum.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr
@@ -242,9 +242,9 @@ $  tmux new -s bench
 # Runs the HalfCheetah-v2 example in the docker instance. The details sections
 # contain commands for the other environments.
 $  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/mujoco \
-     python3 tf_agents/experimental/examples/ppo/schulman17/ppo_clip_train_eval.py \
+     python3 tf_agents/examples/ppo/schulman17/ppo_clip_train_eval.py \
              --root_dir=./logs/ppo/half_cheetah_00/ \
-             --gin_file=tf_agents/experimental/examples/ppo/schulman17/configs/half_cheetah.gin \
+             --gin_file=tf_agents/examples/ppo/schulman17/configs/half_cheetah.gin \
              --eval_interval=10000 \
              --num_iterations=489 \
              --alsologtostderr

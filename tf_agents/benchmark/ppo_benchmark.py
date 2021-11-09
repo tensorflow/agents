@@ -21,7 +21,7 @@ import gin
 import tensorflow as tf
 from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
-from tf_agents.experimental.examples.ppo.schulman17 import ppo_clip_train_eval
+from tf_agents.examples.ppo.schulman17 import ppo_clip_train_eval
 
 
 class PpoSchulman17Return(PerfZeroBenchmark):
