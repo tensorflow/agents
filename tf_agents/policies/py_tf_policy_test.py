@@ -343,8 +343,7 @@ class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
       # 3). Restoring the actor policy while checking that all variables in
       # the checkpoint were found in the graph should fail.
       with self.assertRaisesRegexp(
-          AssertionError,
-          'Some Python objects were not bound to checkpointed values*'):
+          AssertionError, 'not bound to checkpointed values*'):
         policy_restored.restore(
             policy_dir=actor_policy_save_path,
             graph=policy_restore_graph)
