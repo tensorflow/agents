@@ -147,7 +147,7 @@ class Learner(tf.Module):
     dataset = None
     if experience_dataset_fn:
       with self.strategy.scope():
-        dataset = self.strategy.experimental_distribute_datasets_from_function(
+        dataset = self.strategy.distribute_datasets_from_function(
             lambda _: experience_dataset_fn())
         self._experience_iterator = iter(dataset)
 
