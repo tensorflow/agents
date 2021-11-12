@@ -70,7 +70,8 @@ class Learner(tf.Module):
                use_kwargs_in_agent_train=False,
                strategy=None,
                run_optimizer_variable_init=True,
-               use_reverb_v2=False):
+               use_reverb_v2=False,
+               experience_dataset_options=None):
     """Initializes a Learner instance.
 
     Args:
@@ -126,6 +127,9 @@ class Learner(tf.Module):
       use_reverb_v2: If True then we expect the dataset samples to return a
         named_tuple with a data and an info field. If False we expect a
         tuple(data, info).
+      experience_dataset_options: (Optional) `tf.distribute.InputOptions` passed
+        to `strategy.distribute_datasets_from_function`, used to control options
+        on how this dataset is distributed.
     """
     if checkpoint_interval < 0:
       logging.warning(
@@ -148,7 +152,8 @@ class Learner(tf.Module):
     if experience_dataset_fn:
       with self.strategy.scope():
         dataset = self.strategy.distribute_datasets_from_function(
-            lambda _: experience_dataset_fn())
+            lambda _: experience_dataset_fn(),
+            options=experience_dataset_options)
         self._experience_iterator = iter(dataset)
 
     self.after_train_strategy_step_fn = after_train_strategy_step_fn
