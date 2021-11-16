@@ -15,7 +15,6 @@
 
 """Class implementation of Python Wheel Bandit environment."""
 from __future__ import absolute_import
-# Using Type Annotations.
 
 from typing import Optional, Sequence, Text
 

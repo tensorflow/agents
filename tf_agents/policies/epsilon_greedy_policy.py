@@ -20,7 +20,6 @@ TODO(kbanoop): Make policy state optional in the action method.
 
 from __future__ import absolute_import
 from __future__ import division
-# Using Type Annotations.
 from __future__ import print_function
 
 from typing import Optional, Sequence, Text

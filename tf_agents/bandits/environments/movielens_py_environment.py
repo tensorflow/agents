@@ -15,7 +15,6 @@
 
 """Class implementation of the MovieLens Bandit environment."""
 from __future__ import absolute_import
-# Using Type Annotations.
 
 import random
 from typing import Optional, Text

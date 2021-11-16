@@ -17,7 +17,6 @@
 
 from __future__ import absolute_import
 from __future__ import division
-# Using Type Annotations.
 from __future__ import print_function
 
 import abc

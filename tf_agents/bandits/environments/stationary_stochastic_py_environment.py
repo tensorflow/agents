@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Class implementation of Stationary Stochastic Python Bandit environment."""
-# Using Type Annotations.
 
 from typing import Optional, Callable, Sequence, Text
 

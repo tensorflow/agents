@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Class implementation of Python Bernoulli Bandit environment."""
-# Using Type Annotations.
 
 from typing import Callable, Optional
 
