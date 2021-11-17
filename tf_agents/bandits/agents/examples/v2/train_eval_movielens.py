@@ -38,10 +38,12 @@ from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.environments import tf_py_environment
 from tf_agents.networks import q_network
 
-
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_string('data_path', '', 'Location of the movielens dataset.')
+flags.DEFINE_string(
+    'data_path', '',
+    'Location of the movielens dataset. If you downloaded the dataset from Kaggle, set this param to the path of u.data file'
+)
 flags.DEFINE_enum(
     'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'DropoutTS'],
     'Which agent to use. Possible values: `LinUCB`, `LinTS`, `epsGreedy`,'
@@ -80,10 +82,18 @@ def main(unused_argv):
     raise ValueError('Please specify the location of the data file.')
   if FLAGS.per_arm:
     env = movielens_per_arm_py_environment.MovieLensPerArmPyEnvironment(
-        data_path, RANK_K, BATCH_SIZE, num_actions=NUM_ACTIONS)
+        data_path,
+        RANK_K,
+        BATCH_SIZE,
+        num_actions=NUM_ACTIONS,
+        csv_delimiter='\t')
   else:
     env = movielens_py_environment.MovieLensPyEnvironment(
-        data_path, RANK_K, BATCH_SIZE, num_movies=NUM_ACTIONS)
+        data_path,
+        RANK_K,
+        BATCH_SIZE,
+        num_movies=NUM_ACTIONS,
+        csv_delimiter='\t')
   environment = tf_py_environment.TFPyEnvironment(env)
 
   optimal_reward_fn = functools.partial(
@@ -131,6 +141,7 @@ def main(unused_argv):
         info_fields_to_inherit_from_greedy=['predicted_rewards_mean'])
   elif FLAGS.agent == 'DropoutTS':
     train_step_counter = tf.compat.v1.train.get_or_create_global_step()
+
     def dropout_fn():
       return tf.math.maximum(
           tf.math.reciprocal_no_nan(1.01 +
