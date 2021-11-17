@@ -15,13 +15,17 @@
 
 """Module importing all agents."""
 
+from tf_agents.bandits.agents import bernoulli_thompson_sampling_agent
 from tf_agents.bandits.agents import dropout_thompson_sampling_agent
 from tf_agents.bandits.agents import exp3_agent
 from tf_agents.bandits.agents import exp3_mixture_agent
+from tf_agents.bandits.agents import greedy_multi_objective_neural_agent
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.agents import lin_ucb_agent
+from tf_agents.bandits.agents import linear_bandit_agent
 from tf_agents.bandits.agents import linear_thompson_sampling_agent
 from tf_agents.bandits.agents import mixture_agent
+from tf_agents.bandits.agents import neural_boltzmann_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.agents import neural_linucb_agent
 from tf_agents.bandits.agents import static_mixture_agent
