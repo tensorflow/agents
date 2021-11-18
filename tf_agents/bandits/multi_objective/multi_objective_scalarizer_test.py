@@ -55,6 +55,17 @@ class BaseScalarizerTest(tf.test.TestCase):
       multi_objectives = tf.constant([[1, 2, 3, 4]], dtype=tf.float32)
       scalarizer(multi_objectives)
 
+  def testTraceProtocol(self):
+    scalarizer_1 = DummyScalarizer(3)
+    scalarizer_2 = DummyScalarizer(4)
+    trace_type_1 = scalarizer_1.__tf_tracing_type__(None)
+    trace_type_2 = scalarizer_2.__tf_tracing_type__(None)
+
+    self.assertNotEqual(trace_type_1, trace_type_1)
+    self.assertNotEqual(trace_type_1, trace_type_2)
+    self.assertFalse(trace_type_1.is_subtype_of(trace_type_1))
+    self.assertFalse(trace_type_1.is_subtype_of(trace_type_2))
+
 
 class LinearScalarizerTest(tf.test.TestCase):
 

@@ -61,6 +61,33 @@ def _validate_scalarization_parameter_shape(
               multi_objectives.shape, param_name, param_shape))
 
 
+# TODO(b/202447704): Update to use public Protocol when available.
+class ScalarizerTraceType:
+  """Class outlining the default Tracing Protocol for Scalarizer.
+
+  If included as an argument, corresponding tf.function will always retrace for
+  each usage.
+
+  Derived classes can override this behavior by specifying their own Tracing
+  Protocol.
+  """
+
+  def is_subtype_of(self, _):
+    return False
+
+  def most_specific_common_supertype(self, _):
+    return None
+
+  def __hash__(self):
+    return id(self)
+
+  def __eq__(self, _):
+    return False
+
+  def __repr__(self):
+    return 'ScalarizerTraceType()'
+
+
 @six.add_metaclass(abc.ABCMeta)
 class Scalarizer(tf.Module):
   """Abstract base class for different Scalarizers.
@@ -151,6 +178,10 @@ class Scalarizer(tf.Module):
   @abc.abstractmethod
   def set_parameters(self, **kwargs):
     """Setter method for scalarization parameters."""
+
+  def __tf_tracing_type__(self, _):
+    """Default TraceType Protocol for Scalarizaer Class."""
+    return ScalarizerTraceType()
 
 
 class LinearScalarizer(Scalarizer):
