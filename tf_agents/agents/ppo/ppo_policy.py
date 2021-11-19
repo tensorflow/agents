@@ -271,12 +271,13 @@ class PPOPolicy(actor_policy.ActorPolicy):
     else:
       policy_info = ()
 
-    if (not new_policy_state['actor_network_state'] and
-        not new_policy_state['value_network_state']):
+    # Disable lint for TF arrays.
+    if (new_policy_state['actor_network_state'] is () and  # pylint: disable=literal-comparison
+        new_policy_state['value_network_state'] is ()):  # pylint: disable=literal-comparison
       new_policy_state = ()
-    elif not new_policy_state['value_network_state']:
+    elif new_policy_state['value_network_state'] is ():  # pylint: disable=literal-comparison
       del new_policy_state['value_network_state']
-    elif not new_policy_state['actor_network_state']:
+    elif new_policy_state['actor_network_state'] is ():  # pylint: disable=literal-comparison
       del new_policy_state['actor_network_state']
 
     return policy_step.PolicyStep(distributions, new_policy_state, policy_info)
