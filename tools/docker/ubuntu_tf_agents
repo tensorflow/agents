@@ -11,8 +11,8 @@
 #
 #  Builds a docker without TF-Agents. Used to build TF-Agents.
 #    docker build -t tf_agents/release_build \
-#      --build-arg tensorflow_pip_spec=noop \
-#      --build-arg tf_agents_pip_spec=noop \
+#      --build-arg tensorflow_pip_spec="" \
+#      --build-arg tf_agents_pip_spec="" \
 #      -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
 #  Builds a docker with a local TF-Agents .whl file.
@@ -65,8 +65,9 @@ RUN $python_version get-pip.py
 # Removes default TensorFlow so a specific version can be installed.
 RUN $python_version -m pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
 
-RUN $python_version -m pip install ${tensorflow_pip_spec}
-RUN $python_version -m pip install ${tf_agents_pip_spec}
+# Only installs the packages if one is passed.
+RUN if [[ -n "$tensorflow_pip_spec" ]] ; then $python_version -m pip install ${tensorflow_pip_spec}; fi
+RUN if [[ -n "$tf_agents_pip_spec" ]] ; then $python_version -m pip install ${tf_agents_pip_spec}; fi
 RUN $python_version -m pip install wheel \
       opencv-python \
       gym \
