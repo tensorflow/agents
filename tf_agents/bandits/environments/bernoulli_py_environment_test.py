@@ -31,7 +31,7 @@ class BernoulliBanditPyEnvironmentTest(tf.test.TestCase):
     env = bernoulli_py_environment.BernoulliPyEnvironment(
         [0.1, 0.2, 0.3], batch_size=2)
     observation_step = env.reset()
-    self.assertAllEqual(observation_step.observation.shape, [2, 1])
+    self.assertAllEqual(observation_step.observation.shape, [2])
     reward_step = env.step([0, 1])
     self.assertAllEqual(len(reward_step.reward), 2)
 

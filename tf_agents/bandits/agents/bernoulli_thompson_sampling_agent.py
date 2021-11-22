@@ -121,6 +121,7 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
         action_spec)
 
+    self._dtype = dtype
     if variable_collection is None:
       variable_collection = BernoulliBanditVariableCollection(
           num_actions=self._num_actions,
@@ -173,9 +174,11 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
         reward, action, self._num_actions)
     for k in range(self._num_actions):
       tf.compat.v1.assign_add(
-          self._alpha[k], tf.reduce_sum(partitioned_rewards[k]))
+          self._alpha[k], tf.cast(
+              tf.reduce_sum(partitioned_rewards[k]), dtype=self._dtype))
       tf.compat.v1.assign_add(
-          self._beta[k], tf.reduce_sum(1.0 - partitioned_rewards[k]))
+          self._beta[k], tf.cast(
+              tf.reduce_sum(1.0 - partitioned_rewards[k]), dtype=self._dtype))
 
     self.train_step_counter.assign_add(self._batch_size)
     loss = -1. * tf.reduce_sum(reward)

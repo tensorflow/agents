@@ -58,16 +58,19 @@ class BernoulliPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         maximum=self._num_actions - 1,
         name='action')
     observation_spec = array_spec.ArraySpec(
-        shape=(1,), dtype=np.int32, name='observation')
-    super(BernoulliPyEnvironment, self).__init__(observation_spec, action_spec)
+        shape=(), dtype=np.float32, name='observation')
+    super(BernoulliPyEnvironment, self).__init__(
+        observation_spec,
+        action_spec)
 
   def _observe(self) -> types.NestedArray:
-    return np.zeros(
+    return np.ones(
         shape=[self._batch_size] + list(self.observation_spec().shape),
         dtype=self.observation_spec().dtype)
 
   def _apply_action(self, action: types.NestedArray) -> types.Float:
-    return [np.floor(self._means[i] + np.random.random()) for i in action]
+    return np.array(
+        [np.floor(self._means[i] + np.random.random()) for i in action])
 
   @property
   def batched(self) -> bool:
