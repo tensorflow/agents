@@ -40,7 +40,6 @@ class BernoulliThompsonSamplingPolicy(tf_policy.TFPolicy):
                action_spec: types.NestedTensorSpec,
                alpha: Sequence[tf.Variable],
                beta: Sequence[tf.Variable],
-               batch_size: Optional[int] = 1,
                observation_and_action_constraint_splitter: Optional[
                    types.Splitter] = None,
                emit_policy_info: Sequence[Text] = (),
@@ -57,7 +56,6 @@ class BernoulliThompsonSamplingPolicy(tf_policy.TFPolicy):
         the beta distribution of each arm.
       beta: list or tuple of tf.Variable's. It holds the `beta` parameter of the
         beta distribution of each arm.
-      batch_size: optional int with the batch size. It defaults to 1.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -101,15 +99,20 @@ class BernoulliThompsonSamplingPolicy(tf_policy.TFPolicy):
           'The size of alpha parameters is expected to be equal '
           'to the size of beta parameters')
     self._beta = beta
-    self._batch_size = batch_size
 
     self._emit_policy_info = emit_policy_info
     predicted_rewards_mean = ()
     if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
       predicted_rewards_mean = tensor_spec.TensorSpec(
           [self._expected_num_actions])
+    predicted_rewards_sampled = ()
+    if policy_utilities.InfoFields.PREDICTED_REWARDS_SAMPLED in (
+        emit_policy_info):
+      predicted_rewards_sampled = tensor_spec.TensorSpec(
+          [self._expected_num_actions])
     info_spec = policy_utilities.PolicyInfo(
-        predicted_rewards_mean=predicted_rewards_mean)
+        predicted_rewards_mean=predicted_rewards_mean,
+        predicted_rewards_sampled=predicted_rewards_sampled)
 
     super(BernoulliThompsonSamplingPolicy, self).__init__(
         time_step_spec, action_spec,
@@ -123,12 +126,22 @@ class BernoulliThompsonSamplingPolicy(tf_policy.TFPolicy):
     return self._alpha + self._beta
 
   def _distribution(self, time_step, policy_state):
+    if time_step.step_type.shape:
+      if tf.is_tensor(
+          time_step.step_type) and time_step.step_type.shape.rank > 0:
+        batch_size = time_step.step_type.get_shape().as_list()[0]
+      else:
+        batch_size = 1
+    else:
+      batch_size = 1
     # Sample from the posterior distribution.
     posterior_dist = tfd.Beta(self._alpha, self._beta)
-    predicted_reward_sampled = posterior_dist.sample([self._batch_size])
-    predicted_reward_means = tf.stack([
+    predicted_reward_sampled = posterior_dist.sample([batch_size])
+    predicted_reward_means_1d = tf.stack([
         self._alpha[k] / (self._alpha[k] + self._beta[k]) for k in range(
             self._expected_num_actions)], axis=-1)
+    predicted_reward_means = tf.stack([
+        predicted_reward_means_1d for k in range(batch_size)], axis=0)
 
     mask = None
     if self._observation_and_action_constraint_splitter is not None:
@@ -145,13 +158,13 @@ class BernoulliThompsonSamplingPolicy(tf_policy.TFPolicy):
 
     policy_info = policy_utilities.populate_policy_info(
         arm_observations=(), chosen_actions=actions,
-        rewards_for_argmax=predicted_reward_sampled,
-        est_rewards=predicted_reward_means,
+        rewards_for_argmax=tf.cast(predicted_reward_sampled, tf.float32),
+        est_rewards=tf.cast(predicted_reward_means, tf.float32),
         emit_policy_info=self._emit_policy_info,
         accepts_per_arm_features=False)
     if policy_utilities.InfoFields.LOG_PROBABILITY in self._emit_policy_info:
       policy_info._replace(
-          log_probability=tf.zeros([self._batch_size], tf.float32))
+          log_probability=tf.zeros([batch_size], tf.float32))
 
     return policy_step.PolicyStep(
         tfp.distributions.Deterministic(loc=actions), policy_state, policy_info)

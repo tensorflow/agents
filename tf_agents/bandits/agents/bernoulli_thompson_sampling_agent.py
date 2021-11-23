@@ -138,7 +138,6 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
         action_spec,
         self._alpha,
         self._beta,
-        batch_size,
         observation_and_action_constraint_splitter,
         emit_policy_info=emit_policy_info)
 

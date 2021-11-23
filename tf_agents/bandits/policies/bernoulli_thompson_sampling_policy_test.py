@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.policies import bernoulli_thompson_sampling_policy as bern_thompson_sampling_policy
@@ -27,24 +28,25 @@ from tf_agents.utils import test_utils
 from tensorflow.python.framework import test_util  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 
-def _prepare_alphas(action_spec):
+def _prepare_alphas(action_spec, dtype=tf.float32):
   num_actions = action_spec.maximum - action_spec.minimum + 1
   alphas = [tf.compat.v2.Variable(
-      tf.ones([], dtype=tf.float32), name='alpha_{}'.format(k)) for k in range(
+      tf.ones([], dtype=dtype), name='alpha_{}'.format(k)) for k in range(
           num_actions)]
   return alphas
 
 
-def _prepare_betas(action_spec):
+def _prepare_betas(action_spec, dtype=tf.float32):
   num_actions = action_spec.maximum - action_spec.minimum + 1
   betas = [tf.compat.v2.Variable(
-      tf.ones([], dtype=tf.float32), name='beta_{}'.format(k)) for k in range(
+      tf.ones([], dtype=dtype), name='beta_{}'.format(k)) for k in range(
           num_actions)]
   return betas
 
 
 @test_util.run_all_in_graph_and_eager_modes
-class BernoulliThompsonSamplingPolicyTest(test_utils.TestCase):
+class BernoulliThompsonSamplingPolicyTest(
+    parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
     super(BernoulliThompsonSamplingPolicyTest, self).setUp()
@@ -140,9 +142,9 @@ class BernoulliThompsonSamplingPolicyTest(test_utils.TestCase):
         self._time_step_spec,
         self._action_spec,
         alpha=_prepare_alphas(self._action_spec),
-        beta=_prepare_betas(self._action_spec),
-        batch_size=2)
-    time_step = ts.TimeStep(ts.StepType.FIRST, 0.0, 0.0, observation=1.0)
+        beta=_prepare_betas(self._action_spec))
+    observations = tf.constant([[1], [1]], dtype=tf.float32)
+    time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
     self.assertEqual(action_step.action.shape.as_list(), [2])
     self.assertEqual(action_step.action.dtype, tf.int32)
@@ -162,7 +164,6 @@ class BernoulliThompsonSamplingPolicyTest(test_utils.TestCase):
         action_spec,
         alpha=_prepare_alphas(self._action_spec),
         beta=_prepare_betas(self._action_spec),
-        batch_size=2,
         observation_and_action_constraint_splitter=split_fn)
 
     observations = (tf.constant([[1], [1]], dtype=tf.float32),
@@ -175,26 +176,30 @@ class BernoulliThompsonSamplingPolicyTest(test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(self.evaluate(action_step.action), [2, 0])
 
-  def testPredictedRewards(self):
+  @parameterized.named_parameters([
+      ('_tf.float32', tf.float32),
+      ('_tf.float64', tf.float64)
+    ])
+  def testPredictedRewards(self, dtype):
     tf.compat.v1.set_random_seed(1)
     policy = bern_thompson_sampling_policy.BernoulliThompsonSamplingPolicy(
         self._time_step_spec,
         self._action_spec,
-        alpha=_prepare_alphas(self._action_spec),
-        beta=_prepare_betas(self._action_spec),
-        emit_policy_info=('predicted_rewards_mean',))
+        alpha=_prepare_alphas(self._action_spec, dtype=dtype),
+        beta=_prepare_betas(self._action_spec, dtype=dtype),
+        emit_policy_info=(
+            'predicted_rewards_mean', 'predicted_rewards_sampled',))
     time_step = ts.TimeStep(ts.StepType.FIRST, 0.0, 0.0, observation=1.0)
     action_step = policy.action(time_step, seed=1)
     self.assertEqual(action_step.action.shape.as_list(), [1])
     self.assertEqual(action_step.action.dtype, tf.int32)
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    # The expected values are obtained by passing the observation through the
-    # Keras dense layer of the DummyNet (defined above).
-    predicted_rewards_expected_array = np.array([0.5, 0.5, 0.5])
+    predicted_rewards_expected_array = np.array([[0.5, 0.5, 0.5]])
     p_info = self.evaluate(action_step.info)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected_array)
+    self.assertEqual(list(p_info.predicted_rewards_sampled.shape), [1, 3])
 
 
 if __name__ == '__main__':
