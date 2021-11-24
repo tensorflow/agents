@@ -107,7 +107,8 @@ def train(root_dir,
           training_loops,
           steps_per_loop,
           additional_metrics=(),
-          training_data_spec_transformation_fn=None):
+          training_data_spec_transformation_fn=None,
+          save_policy=True):
   """Perform `training_loops` iterations of training.
 
   Checkpoint results.
@@ -132,7 +133,8 @@ def train(root_dir,
       metrics `NumberOfEpisodes`, `AverageReturnMetric`, and
       `AverageEpisodeLengthMetric`.
     training_data_spec_transformation_fn: Optional function that transforms the
-    data items before they get to the replay buffer.
+      data items before they get to the replay buffer.
+    save_policy: (bool) whether to save the policy or not.
   """
 
   # TODO(b/127641485): create evaluation loop with configurable metrics.
@@ -179,7 +181,9 @@ def train(root_dir,
   checkpoint_manager = restore_and_get_checkpoint_manager(
       root_dir, agent, metrics, step_metric)
   train_step_counter = tf.compat.v1.train.get_or_create_global_step()
-  saver = policy_saver.PolicySaver(agent.policy, train_step=train_step_counter)
+  if save_policy:
+    saver = policy_saver.PolicySaver(
+        agent.policy, train_step=train_step_counter)
 
   summary_writer = tf.summary.create_file_writer(root_dir)
   summary_writer.set_as_default()
@@ -189,5 +193,5 @@ def train(root_dir,
     for metric in metrics:
       metric.tf_summaries(train_step=step_metric.result())
     checkpoint_manager.save()
-    if i % 100 == 0:
+    if save_policy & (i % 100 == 0):
       saver.save(os.path.join(root_dir, 'policy_%d' % step_metric.result()))

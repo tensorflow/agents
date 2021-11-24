@@ -73,7 +73,8 @@ def main(unused_argv):
       environment=environment,
       training_loops=TRAINING_LOOPS,
       steps_per_loop=STEPS_PER_LOOP,
-      additional_metrics=[regret_metric, suboptimal_arms_metric])
+      additional_metrics=[regret_metric, suboptimal_arms_metric],
+      save_policy=False)
 
 
 if __name__ == '__main__':
