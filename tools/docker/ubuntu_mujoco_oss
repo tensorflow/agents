@@ -8,7 +8,7 @@
 #    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
 #    -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
-#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco_oss \
 #      ./tools/docker
 #
 #
@@ -18,7 +18,7 @@
 #    --build-arg tensorflow_pip_spec=tensorflow \
 #    -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
-#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco_oss \
 #      ./tools/docker
 #
 FROM tf_agents/core as mujoco
@@ -56,4 +56,4 @@ RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}'
 
 # LD_LIBRARY_PATH is redunanty but needed on hosts where LD_LIBRARY_PATH is
 # not sticky. See comments above.
-RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin $python_version -m pip install git+https://github.com/openai/mujoco-py
+RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin $python_version -m pip install -U 'mujoco-py<2.2,>=2.1'

@@ -8,7 +8,7 @@
 #    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
 #      -f tools/docker/ubuntu_tf_agents ./tools/docker
 #
-#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco_oss \
 #      ./tools/docker
 #
 #    docker build -t tf_agents/mujoco/d4rl -f ./tools/docker/ubuntu_d4rl \
@@ -31,7 +31,7 @@ FROM tf_agents/mujoco as d4rl
 ARG python_version="python3"
 
 # Symlink to MuJoCo that is needed for D4RL installation.
-RUN ln -s /root/.mujoco/mujoco200 /root/.mujoco/mujoco200_linux
+RUN ln -s /root/.mujoco/mujoco210 /root/.mujoco/mujoco210_linux
 
 # Install D4RL.
 RUN $python_version -m pip install git+https://github.com/rail-berkeley/d4rl@master#egg=d4rl
