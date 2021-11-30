@@ -410,10 +410,6 @@ $  gcloud compute instances create $INSTANCE_NAME \
     --boot-disk-type=pd-ssd \
     --scopes=https://www.googleapis.com/auth/cloud-platform
 
-# It may take a couple minutes for the VM to be available
-# This copies your MuJoCo key to the instance from your local machine.
-$  gcloud compute scp --zone $ZONE --project $PROJECT $HOME/.mujoco/mjkey.txt $INSTANCE_NAME:/home/$USER/
-
 # Login to the cloud instance.
 $  gcloud compute ssh --zone $ZONE --project $PROJECT $INSTANCE_NAME
 ```
@@ -421,23 +417,21 @@ $  gcloud compute ssh --zone $ZONE --project $PROJECT $INSTANCE_NAME
 **Step 2:** Build a
 [Docker](https://github.com/tensorflow/agents/tree/master/tools/docker) with
 MuJoCo and D4RL to be used for the experiment. These steps take place on the
-instance that was created in step 1.
+cloud instance created in step 1.
 
 ```shell
 $  git clone https://github.com/tensorflow/agents.git && cd agents
-# Moves MuJoco key scp'd in step 1 into location for docker build.
-$  mv ../mjkey.txt .
 
 # Core tf-agents docker.
 $  docker build -t tf_agents/core \
      --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
-     -f tools/docker/ubuntu_1804_tf_agents .
+     -f tools/docker/ubuntu_tf_agents tools/docker/
 
 # Extends tf_agents/core to create a docker with MuJoCo.
-$  docker build -t tf_agents/mujoco -f tools/docker/ubuntu_1804_mujoco .
+$  docker build -t tf_agents/mujoco -f tools/docker/ubuntu_mujoco_oss tools/docker
 
 # Extends tf_agents/mujoco to create a docker with D4RL.
-$  docker build -t tf_agents/mujoco/d4rl -f tools/docker/ubuntu_1804_d4rl .
+$  docker build -t tf_agents/mujoco/d4rl -f tools/docker/ubuntu_d4rl tools/docker
 ```
 
 **Step 3:** Create a tmux session and start the train and eval.
@@ -447,14 +441,23 @@ $  docker build -t tf_agents/mujoco/d4rl -f tools/docker/ubuntu_1804_d4rl .
 $  tmux new -s bench
 
 # Runs the Antmaze-Medium-Play example in the docker image. Includes data generation and training.
-$  NUM_REPLICAS=10
-$  DATA_ROOT_DIR=./tmp/d4rl_dataset
-$  ENV_NAME=antmaze-medium-play-v0
-$  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
+$  export NUM_REPLICAS=10
+$  export DATA_ROOT_DIR=./data/halfcheetah-medium-v0-rep
+$  export ENV_NAME=halfcheetah-medium-v0
 
-# Run `docker run --rm -it --gpus all -v` instead for GPU support.
-$  docker run --rm -it -v $(pwd):/workspace -w /workspace/ tf_agents/mujoco/d4rl bash -c \
-"python tf_agents/experimental/examples/cql_sac/kumar20/dataset/dataset_generator --replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR && python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval --env_name=$ENV_NAME --root_dir=$TRAIN_EVAL_ROOT_DIR --dataset_path=$DATA_ROOT_DIR --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin --alsologtostderr"
+# Pulls data and creates the dataset for training..
+$ docker run --rm -it -v $(pwd):/workspace -w /workspace/ \
+    tf_agents/mujoco/d4rl \
+    bash -c "python3 -m tf_agents.experimental.examples.cql_sac.kumar20.dataset.dataset_generator"\
+"--replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR"
+
+# Starts the training.
+# Run `docker run --rm -it --gpus all -v` for GPU support.
+$  docker run --rm -it -v $(pwd):/workspace -w /workspace/ \
+    tf_agents/mujoco/d4rl \
+     bash -c "python3 -m tf_agents.experimental.examples.cql_sac.kumar20.cql_sac_train_eval "\
+"--env_name=$ENV_NAME --root_dir=./log/$ENV_NAME --dataset_path=$DATA_ROOT_DIR "\
+"--gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium.gin --alsologtostderr"
 ```
 
 **Step 4 (Optional):** Use [tensorboard.dev](https://tensorboard.dev/) to track
@@ -465,13 +468,9 @@ progress.
 # and start another session to upload the results. This command is run outside
 # of Docker and assumes tensorboard is installed on the host system.
 # Hint: `ctrl + b` followed by `d` will detach from the session.
-$  ENV_NAME=antmaze-medium-play-v0
-$  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-
 $  tmux new -s tensorboard
-$  tensorboard dev upload --logdir=$TRAIN_EVAL_ROOT_DIR
+$  tensorboard dev upload --logdir=./logs/
 ```
-
 
 # Citation
 If you use this code, please cite it using [this guideline](https://github.com/tensorflow/agents#citation).
