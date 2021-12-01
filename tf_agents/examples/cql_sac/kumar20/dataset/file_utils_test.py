@@ -18,13 +18,13 @@ import mock
 import numpy as np
 import tensorflow as tf
 
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset.file_utils import create_trajectory
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset.file_utils import create_transition
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset.file_utils import write_samples_to_tfrecord
+from tf_agents.examples.cql_sac.kumar20.dataset.file_utils import create_trajectory
+from tf_agents.examples.cql_sac.kumar20.dataset.file_utils import create_transition
+from tf_agents.examples.cql_sac.kumar20.dataset.file_utils import write_samples_to_tfrecord
 
 from tf_agents.utils import test_utils
 
-TFRECORD_OBSERVER_PREFIX = ('tf_agents.experimental.examples.cql_sac.' +
+TFRECORD_OBSERVER_PREFIX = ('tf_agents.examples.cql_sac.' +
                             'kumar20.dataset.file_utils.' +
                             'example_encoding_dataset.TFRecordObserver')
 

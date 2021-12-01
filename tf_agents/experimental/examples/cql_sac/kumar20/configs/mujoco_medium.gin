@@ -1,3 +1,0 @@
-include 'tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco.gin'
-
-train_eval.cql_alpha = 0.1

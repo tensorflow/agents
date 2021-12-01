@@ -25,8 +25,8 @@ from absl import logging
 import d4rl  # pylint: disable=unused-import
 import gym
 
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset import dataset_utils
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset import file_utils
+from tf_agents.examples.cql_sac.kumar20.dataset import dataset_utils
+from tf_agents.examples.cql_sac.kumar20.dataset import file_utils
 from tf_agents.system import system_multiprocessing as multiprocessing
 # Using XM.  # pylint: disable=unused-import
 

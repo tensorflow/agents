@@ -26,7 +26,7 @@ import tensorflow as tf
 
 from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
-from tf_agents.experimental.examples.cql_sac.kumar20 import cql_sac_train_eval
+from tf_agents.examples.cql_sac.kumar20 import cql_sac_train_eval
 
 # TODO(b/205172779): Data needs moved to a team based URL.
 # LINT.IfChange
@@ -57,7 +57,7 @@ class CqlSacKumar20Return(PerfZeroBenchmark):
     dataset_path = self.root_data_dir
     start_time_sec = time.time()
     gin.parse_config_file(
-        'tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium.gin'
+        'tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin'
     )
     cql_sac_train_eval.train_eval(
         dataset_path=dataset_path,

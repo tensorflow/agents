@@ -32,8 +32,8 @@ from tf_agents.agents.cql import cql_sac_agent
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.environments import tf_py_environment
-from tf_agents.experimental.examples.cql_sac.kumar20.d4rl_utils import load_d4rl
-from tf_agents.experimental.examples.cql_sac.kumar20.data_utils import create_tf_record_dataset
+from tf_agents.examples.cql_sac.kumar20.d4rl_utils import load_d4rl
+from tf_agents.examples.cql_sac.kumar20.data_utils import create_tf_record_dataset
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.policies import greedy_policy

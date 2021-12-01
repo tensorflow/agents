@@ -22,10 +22,10 @@ from __future__ import print_function
 from absl import flags
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.experimental.examples.cql_sac.kumar20 import cql_sac_train_eval
+from tf_agents.examples.cql_sac.kumar20 import cql_sac_train_eval
 
 FLAGS = flags.FLAGS
-TEST_DATA = 'third_party/py/tf_agents/experimental/examples/cql_sac/kumar20/dataset/test_data/antmaze-medium-play-v0_0.tfrecord'
+TEST_DATA = 'third_party/py/tf_agents/examples/cql_sac/kumar20/dataset/test_data/antmaze-medium-play-v0_0.tfrecord'
 ENV_NAME = 'antmaze-medium-play-v0'
 
 

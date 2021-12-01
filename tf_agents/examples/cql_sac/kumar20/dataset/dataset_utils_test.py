@@ -17,8 +17,8 @@
 import numpy as np
 import tensorflow as tf
 
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset.dataset_utils import create_collect_data_spec
-from tf_agents.experimental.examples.cql_sac.kumar20.dataset.dataset_utils import create_episode_dataset
+from tf_agents.examples.cql_sac.kumar20.dataset.dataset_utils import create_collect_data_spec
+from tf_agents.examples.cql_sac.kumar20.dataset.dataset_utils import create_episode_dataset
 
 from tf_agents.specs.array_spec import ArraySpec
 from tf_agents.trajectories import policy_step

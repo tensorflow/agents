@@ -54,7 +54,7 @@ The script writes a TFRecord dataset to $DATA_ROOT_DIR/$ENV_NAME across $NUM_REP
 $  NUM_REPLICAS=1
 $  DATA_ROOT_DIR=$HOME/tmp/d4rl_dataset
 $  ENV_NAME=antmaze-medium-play-v0
-$  python tf_agents/experimental/examples/cql_sac/kumar20/dataset/dataset_generator.py \
+$  python tf_agents/examples/cql_sac/kumar20/dataset/dataset_generator.py \
     --replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR
 ```
 
@@ -65,11 +65,11 @@ Antmaze-Medium-Play environment, using the dataset generated above:
 
 ```shell
 $  TRAIN_EVAL_ROOT_DIR=$HOME/tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 
 # To view progress in TensorBoard use another terminal and execute.
@@ -78,7 +78,7 @@ $  tensorboard --logdir $TRAIN_EVAL_ROOT_DIR
 
 # Hyperparameters
 We provide gin files with train_eval hyperparameter arguments in the
-[configs](https://github.com/tensorflow/agents/tree/master/tf_agents/experimental/examples/cql_sac/kumar20/configs) directory.
+[configs](https://github.com/tensorflow/agents/tree/master/tf_agents/examples/cql_sac/kumar20/configs) directory.
 
 <table>
   <tr>
@@ -223,7 +223,7 @@ Before training each of the below, run dataset generation for that environment:
 $  NUM_REPLICAS=10
 $  ENV_NAME={insert_env_name}
 $  DATA_ROOT_DIR=./tmp/d4rl_dataset
-$  python tf_agents/experimental/examples/cql_sac/kumar20/dataset/dataset_generator \
+$  python tf_agents/examples/cql_sac/kumar20/dataset/dataset_generator \
      --replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR \
      --alsologtostderr
 ```
@@ -235,11 +235,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/dataset/dataset_genera
 ```shell
 $  ENV_NAME=halfcheetah-medium-expert-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
      --alsologtostderr
 ```
 
@@ -250,11 +250,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=halfcheetah-medium-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
      --alsologtostderr
 ```
 
@@ -265,11 +265,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=hopper-medium-expert-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
      --alsologtostderr
 ```
 
@@ -280,11 +280,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=hopper-medium-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
      --alsologtostderr
 ```
 
@@ -295,11 +295,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=walker2d-medium-expert-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
      --alsologtostderr
 ```
 
@@ -310,11 +310,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=walker2d-medium-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
      --alsologtostderr
 ```
 
@@ -325,11 +325,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=antmaze-medium-diverse-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
 
@@ -341,11 +341,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=antmaze-medium-play-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
 
@@ -356,11 +356,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=antmaze-large-diverse-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
 
@@ -372,11 +372,11 @@ $  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py 
 ```shell
 $  ENV_NAME=antmaze-large-play-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
-$  python tf_agents/experimental/examples/cql_sac/kumar20/cql_sac_train_eval.py \
+$  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
      --dataset_path=$DATA_ROOT_DIR \
-     --gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/antmaze.gin \
+     --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
 
@@ -457,7 +457,7 @@ $  docker run --rm -it -v $(pwd):/workspace -w /workspace/ \
     tf_agents/mujoco/d4rl \
      bash -c "python3 -m tf_agents.experimental.examples.cql_sac.kumar20.cql_sac_train_eval "\
 "--env_name=$ENV_NAME --root_dir=./log/$ENV_NAME --dataset_path=$DATA_ROOT_DIR "\
-"--gin_file=tf_agents/experimental/examples/cql_sac/kumar20/configs/mujoco_medium.gin --alsologtostderr"
+"--gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin --alsologtostderr"
 ```
 
 **Step 4 (Optional):** Use [tensorboard.dev](https://tensorboard.dev/) to track
