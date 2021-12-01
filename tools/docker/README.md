@@ -39,9 +39,6 @@ The steps below build and run a docker with Mujoco.
 
 Note: `tf_agents/core` is the base for this docker and built above.
 
-The Mujoco license file `mjkey.txt` needs to be copied to the root of the github
-repository and is copied into the image during the docker build.
-
 ```shell
 $ docker build -t tf_agents/mujoco \
    -f tools/docker/ubuntu_mujoco ./tools/docker
