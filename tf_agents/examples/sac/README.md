@@ -164,10 +164,7 @@ $  gcloud compute instances create $INSTANCE_NAME \
     --boot-disk-size=100GB \
     --boot-disk-type=pd-ssd
 
-# It may take a couple minutes for the VM to be available
-# This copies your MuJoCo key to the instance from your local machine.
-$  gcloud compute scp --zone $ZONE --project $PROJECT $HOME/.mujoco/mjkey.txt $INSTANCE_NAME:/home/$USER/
-
+# It may take a couple minutes for the VM to be available.
 # Login to the cloud instance.
 $  gcloud compute ssh --zone $ZONE --project $PROJECT $INSTANCE_NAME
 ```
@@ -179,8 +176,6 @@ that was created in step 1.
 
 ```shell
 $  git clone https://github.com/tensorflow/agents.git && cd agents
-# Moves MuJoco key scp'd in step 1 into location for docker build.
-$  mv ../mjkey.txt .
 
 # Core tf-agents docker.
 $  docker build -t tf_agents/core \
