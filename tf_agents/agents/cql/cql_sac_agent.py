@@ -21,7 +21,6 @@ Implements Conservative Q Learning from
   Kumar et al., 2020
   https://arxiv.org/abs/2006.04779
 """
-# Using Type Annotations.
 
 from typing import Callable, Dict, NamedTuple, Optional, Text, Tuple, Union
 

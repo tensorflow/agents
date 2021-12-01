@@ -22,7 +22,6 @@ them for every observation. The distribution is defined by the
 
 from __future__ import absolute_import
 from __future__ import division
-# Using Type Annotations.
 from __future__ import print_function
 
 from typing import Optional, Sequence, Text
