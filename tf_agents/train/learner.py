@@ -140,8 +140,11 @@ class Learner(tf.Module):
 
     self._train_dir = os.path.join(root_dir, TRAIN_DIR)
     self._use_reverb_v2 = use_reverb_v2
-    self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
-        self._train_dir, flush_millis=10000)
+    if summary_interval:
+      self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
+          self._train_dir, flush_millis=10000)
+    else:
+      self.train_summary_writer = tf.summary.create_noop_writer()
 
     self.train_step = train_step
     self._agent = agent
@@ -246,17 +249,23 @@ class Learner(tf.Module):
     Returns:
       The total loss computed before running the final step.
     """
-
+    assert iterations >= 1, (
+        'Iterations must be greater or equal to 1, was %d' % iterations)
     def _summary_record_if():
-      return tf.math.equal(
-          self.train_step % tf.constant(self.summary_interval), 0)
+      if self.summary_interval:
+        return tf.math.equal(
+            self.train_step % tf.constant(self.summary_interval), 0)
+      else:
+        return tf.constant(False)
 
     with self.train_summary_writer.as_default(), \
          common.soft_device_placement(), \
          tf.compat.v2.summary.record_if(_summary_record_if), \
          self.strategy.scope():
       iterator = iterator or self._experience_iterator
-      loss_info = self._train(iterations, iterator, parallel_iterations)
+      loss_info = self._train(tf.constant(iterations),
+                              iterator,
+                              parallel_iterations)
 
       train_step_val = self.train_step.numpy()
       for trigger in self.triggers:
@@ -268,8 +277,6 @@ class Learner(tf.Module):
   # disable use of tf.function.
   @common.function(autograph=True)
   def _train(self, iterations, iterator, parallel_iterations):
-    assert iterations >= 1, (
-        'Iterations must be greater or equal to 1, was %d' % iterations)
     # Call run explicitly once to get loss info shape for autograph. Because the
     # for loop below will get converted to a `tf.while_loop` by autograph we
     # need the shape of loss info to be well defined.
