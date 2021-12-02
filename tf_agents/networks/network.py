@@ -251,16 +251,18 @@ class Network(tf.keras.layers.Layer):
   def variables(self):
     if not self.built:
       raise ValueError(
-          "Network has not been built, unable to access variables.  "
-          "Please call `create_variables` or apply the network first.")
+          f"Network `{self.name}` {type(self)} has not been built,"
+          " unable to access variables."
+          " Please call `create_variables` or apply the network first.")
     return super(Network, self).variables
 
   @property
   def trainable_variables(self):
     if not self.built:
       raise ValueError(
-          "Network has not been built, unable to access variables.  "
-          "Please call `create_variables` or apply the network first.")
+          f"Network `{self.name}` {type(self)} has not been built,"
+          " unable to access trainable_variables."
+          " Please call `create_variables` or apply the network first.")
     return super(Network, self).trainable_variables
 
   @property
