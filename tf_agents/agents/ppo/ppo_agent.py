@@ -1075,6 +1075,10 @@ class PPOAgent(tf_agent.TFAgent):
           entropy_reg_loss = tf.debugging.check_numerics(
               entropy_reg_loss, 'entropy_reg_loss')
 
+        tf.compat.v2.summary.scalar(
+            name='entropy',
+            data=tf.reduce_mean(input_tensor=entropy),
+            step=self.train_step_counter)
         # TODO(b/171573175): remove the condition once histograms are supported
         # on TPUs.
         if debug_summaries and not tf.config.list_logical_devices('TPU'):
