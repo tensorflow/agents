@@ -23,11 +23,11 @@ import os
 from absl import logging
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.bandits.replay_buffers import bandit_replay_buffer
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.policies import policy_saver
-from tf_agents.replay_buffers import tf_uniform_replay_buffer
 
 tf = tf.compat.v2
 
@@ -40,7 +40,7 @@ def get_replay_buffer(data_spec,
                       batch_size,
                       steps_per_loop):
   """Return a `TFUniformReplayBuffer` for the given `agent`."""
-  buf = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+  buf = bandit_replay_buffer.BanditReplayBuffer(
       data_spec=data_spec,
       batch_size=batch_size,
       max_length=steps_per_loop)
