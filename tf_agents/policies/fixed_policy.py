@@ -41,6 +41,7 @@ class FixedPolicy(tf_policy.TFPolicy):
                actions: types.NestedTensor,
                time_step_spec: ts.TimeStep,
                action_spec: types.NestedTensorSpec,
+               emit_log_probability: bool = True,
                policy_info: types.NestedTensorSpec = (),
                info_spec: types.NestedTensorSpec = (),
                name: Optional[Text] = None):
@@ -51,6 +52,11 @@ class FixedPolicy(tf_policy.TFPolicy):
         corresponding to `action_spec()`.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       action_spec: A nest of BoundedTensorSpec representing the actions.
+      emit_log_probability: Emit log-probabilities of actions, if supported. If
+        True, policy_step.info will have CommonFields.LOG_PROBABILITY set.
+        Please consult utility methods provided in policy_step for setting and
+        retrieving these. When working with custom policies, either provide a
+        dictionary info_spec or a namedtuple with the field 'log_probability'.
       policy_info: A policy info to be returned in PolicyStep.
       info_spec: A policy info spec.
       name: The name of this policy. All variables in this module will fall
@@ -58,7 +64,8 @@ class FixedPolicy(tf_policy.TFPolicy):
     """
     super(FixedPolicy, self).__init__(time_step_spec, action_spec, clip=False,
                                       info_spec=info_spec,
-                                      name=name, emit_log_probability=True)
+                                      name=name,
+                                      emit_log_probability=emit_log_probability)
     nest_utils.assert_same_structure(self._action_spec, actions)
 
     def convert(action, spec):
@@ -66,10 +73,13 @@ class FixedPolicy(tf_policy.TFPolicy):
 
     self._action_value = tf.nest.map_structure(convert, actions,
                                                self._action_spec)
-    log_probability = tf.nest.map_structure(
-        lambda t: tf.constant(0.0, tf.float32), self._action_spec)
-    self._policy_info = policy_step.set_log_probability(policy_info,
-                                                        log_probability)  # pytype: disable=wrong-arg-types
+    if self._emit_log_probability:
+      log_probability = tf.nest.map_structure(
+          lambda t: tf.constant(0.0, tf.float32), self._action_spec)
+      self._policy_info = policy_step.set_log_probability(policy_info,
+                                                          log_probability)  # pytype: disable=wrong-arg-types
+    else:
+      self._policy_info = policy_info
 
   def _variables(self):
     return []
@@ -77,10 +87,13 @@ class FixedPolicy(tf_policy.TFPolicy):
   def _get_policy_info_and_action(self, time_step):
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
 
-    log_probability = tf.nest.map_structure(
-        lambda _: tf.zeros(outer_shape, tf.float32), self._action_spec)
-    policy_info = policy_step.set_log_probability(
-        self._policy_info, log_probability=log_probability)
+    if self._emit_log_probability:
+      log_probability = tf.nest.map_structure(
+          lambda _: tf.zeros(outer_shape, tf.float32), self._action_spec)
+      policy_info = policy_step.set_log_probability(
+          self._policy_info, log_probability=log_probability)
+    else:
+      policy_info = self._policy_info
     action = tf.nest.map_structure(lambda t: common.replicate(t, outer_shape),
                                    self._action_value)
     return policy_info, action
