@@ -71,7 +71,8 @@ class Learner(tf.Module):
                strategy=None,
                run_optimizer_variable_init=True,
                use_reverb_v2=False,
-               experience_dataset_options=None):
+               experience_dataset_options=None,
+               strategy_run_options=None):
     """Initializes a Learner instance.
 
     Args:
@@ -85,11 +86,11 @@ class Learner(tf.Module):
         tf.data.Dataset used to sample experience for training. Required for
         using the Learner as is. Optional for subclass learners which take a new
         iterator each time when `learner.run` is called.
-      after_train_strategy_step_fn: (Optional) callable of the form
-        `fn(sample, loss)` which can be used for example to update priorities in
-        a replay buffer where sample is pulled from the `experience_iterator`
-        and loss is a `LossInfo` named tuple returned from the agent. This is
-        called after every train step. It runs using `strategy.run(...)`.
+      after_train_strategy_step_fn: (Optional) callable of the form `fn(sample,
+        loss)` which can be used for example to update priorities in a replay
+        buffer where sample is pulled from the `experience_iterator` and loss is
+        a `LossInfo` named tuple returned from the agent. This is called after
+        every train step. It runs using `strategy.run(...)`.
       triggers: List of callables of the form `trigger(train_step)`. After every
         `run` call every trigger is called with the current `train_step` value
         as an np scalar.
@@ -117,19 +118,22 @@ class Learner(tf.Module):
         happens by building the Tensorflow graph. This is done by calling a
         `get_concrete_function` on the agent's `train` method which requires
         passing some input. Since, no real data is available at this point we
-        use the batched form of `training_data_spec` to
-        achieve this (standard technique). The problem arises when the agent
-        expects some agent specific batching of the input. In this case, there
-        is no _general_ way at this point in the learner to batch the impacted
-        specs properly. To avoid breaking the code in these specific cases, we
-        recommend turning off initialization of the optimizer variables by
-        setting the value of this field to `False`.
+        use the batched form of `training_data_spec` to achieve this (standard
+        technique). The problem arises when the agent expects some agent
+        specific batching of the input. In this case, there is no _general_ way
+        at this point in the learner to batch the impacted specs properly. To
+        avoid breaking the code in these specific cases, we recommend turning
+        off initialization of the optimizer variables by setting the value of
+        this field to `False`.
       use_reverb_v2: If True then we expect the dataset samples to return a
         named_tuple with a data and an info field. If False we expect a
         tuple(data, info).
       experience_dataset_options: (Optional) `tf.distribute.InputOptions` passed
         to `strategy.distribute_datasets_from_function`, used to control options
         on how this dataset is distributed.
+      strategy_run_options: (Optional) `tf.distribute.RunOptions` passed to
+        `strategy.run`. This is passed to every strategy.run invocation by the
+        learner.
     """
     if checkpoint_interval < 0:
       logging.warning(
@@ -165,6 +169,8 @@ class Learner(tf.Module):
     # Prevent autograph from going into the agent.
     self._agent.train = tf.autograph.experimental.do_not_convert(agent.train)
 
+    self._strategy_run_options = strategy_run_options
+
     checkpoint_dir = os.path.join(self._train_dir, POLICY_CHECKPOINT_DIR)
     with self.strategy.scope():
       agent.initialize()
@@ -193,8 +199,14 @@ class Learner(tf.Module):
           # This can be ensured by placing the `strategy.run(...)` call inside
           # the `tf.function`.
           if self.use_kwargs_in_agent_train:
-            return self.strategy.run(self._agent.train, kwargs=specs)
-          return self.strategy.run(self._agent.train, args=(specs,))
+            return self.strategy.run(
+                self._agent.train,
+                kwargs=specs,
+                options=self._strategy_run_options)
+          return self.strategy.run(
+              self._agent.train,
+              args=(specs,),
+              options=self._strategy_run_options)
 
         _create_variables.get_concrete_function(batched_specs)
       else:
@@ -312,20 +324,28 @@ class Learner(tf.Module):
       experience, sample_info = sample
 
     if self.use_kwargs_in_agent_train:
-      loss_info = self.strategy.run(self._agent.train, kwargs=experience)
+      loss_info = self.strategy.run(
+          self._agent.train,
+          kwargs=experience,
+          options=self._strategy_run_options)
     else:
-      loss_info = self.strategy.run(self._agent.train, args=(experience,))
+      loss_info = self.strategy.run(
+          self._agent.train,
+          args=(experience,),
+          options=self._strategy_run_options)
 
     if self.after_train_strategy_step_fn:
       if self.use_kwargs_in_agent_train:
         self.strategy.run(
             self.after_train_strategy_step_fn,
             kwargs=dict(
-                experience=(experience, sample_info), loss_info=loss_info))
+                experience=(experience, sample_info), loss_info=loss_info),
+            options=self._strategy_run_options)
       else:
         self.strategy.run(
             self.after_train_strategy_step_fn,
-            args=((experience, sample_info), loss_info))
+            args=((experience, sample_info), loss_info),
+            options=self._strategy_run_options)
 
     return loss_info
 
@@ -390,11 +410,13 @@ class Learner(tf.Module):
         self.strategy.run(
             self.after_train_strategy_step_fn,
             kwargs=dict(
-                experience=(experience, sample_info), loss_info=loss_info))
+                experience=(experience, sample_info), loss_info=loss_info),
+            options=self._strategy_run_options)
       else:
         self.strategy.run(
             self.after_train_strategy_step_fn,
-            args=((experience, sample_info), loss_info))
+            args=((experience, sample_info), loss_info),
+            options=self._strategy_run_options)
 
     def _reduce_loss(loss):
       rank = None
