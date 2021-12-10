@@ -65,6 +65,7 @@ class MaskedCategorical(tfp.distributions.Categorical):
         Otherwise use given value.
       name: Python `str` name prefixed to Ops created by this class.
     """
+    parameters = dict(locals())
     logits = tf.convert_to_tensor(value=logits)
     mask = tf.convert_to_tensor(value=mask)
     self._mask = tf.cast(mask, tf.bool)  # Nonzero values are True
@@ -87,12 +88,17 @@ class MaskedCategorical(tfp.distributions.Categorical):
         validate_args=validate_args,
         allow_nan_stats=allow_nan_stats,
         name=name)
+    self._parameters = parameters
 
   def _entropy(self):
     entropy = tf.nn.log_softmax(self.logits) * self.probs_parameter()
     # Replace the (potentially -inf) values with 0s before summing.
     entropy = tf.compat.v1.where(self._mask, entropy, tf.zeros_like(entropy))
     return -tf.reduce_sum(input_tensor=entropy, axis=-1)
+
+  @classmethod
+  def _parameter_properties(cls, dtype, num_classes=None):
+    return dict(logits=tfp.util.ParameterProperties(event_ndims=1))
 
   @property
   def mask(self):
