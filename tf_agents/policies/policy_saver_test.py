@@ -353,10 +353,10 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     if tf.compat.v1.executing_eagerly_outside_functions():
       tflite_converter = tf.lite.TFLiteConverter.from_saved_model(
           path, signature_keys=['action'])
+      # Enable using TF ops in a TFLite model as the TF op `StringToNumber` is
+      # not supported natively in TFLite.
       tflite_converter.target_spec.supported_ops = [
           tf.lite.OpsSet.TFLITE_BUILTINS,
-          # TODO(b/111309333): Remove this when `has_input_fn_and_spec`
-          # is `False` once TFLite has native support for RNG ops, atan, etc.
           tf.lite.OpsSet.SELECT_TF_OPS,
       ]
       tflite_serialized_model = tflite_converter.convert()
