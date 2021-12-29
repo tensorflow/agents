@@ -141,12 +141,6 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
       savers.append(
           (greedy_policy_saver, learner.GREEDY_POLICY_SAVED_MODEL_DIR))
 
-    # Save initial saved_model if they do not exist yet. These can be updated
-    # from the policy_checkpoints.
-    raw_policy_specs_path = os.path.join(saved_model_dir,
-                                         learner.RAW_POLICY_SAVED_MODEL_DIR,
-                                         'policy_specs.pbtxt')
-
     extra_concrete_functions = extra_concrete_functions or []
     for saver, _ in savers:
       for name, fn in extra_concrete_functions:
@@ -157,8 +151,9 @@ class PolicySavedModelTrigger(interval_trigger.IntervalTrigger):
 
     # TODO(b/173815037): Use a TF-Agents util to check for whether a saved
     # policy already exists.
-    if not tf.io.gfile.exists(raw_policy_specs_path):
-      for saver, path in savers:
+    for saver, path in savers:
+      spec_path = os.path.join(saved_model_dir, path, 'policy_specs.pbtxt')
+      if not tf.io.gfile.exists(spec_path):
         saver.save(os.path.join(saved_model_dir, path))
 
     super(PolicySavedModelTrigger, self).__init__(
