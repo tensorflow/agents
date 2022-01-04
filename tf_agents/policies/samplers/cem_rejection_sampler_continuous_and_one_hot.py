@@ -19,7 +19,7 @@ See the base class for more information.
 """
 
 import gin
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 
 from tf_agents.policies.samplers import cem_actions_sampler_continuous_and_one_hot
 

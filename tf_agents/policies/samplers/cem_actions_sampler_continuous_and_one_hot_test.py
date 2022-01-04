@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 
 from tf_agents.policies.samplers import cem_actions_sampler_continuous_and_one_hot
 from tf_agents.specs import tensor_spec
