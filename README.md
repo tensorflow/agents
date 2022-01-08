@@ -102,7 +102,7 @@ documentation for the release is on
 ```shell
 $ pip install --user tf-agents[reverb]
 
-# Use this tag get the matching examples and colabs.
+# Use this to get the matching examples and colabs.
 $ git clone https://github.com/tensorflow/agents.git
 $ cd agents
 $ git checkout v0.11.0
