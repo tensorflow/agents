@@ -32,13 +32,20 @@ _MEAN = [0., 0., 0.0]
 _VAR = [0.09, 0.03, 0.05]
 
 
+def dummy_sample_rejecter(samples, state_sample):
+  del state_sample
+  batch_size = samples.shape[0]
+  num_samples = samples.shape[1]
+  return tf.ones([batch_size, num_samples], dtype=tf.bool)
+
+
 class ActionsSamplerTest(tf.test.TestCase):
 
   def testSampleBatch(self):
     action_spec = (
         tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0.0, 1.0))
     sampler = cem_actions_sampler_continuous.GaussianActionsSampler(
-        action_spec=action_spec)
+        action_spec=action_spec, sample_rejecters=dummy_sample_rejecter)
 
     mean = tf.constant(_MEAN)
     var = tf.constant(_VAR)
@@ -46,9 +53,9 @@ class ActionsSamplerTest(tf.test.TestCase):
     var = tf.broadcast_to(var, [_BATCH, _ACTION_SIZE])
 
     actions = sampler.sample_batch_and_clip(_NUM_SAMPLES, mean, var)
-    self.assertEqual((_BATCH, _NUM_SAMPLES, _ACTION_SIZE), actions.shape)
 
     actions_ = self.evaluate(actions)
+    self.assertEqual((_BATCH, _NUM_SAMPLES, _ACTION_SIZE), actions_.shape)
     self.assertTrue((actions_ <= action_spec.maximum).all())
     self.assertTrue((actions_ >= action_spec.minimum).all())
 

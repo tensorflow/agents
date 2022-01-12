@@ -38,7 +38,7 @@ class ActionsSampler(object):
 
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, action_spec, sample_clippers=None):
+  def __init__(self, action_spec, sample_clippers=None, sample_rejecters=None):
     """Creates an ActionsSampler.
 
     Args:
@@ -46,9 +46,12 @@ class ActionsSampler(object):
       sample_clippers: A list of callables that are applied to
         the generated samples. These callables take in a nested structure
         matching the action_spec and must return a matching structure.
+      sample_rejecters: A list of callables that will reject samples and return
+        a mask tensor.
     """
     self._action_spec = action_spec
     self._sample_clippers = sample_clippers
+    self._sample_rejecters = sample_rejecters
 
   @abc.abstractmethod
   def refit_distribution_to(self, target_sample_indices, samples):
@@ -87,6 +90,28 @@ class ActionsSampler(object):
 
 
 class SampleClipper(object):
+  """Base class for sampler clipper.
+
+  Given a batch of actions, clip and return clipped actions according to given
+  constraints.
+  """
+
+  __metaclass__ = abc.ABCMeta
+
+  @abc.abstractmethod
+  def __call__(self, actions, state):
+    """Clips action according to given constraints.
+
+    Args:
+      actions: An [N, B, A] Tensor representing sampled actions.
+      state: Nested state tensor.
+    Returns:
+      actions: An [N, B, A] Tensor representing clipped actions.
+    """
+    raise NotImplementedError('clip not implemented.')
+
+
+class SampleRejecter(object):
   """Base class for sampler clipper.
 
   Given a batch of actions, clip and return clipped actions according to given

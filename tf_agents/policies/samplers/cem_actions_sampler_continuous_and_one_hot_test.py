@@ -34,6 +34,13 @@ _MEAN = [0., 0., 0.0]
 _VAR = [0.09, 0.03, 0.05]
 
 
+def dummy_sample_rejecter(samples, state_sample):
+  del state_sample
+  batch_size = samples['continuous1'].shape[0]
+  num_samples = samples['continuous1'].shape[1]
+  return tf.ones([batch_size, num_samples], dtype=tf.bool)
+
+
 class ActionsSamplerTest(tf.test.TestCase):
 
   def testSampleBatch(self):
@@ -46,7 +53,8 @@ class ActionsSamplerTest(tf.test.TestCase):
             [_ACTION_SIZE_DISCRETE], tf.int32, 0, 1)}
     sampler = cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
         action_spec=action_spec, sample_clippers=[[], [], []],
-        sub_actions_fields=[['continuous1'], ['discrete'], ['continuous2']])
+        sub_actions_fields=[['continuous1'], ['discrete'], ['continuous2']],
+        sample_rejecters=[None, None, dummy_sample_rejecter])
 
     mean = tf.constant(_MEAN)
     var = tf.constant(_VAR)

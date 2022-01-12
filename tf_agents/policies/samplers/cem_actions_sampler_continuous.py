@@ -24,6 +24,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
 
@@ -38,9 +39,13 @@ class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
   'A' means action_size.
   """
 
-  def __init__(self, action_spec, sample_clippers=None):
+  def __init__(self, action_spec, sample_clippers=None, sample_rejecters=None,
+               max_rejection_iterations=10):
 
     super(GaussianActionsSampler, self).__init__(action_spec, sample_clippers)
+
+    self._sample_rejecters = sample_rejecters
+    self._max_rejection_iterations = tf.constant(max_rejection_iterations)
 
     for flat_action_spec in tf.nest.flatten(action_spec):
       if flat_action_spec.dtype.is_integer:
@@ -105,13 +110,95 @@ class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
       sample = tf.transpose(dist.sample(num_samples), [1, 0, 2])
       return sample
 
-    # [B, N, A]
-    samples = tf.nest.map_structure(sample_and_transpose, mean, var)
+    batch_size = tf.shape(tf.nest.flatten(mean)[0])[0]
 
-    actions = tf.nest.map_structure(
-        common.clip_to_spec, samples, self._action_spec)
-    if self._sample_clippers:
-      for sample_clipper in self._sample_clippers:
-        actions = sample_clipper(actions, state)
+    def sample_fn(mean_sample, var_sample, state_sample):
+      # [B, N, A]
+      samples_continuous = tf.nest.map_structure(sample_and_transpose,
+                                                 mean_sample, var_sample)
 
-    return actions
+      if self._sample_clippers:
+        for sample_clipper in self._sample_clippers:
+          samples_continuous = sample_clipper(samples_continuous, state_sample)
+
+      samples_continuous = tf.nest.map_structure(
+          common.clip_to_spec, samples_continuous, self._action_spec)
+      return samples_continuous
+
+    @tf.function
+    def rejection_sampling(sample_rejector):
+      valid_batch_samples = tf.nest.map_structure(
+          lambda spec: tf.TensorArray(spec.dtype, size=batch_size),
+          self._action_spec)
+
+      for b_indx in tf.range(batch_size):
+        k = tf.constant(0)
+        # pylint: disable=cell-var-from-loop
+        valid_samples = tf.nest.map_structure(
+            lambda spec: tf.TensorArray(spec.dtype, size=num_samples),
+            self._action_spec)
+
+        count = tf.constant(0)
+        while count < self._max_rejection_iterations:
+          count += 1
+          mean_sample = tf.nest.map_structure(
+              lambda t: tf.expand_dims(tf.gather(t, b_indx), axis=0), mean)
+          var_sample = tf.nest.map_structure(
+              lambda t: tf.expand_dims(tf.gather(t, b_indx), axis=0), var)
+          if state is not None:
+            state_sample = tf.nest.map_structure(
+                lambda t: tf.expand_dims(tf.gather(t, b_indx), axis=0), state)
+          else:
+            state_sample = None
+
+          samples = sample_fn(mean_sample, var_sample, state_sample)  # n, a
+
+          mask = sample_rejector(samples, state_sample)
+
+          mask = mask[0, ...]
+          mask_index = tf.where(mask)[:, 0]
+
+          num_mask = tf.shape(mask_index)[0]
+          if num_mask == 0:
+            continue
+
+          good_samples = tf.nest.map_structure(
+              lambda t: tf.gather(t, mask_index, axis=1)[0, ...], samples)
+
+          for sample_idx in range(num_mask):
+            if k >= num_samples:
+              break
+            valid_samples = tf.nest.map_structure(
+                lambda gs, vs: vs.write(k, gs[sample_idx:sample_idx+1, ...]),
+                good_samples, valid_samples)
+            k += 1
+
+        if k < num_samples:
+          zero_samples = tensor_spec.zero_spec_nest(
+              self._action_spec, outer_dims=(num_samples-k,))
+          for sample_idx in range(num_samples-k):
+            valid_samples = tf.nest.map_structure(
+                lambda gs, vs: vs.write(k, gs[sample_idx:sample_idx+1, ...]),
+                zero_samples, valid_samples)
+
+        valid_samples = tf.nest.map_structure(lambda vs: vs.concat(),
+                                              valid_samples)
+
+        valid_batch_samples = tf.nest.map_structure(
+            lambda vbs, vs: vbs.write(b_indx, vs), valid_batch_samples,
+            valid_samples)
+
+      samples_continuous = tf.nest.map_structure(
+          lambda a: a.stack(), valid_batch_samples)
+      return samples_continuous
+
+    if self._sample_rejecters:
+      samples_continuous = rejection_sampling(self._sample_rejecters)
+      def set_b_n_shape(t):
+        t.set_shape(tf.TensorShape([None, num_samples] + t.shape[2:].dims))
+
+      tf.nest.map_structure(set_b_n_shape, samples_continuous)
+    else:
+      samples_continuous = sample_fn(mean, var, state)
+
+    return samples_continuous
