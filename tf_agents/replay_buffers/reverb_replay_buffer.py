@@ -539,7 +539,7 @@ def make_reverb_dataset(server_address: str,
         cycle_length=cycle_length,
         num_parallel_calls=num_parallel_calls)
 
-  # Allows interleave to retrieve data from the first `reverb.ReplayDataset`
+  # Allows interleave to retrieve data from the first `reverb.TrajectoryDataset`
   # available.
   options = tf.data.Options()
   # reverb replay buffers are not considered deterministic for tf.data.
