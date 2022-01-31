@@ -204,7 +204,7 @@ def get_test_packages():
       'mock >= 2.0.0',
       'opencv-python >= 3.4.1.15',
       'pybullet',
-      'scipy == 1.1.0',
+      'scipy >= 1.1.0',
   ]
   return test_packages
 

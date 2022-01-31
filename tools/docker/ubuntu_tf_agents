@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       freeglut3-dev \
       ffmpeg \
       python3-opencv \
+      python3-scipy \
       gfortran \
       libopenblas-dev \
       liblapack-dev
