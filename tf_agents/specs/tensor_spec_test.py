@@ -33,6 +33,7 @@ TYPE_PARAMETERS = (
     ("tf.float64", tf.float64),
     ("tf.uint8", tf.uint8),
     ("tf.string", tf.string),
+    ("tf.bool", tf.bool),
 )
 
 
@@ -140,8 +141,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     self.assertTrue(np.all(0 <= sample_))
 
   def testTensorSpecSample(self, dtype):
-    if dtype == tf.string:
-      self.skipTest("Not compatible with string type.")
+    if dtype == tf.string or dtype == tf.bool:
+      self.skipTest("Not compatible with string or bool type.")
     spec = tensor_spec.TensorSpec((2, 3), dtype)
     sample = tensor_spec.sample_spec_nest(spec)
     bounded = tensor_spec.BoundedTensorSpec.from_spec(spec)
@@ -153,8 +154,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
         np.all(sample_ <= bounded.maximum), (sample_.min(), sample_.max()))
 
   def testBoundedTensorSpecSample(self, dtype):
-    if dtype == tf.string:
-      self.skipTest("Not compatible with string type.")
+    if dtype == tf.string or dtype == tf.bool:
+      self.skipTest("Not compatible with string or bool type.")
     spec = tensor_spec.BoundedTensorSpec((2, 3), dtype, 2, 7)
     sample = tensor_spec.sample_spec_nest(spec)
     sample_ = self.evaluate(sample)
@@ -210,8 +211,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
         example_nested_tensor_spec(dtype, (outer_dim,)))
 
   def testNestSample(self, dtype):
-    if dtype == tf.string:
-      self.skipTest("Not compatible with string type.")
+    if dtype == tf.string or dtype == tf.bool:
+      self.skipTest("Not compatible with string or bool type.")
     nested_spec = example_nested_tensor_spec(dtype)
     sample = tensor_spec.sample_spec_nest(nested_spec)
     spec_1 = tensor_spec.BoundedTensorSpec.from_spec(nested_spec["spec_1"])
@@ -251,8 +252,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
   def testNestSampleOuterDims(self, dtype):
     # Can't add another level of parameterized args because the test class is
     # already parameterized on dtype.
-    if dtype == tf.string:
-      self.skipTest("Not compatible with string type.")
+    if dtype == tf.string or dtype == tf.bool:
+      self.skipTest("Not compatible with string or bool type.")
     self._testNestSampleOuterDims(dtype, use_tensor=False)
     self._testNestSampleOuterDims(dtype, use_tensor=True)
 
@@ -396,8 +397,8 @@ class TensorSpecTypeTest(tf.test.TestCase, parameterized.TestCase):
     self.assertIs(tensor_spec.is_continuous(spec), dtype.is_floating)
 
   def testExclusive(self, dtype):
-    if dtype == tf.string:
-      self.skipTest("Not compatible with string type.")
+    if dtype == tf.string or dtype == tf.bool:
+      self.skipTest("Not compatible with string or bool type.")
     spec = tensor_spec.TensorSpec((2, 3), dtype=dtype)
     self.assertIs(
         tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True)

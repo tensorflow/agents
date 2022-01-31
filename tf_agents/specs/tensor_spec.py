@@ -374,6 +374,11 @@ def sample_spec_nest(structure,
         return tf.as_string(
             sample_bounded_spec(
                 sample_spec, outer_dims=outer_dims, seed=seed_stream()))
+      elif spec.dtype == tf.bool:
+        sample_spec = BoundedTensorSpec(
+            spec.shape, tf.int32, minimum=0, maximum=1)
+        return tf.cast(sample_bounded_spec(
+            sample_spec, outer_dims=outer_dims, seed=seed_stream()), tf.bool)
       else:
         bounded_spec = BoundedTensorSpec.from_spec(spec)
 
