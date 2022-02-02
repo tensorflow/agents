@@ -178,7 +178,7 @@ class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
     if num_one_hot_action != 1:
       raise ValueError('Only continuous action + 1 one_hot action is supported'
                        ' by this sampler. The action_spec: \n{}\n contains '
-                       'either multiple one_hot acitons or no one_hot '
+                       'either multiple one_hot actions or no one_hot '
                        'action'.format(action_spec))
 
     if sample_clippers is None:
