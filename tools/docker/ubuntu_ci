@@ -1,0 +1,65 @@
+# Run the following commands in order:
+#
+# docker build --tag tf_agents:ci -f tools/docker/ubuntu_ci tools/docker/
+#
+# Test that everything worked:
+# docker run -it --rm -v $(pwd):/workspace --workdir /workspace circuit_training:ci bash
+# python3.9 -m circuit_training.environment.environment_test
+ARG base_image="ubuntu:20.04"
+
+FROM $base_image
+
+LABEL maintainer="tobyboyd@google.com"
+
+# Supports setting up a single version of python.
+ARG python_version="python3"
+ARG APT_COMMAND="apt-get -o Acquire::Retries=3 -y"
+
+# Stops tzdata from asking about timezones and blocking install on user input.
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Los_Angeles
+
+RUN ${APT_COMMAND} update && ${APT_COMMAND} install -y --no-install-recommends \
+        software-properties-common \
+        curl \
+        less
+
+# Adds repository to pull versions of python from.
+RUN add-apt-repository ppa:deadsnakes/ppa
+
+# Installs various versions of python and then cleans up apt.
+# Pick up some TF dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      zlib1g-dev \
+      libpng-dev \
+      lsb-core \
+      vim \
+      ca-certificates \
+      wget \
+      zip \
+      xvfb \
+      freeglut3-dev \
+      ffmpeg \
+      python3-opencv \
+      python3-dev \
+      python3-scipy \
+      gfortran \
+      libopenblas-dev \
+      liblapack-dev
+
+RUN curl -O https://bootstrap.pypa.io/get-pip.py
+
+ARG pip_dependencies=' \
+       virtualenv'
+
+# No need to install tf-agents as that should be part of the test setup.
+# Doing it for now to test.
+RUN for python in ${python_version}; do \
+    $python get-pip.py && \
+    $python -mpip --no-cache-dir install $pip_dependencies; \
+  done
+
+
+CMD ["/bin/bash"]
