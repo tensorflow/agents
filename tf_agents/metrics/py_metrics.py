@@ -60,7 +60,8 @@ class NumpyDeque(numpy_storage.NumpyState):
 
     # Increase buffer size if necessary.
     if np.isinf(self._maxlen) and insert_idx >= self._buffer.shape[0]:
-      self._buffer.resize((self._buffer.shape[0] * 2,))
+      new_len = self._buffer.shape[0] * 2
+      self._buffer.resize((new_len,), refcheck=False)
 
     self._buffer[insert_idx] = value
     if self._len < self._maxlen:

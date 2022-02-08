@@ -118,10 +118,10 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         SlowStartingEnvironment,
         self.observation_spec,
         self.action_spec,
-        time_sleep=1.0)
+        time_sleep=5.0)
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=10, start_serially=False,
+        constructor=constructor, num_envs=2, start_serially=False,
         blocking=False)
     end_time = time.time()
     self.assertLessEqual(
