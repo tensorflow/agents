@@ -172,6 +172,7 @@ def train_eval(
       debug_summaries=debug_summaries)
 
   table_name = 'uniform_table'
+  sequence_length = n_step_update + 1
   table = reverb.Table(
       table_name,
       max_size=replay_capacity,
@@ -181,12 +182,12 @@ def train_eval(
   reverb_server = reverb.Server([table], port=reverb_port)
   reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
       agent.collect_data_spec,
-      sequence_length=2,
+      sequence_length=sequence_length,
       table_name=table_name,
       local_server=reverb_server)
   rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
       reverb_replay.py_client, table_name,
-      sequence_length=2,
+      sequence_length=sequence_length,
       stride_length=1)
 
   dataset = reverb_replay.as_dataset(
