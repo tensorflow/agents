@@ -88,12 +88,71 @@ def test_cases():
               tf.float64,
           'use_eigendecomp':
               True,
+      }, {
+          'testcase_name':
+              '_batch1_contextdim10_float32_with_weights',
+          'batch_size':
+              1,
+          'context_dim':
+              10,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_ucb_policy,
+          'dtype':
+              tf.float32,
+          'set_example_weights':
+              True,
+      }, {
+          'testcase_name':
+              '_batch4_contextdim5_float64_UCB_with_weights',
+          'batch_size':
+              4,
+          'context_dim':
+              5,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_ucb_policy,
+          'dtype':
+              tf.float64,
+          'set_example_weights':
+              True,
+      }, {
+          'testcase_name':
+              '_batch4_contextdim5_float64_TS_with_weights',
+          'batch_size':
+              4,
+          'context_dim':
+              5,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_thompson_sampling_policy,
+          'dtype':
+              tf.float64,
+          'set_example_weights':
+              True,
+      }, {
+          'testcase_name':
+              '_batch4_contextdim5_float64_decomp_with_weights',
+          'batch_size':
+              4,
+          'context_dim':
+              5,
+          'exploration_policy':
+              linear_agent.ExplorationPolicy.linear_ucb_policy,
+          'dtype':
+              tf.float64,
+          'use_eigendecomp':
+              True,
+          'set_example_weights':
+              True,
       })
 
 
-def _get_initial_and_final_steps(batch_size, context_dim):
-  observation = np.array(range(batch_size * context_dim)).reshape(
-      [batch_size, context_dim])
+def _get_initial_and_final_steps(batch_size,
+                                 context_dim,
+                                 use_constant_observations=False):
+  if use_constant_observations:
+    observation = np.ones(shape=[batch_size, context_dim])
+  else:
+    observation = np.array(range(batch_size * context_dim)).reshape(
+        [batch_size, context_dim])
   reward = np.random.uniform(0.0, 1.0, [batch_size])
   initial_step = time_step.TimeStep(
       tf.constant(
@@ -241,6 +300,14 @@ def _get_experience(initial_step, action_step, final_step):
       lambda x: tf.expand_dims(tf.convert_to_tensor(x), 1), single_experience)
 
 
+def _maybe_weight_observation_and_reward(observation, reward, weights):
+  if weights is None:
+    return (observation, reward)
+  else:
+    w_sqrt = tf.sqrt(weights)
+    return (tf.reshape(w_sqrt, [-1, 1]) * observation, w_sqrt * reward)
+
+
 class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
@@ -253,7 +320,9 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
                           context_dim,
                           exploration_policy,
                           dtype,
-                          use_eigendecomp=False):
+                          use_eigendecomp=False,
+                          set_example_weights=False):
+    del batch_size, use_eigendecomp, set_example_weights  # Unused in this test.
     num_actions = 5
     observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
     time_step_spec = time_step.time_step_spec(observation_spec)
@@ -280,13 +349,65 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         dtype=dtype)
     self.evaluate(agent.initialize())
 
+  @parameterized.named_parameters(('weights_unset', False),
+                                  ('use_weights', True))
+  def testLinearAgentFinalTheta(self, set_example_weights):
+    num_actions = 1
+    context_dim = 1
+    batch_size = 10
+    use_eigendecomp = False
+    dtype = tf.float32
+    # The observation consists of a single constant feature.
+    initial_step, final_step = _get_initial_and_final_steps(
+        batch_size, context_dim, use_constant_observations=True)
+    action = [0] * batch_size
+    action_step = _get_action_step(action)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    # Construct an agent and perform the update.
+    observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
+    time_step_spec = time_step.time_step_spec(observation_spec)
+    action_spec = tensor_spec.BoundedTensorSpec(
+        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+    variable_collection = linear_agent.LinearBanditVariableCollection(
+        context_dim, num_actions, use_eigendecomp=use_eigendecomp, dtype=dtype)
+
+    agent = linear_agent.LinearBanditAgent(
+        exploration_policy=linear_agent.ExplorationPolicy.linear_ucb_policy,
+        time_step_spec=time_step_spec,
+        action_spec=action_spec,
+        variable_collection=variable_collection,
+        use_eigendecomp=use_eigendecomp,
+        tikhonov_weight=0.0,
+        dtype=dtype)
+    self.evaluate(agent.initialize())
+
+    reward = tf.reshape(experience.reward, [batch_size])
+
+    weights = tf.linspace(
+        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    self.evaluate(agent.train(experience, weights=weights))
+    final_theta = self.evaluate(agent.theta)
+    self.assertAllClose(tf.shape(final_theta), [1, 1])
+    # Because the observation consists of a single constant feature and the
+    # agent uses zero regularization for training (`tikhonov_weight` set to 0),
+    # the final theta is expected to be the average reward when the weights are
+    # unset, and the weighted average reward when the weights are set.
+    if weights is None:
+      self.assertAllClose(final_theta[0, 0], tf.reduce_mean(reward))
+    else:
+      self.assertAllClose(
+          final_theta[0, 0],
+          tf.reduce_sum(weights * reward) / tf.reduce_sum(weights))
+
   @test_cases()
   def testLinearAgentUpdate(self,
                             batch_size,
                             context_dim,
                             exploration_policy,
                             dtype,
-                            use_eigendecomp=False):
+                            use_eigendecomp=False,
+                            set_example_weights=False):
     """Check that the agent updates for specified actions and rewards."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
@@ -312,19 +433,26 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         use_eigendecomp=use_eigendecomp,
         dtype=dtype)
     self.evaluate(agent.initialize())
-    loss_info = agent.train(experience)
+    weights = tf.linspace(
+        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    loss_info = agent.train(experience, weights)
     self.evaluate(loss_info)
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
     final_theta = self.evaluate(agent.theta)
 
     # Compute the expected updated estimates.
+    reshaped_observation = tf.reshape(experience.observation,
+                                      [batch_size, context_dim])
+    reshaped_reward = tf.reshape(experience.reward, [batch_size])
+    observation, reward = _maybe_weight_observation_and_reward(
+        reshaped_observation, reshaped_reward, weights)
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(experience.observation, [batch_size, context_dim]),
+        data=observation,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(experience.reward, [batch_size]),
+        data=reward,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []
@@ -373,7 +501,8 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
                                           context_dim,
                                           exploration_policy,
                                           dtype,
-                                          use_eigendecomp=False):
+                                          use_eigendecomp=False,
+                                          set_example_weights=False):
     """Check that the agent updates for specified actions and rewards."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
@@ -410,7 +539,9 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         accepts_per_arm_features=True,
         dtype=dtype)
     self.evaluate(agent.initialize())
-    loss_info = agent.train(experience)
+    weights = tf.linspace(
+        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    loss_info = agent.train(experience, weights)
     self.evaluate(loss_info)
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
@@ -421,12 +552,12 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     arm_observation = experience.policy_info.chosen_arm_features
     overall_observation = tf.squeeze(
         tf.concat([global_observation, arm_observation], axis=-1), axis=1)
-    rewards = tf.squeeze(experience.reward, axis=1)
-
-    expected_a_new = tf.matmul(
-        overall_observation, overall_observation, transpose_a=True)
+    squeezed_rewards = tf.squeeze(experience.reward, axis=1)
+    observation, rewards = _maybe_weight_observation_and_reward(
+        overall_observation, squeezed_rewards, weights)
+    expected_a_new = tf.matmul(observation, observation, transpose_a=True)
     expected_b_new = bandit_utils.sum_reward_weighted_observations(
-        rewards, overall_observation)
+        rewards, observation)
     self.assertAllClose(expected_a_new, final_a[0])
     self.assertAllClose(expected_b_new, final_b[0])
 
@@ -436,7 +567,8 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
                                     context_dim,
                                     exploration_policy,
                                     dtype,
-                                    use_eigendecomp=False):
+                                    use_eigendecomp=False,
+                                    set_example_weights=False):
     """Check that the agent updates for specified actions and rewards."""
 
     # Construct a `Trajectory` for the given action, observation, reward.
@@ -463,19 +595,30 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         add_bias=True,
         dtype=dtype)
     self.evaluate(agent.initialize())
-    loss_info = agent.train(experience)
+    weights = tf.linspace(
+        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    loss_info = agent.train(experience, weights)
     self.evaluate(loss_info)
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
     final_theta = self.evaluate(agent.theta)
 
     # Compute the expected updated estimates.
+    reshaped_observation = tf.reshape(experience.observation,
+                                      [batch_size, context_dim])
+    # Append ones as the final feature to account for the bias.
+    reshaped_observation = tf.concat(
+        [reshaped_observation,
+         tf.ones(shape=[batch_size, 1])], axis=1)
+    reshaped_reward = tf.reshape(experience.reward, [batch_size])
+    observation, reward = _maybe_weight_observation_and_reward(
+        reshaped_observation, reshaped_reward, weights)
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(experience.observation, [batch_size, context_dim]),
+        data=observation,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(experience.reward, [batch_size]),
+        data=reward,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []
@@ -483,10 +626,6 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     expected_theta_updated_list = []
     for _, (observations_for_arm,
             rewards_for_arm) in enumerate(zip(observations_list, rewards_list)):
-      observations_for_arm = tf.concat(
-          [observations_for_arm,
-           tf.ones_like(observations_for_arm[:, 0:1])],
-          axis=1)
       num_samples_for_arm_current = tf.cast(
           tf.shape(rewards_for_arm)[0], tf.float32)
       num_samples_for_arm_total = num_samples_for_arm_current
@@ -529,8 +668,11 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
                                              context_dim,
                                              exploration_policy,
                                              dtype,
-                                             use_eigendecomp=False):
+                                             use_eigendecomp=False,
+                                             set_example_weights=False):
     """Check that the agent updates for specified actions and rewards."""
+
+    del use_eigendecomp  # Unused in this test.
 
     # Construct a `Trajectory` for the given action, observation, reward.
     num_actions = 5
@@ -558,20 +700,26 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
             observation_and_action_constraint_splitter),
         dtype=dtype)
     self.evaluate(agent.initialize())
-    loss_info = agent.train(experience)
+    weights = tf.linspace(
+        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    loss_info = agent.train(experience, weights)
     self.evaluate(loss_info)
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
 
     # Compute the expected updated estimates.
+    reshaped_observation = tf.reshape(
+        observation_and_action_constraint_splitter(experience.observation)[0],
+        [batch_size, -1])
+    reshaped_reward = tf.reshape(experience.reward, [batch_size])
+    observation, reward = _maybe_weight_observation_and_reward(
+        reshaped_observation, reshaped_reward, weights)
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(
-            observation_and_action_constraint_splitter(
-                experience.observation)[0], [batch_size, -1]),
+        data=observation,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(experience.reward, [batch_size]),
+        data=reward,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []
@@ -609,7 +757,8 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
                                           context_dim,
                                           exploration_policy,
                                           dtype,
-                                          use_eigendecomp=False):
+                                          use_eigendecomp=False,
+                                          set_example_weights=False):
     """Check that the agent updates for specified actions and rewards."""
     # We should rewrite this test as it currently does not depend on
     # the value of `gamma`. To properly test the forgetting factor, we need to
@@ -637,19 +786,26 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         dtype=dtype,
         use_eigendecomp=use_eigendecomp)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    loss_info = agent.train(experience)
+    weights = tf.linspace(
+        start=1.5, stop=3.0, num=batch_size) if set_example_weights else None
+    loss_info = agent.train(experience, weights)
     self.evaluate(loss_info)
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
     final_eig_vals = self.evaluate(agent.eig_vals)
 
     # Compute the expected updated estimates.
+    reshaped_observation = tf.reshape(experience.observation,
+                                      [batch_size, context_dim])
+    reshaped_reward = tf.reshape(experience.reward, [batch_size])
+    observation, reward = _maybe_weight_observation_and_reward(
+        reshaped_observation, reshaped_reward, weights)
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(experience.observation, [batch_size, context_dim]),
+        data=observation,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(experience.reward, [batch_size]),
+        data=reward,
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []
@@ -700,8 +856,10 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
                                        context_dim,
                                        exploration_policy,
                                        dtype,
-                                       use_eigendecomp=False):
+                                       use_eigendecomp=False,
+                                       set_example_weights=False):
     """Same as above, but uses the distributed train function of the agent."""
+    del use_eigendecomp  # Unused in this test.
 
     # Construct a `Trajectory` for the given action, observation, reward.
     num_actions = 5
@@ -724,19 +882,26 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         dtype=dtype)
     self.evaluate(agent.initialize())
     train_fn = common.function_in_tf1()(agent._distributed_train_step)
-    loss_info = train_fn(experience=experience)
+    weights = tf.linspace(
+        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    loss_info = train_fn(experience, weights)
     self.evaluate(loss_info)
 
     final_a = self.evaluate(agent.cov_matrix)
     final_b = self.evaluate(agent.data_vector)
 
     # Compute the expected updated estimates.
+    reshaped_observation = tf.reshape(experience.observation,
+                                      [batch_size, context_dim])
+    reshaped_reward = tf.reshape(experience.reward, [batch_size])
+    observation, reward = _maybe_weight_observation_and_reward(
+        reshaped_observation, reshaped_reward, weights)
     observations_list = tf.dynamic_partition(
-        data=tf.reshape(experience.observation, [batch_size, context_dim]),
+        data=tf.reshape(observation, [batch_size, context_dim]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     rewards_list = tf.dynamic_partition(
-        data=tf.reshape(experience.reward, [batch_size]),
+        data=tf.reshape(reward, [batch_size]),
         partitions=tf.convert_to_tensor(action),
         num_partitions=num_actions)
     expected_a_updated_list = []

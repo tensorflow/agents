@@ -22,12 +22,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from enum import Enum
+import enum
 from typing import Optional, Sequence, Text, Tuple
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import utils as bandit_utils
@@ -40,7 +39,7 @@ from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
-class ExplorationPolicy(Enum):
+class ExplorationPolicy(enum.Enum):
   """Possible exploration policies."""
   linear_ucb_policy = 1
   linear_thompson_sampling_policy = 2
@@ -504,12 +503,23 @@ class LinearBanditAgent(tf_agent.TFAgent):
 
     return reward, action, observation, batch_size
 
+  def _maybe_apply_per_example_weight(
+      self, observation: tf.Tensor, reward: tf.Tensor,
+      weights: Optional[tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Optionally applies per-example weight to observation and rewards."""
+    if weights is None:
+      return (observation, reward)
+    else:
+      w_sqrt = tf.sqrt(tf.cast(weights, dtype=self._dtype))
+      return (tf.reshape(w_sqrt, [-1, 1]) * observation, w_sqrt * reward)
+
   def _distributed_train_step(self, experience, weights=None):
     """Distributed train fn to be passed as input to run()."""
-    del weights  # unused
-    reward, action, observation, batch_size = self._process_experience(
-        experience)
+    experience_reward, action, experience_observation, batch_size = (
+        self._process_experience(experience))
     self._train_step_counter.assign_add(batch_size)
+    observation, reward = self._maybe_apply_per_example_weight(
+        experience_observation, experience_reward, weights)
 
     for k in range(self._num_models):
       diag_mask = tf.linalg.tensor_diag(
@@ -580,11 +590,10 @@ class LinearBanditAgent(tf_agent.TFAgent):
     if tf.distribute.has_strategy():
       return self._distributed_train_step(experience)
 
-    del weights  # unused
-
-    reward, action, observation, batch_size = self._process_experience(
-        experience)
-
+    experience_reward, action, experience_observation, batch_size = (
+        self._process_experience(experience))
+    observation, reward = self._maybe_apply_per_example_weight(
+        experience_observation, experience_reward, weights)
     for k in range(self._num_models):
       diag_mask = tf.linalg.tensor_diag(
           tf.cast(tf.equal(action, k), self._dtype))
