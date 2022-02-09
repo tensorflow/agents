@@ -268,7 +268,7 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
 
     # Draw one sample from the server using the Python client.
     content = next(
-        iter(client.sample(reverb_variable_container.DEFAULT_TABLE, 1)))[0].data
+        iter(client.sample(reverb_variable_container.DEFAULT_TABLE, 1)))[0].data  # pytype: disable=attribute-error  # strict_namedtuple_checks
     # Internally in Reverb the data is stored in the form of flat numpy lists.
     self.assertLen(content, 3)
     self.assertAllEqual(content[0], np.array(0, dtype=np.int64))
