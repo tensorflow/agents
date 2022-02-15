@@ -164,7 +164,7 @@ class ReplayBuffer(tf.Module):
     because it allows the user to get full episodes back, and use `tf.data`
     to build padded or truncated batches themselves.
 
-    If `single_determinsitic_pass == True`, the replay buffer will make
+    If `single_deterministic_pass == True`, the replay buffer will make
     every attempt to ensure every time step is visited once and exactly once
     in a deterministic manner (though true determinism depends on the
     underlying data store).  Additional work may be done to ensure minibatches
