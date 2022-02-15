@@ -19,9 +19,10 @@ class MultiCategoricalDistributionBlock(tfp.distributions.Blockwise):
     self._parameters['logits'] = logits
 
   def _create_distrib(self, logits):
-    logits = tf.split(logits, self.categories_shape, -1)
-    distribs = [tfp.distributions.Categorical(logits = logits_split) for
-                    logits_split in logits]
+    logits_splitted = tf.split(logits, self.categories_shape, -1)
+    distribs = tf.nest.map_structure(
+                    lambda l: tfp.distributions.Categorical(logits = l),
+                    logits_splitted)
     return distribs
 
   def _mode(self):
