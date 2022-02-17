@@ -127,6 +127,10 @@ class ReverbAddEpisodeObserver(object):
     """
     self._priority = priority
 
+  @property
+  def py_client(self) -> types.ReverbClient:
+    return self._py_client
+
   def __call__(self, trajectory: trajectory_lib.Trajectory) -> None:
     """Cache the single step trajectory to be written into Reverb.
 
@@ -337,6 +341,10 @@ class ReverbAddTrajectoryObserver(object):
         num_keep_alive_refs=sequence_length + 1, get_signature_timeout_ms=None)
     self._cached_steps = 0
     self._last_trajectory = None
+
+  @property
+  def py_client(self) -> types.ReverbClient:
+    return self._py_client
 
   def __call__(self, trajectory: trajectory_lib.Trajectory) -> None:
     """Writes the trajectory into the underlying replay buffer.
