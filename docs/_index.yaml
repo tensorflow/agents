@@ -54,6 +54,11 @@ landing_page:
 
   - classname: devsite-landing-row-cards
     items:
+    - heading: "Reinforcement Learning with TF-Agents video series"
+      youtube_id: 52DTXidSVWc
+      buttons:
+      - label: Watch the video series
+        path: https://www.youtube.com/watch?v=52DTXidSVWc&list=PLQY2H8rRoyvxWE6bWx8XiMvyZFgg_25Q_&index=2
     - heading: "Reinforcement Learning with TF-Agents"
       youtube_id: -TTziY7EmUA
       buttons:
