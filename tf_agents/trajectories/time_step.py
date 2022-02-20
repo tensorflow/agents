@@ -48,12 +48,8 @@ def _get_np_dtype(spec):
   if isinstance(dtype, tf.dtypes.DType):
     dtype = dtype.as_numpy_dtype
   return np.dtype(dtype)
-  
-# def _get_np_dtype(spec):
-#   if type(spec) == tensor_spec.TensorSpec:
-#     return spec.dtype.as_numpy_dtype
-#   elif type(spec) == array_spec.ArraySpec:
-#     return spec.dtype
+
+
 class TimeStep(
     NamedTuple('TimeStep', [('step_type', types.SpecTensorOrArray),
                             ('reward', types.NestedSpecTensorOrArray),
