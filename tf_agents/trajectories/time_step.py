@@ -23,6 +23,7 @@ import pprint
 from typing import NamedTuple, Optional
 
 import numpy as np
+from pandas import array
 import tensorflow as tf
 
 from tf_agents.specs import array_spec
@@ -31,7 +32,7 @@ from tf_agents.typing import types
 
 
 def _as_array(a, t=np.float32):
-  if t == None:
+  if t is None:
     t = np.float32
   r = np.asarray(a, dtype=t)
   if np.isnan(np.sum(r)):
@@ -40,12 +41,19 @@ def _as_array(a, t=np.float32):
                      'Got:\n{}'.format(a))
   return r
 
-def _get_numpy_dt(spec):
-  if type(spec) == tensor_spec.TensorSpec:
-    return spec.dtype.as_numpy_dtype
-  elif type(spec) == array_spec.ArraySpec:
-    return spec.dtype
-
+def _get_np_dtype(spec):
+  if not isinstance(spec, (tensor_spec.TensorSpec, array_spec.ArraySpec)):
+    return None
+  dtype = spec.dtype
+  if isinstance(dtype, tf.dtypes.DType):
+    dtype = dtype.as_numpy_dtype
+  return np.dtype(dtype)
+  
+# def _get_np_dtype(spec):
+#   if type(spec) == tensor_spec.TensorSpec:
+#     return spec.dtype.as_numpy_dtype
+#   elif type(spec) == array_spec.ArraySpec:
+#     return spec.dtype
 class TimeStep(
     NamedTuple('TimeStep', [('step_type', types.SpecTensorOrArray),
                             ('reward', types.NestedSpecTensorOrArray),
@@ -139,7 +147,7 @@ def restart(observation: types.NestedTensorOrArray,
         reward = np.zeros(batch_size, dtype=np.float32)
       else:
         reward = tf.nest.map_structure(
-            lambda r: np.zeros([batch_size] + list(r.shape), dtype=_get_numpy_dt(r)),
+            lambda r: np.zeros([batch_size] + list(r.shape), dtype=_get_np_dtype(r)),
             reward_spec)
       discount = np.ones(batch_size, dtype=np.float32)
       step_type = np.tile(StepType.FIRST, batch_size)
@@ -153,7 +161,7 @@ def restart(observation: types.NestedTensorOrArray,
             observation)
       else:
         reward = tf.nest.map_structure(
-            lambda r: np.zeros(r.shape, dtype=_get_numpy_dt(r)), reward_spec)
+            lambda r: np.zeros(r.shape, dtype=_get_np_dtype(r)), reward_spec)
         return TimeStep(
             StepType.FIRST,
             reward,
@@ -170,7 +178,7 @@ def restart(observation: types.NestedTensorOrArray,
     reward = tf.nest.map_structure(
         # pylint: disable=g-long-lambda
         lambda r: tf.fill(tf.concat([shape, r.shape], axis=-1),
-                          _as_array(0.0, _get_numpy_dt(r)),
+                          _as_array(0.0, _get_np_dtype(r)),
                           name='reward'), reward_spec)
   discount = tf.fill(shape, _as_array(1.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
@@ -223,7 +231,7 @@ def transition(observation: types.NestedTensorOrArray,
       discount = _as_array(discount)
       return TimeStep(step_type, reward, discount, observation)
     # Infer the batch size.
-    reward = tf.nest.map_structure(lambda x:_as_array(x, _get_numpy_dt(x)), reward)
+    reward = tf.nest.map_structure(lambda x:_as_array(x, _get_np_dtype(x)), reward)
     first_reward = tf.nest.flatten(reward)[0]
     discount = _as_array(discount)
     if first_reward.shape:
@@ -281,7 +289,7 @@ def termination(observation: types.NestedTensorOrArray,
       return TimeStep(step_type, reward, discount, observation)
 
     # Infer the batch size based on reward
-    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_numpy_dt(x)), reward)
+    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_np_dtype(x)), reward)
     first_reward = tf.nest.flatten(reward)[0]
     if first_reward.shape:
       batch_size = first_reward.shape[0]
@@ -343,7 +351,7 @@ def truncation(observation: types.NestedTensorOrArray,
       discount = _as_array(discount)
       return TimeStep(step_type, reward, discount, observation)
     # Infer the batch size.
-    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_numpy_dt(x)), reward)
+    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_np_dtype(x)), reward)
     first_reward = tf.nest.flatten(reward)[0]
     discount = _as_array(discount)
     if first_reward.shape:

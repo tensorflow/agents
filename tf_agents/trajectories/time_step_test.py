@@ -50,7 +50,7 @@ class TimeStepTest(tf.test.TestCase):
   def testRestartRewardDTypeTensor(self):
     observation = -1
     observation_batch = tf.random.uniform([5,2])
-    reward_spec = tensor_spec.TensorSpec(shape=[], dtype=tf.int64)
+    reward_spec = tensor_spec.TensorSpec(shape=[], dtype=tf.float64)
     time_step = ts.restart(observation, None, reward_spec).reward
     time_step_batch = ts.restart(observation_batch, 5, reward_spec).reward
 
@@ -59,13 +59,13 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTransition(self):
     observation = -1
-    reward = np.int64(2)
+    reward = 2.0
     discount = 1.0
     time_step = ts.transition(observation, reward, discount)  # pytype: disable=wrong-arg-types
 
     self.assertEqual(ts.StepType.MID, time_step.step_type)
     self.assertEqual(-1, time_step.observation)
-    self.assertEqual(2, time_step.reward)
+    self.assertEqual(2.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
 
   def testTransitionRewardDTypeTensor(self):
@@ -78,7 +78,7 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTermination(self):
     observation = -1
-    reward = tf.float64(2.0)
+    reward = 2.0
     time_step = ts.termination(observation, reward)  # pytype: disable=wrong-arg-types
 
     self.assertEqual(ts.StepType.LAST, time_step.step_type)
@@ -95,13 +95,13 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTruncation(self):
     observation = -1
-    reward = tf.constant(2, dtype=tf.float32)
+    reward = 2.0
     discount = 1.0
     time_step = ts.truncation(observation, reward, discount)  # pytype: disable=wrong-arg-types
 
     self.assertEqual(ts.StepType.LAST, time_step.step_type)
     self.assertEqual(-1, time_step.observation)
-    self.assertEqual(2, time_step.reward)
+    self.assertEqual(2.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
 
   def testTruncationRewardDTypeTensor(self):
