@@ -23,7 +23,6 @@ import pprint
 from typing import NamedTuple, Optional
 
 import numpy as np
-from pandas import array
 import tensorflow as tf
 
 from tf_agents.specs import array_spec
@@ -46,7 +45,7 @@ def _get_np_dtype(spec):
     return None
   dtype = spec.dtype
   if isinstance(dtype, tf.dtypes.DType):
-    dtype = dtype.as_numpy_dtype
+    dtype = dtype.as_numpy_dtype()
   return np.dtype(dtype)
 
 
