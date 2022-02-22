@@ -76,14 +76,9 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
         # Call the `after_train_function` on the test input. Assumed the
         # observation train steps are stored in the field `priority` of the
         # the sample info of Reverb.
-        strategy.run(
-            after_train_step_fn,
-            args=((None,
-                   reverb.replay_sample.SampleInfo(
-                       key=None,
-                       probability=None,
-                       table_size=None,
-                       priority=observation_train_steps)), None))
+        info = reverb.SampleInfo(*[None for _ in reverb.SampleInfo.tf_dtypes()])
+        info = info._replace(priority=observation_train_steps)
+        strategy.run(after_train_step_fn, args=((None, info), None))
 
         # Check if the expected calls happened on the scalar summary.
         mock_scalar_summary.assert_has_calls(
@@ -125,14 +120,9 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
         # Call the `after_train_function` on the test input. Assumed the
         # observation train steps are stored in the field `priority` of the
         # the sample info of Reverb.
-        strategy.run(
-            after_train_step_fn,
-            args=((None,
-                   reverb.replay_sample.SampleInfo(
-                       key=None,
-                       probability=None,
-                       table_size=None,
-                       priority=observation_train_steps)), None))
+        info = reverb.SampleInfo(*[None for _ in reverb.SampleInfo.tf_dtypes()])
+        info = info._replace(priority=observation_train_steps)
+        strategy.run(after_train_step_fn, args=((None, info), None))
 
         # Check if the expected calls happened on the scalar summary.
         mock_scalar_summary.assert_has_calls(
