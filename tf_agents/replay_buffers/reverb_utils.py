@@ -131,6 +131,11 @@ class ReverbAddEpisodeObserver(object):
   def py_client(self) -> types.ReverbClient:
     return self._py_client
 
+  def get_table_signature(self):
+    # Return the signature of the first table as all the tables have same
+    # signature for an observer.
+    return self._py_client.server_info()[self._table_names[0]].signature
+
   def __call__(self, trajectory: trajectory_lib.Trajectory) -> None:
     """Cache the single step trajectory to be written into Reverb.
 
@@ -345,6 +350,11 @@ class ReverbAddTrajectoryObserver(object):
   @property
   def py_client(self) -> types.ReverbClient:
     return self._py_client
+
+  def get_table_signature(self):
+    # Return the signature of the first table as all the tables have same
+    # signature for an observer.
+    return self._py_client.server_info()[self._table_names[0]].signature
 
   def __call__(self, trajectory: trajectory_lib.Trajectory) -> None:
     """Writes the trajectory into the underlying replay buffer.
