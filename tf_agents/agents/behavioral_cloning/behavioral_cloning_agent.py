@@ -256,7 +256,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     else:
       bc_action = bc_output
 
-    losses = tf.nest.map_structure(tf.losses.mse, experience.action, bc_action)
+    losses = tf.nest.map_structure(tf.math.squared_difference, experience.action, bc_action)
     losses = tf.nest.flatten(losses)
     return tf.add_n(losses)
 
