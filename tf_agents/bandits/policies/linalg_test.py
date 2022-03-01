@@ -65,6 +65,7 @@ class LinalgTest(tf.test.TestCase, parameterized.TestCase):
 
   @test_cases()
   def testAInvUpdateEmptyObservations(self, batch_size, context_dim):
+    del batch_size  # unused
     a_array = 2 * np.eye(context_dim) + np.array(
         range(context_dim * context_dim)).reshape((context_dim, context_dim))
     a_array = a_array + a_array.T
@@ -101,6 +102,7 @@ class ConjugateGradientTest(tf.test.TestCase, parameterized.TestCase):
 
   @cg_test_cases()
   def testConjugateGradientBasic(self, n, rhs):
+    del rhs  # unused
     x_obs = tf.constant(np.random.rand(n, 2), dtype=tf.float32, shape=[n, 2])
     a_mat = tf.eye(n) + tf.matmul(x_obs, tf.linalg.matrix_transpose(x_obs))
     x_exact = tf.constant(np.random.rand(n), dtype=tf.float32, shape=[n, 1])
@@ -116,8 +118,7 @@ class ConjugateGradientTest(tf.test.TestCase, parameterized.TestCase):
     x_exact = tf.constant(
         np.random.rand(n, rhs), dtype=tf.float32, shape=[n, rhs])
     b_mat = tf.matmul(a_mat, x_exact)
-    x_approx = self.evaluate(
-        linalg.conjugate_gradient(a_mat, b_mat))
+    x_approx = self.evaluate(linalg.conjugate_gradient(a_mat, b_mat))
     x_exact_numpy = self.evaluate(x_exact)
     self.assertAllClose(x_exact_numpy, x_approx, rtol=1e-4, atol=1e-4)
 
@@ -144,8 +145,10 @@ class ConjugateGradientTest(tf.test.TestCase, parameterized.TestCase):
     with self.cached_session() as sess:
       x_approx = linalg.conjugate_gradient(a_mat_ph, b_mat_ph)
       x_approx_value = sess.run(
-          x_approx,
-          feed_dict={a_mat_ph: a_mat_value, b_mat_ph: b_mat_value})
+          x_approx, feed_dict={
+              a_mat_ph: a_mat_value,
+              b_mat_ph: b_mat_value
+          })
       self.assertAllClose(x_exact_numpy, x_approx_value, rtol=1e-4, atol=1e-4)
 
 

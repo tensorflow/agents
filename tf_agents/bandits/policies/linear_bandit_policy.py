@@ -39,8 +39,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from enum import Enum
-from typing import Optional, Sequence, Text
+import enum
+from typing import Optional, Sequence, Text, Tuple
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
@@ -56,7 +56,7 @@ from tf_agents.typing import types
 tfd = tfp.distributions
 
 
-class ExplorationStrategy(Enum):
+class ExplorationStrategy(enum.Enum):
   """Possible exploration strategies."""
   optimistic = 1
   sampling = 2
@@ -83,17 +83,18 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
                accepts_per_arm_features: bool = False,
                observation_and_action_constraint_splitter: Optional[
                    types.Splitter] = None,
+               theta: Optional[types.Tensor] = None,
                name: Optional[Text] = None):
     """Initializes `LinearBanditPolicy`.
 
-    The `a` and `b` arguments may be either `Tensor`s or `tf.Variable`s.
-    If they are variables, then any assignements to those variables will be
-    reflected in the output of the policy.
+    The `cov_matrix`, `data_vector`, `num_samples`, and `theta` arguments may be
+    either `Tensor`s or `tf.Variable`s. If they are variables, any assignements
+    to those variables will be reflected in the output of the policy.
 
     Args:
       action_spec: `TensorSpec` containing action specification.
       cov_matrix: list of the covariance matrices A in the paper. If the policy
-        accepts per-arm features, the lenght of this list is 1, as there is only
+        accepts per-arm features, the length of this list is 1, as there is only
         one model. Otherwise, there is one A matrix per arm.
       data_vector: list of the b vectors in the paper. The b vector is a
         weighted sum of the observations, where the weight is the corresponding
@@ -101,7 +102,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         length 1, as there only 1 reward model maintained. Otherwise, each arm
         has its own vector b.
       num_samples: list of number of samples per arm, unless the policy accepts
-      per-arm features, in which case this is just the number of samples seen.
+        per-arm features, in which case this is just the number of samples seen.
       time_step_spec: A `TimeStep` spec of the expected time_steps.
       exploration_strategy: An Enum of type ExplortionStrategy. The strategy
         used for choosing the actions to incorporate exploration. Currently
@@ -128,6 +129,17 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         num_actions]`. This function should also work with a `TensorSpec` as
         input, and should output `TensorSpec` objects for the observation and
         mask.
+      theta: An optional 2-d tf.Tensor of the theta vectors shaped as `[k, n]`,
+        where k denotes the number of arms and n denotes the overall context
+        dimension. When `accepts_per_arm_features` is true, k is expected to be
+        1 and n is the total dimension of the (flattened) global features and
+        the (flattened) per-arm features. When supplied, the policy assumes it's
+        consistent with the value computed from the other arguments
+        `cov_matrix`, `data_vector`, and `tikhonov_weight`. If that is not the
+        case, the policy may behave unexpectedly. Supplying pre-computed theta
+        is the most useful for users who desire a greedy policy that selects
+        actions solely based on the theta vectors, because this may
+        significantly reduce the policy's inference latency.
       name: The name of this policy.
     """
     policy_utilities.check_no_mask_with_arm_features(
@@ -166,8 +178,8 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     self._accepts_per_arm_features = accepts_per_arm_features
     if tf.nest.is_nested(action_spec):
       raise ValueError('Nested `action_spec` is not supported.')
-
-    self._num_actions = action_spec.maximum + 1
+    self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
+        action_spec)
     self._check_input_variables()
     if observation_and_action_constraint_splitter is not None:
       context_spec, _ = observation_and_action_constraint_splitter(
@@ -200,6 +212,15 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     self._emit_policy_info = emit_policy_info
     info_spec = self._populate_policy_info_spec(
         time_step_spec.observation, observation_and_action_constraint_splitter)
+    if theta is not None:
+      if self._dtype != theta.dtype:
+        raise ValueError(
+            f'The dtype of `theta` is expected to be the same as that of '
+            f'`data_vector`: {self._dtype}, but found to be different: '
+            f'{theta.dtype}')
+      self._theta = theta
+    else:
+      self._theta = None
 
     super(LinearBanditPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -211,12 +232,98 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
         name=name)
 
   def _variables(self):
-    all_vars = [self._cov_matrix,
-                self._data_vector,
-                self._num_samples,
-                self._eig_matrix,
-                self._eig_vals]
+    all_vars = [
+        self._cov_matrix, self._data_vector, self._theta, self._num_samples,
+        self._eig_matrix, self._eig_vals
+    ]
     return [v for v in tf.nest.flatten(all_vars) if isinstance(v, tf.Variable)]
+
+  def _predict_mean_reward(self, theta: tf.Tensor,
+                           global_observation: tf.Tensor,
+                           arm_observations: Optional[tf.Tensor]) -> tf.Tensor:
+    """Predicts the mean reward using the theta vectors.
+
+    Args:
+      theta: A `tf.Tensor` of theta vectors, shaped as [num_models,
+        overall_context_dim].
+      global_observation: A `tf.Tensor` shaped as [batch_size,
+        self._global_context_dim].
+      arm_observations: An optional `tf.Tensor` shaped as [batch_size,
+        self._num_actions, self._arm_context_dim]. Expected to be supplied only
+        when self._accepts_per_arm_features is true.
+
+    Returns:
+      A `tf.Tensor` of predicted mean reward shaped as
+        [batch_size, self._num_actions].
+    """
+    if self._accepts_per_arm_features:
+      # The stacked observations are shaped as
+      # [num_actions, batch_size, overall_context_dim].
+      stacked_observations = tf.stack([
+          self._get_current_observation(
+              global_observation, arm_observations, arm_index=k)
+          for k in range(self._num_actions)
+      ])
+      # theta is shaped as [1, overall_context_dim], because `num_models` is 1
+      # for per-arm-features.
+      # predicted_rewards is shaped [num_actions, batch_size, 1].
+      predicted_rewards = tf.matmul(
+          stacked_observations, theta, transpose_b=True)
+      # Squeeze and transpose the predicted rewards to return a matrix of
+      # shape [batch_size, num_actions].
+      return tf.transpose(tf.squeeze(predicted_rewards, axis=-1))
+    else:
+      # global_observation: shaped [batch_size, global_context_dim].
+      # self._theta: shaped [num_actions, global_context_dim].
+      # predicted rewards shaped as [batch_size, num_actions].
+      return tf.matmul(global_observation, theta, transpose_b=True)
+
+  def _predict_mean_reward_and_variance(
+      self, global_observation: tf.Tensor,
+      arm_observations: Optional[tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+    """Predicts mean reward and variance.
+
+    Args:
+      global_observation: A `tf.Tensor` shaped as [batch_size,
+        self._global_context_dim].
+      arm_observations: An optional `tf.Tensor` shaped as [batch_size,
+        self._num_actions, self._arm_context_dim]. Expected to be supplied only
+        when self._accepts_per_arm_features is true.
+
+    Returns:
+      A size-2 tuple of `tf.Tensor`'s representing the predicted reward and
+      variance, both shaped as [batch_size, self._num_actions].
+    """
+    est_reward = []
+    est_variance = []
+    for k in range(self._num_actions):
+      current_observation = tf.linalg.matrix_transpose(
+          self._get_current_observation(global_observation, arm_observations,
+                                        k))
+      model_index = policy_utilities.get_model_index(
+          k, self._accepts_per_arm_features)
+      if self._use_eigendecomp:
+        q_t_b = tf.matmul(
+            self._eig_matrix[model_index],
+            current_observation,
+            transpose_a=True)
+        lambda_inv = tf.divide(
+            tf.ones_like(self._eig_vals[model_index]),
+            self._eig_vals[model_index] + self._tikhonov_weight)
+        a_inv_x = tf.matmul(self._eig_matrix[model_index],
+                            tf.einsum('j,jk->jk', lambda_inv, q_t_b))
+      else:
+        a_inv_x = linalg.conjugate_gradient(
+            self._cov_matrix[model_index] + self._tikhonov_weight *
+            tf.eye(self._overall_context_dim, dtype=self._dtype),
+            current_observation)
+      est_mean_reward = tf.einsum('j,jk->k', self._data_vector[model_index],
+                                  a_inv_x)
+      est_reward.append(est_mean_reward)
+      var = tf.einsum('ij,ij->j', current_observation, a_inv_x)
+      est_variance.append(var)
+
+    return (tf.stack(est_reward, axis=-1), tf.stack(est_variance, axis=-1))
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
@@ -244,55 +351,25 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
               global_observation.shape.as_list()))
     global_observation = tf.reshape(global_observation,
                                     [-1, self._global_context_dim])
-
-    est_rewards = []
-    confidence_intervals = []
-    for k in range(self._num_actions):
-      current_observation = self._get_current_observation(
-          global_observation, arm_observations, k)
-      model_index = policy_utilities.get_model_index(
-          k, self._accepts_per_arm_features)
-      if self._use_eigendecomp:
-        q_t_b = tf.matmul(
-            self._eig_matrix[model_index],
-            tf.linalg.matrix_transpose(current_observation),
-            transpose_a=True)
-        lambda_inv = tf.divide(
-            tf.ones_like(self._eig_vals[model_index]),
-            self._eig_vals[model_index] + self._tikhonov_weight)
-        a_inv_x = tf.matmul(self._eig_matrix[model_index],
-                            tf.einsum('j,jk->jk', lambda_inv, q_t_b))
-      else:
-        a_inv_x = linalg.conjugate_gradient(
-            self._cov_matrix[model_index] + self._tikhonov_weight *
-            tf.eye(self._overall_context_dim, dtype=self._dtype),
-            tf.linalg.matrix_transpose(current_observation))
-      est_mean_reward = tf.einsum('j,jk->k', self._data_vector[model_index],
-                                  a_inv_x)
-      est_rewards.append(est_mean_reward)
-
-      ci = tf.reshape(
-          tf.linalg.tensor_diag_part(tf.matmul(current_observation, a_inv_x)),
-          [-1, 1])
-      confidence_intervals.append(ci)
-
-    if self._exploration_strategy == ExplorationStrategy.optimistic:
-      optimistic_estimates = [
-          tf.reshape(mean_reward, [-1, 1]) + self._alpha * tf.sqrt(confidence)
-          for mean_reward, confidence in zip(est_rewards, confidence_intervals)
-      ]
-      # Keeping the batch dimension during the squeeze, even if batch_size == 1.
-      rewards_for_argmax = tf.squeeze(
-          tf.stack(optimistic_estimates, axis=-1), axis=[1])
-    elif self._exploration_strategy == ExplorationStrategy.sampling:
-      mu_sampler = tfd.Normal(
-          loc=tf.stack(est_rewards, axis=-1),
-          scale=self._alpha *
-          tf.sqrt(tf.squeeze(tf.stack(confidence_intervals, axis=-1), axis=1)))
-      rewards_for_argmax = mu_sampler.sample()
+    if (self._theta is not None) and (self._alpha < 1e-12):
+      # When self._theta is provided and the exploration parameter is nearly
+      # zero, inference only needs the predicted mean reward, which can be
+      # computed efficiently by using the theta vectors.
+      est_rewards = self._predict_mean_reward(self._theta, global_observation,
+                                              arm_observations)
+      rewards_for_argmax = est_rewards
     else:
-      raise ValueError('Exploraton strategy %s not implemented.' %
-                       self._exploration_strategy)
+      est_rewards, est_variances = self._predict_mean_reward_and_variance(
+          global_observation, arm_observations)
+      if self._exploration_strategy == ExplorationStrategy.optimistic:
+        rewards_for_argmax = est_rewards + self._alpha * tf.sqrt(est_variances)
+      elif self._exploration_strategy == ExplorationStrategy.sampling:
+        mu_sampler = tfd.Normal(
+            loc=est_rewards, scale=self._alpha * tf.sqrt(est_variances))
+        rewards_for_argmax = mu_sampler.sample()
+      else:
+        raise ValueError('Exploraton strategy %s not implemented.' %
+                         self._exploration_strategy)
 
     mask = constraints.construct_mask_from_multiple_sources(
         time_step.observation, self._observation_and_action_constraint_splitter,
@@ -311,12 +388,11 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     action_distributions = tfp.distributions.Deterministic(loc=chosen_actions)
 
     policy_info = policy_utilities.populate_policy_info(
-        arm_observations, chosen_actions, rewards_for_argmax,
-        tf.stack(est_rewards, axis=-1), self._emit_policy_info,
-        self._accepts_per_arm_features)
+        arm_observations, chosen_actions, rewards_for_argmax, est_rewards,
+        self._emit_policy_info, self._accepts_per_arm_features)
 
-    return policy_step.PolicyStep(
-        action_distributions, policy_state, policy_info)
+    return policy_step.PolicyStep(action_distributions, policy_state,
+                                  policy_info)
 
   def _check_input_variables(self):
     if len(self._cov_matrix) != len(self._data_vector):
@@ -345,18 +421,18 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
   def _populate_policy_info_spec(self, observation_spec,
                                  observation_and_action_constraint_splitter):
     predicted_rewards_mean = ()
-    if (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in
-        self._emit_policy_info):
+    if (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN
+        in self._emit_policy_info):
       predicted_rewards_mean = tensor_spec.TensorSpec([self._num_actions],
                                                       dtype=self._dtype)
     predicted_rewards_optimistic = ()
-    if (policy_utilities.InfoFields.PREDICTED_REWARDS_OPTIMISTIC in
-        self._emit_policy_info):
+    if (policy_utilities.InfoFields.PREDICTED_REWARDS_OPTIMISTIC
+        in self._emit_policy_info):
       predicted_rewards_optimistic = tensor_spec.TensorSpec([self._num_actions],
                                                             dtype=self._dtype)
     predicted_rewards_sampled = ()
-    if (policy_utilities.InfoFields.PREDICTED_REWARDS_SAMPLED in
-        self._emit_policy_info):
+    if (policy_utilities.InfoFields.PREDICTED_REWARDS_SAMPLED
+        in self._emit_policy_info):
       predicted_rewards_sampled = tensor_spec.TensorSpec([self._num_actions],
                                                          dtype=self._dtype)
     if self._accepts_per_arm_features:
