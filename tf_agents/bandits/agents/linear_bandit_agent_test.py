@@ -20,7 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+from typing import Optional, Tuple
 
+from absl import flags
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -35,6 +37,7 @@ from tf_agents.policies import utils as policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 tfd = tfp.distributions
@@ -308,6 +311,44 @@ def _maybe_weight_observation_and_reward(observation, reward, weights):
     return (tf.reshape(w_sqrt, [-1, 1]) * observation, w_sqrt * reward)
 
 
+def _create_simple_agent_and_data(
+    set_example_weights: bool
+) -> Tuple[linear_agent.LinearBanditAgent, types.NestedTensor,
+           Optional[tf.Tensor]]:
+  num_actions = 1
+  context_dim = 1
+  batch_size = 10
+  dtype = tf.float32
+  # The observation consists of a single constant feature.
+  initial_step, final_step = _get_initial_and_final_steps(
+      batch_size, context_dim, use_constant_observations=True)
+  action = [0] * batch_size
+  action_step = _get_action_step(action)
+  experience = _get_experience(initial_step, action_step, final_step)
+
+  # Construct an agent and perform the update.
+  observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
+  time_step_spec = time_step.time_step_spec(observation_spec)
+  action_spec = tensor_spec.BoundedTensorSpec(
+      dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
+  variable_collection = linear_agent.LinearBanditVariableCollection(
+      context_dim, num_actions, use_eigendecomp=False, dtype=dtype)
+
+  agent = linear_agent.LinearBanditAgent(
+      exploration_policy=linear_agent.ExplorationPolicy.linear_ucb_policy,
+      time_step_spec=time_step_spec,
+      action_spec=action_spec,
+      variable_collection=variable_collection,
+      use_eigendecomp=False,
+      tikhonov_weight=0.0,
+      dtype=dtype)
+
+  weights = tf.linspace(
+      start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+
+  return agent, experience, weights
+
+
 class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def setUp(self):
@@ -349,43 +390,19 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
         dtype=dtype)
     self.evaluate(agent.initialize())
 
-  @parameterized.named_parameters(('weights_unset', False),
-                                  ('use_weights', True))
+  @parameterized.named_parameters(
+      {
+          'testcase_name': '_weights_unset',
+          'set_example_weights': False
+      }, {
+          'testcase_name': '_use_weights',
+          'set_example_weights': True
+      })
   def testLinearAgentFinalTheta(self, set_example_weights):
-    num_actions = 1
-    context_dim = 1
-    batch_size = 10
-    use_eigendecomp = False
-    dtype = tf.float32
-    # The observation consists of a single constant feature.
-    initial_step, final_step = _get_initial_and_final_steps(
-        batch_size, context_dim, use_constant_observations=True)
-    action = [0] * batch_size
-    action_step = _get_action_step(action)
-    experience = _get_experience(initial_step, action_step, final_step)
-
-    # Construct an agent and perform the update.
-    observation_spec = tensor_spec.TensorSpec([context_dim], tf.float32)
-    time_step_spec = time_step.time_step_spec(observation_spec)
-    action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=num_actions - 1)
-    variable_collection = linear_agent.LinearBanditVariableCollection(
-        context_dim, num_actions, use_eigendecomp=use_eigendecomp, dtype=dtype)
-
-    agent = linear_agent.LinearBanditAgent(
-        exploration_policy=linear_agent.ExplorationPolicy.linear_ucb_policy,
-        time_step_spec=time_step_spec,
-        action_spec=action_spec,
-        variable_collection=variable_collection,
-        use_eigendecomp=use_eigendecomp,
-        tikhonov_weight=0.0,
-        dtype=dtype)
+    agent, experience, weights = _create_simple_agent_and_data(
+        set_example_weights)
     self.evaluate(agent.initialize())
-
-    reward = tf.reshape(experience.reward, [batch_size])
-
-    weights = tf.linspace(
-        start=1.5, stop=10.5, num=batch_size) if set_example_weights else None
+    reward = tf.squeeze(experience.reward, axis=-1)
     self.evaluate(agent.train(experience, weights=weights))
     final_theta = self.evaluate(agent.theta)
     self.assertAllClose(tf.shape(final_theta), [1, 1])
@@ -399,6 +416,79 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
       self.assertAllClose(
           final_theta[0, 0],
           tf.reduce_sum(weights * reward) / tf.reduce_sum(weights))
+
+  @parameterized.named_parameters(
+      {
+          'testcase_name': '_weights_unset_train',
+          'set_example_weights': False,
+          'distributed_train': False
+      }, {
+          'testcase_name': '_use_weights_train',
+          'set_example_weights': True,
+          'distributed_train': False
+      }, {
+          'testcase_name': '_weights_unset_distributed_train',
+          'set_example_weights': False,
+          'distributed_train': True
+      }, {
+          'testcase_name': '_use_weights_distributed_train',
+          'set_example_weights': True,
+          'distributed_train': True
+      })
+  def testLinearAgentTrainLoss(self, set_example_weights, distributed_train):
+    agent, experience, weights = _create_simple_agent_and_data(
+        set_example_weights)
+    self.evaluate(agent.initialize())
+    reward = tf.squeeze(experience.reward, axis=-1)
+    if distributed_train:
+      train_fn = common.function_in_tf1()(agent._distributed_train_step)
+      initial_loss = self.evaluate(train_fn(experience, weights=weights))
+    else:
+      initial_loss = self.evaluate(agent.train(experience, weights=weights))
+    # The loss returned by the first train op is based on the initial, all-zero
+    # weights, which lead to all-zero predicted rewards.
+    if weights is None:
+      self.assertAllClose(initial_loss.loss, tf.reduce_mean(tf.square(reward)))
+    else:
+      self.assertAllClose(initial_loss.loss,
+                          tf.reduce_mean(weights * tf.square(reward)))
+
+    # The previous train op minimizes the mse on the training data, so training
+    # on the same data, we expect the loss to be minimized.
+    if distributed_train:
+      train_fn = common.function_in_tf1()(agent._distributed_train_step)
+      minimized_loss = self.evaluate(train_fn(experience, weights=weights))
+    else:
+      minimized_loss = self.evaluate(agent.train(experience, weights=weights))
+    if weights is None:
+      self.assertAllClose(
+          minimized_loss.loss,
+          tf.reduce_mean(tf.square(reward - tf.reduce_mean(reward))))
+    else:
+      self.assertAllClose(
+          minimized_loss.loss,
+          tf.reduce_mean(weights *
+                         tf.square(reward - tf.reduce_sum(weights * reward) /
+                                   tf.reduce_sum(weights))))
+
+  def testSummaries(self):
+    if not tf.executing_eagerly():
+      self.skipTest('Test only works in eager mode.')
+    agent, experience, _ = _create_simple_agent_and_data(
+        set_example_weights=False)
+    self.evaluate(agent.initialize())
+    logdir = os.path.join(flags.FLAGS.test_tmpdir, 'logs')
+    summary_writer = tf.summary.create_file_writer(f'{logdir}/train')
+    summary_writer.set_as_default()
+    self.evaluate(agent.train(experience))
+    summary_writer.flush()
+    files = tf.io.gfile.glob(f'{logdir}/train/*.v2')
+    self.assertLen(files, 1)
+    tags = []
+    for event in tf.compat.v1.train.summary_iterator(files[0]):
+      for value in event.summary.value:
+        tags.append(value.tag)
+    self.assertIn('Losses/loss', tags)
 
   @test_cases()
   def testLinearAgentUpdate(self,
