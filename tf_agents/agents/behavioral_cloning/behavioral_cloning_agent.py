@@ -256,7 +256,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     else:
       bc_action = bc_output
 
-    losses = tf.nest.map_structure(tf.math.squared_difference, experience.action, bc_action)
+    losses = tf.nest.map_structure(self._loss_mse_fn, experience.action, bc_action)
     losses = tf.nest.flatten(losses)
     return tf.add_n(losses)
 
@@ -286,6 +286,12 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     collect_policy = actor_policy.ActorPolicy(
         time_step_spec, action_spec, actor_network=self._cloning_network)
     policy = greedy_policy.GreedyPolicy(collect_policy)
+
+    # Ensure local MSE doesn't collapse batch dimension
+    self._loss_mse_fn = tf.losses.mse
+    if tf.nest.flatten(action_spec)[0].shape.rank == 0:
+      self._loss_mse_fn = tf.math.squared_difference
+
     return policy, collect_policy
 
   def _loss(self, experience, weights=None, training: bool = False):
