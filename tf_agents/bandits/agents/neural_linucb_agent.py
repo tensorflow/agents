@@ -459,7 +459,7 @@ class NeuralLinUCBAgent(tf_agent.TFAgent):
       # Update the matrix A and b.
       # pylint: disable=cell-var-from-loop
       def update(cov_matrix, data_vector):
-        a_new, b_new, _, _ = linear_agent.update_a_and_b_with_forgetting(
+        a_new, b_new = linear_agent.update_a_and_b_with_forgetting(
             cov_matrix, data_vector, rewards_for_arm, observations_for_arm,
             self._gamma)
         return a_new, b_new

@@ -96,7 +96,7 @@ class LinearBanditVariableCollection(tf.Module):
                 name='eig_matrix{}'.format(k)))
         self.eig_vals_list.append(
             tf.compat.v2.Variable(
-                tf.ones([context_dim], dtype=dtype),
+                tf.zeros([context_dim], dtype=dtype),
                 name='eig_vals{}'.format(k)))
       else:
         self.eig_matrix_list.append(
@@ -108,13 +108,8 @@ class LinearBanditVariableCollection(tf.Module):
 
 
 def update_a_and_b_with_forgetting(
-    a_prev: types.Tensor,
-    b_prev: types.Tensor,
-    r: types.Tensor,
-    x: types.Tensor,
-    gamma: float,
-    compute_eigendecomp: bool = False
-) -> Tuple[types.Tensor, types.Tensor, types.Tensor, types.Tensor]:
+    a_prev: types.Tensor, b_prev: types.Tensor, r: types.Tensor,
+    x: types.Tensor, gamma: float) -> Tuple[types.Tensor, types.Tensor]:
   r"""Update the covariance matrix `a` and the weighted sum of rewards `b`.
 
   This function updates the covariance matrix `a` and the sum of weighted
@@ -128,21 +123,14 @@ def update_a_and_b_with_forgetting(
     x: a `Tensor` of shape [`batch_size`, `context_dim`]. This is the matrix
       with the (batched) observations.
     gamma: a float forgetting factor in [0.0, 1.0].
-    compute_eigendecomp: whether to compute the eigen-decomposition of the new
-      covariance matrix.
 
   Returns:
-    The updated estimates of `a` and `b` and optionally the eigenvalues and
-    eigenvectors of `a`.
+    The updated estimates of `a` and `b`.
   """
   a_new = gamma * a_prev + tf.matmul(x, x, transpose_a=True)
   b_new = gamma * b_prev + bandit_utils.sum_reward_weighted_observations(r, x)
 
-  eig_vals = tf.constant([], dtype=a_new.dtype)
-  eig_matrix = tf.constant([], dtype=a_new.dtype)
-  if compute_eigendecomp:
-    eig_vals, eig_matrix = tf.linalg.eigh(a_new)
-  return a_new, b_new, eig_vals, eig_matrix
+  return a_new, b_new
 
 
 @gin.configurable
@@ -563,7 +551,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
       rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
 
       # Compute local updates for the matrix A and b of this arm.
-      cov_matrix_local_udpate = tf.matmul(
+      cov_matrix_local_update = tf.matmul(
           observations_for_arm, observations_for_arm, transpose_a=True)
       data_vector_local_update = bandit_utils.sum_reward_weighted_observations(
           rewards_for_arm, observations_for_arm)
@@ -597,7 +585,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
       # execution is resumed.
       replica_context = tf.distribute.get_replica_context()
       replica_context.merge_call(
-          _merge_fn, args=(cov_matrix_local_udpate, data_vector_local_update))
+          _merge_fn, args=(cov_matrix_local_update, data_vector_local_update))
 
     with tf.control_dependencies([loss.loss]):
       self._theta.assign(self.theta)
@@ -647,18 +635,29 @@ class LinearBanditAgent(tf_agent.TFAgent):
       def update(cov_matrix, data_vector):
         return update_a_and_b_with_forgetting(cov_matrix, data_vector,
                                               rewards_for_arm,
-                                              observations_for_arm, self._gamma,
-                                              self._use_eigendecomp)
+                                              observations_for_arm, self._gamma)
 
-      a_new, b_new, eig_vals, eig_matrix = tf.cond(
+      a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0,
           lambda: update(self._cov_matrix_list[k], self._data_vector_list[k]),
-          lambda: (self._cov_matrix_list[k], self._data_vector_list[k], self.
-                   _eig_vals_list[k], self._eig_matrix_list[k]))
+          lambda: (self._cov_matrix_list[k], self._data_vector_list[k]))
       tf.compat.v1.assign(self._cov_matrix_list[k], a_new)
       tf.compat.v1.assign(self._data_vector_list[k], b_new)
-      tf.compat.v1.assign(self._eig_vals_list[k], eig_vals)
-      tf.compat.v1.assign(self._eig_matrix_list[k], eig_matrix)
+
+    if self._use_eigendecomp:
+      eigenvalues, eigenvectors = tf.linalg.eigh(
+          tf.stack(self._cov_matrix_list))
+      eigenvalues_list = tf.unstack(eigenvalues)
+      eigenvectors_list = tf.unstack(eigenvectors)
+      for k in range(self._num_models):
+        tf.compat.v1.assign(self._eig_vals_list[k], eigenvalues_list[k])
+        tf.compat.v1.assign(self._eig_matrix_list[k], eigenvectors_list[k])
+    else:
+      for k in range(self._num_models):
+        tf.compat.v1.assign(self._eig_vals_list[k],
+                            tf.constant([], dtype=self._dtype))
+        tf.compat.v1.assign(self._eig_matrix_list[k],
+                            tf.constant([], dtype=self._dtype))
 
     with tf.control_dependencies([loss.loss]):
       self._theta.assign(self.theta)

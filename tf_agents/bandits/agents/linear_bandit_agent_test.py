@@ -922,7 +922,7 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
       def false_fn():
         if use_eigendecomp:
           return (tf.zeros([context_dim, context_dim]), tf.zeros([context_dim]),
-                  tf.ones([context_dim]), tf.eye(context_dim))
+                  tf.zeros([context_dim]), tf.eye(context_dim))
         else:
           return (tf.zeros([context_dim, context_dim]), tf.zeros([context_dim]),
                   tf.constant([], dtype=dtype), tf.constant([], dtype=dtype))
@@ -1082,6 +1082,26 @@ class LinearBanditAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllEqual(ucb_agent._variable_collection.data_vector_list[0],
                         ts_agent._variable_collection.data_vector_list[0])
 
+  @parameterized.product(
+      batch_size=[1, 4], context_dim=[1, 10], gamma=[0.0, 0.5, 1.0])
+  def testUpdateAandBWithForgetting(self, batch_size, context_dim, gamma):
+    a_prev = tf.eye(context_dim, dtype=tf.float64)
+    b_prev = tf.ones(shape=[context_dim], dtype=tf.float64)
+    r = tf.random.stateless_uniform(
+        shape=[batch_size],
+        seed=(2, 3),
+        minval=0.0,
+        maxval=10.0,
+        dtype=tf.float64)
+    x = tf.random.stateless_normal(
+        shape=[batch_size, context_dim], seed=(2, 3), dtype=tf.float64)
+    a_new, b_new = linear_agent.update_a_and_b_with_forgetting(
+        a_prev, b_prev, r, x, gamma)
+    expected_a_new = a_prev * gamma + tf.matmul(x, x, transpose_a=True)
+    expected_b_new = (
+        b_prev * gamma + bandit_utils.sum_reward_weighted_observations(r, x))
+    self.assertAllClose(self.evaluate(a_new), self.evaluate(expected_a_new))
+    self.assertAllClose(self.evaluate(b_new), self.evaluate(expected_b_new))
 
 if __name__ == '__main__':
   tf.test.main()

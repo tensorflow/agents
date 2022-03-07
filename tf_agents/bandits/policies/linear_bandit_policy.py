@@ -88,7 +88,7 @@ class LinearBanditPolicy(tf_policy.TFPolicy):
     """Initializes `LinearBanditPolicy`.
 
     The `cov_matrix`, `data_vector`, `num_samples`, and `theta` arguments may be
-    either `Tensor`s or `tf.Variable`s. If they are variables, any assignements
+    either `Tensor`s or `tf.Variable`s. If they are variables, any assignments
     to those variables will be reflected in the output of the policy.
 
     Args:
