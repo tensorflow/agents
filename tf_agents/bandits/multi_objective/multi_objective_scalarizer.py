@@ -60,8 +60,7 @@ def _validate_scalarization_parameter_shape(
               multi_objectives.shape, param_name, param_shape))
 
 
-# TODO(b/202447704): Update to use public Protocol when available.
-class ScalarizerTraceType:
+class ScalarizerTraceType(tf.types.experimental.TraceType):
   """Class outlining the default Tracing Protocol for Scalarizer.
 
   If included as an argument, corresponding tf.function will always retrace for
