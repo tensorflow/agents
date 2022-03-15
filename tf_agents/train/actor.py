@@ -122,7 +122,13 @@ class Actor(object):
           max_steps=steps_per_run,
           max_episodes=episodes_per_run)
     elif isinstance(env, tf_environment.TFEnvironment):
-      raise ValueError("Actor doesn't support TFEnvironments yet.")
+      self._driver = tf_driver.TFDriver(
+          env,
+          policy,
+          self._observers,
+          transition_observers=self._transition_observers,
+          max_steps=steps_per_run,
+          max_episodes=episodes_per_run)
     else:
       raise ValueError("Unknown environment type.")
 
