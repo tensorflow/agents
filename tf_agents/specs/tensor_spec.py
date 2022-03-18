@@ -43,7 +43,10 @@ BoundedTensorSpec = ts.BoundedTensorSpec
 
 
 def is_bounded(spec):
-  return isinstance(spec, (array_spec.BoundedArraySpec, BoundedTensorSpec))
+  if isinstance(spec, (array_spec.BoundedArraySpec, BoundedTensorSpec)):
+    return True
+  elif hasattr(spec, "minimum") and hasattr(spec, "maximum"):
+    return hasattr(spec, "dtype") and hasattr(spec, "shape")
 
 
 def is_discrete(spec):
@@ -67,7 +70,7 @@ def from_spec(spec):
     # Need to check bounded first as non bounded specs are base class.
     if isinstance(s, tf.TypeSpec):
       return s
-    if isinstance(s, (array_spec.BoundedArraySpec, BoundedTensorSpec)):
+    if is_bounded(s):
       return BoundedTensorSpec.from_spec(s)
     elif isinstance(s, array_spec.ArraySpec):
       return TensorSpec.from_spec(s)
