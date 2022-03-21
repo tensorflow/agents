@@ -148,9 +148,9 @@ def train_eval(
         tf_env.action_spec(),
         actor_network=actor_net,
         critic_network=critic_net,
-        actor_optimizer=tf.compat.v1.train.AdamOptimizer(
+        actor_optimizer=tf.keras.optimizers.Adam(
             learning_rate=actor_learning_rate),
-        critic_optimizer=tf.compat.v1.train.AdamOptimizer(
+        critic_optimizer=tf.keras.optimizers.Adam(
             learning_rate=critic_learning_rate),
         exploration_noise_std=exploration_noise_std,
         target_update_tau=target_update_tau,
