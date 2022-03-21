@@ -276,7 +276,7 @@ class CEMPolicy(tf_policy.TFPolicy):
 
       # Sample a batch of actions with the shape of [B, N, A] or [BxT, N, A]
       actions = self._actions_sampler.sample_batch_and_clip(
-          self._num_samples, mean, var, observation)
+          self._num_samples, mean, var, observation)  # pytype: disable=wrong-arg-count  # trace-all-classes
 
       if outer_rank == 2:
         scores, next_policy_state = self._score_with_time(

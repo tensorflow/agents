@@ -123,7 +123,7 @@ class BernoulliThompsonSamplingPolicy(tf_policy.TFPolicy):
         name=name)
 
   def _variables(self):
-    return self._alpha + self._beta
+    return self._alpha + self._beta  # pytype: disable=unsupported-operands  # trace-all-classes
 
   def _distribution(self, time_step, policy_state):
     if time_step.step_type.shape:

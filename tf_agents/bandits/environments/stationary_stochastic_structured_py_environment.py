@@ -145,16 +145,16 @@ class StationaryStochasticStructuredPyEnvironment(
   def _apply_action(self, action: types.Array) -> types.Array:
     if len(action) != self.batch_size:
       raise ValueError('Number of actions must match batch size.')
-    global_obs = self._observation[GLOBAL_KEY]
+    global_obs = self._observation[GLOBAL_KEY]  # pytype: disable=attribute-error  # trace-all-classes
     batch_size_range = list(range(self.batch_size))
     arm_obs = tf.nest.map_structure(lambda x: x[batch_size_range, action, :],
-                                    self._observation[PER_ARM_KEY])
+                                    self._observation[PER_ARM_KEY])  # pytype: disable=attribute-error  # trace-all-classes
     def _get_element_from_batch(structure, index):
       return tf.nest.map_structure(lambda x: x[index], structure)
 
     reward = np.stack([
         self._reward_fn(
             _get_element_from_batch(global_obs, b),
-            _get_element_from_batch(arm_obs, b)) for b in batch_size_range
+            _get_element_from_batch(arm_obs, b)) for b in batch_size_range  # pytype: disable=wrong-arg-count  # trace-all-classes
     ])
     return reward
