@@ -40,12 +40,15 @@ import version as tf_agents_version  # pylint: disable=g-import-not-at-top
 
 # Default versions for packages we often override for testing and release
 # candidates. These can all be overridden with flags.
-TFP_VERSION = 'tensorflow-probability>=0.13.0'
+TFP_VERSION = 'tensorflow-probability'
 TFP_NIGHTLY = 'tfp-nightly'
-TENSORFLOW_VERSION = 'tensorflow>=2.6.0'
+TENSORFLOW_VERSION = 'tensorflow'
 TENSORFLOW_NIGHTLY = 'tf-nightly'
-REVERB_VERSION = 'dm-reverb>=0.6.0'
+REVERB_VERSION = 'dm-reverb'
 REVERB_NIGHTLY = 'dm-reverb-nightly'
+RLDS_VERSION = 'rlds'
+# TODO(b/224850217): rlds does not have nightly builds yet.
+RLDS_NIGHTLY = 'rlds'
 
 
 class StderrWrapper(io.IOBase):
@@ -219,16 +222,21 @@ def get_reverb_packages():
   if FLAGS.release:
     tf_version = TENSORFLOW_VERSION
     reverb_version = REVERB_VERSION
+    rlds_version = RLDS_VERSION
   else:
     tf_version = TENSORFLOW_NIGHTLY
     reverb_version = REVERB_NIGHTLY
+    rlds_version = RLDS_NIGHTLY
 
   # Overrides required versions if FLAGS are set.
   if FLAGS.tf_version:
     tf_version = FLAGS.tf_version
   if FLAGS.reverb_version:
     reverb_version = FLAGS.reverb_version
+  if FLAGS.rlds_version:
+    rlds_version = FLAGS.rlds_version
 
+  reverb_packages.append(rlds_version)
   reverb_packages.append(reverb_version)
   reverb_packages.append(tf_version)
   return reverb_packages
@@ -333,6 +341,12 @@ if __name__ == '__main__':
       default=None,
       help='Overrides tfp version required, e.g. '
       'tensorflow-probability==0.11.0rc0')
+  parser.add_argument(
+      '--rlds-version',
+      type=str,
+      default=None,
+      help='Overrides rlds version required, e.g. '
+      'rlds==0.1.4')
   parser.add_argument(
       '--broken_tests',
       type=str,
