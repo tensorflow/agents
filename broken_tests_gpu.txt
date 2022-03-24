@@ -4,4 +4,3 @@ examples.cql_sac.kumar20.dataset.dataset_utils_test  # b/199583100
 examples.cql_sac.kumar20.cql_sac_train_eval_test  # b/199583100
 replay_buffers.episodic_replay_buffer_driver_test  # b/199587793
 replay_buffers.episodic_replay_buffer_test  # b/199587793
-replay_buffers.rlds_to_reverb_test  # b/223450839

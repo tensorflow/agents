@@ -24,6 +24,7 @@ from typing import Dict, List, Tuple, Union
 from absl import logging
 
 import numpy as np
+import rlds
 import tensorflow as tf
 
 from tf_agents.replay_buffers import reverb_utils
@@ -31,9 +32,6 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
-from tf_agents.utils import lazy_loader
-
-rlds = lazy_loader.LazyLoader('rlds', globals(), 'rlds')
 
 
 def get_rlds_step_features() -> List[str]:

@@ -24,6 +24,7 @@ from typing import Dict, List, Tuple
 from absl.testing import parameterized
 
 import reverb
+from rlds import rlds_types
 import tensorflow as tf
 
 from tf_agents.replay_buffers import reverb_replay_buffer
@@ -31,13 +32,7 @@ from tf_agents.replay_buffers import reverb_utils
 from tf_agents.replay_buffers import rlds_to_reverb
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
-from tf_agents.utils import lazy_loader
 from tf_agents.utils import test_utils
-
-# Lazy loading RLDS package as these tests are currently disabled in OSS for
-# version mismatch.
-rlds_types = lazy_loader.LazyLoader('rlds.rlds_types', globals(),
-                                    'rlds.rlds_types')
 
 SEQUENCE_LENGTH = 2
 STRIDE_LENGTH = 1
@@ -197,6 +192,9 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
   def setUp(self):
     super(RldsToReverbTest, self).setUp()
 
+    self._valid_episodes = generate_valid_episodes()
+    self._invalid_episodes = generate_invalid_episodes()
+
     # Data spec corresponding to our test data. This data spec is used for
     #  1) Validation of create_trajectory_data_spec.
     #  2) Initializing Reverb server and Reverb Replay Buffer.
@@ -251,7 +249,7 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
       ('_single_step_episode', 'single_step_episode'),
       ('_multiple_episodes', 'multiple_episodes'))
   def test_trajectory_data_spec_valid_episodes(self, episode):
-    rlds_data, _ = generate_valid_episodes()[episode]
+    rlds_data, _ = self._valid_episodes[episode]
     self.assertEqual(
         rlds_to_reverb.create_trajectory_data_spec(rlds_data), self._data_spec)
 
@@ -259,7 +257,7 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
       ('_no_step_episode', 'no_step_episode'),
       ('_incorrect_step_spec', 'incorrect_step_spec'))
   def test_trajectory_data_spec_no_step_episode(self, episode):
-    rlds_data, error_message = generate_invalid_episodes()[episode]
+    rlds_data, error_message = self._invalid_episodes[episode]
     with self.assertRaises(ValueError) as err:
       rlds_to_reverb.create_trajectory_data_spec(rlds_data)
     self.assertEqual(str(err.exception), error_message)
@@ -271,7 +269,7 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
       ('_multiple_episodes', 'multiple_episodes', 7))
   def test_push_to_reverb_valid_episodes(self, episode,
                                          expected_trajectories_pushed):
-    rlds_data, _ = generate_valid_episodes()[episode]
+    rlds_data, _ = self._valid_episodes[episode]
     trajectories_pushed = rlds_to_reverb.push_rlds_to_reverb(
         rlds_data, self._reverb_observer)  # type: int
     self.assertEqual(trajectories_pushed, expected_trajectories_pushed)
@@ -281,7 +279,7 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
       ('_incorrect_termination', 'incorrect_termination'),
       ('_incorrect_beginning', 'incorrect_beginning'))
   def test_push_to_reverb_invalid_episodes(self, episode):
-    rlds_data, error_message = generate_invalid_episodes()[episode]
+    rlds_data, error_message = self._invalid_episodes[episode]
     with self.assertRaises(tf.errors.InvalidArgumentError) as err:
       rlds_to_reverb.push_rlds_to_reverb(rlds_data, self._reverb_observer)
     self.assertRegex(str(err.exception), error_message)
@@ -291,7 +289,7 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
       ('_no_step_episode', 'no_step_episode'),
       ('_incorrect_step_spec', 'incorrect_step_spec'))
   def test_push_to_reverb_invalid_episodes_value_errors(self, episode):
-    rlds_data, error_message = generate_invalid_episodes()[episode]
+    rlds_data, error_message = self._invalid_episodes[episode]
     with self.assertRaises(ValueError) as err:
       rlds_to_reverb.push_rlds_to_reverb(rlds_data, self._reverb_observer)
     self.assertEqual(str(err.exception), error_message)
@@ -299,13 +297,19 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
 
 class RldsToTrajectoriesTest(parameterized.TestCase, test_utils.TestCase):
 
+  def setUp(self):
+    super(RldsToTrajectoriesTest, self).setUp()
+
+    self._valid_episodes = generate_valid_episodes()
+    self._invalid_episodes = generate_invalid_episodes()
+
   @parameterized.named_parameters(
       ('_complete_episode', 'complete_episode'),
       ('_truncated_episode', 'truncated_episode'),
       ('_single_step_episode', 'single_step_episode'),
       ('_multiple_episodes', 'multiple_episodes'))
   def test_conversion_valid_episodes(self, episode):
-    rlds_data, expected_trajectories = generate_valid_episodes()[episode]
+    rlds_data, expected_trajectories = self._valid_episodes[episode]
     generated_trajectories = rlds_to_reverb.convert_rlds_to_trajectories(
         rlds_data)  # type: tf.data.Dataset
     for generated_trajectory, expected_trajectory in zip(
@@ -329,7 +333,7 @@ class RldsToTrajectoriesTest(parameterized.TestCase, test_utils.TestCase):
       ('_incorrect_termination', 'incorrect_termination'),
       ('_incorrect_beginning', 'incorrect_beginning'))
   def test_conversion_invalid_episodes(self, episode):
-    rlds_data, error_message = generate_invalid_episodes()[episode]
+    rlds_data, error_message = self._invalid_episodes[episode]
     with self.assertRaises(tf.errors.InvalidArgumentError) as err:
       list(
           rlds_to_reverb.convert_rlds_to_trajectories(
@@ -340,7 +344,7 @@ class RldsToTrajectoriesTest(parameterized.TestCase, test_utils.TestCase):
       ('_no_step_episode', 'no_step_episode'),
       ('_incorrect_step_spec', 'incorrect_step_spec'))
   def test_conversion_no_step_episodes(self, episode):
-    rlds_data, error_message = generate_invalid_episodes()[episode]
+    rlds_data, error_message = self._invalid_episodes[episode]
     with self.assertRaises(ValueError) as err:
       rlds_to_reverb.convert_rlds_to_trajectories(rlds_data)
     self.assertEqual(str(err.exception), error_message)
