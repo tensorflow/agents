@@ -77,7 +77,7 @@ def _validate_rlds_step_spec(
     ValueError: If RLDS step spec is not valid.
   """
   rlds_step_features = get_rlds_step_features()
-  if not all(item in rlds_step_features for item in rlds_step_spec):
+  if not all(item in rlds_step_spec for item in rlds_step_features):
     raise ValueError(
         'Invalid RLDS step spec. Features expected '
         f'are {rlds_step_features}, but found {list(rlds_step_spec.keys())}')
