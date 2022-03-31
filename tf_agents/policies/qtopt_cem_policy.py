@@ -287,7 +287,10 @@ class CEMPolicy(tf_policy.TFPolicy):
 
       best_scores, ind = tf.nn.top_k(scores, self._num_elites)  # ind: [B, M]
 
-      mean, var = self._actions_sampler.refit_distribution_to(ind, actions)
+      actions_float = tf.nest.map_structure(
+          lambda t: tf.cast(t, tf.float32), actions)
+      mean, var = self._actions_sampler.refit_distribution_to(
+          ind, actions_float)
 
       best_next_policy_state = next_policy_state
 
