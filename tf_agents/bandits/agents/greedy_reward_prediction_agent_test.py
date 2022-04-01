@@ -322,7 +322,7 @@ class AgentTest(tf.test.TestCase):
         'reward': tensor_spec.TensorSpec(
             shape=(), dtype=tf.float32, name='reward'),
         'constraint': tensor_spec.TensorSpec(
-            shape=(), dtype=tf.float32, name='constraint')
+            shape=(1,), dtype=tf.float32, name='constraint')
     }
     self._time_step_spec = ts.time_step_spec(self._obs_spec, reward_spec)
 
@@ -336,7 +336,7 @@ class AgentTest(tf.test.TestCase):
     actions = np.array([0, 1], dtype=np.int32)
     rewards = {
         'reward': np.array([0.5, 3.0], dtype=np.float32),
-        'constraint': np.array([6.0, 4.0], dtype=np.float32)
+        'constraint': np.array([[6.0], [4.0]], dtype=np.float32)
     }
     initial_step, final_step = _get_initial_and_final_steps_nested_rewards(
         observations, rewards)
@@ -379,7 +379,7 @@ class AgentTest(tf.test.TestCase):
         'reward': tensor_spec.TensorSpec(
             shape=(), dtype=tf.float32, name='reward'),
         'constraint': tensor_spec.TensorSpec(
-            shape=(), dtype=tf.float32, name='constraint')
+            shape=(1,), dtype=tf.float32, name='constraint')
     }
     observation_and_mask_spec = (tensor_spec.TensorSpec([2], tf.float32),
                                  tensor_spec.TensorSpec([3], tf.int32))
@@ -403,7 +403,7 @@ class AgentTest(tf.test.TestCase):
     actions = np.array([0, 1], dtype=np.int32)
     rewards = {
         'reward': np.array([0.5, 3.0], dtype=np.float32),
-        'constraint': np.array([6.0, 4.0], dtype=np.float32)
+        'constraint': np.array([[6.0], [4.0]], dtype=np.float32)
     }
     initial_step, final_step = (
         _get_initial_and_final_steps_action_mask_nested_rewards(
@@ -542,7 +542,7 @@ class AgentTest(tf.test.TestCase):
         'reward': tensor_spec.TensorSpec(
             shape=(), dtype=tf.float32, name='reward'),
         'constraint': tensor_spec.TensorSpec(
-            shape=(), dtype=tf.float32, name='constraint')
+            shape=(1,), dtype=tf.float32, name='constraint')
     }
     time_step_spec = ts.time_step_spec(obs_spec, reward_spec)
     reward_net = (
@@ -574,7 +574,7 @@ class AgentTest(tf.test.TestCase):
     actions = np.array([0, 3], dtype=np.int32)
     rewards = {
         'reward': np.array([0.5, 3.0], dtype=np.float32),
-        'constraint': np.array([6.0, 4.0], dtype=np.float32)
+        'constraint': np.array([[6.0], [4.0]], dtype=np.float32)
     }
     initial_step, final_step = _get_initial_and_final_steps_nested_rewards(
         observations, rewards)

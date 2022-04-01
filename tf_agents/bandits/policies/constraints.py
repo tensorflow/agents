@@ -85,7 +85,7 @@ class NeuralConstraint(BaseConstraint):
       self,
       time_step_spec: types.TimeStep,
       action_spec: types.BoundedTensorSpec,
-      constraint_network: types.Network,
+      constraint_network: Optional[types.Network],
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
       name: Optional[Text] = 'NeuralConstraint'):
     """Creates a trainable constraint using a neural network.
@@ -95,7 +95,9 @@ class NeuralConstraint(BaseConstraint):
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
       constraint_network: An instance of `tf_agents.network.Network` used to
         provide estimates of action feasibility. The input structure should be
-        consistent with the `observation_spec`.
+        consistent with the `observation_spec`. If the constraint network is
+        not available at construction time, it can be set later on using the
+        constraint_network setter.
       error_loss_fn: A function for computing the loss used to train the
         constraint network. The default is `tf.losses.mean_squared_error`.
       name: Python str name of this agent. All variables in this module will
@@ -108,11 +110,22 @@ class NeuralConstraint(BaseConstraint):
 
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
         action_spec)
-
-    with self.name_scope:
-      constraint_network.create_variables()
+    if constraint_network is not None:
+      with self.name_scope:
+        constraint_network.create_variables()
     self._constraint_network = constraint_network
     self._error_loss_fn = error_loss_fn
+
+  @property
+  def constraint_network(self):
+    return self._constraint_network
+
+  @constraint_network.setter
+  def constraint_network(self, constraint_network):
+    if constraint_network is not None:
+      with self.name_scope:
+        constraint_network.create_variables()
+    self._constraint_network = constraint_network
 
   def initialize(self):
     """Returns an op to initialize the constraint."""
@@ -122,7 +135,7 @@ class NeuralConstraint(BaseConstraint):
                    observations: types.NestedTensor,
                    actions: types.NestedTensor,
                    rewards: types.Tensor,
-                   weights: Optional[types.TensorOrArray] = None,
+                   weights: Optional[types.Float] = None,
                    training: bool = False) -> types.Tensor:
     """Computes loss for training the constraint network.
 
@@ -139,7 +152,7 @@ class NeuralConstraint(BaseConstraint):
       loss: A `Tensor` containing the loss for the training step.
     """
     with tf.name_scope('constraint_loss'):
-      sample_weights = weights if weights else 1
+      sample_weights = weights if weights is not None else 1
       predicted_values, _ = self._constraint_network(
           observations, training=training)
       action_predicted_values = common.index_with_actions(
