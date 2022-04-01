@@ -25,7 +25,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.qtopt import qtopt_agent
 from tf_agents.networks import network
-from tf_agents.policies.samplers import cem_actions_sampler_continuous
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler_continuous
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import test_utils as trajectories_test_utils
@@ -74,7 +74,7 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
                              action_size).astype(np.float32)  # [N, a]
     self._mean = np.mean(samples, axis=0)
     self._var = np.var(samples, axis=0)
-    self._sampler = cem_actions_sampler_continuous.GaussianActionsSampler(
+    self._sampler = qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
         action_spec=self._action_spec)
 
   def testCreateAgent(self):
@@ -186,8 +186,7 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(self.evaluate(tf.reduce_mean(loss_info.td_loss)),
                         expected_td_loss)
 
-  def verifyVariableAssignAndRestore(self,
-                                     loss_fn=None):
+  def VerifyVariableAssignAndRestore(self):
     strategy = tf.distribute.get_strategy()
     with strategy.scope():
       # Use BehaviorCloningAgent instead of AWRAgent to test the network.
@@ -225,8 +224,7 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
             value, np.zeros_like(value),
             msg='{} has var mean {}, expected 0.'.format(var.name, value))
 
-  def verifyTrainAndRestore(self,
-                            loss_fn=None):
+  def VerifyTrainAndRestore(self):
     """Helper function for testing correct variable updating and restoring."""
     batch_size = 2
     seq_len = 2
@@ -283,8 +281,8 @@ class QtoptAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(loss_after_restore, loss_after_train)
 
   def testAssignAndRestore(self):
-    self.verifyVariableAssignAndRestore()
-    self.verifyTrainAndRestore()
+    self.VerifyVariableAssignAndRestore()
+    self.VerifyTrainAndRestore()
 
 
 if __name__ == '__main__':

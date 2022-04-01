@@ -29,7 +29,7 @@ import tensorflow_probability as tfp
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.policies import tf_policy
-from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -104,7 +104,7 @@ class CEMPolicy(tf_policy.TFPolicy):
                time_step_spec: ts.TimeStep,
                action_spec: types.NestedTensorSpec,
                q_network: network.Network,
-               sampler: cem_actions_sampler.ActionsSampler,
+               sampler: qtopt_cem_actions_sampler.ActionsSampler,
                init_mean: types.NestedArray,
                init_var: types.NestedArray,
                actor_policy: Optional[tf_policy.TFPolicy] = None,

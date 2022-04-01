@@ -38,10 +38,11 @@ action_spec = {
     'categorical': tensor_spec.BoundedTensorSpec(
         [4], tf.int32, 0, 1)}
 
-sampler = cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
-    action_spec=action_spec, sample_clippers=[[], [], []],
-    sub_actions_fields=[
-        ['categorical'], ['continuous1', 'continuous3'], ['continuous2']])
+sampler = (
+    qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+        action_spec=action_spec, sample_clippers=[[], [], []],
+        sub_actions_fields=[
+            ['categorical'], ['continuous1', 'continuous3'], ['continuous2']]))
 ```
 
 In this case, the action has a 'categorical' field that is a categorical
@@ -92,10 +93,11 @@ one_hot_vector stands for.
 
 For example, if you call
 ```
-sampler = cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
-    action_spec=action_spec, sample_clippers=[[], [], []],
-    sub_actions_fields=[
-        ['continuous1', 'continuous3'], ['categorical'], ['continuous2']])
+sampler = (
+    qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+        action_spec=action_spec, sample_clippers=[[], [], []],
+        sub_actions_fields=[
+            ['continuous1', 'continuous3'], ['categorical'], ['continuous2']]))
 ```
 
 [1, 0, 0, 0] -- choosing continuous1 & continuous3
@@ -122,12 +124,12 @@ import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.utils import common
 
 
 @gin.configurable
-class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
+class GaussianActionsSampler(qtopt_cem_actions_sampler.ActionsSampler):
   """Action sampler that samples continuous actions using Gaussian distribution and one_hot actions.
 
   Supports dict action_spec with arbitrary 1d continuous actions and 1 one_hot

@@ -23,13 +23,13 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
-from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
 
 @gin.configurable
-class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
+class GaussianActionsSampler(qtopt_cem_actions_sampler.ActionsSampler):
   """Continuous Gaussian actions sampler.
 
   Supports nested action_spec with 1d continuous actions.
@@ -39,8 +39,12 @@ class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
   'A' means action_size.
   """
 
-  def __init__(self, action_spec, sample_clippers=None, sample_rejecters=None,
-               max_rejection_iterations=10, support_integer=False):
+  def __init__(self,
+               action_spec,
+               sample_clippers=None,
+               sample_rejecters=None,
+               max_rejection_iterations=10,
+               support_integer=False):
 
     super(GaussianActionsSampler, self).__init__(action_spec, sample_clippers)
 

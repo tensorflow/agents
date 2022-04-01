@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.policies.samplers.cem_actions_sampler_continuous_and_one_hot."""
+"""Tests for tf_agents.policies.samplers.qtopt_cem_actions_sampler_continuous_and_one_hot."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -22,7 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-from tf_agents.policies.samplers import cem_actions_sampler_continuous_and_one_hot
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler_continuous_and_one_hot
 from tf_agents.specs import tensor_spec
 
 
@@ -51,8 +51,9 @@ class ActionsSamplerTest(tf.test.TestCase):
             [_ACTION_SIZE_CONTINUOUS], tf.float32, 0.0, 1.0),
         'discrete': tensor_spec.BoundedTensorSpec(
             [_ACTION_SIZE_DISCRETE], tf.int32, 0, 1)}
-    sampler = cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
-        action_spec=action_spec, sample_clippers=[[], [], []],
+    sampler = qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+        action_spec=action_spec,
+        sample_clippers=[[], [], []],
         sub_actions_fields=[['continuous1'], ['discrete'], ['continuous2']],
         sample_rejecters=[None, None, dummy_sample_rejecter])
 
@@ -120,7 +121,7 @@ class ActionsSamplerTest(tf.test.TestCase):
     with self.assertRaisesRegex(
         ValueError, r'Only continuous action \+ 1 one_hot action is supported'
         ' by this sampler.*'):
-      cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+      qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
           action_spec=action_spec)
 
     action_spec = [
@@ -131,7 +132,7 @@ class ActionsSamplerTest(tf.test.TestCase):
             [_ACTION_SIZE_CONTINUOUS], tf.float32, 0.0, 1.0)]
     with self.assertRaisesRegex(
         ValueError, 'Only 1d action is supported by this sampler.*'):
-      cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+      qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
           action_spec=action_spec)
 
   def testRefitDistribution(self):
@@ -145,8 +146,9 @@ class ActionsSamplerTest(tf.test.TestCase):
             [_ACTION_SIZE_CONTINUOUS], tf.float32, 0.0, 1.0),
         'discrete': tensor_spec.BoundedTensorSpec(
             [_ACTION_SIZE_DISCRETE], tf.int32, 0, 1)}
-    sampler = cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
-        action_spec=action_spec, sample_clippers=[[], [dummy_sample_clipper]],
+    sampler = qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+        action_spec=action_spec,
+        sample_clippers=[[], [dummy_sample_clipper]],
         sub_actions_fields=[['discrete'], ['continuous']])
 
     mean = tf.constant(_MEAN)
