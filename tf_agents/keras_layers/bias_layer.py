@@ -23,10 +23,8 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 class BiasLayer(tf.keras.layers.Layer):
   """Keras layer that only adds a bias to the input.
-
   `BiasLayer` implements the operation:
   `output = input + bias`
-
   Args:
       bias_initializer: Initializer for the bias vector.
   Input shape:
@@ -39,12 +37,14 @@ class BiasLayer(tf.keras.layers.Layer):
         shape `(batch_size, input_dim)`.
   """
 
-  def __init__(self, bias_initializer='zeros', **kwargs):
+  def __init__(self, bias_initializer='zeros', bias_regularizer=None, bias_constraint=None, **kwargs):
     if 'input_shape' not in kwargs and 'input_dim' in kwargs:
       kwargs['input_shape'] = (kwargs.pop('input_dim'),)
 
     super(BiasLayer, self).__init__(**kwargs)
     self.bias_initializer = tf.keras.initializers.get(bias_initializer)
+    self.bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
+    self.bias_constraint = tf.keras.constraints.get(bias_constraint)
 
     self.supports_masking = True
 
@@ -59,6 +59,8 @@ class BiasLayer(tf.keras.layers.Layer):
         'bias',
         shape=shape,
         initializer=self.bias_initializer,
+        regularizer=self.bias_regularizer,
+        constraint=self.bias_constraint,
         dtype=self.dtype,
         trainable=True)
     self.built = True
