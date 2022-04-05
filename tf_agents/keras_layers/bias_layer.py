@@ -37,7 +37,10 @@ class BiasLayer(tf.keras.layers.Layer):
         shape `(batch_size, input_dim)`.
   """
 
-  def __init__(self, bias_initializer='zeros', bias_regularizer=None, bias_constraint=None, **kwargs):
+  def __init__(self, bias_initializer='zeros', 
+                     bias_regularizer=None, 
+                     bias_constraint=None, 
+                     **kwargs):
     if 'input_shape' not in kwargs and 'input_dim' in kwargs:
       kwargs['input_shape'] = (kwargs.pop('input_dim'),)
 
