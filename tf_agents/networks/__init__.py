@@ -23,7 +23,7 @@ from tf_agents.networks import encoding_network
 from tf_agents.networks import expand_dims_layer
 from tf_agents.networks import lstm_encoding_network
 from tf_agents.networks import mask_splitter_network
-from tf_agents.networks import multi_categorical_projection_network
+from tf_agents.networks import multi_categorical_network
 from tf_agents.networks import nest_map
 from tf_agents.networks import network
 from tf_agents.networks import normal_projection_network

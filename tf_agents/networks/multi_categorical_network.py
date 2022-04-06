@@ -31,7 +31,7 @@ class MultiCategoricalDistributionBlock(tfp.distributions.Blockwise):
       )
 
 @gin.configurable
-class MultiCategoricalProjectionNetwork(network.DistributionNetwork):
+class MultiCategoricalNetwork(network.DistributionNetwork):
   """Generates a set of tfp.distribution.Categorical by predicting logits"""
   def __init__(self,
             sample_spec,
@@ -55,7 +55,7 @@ class MultiCategoricalProjectionNetwork(network.DistributionNetwork):
       categories_shape,
       name)
 
-    super(MultiCategoricalProjectionNetwork, self).__init__(
+    super(MultiCategoricalNetwork, self).__init__(
       input_tensor_spec=None,
       state_spec = (),
       output_spec=output_spec,
