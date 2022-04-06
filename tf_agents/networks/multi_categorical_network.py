@@ -14,6 +14,12 @@ class MultiCategoricalDistributionBlock(tfp.distributions.Blockwise):
 
   def __init__(self, logits, categories_shape):
     self.categories_shape = categories_shape
+
+    if logits.shape[-1] != np.sum(categories_shape):
+      raise ValueError('Length of logits do not match categories_shape'
+                       'Got: %s and %s.' % (logits.shape[-1],
+                       np.sum(categories_shape)))
+
     distribs = self._create_distrib(logits)
     super().__init__(distributions = distribs)
     self._parameters['logits'] = logits
