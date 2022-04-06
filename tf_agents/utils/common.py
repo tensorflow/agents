@@ -1428,6 +1428,6 @@ def deduped_network_variables(network, *args):
 def safe_has_state(state):
   """Safely checks `state not in (None, (), [])`."""
   # TODO(b/158804957): tf.function changes "s in ((),)" to a tensor bool expr.
-  # pylint: disable=literal-comparison
-  return state is not None and state is not () and state is not []
-  # pylint: enable=literal-comparison
+  # pylint: disable=g-explicit-bool-comparison
+  return state is not None and state != () and state != []
+  # pylint: enable=g-explicit-bool-comparison
