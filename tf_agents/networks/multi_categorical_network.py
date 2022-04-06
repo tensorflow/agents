@@ -48,7 +48,7 @@ class MultiCategoricalNetwork(network.DistributionNetwork):
     Args:
       sample_spec: A collection of `tensor_spec.BoundedTensorSpec` detailing
         the shape and dtypes of samples pulled from the output distribution.
-      logits_init_output_factor: Output factor for initializing kernal
+      logits_init_output_factor: Output factor for initializing kernel
         logits weights.
       name: A string representing the name of the network.
     """
@@ -102,7 +102,11 @@ class MultiCategoricalNetwork(network.DistributionNetwork):
 
     return categories_shape
 
-  def _output_distribution_spec(self, output_shape, sample_spec, categories_shape, network_name):
+  def _output_distribution_spec(self,
+                                output_shape,
+                                sample_spec,
+                                categories_shape,
+                                network_name):
     input_param_spec = {
         'logits':
             tensor_spec.TensorSpec(
@@ -129,18 +133,20 @@ class MultiCategoricalNetwork(network.DistributionNetwork):
     if mask is not None:
       # assume mask is a flattened array for now
 
-      # If the action spec says each action should be shaped (1,), add another
-      # dimension so the final shape is (B, 1, A), where A is the number of
-      # actions. This will make Categorical emit events shaped (B, 1) rather
-      # than (B,). Using axis -2 to allow for (B, T, 1, A) shaped q_values.
+      # If the action spec says each action should be shaped (1,), add
+      # another dimension so the final shape is (B, 1, A),
+      # where A is the number of actions. This will make Categorical
+      # emit events shaped (B, 1) rather than (B,).
+      # Using axis -2 to allow for (B, T, 1, A) shaped q_values.
       if mask.shape.rank < logits.shape.rank:
         mask = tf.expand_dims(mask, -2)
 
       # Overwrite the logits for invalid actions to a very large negative
       # number. We do not use -inf because it produces NaNs in many tfp
       # functions.
-      almost_neg_inf = tf.constant(logits.dtype.min, dtype = logits.dtype)
+      almost_neg_inf = tf.constant(logits.dtype.min,
+        dtype=logits.dtype)
       logits = tf.compat.v2.where(
         tf.cast(mask, tf.bool), logits, almost_neg_inf)
 
-    return self.output_spec.build_distribution(logits= logits), ()
+    return self.output_spec.build_distribution(logits=logits), ()
