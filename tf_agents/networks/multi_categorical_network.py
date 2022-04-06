@@ -82,15 +82,15 @@ class MultiCategoricalNetwork(network.DistributionNetwork):
 
   def _categories_shape(self, sample_spec):
     def _get_n_categories(array_spec):
-      if not tensor_spec.is_bounded(array_spec):
+      if tensor_spec.is_bounded(array_spec) and \
+      tensor_spec.is_discrete(array_spec):
+        n_categories = array_spec.maximum - array_spec.minimum +1
+        return n_categories
+      else:
         raise ValueError(
-          'sample_spec must be bounded. Got: %s.' % type(array_spec))
-
-      if not tensor_spec.is_discrete(array_spec):
-        raise ValueError('sample_spec must be discrete. Got: %s.' % array_spec)
-
-      n_categories = array_spec.maximum - array_spec.minimum +1
-      return n_categories
+          'sample_spec must be discrete and bounded. Got: %s.'
+          % type(array_spec)
+          )
 
     flattened_spec = tf.nest.flatten(sample_spec)
     categories_shape = tf.nest.map_structure(
