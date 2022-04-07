@@ -206,7 +206,7 @@ class TFPolicy(tf.Module):
     self._info_spec = tensor_spec.from_spec(info_spec)
     self._setup_specs()
     self._clip = clip
-    self._action_fn = common.function_in_tf1(experimental_relax_shapes=False)(
+    self._action_fn = common.function_in_tf1(reduce_retracing=False)(
         self._action)
     self._automatic_state_reset = automatic_state_reset
     self._observation_and_action_constraint_splitter = (

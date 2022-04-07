@@ -94,7 +94,7 @@ class DynamicStepDriver(driver.Driver):
     super(DynamicStepDriver, self).__init__(env, policy, observers,
                                             transition_observers)
     self._num_steps = num_steps
-    self._run_fn = common.function_in_tf1(experimental_relax_shapes=False)(
+    self._run_fn = common.function_in_tf1(reduce_retracing=False)(
         self._run)
     self._is_bandit_env = is_bandit_env(env)
 
