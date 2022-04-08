@@ -19,31 +19,94 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from absl import flags
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from gym import error
+
+import rlds
+import tensorflow as tf
+import tensorflow_datasets as tfds
 
 from tf_agents.examples.cql_sac.kumar20 import cql_sac_train_eval
 
-FLAGS = flags.FLAGS
-TEST_DATA = 'third_party/py/tf_agents/examples/cql_sac/kumar20/dataset/test_data/antmaze-medium-play-v0_0.tfrecord'
-ENV_NAME = 'antmaze-medium-play-v0'
+_ENV_NAME = 'antmaze-medium-play-v0'
+_DATASET_NAME = 'd4rl_antmaze/medium-play-v0'
+_COUNT = 10
+
+
+def _load_test_rlds(dataset_name: str) -> tf.data.Dataset:
+  with tfds.testing.mock_data(num_examples=20):
+    return rlds.load(dataset_name)
 
 
 class CqlSacTrainEval(tf.test.TestCase):
 
-  def testBasic(self):
+  def testBasicTrainingSuccess(self):
     root_dir = self.get_temp_dir()
     cql_sac_train_eval.train_eval(
         root_dir,
-        dataset_path=TEST_DATA,
-        env_name=ENV_NAME,
+        dataset_name=_DATASET_NAME,
+        load_dataset_fn=_load_test_rlds,
+        env_name=_ENV_NAME,
         num_gradient_updates=2,
         batch_size=4,
         eval_interval=2,
         eval_episodes=1,
-    )
+        data_take=_COUNT,
+        data_prefetch=1,
+        pad_end_of_episodes=True)
+
+  def testTransformationsTrainingSuccess(self):
+    root_dir = self.get_temp_dir()
+    cql_sac_train_eval.train_eval(
+        root_dir,
+        dataset_name=_DATASET_NAME,
+        load_dataset_fn=_load_test_rlds,
+        env_name=_ENV_NAME,
+        num_gradient_updates=2,
+        reward_shift=0.1,
+        action_clipping=(0.1, 0.9),
+        batch_size=4,
+        eval_interval=2,
+        eval_episodes=1,
+        data_take=_COUNT,
+        data_prefetch=1,
+        pad_end_of_episodes=True)
+
+  def testIncorrectDatasetTrainingFails(self):
+    root_dir = self.get_temp_dir()
+    with self.assertRaises(ValueError):
+      cql_sac_train_eval.train_eval(
+          root_dir,
+          dataset_name='random_dataset_name',
+          load_dataset_fn=_load_test_rlds,
+          env_name=_ENV_NAME,
+          num_gradient_updates=2,
+          reward_shift=0.1,
+          action_clipping=(0.1, 0.9),
+          batch_size=4,
+          eval_interval=2,
+          eval_episodes=1,
+          data_take=_COUNT,
+          data_prefetch=1,
+          pad_end_of_episodes=True)
+
+  def testIncorrectEnvironmentTrainingFails(self):
+    root_dir = self.get_temp_dir()
+    with self.assertRaises(error.Error):
+      cql_sac_train_eval.train_eval(
+          root_dir,
+          dataset_name=_DATASET_NAME,
+          load_dataset_fn=_load_test_rlds,
+          env_name='random_env_name',
+          num_gradient_updates=2,
+          reward_shift=0.1,
+          action_clipping=(0.1, 0.9),
+          batch_size=4,
+          eval_interval=2,
+          eval_episodes=1,
+          data_take=_COUNT,
+          data_prefetch=1,
+          pad_end_of_episodes=True)
 
 
 if __name__ == '__main__':
-  tf.compat.v1.enable_v2_behavior()
   tf.test.main()
