@@ -186,7 +186,7 @@ def convert_rlds_to_trajectories(rlds_data: tf.data.Dataset) -> tf.data.Dataset:
         rlds.ACTION: pair[rlds.ACTION][1]
     })
 
-  def _get_step_type(step) -> np.ndarray:
+  def _get_step_type(step: Dict[str, tf.Tensor]) -> np.ndarray:
     if step[rlds.IS_FIRST]:
       return ts.StepType.FIRST
     elif step[rlds.IS_LAST]:
