@@ -620,12 +620,11 @@ class LinearBanditAgent(tf_agent.TFAgent):
     observation, reward = self._maybe_apply_per_example_weight(
         experience_observation, experience_reward, weights)
     for k in range(self._num_models):
-      diag_mask = tf.linalg.tensor_diag(
-          tf.cast(tf.equal(action, k), self._dtype))
-      observations_for_arm = tf.matmul(diag_mask, observation)
-      rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
+      action_mask = tf.equal(action, k)
+      observations_for_arm = tf.boolean_mask(observation, action_mask, axis=0)
+      rewards_for_arm = tf.boolean_mask(tf.reshape(reward, [-1, 1]), action_mask, axis=0)
 
-      num_samples_for_arm_current = tf.reduce_sum(diag_mask)
+      num_samples_for_arm_current = tf.reduce_sum(tf.cast(action_mask, self._dtype))
       tf.compat.v1.assign_add(self._num_samples_list[k],
                               num_samples_for_arm_current)
       num_samples_for_arm_total = self._num_samples_list[k].read_value()
