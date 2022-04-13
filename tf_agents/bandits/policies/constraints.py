@@ -127,6 +127,18 @@ class NeuralConstraint(BaseConstraint):
         constraint_network.create_variables()
     self._constraint_network = constraint_network
 
+  @property
+  def observation_spec(self):
+    return self._time_step_spec.observation
+
+  @observation_spec.setter
+  def observation_spec(self, observation_spec):
+    self._time_step_spec = ts.TimeStep(
+        step_type=self._time_step_spec.step_type,
+        reward=self._time_step_spec.reward,
+        discount=self._time_step_spec.discount,
+        observation=observation_spec)
+
   def initialize(self):
     """Returns an op to initialize the constraint."""
     tf.compat.v1.variables_initializer(self.variables)
