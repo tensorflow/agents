@@ -175,7 +175,7 @@ def get_required_packages():
       'absl-py >= 0.6.1',
       'cloudpickle >= 1.3',
       'gin-config >= 0.4.0',
-      'gym >= 0.17.0',
+      'gym >= 0.17.0, <=0.23.0',
       'numpy >= 1.13.3',
       'pillow',
       'six >= 1.10.0',
