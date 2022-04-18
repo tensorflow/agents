@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 r"""Example training DQN using actor/learner with RNNs in a gym environment.
 
 This example uses a modified version of the Gym Cartpole environment where the

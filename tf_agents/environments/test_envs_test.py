@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Tests for tf_agents.environments.test_envs."""
 
 from __future__ import absolute_import

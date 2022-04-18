@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Distributed tf.Variable store client for Reverb backend.
 
 This is just a client. The server needs to be consructed and held separately.
