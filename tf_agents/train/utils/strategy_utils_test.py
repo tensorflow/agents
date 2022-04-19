@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Tests for tf_agents.train.strategy_utils."""
 
 from absl.testing.absltest import mock

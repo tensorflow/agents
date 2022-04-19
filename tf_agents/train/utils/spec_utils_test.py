@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Tests for tf_agents.train.utils.spec_utils."""
 
 from tf_agents.drivers import test_utils as driver_test_utils
