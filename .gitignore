@@ -1,13 +1,109 @@
-.DS_Store
+# TF-agents
 .ipynb_checkpoints
 node_modules
 /pip_test
 /_python_build
 *.pyc
-__pycache__
-*.swp
-.vscode/
-.idea/
-.eggs/
-*.egg-info/
 /.vs
+
+# TF2RL Results
+results/*
+*/results/*
+*/*/results/*
+*/*/*/results/*
+
+# Tensorflow Models
+*.pkl
+
+# IDE files
+.vscode/*
+.idea/*
+.spyderproject
+.spyproject
+*.swp
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+*.out
+.eggs/*
+*.eggs/
+build/*
+dist/*
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Rope
+.ropeproject
+
+# Django stuff:
+*.log
+*.pot
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Sphinx documentation
+docs/_build/
+
+# Scrapy stuff:
+.scrapy
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pyenv
+
+# Docker
+.vagrant*
+docker/docker
+*.orig
+build_src
+.flymake*
+.DS_Store
+.gopath/
+.dotcloud
+Vagrantfile
