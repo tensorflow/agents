@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Utilities to gather transition information from a D4RL dataset."""
-# Lint as: python3
 from typing import Dict, List, Union
 
 import d4rl  # pylint: disable=unused-import

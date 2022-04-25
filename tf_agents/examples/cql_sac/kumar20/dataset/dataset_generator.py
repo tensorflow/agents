@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Generate D4RL TFRecord dataset that is compatible with TF-Agents."""
-# Lint as: python3
 import functools
 import os
 

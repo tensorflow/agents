@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Utilities to generate and save transitions to TFRecord files."""
-# Lint as: python3
 from typing import Dict
 from absl import logging
 
