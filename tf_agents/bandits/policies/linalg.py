@@ -75,12 +75,12 @@ def conjugate_gradient(a_mat: types.Tensor,
         tf.expand_dims(active_columns_mask, axis=0),
         multiples=[tf.shape(b_mat)[0], 1])
     a_x_p = tf.matmul(a_mat, p)
-    alpha_diag = tf.linalg.diag(rs_old / tf.reduce_sum(p * a_x_p, axis=0))
-    x = tf.where(active_columns_tiled_mask, x + tf.matmul(p, alpha_diag), x)
-    r = tf.where(active_columns_tiled_mask, r - tf.matmul(a_x_p, alpha_diag), r)
+    alpha = rs_old / tf.reduce_sum(p * a_x_p, axis=0)
+    x = tf.where(active_columns_tiled_mask, x + tf.multiply(p, alpha), x)
+    r = tf.where(active_columns_tiled_mask, r - tf.multiply(a_x_p, alpha), r)
     rs_new = tf.where(active_columns_mask, tf.einsum('ij,ij->j', r, r), rs_new)
-    p = tf.where(active_columns_tiled_mask,
-                 r + tf.matmul(p, tf.linalg.diag(rs_new / rs_old)), p)
+    p = tf.where(active_columns_tiled_mask, r + tf.multiply(p, rs_new / rs_old),
+                 p)
     rs_old = tf.where(active_columns_mask, rs_new, rs_old)
     i = i + 1
     return i, x, p, r, rs_old, rs_new
