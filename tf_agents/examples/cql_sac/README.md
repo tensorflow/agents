@@ -4,6 +4,9 @@
 ["Conservative Q-Learning for Offline Reinforcement Learning"](https://arxiv.org/abs/2006.04779)
 (Kumar, 20).
 
+WARNING: Please note that installation of D4RL environments is currently having
+some issues. [Installing D4RL](https://sites.google.com/view/d4rl-anonymous/) is
+a prerequisite to run the CQL for D4RL.
 
 # Background
 
@@ -44,19 +47,13 @@ actions to the data.
 
 The benchmarks are described in detail in the [D4RL paper](https://arxiv.org/abs/2004.07219).
 
-# Generate TF-Agents datasets
+# Select RLDS D4RL dataset corresponding to environment
 
-Here is an example to generate a dataset for the Antmaze-Medium-Play D4RL environment.
+Select the correct RLDS dataset name from [here](https://www.tensorflow.org/datasets/catalog/overview#d4rl)
+corresponding to the D4RL environment you wish to use.
 
-The script writes a TFRecord dataset to $DATA_ROOT_DIR/$ENV_NAME across $NUM_REPLICAS shards.
-
-```shell
-$  NUM_REPLICAS=1
-$  DATA_ROOT_DIR=$HOME/tmp/d4rl_dataset
-$  ENV_NAME=antmaze-medium-play-v0
-$  python tf_agents/examples/cql_sac/kumar20/dataset/dataset_generator.py \
-    --replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR
-```
+For example, dataset [d4rl_antmaze/medium-play-v0](https://www.tensorflow.org/datasets/catalog/d4rl_antmaze#d4rl_antmazemedium-play-v0)
+dataset for the Antmaze-Medium-Play D4RL environment.
 
 # Examples
 
@@ -64,11 +61,13 @@ Here is a simple example to train and evaluate CqlSacAgent on the
 Antmaze-Medium-Play environment, using the dataset generated above:
 
 ```shell
+$  DATASET_NAME=d4rl_antmaze/medium-play-v0
+$  ENV_NAME=antmaze-medium-play-v0
 $  TRAIN_EVAL_ROOT_DIR=$HOME/tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 
@@ -219,15 +218,6 @@ The commands should also work on a bare metal workstation setup as well.
 
 Before training each of the below, run dataset generation for that environment:
 
-```shell
-$  NUM_REPLICAS=10
-$  ENV_NAME={insert_env_name}
-$  DATA_ROOT_DIR=./tmp/d4rl_dataset
-$  python tf_agents/examples/cql_sac/kumar20/dataset/dataset_generator \
-     --replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR \
-     --alsologtostderr
-```
-
 ## HalfCheetah-Medium-Expert (MuJoCo)
 
 ![alt_text](https://raw.githubusercontent.com/tensorflow/agents/master/docs/images/cql_sac_readme/halfcheetah-medium-expert-v0_graph.png "halfcheetah-medium-expert-v0 Mean and min/max graph.")
@@ -235,10 +225,11 @@ $  python tf_agents/examples/cql_sac/kumar20/dataset/dataset_generator \
 ```shell
 $  ENV_NAME=halfcheetah-medium-expert-v0
 $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
+$  DATASET_NAME=d4rl_mujoco_halfcheetah/v0-medium-expert
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
      --alsologtostderr
 ```
@@ -253,7 +244,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
      --alsologtostderr
 ```
@@ -268,7 +259,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
      --alsologtostderr
 ```
@@ -283,7 +274,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
      --alsologtostderr
 ```
@@ -298,7 +289,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium_expert.gin \
      --alsologtostderr
 ```
@@ -313,7 +304,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin \
      --alsologtostderr
 ```
@@ -328,7 +319,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
@@ -344,7 +335,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
@@ -359,7 +350,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
@@ -375,7 +366,7 @@ $  TRAIN_EVAL_ROOT_DIR=./tmp/cql_sac/$ENV_NAME
 $  python tf_agents/examples/cql_sac/kumar20/cql_sac_train_eval.py \
      --env_name=$ENV_NAME \
      --root_dir=$TRAIN_EVAL_ROOT_DIR \
-     --dataset_path=$DATA_ROOT_DIR \
+     --dataset_name=$DATASET_NAME \
      --gin_file=tf_agents/examples/cql_sac/kumar20/configs/antmaze.gin \
      --alsologtostderr
 ```
@@ -442,21 +433,15 @@ $  tmux new -s bench
 
 # Runs the Antmaze-Medium-Play example in the docker image. Includes data generation and training.
 $  export NUM_REPLICAS=10
-$  export DATA_ROOT_DIR=./data/halfcheetah-medium-v0-rep
+$  export DATASET_NAME=d4rl_mujoco_halfcheetah/v0-medium-expert
 $  export ENV_NAME=halfcheetah-medium-v0
-
-# Pulls data and creates the dataset for training..
-$ docker run --rm -it -v $(pwd):/workspace -w /workspace/ \
-    tf_agents/mujoco/d4rl \
-    bash -c "python3 -m tf_agents.experimental.examples.cql_sac.kumar20.dataset.dataset_generator"\
-"--replicas=$NUM_REPLICAS --env_name=$ENV_NAME --root_dir=$DATA_ROOT_DIR"
 
 # Starts the training.
 # Run `docker run --rm -it --gpus all -v` for GPU support.
 $  docker run --rm -it -v $(pwd):/workspace -w /workspace/ \
     tf_agents/mujoco/d4rl \
      bash -c "python3 -m tf_agents.experimental.examples.cql_sac.kumar20.cql_sac_train_eval "\
-"--env_name=$ENV_NAME --root_dir=./log/$ENV_NAME --dataset_path=$DATA_ROOT_DIR "\
+"--env_name=$ENV_NAME --root_dir=./log/$ENV_NAME --dataset_name=$DATASET_NAME "\
 "--gin_file=tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin --alsologtostderr"
 ```
 
