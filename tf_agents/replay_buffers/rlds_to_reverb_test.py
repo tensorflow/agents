@@ -34,14 +34,14 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import test_utils
 
-SEQUENCE_LENGTH = 2
-STRIDE_LENGTH = 1
-REVERB_TABLE_SIZE = 10000
-REVERB_RATE_LIMITER = 1
-OBSERVATIONS = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
-ACTIONS = [[11.0], [21.0], [31.0]]
-REWARDS = [1.0, 2.0, 3.0]
-DISCOUNTS = [1.0, 1.0, 1.0]
+_SEQUENCE_LENGTH = 2
+_STRIDE_LENGTH = 1
+_REVERB_TABLE_SIZE = 10000
+_REVERB_RATE_LIMITER = 1
+_OBSERVATIONS = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
+_ACTIONS = [[11.0], [21.0], [31.0]]
+_REWARDS = [1.0, 2.0, 3.0]
+_DISCOUNTS = [1.0, 1.0, 1.0]
 
 
 def generate_valid_episodes(
@@ -53,10 +53,10 @@ def generate_valid_episodes(
     and expected TF-Agents trajectories as values.
   """
   complete_steps = tf.data.Dataset.from_tensor_slices({
-      rlds_types.OBSERVATION: OBSERVATIONS,
-      rlds_types.ACTION: ACTIONS,
-      rlds_types.REWARD: REWARDS,
-      rlds_types.DISCOUNT: DISCOUNTS,
+      rlds_types.OBSERVATION: _OBSERVATIONS,
+      rlds_types.ACTION: _ACTIONS,
+      rlds_types.REWARD: _REWARDS,
+      rlds_types.DISCOUNT: _DISCOUNTS,
       rlds_types.IS_TERMINAL: [False, False, True],
       rlds_types.IS_LAST: [False, False, True],
       rlds_types.IS_FIRST: [True, False, False],
@@ -68,10 +68,10 @@ def generate_valid_episodes(
   ]
 
   truncated_steps = tf.data.Dataset.from_tensor_slices({
-      rlds_types.OBSERVATION: OBSERVATIONS,
-      rlds_types.ACTION: ACTIONS,
-      rlds_types.REWARD: REWARDS,
-      rlds_types.DISCOUNT: DISCOUNTS,
+      rlds_types.OBSERVATION: _OBSERVATIONS,
+      rlds_types.ACTION: _ACTIONS,
+      rlds_types.REWARD: _REWARDS,
+      rlds_types.DISCOUNT: _DISCOUNTS,
       rlds_types.IS_TERMINAL: [False, False, False],
       rlds_types.IS_LAST: [False, False, True],
       rlds_types.IS_FIRST: [True, False, False],
@@ -123,10 +123,10 @@ def generate_invalid_episodes() -> Dict[str, Tuple[tf.data.Dataset, str]]:
       'incorrect_ending': (tf.data.Dataset.from_tensor_slices({
           rlds_types.STEPS: [
               tf.data.Dataset.from_tensor_slices({
-                  rlds_types.OBSERVATION: OBSERVATIONS,
-                  rlds_types.ACTION: ACTIONS,
-                  rlds_types.REWARD: REWARDS,
-                  rlds_types.DISCOUNT: DISCOUNTS,
+                  rlds_types.OBSERVATION: _OBSERVATIONS,
+                  rlds_types.ACTION: _ACTIONS,
+                  rlds_types.REWARD: _REWARDS,
+                  rlds_types.DISCOUNT: _DISCOUNTS,
                   rlds_types.IS_TERMINAL: [False, False, False],
                   rlds_types.IS_LAST: [False, False, False],
                   rlds_types.IS_FIRST: [True, False, True],
@@ -136,10 +136,10 @@ def generate_invalid_episodes() -> Dict[str, Tuple[tf.data.Dataset, str]]:
       'incorrect_termination': (tf.data.Dataset.from_tensor_slices({
           rlds_types.STEPS: [
               tf.data.Dataset.from_tensor_slices({
-                  rlds_types.OBSERVATION: OBSERVATIONS,
-                  rlds_types.ACTION: ACTIONS,
-                  rlds_types.REWARD: REWARDS,
-                  rlds_types.DISCOUNT: DISCOUNTS,
+                  rlds_types.OBSERVATION: _OBSERVATIONS,
+                  rlds_types.ACTION: _ACTIONS,
+                  rlds_types.REWARD: _REWARDS,
+                  rlds_types.DISCOUNT: _DISCOUNTS,
                   rlds_types.IS_TERMINAL: [False, False, True],
                   rlds_types.IS_LAST: [False, False, False],
                   rlds_types.IS_FIRST: [True, False, False],
@@ -149,10 +149,10 @@ def generate_invalid_episodes() -> Dict[str, Tuple[tf.data.Dataset, str]]:
       'incorrect_beginning': (tf.data.Dataset.from_tensor_slices({
           rlds_types.STEPS: [
               tf.data.Dataset.from_tensor_slices({
-                  rlds_types.OBSERVATION: OBSERVATIONS,
-                  rlds_types.ACTION: ACTIONS,
-                  rlds_types.REWARD: REWARDS,
-                  rlds_types.DISCOUNT: DISCOUNTS,
+                  rlds_types.OBSERVATION: _OBSERVATIONS,
+                  rlds_types.ACTION: _ACTIONS,
+                  rlds_types.REWARD: _REWARDS,
+                  rlds_types.DISCOUNT: _DISCOUNTS,
                   rlds_types.IS_TERMINAL: [False, True, False],
                   rlds_types.IS_LAST: [False, True, False],
                   rlds_types.IS_FIRST: [True, False, False],
@@ -163,9 +163,9 @@ def generate_invalid_episodes() -> Dict[str, Tuple[tf.data.Dataset, str]]:
           rlds_types.STEPS: [
               tf.data.Dataset.from_tensor_slices({
                   rlds_types.OBSERVATION: [[1.0], [3.0], [5.0]],
-                  rlds_types.ACTION: ACTIONS,
-                  rlds_types.REWARD: REWARDS,
-                  rlds_types.DISCOUNT: DISCOUNTS,
+                  rlds_types.ACTION: _ACTIONS,
+                  rlds_types.REWARD: _REWARDS,
+                  rlds_types.DISCOUNT: _DISCOUNTS,
                   rlds_types.IS_TERMINAL: [False, True, False],
                   rlds_types.IS_LAST: [False, True, False],
                   rlds_types.IS_FIRST: [True, False, False],
@@ -216,25 +216,25 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
     # Initialize Reverb server, Reverb Replay Buffer and Reverb Observer.
     uniform_table = reverb.Table(
         name=self._table_name,
-        max_size=REVERB_TABLE_SIZE,
+        max_size=_REVERB_TABLE_SIZE,
         sampler=reverb.selectors.Uniform(),
         remover=reverb.selectors.Fifo(),
-        rate_limiter=reverb.rate_limiters.MinSize(REVERB_RATE_LIMITER),
+        rate_limiter=reverb.rate_limiters.MinSize(_REVERB_RATE_LIMITER),
         signature=tensor_spec.add_outer_dim(self._data_spec))
 
     self._server = reverb.Server([uniform_table])
 
     replay_buffer = reverb_replay_buffer.ReverbReplayBuffer(
         self._data_spec,
-        sequence_length=SEQUENCE_LENGTH,
+        sequence_length=_SEQUENCE_LENGTH,
         table_name=self._table_name,
         local_server=self._server)
 
     self._reverb_observer = reverb_utils.ReverbAddTrajectoryObserver(
         replay_buffer.py_client,
         self._table_name,
-        sequence_length=SEQUENCE_LENGTH,
-        stride_length=STRIDE_LENGTH)
+        sequence_length=_SEQUENCE_LENGTH,
+        stride_length=_STRIDE_LENGTH)
 
   def tearDown(self):
     if self._server:
