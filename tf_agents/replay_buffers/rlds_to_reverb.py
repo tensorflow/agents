@@ -175,23 +175,16 @@ def convert_rlds_to_trajectories(
       pair: Dict[str, tf.Tensor]
   ) -> Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]]:
     """Converts a batch of two adjacent RLDS steps to a Tuple of RLDS steps."""
-    return ({
-        rlds.IS_FIRST: pair[rlds.IS_FIRST][0],
-        rlds.IS_LAST: pair[rlds.IS_LAST][0],
-        rlds.IS_TERMINAL: pair[rlds.IS_TERMINAL][0],
-        rlds.REWARD: pair[rlds.REWARD][0],
-        rlds.DISCOUNT: pair[rlds.DISCOUNT][0],
-        rlds.OBSERVATION: pair[rlds.OBSERVATION][0],
-        rlds.ACTION: pair[rlds.ACTION][0]
-    }, {
-        rlds.IS_FIRST: pair[rlds.IS_FIRST][1],
-        rlds.IS_LAST: pair[rlds.IS_LAST][1],
-        rlds.IS_TERMINAL: pair[rlds.IS_TERMINAL][1],
-        rlds.REWARD: pair[rlds.REWARD][1],
-        rlds.DISCOUNT: pair[rlds.DISCOUNT][1],
-        rlds.OBSERVATION: pair[rlds.OBSERVATION][1],
-        rlds.ACTION: pair[rlds.ACTION][1]
-    })
+    current_step = {}
+    next_step = {}
+    for key, value in pair.items():
+      if isinstance(value, dict):
+        current_step[key] = value
+        next_step[key] = value
+      else:
+        current_step[key] = value[0]
+        next_step[key] = value[1]
+    return (current_step, next_step)
 
   def _get_step_type(step: Dict[str, tf.Tensor]) -> np.ndarray:
     if step[rlds.IS_FIRST]:
