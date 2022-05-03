@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, Optional, List, Tuple, Union
 
 from absl import logging
 
@@ -32,6 +32,9 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+
+_PolicyFnType = Optional[Callable[[Dict[str, tf.Tensor], Dict[str, tf.Tensor]],
+                                  Dict[str, tf.Tensor]]]
 
 
 def get_rlds_step_features() -> List[str]:
@@ -113,7 +116,9 @@ def create_trajectory_data_spec(
   return trajectory.from_transition(time_step_spec, action_spec, time_step_spec)
 
 
-def convert_rlds_to_trajectories(rlds_data: tf.data.Dataset) -> tf.data.Dataset:
+def convert_rlds_to_trajectories(
+    rlds_data: tf.data.Dataset,
+    policy_info_fn: _PolicyFnType = None) -> tf.data.Dataset:
   """Converts the RLDS data to a dataset of trajectories.
 
   Converts the rlds_data provided to a dataset of TF Agents trajectories by
@@ -147,6 +152,8 @@ def convert_rlds_to_trajectories(rlds_data: tf.data.Dataset) -> tf.data.Dataset:
       episode contains a tf.data.Dataset of RLDS steps. An RLDS step is a
       dictionary of tensors containing is_first, is_last, observation, action,
       reward, is_terminal, and discount.
+    policy_info_fn: An optional function to create some policy.info to be used
+      while generating TF-Agents trajectories.
 
   Returns:
     A dataset of type tf.data.Dataset, elements of which are TF Agents
@@ -231,6 +238,9 @@ def convert_rlds_to_trajectories(rlds_data: tf.data.Dataset) -> tf.data.Dataset:
     step_type = _get_step_type(current_step)
     next_step_type = _get_step_type(next_step)
 
+    policy_info = policy_info_fn(current_step,
+                                 next_step) if policy_info_fn else ()
+
     # Represent single step episode with step_type=LAST and next_step_type=LAST.
     if step_type == ts.StepType.FIRST and next_step_type == ts.StepType.FIRST:
       step_type = ts.StepType.LAST
@@ -240,7 +250,7 @@ def convert_rlds_to_trajectories(rlds_data: tf.data.Dataset) -> tf.data.Dataset:
         step_type=step_type,
         observation=current_step[rlds.OBSERVATION],
         action=current_step[rlds.ACTION],
-        policy_info=(),
+        policy_info=policy_info,
         next_step_type=next_step_type,
         reward=current_step[rlds.REWARD],
         discount=_get_discount(current_step))
@@ -263,11 +273,11 @@ def convert_rlds_to_trajectories(rlds_data: tf.data.Dataset) -> tf.data.Dataset:
       drop_remainder=True).map(_pair_to_tuple).map(_to_trajectory)
 
 
-def push_rlds_to_reverb(
-    rlds_data: tf.data.Dataset,
-    reverb_observer: Union[reverb_utils.ReverbAddEpisodeObserver,
-                           reverb_utils.ReverbAddTrajectoryObserver]
-) -> int:
+def push_rlds_to_reverb(rlds_data: tf.data.Dataset,
+                        reverb_observer: Union[
+                            reverb_utils.ReverbAddEpisodeObserver,
+                            reverb_utils.ReverbAddTrajectoryObserver],
+                        policy_info_fn: _PolicyFnType = None) -> int:
   """Pushes the RLDS data to Reverb server as TF Agents trajectories.
 
   Pushes the rlds_data provided to Reverb server using reverb_observer after
@@ -283,6 +293,8 @@ def push_rlds_to_reverb(
       dictionary of tensors containing is_first, is_last, observation, action,
       reward, is_terminal, and discount.
     reverb_observer: A Reverb observer for writing trajectories data to Reverb.
+    policy_info_fn: An optional function to create some policy.info to be used
+      while generating TF-Agents trajectories.
 
   Returns:
     An int representing the number of trajectories successfully pushed to RLDS.
@@ -309,7 +321,7 @@ def push_rlds_to_reverb(
         'Replay buffer table signature spec should match RLDS data spec.')
 
   steps = 0
-  for entry in convert_rlds_to_trajectories(rlds_data):
+  for entry in convert_rlds_to_trajectories(rlds_data, policy_info_fn):
     reverb_observer(entry)
     steps += 1
   logging.info('Successfully wrote %d steps to Reverb.', steps)

@@ -187,6 +187,14 @@ def generate_invalid_episodes() -> Dict[str, Tuple[tf.data.Dataset, str]]:
   }
 
 
+def get_policy_info_test_fn(
+    current_step: Dict[str, tf.Tensor],
+    next_step: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+  """Returns policy info for test function for policy info tests."""
+  del next_step  # unused
+  return {rlds_types.ACTION: current_step[rlds_types.ACTION]}
+
+
 class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
 
   def setUp(self):
@@ -294,6 +302,18 @@ class RldsToReverbTest(parameterized.TestCase, test_utils.TestCase):
       rlds_to_reverb.push_rlds_to_reverb(rlds_data, self._reverb_observer)
     self.assertEqual(str(err.exception), error_message)
 
+  @parameterized.named_parameters(
+      ('_complete_episode', 'complete_episode', 3),
+      ('_truncated_episode', 'truncated_episode', 3),
+      ('_single_step_episode', 'single_step_episode', 1),
+      ('_multiple_episodes', 'multiple_episodes', 7))
+  def test_push_to_reverb_with_policy(self, episode,
+                                      expected_trajectories_pushed):
+    rlds_data, _ = self._valid_episodes[episode]
+    trajectories_pushed = rlds_to_reverb.push_rlds_to_reverb(
+        rlds_data, self._reverb_observer, get_policy_info_test_fn)  # type: int
+    self.assertEqual(trajectories_pushed, expected_trajectories_pushed)
+
 
 class RldsToTrajectoriesTest(parameterized.TestCase, test_utils.TestCase):
 
@@ -348,6 +368,33 @@ class RldsToTrajectoriesTest(parameterized.TestCase, test_utils.TestCase):
     with self.assertRaises(ValueError) as err:
       rlds_to_reverb.convert_rlds_to_trajectories(rlds_data)
     self.assertEqual(str(err.exception), error_message)
+
+  @parameterized.named_parameters(
+      ('_complete_episode', 'complete_episode'),
+      ('_truncated_episode', 'truncated_episode'),
+      ('_single_step_episode', 'single_step_episode'),
+      ('_multiple_episodes', 'multiple_episodes'))
+  def test_conversion_with_policy(self, episode):
+    rlds_data, expected_trajectories = self._valid_episodes[episode]
+    generated_trajectories = rlds_to_reverb.convert_rlds_to_trajectories(
+        rlds_data, get_policy_info_test_fn)  # type: tf.data.Dataset
+    for generated_trajectory, expected_trajectory in zip(
+        list(generated_trajectories.as_numpy_iterator()),
+        expected_trajectories):
+      self.assertEqual(generated_trajectory.step_type,
+                       expected_trajectory.step_type)
+      self.assertEqual(generated_trajectory.next_step_type,
+                       expected_trajectory.next_step_type)
+      self.assertAllEqual(generated_trajectory.observation,
+                          expected_trajectory.observation)
+      self.assertAllEqual(generated_trajectory.action,
+                          expected_trajectory.action)
+      self.assertAllEqual(generated_trajectory.discount,
+                          expected_trajectory.discount)
+      self.assertAllEqual(generated_trajectory.reward,
+                          expected_trajectory.reward)
+      self.assertAllEqual(generated_trajectory.policy_info,
+                          {rlds_types.ACTION: expected_trajectory.action})
 
 
 if __name__ == '__main__':
