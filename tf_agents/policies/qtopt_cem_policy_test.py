@@ -37,9 +37,9 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.networks import network
 from tf_agents.policies import qtopt_cem_policy
-from tf_agents.policies.samplers import cem_actions_sampler_continuous
-from tf_agents.policies.samplers import cem_actions_sampler_continuous_and_one_hot
-from tf_agents.policies.samplers import cem_actions_sampler_hybrid
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler_continuous
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler_continuous_and_one_hot
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler_hybrid
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 
@@ -284,8 +284,9 @@ class CEMPolicyTest(parameterized.TestCase, tf.test.TestCase):
                                dtype=np.float32)
       }
 
-      sampler = cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
-          action_spec=action_spec, sample_clippers=[[], []],
+      sampler = qtopt_cem_actions_sampler_continuous_and_one_hot.GaussianActionsSampler(
+          action_spec=action_spec,
+          sample_clippers=[[], []],
           sub_actions_fields=[['discrete'], ['continuous']])
     elif sampler_type == 'hybrid':
       action_spec = self._action_spec_hybrid
@@ -305,7 +306,7 @@ class CEMPolicyTest(parameterized.TestCase, tf.test.TestCase):
           'discrete': np.var(samples_discrete, axis=0),
       }
 
-      sampler = cem_actions_sampler_hybrid.GaussianActionsSampler(
+      sampler = qtopt_cem_actions_sampler_hybrid.GaussianActionsSampler(
           action_spec=action_spec)
     elif sampler_type == 'continuous':
       action_spec = self._action_spec
@@ -315,7 +316,7 @@ class CEMPolicyTest(parameterized.TestCase, tf.test.TestCase):
                                 _ACTION_SIZE).astype(np.float32))  # [N, A]
       mean = np.mean(samples, axis=0).tolist()
       var = np.var(samples, axis=0).tolist()
-      sampler = cem_actions_sampler_continuous.GaussianActionsSampler(
+      sampler = qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
           action_spec=action_spec)
 
     cem_fn = qtopt_cem_policy.CEMPolicy(

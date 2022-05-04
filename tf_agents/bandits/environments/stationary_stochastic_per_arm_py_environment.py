@@ -152,9 +152,9 @@ class StationaryStochasticPerArmPyEnvironment(
   def _apply_action(self, action: np.ndarray) -> types.Array:
     if action.shape[0] != self.batch_size:
       raise ValueError('Number of actions must match batch size.')
-    global_obs = self._observation[GLOBAL_KEY]
+    global_obs = self._observation[GLOBAL_KEY]  # pytype: disable=attribute-error  # trace-all-classes
     batch_size_range = range(self.batch_size)
-    arm_obs = self._observation[PER_ARM_KEY][batch_size_range, action, :]
+    arm_obs = self._observation[PER_ARM_KEY][batch_size_range, action, :]  # pytype: disable=attribute-error  # trace-all-classes
     reward = np.stack([
         self._reward_fn(np.concatenate((global_obs[b, :], arm_obs[b, :])))
         for b in batch_size_range

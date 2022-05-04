@@ -147,6 +147,29 @@ class NeuralConstraintTest(tf.test.TestCase):
         rewards)
     self.assertAllClose(self.evaluate(loss), 42.25)
 
+  def testComputeLossWithNetworkSetter(self):
+    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    actions = tf.constant([0, 1], dtype=tf.int32)
+    rewards = tf.constant([0.5, 3.0], dtype=tf.float32)
+
+    neural_constraint = constraints.NeuralConstraint(
+        self._time_step_spec,
+        self._action_spec,
+        constraint_network=None)
+
+    constraint_net = DummyNet(self._observation_spec, self._action_spec)
+    neural_constraint.constraint_network = constraint_net
+    init_op = neural_constraint.initialize()
+    if not tf.executing_eagerly():
+      with self.cached_session() as sess:
+        common.initialize_uninitialized_variables(sess)
+        self.assertIsNone(sess.run(init_op))
+    loss = neural_constraint.compute_loss(
+        observations,
+        actions,
+        rewards)
+    self.assertAllClose(self.evaluate(loss), 42.25)
+
   def testComputeLossWithArmFeatures(self):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         global_dim=2, per_arm_dim=3, max_num_actions=3)

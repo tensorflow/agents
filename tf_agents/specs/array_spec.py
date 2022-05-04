@@ -44,8 +44,8 @@ def sample_bounded_spec(spec, rng):
       # The min-max interval cannot be represented by the np.float64. This is a
       # problem only for np.float64, np.float32 works as expected.
       # Spec bounds are set to read only so we can't use argumented assignment.
-      low = low / 2  # pylint: disable=g-no-augmented-assignment
-      high = high / 2  # pylint: disable=g-no-augmented-assignment
+      low = low / 2
+      high = high / 2
     return rng.uniform(
         low,
         high,
@@ -56,11 +56,11 @@ def sample_bounded_spec(spec, rng):
     if spec.dtype == np.int64 and np.any(high - low < 0):
       # The min-max interval cannot be represented by the tf_dtype. This is a
       # problem only for int64.
-      low = low / 2  # pylint: disable=g-no-augmented-assignment
-      high = high / 2  # pylint: disable=g-no-augmented-assignment
+      low = low / 2
+      high = high / 2
 
     if np.any(high < tf_dtype.max):
-      high = np.where(high < tf_dtype.max, high + 1, high)  # pylint: disable=g-no-augmented-assignment
+      high = np.where(high < tf_dtype.max, high + 1, high)
     elif spec.dtype != np.int64 or spec.dtype != np.uint64:
       # We can still +1 the high if we cast it to the larger dtype.
       high = high.astype(np.int64) + 1

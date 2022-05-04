@@ -30,13 +30,24 @@ from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
 
 
-def _as_float32_array(a):
-  r = np.asarray(a, dtype=np.float32)
+def _as_array(a, t=np.float32):
+  if t is None:
+    t = np.float32
+  r = np.asarray(a, dtype=t)
   if np.isnan(np.sum(r)):
     raise ValueError('Received a time_step input that converted to a nan array.'
                      ' Did you accidentally set some input value to None?.\n'
                      'Got:\n{}'.format(a))
   return r
+
+
+def _get_np_dtype(spec):
+  if not isinstance(spec, (tensor_spec.TensorSpec, array_spec.ArraySpec)):
+    return None
+  dtype = spec.dtype
+  if isinstance(dtype, tf.dtypes.DType):
+    dtype = dtype.as_numpy_dtype()
+  return np.dtype(dtype)
 
 
 class TimeStep(
@@ -132,40 +143,35 @@ def restart(observation: types.NestedTensorOrArray,
         reward = np.zeros(batch_size, dtype=np.float32)
       else:
         reward = tf.nest.map_structure(
-            lambda r: np.zeros([batch_size] + list(r.shape), dtype=r.dtype),
+            lambda r: np.zeros([batch_size] + list(r.shape), _get_np_dtype(r)),
             reward_spec)
       discount = np.ones(batch_size, dtype=np.float32)
       step_type = np.tile(StepType.FIRST, batch_size)
       return TimeStep(step_type, reward, discount, observation)
     else:
       if reward_spec is None:
-        return TimeStep(
-            StepType.FIRST,
-            _as_float32_array(0.0),
-            _as_float32_array(1.0),
-            observation)
+        return TimeStep(StepType.FIRST, _as_array(0.0), _as_array(1.0),
+                        observation)
       else:
         reward = tf.nest.map_structure(
-            lambda r: np.zeros(r.shape, dtype=r.dtype), reward_spec)
-        return TimeStep(
-            StepType.FIRST,
-            reward,
-            _as_float32_array(1.0),
-            observation)
+            lambda r: np.zeros(r.shape, dtype=_get_np_dtype(r)), reward_spec)
+        return TimeStep(StepType.FIRST, reward, _as_array(1.0), observation)
 
   # TODO(b/130244501): Check leading dimension of first_observation
   # against batch_size if all are known statically.
   shape = _as_multi_dim(batch_size)
   step_type = tf.fill(shape, StepType.FIRST, name='step_type')
   if reward_spec is None:
-    reward = tf.fill(shape, _as_float32_array(0.0), name='reward')
+    reward = tf.fill(shape, _as_array(0.0), name='reward')
   else:
     reward = tf.nest.map_structure(
         # pylint: disable=g-long-lambda
-        lambda r: tf.fill(tf.concat([shape, r.shape], axis=-1),
-                          _as_float32_array(0.0),
-                          name='reward'), reward_spec)
-  discount = tf.fill(shape, _as_float32_array(1.0), name='discount')
+        lambda r: tf.fill(
+            tf.concat([shape, r.shape], axis=-1),
+            _as_array(0.0, _get_np_dtype(r)),
+            name='reward'),
+        reward_spec)
+  discount = tf.fill(shape, _as_array(1.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
 
 
@@ -200,7 +206,7 @@ def transition(observation: types.NestedTensorOrArray,
     discount: (optional) A scalar, or 1D NumPy array, or tensor.
     outer_dims: (optional) If provided, it will be used to determine the
       batch dimensions. If not, the batch dimensions will be inferred by
-      reward's shape.
+      reward's shape. If reward is a vector, but not batched use ().
 
   Returns:
     A `TimeStep`.
@@ -213,12 +219,13 @@ def transition(observation: types.NestedTensorOrArray,
   if not tf.is_tensor(first_observation):
     if outer_dims is not None:
       step_type = np.tile(StepType.MID, outer_dims)
-      discount = _as_float32_array(discount)
+      discount = _as_array(discount)
       return TimeStep(step_type, reward, discount, observation)
     # Infer the batch size.
-    reward = tf.nest.map_structure(_as_float32_array, reward)
+    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_np_dtype(x)),
+                                   reward)
     first_reward = tf.nest.flatten(reward)[0]
-    discount = _as_float32_array(discount)
+    discount = _as_array(discount)
     if first_reward.shape:
       step_type = np.tile(StepType.MID, first_reward.shape)
     else:
@@ -230,8 +237,8 @@ def transition(observation: types.NestedTensorOrArray,
   # check that these match.
   reward = tf.nest.map_structure(
       # pylint: disable=g-long-lambda
-      lambda r: tf.convert_to_tensor(
-          value=r, dtype=tf.float32, name='reward'), reward)
+      lambda r: tf.convert_to_tensor(value=r, dtype=r.dtype, name='reward'),
+      reward)
   if outer_dims is not None:
     shape = outer_dims
   else:
@@ -274,7 +281,8 @@ def termination(observation: types.NestedTensorOrArray,
       return TimeStep(step_type, reward, discount, observation)
 
     # Infer the batch size based on reward
-    reward = tf.nest.map_structure(_as_float32_array, reward)
+    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_np_dtype(x)),
+                                   reward)
     first_reward = tf.nest.flatten(reward)[0]
     if first_reward.shape:
       batch_size = first_reward.shape[0]
@@ -282,15 +290,14 @@ def termination(observation: types.NestedTensorOrArray,
       discount = np.zeros(batch_size, dtype=np.float32)
     else:
       step_type = StepType.LAST
-      discount = _as_float32_array(0.0)
+      discount = _as_array(0.0)
     return TimeStep(step_type, reward, discount, observation)
 
   # TODO(b/130245199): If reward.shape.rank == 2, and static
   # batch sizes are available for both first_observation and reward,
   # check that these match.
   reward = tf.nest.map_structure(
-      lambda r: tf.convert_to_tensor(r, dtype=tf.float32, name='reward'),
-      reward)
+      lambda r: tf.convert_to_tensor(r, dtype=r.dtype, name='reward'), reward)
 
   if outer_dims is not None:
     shape = outer_dims
@@ -302,7 +309,7 @@ def termination(observation: types.NestedTensorOrArray,
       shape = [tf.compat.dimension_value(first_reward.shape[0]) or
                tf.shape(input=first_reward)[0]]
   step_type = tf.fill(shape, StepType.LAST, name='step_type')
-  discount = tf.fill(shape, _as_float32_array(0.0), name='discount')
+  discount = tf.fill(shape, _as_array(0.0), name='discount')
   return TimeStep(step_type, reward, discount, observation)
 
 
@@ -333,12 +340,13 @@ def truncation(observation: types.NestedTensorOrArray,
   if not tf.is_tensor(first_observation):
     if outer_dims is not None:
       step_type = np.tile(StepType.LAST, outer_dims)
-      discount = _as_float32_array(discount)
+      discount = _as_array(discount)
       return TimeStep(step_type, reward, discount, observation)
     # Infer the batch size.
-    reward = tf.nest.map_structure(_as_float32_array, reward)
+    reward = tf.nest.map_structure(lambda x: _as_array(x, _get_np_dtype(x)),
+                                   reward)
     first_reward = tf.nest.flatten(reward)[0]
-    discount = _as_float32_array(discount)
+    discount = _as_array(discount)
     if first_reward.shape:
       step_type = np.tile(StepType.LAST, first_reward.shape)
     else:
@@ -346,7 +354,7 @@ def truncation(observation: types.NestedTensorOrArray,
     return TimeStep(step_type, reward, discount, observation)
 
   reward = tf.nest.map_structure(
-      lambda r: tf.convert_to_tensor(value=r, name='reward'),
+      lambda r: tf.convert_to_tensor(value=r, dtype=r.dtype, name='reward'),
       reward)
   if outer_dims is not None:
     shape = outer_dims

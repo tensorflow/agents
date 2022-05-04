@@ -28,11 +28,6 @@ from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
 from tf_agents.examples.cql_sac.kumar20 import cql_sac_train_eval
 
-# TODO(b/205172779): Data needs moved to a team based URL.
-# LINT.IfChange
-TRANSITIONS_DIR_NAME = 'transitions'
-# LINT.ThenChange(tf_agents/copy.bara.sky)
-
 
 class CqlSacKumar20Return(PerfZeroBenchmark):
   """Benchmark return tests for CQL-SAC Kumar20."""
@@ -47,22 +42,20 @@ class CqlSacKumar20Return(PerfZeroBenchmark):
         constructor forward compatible in case PerfZero provides more named
         arguments before updating the constructor.
     """
-    self.root_data_dir = os.path.join(root_data_dir, TRANSITIONS_DIR_NAME)
     super(CqlSacKumar20Return, self).__init__(output_dir=output_dir)
 
   def benchmark_halfcheetah_medium_v0(self):
     """Benchmarks MuJoCo HalfCheetah to 1M steps."""
     self.setUp()
     output_dir = self._get_test_output_dir('halfcheetah_medium_v0_02_eval')
-    dataset_path = self.root_data_dir
     start_time_sec = time.time()
     gin.parse_config_file(
         'tf_agents/examples/cql_sac/kumar20/configs/mujoco_medium.gin'
     )
     cql_sac_train_eval.train_eval(
-        dataset_path=dataset_path,
         root_dir=output_dir,
         env_name='halfcheetah-medium-v0',
+        dataset_name='d4rl_mujoco_halfcheetah/v0-medium',
         num_gradient_updates=500000,  # Number of iterations.
         learner_iterations_per_call=500,
         data_shuffle_buffer_size=10000,

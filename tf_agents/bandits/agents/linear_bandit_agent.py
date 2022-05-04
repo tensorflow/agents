@@ -71,6 +71,8 @@ class LinearBanditVariableCollection(tf.Module):
       name: (string) the name of this instance.
     """
     tf.Module.__init__(self, name=name)
+    self.theta = tf.compat.v2.Variable(
+        tf.zeros([num_models, context_dim], dtype=dtype), name='theta')
     self.cov_matrix_list = []
     self.data_vector_list = []
     self.eig_matrix_list = []
@@ -94,7 +96,7 @@ class LinearBanditVariableCollection(tf.Module):
                 name='eig_matrix{}'.format(k)))
         self.eig_vals_list.append(
             tf.compat.v2.Variable(
-                tf.ones([context_dim], dtype=dtype),
+                tf.zeros([context_dim], dtype=dtype),
                 name='eig_vals{}'.format(k)))
       else:
         self.eig_matrix_list.append(
@@ -106,13 +108,8 @@ class LinearBanditVariableCollection(tf.Module):
 
 
 def update_a_and_b_with_forgetting(
-    a_prev: types.Tensor,
-    b_prev: types.Tensor,
-    r: types.Tensor,
-    x: types.Tensor,
-    gamma: float,
-    compute_eigendecomp: bool = False
-) -> Tuple[types.Tensor, types.Tensor, types.Tensor, types.Tensor]:
+    a_prev: types.Tensor, b_prev: types.Tensor, r: types.Tensor,
+    x: types.Tensor, gamma: float) -> Tuple[types.Tensor, types.Tensor]:
   r"""Update the covariance matrix `a` and the weighted sum of rewards `b`.
 
   This function updates the covariance matrix `a` and the sum of weighted
@@ -126,21 +123,14 @@ def update_a_and_b_with_forgetting(
     x: a `Tensor` of shape [`batch_size`, `context_dim`]. This is the matrix
       with the (batched) observations.
     gamma: a float forgetting factor in [0.0, 1.0].
-    compute_eigendecomp: whether to compute the eigen-decomposition of the new
-      covariance matrix.
 
   Returns:
-    The updated estimates of `a` and `b` and optionally the eigenvalues and
-    eigenvectors of `a`.
+    The updated estimates of `a` and `b`.
   """
   a_new = gamma * a_prev + tf.matmul(x, x, transpose_a=True)
   b_new = gamma * b_prev + bandit_utils.sum_reward_weighted_observations(r, x)
 
-  eig_vals = tf.constant([], dtype=a_new.dtype)
-  eig_matrix = tf.constant([], dtype=a_new.dtype)
-  if compute_eigendecomp:
-    eig_vals, eig_matrix = tf.linalg.eigh(a_new)
-  return a_new, b_new, eig_vals, eig_matrix
+  return a_new, b_new
 
 
 @gin.configurable
@@ -257,6 +247,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
     self._data_vector_list = variable_collection.data_vector_list
     self._eig_matrix_list = variable_collection.eig_matrix_list
     self._eig_vals_list = variable_collection.eig_vals_list
+    self._theta = variable_collection.theta
     # We keep track of the number of samples per arm.
     self._num_samples_list = variable_collection.num_samples_list
     self._gamma = gamma
@@ -281,6 +272,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
         action_spec=action_spec,
         cov_matrix=self._cov_matrix_list,
         data_vector=self._data_vector_list,
+        theta=self._theta,
         num_samples=self._num_samples_list,
         time_step_spec=time_step_spec,
         exploration_strategy=exploration_strategy,
@@ -352,13 +344,28 @@ class LinearBanditAgent(tf_agent.TFAgent):
     """
     thetas = []
     for k in range(self._num_models):
-      thetas.append(
-          tf.squeeze(
-              linalg.conjugate_gradient(
-                  self._cov_matrix_list[k] + self._tikhonov_weight *
-                  tf.eye(self._overall_context_dim, dtype=self._dtype),
-                  tf.expand_dims(self._data_vector_list[k], axis=-1)),
-              axis=-1))
+      if self._use_eigendecomp:
+        model_index = policy_utilities.get_model_index(
+            k, self._accepts_per_arm_features)
+        q_t_b = tf.matmul(
+            self.eig_matrix[model_index],
+            tf.expand_dims(self.data_vector[model_index], axis=-1),
+            transpose_a=True)
+        lambda_inv = tf.divide(
+            tf.ones_like(self.eig_vals[model_index]),
+            self.eig_vals[model_index] + self._tikhonov_weight)
+        theta_k = tf.squeeze(
+            tf.matmul(self.eig_matrix[model_index],
+                      tf.einsum('j,jk->jk', lambda_inv, q_t_b)),
+            axis=-1)
+      else:
+        theta_k = tf.squeeze(
+            linalg.conjugate_gradient(
+                self._cov_matrix_list[k] + self._tikhonov_weight *
+                tf.eye(self._overall_context_dim, dtype=self._dtype),
+                tf.expand_dims(self._data_vector_list[k], axis=-1)),
+            axis=-1)
+      thetas.append(theta_k)
 
     return tf.stack(thetas, axis=0)
 
@@ -376,9 +383,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
           for var in self.policy.variables():
             var_name = var.name.replace(':', '_')
             tf.compat.v2.summary.histogram(
-                name=var_name,
-                data=var,
-                step=self.train_step_counter)
+                name=var_name, data=var, step=self.train_step_counter)
             tf.compat.v2.summary.scalar(
                 name=var_name + '_value_norm',
                 data=tf.linalg.global_norm([var]),
@@ -418,7 +423,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
 
     Args:
       experience: An instance of trajectory. Every element in the trajectory has
-      two batch dimensions.
+        two batch dimensions.
 
     Returns:
       A tuple of reward, action, observation, and batch_size. All the outputs
@@ -438,10 +443,11 @@ class LinearBanditAgent(tf_agent.TFAgent):
     global_observation = observation[bandit_spec_utils.GLOBAL_FEATURE_KEY]
     if self._add_bias:
       # The bias is added via a constant 1 feature.
-      global_observation = tf.concat(
-          [global_observation,
-           tf.ones([batch_size, 1], dtype=global_observation.dtype)],
-          axis=1)
+      global_observation = tf.concat([
+          global_observation,
+          tf.ones([batch_size, 1], dtype=global_observation.dtype)
+      ],
+                                     axis=1)
 
     # The arm observation we train on needs to be copied from the respective
     # policy info field to the per arm observation field. Pretending there was
@@ -471,7 +477,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
 
     Args:
       experience: An instance of trajectory. Every element in the trajectory has
-      two batch dimensions.
+        two batch dimensions.
 
     Returns:
       A tuple of reward, action, observation, and batch_size. All the outputs
@@ -513,6 +519,22 @@ class LinearBanditAgent(tf_agent.TFAgent):
       w_sqrt = tf.sqrt(tf.cast(weights, dtype=self._dtype))
       return (tf.reshape(w_sqrt, [-1, 1]) * observation, w_sqrt * reward)
 
+  def _loss(self,
+            experience: types.NestedTensor,
+            weights: Optional[types.Float] = None,
+            training: bool = False) -> tf_agent.LossInfo:
+    del training  # unused
+    experience_reward, action, experience_observation, _ = (
+        self._process_experience(experience))
+    observation, reward = self._maybe_apply_per_example_weight(
+        experience_observation, experience_reward, weights)
+    theta_for_action = tf.gather(params=self._theta, indices=action)
+    pred_rewards_for_action = tf.einsum('ij,ij->i', observation,
+                                        theta_for_action)
+    loss = tf.losses.mean_squared_error(reward, pred_rewards_for_action)
+    self.compute_summaries(loss)
+    return tf_agent.LossInfo(loss, extra=())
+
   def _distributed_train_step(self, experience, weights=None):
     """Distributed train fn to be passed as input to run()."""
     experience_reward, action, experience_observation, batch_size = (
@@ -520,6 +542,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
     self._train_step_counter.assign_add(batch_size)
     observation, reward = self._maybe_apply_per_example_weight(
         experience_observation, experience_reward, weights)
+    loss = self._loss(experience, weights, training=True)
 
     for k in range(self._num_models):
       diag_mask = tf.linalg.tensor_diag(
@@ -528,7 +551,7 @@ class LinearBanditAgent(tf_agent.TFAgent):
       rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
 
       # Compute local updates for the matrix A and b of this arm.
-      cov_matrix_local_udpate = tf.matmul(
+      cov_matrix_local_update = tf.matmul(
           observations_for_arm, observations_for_arm, transpose_a=True)
       data_vector_local_update = bandit_utils.sum_reward_weighted_observations(
           rewards_for_arm, observations_for_arm)
@@ -562,11 +585,11 @@ class LinearBanditAgent(tf_agent.TFAgent):
       # execution is resumed.
       replica_context = tf.distribute.get_replica_context()
       replica_context.merge_call(
-          _merge_fn,
-          args=(cov_matrix_local_udpate, data_vector_local_update))
+          _merge_fn, args=(cov_matrix_local_update, data_vector_local_update))
 
-    loss = -1. * tf.reduce_sum(reward)
-    return tf_agent.LossInfo(loss=(loss), extra=())
+    with tf.control_dependencies([loss.loss]):
+      self._theta.assign(self.theta)
+    return loss
 
   def _train(self, experience, weights=None):
     """Updates the policy based on the data in `experience`.
@@ -590,17 +613,20 @@ class LinearBanditAgent(tf_agent.TFAgent):
     if tf.distribute.has_strategy():
       return self._distributed_train_step(experience)
 
+    loss = self._loss(experience, weights, training=True)
+
     experience_reward, action, experience_observation, batch_size = (
         self._process_experience(experience))
     observation, reward = self._maybe_apply_per_example_weight(
         experience_observation, experience_reward, weights)
     for k in range(self._num_models):
-      diag_mask = tf.linalg.tensor_diag(
-          tf.cast(tf.equal(action, k), self._dtype))
-      observations_for_arm = tf.matmul(diag_mask, observation)
-      rewards_for_arm = tf.matmul(diag_mask, tf.reshape(reward, [-1, 1]))
+      action_mask = tf.equal(action, k)
+      observations_for_arm = tf.boolean_mask(observation, action_mask, axis=0)
+      rewards_for_arm = tf.boolean_mask(
+          tf.reshape(reward, [-1, 1]), action_mask, axis=0)
 
-      num_samples_for_arm_current = tf.reduce_sum(diag_mask)
+      num_samples_for_arm_current = tf.reduce_sum(
+          tf.cast(action_mask, self._dtype))
       tf.compat.v1.assign_add(self._num_samples_list[k],
                               num_samples_for_arm_current)
       num_samples_for_arm_total = self._num_samples_list[k].read_value()
@@ -608,23 +634,33 @@ class LinearBanditAgent(tf_agent.TFAgent):
       # Update the matrix A and b.
       # pylint: disable=cell-var-from-loop,g-long-lambda
       def update(cov_matrix, data_vector):
-        return update_a_and_b_with_forgetting(
-            cov_matrix, data_vector, rewards_for_arm, observations_for_arm,
-            self._gamma, self._use_eigendecomp)
-      a_new, b_new, eig_vals, eig_matrix = tf.cond(
+        return update_a_and_b_with_forgetting(cov_matrix, data_vector,
+                                              rewards_for_arm,
+                                              observations_for_arm, self._gamma)
+
+      a_new, b_new = tf.cond(
           tf.squeeze(num_samples_for_arm_total) > 0,
           lambda: update(self._cov_matrix_list[k], self._data_vector_list[k]),
-          lambda: (self._cov_matrix_list[k], self._data_vector_list[k],
-                   self._eig_vals_list[k], self._eig_matrix_list[k]))
-
+          lambda: (self._cov_matrix_list[k], self._data_vector_list[k]))
       tf.compat.v1.assign(self._cov_matrix_list[k], a_new)
       tf.compat.v1.assign(self._data_vector_list[k], b_new)
-      tf.compat.v1.assign(self._eig_vals_list[k], eig_vals)
-      tf.compat.v1.assign(self._eig_matrix_list[k], eig_matrix)
 
-    loss = -1. * tf.reduce_sum(reward)
-    self.compute_summaries(loss)
+    if self._use_eigendecomp:
+      eigenvalues, eigenvectors = tf.linalg.eigh(
+          tf.stack(self._cov_matrix_list))
+      eigenvalues_list = tf.unstack(eigenvalues)
+      eigenvectors_list = tf.unstack(eigenvectors)
+      for k in range(self._num_models):
+        tf.compat.v1.assign(self._eig_vals_list[k], eigenvalues_list[k])
+        tf.compat.v1.assign(self._eig_matrix_list[k], eigenvectors_list[k])
+    else:
+      for k in range(self._num_models):
+        tf.compat.v1.assign(self._eig_vals_list[k],
+                            tf.constant([], dtype=self._dtype))
+        tf.compat.v1.assign(self._eig_matrix_list[k],
+                            tf.constant([], dtype=self._dtype))
 
+    with tf.control_dependencies([loss.loss]):
+      self._theta.assign(self.theta)
     self._train_step_counter.assign_add(batch_size)
-
-    return tf_agent.LossInfo(loss=(loss), extra=())
+    return loss

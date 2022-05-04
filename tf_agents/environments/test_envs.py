@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Collection of simple environments useful for testing."""
 
 from __future__ import absolute_import

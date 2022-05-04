@@ -61,7 +61,7 @@ def conjugate_gradient(a_mat: types.Tensor,
 
   r = b_mat - tf.matmul(a_mat, x)
   p = r
-  rs_old = tf.reduce_sum(r * r, axis=0)
+  rs_old = tf.einsum('ij,ij->j', r, r)
   rs_new = rs_old
 
   def body_fn(i, x, p, r, rs_old, rs_new):
@@ -75,12 +75,12 @@ def conjugate_gradient(a_mat: types.Tensor,
         tf.expand_dims(active_columns_mask, axis=0),
         multiples=[tf.shape(b_mat)[0], 1])
     a_x_p = tf.matmul(a_mat, p)
-    alpha_diag = tf.linalg.diag(rs_old / tf.reduce_sum(p * a_x_p, axis=0))
-    x = tf.where(active_columns_tiled_mask, x + tf.matmul(p, alpha_diag), x)
-    r = tf.where(active_columns_tiled_mask, r - tf.matmul(a_x_p, alpha_diag), r)
-    rs_new = tf.where(active_columns_mask, tf.reduce_sum(r * r, axis=0), rs_new)
-    p = tf.where(active_columns_tiled_mask,
-                 r + tf.matmul(p, tf.linalg.diag(rs_new / rs_old)), p)
+    alpha = rs_old / tf.reduce_sum(p * a_x_p, axis=0)
+    x = tf.where(active_columns_tiled_mask, x + tf.multiply(p, alpha), x)
+    r = tf.where(active_columns_tiled_mask, r - tf.multiply(a_x_p, alpha), r)
+    rs_new = tf.where(active_columns_mask, tf.einsum('ij,ij->j', r, r), rs_new)
+    p = tf.where(active_columns_tiled_mask, r + tf.multiply(p, rs_new / rs_old),
+                 p)
     rs_old = tf.where(active_columns_mask, rs_new, rs_old)
     i = i + 1
     return i, x, p, r, rs_old, rs_new
@@ -97,8 +97,7 @@ def conjugate_gradient(a_mat: types.Tensor,
 
   _, x, _, _, _, _ = tf.while_loop(
       while_exit_cond,
-      body_fn,
-      [tf.constant(0), x, p, r, rs_old, rs_new],
+      body_fn, [tf.constant(0), x, p, r, rs_old, rs_new],
       parallel_iterations=1)
   return x
 
@@ -129,6 +128,7 @@ def simplified_woodbury_update(a_inv: types.Float,
   Args:
     a_inv: an invertible SYMMETRIC `Tensor` of shape `[m, m]`.
     u: a `Tensor` of shape `[n, m]`.
+
   Returns:
     A `Tensor` `w` of shape `[m, m]` such that
     `inverse(a + u.T.dot(u)) = a_inv + w`.

@@ -29,7 +29,7 @@ import tensorflow_probability as tfp
 from tf_agents.networks import network
 from tf_agents.networks import utils as network_utils
 from tf_agents.policies import tf_policy
-from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -104,7 +104,7 @@ class CEMPolicy(tf_policy.TFPolicy):
                time_step_spec: ts.TimeStep,
                action_spec: types.NestedTensorSpec,
                q_network: network.Network,
-               sampler: cem_actions_sampler.ActionsSampler,
+               sampler: qtopt_cem_actions_sampler.ActionsSampler,
                init_mean: types.NestedArray,
                init_var: types.NestedArray,
                actor_policy: Optional[tf_policy.TFPolicy] = None,
@@ -276,7 +276,7 @@ class CEMPolicy(tf_policy.TFPolicy):
 
       # Sample a batch of actions with the shape of [B, N, A] or [BxT, N, A]
       actions = self._actions_sampler.sample_batch_and_clip(
-          self._num_samples, mean, var, observation)
+          self._num_samples, mean, var, observation)  # pytype: disable=wrong-arg-count  # trace-all-classes
 
       if outer_rank == 2:
         scores, next_policy_state = self._score_with_time(
@@ -287,7 +287,10 @@ class CEMPolicy(tf_policy.TFPolicy):
 
       best_scores, ind = tf.nn.top_k(scores, self._num_elites)  # ind: [B, M]
 
-      mean, var = self._actions_sampler.refit_distribution_to(ind, actions)
+      actions_float = tf.nest.map_structure(
+          lambda t: tf.cast(t, tf.float32), actions)
+      mean, var = self._actions_sampler.refit_distribution_to(
+          ind, actions_float)
 
       best_next_policy_state = next_policy_state
 

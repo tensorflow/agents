@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 r"""Creates graphs and summary information from event logs.
 
 This was created to build the graphs and supporting data for the README pages

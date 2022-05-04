@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 r"""Train/eval PPOClipAgent in Mujoco environments with (Schulman, 17) methods.
 
 To reproduce (Schulman, 17), here we collect fixed length sequences of

@@ -125,7 +125,7 @@ class PiecewiseBernoulliPyEnvironment(
   def _increment_time(self):
     self._current_time += 1
     while self._current_time >= self._next_change:
-      duration = int(next(self._change_duration_generator))
+      duration = int(next(self._change_duration_generator))  # pytype: disable=wrong-arg-types  # trace-all-classes
       if duration < 0:
         raise ValueError(
             'Generated duration must be non-negative. Got {}.'.format(duration))

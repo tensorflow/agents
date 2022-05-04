@@ -359,12 +359,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
 
     constraint_loss = tf.constant(0.0)
     for i, c in enumerate(self._constraints, 0):
-      if self._time_step_spec.reward[
-          bandit_spec_utils.CONSTRAINTS_SPEC_KEY].shape.rank > 1:
-        constraint_targets = rewards[
-            bandit_spec_utils.CONSTRAINTS_SPEC_KEY][:, i]
-      else:
-        constraint_targets = rewards[bandit_spec_utils.CONSTRAINTS_SPEC_KEY]
+      constraint_targets = rewards[
+          bandit_spec_utils.CONSTRAINTS_SPEC_KEY][:, i]
+      constraint_targets = tf.reshape(constraint_targets, [-1])
       constraint_loss += c.compute_loss(
           observations, actions, constraint_targets, weights, training)
 

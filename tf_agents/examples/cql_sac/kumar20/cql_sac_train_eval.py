@@ -18,7 +18,10 @@
 All default hyperparameters in train_eval come from the CQL paper:
 https://arxiv.org/abs/2006.04779
 """
+
 import os
+
+from typing import Callable, Dict, Optional, Tuple, Union
 
 from absl import app
 from absl import flags
@@ -26,6 +29,8 @@ from absl import logging
 
 import gin
 import numpy as np
+import reverb
+import rlds
 import tensorflow as tf
 
 from tf_agents.agents.cql import cql_sac_agent
@@ -33,25 +38,35 @@ from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.sac import tanh_normal_projection_network
 from tf_agents.environments import tf_py_environment
 from tf_agents.examples.cql_sac.kumar20.d4rl_utils import load_d4rl
-from tf_agents.examples.cql_sac.kumar20.data_utils import create_tf_record_dataset
 from tf_agents.metrics import py_metrics
 from tf_agents.networks import actor_distribution_network
 from tf_agents.policies import greedy_policy
 from tf_agents.policies import py_tf_eager_policy
+from tf_agents.replay_buffers import reverb_replay_buffer
+from tf_agents.replay_buffers import reverb_utils
+from tf_agents.replay_buffers import rlds_to_reverb
+from tf_agents.specs import tensor_spec
 from tf_agents.train import actor
 from tf_agents.train import learner
 from tf_agents.train import triggers
 from tf_agents.train.utils import strategy_utils
 from tf_agents.train.utils import train_utils
 from tf_agents.trajectories import trajectory
+from tf_agents.typing import types
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
+_REVERB_PORT = flags.DEFINE_integer(
+    'reverb_port', None,
+    'Port for reverb server, if None, use a randomly chosen unused port.')
 flags.DEFINE_string('env_name', 'antmaze-medium-play-v0',
                     'Name of the environment.')
-flags.DEFINE_string('dataset_path', None, 'TFRecord dataset path.')
+_DATASET_NAME = flags.DEFINE_string(
+    'dataset_name', 'd4rl_antmaze/medium-play-v0',
+    'RLDS dataset name. Please select the RLDS dataset'
+    'corresponding to D4RL environment chosen for training.')
 flags.DEFINE_integer('learner_iterations_per_call', 500,
                      'Iterations per learner run call.')
 flags.DEFINE_integer('policy_save_interval', 10000, 'Policy save interval.')
@@ -59,95 +74,201 @@ flags.DEFINE_integer('eval_interval', 10000, 'Evaluation interval.')
 flags.DEFINE_integer('summary_interval', 1000, 'Summary interval.')
 flags.DEFINE_integer('num_gradient_updates', 1000000,
                      'Total number of train iterations to perform.')
-flags.DEFINE_bool(
-    'use_trajectories', False,
-    'Whether dataset samples are stored as trajectories. '
-    'If False, stored as transitions')
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
+_DATA_TAKE = flags.DEFINE_integer(
+    'data_take', None, 'Number of steps to take for training '
+    'from RLDS dataset. If not specified, all steps are used '
+    'for training.')
+
+_SEQUENCE_LENGTH = 2
+_STRIDE_LENGTH = 1
 
 
 @gin.configurable
 def train_eval(
-    root_dir,
-    dataset_path,
-    env_name,
+    root_dir: str,
+    env_name: str,
+    dataset_name: str,
+    load_dataset_fn: Optional[Callable[[str], tf.data.Dataset]] = rlds.load,
     # Training params
-    tpu=False,
-    use_gpu=False,
-    num_gradient_updates=1000000,
-    actor_fc_layers=(256, 256),
-    critic_joint_fc_layers=(256, 256, 256),
+    tpu: bool = False,
+    use_gpu: bool = False,
+    num_gradient_updates: int = 1000000,
+    actor_fc_layers: Tuple[int, ...] = (256, 256),
+    critic_joint_fc_layers: Tuple[int, ...] = (256, 256, 256),
     # Agent params
-    batch_size=256,
-    bc_steps=0,
-    actor_learning_rate=3e-5,
-    critic_learning_rate=3e-4,
-    alpha_learning_rate=3e-4,
-    reward_scale_factor=1.0,
-    cql_alpha_learning_rate=3e-4,
-    cql_alpha=5.0,
-    cql_tau=10.0,
-    num_cql_samples=10,
-    reward_noise_variance=0.0,
-    include_critic_entropy_term=False,
-    use_lagrange_cql_alpha=True,
-    log_cql_alpha_clipping=None,
-    softmax_temperature=1.0,
-    # Data params
-    reward_shift=0.0,
-    action_clipping=None,
-    use_trajectories=False,
-    data_shuffle_buffer_size_per_record=1,
-    data_shuffle_buffer_size=100,
-    data_num_shards=1,
-    data_block_length=10,
-    data_parallel_reads=None,
-    data_parallel_calls=10,
-    data_prefetch=10,
-    data_cycle_length=10,
+    batch_size: int = 256,
+    bc_steps: int = 0,
+    actor_learning_rate: types.Float = 3e-5,
+    critic_learning_rate: types.Float = 3e-4,
+    alpha_learning_rate: types.Float = 3e-4,
+    reward_scale_factor: types.Float = 1.0,
+    cql_alpha_learning_rate: types.Float = 3e-4,
+    cql_alpha: types.Float = 5.0,
+    cql_tau: types.Float = 10.0,
+    num_cql_samples: int = 10,
+    reward_noise_variance: Union[types.Float, tf.Variable] = 0.0,
+    include_critic_entropy_term: bool = False,
+    use_lagrange_cql_alpha: bool = True,
+    log_cql_alpha_clipping: Optional[Tuple[types.Float, types.Float]] = None,
+    softmax_temperature: types.Float = 1.0,
+    # Data and Reverb Replay Buffer params
+    reward_shift: types.Float = 0.0,
+    action_clipping: Optional[Tuple[types.Float, types.Float]] = None,
+    data_shuffle_buffer_size: int = 100,
+    data_prefetch: int = 10,
+    data_take: Optional[int] = None,
+    pad_end_of_episodes: bool = False,
+    reverb_port: Optional[int] = None,
+    min_rate_limiter: int = 1,
     # Others
-    policy_save_interval=10000,
-    eval_interval=10000,
-    summary_interval=1000,
-    learner_iterations_per_call=1,
-    eval_episodes=10,
-    debug_summaries=False,
-    summarize_grads_and_vars=False,
-    seed=None):
-  """Trains and evaluates CQL-SAC."""
+    policy_save_interval: int = 10000,
+    eval_interval: int = 10000,
+    summary_interval: int = 1000,
+    learner_iterations_per_call: int = 1,
+    eval_episodes: int = 10,
+    debug_summaries: bool = False,
+    summarize_grads_and_vars: bool = False,
+    seed: Optional[int] = None) -> None:
+  """Trains and evaluates CQL-SAC.
+
+  Args:
+    root_dir: Training eval directory
+    env_name: Environment to train on.
+    dataset_name: RLDS dataset name for the envronment to train.
+    load_dataset_fn: A function that will return an instance of a
+      tf.data.Dataset for RLDS data to be used for training.
+    tpu: Whether to use TPU for training.
+    use_gpu: Whether to use GPU for training.
+    num_gradient_updates: Number of gradient updates for training.
+    actor_fc_layers: Optional list of fully_connected parameters for actor
+      distribution network, where each item is the number of units in the layer.
+    critic_joint_fc_layers: Optional list of fully connected parameters after
+      merging observations and actions in critic, where each item is the number
+      of units in the layer.
+    batch_size: Batch size for sampling data from Reverb Replay Buffer.
+    bc_steps: Number of behavioral cloning steps.
+    actor_learning_rate: The learning rate for the actor network. It is used in
+      Adam optimiser for actor network.
+    critic_learning_rate: The learning rate for the critic network. It is used
+      in Adam optimiser for critic network.
+    alpha_learning_rate: The learning rate to tune cql alpha. It is used in Adam
+      optimiser for cql alpha.
+    reward_scale_factor: Multiplicative scale for the reward.
+    cql_alpha_learning_rate: The learning rate to tune cql_alpha.
+    cql_alpha: The weight on CQL loss. This can be a tf.Variable.
+    cql_tau: The threshold for the expected difference in Q-values which
+      determines the tuning of cql_alpha.
+    num_cql_samples: Number of samples for importance sampling in CQL.
+    reward_noise_variance: The noise variance to introduce to the rewards.
+    include_critic_entropy_term: Whether to include the entropy term in the
+      target for the critic loss.
+    use_lagrange_cql_alpha: Whether to use a Lagrange threshold to tune
+      cql_alpha during training.
+    log_cql_alpha_clipping: (Minimum, maximum) values to clip log CQL alpha.
+    softmax_temperature: Temperature value which weights Q-values before the
+      `cql_loss` logsumexp calculation.
+    reward_shift: shift rewards for each experience sample by the value provided
+    action_clipping: Clip actions for each experience sample
+    data_shuffle_buffer_size: Shuffle buffer size for the interleaved dataset.
+    data_prefetch: Number of data point to prefetch for training from Reverb
+      Replay Buffer.
+    data_take: Number of steps to take for training from RLDS dataset. If not
+      specified, all steps are used for training.
+    pad_end_of_episodes: Whether to pad end of episodes.
+    reverb_port: Port to start the Reverb server. if not provided, randomly
+      chosen port used.
+    min_rate_limiter: Reverb min rate limiter.
+    policy_save_interval: How often, in train steps, the trigger will save.
+    eval_interval: Number of train steps in between evaluations.
+    summary_interval: Number of train steps in between summaries.
+    learner_iterations_per_call: Iterations per learner run call.
+    eval_episodes: Number of episodes evaluated per run call.
+    debug_summaries: A bool to gather debug summaries.
+    summarize_grads_and_vars: If True, gradient and network variable summaries
+      will be written during training.
+    seed: Optional seed for tf.random.
+  """
   logging.info('Training CQL-SAC on: %s', env_name)
   tf.random.set_seed(seed)
   np.random.seed(seed)
-
   # Load environment.
   env = load_d4rl(env_name)
   tf_env = tf_py_environment.TFPyEnvironment(env)
   strategy = strategy_utils.get_strategy(tpu, use_gpu)
 
-  if not dataset_path.endswith('.tfrecord'):
-    dataset_path = os.path.join(dataset_path, env_name,
-                                '%s*.tfrecord' % env_name)
-  logging.info('Loading dataset from %s', dataset_path)
-  dataset_paths = tf.io.gfile.glob(dataset_path)
+  # Create dataset of TF-Agents trajectories from RLDS D4RL dataset.
+  #
+  # The RLDS dataset will be converted to trajectories and pushed to Reverb.
+  rlds_data = load_dataset_fn(dataset_name)
+  trajectory_data_spec = rlds_to_reverb.create_trajectory_data_spec(rlds_data)
+  table_name = 'uniform_table'
+  table = reverb.Table(
+      name=table_name,
+      max_size=data_shuffle_buffer_size,
+      sampler=reverb.selectors.Uniform(),
+      remover=reverb.selectors.Fifo(),
+      rate_limiter=reverb.rate_limiters.MinSize(min_rate_limiter),
+      signature=tensor_spec.add_outer_dim(trajectory_data_spec))
+  reverb_server = reverb.Server([table], port=reverb_port)
+  reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
+      trajectory_data_spec,
+      sequence_length=_SEQUENCE_LENGTH,
+      table_name=table_name,
+      local_server=reverb_server)
+  rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
+      reverb_replay.py_client,
+      table_name,
+      sequence_length=_SEQUENCE_LENGTH,
+      stride_length=_STRIDE_LENGTH,
+      pad_end_of_episodes=pad_end_of_episodes)
 
-  # Create dataset.
-  with strategy.scope():
-    dataset = create_tf_record_dataset(
-        dataset_paths,
-        batch_size,
-        shuffle_buffer_size_per_record=data_shuffle_buffer_size_per_record,
-        shuffle_buffer_size=data_shuffle_buffer_size,
-        num_shards=data_num_shards,
-        cycle_length=data_cycle_length,
-        block_length=data_block_length,
-        num_parallel_reads=data_parallel_reads,
-        num_parallel_calls=data_parallel_calls,
-        num_prefetch=data_prefetch,
-        strategy=strategy,
-        reward_shift=reward_shift,
-        action_clipping=action_clipping,
-        use_trajectories=use_trajectories)
+  def _transform_episode(episode: tf.data.Dataset) -> tf.data.Dataset:
+    """Apply reward_shift and action_clipping to RLDS episode.
+
+    Args:
+      episode: An RLDS episode dataset of RLDS steps datasets.
+
+    Returns:
+      An RLDS episode after applying action clipping and reward shift.
+    """
+
+    def _transform_step(
+        rlds_step: Dict[str, tf.Tensor]) -> Dict[str, tf.Tensor]:
+      """Apply reward_shift and action_clipping to RLDS step.
+
+      Args:
+        rlds_step: An RLDS step is a dictionary of tensors containing is_first,
+          is_last, observation, action, reward, is_terminal, and discount.
+
+      Returns:
+        An RLDS step after applying action clipping and reward shift.
+      """
+      rlds_step[rlds.REWARD] = rlds_step[rlds.REWARD] + reward_shift
+      if action_clipping:
+        rlds_step[rlds.ACTION] = tf.clip_by_value(
+            rlds_step[rlds.ACTION],
+            clip_value_min=action_clipping[0],
+            clip_value_max=action_clipping[1])
+      return rlds_step
+
+    episode[rlds.STEPS] = episode[rlds.STEPS].map(_transform_step)
+    return episode
+
+  if data_take:
+    rlds_data = rlds_data.take(data_take)
+
+  if reward_shift or action_clipping:
+    rlds_data = rlds_data.map(_transform_episode)
+
+  rlds_to_reverb.push_rlds_to_reverb(rlds_data, rb_observer)
+
+  def _experience_dataset() -> tf.data.Dataset:
+    """Reads and returns the experiences dataset from Reverb Replay Buffer."""
+    return reverb_replay.as_dataset(
+        sample_batch_size=batch_size,
+        num_steps=_SEQUENCE_LENGTH).prefetch(data_prefetch)
 
   # Create agent.
   time_step_spec = tf_env.time_step_spec()
@@ -220,7 +341,7 @@ def train_eval(
       root_dir,
       train_step,
       agent,
-      experience_dataset_fn=lambda: dataset,
+      experience_dataset_fn=_experience_dataset,
       triggers=learning_triggers,
       summary_interval=summary_interval,
       strategy=strategy)
@@ -258,7 +379,7 @@ def main(_):
 
   train_eval(
       root_dir=FLAGS.root_dir,
-      dataset_path=FLAGS.dataset_path,
+      dataset_name=_DATASET_NAME.value,
       env_name=FLAGS.env_name,
       tpu=FLAGS.tpu,
       use_gpu=FLAGS.use_gpu,
@@ -267,10 +388,9 @@ def main(_):
       eval_interval=FLAGS.eval_interval,
       summary_interval=FLAGS.summary_interval,
       learner_iterations_per_call=FLAGS.learner_iterations_per_call,
-      use_trajectories=FLAGS.use_trajectories)
+      reverb_port=_REVERB_PORT.value,
+      data_take=_DATA_TAKE.value)
 
 
 if __name__ == '__main__':
-  flags.mark_flag_as_required('root_dir')
-  flags.mark_flag_as_required('dataset_path')
   app.run(main)

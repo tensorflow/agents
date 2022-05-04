@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf_agents.policies.samplers.cem_actions_sampler_continuous."""
+"""Tests for tf_agents.policies.samplers.qtopt_cem_actions_sampler_continuous."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
-from tf_agents.policies.samplers import cem_actions_sampler_continuous
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler_continuous
 from tf_agents.specs import tensor_spec
 
 
@@ -44,7 +44,7 @@ class ActionsSamplerTest(tf.test.TestCase):
   def testSampleBatch(self):
     action_spec = (
         tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0.0, 1.0))
-    sampler = cem_actions_sampler_continuous.GaussianActionsSampler(
+    sampler = qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
         action_spec=action_spec, sample_rejecters=dummy_sample_rejecter)
 
     mean = tf.constant(_MEAN)
@@ -65,7 +65,7 @@ class ActionsSamplerTest(tf.test.TestCase):
         tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.int32, 0, 1)]
     with self.assertRaisesRegex(
         ValueError, 'Only continuous action is supported by this sampler.*'):
-      cem_actions_sampler_continuous.GaussianActionsSampler(
+      qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
           action_spec=action_spec)
 
     action_spec = [
@@ -73,13 +73,13 @@ class ActionsSamplerTest(tf.test.TestCase):
             [_ACTION_SIZE, _ACTION_SIZE], tf.float32, 0., 1.)]
     with self.assertRaisesRegex(
         ValueError, 'Only 1d action is supported by this sampler.*'):
-      cem_actions_sampler_continuous.GaussianActionsSampler(
+      qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
           action_spec=action_spec)
 
     action_spec = [
         tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0., 1.),
         tensor_spec.BoundedTensorSpec([_ACTION_SIZE], tf.float32, 0., 1.)]
-    cem_actions_sampler_continuous.GaussianActionsSampler(
+    qtopt_cem_actions_sampler_continuous.GaussianActionsSampler(
         action_spec=action_spec)
 
 if __name__ == '__main__':

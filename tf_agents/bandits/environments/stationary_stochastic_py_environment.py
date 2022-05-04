@@ -121,11 +121,11 @@ class StationaryStochasticPyEnvironment(
     if len(action) != self.batch_size:
       raise ValueError('Number of actions must match batch size.')
     reward = np.stack(
-        [self._reward_fns[a](o) for a, o in zip(action, self._observation)])
+        [self._reward_fns[a](o) for a, o in zip(action, self._observation)])  # pytype: disable=attribute-error  # trace-all-classes
     if self._constraint_fns is not None:
       constraint = np.stack(
           [self._constraint_fns[a](o) for a, o in zip(action,
-                                                      self._observation)])
+                                                      self._observation)])  # pytype: disable=attribute-error  # trace-all-classes
       reward = {
           bandits_spec_utils.REWARD_SPEC_KEY: reward,
           bandits_spec_utils.CONSTRAINTS_SPEC_KEY: constraint

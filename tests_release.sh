@@ -17,6 +17,8 @@ REVERB_INSTALL=false
 REVERB_DEP_OVERRIDE=false
 TFP_INSTALL=false
 TFP_DEP_OVERRIDE=false
+RLDS_INSTALL=false
+RLDS_DEP_OVERRIDE=false
 PYTHON_VERSION=python3
 BROKEN_TESTS=false
 
@@ -29,9 +31,12 @@ if [[ $# -lt 1 ]] ; then
   echo "                        Examples: dm-reverb==0.1.0rc0  or dm-reverb>=0.1.0]"
   echo "--tfp_dep_override    [Required tensorflow version to pass to setup.py."
   echo "                       Examples: tensorflow-probability==0.11.0rc0]"
+  echo "--rlds_dep_override   [Version of RLDS to install.]"
+  echo "                       Examples: rlds==0.1.3]"
   echo "--tf_install          [Version of TensorFlow to install]"
   echo "--reverb_install      [Version of Reverb to install]"
   echo "--tfp_install         [Version of TensorFlow probability to install]"
+  echo "--rlds_install         [Version of TensorFlow probability to install]"
   echo "--test_colabs         [true to run colab tests.]"
   echo "--python_version    [python3.7(default), Python binary to use.]"
   echo "--broken_tests   [Broken tests file]"
@@ -75,6 +80,14 @@ while [[ $# -gt -0 ]]; do
       TFP_DEP_OVERRIDE="$2"  # Setup.py is told this is the required tf-probability.
       shift
       ;;
+    --rlds_install)
+      RLDS_INSTALL="$2"  # Install this version of rlds.
+      shift
+      ;;
+    --rlds_dep_override)
+      RLDS_DEP_OVERRIDE="$2"  # Setup.py is told this is the required rlds.
+      shift
+      ;;
     --python_version)
       PYTHON_VERSION="$2"  # Python binary to use for the build.
       shift
@@ -107,6 +120,12 @@ install_optional_dependencies() {
     $PYTHON_VERSION -mpip install $TFP_INSTALL
   else
     $PYTHON_VERSION -mpip install $3
+  fi
+
+  if [ "$RLDS_INSTALL" != "false" ]; then
+    $PYTHON_VERSION -mpip install $RLDS_INSTALL
+  else
+    $PYTHON_VERSION -mpip install $4
   fi
 }
 
@@ -145,6 +164,9 @@ run_tests() {
   if [ "$TFP_DEP_OVERRIDE" != "false" ]; then
     EXTRA_ARGS="${EXTRA_ARGS} --tfp-version ${TFP_DEP_OVERRIDE}"
   fi
+  if [ "$RLDS_DEP_OVERRIDE" != "false" ]; then
+    EXTRA_ARGS="${EXTRA_ARGS} --rlds-version ${RLDS_DEP_OVERRIDE}"
+  fi
   if [ "$BROKEN_TESTS" != "false" ]; then
     EXTRA_ARGS="${EXTRA_ARGS} --broken_tests ${BROKEN_TESTS}"
   fi
@@ -152,7 +174,8 @@ run_tests() {
   # TensorFlow is not set as a dependency of TF-Agents because there are many
   # different TensorFlow versions a user might want and installed.
   if [ "$RELEASE_TYPE" = "nightly" ]; then
-    install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly"
+    # TODO(b/224850217): rlds does not have nightly builds yet.
+    install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly" "rlds"
 
     # Run the tests
     $PYTHON_VERSION setup.py test $EXTRA_ARGS
@@ -161,7 +184,7 @@ run_tests() {
     WHEEL_PATH=${TMP}/wheel/$1
     ./pip_pkg.sh ${WHEEL_PATH}/ $EXTRA_ARGS
   elif [ "$RELEASE_TYPE" = "stable" ]; then
-    install_optional_dependencies "tensorflow" "dm-reverb" "tensorflow-probability"
+    install_optional_dependencies "tensorflow" "dm-reverb" "tensorflow-probability" "rlds"
     # Run the tests
     $PYTHON_VERSION setup.py test --release $EXTRA_ARGS
 

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python2, python3
 """Unit tests for the Learner."""
 
 from __future__ import absolute_import

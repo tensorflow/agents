@@ -23,12 +23,12 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
-from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.utils import common
 
 
 @gin.configurable
-class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
+class GaussianActionsSampler(qtopt_cem_actions_sampler.ActionsSampler):
   """Continuous Gaussian actions sampler.
 
   Supports in nested action_spec with 1d continuous actions or 1d

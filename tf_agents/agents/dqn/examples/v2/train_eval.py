@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python2, python3
 r"""Train and Eval DQN.
 
 To run DQN on CartPole:

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 r"""Tests for tf_agents.policies.policy_info_updater_wrapper.
 """
 

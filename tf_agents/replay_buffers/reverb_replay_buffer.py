@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Reverb as a TF-Agents replay buffer."""
 
 from __future__ import absolute_import

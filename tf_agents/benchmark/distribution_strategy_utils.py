@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python2, python3
 """Helper functions for running models in a distributed setting."""
 
 from __future__ import absolute_import

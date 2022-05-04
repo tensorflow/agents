@@ -37,6 +37,26 @@ class TimeStepTest(tf.test.TestCase):
     self.assertEqual(0.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
 
+  def testRestartRewardDTypeArray(self):
+    observation = -1
+    observation_batch = tf.random.uniform([5, 2])
+    reward_spec = array_spec.ArraySpec(shape=[2], dtype=np.float16)
+    time_step = ts.restart(observation, None, reward_spec).reward
+    time_step_batch = ts.restart(observation_batch, 5, reward_spec).reward
+
+    self.assertEqual(time_step.dtype, reward_spec.dtype)
+    self.assertEqual(time_step_batch.dtype, reward_spec.dtype)
+
+  def testRestartRewardDTypeTensor(self):
+    observation = -1
+    observation_batch = tf.random.uniform([5, 2])
+    reward_spec = tensor_spec.TensorSpec(shape=[2], dtype=tf.float64)
+    time_step = ts.restart(observation, None, reward_spec).reward
+    time_step_batch = ts.restart(observation_batch, 5, reward_spec).reward
+
+    self.assertEqual(time_step.dtype, reward_spec.dtype)
+    self.assertEqual(time_step_batch.dtype, reward_spec.dtype)
+
   def testTransition(self):
     observation = -1
     reward = 2.0
@@ -48,6 +68,14 @@ class TimeStepTest(tf.test.TestCase):
     self.assertEqual(2.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
 
+  def testTransitionRewardDTypeTensor(self):
+    observation = tf.random.uniform([5, 2])
+    reward = tf.random.uniform([2], dtype=tf.float64)
+    discount = 1.0
+    time_step = ts.transition(observation, reward, discount)
+
+    self.assertEqual(time_step.reward.dtype, reward.dtype)
+
   def testTermination(self):
     observation = -1
     reward = 2.0
@@ -57,6 +85,13 @@ class TimeStepTest(tf.test.TestCase):
     self.assertEqual(-1, time_step.observation)
     self.assertEqual(2.0, time_step.reward)
     self.assertEqual(0.0, time_step.discount)
+
+  def testTerminationRewardDTypeTensor(self):
+    observation = tf.random.uniform([5, 2])
+    reward = tf.random.uniform([2], dtype=tf.float16)
+    time_step = ts.termination(observation, reward)
+
+    self.assertEqual(time_step.reward.dtype, reward.dtype)
 
   def testTruncation(self):
     observation = -1
@@ -68,6 +103,14 @@ class TimeStepTest(tf.test.TestCase):
     self.assertEqual(-1, time_step.observation)
     self.assertEqual(2.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
+
+  def testTruncationRewardDTypeTensor(self):
+    observation = tf.random.uniform([5, 2])
+    reward = tf.random.uniform([2], dtype=tf.float64)
+    discount = 1.0
+    time_step = ts.truncation(observation, reward, discount)
+
+    self.assertEqual(time_step.reward.dtype, reward.dtype)
 
   def testRestartIsFirst(self):
     observation = -1

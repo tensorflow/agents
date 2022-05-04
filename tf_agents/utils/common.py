@@ -138,11 +138,11 @@ def function(*args, **kwargs):
     A tf.function wrapper.
   """
   autograph = kwargs.pop('autograph', False)
-  experimental_relax_shapes = kwargs.pop('experimental_relax_shapes', True)
+  reduce_retracing = kwargs.pop('reduce_retracing', True)
   return tf.function(  # allow-tf-function
       *args,
       autograph=autograph,
-      experimental_relax_shapes=experimental_relax_shapes,
+      reduce_retracing=reduce_retracing,
       **kwargs)
 
 
@@ -1428,6 +1428,6 @@ def deduped_network_variables(network, *args):
 def safe_has_state(state):
   """Safely checks `state not in (None, (), [])`."""
   # TODO(b/158804957): tf.function changes "s in ((),)" to a tensor bool expr.
-  # pylint: disable=literal-comparison
-  return state is not None and state is not () and state is not []
-  # pylint: enable=literal-comparison
+  # pylint: disable=g-explicit-bool-comparison
+  return state is not None and state != () and state != []
+  # pylint: enable=g-explicit-bool-comparison

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Actor to use for data collection or evaluation.
 
 **Note** the actor currently only supports py_envs, policies/drivers.

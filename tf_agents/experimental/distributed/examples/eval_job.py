@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Eval job using a variable container to fetch the weights of the policy."""
 
 import functools

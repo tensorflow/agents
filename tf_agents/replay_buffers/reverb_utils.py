@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Utilities for working with a reverb replay buffer."""
 
 from __future__ import absolute_import
@@ -111,7 +110,7 @@ class ReverbAddEpisodeObserver(object):
     self._py_client = py_client
     self._writer = self._py_client.trajectory_writer(
         num_keep_alive_refs=self._max_sequence_length + 1,
-        get_signature_timeout_ms=None)
+        validate_items=False)
     self._cached_steps = 0
     self._bypass_partial_episodes = bypass_partial_episodes
     self._overflow_episode = False
@@ -241,7 +240,7 @@ class ReverbAddEpisodeObserver(object):
     if self._writer is None:
       self._writer = self._py_client.trajectory_writer(
           num_keep_alive_refs=self._max_sequence_length + 1,
-          get_signature_timeout_ms=None)
+          validate_items=False)
 
   def close(self) -> None:
     """Closes the writer of the observer.
@@ -343,7 +342,7 @@ class ReverbAddTrajectoryObserver(object):
     # once Reverb Dataset with emit_timesteps=True returns properly shaped
     # sequences.
     self._writer = py_client.trajectory_writer(
-        num_keep_alive_refs=sequence_length + 1, get_signature_timeout_ms=None)
+        num_keep_alive_refs=sequence_length + 1, validate_items=False)
     self._cached_steps = 0
     self._last_trajectory = None
 
@@ -478,7 +477,7 @@ class ReverbAddTrajectoryObserver(object):
     if self._writer is None:
       self._writer = self._py_client.trajectory_writer(
           num_keep_alive_refs=self._sequence_length + 1,
-          get_signature_timeout_ms=None)
+          validate_items=False)
       self._cached_steps = 0
 
   def close(self) -> None:

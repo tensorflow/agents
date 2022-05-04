@@ -23,13 +23,13 @@ import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
-from tf_agents.policies.samplers import cem_actions_sampler
+from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import common
 
 
 @gin.configurable
-class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
+class GaussianActionsSampler(qtopt_cem_actions_sampler.ActionsSampler):
   """Continuous Gaussian actions sampler.
 
   Supports nested action_spec with 1d continuous actions.
@@ -39,24 +39,30 @@ class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
   'A' means action_size.
   """
 
-  def __init__(self, action_spec, sample_clippers=None, sample_rejecters=None,
-               max_rejection_iterations=10):
+  def __init__(self,
+               action_spec,
+               sample_clippers=None,
+               sample_rejecters=None,
+               max_rejection_iterations=10,
+               support_integer=False):
 
     super(GaussianActionsSampler, self).__init__(action_spec, sample_clippers)
 
     self._sample_rejecters = sample_rejecters
     self._max_rejection_iterations = tf.constant(max_rejection_iterations)
 
-    for flat_action_spec in tf.nest.flatten(action_spec):
-      if flat_action_spec.dtype.is_integer:
-        raise ValueError('Only continuous action is supported by this sampler. '
-                         'The action_spec: {} contains discrete action'.format(
-                             action_spec))
-      if flat_action_spec.shape.rank > 1:
-        raise ValueError('Only 1d action is supported by this sampler. '
-                         'The action_spec: {} contains action whose rank > 1. '
-                         'Consider coverting it into multiple 1d '
-                         'actions.'.format(action_spec))
+    self._support_integer = support_integer
+    if not support_integer:
+      for flat_action_spec in tf.nest.flatten(action_spec):
+        if flat_action_spec.dtype.is_integer:
+          raise ValueError('Only continuous action is supported by this '
+                           'sampler. The action_spec: {} contains discrete '
+                           'action'.format(action_spec))
+        if flat_action_spec.shape.rank > 1:
+          raise ValueError('Only 1d action is supported by this sampler. '
+                           'The action_spec: {} contains action whose rank > 1.'
+                           'Consider coverting it into multiple 1d '
+                           'actions.'.format(action_spec))
 
   def refit_distribution_to(self, target_sample_indices, samples):
     """Refits distribution according to actions with index of ind.
@@ -201,4 +207,8 @@ class GaussianActionsSampler(cem_actions_sampler.ActionsSampler):
     else:
       samples_continuous = sample_fn(mean, var, state)
 
+    if self._support_integer:
+      samples_continuous = tf.nest.map_structure(
+          lambda t, s: tf.cast(t, s.dtype), samples_continuous,
+          self._action_spec)
     return samples_continuous

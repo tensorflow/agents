@@ -18,6 +18,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import itertools
+
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -45,36 +47,49 @@ def test_cases():
 
 
 def test_cases_with_strategy():
-  return parameterized.named_parameters(
-      {
-          'testcase_name': 'batch1UCB',
-          'batch_size': 1,
-          'exploration_strategy': linear_policy.ExplorationStrategy.optimistic,
-      }, {
-          'testcase_name': 'batch4UCB',
-          'batch_size': 4,
-          'exploration_strategy': linear_policy.ExplorationStrategy.optimistic,
-      }, {
-          'testcase_name': 'batch1TS',
-          'batch_size': 1,
-          'exploration_strategy': linear_policy.ExplorationStrategy.sampling,
-      }, {
-          'testcase_name': 'batch4TS',
-          'batch_size': 4,
-          'exploration_strategy': linear_policy.ExplorationStrategy.sampling,
-      })
+  batch_sizes = [1, 4]
+  exploration_strategies = [
+      linear_policy.ExplorationStrategy.optimistic,
+      linear_policy.ExplorationStrategy.sampling
+  ]
+  alphas = [1.0, 0.0]
+  cases = []
+  for batch_size, strategy, alpha in itertools.product(batch_sizes,
+                                                       exploration_strategies,
+                                                       alphas):
+    strategy_name = ('UCB' if strategy
+                     == linear_policy.ExplorationStrategy.optimistic else 'TS')
+    cases.append(
+        dict(
+            testcase_name=f'batch{batch_size}{strategy_name}_alpha{alpha}',
+            batch_size=batch_size,
+            exploration_strategy=strategy,
+            alpha=alpha))
+  return parameterized.named_parameters(cases)
 
 
 def test_cases_with_decomposition():
   return parameterized.named_parameters(
       {
-          'testcase_name': 'batch1',
+          'testcase_name': 'batch1Alpha1',
           'batch_size': 1,
-          'use_decomposition': False
+          'use_decomposition': False,
+          'alpha': 1.0,
       }, {
-          'testcase_name': 'batch4',
+          'testcase_name': 'batch4Alpha1',
           'batch_size': 4,
-          'use_decomposition': True
+          'use_decomposition': True,
+          'alpha': 1.0,
+      }, {
+          'testcase_name': 'batch1Alpha0',
+          'batch_size': 1,
+          'use_decomposition': False,
+          'alpha': 0.0,
+      }, {
+          'testcase_name': 'batch4Alpha0',
+          'batch_size': 4,
+          'use_decomposition': True,
+          'alpha': 0.0,
       })
 
 
@@ -94,7 +109,6 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._time_step_spec_with_mask = ts.time_step_spec(self._obs_spec_with_mask)
     self._per_arm_time_step_spec = ts.time_step_spec(self._per_arm_obs_spec)
-    self._alpha = 1.0
     self._action_spec = tensor_spec.BoundedTensorSpec(
         shape=(),
         dtype=tf.int32,
@@ -114,13 +128,15 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
 
   @property
   def _b(self):
-    return [tf.constant([r, r], dtype=tf.float32)
-            for r in range(self._num_actions)]
+    return [
+        tf.constant([r, r], dtype=tf.float32) for r in range(self._num_actions)
+    ]
 
   @property
   def _b_numpy(self):
-    return [np.array([r, r], dtype=np.float32)
-            for r in range(self._num_actions)]
+    return [
+        np.array([r, r], dtype=np.float32) for r in range(self._num_actions)
+    ]
 
   @property
   def _num_samples_per_arm(self):
@@ -134,13 +150,17 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
   def _time_step_batch(self, batch_size):
     return ts.TimeStep(
         tf.constant(
-            ts.StepType.FIRST, dtype=tf.int32, shape=[batch_size],
+            ts.StepType.FIRST,
+            dtype=tf.int32,
+            shape=[batch_size],
             name='step_type'),
         tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
         tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
-        tf.constant(np.array(range(batch_size * self._obs_dim)),
-                    dtype=tf.float32, shape=[batch_size, self._obs_dim],
-                    name='observation'))
+        tf.constant(
+            np.array(range(batch_size * self._obs_dim)),
+            dtype=tf.float32,
+            shape=[batch_size, self._obs_dim],
+            name='observation'))
 
   def _per_arm_time_step_batch(self, batch_size):
     return ts.TimeStep(
@@ -166,7 +186,6 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
                     name='observation'),
             bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY:
                 tf.ones([batch_size], dtype=tf.int32) * 2
-
         })
 
   def _time_step_batch_with_mask(self, batch_size):
@@ -200,12 +219,16 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
 
   @test_cases_with_strategy()
-  def testObservationShapeMismatch(self, batch_size, exploration_strategy):
-    policy = linear_policy.LinearBanditPolicy(self._action_spec, self._a,
-                                              self._b,
-                                              self._num_samples_per_arm,
-                                              self._time_step_spec,
-                                              exploration_strategy)
+  def testObservationShapeMismatch(self, batch_size, exploration_strategy,
+                                   alpha):
+    policy = linear_policy.LinearBanditPolicy(
+        self._action_spec,
+        self._a,
+        self._b,
+        self._num_samples_per_arm,
+        self._time_step_spec,
+        exploration_strategy,
+        alpha=alpha)
 
     current_time_step = ts.TimeStep(
         tf.constant(
@@ -226,12 +249,15 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
       policy.action(current_time_step)
 
   @test_cases_with_strategy()
-  def testActionBatch(self, batch_size, exploration_strategy):
-    policy = linear_policy.LinearBanditPolicy(self._action_spec, self._a,
-                                              self._b,
-                                              self._num_samples_per_arm,
-                                              self._time_step_spec,
-                                              exploration_strategy)
+  def testActionBatch(self, batch_size, exploration_strategy, alpha):
+    policy = linear_policy.LinearBanditPolicy(
+        self._action_spec,
+        self._a,
+        self._b,
+        self._num_samples_per_arm,
+        self._time_step_spec,
+        exploration_strategy,
+        alpha=alpha)
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))
     self.assertEqual(action_step.action.shape.as_list(), [batch_size])
@@ -241,7 +267,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
 
   @test_cases_with_strategy()
-  def testActionBatchWithBias(self, batch_size, exploration_strategy):
+  def testActionBatchWithBias(self, batch_size, exploration_strategy, alpha):
     a = [tf.constant([[4, 1, 2], [1, 5, 3], [2, 3, 6]], dtype=tf.float32)
         ] * self._num_actions
     b = [
@@ -255,6 +281,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
         self._num_samples_per_arm,
         self._time_step_spec,
         exploration_strategy,
+        alpha=alpha,
         add_bias=True)
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))
@@ -265,7 +292,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllLessEqual(actions_, self._action_spec.maximum)
 
   @test_cases_with_strategy()
-  def testActionBatchWithMask(self, batch_size, exploration_strategy):
+  def testActionBatchWithMask(self, batch_size, exploration_strategy, alpha):
 
     def split_fn(obs):
       return obs[0], obs[1]
@@ -277,6 +304,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
         self._num_samples_per_arm,
         self._time_step_spec_with_mask,
         exploration_strategy,
+        alpha=alpha,
         observation_and_action_constraint_splitter=split_fn)
 
     action_step = policy.action(
@@ -296,9 +324,8 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     num_samples_list = []
     num_samples_new_list = []
     for k in range(1, self._num_actions + 1):
-      a_initial_value = tf.constant(
-          [[2 * k + 1, k + 1], [k + 1, 2 * k+1]],
-          dtype=tf.float32)
+      a_initial_value = tf.constant([[2 * k + 1, k + 1], [k + 1, 2 * k + 1]],
+                                    dtype=tf.float32)
       a_for_one_arm = tf.compat.v2.Variable(a_initial_value)
       a_list.append(a_for_one_arm)
       b_initial_value = tf.constant([k, k], dtype=tf.float32)
@@ -309,11 +336,11 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
       num_samples_list.append(num_samples_for_one_arm)
 
       # Variables for the new policy (they differ by an offset).
-      a_new_for_one_arm = tf.compat.v2.Variable(
-          a_initial_value + _POLICY_VARIABLES_OFFSET)
+      a_new_for_one_arm = tf.compat.v2.Variable(a_initial_value +
+                                                _POLICY_VARIABLES_OFFSET)
       a_new_list.append(a_new_for_one_arm)
-      b_new_for_one_arm = tf.compat.v2.Variable(
-          b_initial_value + _POLICY_VARIABLES_OFFSET)
+      b_new_for_one_arm = tf.compat.v2.Variable(b_initial_value +
+                                                _POLICY_VARIABLES_OFFSET)
       b_new_list.append(b_new_for_one_arm)
       num_samples_for_one_arm_new = tf.compat.v2.Variable(
           num_samples_initial_value + _POLICY_VARIABLES_OFFSET)
@@ -399,7 +426,7 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
                         first_arm_features[first_action])
 
   @test_cases_with_decomposition()
-  def testComparisonWithNumpy(self, batch_size, use_decomposition=False):
+  def testComparisonWithNumpy(self, batch_size, use_decomposition, alpha):
     eig_matrix_list = ()
     eig_vals_list = ()
     if use_decomposition:
@@ -407,12 +434,22 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
       eig_vals_list = [eig_vals_one_arm] * self._num_actions
       eig_matrix_list = [eig_matrix_one_arm] * self._num_actions
 
+    a_inv = []
+    theta = []
+    for k in range(self._num_actions):
+      a_inv.append(np.linalg.inv(self._a_numpy[k] + np.eye(self._obs_dim)))
+      theta.append(
+          np.matmul(a_inv[k], self._b_numpy[k].reshape([self._obs_dim, 1])))
+
     policy = linear_policy.LinearBanditPolicy(
         self._action_spec,
         self._a,
         self._b,
         self._num_samples_per_arm,
         self._time_step_spec,
+        alpha=alpha,
+        theta=None if alpha > 0.0 else tf.squeeze(
+            tf.cast(tf.stack(theta), dtype=self._obs_spec.dtype), axis=-1),
         eig_vals=eig_vals_list,
         eig_matrix=eig_matrix_list)
 
@@ -422,27 +459,32 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     actions_ = self.evaluate(action_step.action)
 
     observation_numpy = np.array(
-        range(batch_size * self._obs_dim), dtype=np.float32).reshape(
-            [batch_size, self._obs_dim])
+        range(batch_size * self._obs_dim),
+        dtype=np.float32).reshape([batch_size, self._obs_dim])
 
     p_values = []
     for k in range(self._num_actions):
-      a_inv = np.linalg.inv(self._a_numpy[k] + np.eye(self._obs_dim))
-      theta = np.matmul(
-          a_inv, self._b_numpy[k].reshape([self._obs_dim, 1]))
-      confidence_intervals = np.sqrt(np.diag(
-          np.matmul(observation_numpy,
-                    np.matmul(a_inv, np.transpose(observation_numpy)))))
-      p_value = (np.matmul(observation_numpy, theta) +
-                 self._alpha * confidence_intervals.reshape([-1, 1]))
+      confidence_intervals = np.sqrt(
+          np.diag(
+              np.matmul(observation_numpy,
+                        np.matmul(a_inv[k], np.transpose(observation_numpy)))))
+      p_value = (
+          np.matmul(observation_numpy, theta[k]) +
+          alpha * confidence_intervals.reshape([-1, 1]))
       p_values.append(p_value)
 
-    actions_numpy = np.argmax(np.stack(p_values, axis=-1), axis=-1).reshape(
-        [batch_size])
+    actions_numpy = np.argmax(
+        np.stack(p_values, axis=-1), axis=-1).reshape([batch_size])
     self.assertAllEqual(actions_.reshape([batch_size]), actions_numpy)
 
   @test_cases_with_strategy()
-  def testPredictedRewards(self, batch_size, exploration_strategy):
+  def testPredictedRewards(self, batch_size, exploration_strategy, alpha):
+    a_inv = []
+    theta = []
+    for k in range(self._num_actions):
+      a_inv.append(np.linalg.inv(self._a_numpy[k] + np.eye(self._obs_dim)))
+      theta.append(
+          np.matmul(a_inv[k], self._b_numpy[k].reshape([self._obs_dim, 1])))
     policy = linear_policy.LinearBanditPolicy(
         self._action_spec,
         self._a,
@@ -450,6 +492,9 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
         self._num_samples_per_arm,
         self._time_step_spec,
         exploration_strategy,
+        alpha=alpha,
+        theta=None if alpha > 0.0 else tf.squeeze(
+            tf.cast(tf.stack(theta), dtype=self._obs_spec.dtype), axis=-1),
         emit_policy_info=(policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,))
 
     action_step = policy.action(self._time_step_batch(batch_size=batch_size))
@@ -457,27 +502,17 @@ class LinearBanditPolicyTest(parameterized.TestCase, test_utils.TestCase):
     self.assertEqual(action_step.action.dtype, tf.int32)
 
     observation_numpy = np.array(
-        range(batch_size * self._obs_dim), dtype=np.float32).reshape(
-            [batch_size, self._obs_dim])
+        range(batch_size * self._obs_dim),
+        dtype=np.float32).reshape([batch_size, self._obs_dim])
 
-    p_values = []
     predicted_rewards_expected = []
     for k in range(self._num_actions):
-      a_inv = np.linalg.inv(self._a_numpy[k] + np.eye(self._obs_dim))
-      theta = np.matmul(
-          a_inv, self._b_numpy[k].reshape([self._obs_dim, 1]))
-      confidence_intervals = np.sqrt(np.diag(
-          np.matmul(observation_numpy,
-                    np.matmul(a_inv, np.transpose(observation_numpy)))))
-      est_mean_reward = np.matmul(observation_numpy, theta)
+      est_mean_reward = np.matmul(observation_numpy, theta[k])
       predicted_rewards_expected.append(est_mean_reward)
-      p_value = (est_mean_reward +
-                 self._alpha * confidence_intervals.reshape([-1, 1]))
-      p_values.append(p_value)
 
     predicted_rewards_expected_array = np.stack(
-        predicted_rewards_expected, axis=-1).reshape(
-            batch_size, self._num_actions)
+        predicted_rewards_expected, axis=-1).reshape(batch_size,
+                                                     self._num_actions)
     p_info = self.evaluate(action_step.info)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected_array)
