@@ -141,7 +141,8 @@ class TFAgent(tf.Module):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       enable_summaries: bool = True,
-      train_step_counter: Optional[tf.Variable] = None):
+      train_step_counter: Optional[tf.Variable] = None,
+      policy_state_spec: types.NestedTensorSpec = ()):
     """Meant to be called by subclass constructors.
 
     Args:
@@ -178,6 +179,8 @@ class TFAgent(tf.Module):
         `summarize_grads_and_vars` properties.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
+      policy_state_spec: A nest of TensorSpec representing the policy
+        state. Provided by the user. Defaults to an empty tuple.
 
     Raises:
       ValueError: If `num_outer_dims` is not in `[1, 2]`.
@@ -209,6 +212,7 @@ class TFAgent(tf.Module):
     self._collect_data_context = data_converter.DataContext(
         time_step_spec=self._time_step_spec,
         action_spec=self._action_spec,
+        policy_state_spec=policy_state_spec,
         info_spec=collect_policy.info_spec)
     # Data context for data passed to train().  May be different if
     # training_data_spec is provided.
@@ -235,11 +239,13 @@ class TFAgent(tf.Module):
               reward=training_reward_spec,
               step_type=training_step_type_spec),
           action_spec=training_action_spec,
+          policy_state_spec=policy_state_spec,
           info_spec=training_policy_info_spec)
     else:
       self._data_context = data_converter.DataContext(
           time_step_spec=time_step_spec,
           action_spec=action_spec,
+          policy_state_spec=policy_state_spec,
           info_spec=collect_policy.info_spec)
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
