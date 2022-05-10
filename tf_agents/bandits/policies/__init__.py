@@ -23,4 +23,5 @@ from tf_agents.bandits.policies import linalg
 from tf_agents.bandits.policies import linear_thompson_sampling_policy
 from tf_agents.bandits.policies import mixture_policy
 from tf_agents.bandits.policies import neural_linucb_policy
+from tf_agents.bandits.policies import ranking_policy
 from tf_agents.policies import utils as policy_utilities
