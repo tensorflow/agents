@@ -28,5 +28,6 @@ from tf_agents.bandits.agents import mixture_agent
 from tf_agents.bandits.agents import neural_boltzmann_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.agents import neural_linucb_agent
+from tf_agents.bandits.agents import ranking_agent
 from tf_agents.bandits.agents import static_mixture_agent
 from tf_agents.bandits.agents import utils
