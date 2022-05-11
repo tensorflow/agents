@@ -103,7 +103,7 @@ class CosinePenalizedPlackettLuce(PenalizedPlackettLuce):
 
     # Calculate the similarity between all pairs from
     # `slotted_features x all_features`.
-    all_sims = tf.losses.cosine_similarity(
+    all_sims = tf.keras.losses.cosine_similarity(
         tf.repeat(features, num_slotted, axis=1),
         tf.tile(slotted_features, [1, num_items, 1])) - 1
 
@@ -169,6 +169,7 @@ class RankingPolicy(tf_policy.TFPolicy):
     info_spec = policy_utils.PolicyInfo(
         predicted_rewards_mean=tensor_spec.TensorSpec(
             shape=(num_slots,), dtype=tf.float32))
+    network.create_variables()
     self._network = network
     assert num_slots <= num_items, (
         'The number of slots have to be less than or equal to the number of '
@@ -199,7 +200,7 @@ class RankingPolicy(tf_policy.TFPolicy):
           bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
       masked_scores = tf.where(
           tf.sequence_mask(num_actions, maxlen=self._num_items), scores,
-          -np.inf)
+          tf.fill(tf.shape(scores), -np.inf))
     else:
       masked_scores = scores
     return policy_step.PolicyStep(

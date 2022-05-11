@@ -31,9 +31,6 @@ class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
                             dict(batch_size=3, num_items=15, num_slots=15),
                             dict(batch_size=30, num_items=115, num_slots=100))
   def testPolicy(self, batch_size, num_items, num_slots):
-    if not tf.executing_eagerly():
-      # TODO(b/231954903): Make the tests work in graph mode.
-      self.skipTest('Works only in eager mode.')
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         7, 5, num_items)
     time_step_spec = ts.time_step_spec(obs_spec)
@@ -49,13 +46,12 @@ class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
         obs_spec, outer_dims=[batch_size], minimum=-1, maximum=1)
     time_spec = ts.restart(observation, batch_size=batch_size)
     action_step = policy.action(time_spec)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_step.action.shape, [batch_size, num_slots])
 
   @parameterized.parameters(dict(batch_size=1, num_items=20, num_slots=5),
                             dict(batch_size=3, num_items=15, num_slots=15))
   def testNumActionsPolicy(self, batch_size, num_items, num_slots):
-    if not tf.executing_eagerly():
-      self.skipTest('Works only in eager mode.')
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         7,
         5,
@@ -75,13 +71,12 @@ class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
         obs_spec, outer_dims=[batch_size])
     time_spec = ts.restart(observation, batch_size=batch_size)
     action_step = policy.action(time_spec)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_step.action.shape, [batch_size, num_slots])
 
   @parameterized.parameters(dict(batch_size=1, num_items=20, num_slots=5),
                             dict(batch_size=3, num_items=15, num_slots=15))
   def testDescendingScorePolicy(self, batch_size, num_items, num_slots):
-    if not tf.executing_eagerly():
-      self.skipTest('Works only in eager mode.')
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         7, 5, num_items)
     time_step_spec = ts.time_step_spec(obs_spec)
@@ -100,6 +95,7 @@ class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllEqual(action_step.action.shape, [batch_size, num_slots])
     # Check that the policy is deterministic.
     action_step_again = policy.action(time_spec)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_step.action, action_step_again.action)
 
 if __name__ == '__main__':
