@@ -71,12 +71,13 @@ class Learner(tf.Module):
                run_optimizer_variable_init=True,
                use_reverb_v2=False,
                experience_dataset_options=None,
-               strategy_run_options=None):
+               strategy_run_options=None,
+               summary_root_dir=None):
     """Initializes a Learner instance.
 
     Args:
       root_dir: Main directory path where checkpoints, saved_models, and
-        summaries will be written to.
+        summaries (if summary_dir is not specified) will be written to.
       train_step: a scalar tf.int64 `tf.Variable` which will keep track of the
         number of train steps. This is used for artifacts created like
         summaries, or outputs in the root_dir.
@@ -133,6 +134,8 @@ class Learner(tf.Module):
       strategy_run_options: (Optional) `tf.distribute.RunOptions` passed to
         `strategy.run`. This is passed to every strategy.run invocation by the
         learner.
+      summary_root_dir: (Optional) Root directory path where summaries will be
+       written to.
     """
     if checkpoint_interval < 0:
       logging.warning(
@@ -142,10 +145,13 @@ class Learner(tf.Module):
       )
 
     self._train_dir = os.path.join(root_dir, TRAIN_DIR)
+    summary_root_dir = (
+        root_dir if summary_root_dir is None else summary_root_dir)
+    self._summary_dir = os.path.join(summary_root_dir, TRAIN_DIR)
     self._use_reverb_v2 = use_reverb_v2
     if summary_interval:
       self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
-          self._train_dir, flush_millis=10000)
+          self._summary_dir, flush_millis=10000)
     else:
       self.train_summary_writer = tf.summary.create_noop_writer()
 
