@@ -117,6 +117,7 @@ class DqnAgent(tf_agent.TFAgent):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
+      training_data_spec: Optional[types.NestedTensorSpec] = None,
       name: Optional[Text] = None):
     """Creates a DQN Agent.
 
@@ -203,6 +204,9 @@ class DqnAgent(tf_agent.TFAgent):
         will be written during training.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
+      training_data_spec: A nest of TensorSpec specifying the structure of data
+        the train() function expects. If None, defaults to the trajectory_spec
+        of the collect_policy.
       name: The name of this agent. All variables in this module will fall
         under that name. Defaults to the class name.
 
@@ -275,6 +279,7 @@ class DqnAgent(tf_agent.TFAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
+        training_data_spec=training_data_spec,
     )
 
     if q_network.state_spec:
