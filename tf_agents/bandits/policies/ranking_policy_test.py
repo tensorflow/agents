@@ -49,6 +49,46 @@ class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_step.action.shape, [batch_size, num_slots])
 
+  def testTemperature(self):
+    if not tf.executing_eagerly():
+      self.skipTest('This test is only run in eager mode.')
+    batch_size = 1
+    num_items = 20
+    num_slots = 4
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
+        7, 5, num_items)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    network = arm_net.create_feed_forward_common_tower_network(
+        obs_spec, [3], [4], [5])
+
+    low_temp_policy = ranking_policy.NoPenaltyRankingPolicy(
+        num_items=num_items,
+        num_slots=num_slots,
+        time_step_spec=time_step_spec,
+        network=network,
+        logits_temperature=0.001)
+    high_temp_policy = ranking_policy.NoPenaltyRankingPolicy(
+        num_items=num_items,
+        num_slots=num_slots,
+        time_step_spec=time_step_spec,
+        network=network,
+        logits_temperature=1000.)
+    observation = tensor_spec.sample_spec_nest(
+        obs_spec, outer_dims=[batch_size], minimum=-1, maximum=1)
+    time_step = ts.restart(observation, batch_size=batch_size)
+    low_temp_first_items = tf.stack(
+        [low_temp_policy.action(time_step).action[0][0] for _ in range(30)])
+    num_low_temp_items = tf.shape(tf.unique(low_temp_first_items)[0])[0]
+
+    high_temp_first_items = tf.stack(
+        [high_temp_policy.action(time_step).action[0][0] for _ in range(30)])
+    num_high_temp_items = tf.shape(tf.unique(high_temp_first_items)[0])[0]
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    # The high temperature policy is more random, so when called repeatedly, it
+    # chooses more diverse items for the first slot. Hence, the number of unique
+    # elements will be more.
+    self.assertLess(num_low_temp_items, num_high_temp_items)
+
   @parameterized.parameters(dict(batch_size=1, num_items=20, num_slots=5),
                             dict(batch_size=3, num_items=15, num_slots=15))
   def testNumActionsPolicy(self, batch_size, num_items, num_slots):

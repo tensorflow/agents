@@ -147,6 +147,7 @@ class RankingPolicy(tf_policy.TFPolicy):
                network: types.Network,
                item_sampler: tfd.Distribution,
                penalty_mixture_coefficient: float = 1.,
+               logits_temperature: float = 1.,
                name: Optional[Text] = None):
     """Initializes an instance of `RankingPolicy`.
 
@@ -162,6 +163,8 @@ class RankingPolicy(tf_policy.TFPolicy):
         can be implemented within this sampler.
       penalty_mixture_coefficient: A parameter responsible for the balance
         between selecting high scoring items and enforcing diverisity.
+      logits_temperature: The "temperature" parameter for sampling. All the
+        logits will be divided by this float value.
       name: The name of this policy instance.
     """
     action_spec = tensor_spec.BoundedTensorSpec(
@@ -178,6 +181,7 @@ class RankingPolicy(tf_policy.TFPolicy):
     self._num_items = num_items
     self._item_sampler = item_sampler
     self._penalty_mixture_coefficient = penalty_mixture_coefficient
+    self._logits_temperature = logits_temperature
     if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in time_step_spec.observation:
       self._use_num_actions = True
     else:
@@ -203,6 +207,7 @@ class RankingPolicy(tf_policy.TFPolicy):
           tf.fill(tf.shape(scores), -np.inf))
     else:
       masked_scores = scores
+    masked_scores = masked_scores / self._logits_temperature
     return policy_step.PolicyStep(
         self._item_sampler(observation[bandit_spec_utils.PER_ARM_FEATURE_KEY],
                            self._num_slots, masked_scores,
@@ -225,6 +230,7 @@ class PenalizeCosineDistanceRankingPolicy(RankingPolicy):
                time_step_spec: types.TimeStep,
                network: types.Network,
                penalty_mixture_coefficient: float = 1.,
+               logits_temperature: float = 1.,
                name: Optional[Text] = None):
     super(PenalizeCosineDistanceRankingPolicy, self).__init__(
         num_items=num_items,
@@ -233,6 +239,7 @@ class PenalizeCosineDistanceRankingPolicy(RankingPolicy):
         network=network,
         item_sampler=CosinePenalizedPlackettLuce,
         penalty_mixture_coefficient=penalty_mixture_coefficient,
+        logits_temperature=logits_temperature,
         name=name)
 
 
@@ -243,6 +250,7 @@ class NoPenaltyRankingPolicy(RankingPolicy):
                num_slots: int,
                time_step_spec: types.TimeStep,
                network: types.Network,
+               logits_temperature: float = 1.,
                name: Optional[Text] = None):
     super(NoPenaltyRankingPolicy, self).__init__(
         num_items=num_items,
@@ -250,6 +258,7 @@ class NoPenaltyRankingPolicy(RankingPolicy):
         time_step_spec=time_step_spec,
         network=network,
         item_sampler=NoPenaltyPlackettLuce,
+        logits_temperature=logits_temperature,
         name=name)
 
 
