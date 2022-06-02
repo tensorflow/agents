@@ -170,7 +170,7 @@ class TFEnvironment(object):
 
     Returns:
       A `TensorSpec`, or a nested dict, list or tuple of
-      `TensorSpec` objects, which describe the observation.
+      `TensorSpec` objects, which describe the reward.
     """
     return self.time_step_spec().reward
 
