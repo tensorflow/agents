@@ -111,6 +111,8 @@ def spec_from_gym_space(space: gym.Space,
       dtype = space.dtype
     else:
       dtype = dtype_map.get(gym.spaces.Box, np.float32)
+    if dtype == tf.string:
+      return specs.ArraySpec(shape=space.shape, dtype=dtype, name=name)
     minimum = np.asarray(space.low, dtype=dtype)
     maximum = np.asarray(space.high, dtype=dtype)
     if simplify_box_bounds:
