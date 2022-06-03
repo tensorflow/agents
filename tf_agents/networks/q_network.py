@@ -55,6 +55,7 @@ class QNetwork(network.Network):
                kernel_initializer=None,
                batch_squash=True,
                dtype=tf.float32,
+               q_layer_activation_fn=None,
                name='QNetwork'):
     """Creates an instance of `QNetwork`.
 
@@ -90,6 +91,7 @@ class QNetwork(network.Network):
         the batch dimension. This allow encoding networks to be used with
         observations with shape [BxTx...].
       dtype: The dtype to use by the convolution and fully connected layers.
+      q_layer_activation_fn: Activation function for the Q layer.
       name: A string representing the name of the network.
 
     Raises:
@@ -115,7 +117,7 @@ class QNetwork(network.Network):
 
     q_value_layer = tf.keras.layers.Dense(
         num_actions,
-        activation=None,
+        activation=q_layer_activation_fn,
         kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
         bias_initializer=tf.constant_initializer(-0.2),

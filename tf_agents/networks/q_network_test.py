@@ -245,6 +245,19 @@ class SingleObservationSingleActionTest(tf.test.TestCase):
     q_logits, _ = network(tf.ones((3, num_state_dims)))
     self.assertAllEqual(q_logits.shape.as_list(), [3, 2])
 
+  def testQLayerActivation(self):
+    """Tests activation for the Q layer."""
+    num_state_dims = 5
+    network = q_network.QNetwork(
+        input_tensor_spec=tensor_spec.TensorSpec([num_state_dims], tf.float32),
+        action_spec=tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
+        q_layer_activation_fn=tf.keras.activations.softplus)
+    q_logits, _ = network(tf.ones((3, num_state_dims)))
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    self.evaluate(tf.compat.v1.initializers.tables_initializer())
+    self.assertAllEqual(q_logits.shape.as_list(), [3, 2])
+    self.assertAllGreater(q_logits, 0.0)
+
 
 if __name__ == '__main__':
   tf.test.main()
