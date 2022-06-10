@@ -147,6 +147,7 @@ def create_sequential_actor_net():
         'my_action': my_action,
     }
 
+  tf.keras.utils.set_random_seed(0)
   return sequential.Sequential([
       tf.keras.layers.Dense(4),
       tf.keras.layers.Dense(2),

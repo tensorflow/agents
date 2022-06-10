@@ -401,10 +401,10 @@ class CqlSacAgentTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   @parameterized.parameters(
-      (0.0, 10, False, False, 0.847626),
-      (1.0, 10, False, True, 4.568825),
-      (10.0, 10, False, False, 38.059581),
-      (10.0, 10, True, False, 46.149696))
+      (0.0, 10, False, False, 0.850076),
+      (1.0, 10, False, True, 4.571281),
+      (10.0, 10, False, False, 38.06202),
+      (10.0, 10, True, False, 46.153343))
   def testTrainWithRnn(self, cql_alpha, num_cql_samples,
                        include_critic_entropy_term, use_lagrange_cql_alpha,
                        expected_loss):
@@ -479,9 +479,9 @@ class CqlSacAgentTest(test_utils.TestCase, parameterized.TestCase):
       self.assertEqual(self.evaluate(counter), 1)
 
   @parameterized.parameters(
-      (True, False, (-1, 10.0), 5.0, 3.032653, 2.895160, 3.130782),
-      (False, False, (-1, 0), 5.0, 5.0, 2.895160, 3.130782),
-      (False, True, (-1, 0), 5.0, 6.0, 2.895160, 3.130782))
+      (True, False, (-1, 10.0), 5.0, 3.032653, 2.904868, 3.137269),
+      (False, False, (-1, 0), 5.0, 5.0, 2.904868, 3.137269),
+      (False, True, (-1, 0), 5.0, 6.0, 2.904868, 3.137269))
   def testTrainWithLagrange(self, use_lagrange_cql_alpha,
                             use_variable_for_cql_alpha,
                             log_cql_alpha_clipping,
