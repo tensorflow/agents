@@ -141,7 +141,7 @@ def create_sequential_actor_net():
          tfp.bijectors.Tanh()])(
              tfd.Normal(
                  loc=loc_and_scale[..., 0],
-                 scale=tf.math.softplus(loc_and_scale[..., 1]),
+                 scale=tf.math.softplus(loc_and_scale[..., 1]) + 1e-10,
                  validate_args=True))
     return {
         'my_action': my_action,
