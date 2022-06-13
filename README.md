@@ -105,7 +105,7 @@ $ pip install --user tf-agents[reverb]
 # Use this tag get the matching examples and colabs.
 $ git clone https://github.com/tensorflow/agents.git
 $ cd agents
-$ git checkout v0.12.0
+$ git checkout v0.13.0
 ```
 
 If you want to install TF-Agents with versions of Tensorflow or
@@ -175,6 +175,7 @@ with Python 2.
 Release | Branch / Tag                                               | TensorFlow Version
 ------- | ---------------------------------------------------------- | ------------------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
+0.13.0  | [v0.13.0](https://github.com/tensorflow/agents/tree/v0.13.0) | 2.9.0
 0.12.0  | [v0.12.0](https://github.com/tensorflow/agents/tree/v0.12.0) | 2.8.0
 0.11.0  | [v0.11.0](https://github.com/tensorflow/agents/tree/v0.11.0) | 2.7.0
 0.10.0  | [v0.10.0](https://github.com/tensorflow/agents/tree/v0.10.0) | 2.6.0
