@@ -55,6 +55,7 @@ class Actor(object):
                reference_metrics=None,
                summary_dir=None,
                summary_interval=1000,
+               end_episode_on_boundary=True,
                name=""):
     """Initializes an Actor.
 
@@ -83,6 +84,9 @@ class Actor(object):
       summary_dir: Path used for summaries. If no path is provided no summaries
         are written.
       summary_interval: How often summaries are written.
+      end_episode_on_boundary: This parameter should be False when using
+        transition observers and be True when using trajectory observers. It
+        is used in py_driver.
       name: Name for the actor used as a prefix to generated summaries.
     """
     self._env = env
@@ -119,7 +123,8 @@ class Actor(object):
           self._observers,
           transition_observers=self._transition_observers,
           max_steps=steps_per_run,
-          max_episodes=episodes_per_run)
+          max_episodes=episodes_per_run,
+          end_episode_on_boundary=end_episode_on_boundary)
     elif isinstance(env, tf_environment.TFEnvironment):
       raise ValueError("Actor doesn't support TFEnvironments yet.")
     else:

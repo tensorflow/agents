@@ -41,7 +41,8 @@ class PyDriver(driver.Driver):
       transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
                                                        Any]]] = None,
       max_steps: Optional[types.Int] = None,
-      max_episodes: Optional[types.Int] = None):
+      max_episodes: Optional[types.Int] = None,
+      end_episode_on_boundary: bool = True):
     """A driver that runs a python policy in a python environment.
 
     **Note** about bias when using batched environments with `max_episodes`:
@@ -72,6 +73,8 @@ class PyDriver(driver.Driver):
         max_episodes must be provided. If both are set, run() terminates when at
         least one of the conditions is
         satisfied.  Default: 0.
+      end_episode_on_boundary: This parameter should be False when using
+        transition observers and be True when using trajectory observers.
 
     Raises:
       ValueError: If both max_steps and max_episodes are None.
@@ -85,6 +88,7 @@ class PyDriver(driver.Driver):
     super(PyDriver, self).__init__(env, policy, observers, transition_observers)
     self._max_steps = max_steps or np.inf
     self._max_episodes = max_episodes or np.inf
+    self._end_episode_on_boundary = end_episode_on_boundary
 
   def run(
       self,
@@ -121,7 +125,11 @@ class PyDriver(driver.Driver):
       for observer in self.observers:
         observer(traj)
 
-      num_episodes += np.sum(traj.is_boundary())
+      if self._end_episode_on_boundary:
+        num_episodes += np.sum(traj.is_boundary())
+      else:
+        num_episodes += np.sum(traj.is_last())
+
       num_steps += np.sum(~traj.is_boundary())
 
       time_step = next_time_step

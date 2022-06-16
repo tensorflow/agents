@@ -59,7 +59,8 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     ]
 
   @parameterized.named_parameters(
-      [('NoneStepsTwoEpisodes', None, 2, 6),
+      [('NoneStepsOneEpisodes', None, 1, 3),
+       ('NoneStepsTwoEpisodes', None, 2, 6),
        ('TwoStepsTwoEpisodes', 2, 2, 2),
        ('FourStepsTwoEpisodes', 4, 2, 5),
        ('FourStepsOneEpisodes', 4, 1, 3),
@@ -70,12 +71,11 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
                                             env.action_spec())
     replay_buffer_observer = MockReplayBufferObserver()
-    transition_replay_buffer_observer = MockReplayBufferObserver()
     driver = py_driver.PyDriver(
         env,
         policy,
         observers=[replay_buffer_observer],
-        transition_observers=[transition_replay_buffer_observer],
+        transition_observers=[],
         max_steps=max_steps,
         max_episodes=max_episodes,
     )
@@ -85,6 +85,34 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     driver.run(initial_time_step, initial_policy_state)
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:expected_steps])
+
+  @parameterized.named_parameters(
+      [('NoneStepsOneEpisodes', None, 1, 2),
+       ('NoneStepsTwoEpisodes', None, 2, 5),
+       ('TwoStepsTwoEpisodes', 2, 2, 2),
+       ('FourStepsTwoEpisodes', 4, 2, 5),
+       ('FourStepsOneEpisodes', 4, 1, 2),
+       ('FourStepsNoneEpisodes', 4, None, 5),
+      ])
+  def testRunOnceTransitionObserver(
+      self, max_steps, max_episodes, expected_steps):
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    transition_replay_buffer_observer = MockReplayBufferObserver()
+    driver = py_driver.PyDriver(
+        env,
+        policy,
+        observers=[],
+        transition_observers=[transition_replay_buffer_observer],
+        max_steps=max_steps,
+        max_episodes=max_episodes,
+        end_episode_on_boundary=False
+    )
+
+    initial_time_step = env.reset()
+    initial_policy_state = policy.get_initial_state()
+    driver.run(initial_time_step, initial_policy_state)
 
     transitions = transition_replay_buffer_observer.gather_all()
     self.assertLen(transitions, expected_steps)
