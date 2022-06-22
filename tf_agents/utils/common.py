@@ -905,6 +905,8 @@ def generate_tensor_summaries(tag, tensor, step):
         name='max', data=tf.reduce_max(input_tensor=tensor), step=step)
     tf.compat.v2.summary.scalar(
         name='min', data=tf.reduce_min(input_tensor=tensor), step=step)
+    tf.compat.v2.summary.scalar(
+        name='std', data=tf.math.reduce_std(input_tensor=tensor), step=step)
 
 
 def summarize_tensor_dict(tensor_dict: Dict[Text, types.Tensor],
