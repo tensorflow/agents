@@ -28,7 +28,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
 
 # We use this to build {Dict,Tuple,List}Wrappers for testing nesting code.
-from tensorflow.python.training.tracking import data_structures  # pylint: disable=g-direct-tensorflow-import  # TF internal
+from tensorflow.python.trackable import data_structures  # pylint: disable=g-direct-tensorflow-import  # TF internal
 
 
 # pylint: disable=invalid-name

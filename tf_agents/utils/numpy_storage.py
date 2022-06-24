@@ -25,8 +25,8 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import array_spec
 
 # pylint:disable=g-direct-tensorflow-import
-from tensorflow.python.training.tracking import base  # TF internal
-from tensorflow.python.training.tracking import data_structures  # TF internal
+from tensorflow.python.trackable import base  # TF internal
+from tensorflow.python.trackable import data_structures  # TF internal
 # pylint:enable=g-direct-tensorflow-import
 
 
