@@ -266,8 +266,9 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
     loss_before_train = agent.loss(experience).loss
     # Check loss is stable.
     self.assertEqual(loss_before_train, agent.loss(experience).loss)
-    # Train 1 step, verify that loss is decreased for the same input.
-    agent.train(experience)
+    # Train 2 steps, verify that loss is decreased for the same input.
+    for _ in range(2):
+      agent.train(experience)
     loss_after_train = agent.loss(experience).loss
     self.assertLessEqual(loss_after_train, loss_before_train)
     # Assert loss evaluation is still stable, e.g. deterministic.
