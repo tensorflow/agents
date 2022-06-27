@@ -261,7 +261,7 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
           time_step_spec,
           action_spec,
           cloning_network=actor_net,
-          optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+          optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
           loss_fn=loss_fn)
     loss_before_train = agent.loss(experience).loss
     # Check loss is stable.
