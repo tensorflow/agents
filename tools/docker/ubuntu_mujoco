@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y \
   patchelf
 
 RUN mkdir -p /root/.mujoco \
-    && wget https://www.roboti.us/download/mujoco200_linux.zip -O mujoco.zip \
+    && wget https://storage.googleapis.com/rl-infra-public/mujoco/mujoco200_linux.zip -O mujoco.zip \
     && unzip mujoco.zip -d /root/.mujoco \
     && mv /root/.mujoco/mujoco200_linux /root/.mujoco/mujoco200 \
     && rm mujoco.zip
