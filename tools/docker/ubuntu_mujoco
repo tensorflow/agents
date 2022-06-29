@@ -59,7 +59,7 @@ ENV LD_LIBRARY_PATH "/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}"
 RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}' >> /etc/bash.bashrc
 
 # Copies Mujoco key into image.
-RUN wget https://www.roboti.us/file/mjkey.txt -P /root/.mujoco/
+RUN wget https://storage.googleapis.com/rl-infra-public/mujoco/mjkey.txt -P /root/.mujoco/
 
 # LD_LIBRARY_PATH is redunanty but needed on hosts where LD_LIBRARY_PATH is
 # not sticky. See comments above.
