@@ -91,7 +91,7 @@ class MixturePolicy(tf_policy.TFPolicy):
 
   def _variables(self):
     variables = sum([p.variables() for p in self._policies], [])
-    variables.extend(self._mixture_distribution.variables)
+    variables.extend(self._mixture_distribution.variables)  # pytype: disable=attribute-error  # dynamic-method-lookup
     return variables
 
   def _distribution(self, time_step, policy_state):

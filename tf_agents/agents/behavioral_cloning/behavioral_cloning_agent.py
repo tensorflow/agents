@@ -291,7 +291,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
   def _loss(self, experience, weights=None, training: bool = False):
     experience = self._as_trajectory(experience)
 
-    per_example_loss = self._bc_loss_fn(experience, training=training)
+    per_example_loss = self._bc_loss_fn(experience, training=training)  # pytype: disable=wrong-keyword-args  # dynamic-method-lookup
     aggregated_losses = common.aggregate_losses(
         per_example_loss=per_example_loss,
         sample_weight=weights,
@@ -305,7 +305,7 @@ class BehavioralCloningAgent(tf_agent.TFAgent):
     experience = self._as_trajectory(experience)
 
     with tf.GradientTape() as tape:
-      per_example_loss = self._bc_loss_fn(experience, training=True)
+      per_example_loss = self._bc_loss_fn(experience, training=True)  # pytype: disable=wrong-keyword-args  # dynamic-method-lookup
 
       aggregated_losses = common.aggregate_losses(
           per_example_loss=per_example_loss,
