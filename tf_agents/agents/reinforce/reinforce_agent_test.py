@@ -860,6 +860,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
       (True,),
   )
   def testGetInitialPolicyState(self, stateful):
+    if tf.test.is_built_with_gpu_support():  # b/237573967
+      self.skipTest('Test is only applicable on GPU')
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,

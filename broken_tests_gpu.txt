@@ -4,3 +4,6 @@ examples.cql_sac.kumar20.dataset.dataset_utils_test  # b/199583100
 examples.cql_sac.kumar20.cql_sac_train_eval_test  # b/199583100
 replay_buffers.episodic_replay_buffer_driver_test  # b/199587793
 replay_buffers.episodic_replay_buffer_test  # b/199587793
+networks.q_rnn_network_test # b/237573967
+networks.actor_distribution_rnn_network_test # b/237573967
+agents.ddpg.critic_rnn_network_test # b/237573967
