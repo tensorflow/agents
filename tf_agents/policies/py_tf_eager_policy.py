@@ -199,6 +199,17 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
     if policy_specs:
       self._collect_data_spec = policy_specs['collect_data_spec']
 
+    # Call action function of the saved_model policy w/ dummy data to
+    # initialize the graph. Otherwise the first call to the action function may
+    # be 10x slower than the rest of the calls on GPU.
+    dummy_time_step = tf.nest.map_structure(
+        lambda s: tf.zeros(s.shape, s.dtype), time_step_spec)
+    dummy_time_step = nest_utils.batch_nested_tensors(dummy_time_step)
+    dummy_policy_state = tf.nest.map_structure(
+        lambda s: tf.zeros(s.shape, s.dtype), policy_state_spec)
+    dummy_policy_state = nest_utils.batch_nested_tensors(dummy_policy_state)
+    self._policy_action_fn(dummy_time_step, dummy_policy_state)
+
   def get_train_step(self) -> types.Int:
     """Returns the training global step of the saved model."""
     return self._policy.get_train_step().numpy()
