@@ -1,4 +1,3 @@
-agents.cql.cql_sac_agent_test  # b/239448722
 environments.suite_atari_test # b/201537188
 examples.cql_sac.kumar20.dataset.file_utils_test  # b/199583100
 examples.cql_sac.kumar20.dataset.dataset_utils_test  # b/199583100

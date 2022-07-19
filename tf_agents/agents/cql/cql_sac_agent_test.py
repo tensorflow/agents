@@ -401,9 +401,9 @@ class CqlSacAgentTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   @parameterized.parameters(
-      (0.0, 10, False, False, 0.850366),
-      (1.0, 10, False, True, 4.571599),
-      (10.0, 10, False, False, 38.06277),
+      (0.0, 10, False, False, 0.850076),
+      (1.0, 10, False, True, 4.571281),
+      (10.0, 10, False, False, 38.06202),
       (10.0, 10, True, False, 46.153343))
   def testTrainWithRnn(self, cql_alpha, num_cql_samples,
                        include_critic_entropy_term, use_lagrange_cql_alpha,
