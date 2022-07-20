@@ -41,6 +41,9 @@ from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import test_utils
 
+# TODO(b/237700589): Remove this once the global flag is on.
+tf.keras.backend.experimental.enable_tf_random_generator()
+
 
 class _MockDistribution(object):
 
@@ -401,9 +404,9 @@ class CqlSacAgentTest(test_utils.TestCase, parameterized.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   @parameterized.parameters(
-      (0.0, 10, False, False, 0.850076),
-      (1.0, 10, False, True, 4.571281),
-      (10.0, 10, False, False, 38.06202),
+      (0.0, 10, False, False, 0.850366),
+      (1.0, 10, False, True, 4.571599),
+      (10.0, 10, False, False, 38.06277),
       (10.0, 10, True, False, 46.153343))
   def testTrainWithRnn(self, cql_alpha, num_cql_samples,
                        include_critic_entropy_term, use_lagrange_cql_alpha,
