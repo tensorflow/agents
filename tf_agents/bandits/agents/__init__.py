@@ -17,6 +17,7 @@
 
 from tf_agents.bandits.agents import bernoulli_thompson_sampling_agent
 from tf_agents.bandits.agents import dropout_thompson_sampling_agent
+from tf_agents.bandits.agents import examples
 from tf_agents.bandits.agents import exp3_agent
 from tf_agents.bandits.agents import exp3_mixture_agent
 from tf_agents.bandits.agents import greedy_multi_objective_neural_agent
