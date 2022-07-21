@@ -132,6 +132,7 @@ class RankingAgent(tf_agent.TFAgent):
       summarize_grads_and_vars: bool = False,
       enable_summaries: bool = True,
       train_step_counter: Optional[tf.Variable] = None,
+      penalty_mixture_coefficient: float = 1.,
       name: Optional[Text] = None):
     """Initializes an instance of RankingAgent.
 
@@ -163,6 +164,9 @@ class RankingAgent(tf_agent.TFAgent):
         (debug or otherwise) should not be written.
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
+      penalty_mixture_coefficient: A parameter responsible for the balance
+        between selecting high scoring items and enforcing diverisity. Used Only
+        by diversity-based policies.
       name: The name of this agent instance.
     """
     tf.Module.__init__(self, name=name)
@@ -201,6 +205,7 @@ class RankingAgent(tf_agent.TFAgent):
           self._num_slots,
           time_step_spec,
           scoring_network,
+          penalty_mixture_coefficient=penalty_mixture_coefficient,
           logits_temperature=logits_temperature)
     elif policy_type == RankingPolicyType.NO_PENALTY:
       policy = ranking_policy.NoPenaltyRankingPolicy(
