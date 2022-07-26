@@ -134,6 +134,29 @@ class EncodingNetwork(network.Network):
     ]
     ```
 
+    If you wish to pass multiple inputs to a single preprocessing layer,
+    when setting up a dictionary of preprocessing layers, if you use
+    a tuple as a key with the values of the tuple being the inputs you
+    wish to pass to that preprocessing layer, all specified input tensors in the
+    tuple will be sent to that individual preprocessing layer. For example:
+
+    ```python
+    input_tensor_spec = {
+      'a': TensorSpec(2),
+      'b': TensorSpec(2)
+    }
+    preprocessing_layers = {
+      ('a', 'b'): Layer1
+    }
+    ```
+
+    Then preprocessing will call
+
+    ```python
+    preprocessed = [preprocessing_layers[('a','b')]([observations['a'], 
+                                                     observations['b'])]
+    ```
+
     **NOTE** `preprocessing_layers` and `preprocessing_combiner` are not allowed
     to have already been built.  This ensures calls to `network.copy()` in the
     future always have an unbuilt, fresh set of parameters.  Furtheremore,
@@ -188,19 +211,51 @@ class EncodingNetwork(network.Network):
     """
     if preprocessing_layers is None:
       flat_preprocessing_layers = None
+      preprocessing_nest = None
     else:
-      flat_preprocessing_layers = [
-          _copy_layer(layer) for layer in tf.nest.flatten(preprocessing_layers)
-      ]
+      # tf.nest.flatten doesn't support tuples as dict keys
+      if isinstance(preprocessing_layers, dict):
+        flat_preprocessing_layers = []
+        preprocessing_nest = {}
+        for layer in preprocessing_layers:
+          preprocessing_nest[layer] = len(flat_preprocessing_layers)
+          flat_preprocessing_layers.append(
+            _copy_layer(preprocessing_layers[layer]))
+      else:
+        flat_preprocessing_layers = [
+            _copy_layer(layer) for layer in tf.nest.flatten(preprocessing_layers)
+        ]
+        preprocessing_nest = tf.nest.map_structure(lambda l: None,
+                                                     preprocessing_layers)
       # Assert shallow structure is the same. This verifies preprocessing
       # layers can be applied on expected input nests.
-      input_nest = input_tensor_spec
-      # Given the flatten on preprocessing_layers above we need to make sure
-      # input_tensor_spec is a sequence for the shallow_structure check below
-      # to work.
-      if not nest.is_sequence(input_tensor_spec):
-        input_nest = [input_tensor_spec]
-      nest.assert_shallow_structure(preprocessing_layers, input_nest)
+      if isinstance(preprocessing_layers, dict):
+        layer_inputs = []
+        for layer in preprocessing_layers:
+          if isinstance(layer, tuple):
+            for input_name in layer:
+              layer_inputs.append(input_name)
+          else:
+            layer_inputs.append(layer)
+        if len(layer_inputs) != len(input_tensor_spec):
+          raise ValueError(
+            'the number of inputs to preprocessing layers needs'
+            'to be equal to the number if input tensors'
+          )
+        for input in layer_inputs:
+          if input not in input_tensor_spec:
+            raise ValueError(
+              'a preprocessing layer requires an input tensor'
+              f'{input}, but it is not present'
+            )
+      else:
+        input_nest = input_tensor_spec
+        # Given the flatten on preprocessing_layers above we need to make sure
+        # input_tensor_spec is a sequence for the shallow_structure check below
+        # to work.
+        if not nest.is_sequence(input_tensor_spec):
+          input_nest = [input_tensor_spec]
+        nest.assert_shallow_structure(preprocessing_layers, input_nest)
 
     if (len(tf.nest.flatten(input_tensor_spec)) > 1 and
         preprocessing_combiner is None):
@@ -286,11 +341,9 @@ class EncodingNetwork(network.Network):
     super(EncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec, state_spec=(), name=name)
 
-    # Pull out the nest structure of the preprocessing layers. This avoids
-    # saving the original kwarg layers as a class attribute which Keras would
-    # then track.
-    self._preprocessing_nest = tf.nest.map_structure(lambda l: None,
-                                                     preprocessing_layers)
+    # Set preprocessing_nest directly so that keras doesn't do any
+    # processing to it and error out when tf.nest.flatten is called
+    self.__dict__['_preprocessing_nest'] = preprocessing_nest
     self._flat_preprocessing_layers = flat_preprocessing_layers
     self._preprocessing_combiner = preprocessing_combiner
     self._postprocessing_layers = layers
@@ -310,10 +363,25 @@ class EncodingNetwork(network.Network):
       processed = observation
     else:
       processed = []
-      for obs, layer in zip(
-          nest.flatten_up_to(self._preprocessing_nest, observation),
-          self._flat_preprocessing_layers):
-        processed.append(layer(obs, training=training))
+      if isinstance(self._preprocessing_nest, dict):
+        for layer_name in self._preprocessing_nest:
+          preprocessing_layer = self._flat_preprocessing_layers[
+            self._preprocessing_nest[layer_name]]
+          if isinstance(layer_name, tuple):
+            print("called layer on tuple")
+            needed_inputs = []
+            for input_name in layer_name:
+              needed_inputs.append(observation[input_name])
+            processed.append(preprocessing_layer(needed_inputs,
+                                                 training=training))
+          else:
+            processed.append(preprocessing_layer(observation[layer_name],
+                                                 training=training))
+      else:
+        for obs, layer in zip(
+            nest.flatten_up_to(self._preprocessing_nest, observation),
+            self._flat_preprocessing_layers):
+          processed.append(layer(obs, training=training))
       if len(processed) == 1 and self._preprocessing_combiner is None:
         # If only one observation is passed and the preprocessing_combiner
         # is unspecified, use the preprocessed version of this observation.

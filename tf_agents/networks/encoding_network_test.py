@@ -251,6 +251,58 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     # 6144 is the shape from a concat of flat (32, 32, 3) x2.
     self.assertEqual((7168,), output.shape)
 
+  def test_dict_spec_and_tuple_pre_processing_shape(self):
+    input_spec = {
+        'a': tensor_spec.TensorSpec((2, 5), tf.float32),
+        'b': tensor_spec.TensorSpec((2, 5), tf.float32),
+        'c': tensor_spec.TensorSpec((2, 5), tf.float32)
+    }
+    network = encoding_network.EncodingNetwork(
+        input_spec,
+        preprocessing_layers={
+            ('a', 'b'):
+                tf.keras.layers.Multiply(),
+            'b':
+                tf.keras.layers.Lambda(lambda x: x)
+        },
+        fc_layer_params=(),
+        preprocessing_combiner=tf.keras.layers.Concatenate(axis=-1),
+        activation_fn=tf.keras.activations.tanh
+    )
+
+    sample_input = tensor_spec.sample_spec_nest(input_spec)
+    output, _ = network(sample_input)
+    # output shape should be (20,)
+    self.assertEqual((20,), output.shape)
+
+  def test_dict_spec_and_tuple_pre_processing_output(self):
+    input_spec = {
+        'a': tensor_spec.TensorSpec([2], tf.int32),
+        'b': tensor_spec.TensorSpec([2], tf.int32),
+        'c': tensor_spec.TensorSpec([2], tf.int32)
+    }
+    network = encoding_network.EncodingNetwork(
+        input_spec,
+        preprocessing_layers={
+            ('a', 'b'):
+                tf.keras.layers.Multiply(),
+            'c':
+                tf.keras.layers.Lambda(lambda x: x)
+        },
+        fc_layer_params=(),
+        preprocessing_combiner=tf.keras.layers.Concatenate(axis=-1),
+        activation_fn=tf.keras.activations.linear
+    )
+
+    input = {
+        'a': tf.constant([1,1], dtype=tf.int32),
+        'b': tf.constant([2,2], dtype=tf.int32),
+        'c': tf.constant([3,3], dtype=tf.int32)
+    }
+    output, _ = network(input)
+    expected_output = tf.constant([2,2,3,3], dtype=tf.int32)
+    tf.debugging.assert_equal(output, expected_output)
+
   def test_layers_buildable(self):
     input_spec = {
         'a': tensor_spec.TensorSpec((32, 32, 3), tf.float32),
