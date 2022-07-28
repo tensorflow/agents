@@ -218,9 +218,11 @@ class EncodingNetwork(network.Network):
         flat_preprocessing_layers = []
         preprocessing_nest = {}
         for layer in preprocessing_layers:
-          preprocessing_nest[layer] = len(flat_preprocessing_layers)
           flat_preprocessing_layers.append(
             _copy_layer(preprocessing_layers[layer]))
+          if not isinstance(layer, tuple):
+            layer = (layer,)
+          preprocessing_nest[layer] = len(flat_preprocessing_layers) - 1
       else:
         flat_preprocessing_layers = [
             _copy_layer(layer) for layer in tf.nest.flatten(preprocessing_layers)
@@ -341,9 +343,7 @@ class EncodingNetwork(network.Network):
     super(EncodingNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec, state_spec=(), name=name)
 
-    # Set preprocessing_nest directly so that keras doesn't do any
-    # processing to it and error out when tf.nest.flatten is called
-    self.__dict__['_preprocessing_nest'] = preprocessing_nest
+    self._preprocessing_nest = preprocessing_nest
     self._flat_preprocessing_layers = flat_preprocessing_layers
     self._preprocessing_combiner = preprocessing_combiner
     self._postprocessing_layers = layers
@@ -367,15 +367,14 @@ class EncodingNetwork(network.Network):
         for layer_name in self._preprocessing_nest:
           preprocessing_layer = self._flat_preprocessing_layers[
             self._preprocessing_nest[layer_name]]
-          if isinstance(layer_name, tuple):
-            print("called layer on tuple")
-            needed_inputs = []
-            for input_name in layer_name:
-              needed_inputs.append(observation[input_name])
-            processed.append(preprocessing_layer(needed_inputs,
+          needed_inputs = []
+          for input_name in layer_name:
+            needed_inputs.append(observation[input_name])
+          if len(layer_name) == 1:
+            processed.append(preprocessing_layer(needed_inputs[0],
                                                  training=training))
           else:
-            processed.append(preprocessing_layer(observation[layer_name],
+            processed.append(preprocessing_layer(needed_inputs,
                                                  training=training))
       else:
         for obs, layer in zip(
