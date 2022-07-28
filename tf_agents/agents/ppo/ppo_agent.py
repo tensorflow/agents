@@ -310,6 +310,7 @@ class PPOAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
 
     self._clip_fraction = 0.0
+    self._grad_norm = 0.0
     self._optimizer = optimizer
     self._actor_net = actor_net
     self._value_net = value_net
@@ -881,6 +882,8 @@ class PPOAgent(tf_agent.TFAgent):
         grads = tape.gradient(loss_info.loss, variables_to_train)
         if self._gradient_clipping > 0:
           grads, _ = tf.clip_by_global_norm(grads, self._gradient_clipping)
+
+        self._grad_norm = tf.linalg.global_norm(grads)
 
         # Tuple is used for py3, where zip is a generator producing values once.
         grads_and_vars = tuple(zip(grads, variables_to_train))
