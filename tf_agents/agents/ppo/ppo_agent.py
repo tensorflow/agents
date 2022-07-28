@@ -93,6 +93,7 @@ PPOLossInfo = collections.namedtuple('PPOLossInfo', (
     'l2_regularization_loss',
     'entropy_regularization_loss',
     'kl_penalty_loss',
+    'clip_fraction',
 ))
 
 
@@ -308,6 +309,7 @@ class PPOAgent(tf_agent.TFAgent):
 
     tf.Module.__init__(self, name=name)
 
+    self._clip_fraction = 0.0
     self._optimizer = optimizer
     self._actor_net = actor_net
     self._value_net = value_net
@@ -573,6 +575,7 @@ class PPOAgent(tf_agent.TFAgent):
             l2_regularization_loss=l2_regularization_loss,
             entropy_regularization_loss=entropy_regularization_loss,
             kl_penalty_loss=kl_penalty_loss,
+            clip_fraction=self._clip_fraction,
         ))
 
   def compute_return_and_advantage(
@@ -1270,16 +1273,18 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       policy_gradient_loss = tf.math.reduce_mean(policy_gradient_loss * weights)
 
+    if self._importance_ratio_clipping > 0.0:
+      self._clip_fraction = tf.reduce_mean(
+          input_tensor=tf.cast(
+              tf.greater(
+                  tf.abs(importance_ratio -
+                         1.0), self._importance_ratio_clipping), tf.float32))
+
     if debug_summaries:
       if self._importance_ratio_clipping > 0.0:
-        clip_fraction = tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.greater(
-                    tf.abs(importance_ratio -
-                           1.0), self._importance_ratio_clipping), tf.float32))
         tf.compat.v2.summary.scalar(
             name='clip_fraction',
-            data=clip_fraction,
+            data=self._clip_fraction,
             step=self.train_step_counter)
       tf.compat.v2.summary.scalar(
           name='importance_ratio_mean',

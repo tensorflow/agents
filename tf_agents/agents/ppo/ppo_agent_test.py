@@ -592,7 +592,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     total_loss, extra_loss_info = self.evaluate(loss_info)
     (policy_gradient_loss, value_estimation_loss, l2_regularization_loss,
-     entropy_reg_loss, kl_penalty_loss) = extra_loss_info
+     entropy_reg_loss, kl_penalty_loss, clip_fraction) = extra_loss_info
 
     # Check loss values are as expected. Factor of 2/4 is because four timesteps
     # were included in the data, but two were masked out. Reduce_means in losses
@@ -602,6 +602,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_l2_loss = 1e-4 * 12 * 2 / 4
     expected_ent_loss = -0.370111 * 2 / 4
     expected_kl_penalty_loss = 0.0
+    expected_clip_fraction = 0.0
     self.assertAllClose(
         expected_pg_loss + expected_ve_loss + expected_l2_loss +
         expected_ent_loss + expected_kl_penalty_loss,
@@ -614,6 +615,7 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         expected_l2_loss, l2_regularization_loss, atol=0.001, rtol=0.001)
     self.assertAllClose(expected_ent_loss, entropy_reg_loss)
     self.assertAllClose(expected_kl_penalty_loss, kl_penalty_loss)
+    self.assertAllClose(expected_clip_fraction, clip_fraction)
 
   @parameterized.named_parameters(
       ('DefaultIsZero', _default, 0), ('DefaultNotZero', _default, 1),
