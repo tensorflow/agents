@@ -54,6 +54,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       'item_dim': 5,
       'num_items': 7,
       'num_slots': 5,
+      'feedback_model': ranking_environment.FeedbackModel.CASCADING,
       'click_model': ranking_environment.ClickModel.GHOST_ACTIONS
   }, {
       'batch_size': 8,
@@ -61,10 +62,12 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       'item_dim': 4,
       'num_items': 23,
       'num_slots': 9,
+      'feedback_model': ranking_environment.FeedbackModel.SCORE_VECTOR,
       'click_model': ranking_environment.ClickModel.DISTANCE_BASED
   }])
   def test_ranking_environment(self, batch_size, global_dim, item_dim,
-                               num_items, num_slots, click_model):
+                               num_items, num_slots, feedback_model,
+                               click_model):
 
     def _global_sampling_fn():
       return np.random.randint(-10, 10, [global_dim])
@@ -82,6 +85,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
         num_items=num_items,
         num_slots=num_slots,
         scores_weight_matrix=scores_weight_matrix,
+        feedback_model=feedback_model,
         click_model=click_model,
         distance_threshold=10.0,
         batch_size=batch_size)
@@ -104,9 +108,49 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       self.assertAllGreaterEqual(action, 0)
       time_step = env.step(action)
       reward = time_step.reward
-      self.assertAllEqual(reward['chosen_index'].shape, [batch_size])
-      self.assertAllGreaterEqual(reward['chosen_index'], 0)
-      self.assertAllEqual(reward['chosen_value'].shape, [batch_size])
+      if feedback_model == ranking_environment.FeedbackModel.CASCADING:
+        self.assertAllEqual(reward['chosen_index'].shape, [batch_size])
+        self.assertAllGreaterEqual(reward['chosen_index'], 0)
+        self.assertAllEqual(reward['chosen_value'].shape, [batch_size])
+      else:
+        self.assertAllEqual(reward.shape, [batch_size, num_slots])
+
+  def test_cascading_to_scorevector(self):
+    batch_size = 5
+    global_dim = 12
+    item_dim = 4
+    num_items = 23
+    num_slots = 9
+    def _global_sampling_fn():
+      return np.random.randint(-10, 10, [global_dim])
+
+    def _item_sampling_fn():
+      return np.random.randint(-2, 3, [item_dim])
+    scores_weight_matrix = (np.reshape(
+        np.arange(global_dim * item_dim, dtype=np.float),
+        newshape=[item_dim, global_dim]) - 10) / 5
+    env = ranking_environment.RankingPyEnvironment(
+        _global_sampling_fn,
+        _item_sampling_fn,
+        num_items=num_items,
+        num_slots=num_slots,
+        scores_weight_matrix=scores_weight_matrix,
+        feedback_model=ranking_environment.FeedbackModel.SCORE_VECTOR,
+        click_model=ranking_environment.ClickModel.DISTANCE_BASED,
+        distance_threshold=10.0,
+        batch_size=batch_size)
+
+    chosen_items = np.array([0, 2, 9, 1, 2])
+    chosen_values = np.array([6, 8, 4, 2, 3])
+    score_vector = env._cascading_to_scorevector(chosen_items, chosen_values)
+    self.assertAllEqual(score_vector.shape, [batch_size, num_slots])
+
+    # The third row is all zeros because `chosen_item == 9` means no click.
+    self.assertAllEqual(score_vector, [[6, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 8, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 2, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 3, 0, 0, 0, 0, 0, 0]])
 
 
 if __name__ == '__main__':

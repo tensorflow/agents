@@ -57,6 +57,9 @@ class FeedbackModel(object):
   UNKNOWN = 0
   # Cascading feedback model: A tuple of the chosen index and its value.
   CASCADING = 1
+  # Score Vector feedback model: Every element in the output ranking receives a
+  # score value.
+  SCORE_VECTOR = 2
 
 
 class ClickModel(object):
@@ -168,6 +171,9 @@ class RankingPyEnvironment(
               array_spec.ArraySpec(
                   shape=[], dtype=np.float32, name='chosen_value')
       }
+    elif feedback_model == FeedbackModel.SCORE_VECTOR:
+      reward_spec = array_spec.ArraySpec(
+          shape=[num_slots], dtype=np.float32, name='score_vector')
     else:
       raise NotImplementedError(
           'Feedback model {} not implemented'.format(feedback_model))
@@ -209,11 +215,18 @@ class RankingPyEnvironment(
           self._click_model))
 
     if self._feedback_model == FeedbackModel.CASCADING:
-      chosen_items = np.array(
-          chosen_items, dtype=self._reward_spec['chosen_index'].dtype)
-      chosen_values = (chosen_items < self._num_slots).astype(
-          self._reward_spec['chosen_value'].dtype)
+      chosen_items = np.array(chosen_items, dtype=np.float32)
+      chosen_values = (chosen_items < self._num_slots).astype(np.float32)
       return {'chosen_index': chosen_items, 'chosen_value': chosen_values}
+    elif self._feedback_model == FeedbackModel.SCORE_VECTOR:
+      chosen_values = (chosen_items < self._num_slots).astype(np.float32)
+      return self._cascading_to_scorevector(chosen_items, chosen_values)
+
+  def _cascading_to_scorevector(self, chosen_items, chosen_values):
+    scores = np.zeros((self.batch_size, self._num_slots + 1), dtype=np.float32)
+    r = np.arange(self.batch_size)
+    scores[r, chosen_items] = chosen_values
+    return scores[:, :-1]  # The last column is for samples with no click.
 
   def _step(self, action):
     """We need to override this function because the reward dtype can be int."""
