@@ -154,7 +154,10 @@ def train(root_dir,
       tf_metrics.AverageEpisodeLengthMetric(batch_size=environment.batch_size)
   ] + list(additional_metrics)
 
-  if isinstance(environment.reward_spec(), dict):
+  # If the reward anything else than a single scalar, we're adding multimetric
+  # average reward.
+  if isinstance(environment.reward_spec(),
+                dict) or environment.reward_spec().shape != tf.TensorShape(()):
     metrics += [tf_metrics.AverageReturnMultiMetric(
         reward_spec=environment.reward_spec(),
         batch_size=environment.batch_size)]
