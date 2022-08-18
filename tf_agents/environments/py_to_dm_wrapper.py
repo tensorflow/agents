@@ -42,7 +42,7 @@ def _convert_timestep(timestep: ts.TimeStep) -> dm_env.TimeStep:
   )
 
 
-def _convert_spec(spec: tfa_spec.ArraySpec) -> dm_spec.ArraySpec:
+def _convert_spec(spec: tfa_spec.ArraySpec) -> dm_spec.Array:
   if isinstance(spec, tfa_spec.BoundedArraySpec):
     return dm_spec.BoundedArray(
         shape=spec.shape,
@@ -58,9 +58,9 @@ class PyToDMWrapper(dm_env.Environment):
   """Environment wrapper to convert TF environments in DM environments."""
 
   def __init__(self, env: py_environment.PyEnvironment):
-    super(PyToDMWrapper, self).__init__(env)
+    super(PyToDMWrapper, self).__init__()
     self._environment = env
-    if env.batched():
+    if env.batched:
       raise NotImplementedError(
           'Batched environments cannot be converted to dm environments.')
     self._observation_spec = tree.map_structure(_convert_spec,
@@ -86,7 +86,7 @@ class PyToDMWrapper(dm_env.Environment):
   def action_spec(self):
     return self._action_spec
 
-  def discount_spec(self) -> dm_spec.Array:
+  def discount_spec(self) -> dm_spec.BoundedArray:
     return self._discount_spec
 
   @property
