@@ -164,7 +164,7 @@ class RankingPolicy(tf_policy.TFPolicy):
       penalty_mixture_coefficient: A parameter responsible for the balance
         between selecting high scoring items and enforcing diverisity.
       logits_temperature: The "temperature" parameter for sampling. All the
-        logits will be divided by this float value.
+        logits will be divided by this float value. This value must be positive.
       name: The name of this policy instance.
     """
     action_spec = tensor_spec.BoundedTensorSpec(
@@ -181,6 +181,9 @@ class RankingPolicy(tf_policy.TFPolicy):
     self._num_items = num_items
     self._item_sampler = item_sampler
     self._penalty_mixture_coefficient = penalty_mixture_coefficient
+    if logits_temperature <= 0:
+      raise ValueError(
+          f'logits_temperature must be positive; was {logits_temperature}')
     self._logits_temperature = logits_temperature
     if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in time_step_spec.observation:
       self._use_num_actions = True

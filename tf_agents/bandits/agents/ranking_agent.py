@@ -157,7 +157,8 @@ class RankingAgent(tf_agent.TFAgent):
       non_click_score: (float) For the cascading feedback model, this is the
         score value for items lying "before" the clicked item. If not set, -1 is
         used. It is recommended (but not enforced) to use a negative value.
-      logits_temperature: temeprature parameter for non-deterministic policies.
+      logits_temperature: temperature parameter for non-deterministic policies.
+        This value must be positive.
       summarize_grads_and_vars: A Python bool, default False. When True,
         gradients and network variable summaries are written during training.
       enable_summaries: A Python bool, default True. When False, all summaries
