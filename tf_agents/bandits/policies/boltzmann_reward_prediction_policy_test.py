@@ -420,7 +420,7 @@ class BoltzmannRewardPredictionPolicyTest(test_utils.TestCase):
         action_spec,
         reward_network=reward_network,
         accepts_per_arm_features=True,
-        emit_policy_info=('predicted_rewards_mean'))
+        emit_policy_info=('predicted_rewards_mean',))
     observations = {
         'global': {
             'sport': tf.constant(['snooker', 'chess'])
