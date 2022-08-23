@@ -457,19 +457,23 @@ class RewardPredictionPoliciesTest(test_utils.TestCase, parameterized.TestCase):
   @test_cases()
   def testPolicyWithConstraints(self, policy_class):
     constraint_net = DummyNet(self._obs_spec)
-    neural_constraint = constraints.NeuralConstraint(
+    # Create an `AbsoluteConstraint` where feasible actions must have predicted
+    # rewards at most 0.0.
+    absolute_constraint = constraints.AbsoluteConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+        comparator_fn=tf.less_equal,
+        absolute_value=0.0)
 
     tf.compat.v1.set_random_seed(1)
     policy = policy_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=DummyNet(self._obs_spec),
-        constraints=[neural_constraint],
+        constraints=[absolute_constraint],
         emit_policy_info=('predicted_rewards_mean',))
-    observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+    observations = tf.constant([[1, 2], [2, 1]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
     self.assertEqual(action_step.action.shape.as_list(), [2])
@@ -479,10 +483,13 @@ class RewardPredictionPoliciesTest(test_utils.TestCase, parameterized.TestCase):
     # The expected values are obtained by passing the observation through the
     # Keras dense layer of the DummyNet (defined above).
     predicted_rewards_expected_array = np.array([[4.0, 5.5, 0.0],
-                                                 [8.0, 11.5, 12.0]])
+                                                 [4.0, 5.5, -2.0]])
     p_info = self.evaluate(action_step.info)
     self.assertAllClose(p_info.predicted_rewards_mean,
                         predicted_rewards_expected_array)
+    # Under the `absolute_constraint`, only actions with predicted rewards
+    # at most 0.0 are feasible.
+    self.assertAllEqual(self.evaluate(action_step.action), [2, 2])
 
 
 if __name__ == '__main__':
