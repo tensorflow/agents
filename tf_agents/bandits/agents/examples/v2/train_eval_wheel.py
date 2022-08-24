@@ -47,15 +47,15 @@ flags.DEFINE_enum(
 
 FLAGS = flags.FLAGS
 
-BATCH_SIZE = 8
+BATCH_SIZE = 32
 TRAINING_LOOPS = 20000
 STEPS_PER_LOOP = 2
 
-DELTA = 0.5
-MU_BASE = [0.05, 0.01, 0.011, 0.009, 0.012]
-STD_BASE = [0.001] * 5
-MU_HIGH = 0.5
-STD_HIGH = 0.001
+DELTA = 0.8
+MU_BASE = [1.2, 1.0, 1.0, 1.0, 1.0]
+STD_BASE = [0.01] * 5
+MU_HIGH = 50.
+STD_HIGH = 0.01
 
 
 # LinUCB agent constants.
@@ -71,6 +71,10 @@ LR = 0.001
 
 def main(unused_argv):
   tf.compat.v1.enable_v2_behavior()  # The trainer only runs with V2 enabled.
+  if MU_BASE[0] > MU_HIGH:
+    raise ValueError('The reward for action1 (MU_BASE[0]) should always be '
+                     'less than the reward for the optimal outer action '
+                     '(MU_HIGH).')
 
   with tf.device('/CPU:0'):  # due to b/128333994
     env = wheel_py_environment.WheelPyEnvironment(DELTA, MU_BASE, STD_BASE,
