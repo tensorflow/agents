@@ -221,6 +221,7 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
             for weights in self._kernel_weights]
 
   def testCreateAgent(self):
+
     agent = greedy_multi_objective_agent.GreedyMultiObjectiveNeuralAgent(
         self._time_step_spec,
         self._action_spec,
@@ -310,6 +311,44 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
     loss, _ = agent._loss(experience)
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.assertAllClose(self.evaluate(loss), 0.0)
+
+  def testLossLaplacianSmoothing(self):
+    laplacian_matrix = np.array(
+        [[1.0, -1.0, 0.0], [-1.0, 2.0, -1.0], [0.0, -1.0, 1.0]],
+        dtype=np.float32)
+    agent = greedy_multi_objective_agent.GreedyMultiObjectiveNeuralAgent(
+        self._time_step_spec,
+        self._action_spec,
+        self._scalarizer,
+        objective_network_and_loss_fn_sequence=self
+        ._create_objective_network_and_loss_fn_sequence(),
+        optimizer=None,
+        laplacian_matrix=laplacian_matrix,
+        laplacian_smoothing_weights=[1.0, 0.0, 0.0])
+    observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
+    actions = np.array([0, 1], dtype=np.int32)
+    objectives = np.array([[8, 12, 11], [25, 18, 32]], dtype=np.float32)
+    initial_step, final_step = _get_initial_and_final_steps(
+        observations, objectives)
+    action_step = _get_action_step(actions)
+    experience = _get_experience(initial_step, action_step, final_step)
+
+    init_op = agent.initialize()
+    if not tf.executing_eagerly():
+      with self.cached_session() as sess:
+        common.initialize_uninitialized_variables(sess)
+        self.assertIsNone(sess.run(init_op))
+    loss, _ = agent._loss(experience)
+    self.evaluate(tf.compat.v1.initialize_all_variables())
+    predicted_values = np.array([[8, 11, 14], [18, 25, 32]], dtype=np.float32)
+    laplacian_loss = np.mean(
+        np.diag(
+            np.matmul(
+                predicted_values,
+                np.matmul(laplacian_matrix, np.transpose(predicted_values)))))
+    # The canonical loss is 0.0 (see the test above). Hence any residual loss
+    # is due to the Laplacian regularization term.
+    self.assertAllClose(self.evaluate(loss), laplacian_loss)
 
   def testObjectiveDependentLosses(self):
     networks_and_loss_fns = self._create_objective_network_and_loss_fn_sequence(
@@ -553,7 +592,6 @@ class MultiObjectiveAgentTest(tf.test.TestCase):
     experience = _get_experience(initial_step, action_step, final_step)
     agent.train(experience, None)
     self.evaluate(tf.compat.v1.initialize_all_variables())
-
 
 if __name__ == '__main__':
   tf.test.main()
