@@ -98,4 +98,4 @@ def create_episode_dataset(
     dtype = observation_dtype if key == 'states' else np.float32
     dataset[key] = np.asarray(value, dtype)
 
-  return dataset
+  return dataset  # pytype: disable=bad-return-type  # dict-kwargs
