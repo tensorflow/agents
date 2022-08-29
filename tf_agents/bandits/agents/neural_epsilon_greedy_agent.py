@@ -98,7 +98,8 @@ class NeuralEpsilonGreedyAgent(
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
       constraints: iterable of constraints objects that are instances of
-        `tf_agents.bandits.agents.NeuralConstraint`.
+        `tf_agents.bandits.agents.NeuralConstraint`. WARNING: only the greedy
+        actions respect the constraints. Uniform random actions may not.
       error_loss_fn: A function for computing the error loss, taking parameters
         labels, predictions, and weights (any function from tf.losses would
         work). The default is `tf.losses.mean_squared_error`.
