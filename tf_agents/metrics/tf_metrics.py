@@ -177,8 +177,11 @@ class AverageReturnMetric(tf_metric.TFStepMetric):
         tf.where(trajectory.is_first(), tf.zeros_like(self._return_accumulator),
                  self._return_accumulator))
 
-    # Update accumulator with received rewards.
-    self._return_accumulator.assign_add(trajectory.reward)
+    # Update accumulator with received rewards. We are summing over all
+    # non-batch dimensions in case the reward is a vector.
+    self._return_accumulator.assign_add(
+        tf.reduce_sum(
+            trajectory.reward, axis=range(1, len(trajectory.reward.shape))))
 
     # Add final returns to buffer.
     last_episode_indices = tf.squeeze(tf.where(trajectory.is_last()), axis=-1)

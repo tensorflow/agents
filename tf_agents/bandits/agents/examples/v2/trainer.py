@@ -161,7 +161,7 @@ def train(root_dir,
     metrics += [tf_metrics.AverageReturnMultiMetric(
         reward_spec=environment.reward_spec(),
         batch_size=environment.batch_size)]
-  else:
+  if not isinstance(environment.reward_spec(), dict):
     metrics += [
         tf_metrics.AverageReturnMetric(batch_size=environment.batch_size)]
 

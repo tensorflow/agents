@@ -329,6 +329,37 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
       self.assertEmpty(self.evaluate(metric.result()))
 
   @parameterized.named_parameters([
+      ('testAverageReturnMetricVectorGraph', context.graph_mode, 6,
+       tensor_spec.TensorSpec((2,), tf.float32, 'r'), 18.0),
+      ('testAverageReturnMetricVectorEager', context.eager_mode, 6,
+       tensor_spec.TensorSpec((5,), tf.float32, 'r'), 45.0),])
+  def testAverageReturnMetricVector(self, run_mode, num_trajectories,
+                                    reward_spec, expected_result):
+    with run_mode():
+      trajectories = self._create_trajectories()
+      multi_trajectories = []
+      for traj in trajectories:
+        new_reward = tf.stack([traj.reward] * reward_spec.shape.as_list()[0],
+                              axis=1)
+        new_traj = trajectory.Trajectory(
+            step_type=traj.step_type,
+            observation=traj.observation,
+            action=traj.action,
+            policy_info=traj.policy_info,
+            next_step_type=traj.next_step_type,
+            reward=new_reward,
+            discount=traj.discount)
+        multi_trajectories.append(new_traj)
+
+      metric = tf_metrics.AverageReturnMetric(batch_size=2)
+      self.evaluate(tf.compat.v1.global_variables_initializer())
+      self.evaluate(metric.init_variables())
+      for i in range(num_trajectories):
+        self.evaluate(metric(multi_trajectories[i]))
+
+      self.assertAllClose(expected_result, self.evaluate(metric.result()))
+
+  @parameterized.named_parameters([
       ('testAverageReturnMultiMetricGraph', context.graph_mode, 6,
        tensor_spec.TensorSpec((2,), tf.float32, 'r'), [9.0, 9.0]),
       ('testAverageReturnMultiMetricEager', context.eager_mode, 6,
