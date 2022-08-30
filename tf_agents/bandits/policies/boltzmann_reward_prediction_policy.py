@@ -30,6 +30,10 @@ from tf_agents.distributions import shifted_categorical
 from tf_agents.policies import utils as policy_utilities
 from tf_agents.typing import types
 
+# The temperature parameter is internally lower-bounded at this value to avoid
+# numerical issues.
+_MIN_TEMPERATURE = 1e-12
+
 
 class BoltzmannRewardPredictionPolicy(
     reward_prediction_base_policy.RewardPredictionBasePolicy):
@@ -45,7 +49,7 @@ class BoltzmannRewardPredictionPolicy(
       observation_and_action_constraint_splitter: Optional[
           types.Splitter] = None,
       accepts_per_arm_features: bool = False,
-      constraints: Iterable[constr.NeuralConstraint] = (),
+      constraints: Iterable[constr.BaseConstraint] = (),
       emit_policy_info: Tuple[Text, ...] = (),
       num_samples_list: Sequence[tf.Variable] = (),
       name: Optional[Text] = None):
@@ -77,7 +81,7 @@ class BoltzmannRewardPredictionPolicy(
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
       constraints: iterable of constraints objects that are instances of
-        `tf_agents.bandits.agents.NeuralConstraint`.
+        `tf_agents.bandits.agents.BaseConstraint`.
       emit_policy_info: (tuple of strings) what side information we want to get
         as part of the policy info. Allowed values can be found in
         `policy_utilities.PolicyInfo`.
@@ -119,11 +123,12 @@ class BoltzmannRewardPredictionPolicy(
             self._expected_num_actions)
 
   def _get_temperature_value(self):
-    if callable(self._temperature):
-      return self._temperature()
-    return self._temperature
+    return tf.math.maximum(
+        _MIN_TEMPERATURE,
+        self._temperature()
+        if callable(self._temperature) else self._temperature)
 
-  def _sample_action(self, mask, predicted_rewards):
+  def _action_distribution(self, mask, predicted_rewards):
     batch_size = tf.shape(predicted_rewards)[0]
     if self._boltzmann_gumbel_exploration_constant is not None:
       logits = predicted_rewards
@@ -146,9 +151,11 @@ class BoltzmannRewardPredictionPolicy(
       final_logits = logits + exploration_weights * gumbel_samples
       actions = tf.cast(
           tf.math.argmax(final_logits, axis=1), self._action_spec.dtype)
-      # Log probability is not available in closed form. We treat this as a
-      # deterministic policy at the moment.
-      log_probability = tf.zeros([batch_size], tf.float32)
+      # To conform with the return type, we construct a deterministic
+      # distribution here. Note that this results in the log_probability of
+      # the chosen arm being 0. The true sampling probability here has no simple
+      # closed-form.
+      distribution = tfp.distributions.Deterministic(loc=actions)
     else:
       # Apply the temperature scaling, needed for Boltzmann exploration.
       logits = predicted_rewards / self._get_temperature_value()
@@ -170,9 +177,6 @@ class BoltzmannRewardPredictionPolicy(
             logits=logits,
             dtype=self._action_spec.dtype)
 
-      actions = distribution.sample()
-      log_probability = distribution.log_prob(actions)
-
     bandit_policy_values = tf.fill([batch_size, 1],
                                    policy_utilities.BanditPolicyType.BOLTZMANN)
-    return actions, log_probability, bandit_policy_values
+    return distribution, bandit_policy_values

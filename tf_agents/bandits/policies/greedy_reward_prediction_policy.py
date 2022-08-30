@@ -15,11 +15,8 @@
 
 """Policy for greedy reward prediction."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow_probability as tfp
 
 from tf_agents.bandits.policies import reward_prediction_base_policy
 from tf_agents.policies import utils as policy_utilities
@@ -29,7 +26,7 @@ class GreedyRewardPredictionPolicy(
     reward_prediction_base_policy.RewardPredictionBasePolicy):
   """Class to build GreedyNNPredictionPolicies."""
 
-  def _sample_action(self, mask, predicted_rewards):
+  def _action_distribution(self, mask, predicted_rewards):
     """Returns the action with largest predicted reward."""
     # Argmax.
     batch_size = tf.shape(predicted_rewards)[0]
@@ -44,6 +41,16 @@ class GreedyRewardPredictionPolicy(
 
     bandit_policy_values = tf.fill([batch_size, 1],
                                    policy_utilities.BanditPolicyType.GREEDY)
-    # This deterministic policy chooses the greedy action with probability 1.
-    log_probability = tf.zeros([batch_size], tf.float32)
-    return actions, log_probability, bandit_policy_values
+    return tfp.distributions.Deterministic(loc=actions), bandit_policy_values
+
+  def _distribution(self, time_step, policy_state):
+    step = super(GreedyRewardPredictionPolicy,
+                 self)._distribution(time_step, policy_state)
+    # Greedy is deterministic, so we know the chosen arm features here. We
+    # save it here so the chosen arm features get correctly returned by
+    # `tf_agents.policies.epsilon_greey_policy.EpsilonGreedyPolicy` wrapping a
+    # `GreedyRewardPredictionPolicy` because `EpsilonGreedyPolicy` only accesses
+    # the `distribution` method of the wrapped policy via
+    # `tf_agents.policies.greedy_policy.GreedyPolicy`.
+    action = step.action.sample()
+    return self._maybe_save_chosen_arm_features(time_step, action, step)

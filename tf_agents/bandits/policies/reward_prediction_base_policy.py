@@ -15,10 +15,6 @@
 
 """Base policy that samples actions based on predicted rewards."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import abc
 from typing import Iterable, Optional, Text, Tuple
 
@@ -33,6 +29,7 @@ from tf_agents.policies import tf_policy
 from tf_agents.policies import utils as policy_utilities
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 
 
@@ -48,7 +45,7 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
                observation_and_action_constraint_splitter: Optional[
                    types.Splitter] = None,
                accepts_per_arm_features: bool = False,
-               constraints: Iterable[constr.NeuralConstraint] = (),
+               constraints: Iterable[constr.BaseConstraint] = (),
                emit_policy_info: Tuple[Text, ...] = (),
                name: Optional[Text] = None):
     """Base class for building policies using a reward tf_agents.Network.
@@ -74,7 +71,7 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
       accepts_per_arm_features: (bool) Whether the policy accepts per-arm
         features.
       constraints: Iterable of constraints objects that are instances of
-        `tf_agents.bandits.agents.NeuralConstraint`.
+        `tf_agents.bandits.agents.BaseConstraint`.
       emit_policy_info: (tuple of strings) what side information we want to get
         as part of the policy info. Allowed values can be found in
         `policy_utilities.PolicyInfo`.
@@ -107,14 +104,18 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
     self._constraints = constraints
 
     self._emit_policy_info = emit_policy_info
-    predicted_rewards_mean = ()
     if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN in emit_policy_info:
       predicted_rewards_mean = tensor_spec.TensorSpec(
           [self._expected_num_actions])
-    bandit_policy_type = ()
+    else:
+      predicted_rewards_mean = ()
+
     if policy_utilities.InfoFields.BANDIT_POLICY_TYPE in emit_policy_info:
       bandit_policy_type = (
           policy_utilities.create_bandit_policy_type_tensor_spec(shape=[1]))
+    else:
+      bandit_policy_type = ()
+
     if accepts_per_arm_features:
       # The features for the chosen arm is saved to policy_info.
       chosen_arm_features_info = (
@@ -137,7 +138,8 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
         policy_state_spec=reward_network.state_spec,
         clip=False,
         info_spec=info_spec,
-        emit_log_probability='log_probability' in emit_policy_info,
+        emit_log_probability=policy_utilities.InfoFields.LOG_PROBABILITY
+        in emit_policy_info,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter),
         name=name)
@@ -153,10 +155,12 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
     return policy_variables
 
   @abc.abstractmethod
-  def _sample_action(
+  def _action_distribution(
       self, mask: Optional[types.Tensor], predicted_rewards: types.Tensor
-  ) -> Tuple[types.Tensor, types.Tensor, types.Tensor]:
-    """Sample actions based on predicted rewards.
+  ) -> Tuple[tfp.distributions.Distribution, types.Tensor]:
+    """Returns an action distribution based on predicted rewards.
+
+    Sub-classes are expected to implement this method.
 
     Args:
       mask: A 2-D tensor of binary masks shaped as [batch_size, num_of_arms].
@@ -164,10 +168,61 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
         [batch_size, num_of_arms].
 
     Returns:
-      A tuple of three tensors: sampled actions, log of sampling probabilities
-      of sampled actions, and policy types, all shaped as [batch_size].
+      A tuple of a `tfp.distributions.Distribution` and a tensor of policy types
+      shaped as [batch_size].
     """
     pass
+
+  def _maybe_save_chosen_arm_features(
+      self, time_step: ts.TimeStep, action: types.Tensor,
+      step: policy_step.PolicyStep) -> policy_step.PolicyStep:
+    """Extracts and saves the chosen arm features in the policy info.
+
+    If the policy accepts arm features, this method extracts the arm features
+    from `time_step.observation` corresponding to the input `action` tensor,
+    saves it in the policy info of the input `step` and returns the modified
+    step. Otherwise, the method returns the input `step`.
+
+    Args:
+      time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
+      action: A `types.Tensor` of chosen actions.
+      step: A `PolicyStep`.
+
+    Returns:
+      A `PolicyStep` resulting from saving the chosen arm features in the policy
+      info of the input `step` if the policy accepts arm features, or the input
+      `step` otherwise.
+    """
+    if self.accepts_per_arm_features:
+      # Saving the features for the chosen action to the policy_info.
+      chosen_arm_features = tf.nest.map_structure(
+          lambda obs: tf.gather(params=obs, indices=action, batch_dims=1),
+          time_step.observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
+      step = step._replace(
+          info=step.info._replace(chosen_arm_features=chosen_arm_features))
+    return step
+
+  def _action(self,
+              time_step: ts.TimeStep,
+              policy_state: types.NestedTensor,
+              seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
+    """Implementation of `action`.
+
+    Args:
+      time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
+      policy_state: A Tensor, or a nested dict, list or tuple of Tensors
+        representing the previous policy_state.
+      seed: Seed to use if action performs sampling (optional).
+
+    Returns:
+      A `PolicyStep` named tuple containing:
+        `action`: An action Tensor matching the `action_spec`.
+        `state`: A policy state tensor to be fed into the next call to action.
+        `info`: Optional side information such as action log probabilities.
+    """
+    step = super(RewardPredictionBasePolicy,
+                 self)._action(time_step, policy_state, seed)
+    return self._maybe_save_chosen_arm_features(time_step, step.action, step)
 
   def _distribution(self, time_step, policy_state):
     observation = time_step.observation
@@ -197,21 +252,14 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
     mask = constr.construct_mask_from_multiple_sources(
         time_step.observation, self._observation_and_action_constraint_splitter,
         self._constraints, self._expected_num_actions)
-    actions, log_probability, bandit_policy_values = self._sample_action(
+    action_distribution, bandit_policy_values = self._action_distribution(
         mask, predicted_reward_values)
 
     if self._accepts_per_arm_features:
-      # Saving the features for the chosen action to the policy_info.
-      def gather_observation(obs):
-        return tf.gather(params=obs, indices=actions, batch_dims=1)
-
-      chosen_arm_features = tf.nest.map_structure(
-          gather_observation,
-          observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
+      # The actual action sampling hasn't happened yet, so we leave
+      # `log_probability` and `chosen_arm_features` empty.
       policy_info = policy_utilities.PerArmPolicyInfo(
-          log_probability=log_probability
-          if policy_utilities.InfoFields.LOG_PROBABILITY
-          in self._emit_policy_info else (),
+          log_probability=(),
           predicted_rewards_mean=(
               predicted_reward_values
               if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN
@@ -219,12 +267,12 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
           bandit_policy_type=(bandit_policy_values
                               if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
                               in self._emit_policy_info else ()),
-          chosen_arm_features=chosen_arm_features)
+          chosen_arm_features=())
     else:
+      # The actual action sampling hasn't happened yet, so we leave
+      # `log_probability` empty.
       policy_info = policy_utilities.PolicyInfo(
-          log_probability=log_probability
-          if policy_utilities.InfoFields.LOG_PROBABILITY
-          in self._emit_policy_info else (),
+          log_probability=(),
           predicted_rewards_mean=(
               predicted_reward_values
               if policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN
@@ -233,5 +281,5 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
                               if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
                               in self._emit_policy_info else ()))
 
-    return policy_step.PolicyStep(
-        tfp.distributions.Deterministic(loc=actions), policy_state, policy_info)
+    return policy_step.PolicyStep(action_distribution, policy_state,
+                                  policy_info)
