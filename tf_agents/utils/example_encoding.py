@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
+from collections import abc
 import io
 import gin
 
@@ -171,7 +171,7 @@ def get_example_decoder(example_spec,
 
 def _validate_shape(shape):
   """Check that shape is a valid array shape."""
-  if not isinstance(shape, collections.Iterable):
+  if not isinstance(shape, abc.Iterable):
     raise TypeError('shape must be a tuple or other iterable object, not %s' %
                     type(shape).__name__)
 
