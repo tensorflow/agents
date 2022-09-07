@@ -32,6 +32,7 @@ from tf_agents.bandits.networks import global_and_arm_feature_network
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import boltzmann_reward_prediction_policy
 from tf_agents.bandits.policies import constraints
+from tf_agents.bandits.policies import falcon_reward_prediction_policy
 from tf_agents.bandits.policies import greedy_reward_prediction_policy
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.networks import network
@@ -111,6 +112,11 @@ def test_cases():
               'Boltzmann',
           'policy_class':
               boltzmann_reward_prediction_policy.BoltzmannRewardPredictionPolicy
+      }, {
+          'testcase_name':
+              'Falcon',
+          'policy_class':
+              falcon_reward_prediction_policy.FalconRewardPredictionPolicy
       })
 
 

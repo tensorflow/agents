@@ -170,14 +170,18 @@ class BanditPolicyType(object):
   UNIFORM = 2
   # Decision made by Boltzmann exploration.
   BOLTZMANN = 3
+  # Decision made by FALCON.
+  FALCON = 4
 
 
 def create_bandit_policy_type_tensor_spec(
     shape: types.Shape) -> types.BoundedTensorSpec:
   """Create tensor spec for bandit policy type."""
   return tensor_spec.BoundedTensorSpec(
-      shape=shape, dtype=tf.int32,
-      minimum=BanditPolicyType.UNKNOWN, maximum=BanditPolicyType.UNIFORM)
+      shape=shape,
+      dtype=tf.int32,
+      minimum=BanditPolicyType.UNKNOWN,
+      maximum=BanditPolicyType.FALCON)
 
 
 @common.function
