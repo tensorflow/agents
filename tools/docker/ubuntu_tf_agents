@@ -81,6 +81,8 @@ RUN $python_version -m pip install wheel \
       absl-py \
       mock \
 # Only used for nightly testing.
+# Needs pinned to avoid going over probuf 3.19.x until TF does.
+      google-api-core==2.8.2 \
       google-cloud-bigquery \
       psutil
 
