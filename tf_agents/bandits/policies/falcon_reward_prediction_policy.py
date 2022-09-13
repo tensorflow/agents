@@ -65,7 +65,7 @@ class FalconRewardPredictionPolicy(
                observation_and_action_constraint_splitter: Optional[
                    types.Splitter] = None,
                accepts_per_arm_features: bool = False,
-               constraints: Iterable[constr.NeuralConstraint] = (),
+               constraints: Iterable[constr.BaseConstraint] = (),
                emit_policy_info: Tuple[Text, ...] = (),
                num_samples_list: Sequence[tf.Variable] = (),
                name: Optional[Text] = None):
