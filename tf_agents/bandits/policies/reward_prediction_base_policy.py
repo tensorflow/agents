@@ -257,7 +257,12 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
 
     if self._accepts_per_arm_features:
       # The actual action sampling hasn't happened yet, so we leave
-      # `log_probability` and `chosen_arm_features` empty.
+      # `log_probability` empty and set `chosen_arm_features` to dummy values of
+      # all zeros. We need to save dummy chosen arm features to make the
+      # returned policy step have the same structure as the policy state spec.
+      dummy_chosen_arm_features = tf.nest.map_structure(
+          lambda obs: tf.zeros_like(obs[:, 0, ...]),
+          time_step.observation[bandit_spec_utils.PER_ARM_FEATURE_KEY])
       policy_info = policy_utilities.PerArmPolicyInfo(
           log_probability=(),
           predicted_rewards_mean=(
@@ -267,7 +272,7 @@ class RewardPredictionBasePolicy(tf_policy.TFPolicy):
           bandit_policy_type=(bandit_policy_values
                               if policy_utilities.InfoFields.BANDIT_POLICY_TYPE
                               in self._emit_policy_info else ()),
-          chosen_arm_features=())
+          chosen_arm_features=dummy_chosen_arm_features)
     else:
       # The actual action sampling hasn't happened yet, so we leave
       # `log_probability` empty.

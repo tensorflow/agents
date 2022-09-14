@@ -342,6 +342,37 @@ class RewardPredictionPoliciesTest(test_utils.TestCase, parameterized.TestCase):
                         padded_p_info.predicted_rewards_mean[:, 0])
 
   @test_cases()
+  def testPerArmPolicyDistribution(self, policy_class):
+    tf.compat.v1.set_random_seed(3000)
+    obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
+    time_step_spec = ts.time_step_spec(obs_spec)
+    action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 3)
+    reward_network = (
+        global_and_arm_feature_network.create_feed_forward_common_tower_network(
+            obs_spec, (4, 3), (3, 4), (4, 2)))
+
+    policy = policy_class(
+        time_step_spec,
+        action_spec,
+        reward_network=reward_network,
+        accepts_per_arm_features=True)
+    action_feature = tf.cast(
+        tf.reshape(tf.random.shuffle(tf.range(24)), shape=[2, 4, 3]),
+        dtype=tf.float32)
+    observations = {
+        bandit_spec_utils.GLOBAL_FEATURE_KEY:
+            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY:
+            action_feature
+    }
+    time_step = ts.restart(observations, batch_size=2)
+    distribution_step = policy.distribution(time_step)
+    # Initialize all variables
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    info = self.evaluate(distribution_step.info)
+    self.assertAllEqual(info.chosen_arm_features.shape, [2, 3])
+
+  @test_cases()
   def testPerArmRewardsVariableNumActions(self, policy_class):
     tf.compat.v1.set_random_seed(3000)
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
