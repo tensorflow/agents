@@ -13,12 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Metrics module."""
+"""Utils to export metrics."""
 
-from tf_agents.metrics import batched_py_metric
-from tf_agents.metrics import export_utils
-from tf_agents.metrics import py_metric
-from tf_agents.metrics import py_metrics
-from tf_agents.metrics import tf_metric
-from tf_agents.metrics import tf_metrics
-from tf_agents.metrics import tf_py_metric
+from absl import logging
+
+
+def export_metrics(step, metrics, loss_info):
+  """Exports the metrics and loss information to logging.info.
+
+  Args:
+    step: Integer denoting the round at which we log the metrics.
+    metrics: List of `TF metrics` to log.
+    loss_info: An instance of `LossInfo` whose value is logged.
+  """
+  def logging_at_step_fn(name, value):
+    logging_msg = f'[step={step}] {name} = {value}.'
+    logging.info(logging_msg)
+
+  for metric in metrics:
+    logging_at_step_fn(metric.name, metric.result())
+  logging_at_step_fn('loss', loss_info.loss)

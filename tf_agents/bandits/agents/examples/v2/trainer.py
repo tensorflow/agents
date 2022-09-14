@@ -26,6 +26,7 @@ import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.replay_buffers import bandit_replay_buffer
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.eval import metric_utils
+from tf_agents.metrics import export_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.policies import policy_saver
 
@@ -190,9 +191,11 @@ def train(root_dir,
 
   summary_writer = tf.summary.create_file_writer(root_dir)
   summary_writer.set_as_default()
+
   for i in range(training_loops):
-    training_loop()
+    loss_info = training_loop()
     metric_utils.log_metrics(metrics)
+    export_utils.export_metrics(step=i, metrics=metrics, loss_info=loss_info)
     for metric in metrics:
       metric.tf_summaries(train_step=step_metric.result())
     checkpoint_manager.save()
