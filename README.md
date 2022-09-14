@@ -93,6 +93,9 @@ TF-Agents publishes nightly and stable builds. For a list of releases read the
 TF-Agents stable and nightly from [pypi.org](https://pypi.org) as well as from a
 GitHub clone.
 
+> :warning: If using Reverb (replay buffer), which is very common,
+TF-Agents will only work with Linux.
+
 ### Stable
 
 Run the commands below to install the most recent stable release. API
