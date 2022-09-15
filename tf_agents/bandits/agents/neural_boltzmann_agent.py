@@ -66,6 +66,8 @@ class NeuralBoltzmannAgent(
       emit_policy_info: Tuple[Text, ...] = (),
       train_step_counter: Optional[tf.Variable] = None,
       num_samples_list: Sequence[tf.Variable] = (),
+      laplacian_matrix: Optional[types.Float] = None,
+      laplacian_smoothing_weight: float = 0.001,
       name: Optional[Text] = None):
     """Creates a Neural Boltzmann Agent.
 
@@ -116,6 +118,14 @@ class NeuralBoltzmannAgent(
         train op is run.  Defaults to the `global_step`.
       num_samples_list: list or tuple of tf.Variable's. Used only in
         Boltzmann-Gumbel exploration. Otherwise, empty.
+      laplacian_matrix: A float `Tensor` or a numpy array shaped
+        `[num_actions, num_actions]`. This holds the Laplacian matrix used to
+        regularize the smoothness of the estimated expected reward function.
+        This only applies to problems where the actions have a graph structure.
+        If `None`, the regularization is not applied.
+      laplacian_smoothing_weight: A float that determines the weight of the
+        regularization term. Note that this has no effect if `laplacian_matrix`
+        above is `None`.
       name: Python str name of this agent. All variables in this module will
         fall under that name. Defaults to the class name.
 
@@ -140,6 +150,8 @@ class NeuralBoltzmannAgent(
         emit_policy_info=emit_policy_info,
         train_step_counter=train_step_counter,
         num_samples_list=num_samples_list,
+        laplacian_matrix=laplacian_matrix,
+        laplacian_smoothing_weight=laplacian_smoothing_weight,
         name=name)
     self._policy = boltzmann_policy.BoltzmannRewardPredictionPolicy(
         time_step_spec,

@@ -19,11 +19,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from absl.testing import parameterized
+import functools
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.agents import greedy_reward_prediction_agent as greedy_agent
+from tf_agents.bandits.agents import neural_boltzmann_agent
+from tf_agents.bandits.agents import neural_epsilon_greedy_agent
 from tf_agents.bandits.agents import neural_falcon_agent
 from tf_agents.bandits.drivers import driver_utils
 from tf_agents.bandits.networks import global_and_arm_feature_network
@@ -192,10 +195,25 @@ def test_cases():
   return parameterized.named_parameters(
       {
           'testcase_name': 'Greedy',
-          'agent_class': greedy_agent.GreedyRewardPredictionAgent
+          'agent_class': greedy_agent.GreedyRewardPredictionAgent,
+          'use_num_samples_list': True
       }, {
           'testcase_name': 'Falcon',
-          'agent_class': neural_falcon_agent.NeuralFalconAgent
+          'agent_class': neural_falcon_agent.NeuralFalconAgent,
+          'use_num_samples_list': True
+      }, {
+          'testcase_name': 'Boltzmann',
+          'agent_class': neural_boltzmann_agent.NeuralBoltzmannAgent,
+          'use_num_samples_list': True
+      }, {
+          'testcase_name':
+              'EpsilonGreedy',
+          'agent_class':
+              functools.partial(
+                  neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent,
+                  epsilon=0.05),
+          'use_num_samples_list':
+              False
       })
 
 
@@ -219,25 +237,29 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     ]
 
   @test_cases()
-  def testCreateAgent(self, agent_class):
+  def testCreateAgent(self, agent_class, use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=reward_net,
-        optimizer=None,
-        num_samples_list=self._num_samples_list)
+        optimizer=None)
     self.assertIsNotNone(agent.policy)
 
   @test_cases()
-  def testInitializeAgent(self, agent_class):
+  def testInitializeAgent(self, agent_class, use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=reward_net,
-        optimizer=None,
-        num_samples_list=self._num_samples_list)
+        optimizer=None)
     init_op = agent.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -245,7 +267,7 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         self.assertIsNone(sess.run(init_op))
 
   @test_cases()
-  def testLoss(self, agent_class):
+  def testLoss(self, agent_class, use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
     actions = np.array([0, 1], dtype=np.int32)
@@ -255,12 +277,15 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
 
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
+
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=reward_net,
-        optimizer=None,
-        num_samples_list=self._num_samples_list)
+        optimizer=None)
     init_op = agent.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -316,15 +341,17 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         self.assertAllEqual(sess.run(action_step.action), [1, 2])
 
   @test_cases()
-  def testTrainAgent(self, agent_class):
+  def testTrainAgent(self, agent_class, use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=reward_net,
-        optimizer=optimizer,
-        num_samples_list=self._num_samples_list)
+        optimizer=optimizer)
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
     actions = np.array([0, 1], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
@@ -339,7 +366,7 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(self.evaluate(loss_after), 93.46)
 
   @test_cases()
-  def testTrainAgentWithConstraint(self, agent_class):
+  def testTrainAgentWithConstraint(self, agent_class, use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
 
@@ -358,13 +385,16 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     }
     self._time_step_spec = ts.time_step_spec(self._obs_spec, reward_spec)
 
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
+
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=reward_net,
         optimizer=optimizer,
-        constraints=[neural_constraint],
-        num_samples_list=self._num_samples_list)
+        constraints=[neural_constraint])
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
     actions = np.array([0, 1], dtype=np.int32)
     rewards = {
@@ -381,18 +411,20 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(self.evaluate(loss_before), 42.25 + 30.125)
 
   @test_cases()
-  def testTrainAgentWithMask(self, agent_class):
+  def testTrainAgentWithMask(self, agent_class, use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
     time_step_spec = ts.time_step_spec((tensor_spec.TensorSpec([2], tf.float32),
                                         tensor_spec.TensorSpec([3], tf.int32)))
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
     agent = agent_class(
         time_step_spec,
         self._action_spec,
         reward_network=reward_net,
         optimizer=optimizer,
-        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
-        num_samples_list=self._num_samples_list)
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
     observations = (np.array([[1, 2], [3, 4]], dtype=np.float32),
                     np.array([[1, 0, 0], [1, 1, 0]], dtype=np.int32))
     actions = np.array([0, 1], dtype=np.int32)
@@ -408,7 +440,8 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(self.evaluate(loss_after), 93.46)
 
   @test_cases()
-  def testTrainAgentWithMaskAndConstraint(self, agent_class):
+  def testTrainAgentWithMaskAndConstraint(self, agent_class,
+                                          use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
     reward_spec = {
@@ -428,14 +461,17 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         self._action_spec,
         constraint_network=constraint_net)
 
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
+
     agent = agent_class(
         time_step_spec,
         self._action_spec,
         reward_network=reward_net,
         optimizer=optimizer,
         observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
-        constraints=[neural_constraint],
-        num_samples_list=self._num_samples_list)
+        constraints=[neural_constraint])
     observations = (np.array([[1, 2], [3, 4]], dtype=np.float32),
                     np.array([[1, 0, 0], [1, 1, 0]], dtype=np.int32))
     actions = np.array([0, 1], dtype=np.int32)
@@ -454,19 +490,24 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(self.evaluate(loss_before), 42.25 + 30.125)
 
   @test_cases()
-  def testTrainAgentWithLaplacianSmoothing(self, agent_class):
+  def testTrainAgentWithLaplacianSmoothing(self, agent_class,
+                                           use_num_samples_list):
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
     laplacian_matrix = tf.constant([[1.0, -1.0, 0.0], [-1.0, 2.0, -1.0],
                                     [0.0, -1.0, 1.0]])
+
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._num_samples_list)
+
     agent = agent_class(
         self._time_step_spec,
         self._action_spec,
         reward_network=reward_net,
         optimizer=optimizer,
         laplacian_matrix=laplacian_matrix,
-        laplacian_smoothing_weight=1.0,
-        num_samples_list=self._num_samples_list)
+        laplacian_smoothing_weight=1.0)
     observations = np.array([[1, 2], [3, 4]], dtype=np.float32)
     actions = np.array([0, 1], dtype=np.int32)
     rewards = np.array([0.5, 3.0], dtype=np.float32)
@@ -480,7 +521,8 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertAllClose(self.evaluate(loss_before), 42.25 + 22.5)
 
   @test_cases()
-  def testTrainAgentWithLaplacianSmoothingInvalidMatrix(self, agent_class):
+  def testTrainAgentWithLaplacianSmoothingInvalidMatrix(self, agent_class,
+                                                        use_num_samples_list):
     if tf.executing_eagerly:
       return
 
@@ -498,20 +540,22 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
       # Set the Laplacian matrix to be the identity, which is not a valid
       # Laplacian.
       laplacian_matrix = tf.eye(3)
+      if use_num_samples_list:
+        agent_class = functools.partial(
+            agent_class, num_samples_list=self._num_samples_list)
       agent = agent_class(
           self._time_step_spec,
           self._action_spec,
           reward_network=reward_net,
           optimizer=optimizer,
           laplacian_matrix=laplacian_matrix,
-          laplacian_smoothing_weight=1.0,
-          num_samples_list=self._num_samples_list)
+          laplacian_smoothing_weight=1.0)
       self.evaluate(tf.compat.v1.initialize_all_variables())
       loss_before, _ = agent.train(experience, None)
       self.evaluate(loss_before)
 
   @test_cases()
-  def testTrainPerArmAgent(self, agent_class):
+  def testTrainPerArmAgent(self, agent_class, use_num_samples_list):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         2, 3, 4, add_num_actions_feature=True)
     time_step_spec = ts.time_step_spec(obs_spec)
@@ -519,13 +563,15 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
             obs_spec, (4, 3), (3, 4), (4, 2)))
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._per_arm_num_samples_list)
     agent = agent_class(
         time_step_spec,
         self._action_spec,
         reward_network=reward_net,
         accepts_per_arm_features=True,
-        optimizer=optimizer,
-        num_samples_list=self._per_arm_num_samples_list)
+        optimizer=optimizer)
     observations = {
         bandit_spec_utils.GLOBAL_FEATURE_KEY:
             tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
@@ -547,12 +593,15 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     experience = _get_experience(initial_step, action_step, final_step)
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.evaluate(agent.train(experience, None).loss)
-    self.evaluate(agent.train(experience, None).loss)
-    self.assertEqual(
-        self.evaluate(self._per_arm_num_samples_list[0].read_value()), 4)
+    if use_num_samples_list:
+      self.evaluate(agent.train(experience, None).loss)
+      self.assertEqual(
+          self.evaluate(self._per_arm_num_samples_list[0].read_value()), 4)
 
   @test_cases()
-  def testNumSamplesList(self, agent_class):
+  def testNumSamplesList(self, agent_class, use_num_samples_list):
+    if not use_num_samples_list:
+      return
     reward_net = DummyNet(self._observation_spec, self._action_spec)
     optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.1)
     agent = agent_class(
@@ -577,7 +626,8 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(self.evaluate(self._num_samples_list[2].read_value()), 0)
 
   @test_cases()
-  def testTrainPerArmAgentWithConstraint(self, agent_class):
+  def testTrainPerArmAgentWithConstraint(self, agent_class,
+                                         use_num_samples_list):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(2, 3, 4)
     reward_spec = {
         'reward':
@@ -597,14 +647,17 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     neural_constraint = constraints.NeuralConstraint(
         time_step_spec, self._action_spec, constraint_network=constraint_net)
 
+    if use_num_samples_list:
+      agent_class = functools.partial(
+          agent_class, num_samples_list=self._per_arm_num_samples_list)
+
     agent = agent_class(
         time_step_spec,
         self._action_spec,
         reward_network=reward_net,
         accepts_per_arm_features=True,
         optimizer=optimizer,
-        constraints=[neural_constraint],
-        num_samples_list=self._per_arm_num_samples_list)
+        constraints=[neural_constraint])
     observations = {
         bandit_spec_utils.GLOBAL_FEATURE_KEY:
             tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
@@ -627,9 +680,10 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
     experience = _get_experience(initial_step, action_step, final_step)
     self.evaluate(tf.compat.v1.initialize_all_variables())
     self.evaluate(agent.train(experience, None).loss)
-    self.evaluate(agent.train(experience, None).loss)
-    self.assertEqual(
-        self.evaluate(self._per_arm_num_samples_list[0].read_value()), 4)
+    if use_num_samples_list:
+      self.evaluate(agent.train(experience, None).loss)
+      self.assertEqual(
+          self.evaluate(self._per_arm_num_samples_list[0].read_value()), 4)
 
 if __name__ == '__main__':
   tf.test.main()
