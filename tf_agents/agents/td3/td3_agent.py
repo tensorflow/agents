@@ -308,8 +308,9 @@ class Td3Agent(tf_agent.TFAgent):
     # We only optimize the actor every actor_update_period training steps.
     def optimize_actor():
       actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
-      return self._apply_gradients(actor_grads, trainable_actor_variables,
-                                   self._actor_optimizer)
+      self._apply_gradients(actor_grads, trainable_actor_variables,
+                            self._actor_optimizer)
+      return tf.no_op()
 
     remainder = tf.math.mod(self.train_step_counter, self._actor_update_period)
     tf.cond(

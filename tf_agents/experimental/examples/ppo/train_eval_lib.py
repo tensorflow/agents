@@ -157,7 +157,7 @@ def train_eval(
   agent = ppo_clip_agent.PPOClipAgent(
       time_step_tensor_spec,
       action_tensor_spec,
-      optimizer=tf.keras.optimizers.Adam(
+      optimizer=tf.keras.optimizers.legacy.Adam(
           learning_rate=learning_rate_fn, epsilon=1e-5),
       actor_net=actor_net,
       value_net=value_net,

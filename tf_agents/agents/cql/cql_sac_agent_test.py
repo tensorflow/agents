@@ -583,7 +583,11 @@ class CqlSacAgentTest(test_utils.TestCase, parameterized.TestCase):
             atol=4.5e-5,
             rtol=1.5e-5)
       else:
-        self.assertAllClose(loss.extra.cql_alpha, expected_cql_alpha_step_two)
+        self.assertAllClose(
+            loss.extra.cql_alpha,
+            expected_cql_alpha_step_two,
+            rtol=2e-5,
+            atol=2e-5)
 
 
 if __name__ == '__main__':
