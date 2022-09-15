@@ -124,7 +124,9 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
       train_step_counter: An optional `tf.Variable` to increment every time the
         train op is run.  Defaults to the `global_step`.
       num_samples_list: An optional list or tuple of tf.Variable's. It holds the
-        number of samples per action. If provided, it will be populated.
+        number of samples per action. If provided, it will be populated. For
+        per-arm features, it is expected to have only one element, which holds
+        the total number of samples.
       laplacian_matrix: A float `Tensor` or a numpy array shaped
         `[num_actions, num_actions]`. This holds the Laplacian matrix used to
         regularize the smoothness of the estimated expected reward function.
@@ -150,10 +152,18 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
     self._accepts_per_arm_features = accepts_per_arm_features
     self._constraints = constraints
     if num_samples_list:
-      if len(num_samples_list) != self._num_actions:
-        ValueError('num_samples_list is expected to have length equal to the ',
-                   'number of actions: ', self._num_actions,
-                   ' , but found to be', len(num_samples_list))
+      if accepts_per_arm_features and (len(num_samples_list) != 1):
+        raise ValueError(
+            'num_samples_list is expected to be of length 1 when ',
+            'accepts_per_arm_features is True, but is found '
+            f'otherwise: {num_samples_list}')
+      if (not accepts_per_arm_features) and (len(num_samples_list) !=
+                                             self._num_actions):
+        raise ValueError(
+            'num_samples_list is expected to have length equal to the ',
+            'number of actions: ', self._num_actions, ' , but found to be',
+            len(num_samples_list))
+
     self._num_samples_list = num_samples_list
 
     reward_network.create_variables()
@@ -240,12 +250,18 @@ class GreedyRewardPredictionAgent(tf_agent.TFAgent):
 
     self._optimizer.apply_gradients(grads_and_vars)
     self.train_step_counter.assign_add(1)
-    if not self._accepts_per_arm_features and self._num_samples_list:
-      # Compute the number of samples for each action in the current batch.
+    if self._num_samples_list:
       actions_flattened = tf.reshape(experience.action, [-1])
-      num_samples_per_action_current = [
-          tf.reduce_sum(tf.cast(tf.equal(actions_flattened, k), tf.int64))
-          for k in range(self._num_actions)]
+      if self._accepts_per_arm_features:
+        num_samples_per_action_current = [
+            tf.cast(tf.shape(actions_flattened)[0], dtype=tf.int64)
+        ]
+      else:
+        # Compute the number of samples for each action in the current batch.
+        num_samples_per_action_current = [
+            tf.reduce_sum(tf.cast(tf.equal(actions_flattened, k), tf.int64))
+            for k in range(self._num_actions)
+        ]
       # Update the number of samples for each action.
       for a, b in zip(self._num_samples_list, num_samples_per_action_current):
         tf.compat.v1.assign_add(a, b)

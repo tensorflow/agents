@@ -123,9 +123,17 @@ class FalconRewardPredictionPolicy(
                          emit_policy_info, name)
 
     self._exploitation_coefficient = exploitation_coefficient
-    self._num_samples_list = num_samples_list if num_samples_list else (
-        [tf.Variable(0, dtype=tf.int64)] * self._expected_num_actions)
-    if len(self._num_samples_list) != self._expected_num_actions:
+    if num_samples_list:
+      self._num_samples_list = num_samples_list
+    else:
+      self._num_samples_list = [tf.Variable(0, dtype=tf.int64)] * (
+          1 if self.accepts_per_arm_features else self._expected_num_actions)
+    if self.accepts_per_arm_features and len(self._num_samples_list) != 1:
+      raise ValueError('num_samples_list is expected to be of length 1 when'
+                       'accepts_per_arm_features is True, but found otherwise: '
+                       f'{self._num_samples_list} ')
+    if not self.accepts_per_arm_features and (len(self._num_samples_list) !=
+                                              self._expected_num_actions):
       raise ValueError('Size of num_samples_list: ',
                        len(self._num_samples_list),
                        ' does not match the expected number of actions:',

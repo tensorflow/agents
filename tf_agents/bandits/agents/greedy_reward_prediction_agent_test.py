@@ -214,6 +214,9 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples_1'),
         tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples_2')
     ]
+    self._per_arm_num_samples_list = [
+        tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples')
+    ]
 
   @test_cases()
   def testCreateAgent(self, agent_class):
@@ -522,7 +525,7 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         reward_network=reward_net,
         accepts_per_arm_features=True,
         optimizer=optimizer,
-        num_samples_list=self._num_samples_list)
+        num_samples_list=self._per_arm_num_samples_list)
     observations = {
         bandit_spec_utils.GLOBAL_FEATURE_KEY:
             tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
@@ -542,8 +545,11 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
             chosen_arm_features=np.array([[1, 2, 3], [3, 2, 1]],
                                          dtype=np.float32)))
     experience = _get_experience(initial_step, action_step, final_step)
-    agent.train(experience, None)
     self.evaluate(tf.compat.v1.initialize_all_variables())
+    self.evaluate(agent.train(experience, None).loss)
+    self.evaluate(agent.train(experience, None).loss)
+    self.assertEqual(
+        self.evaluate(self._per_arm_num_samples_list[0].read_value()), 4)
 
   @test_cases()
   def testNumSamplesList(self, agent_class):
@@ -598,7 +604,7 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
         accepts_per_arm_features=True,
         optimizer=optimizer,
         constraints=[neural_constraint],
-        num_samples_list=self._num_samples_list)
+        num_samples_list=self._per_arm_num_samples_list)
     observations = {
         bandit_spec_utils.GLOBAL_FEATURE_KEY:
             tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
@@ -619,9 +625,11 @@ class AgentTest(tf.test.TestCase, parameterized.TestCase):
             chosen_arm_features=np.array([[1, 2, 3], [3, 2, 1]],
                                          dtype=np.float32)))
     experience = _get_experience(initial_step, action_step, final_step)
-    agent.train(experience, None)
     self.evaluate(tf.compat.v1.initialize_all_variables())
-
+    self.evaluate(agent.train(experience, None).loss)
+    self.evaluate(agent.train(experience, None).loss)
+    self.assertEqual(
+        self.evaluate(self._per_arm_num_samples_list[0].read_value()), 4)
 
 if __name__ == '__main__':
   tf.test.main()
