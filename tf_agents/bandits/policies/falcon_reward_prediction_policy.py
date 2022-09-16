@@ -154,7 +154,24 @@ class FalconRewardPredictionPolicy(
   def num_samples_list(self):
     return self._num_samples_list
 
-  def _compute_gamma(self, dtype: tf.DType) -> types.Float:
+  def _get_number_of_allowed_actions(
+      self, mask: Optional[types.Tensor]) -> types.Float:
+    """Gets the number of allowed actions.
+
+    Args:
+      mask: An optional mask represented by a tensor shaped as [batch_size,
+        num_actions].
+
+    Returns:
+      The number of allowed actions. It can be either a scalar (when `mask` is
+      None), or a tensor shaped as [batch_size].
+    """
+    return (tf.cast(self._expected_num_actions, dtype=tf.float32)
+            if mask is None else tf.reduce_sum(
+                tf.cast(tf.cast(mask, tf.bool), tf.float32), axis=1))
+
+  def _compute_gamma(self, mask: Optional[types.Tensor],
+                     dtype: tf.DType) -> types.Float:
     """Computes the gamma parameter in the sampling probability.
 
     This helper method implements a simple heuristic for computing the
@@ -163,6 +180,8 @@ class FalconRewardPredictionPolicy(
     sampling distribution concentrate more on the greedy action.
 
     Args:
+      mask: An optional mask represented by a tensor shaped as
+        [batch_size, num_actions].
       dtype: Type of the returned value, expected to be a float type.
 
     Returns:
@@ -173,12 +192,14 @@ class FalconRewardPredictionPolicy(
         0.0)
     num_trainable_elements_float = tf.cast(
         tf.math.maximum(self.num_trainable_elements, 1), tf.float32)
+    num_allowed_actions = self._get_number_of_allowed_actions(mask)
     return self._get_exploitation_coefficient() * tf.sqrt(
-        self._expected_num_actions * tf.reduce_sum(num_samples_list_float) /
+        num_allowed_actions * tf.reduce_sum(num_samples_list_float) /
         num_trainable_elements_float)
 
   def _action_distribution(self, mask, predicted_rewards):
-    gamma = self._compute_gamma(predicted_rewards.dtype)
+    gamma = tf.expand_dims(
+        self._compute_gamma(mask, predicted_rewards.dtype), axis=-1)
     batch_size = tf.shape(predicted_rewards)[0]
     # Replace predicted rewards of masked actions with -inf.
     predictions = predicted_rewards if mask is None else tf.where(
@@ -191,9 +212,11 @@ class FalconRewardPredictionPolicy(
 
     # `other_actions_probs` is a tensor shaped as [batch_size, num_actions] that
     # contains valid sampling probabilities for all non-greedy actions.
+    num_allowed_actions = tf.expand_dims(
+        self._get_number_of_allowed_actions(mask), axis=-1)
     other_actions_probs = tf.math.divide_no_nan(
-        1.0, self._expected_num_actions + gamma *
-        (greedy_action_predictions - predictions))
+        1.0,
+        num_allowed_actions + gamma * (greedy_action_predictions - predictions))
     # Although `predictions` has accounted for the action mask, we still need
     # to mask the action probabilities in the case of zero gamma.
     other_actions_probs = (
