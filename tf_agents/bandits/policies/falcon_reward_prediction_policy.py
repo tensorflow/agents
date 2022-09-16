@@ -144,6 +144,7 @@ class FalconRewardPredictionPolicy(
   def _get_exploitation_coefficient(self) -> types.FloatOrReturningFloat:
     coef = self._exploitation_coefficient() if callable(
         self._exploitation_coefficient) else self._exploitation_coefficient
+    coef = tf.cast(coef, dtype=tf.float32)
     return tf.maximum(coef, 0.0)
 
   @property
