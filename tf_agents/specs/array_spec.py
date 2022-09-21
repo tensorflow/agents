@@ -115,19 +115,33 @@ def check_arrays_nest(arrays, spec):
   """
   # Check that arrays and spec has the same structure.
   try:
-    tf.nest.assert_same_structure(arrays, spec)
+    assert_arrays_spec_nest(arrays, spec)
+    return True
   except (TypeError, ValueError):
     return False
 
-  def check_array(spec, array):
+
+def assert_arrays_spec_nest(arrays, spec):
+  """Check that the arrays conform to the spec.
+
+  Args:
+    arrays: A NumPy array, or a nested dict, list or tuple of arrays.
+    spec: An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+
+  Raise:
+    A TypeError or ValueError describing the mismatch.
+  """
+  tf.nest.assert_same_structure(arrays, spec)
+
+  def assert_array_spec(array, spec):
     if not isinstance(spec, ArraySpec):
-      return False
-    return spec.check_array(array)
+      raise TypeError(f'The spec "{spec}" is not an ArraySpec, instead '
+                      f'"{type(spec)}"')
+    if not spec.check_array(array):
+      raise ValueError(f'The value "{array}" does not match spec: {spec}')
 
   # Check all the elements in arrays match to their spec
-  checks = tf.nest.map_structure(check_array, spec, arrays)
-  # Only return True if all the checks pass.
-  return all(tf.nest.flatten(checks))
+  tf.nest.map_structure(assert_array_spec, arrays, spec)
 
 
 def add_outer_dims_nest(structure, outer_dims):
