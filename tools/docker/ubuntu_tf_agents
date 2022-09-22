@@ -72,7 +72,8 @@ RUN if [[ -n "$tf_agents_pip_spec" ]] ; then $python_version -m pip install ${tf
 RUN $python_version -m pip install wheel \
       opencv-python \
       gym \
-      ale-py \
+      # b/248257418
+      ale-py==0.7.5 \
       atari-py \
       pybullet \
       gin-config \
@@ -81,7 +82,8 @@ RUN $python_version -m pip install wheel \
       absl-py \
       mock \
 # Only used for nightly testing.
-# Needs pinned to avoid going over probuf 3.19.x until TF does.
+# `protobuf` and `google-api-core` need pinned to avoid going over probuf 3.19.x until TF does.
+      protobuf==3.19.5 \
       google-api-core==2.8.2 \
       google-cloud-bigquery \
       psutil
