@@ -31,6 +31,7 @@ from tf_agents.utils import batched_observer_unbatching
 
 
 def collect_random(num_episodes: int, num_envs: int):
+    """Collects full episodes of the CartPole-v0 env using a random policy."""
     env = parallel_py_environment.ParallelPyEnvironment(
         [lambda: suite_gym.load("CartPole-v0")] * num_envs)
 
