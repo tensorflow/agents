@@ -19,8 +19,9 @@ from absl import logging
 
 import tensorflow.compat.v2 as tf
 
-flags.DEFINE_string('tpu', None, 'BNS address for the TPU')
-flags.DEFINE_bool('use_gpu', False, 'If True a MirroredStrategy will be used.')
+TPU = flags.DEFINE_string('tpu', None, 'BNS address for the TPU')
+USE_GPU = flags.DEFINE_bool('use_gpu', False, 'If True a MirroredStrategy '
+                            'will be used.')
 
 
 def get_strategy(tpu, use_gpu):
