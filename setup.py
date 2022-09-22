@@ -206,8 +206,6 @@ def add_additional_packages(required_packages):
 def get_test_packages():
   """Returns list of packages needed when testing."""
   test_packages = [
-      'ale-py',
-      'atari-py',  # TODO(b/200012648) contains ALE/Tetris ROM for unit test.
       'mock >= 2.0.0',
       'opencv-python >= 3.4.1.15',
       'pybullet',
