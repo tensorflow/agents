@@ -86,7 +86,7 @@ $  git clone https://github.com/tensorflow/agents.git && cd agents
 # Core tf-agents docker.
 $  docker build -t tf_agents/core \
      --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
-     - < tools/docker/ubuntu_1804_tf_agents
+     - < tools/docker/ubuntu_tf_agents
 
 ```
 
@@ -102,8 +102,7 @@ $  sudo apt-add-repository non-free
 $  sudo apt-get update
 
 # Get all available ROMs.
-$  wget http://www.atarimania.com/roms/Roms.rar && unrar x Roms.rar \
-$    && unzip ROMS.zip && unzip HC\ ROMS.zip
+$  wget http://www.atarimania.com/roms/Roms.rar && unrar x Roms.rar
 
 # After unzipping the Pong ROM is located at:
 #  `HC ROMS/BY ALPHABET/S-Z/Video Olympics - Pong Sports.bin`
@@ -119,7 +118,7 @@ build process.
 # Extend the core image to include atari ROMs.
 # Note that the ROMs need to have already been downloaded and put into
 # ./tools/docker/roms
-$  docker build -t tf_agents/atari -f ./tools/docker/ubuntu_1804_atari \
+$  docker build -t tf_agents/atari -f ./tools/docker/ubuntu_atari \
      ./tools/docker
 ```
 

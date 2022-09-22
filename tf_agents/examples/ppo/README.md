@@ -222,10 +222,10 @@ $  git clone https://github.com/tensorflow/agents.git && cd agents
 # Core tf-agents docker.
 $  docker build -t tf_agents/core \
      --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
-     -f tools/docker/ubuntu_1804_tf_agents .
+     -f tools/docker/ubuntu_tf_agents .
 
 # Extends tf_agents/core to create a docker with MuJoCo.
-$  docker build -t tf_agents/mujoco -f tools/docker/ubuntu_1804_mujoco .
+$  docker build -t tf_agents/mujoco -f tools/docker/ubuntu_mujoco .
 ```
 
 **Step 3:** Create a tmux session and start the train and eval.
