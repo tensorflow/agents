@@ -215,9 +215,9 @@ class SacAgent(tf_agent.TFAgent):
     self._use_log_alpha_in_alpha_loss = use_log_alpha_in_alpha_loss
     self._target_update_tau = target_update_tau
     self._target_update_period = target_update_period
-    self._actor_optimizer = actor_optimizer
-    self._critic_optimizer = critic_optimizer
-    self._alpha_optimizer = alpha_optimizer
+    self._actor_optimizer = self._convert_optimizer_to_legacy(actor_optimizer)
+    self._critic_optimizer = self._convert_optimizer_to_legacy(critic_optimizer)
+    self._alpha_optimizer = self._convert_optimizer_to_legacy(alpha_optimizer)
     self._actor_loss_weight = actor_loss_weight
     self._critic_loss_weight = critic_loss_weight
     self._alpha_loss_weight = alpha_loss_weight
@@ -246,6 +246,13 @@ class SacAgent(tf_agent.TFAgent):
 
     self._as_transition = data_converter.AsTransition(
         self.data_context, squeeze_time_dim=(train_sequence_length == 2))
+
+  def _convert_optimizer_to_legacy(self, optimizer):
+    if hasattr(tf.keras.optimizers, 'experimental') and isinstance(
+        optimizer, tf.keras.optimizers.experimental.Optimizer):
+      return tf.keras.__internal__.optimizers.convert_to_legacy_optimizer(
+          optimizer)
+    return optimizer
 
   def _check_action_spec(self, action_spec):
     flat_action_spec = tf.nest.flatten(action_spec)
