@@ -19,8 +19,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import reverb
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+from tf_agents.drivers import py_driver
+from tf_agents.environments import parallel_py_environment
+from tf_agents.environments import suite_gym
+from tf_agents.policies import random_py_policy
+from tf_agents.replay_buffers import reverb_utils
+from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory as trajectory_lib
 from tf_agents.utils import batched_observer_unbatching
 
@@ -82,6 +89,42 @@ class BatchedObserverUnbatchingTest(tf.test.TestCase):
                 ),
             ],
         )
+
+    def test_reverb_integration(self):
+        num_envs = 3
+        env = parallel_py_environment.ParallelPyEnvironment(
+            [lambda: suite_gym.load("CartPole-v0")] * num_envs)
+
+        policy = random_py_policy.RandomPyPolicy(
+            env.time_step_spec(), env.action_spec())
+
+        replay_buffer_signature = tensor_spec.from_spec(
+            policy.collect_data_spec)
+        replay_buffer_signature = tensor_spec.add_outer_dim(
+            replay_buffer_signature)
+        table = reverb.Table(
+            "experience",
+            max_size=100,
+            sampler=reverb.selectors.Uniform(),
+            remover=reverb.selectors.Fifo(),
+            rate_limiter=reverb.rate_limiters.MinSize(1),
+            signature=replay_buffer_signature,
+        )
+        reverb_server = reverb.Server([table])
+
+        def create_add_episode_observer():
+            return reverb_utils.ReverbAddEpisodeObserver(
+                reverb_server.localhost_client(),
+                table_name="experience",
+                max_sequence_length=200,
+            )
+
+        rb_observer = batched_observer_unbatching.BatchedObserverUnbatching(
+            create_add_episode_observer, batch_size=num_envs)
+
+        driver = py_driver.PyDriver(
+            env, policy, observers=[rb_observer], max_episodes=30)
+        driver.run(env.reset())
 
 
 if __name__ == '__main__':
