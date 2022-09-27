@@ -24,8 +24,6 @@ from typing import Callable
 from tf_agents.trajectories import trajectory as trajectory_lib
 from tf_agents.utils import nest_utils
 
-Observer = Callable[[trajectory_lib.Trajectory], None]
-
 
 class BatchedObserverUnbatching(object):
     """An observer that takes batched trajectories, unbatches them, and delegates them to multiple observers.
@@ -37,7 +35,7 @@ class BatchedObserverUnbatching(object):
     """
 
     def __init__(self,
-                 create_delegated_observer_fn: Callable[[], Observer],
+                 create_delegated_observer_fn: Callable[[], Callable[[trajectory_lib.Trajectory], None]],
                  batch_size: int):
         self._delegated_observers = [
             create_delegated_observer_fn() for _ in range(batch_size)
