@@ -24,8 +24,8 @@ To run DQN-RNNs on MaskedCartPole:
 
 ```bash
 tensorboard --logdir $HOME/tmp/dqn/gym/MaskedCartPole-v0/ --port 2223 &
-python tf_agents/experimental/examples/dqn/dqn_train_eval_rnn.py \
-  --root_dir=/tmp/dqn_maskedcartpole \
+python tf_agents/examples/dqn/dqn_train_eval_rnn.py \
+  --root_dir=$HOME/tmp/dqn/gym/MaskedCartPole-v0/ \
   --env_name='MaskedCartPole-v0' \
   --train_sequence_length=20
 ```
