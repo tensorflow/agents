@@ -217,9 +217,10 @@ class StepPerSecondLogTrigger(interval_trigger.IntervalTrigger):
     if self._log_to_terminal:
       logging.info('Step: %d, %.3f steps/sec', step, steps_per_sec)
     with tf.compat.v2.summary.record_if(True):
-      tf.summary.scalar(name='train_steps_per_sec',
-                        data=steps_per_sec,
-                        step=step)
+      with tf.name_scope('RunTime/'):
+        tf.summary.scalar(name='train_steps_per_sec',
+                          data=steps_per_sec,
+                          step=step)
 
 
 class ReverbCheckpointTrigger(interval_trigger.IntervalTrigger):
