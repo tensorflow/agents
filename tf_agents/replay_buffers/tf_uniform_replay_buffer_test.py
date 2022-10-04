@@ -415,6 +415,10 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     ds = replay_buffer.as_dataset()
+    # Turn off `inject_prefetch` optimization
+    options = tf.data.Options()
+    options.experimental_optimization.inject_prefetch = False
+    ds = ds.with_options(options)
     if tf.executing_eagerly():
       add_op = lambda: replay_buffer.add_batch(actions)
       itr = iter(ds)
