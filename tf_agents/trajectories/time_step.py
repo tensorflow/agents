@@ -95,7 +95,8 @@ class TimeStep(
     return hash(tuple(tf.nest.flatten(self)))
 
   def __repr__(self):
-    return 'TimeStep(\n' + pprint.pformat(dict(self._asdict())) + ')'
+    return 'TimeStep(\n' + \
+      pprint.pformat(dict(self._asdict()), sort_dicts=False) + ')'
 
 
 class StepType(object):

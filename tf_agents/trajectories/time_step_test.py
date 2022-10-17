@@ -18,6 +18,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.specs import array_spec
@@ -448,6 +450,18 @@ class TFTimeStepTest(tf.test.TestCase):
     reward = (None, None)
     with self.assertRaises(ValueError):
       ts.transition(observation, reward)  # pytype: disable=wrong-arg-types
+
+  def testPrintFormat(self):
+    observation = tf.constant(-1)
+    reward = tf.constant(2.0)
+
+    time_step = ts.transition(observation, reward)
+    with self.captureWritesToStream(sys.stdout) as printed:
+      print_op = tf.print(time_step, output_stream=sys.stdout)
+      self.evaluate(print_op)
+
+    expected = "{'step_type': 1, 'reward': 2, 'discount': 1, 'observation': -1}"
+    self.assertIn(expected, printed.contents())
 
 
 class TFTimeStepSpecTest(tf.test.TestCase):
