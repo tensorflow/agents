@@ -18,13 +18,13 @@
 from absl import logging
 
 
-def export_metrics(step, metrics, loss_info):
+def export_metrics(step, metrics, loss_info=None):
   """Exports the metrics and loss information to logging.info.
 
   Args:
     step: Integer denoting the round at which we log the metrics.
     metrics: List of `TF metrics` to log.
-    loss_info: An instance of `LossInfo` whose value is logged.
+    loss_info: An optional instance of `LossInfo` whose value is logged.
   """
   def logging_at_step_fn(name, value):
     logging_msg = f'[step={step}] {name} = {value}.'
@@ -32,4 +32,5 @@ def export_metrics(step, metrics, loss_info):
 
   for metric in metrics:
     logging_at_step_fn(metric.name, metric.result())
-  logging_at_step_fn('loss', loss_info.loss)
+  if loss_info is not None:
+    logging_at_step_fn('loss', loss_info.loss)

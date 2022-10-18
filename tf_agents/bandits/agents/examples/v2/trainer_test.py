@@ -22,7 +22,9 @@ from __future__ import print_function
 import functools
 import os
 import tempfile
+from unittest import mock
 
+from absl import logging
 from absl.testing import parameterized
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
@@ -35,6 +37,7 @@ from tf_agents.bandits.environments import stationary_stochastic_py_environment
 from tf_agents.bandits.environments import wheel_py_environment
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 from tf_agents.environments import tf_py_environment
+from tf_agents.metrics import export_utils
 from tf_agents.specs import tensor_spec
 
 tfd = tfp.distributions
@@ -99,6 +102,20 @@ def get_environment_and_optimal_functions_by_name(environment_name, batch_size):
         environment_utilities.tf_wheel_bandit_compute_optimal_action,
         delta=delta)
   return (environment, optimal_reward_fn, optimal_action_fn)
+
+
+class MockLog(mock.Mock):
+
+  def __init__(self, *args, **kwargs):
+    super(MockLog, self).__init__(*args, **kwargs)
+    self.lines = []
+
+  def info(self, message, *args):
+    self.lines.append(message % args)
+    logging.info(message, *args)
+
+  def as_string(self):
+    return '\n'.join(self.lines)
 
 
 class TrainerTest(tf.test.TestCase, parameterized.TestCase):
@@ -186,13 +203,19 @@ class TrainerTest(tf.test.TestCase, parameterized.TestCase):
     regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
     suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
         optimal_action_fn)
-    trainer.train(
-        root_dir=tempfile.mkdtemp(dir=os.getenv('TEST_TMPDIR')),
-        agent=agent,
-        environment=environment,
-        training_loops=training_loops,
-        steps_per_loop=steps_per_loop,
-        additional_metrics=[regret_metric, suboptimal_arms_metric])
+    with mock.patch.object(
+        export_utils, 'logging', new_callable=MockLog) as mock_logging:
+      trainer.train(
+          root_dir=tempfile.mkdtemp(dir=os.getenv('TEST_TMPDIR')),
+          agent=agent,
+          environment=environment,
+          training_loops=training_loops,
+          steps_per_loop=steps_per_loop,
+          additional_metrics=[regret_metric, suboptimal_arms_metric])
+    logged = mock_logging.as_string()
+    self.assertEqual(logged.count('RegretMetric'), training_loops)
+    self.assertEqual(logged.count('SuboptimalArmsMetric'), training_loops)
+    self.assertEqual(logged.count('loss'), training_loops)
 
 
 if __name__ == '__main__':
