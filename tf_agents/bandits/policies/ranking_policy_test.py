@@ -27,17 +27,45 @@ from tf_agents.utils import test_utils
 
 class RankingPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
-  @parameterized.parameters(dict(batch_size=1, num_items=20, num_slots=5),
-                            dict(batch_size=3, num_items=15, num_slots=15),
-                            dict(batch_size=30, num_items=115, num_slots=100))
-  def testPolicy(self, batch_size, num_items, num_slots):
+  @parameterized.parameters(
+      dict(
+          policy_class=ranking_policy.DescendingScoreRankingPolicy,
+          batch_size=1,
+          num_items=20,
+          num_slots=5),
+      dict(
+          policy_class=ranking_policy.DescendingScoreRankingPolicy,
+          batch_size=3,
+          num_items=15,
+          num_slots=15),
+      dict(
+          policy_class=ranking_policy.PenalizeCosineDistanceRankingPolicy,
+          batch_size=30,
+          num_items=115,
+          num_slots=100),
+      dict(
+          policy_class=ranking_policy.PenalizeCosineDistanceRankingPolicy,
+          batch_size=1,
+          num_items=20,
+          num_slots=5),
+      dict(
+          policy_class=ranking_policy.NoPenaltyRankingPolicy,
+          batch_size=3,
+          num_items=15,
+          num_slots=15),
+      dict(
+          policy_class=ranking_policy.NoPenaltyRankingPolicy,
+          batch_size=30,
+          num_items=115,
+          num_slots=100))
+  def testPolicy(self, policy_class, batch_size, num_items, num_slots):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         7, 5, num_items)
     time_step_spec = ts.time_step_spec(obs_spec)
     network = arm_net.create_feed_forward_common_tower_network(
         obs_spec, [3], [4], [5])
 
-    policy = ranking_policy.PenalizeCosineDistanceRankingPolicy(
+    policy = policy_class(
         num_items=num_items,
         num_slots=num_slots,
         time_step_spec=time_step_spec,
