@@ -37,21 +37,8 @@ STEP_CHECKPOINT_NAME = 'step'
 CHECKPOINT_FILE_PREFIX = 'ckpt'
 
 
-def export_metrics(step, metrics):
-  """Exports metrics."""
-  metric_utils.log_metrics(metrics)
-  export_utils.export_metrics(step=step, metrics=metrics)
-  for metric in metrics:
-    metric.tf_summaries(train_step=step)
-
-
-def export_loss_info(step, loss_info):
-  """Exports loss info."""
-  export_utils.export_metrics(step=step, metrics=[], loss_info=loss_info)
-
-
-def get_replay_buffer(data_spec, batch_size, steps_per_loop,
-                      async_steps_per_loop):
+def _get_replay_buffer(data_spec, batch_size, steps_per_loop,
+                       async_steps_per_loop):
   """Return a `TFUniformReplayBuffer` for the given `agent`."""
   return bandit_replay_buffer.BanditReplayBuffer(
       data_spec=data_spec,
@@ -72,8 +59,8 @@ def set_expected_shape(experience, num_steps):
   tf.nest.map_structure(lambda t: set_time_dim(t, num_steps), experience)
 
 
-def get_training_loop(driver, replay_buffer, agent, steps,
-                      async_steps_per_loop):
+def _get_training_loop(driver, replay_buffer, agent, steps,
+                       async_steps_per_loop):
   """Returns a `tf.function` that runs the driver and training loops.
 
   Args:
@@ -87,11 +74,18 @@ def get_training_loop(driver, replay_buffer, agent, steps,
       many batches sampled from the replay buffer.
   """
 
+  def _export_metrics_and_summaries(step, metrics):
+    """Exports metrics and tf summaries."""
+    metric_utils.log_metrics(metrics)
+    export_utils.export_metrics(step=step, metrics=metrics)
+    for metric in metrics:
+      metric.tf_summaries(train_step=step)
+
   def training_loop(train_step, metrics):
     """Returns a function that runs a single training loop and logs metrics."""
     for batch_id in range(async_steps_per_loop):
       driver.run()
-      export_metrics(
+      _export_metrics_and_summaries(
           step=train_step * async_steps_per_loop + batch_id, metrics=metrics)
     batch_size = driver.env.batch_size
     dataset_it = iter(
@@ -103,8 +97,9 @@ def get_training_loop(driver, replay_buffer, agent, steps,
       experience, unused_buffer_info = dataset_it.get_next()
       set_expected_shape(experience, steps)
       loss_info = agent.train(experience)
-      export_loss_info(
+      export_utils.export_metrics(
           step=train_step * async_steps_per_loop + batch_id,
+          metrics=[],
           loss_info=loss_info)
 
     replay_buffer.clear()
@@ -198,7 +193,7 @@ def train(root_dir,
   if async_steps_per_loop is None:
     async_steps_per_loop = 1
   if get_replay_buffer_fn is None:
-    get_replay_buffer_fn = get_replay_buffer
+    get_replay_buffer_fn = _get_replay_buffer
   replay_buffer = get_replay_buffer_fn(data_spec, environment.batch_size,
                                        steps_per_loop, async_steps_per_loop)
 
@@ -236,7 +231,7 @@ def train(root_dir,
       observers=observers)
 
   if get_training_loop_fn is None:
-    get_training_loop_fn = get_training_loop
+    get_training_loop_fn = _get_training_loop
   training_loop = get_training_loop_fn(driver, replay_buffer, agent,
                                        steps_per_loop, async_steps_per_loop)
   checkpoint_manager = restore_and_get_checkpoint_manager(
