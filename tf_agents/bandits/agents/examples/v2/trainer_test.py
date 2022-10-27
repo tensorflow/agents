@@ -217,6 +217,71 @@ class TrainerTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(logged.count('SuboptimalArmsMetric'), training_loops)
     self.assertEqual(logged.count('loss'), training_loops)
 
+  def testResumeTrainLoops(self):
+    batch_size = 8
+    training_loops = 3
+    steps_per_loop = 2
+    environment_name = 'stationary_stochastic'
+    agent_name = 'epsGreedy'
+    environment, _, _ = (
+        trainer_test_utils.get_environment_and_optimal_functions_by_name(
+            environment_name, batch_size))
+    agent = trainer_test_utils.get_agent_by_name(agent_name,
+                                                 environment.time_step_spec(),
+                                                 environment.action_spec())
+    root_dir = tempfile.mkdtemp(dir=os.getenv('TEST_TMPDIR'))
+
+    def train(training_loops, resume_training_loops):
+      trainer.train(
+          root_dir=root_dir,
+          agent=agent,
+          environment=environment,
+          training_loops=training_loops,
+          steps_per_loop=steps_per_loop,
+          resume_training_loops=resume_training_loops)
+
+    with mock.patch.object(
+        export_utils, 'logging', new_callable=MockLog) as mock_logging:
+      train(training_loops=training_loops, resume_training_loops=True)
+    logged = mock_logging.as_string()
+    self.assertEqual(logged.count('loss'), training_loops)
+    self.assertEqual(logged.count('AverageReturn'), training_loops)
+
+    # With `resume_training_loops` set to True, the same `training_loops`
+    # would not result in more training.
+    with mock.patch.object(
+        export_utils, 'logging', new_callable=MockLog) as mock_logging:
+      train(training_loops=training_loops, resume_training_loops=True)
+    logged = mock_logging.as_string()
+    self.assertEqual(logged.count('loss'), 0)
+    self.assertEqual(logged.count('AverageReturn'), 0)
+
+    # With `resume_training_loops` set to True, increasing
+    # `training_loops` will result in more training.
+    with mock.patch.object(
+        export_utils, 'logging', new_callable=MockLog) as mock_logging:
+      train(training_loops=training_loops + 1, resume_training_loops=True)
+    logged = mock_logging.as_string()
+    self.assertEqual(logged.count('loss'), 1)
+    self.assertEqual(logged.count('AverageReturn'), 1)
+    expected_num_episodes = (training_loops + 1) * steps_per_loop * batch_size
+    self.assertEqual(
+        logged.count(f'NumberOfEpisodes = {expected_num_episodes}'), 1)
+
+    # With `resume_training_loops` set to False, `training_loops` of 1
+    # will result in more training.
+    with mock.patch.object(
+        export_utils, 'logging', new_callable=MockLog) as mock_logging:
+      train(training_loops=1, resume_training_loops=False)
+    logged = mock_logging.as_string()
+    self.assertEqual(logged.count('loss'), 1)
+    self.assertEqual(logged.count('AverageReturn'), 1)
+    # The number of episodes is expected to accumulate over all trainings using
+    # the same `root_dir`.
+    expected_num_episodes = (training_loops + 2) * steps_per_loop * batch_size
+    self.assertEqual(
+        logged.count(f'NumberOfEpisodes = {expected_num_episodes}'), 1)
+
 
 if __name__ == '__main__':
   tf.test.main()

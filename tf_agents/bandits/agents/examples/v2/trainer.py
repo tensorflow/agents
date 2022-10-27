@@ -137,7 +137,8 @@ def train(root_dir,
           get_replay_buffer_fn=None,
           get_training_loop_fn=None,
           training_data_spec_transformation_fn=None,
-          save_policy=True):
+          save_policy=True,
+          resume_training_loops=False):
   """Perform `training_loops` iterations of training.
 
   Checkpoint results.
@@ -182,6 +183,9 @@ def train(root_dir,
     training_data_spec_transformation_fn: Optional function that transforms the
       data items before they get to the replay buffer.
     save_policy: (bool) whether to save the policy or not.
+    resume_training_loops: A boolean flag indicating whether
+      `training_loops` should be enforced relatively to the initial (True) or
+      the last (False) checkpoint.
   """
 
   # TODO(b/127641485): create evaluation loop with configurable metrics.
@@ -244,7 +248,23 @@ def train(root_dir,
   summary_writer = tf.summary.create_file_writer(root_dir)
   summary_writer.set_as_default()
 
-  for i in range(training_loops):
+  if resume_training_loops:
+    train_step_count_per_loop = (
+        steps_per_loop * environment.batch_size * async_steps_per_loop)
+    last_checkpointed_step = step_metric.result().numpy()
+    if last_checkpointed_step % train_step_count_per_loop != 0:
+      raise ValueError(
+          f'Last checkpointed step is expected to be a multiple of '
+          'steps_per_loop * batch_size * async_steps_per_loop, but found '
+          f'otherwise: last checkpointed step: {last_checkpointed_step}, '
+          f'steps_per_loop: {steps_per_loop}, batch_size: '
+          f'{environment.batch_size}, async_steps_per_loop: '
+          f'{async_steps_per_loop}')
+    starting_loop = last_checkpointed_step // train_step_count_per_loop
+  else:
+    starting_loop = 0
+
+  for i in range(starting_loop, training_loops):
     training_loop(train_step=i, metrics=metrics)
     checkpoint_manager.save()
     if save_policy & (i % 100 == 0):
