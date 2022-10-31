@@ -146,7 +146,7 @@ class BoltzmannRewardPredictionPolicy(
           [tf.cast(x.read_value(), tf.float32) for x in self._num_samples_list],
           axis=-1)
       exploration_weights = tf.math.divide_no_nan(
-          self._boltzmann_gumbel_exploration_constant,
+          tf.cast(self._boltzmann_gumbel_exploration_constant, tf.float32),
           tf.sqrt(num_samples_list_float))
       final_logits = logits + exploration_weights * gumbel_samples
       actions = tf.cast(
