@@ -166,7 +166,7 @@ def main(unused_argv):
       agent.policy.step = train_step_counter
     elif FLAGS.agent == 'BoltzmannGumbel':
       num_samples_list = [tf.compat.v2.Variable(
-          0, dtype=tf.int32,
+          0, dtype=tf.int64,
           name='num_samples_{}'.format(k)) for k in range(NUM_ACTIONS)]
       agent = neural_boltzmann_agent.NeuralBoltzmannAgent(
           time_step_spec=environment.time_step_spec(),
