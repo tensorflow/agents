@@ -555,7 +555,7 @@ class PPOAgent(tf_agent.TFAgent):
     else:
       entropy_regularization_loss = tf.zeros_like(policy_gradient_loss)
 
-    # TODO(b/1613650790: Move this logic to PPOKLPenaltyAgent.
+    # TODO(b/1613650790): Move this logic to PPOKLPenaltyAgent.
     if self._initial_adaptive_kl_beta == 0:
       kl_penalty_loss = tf.zeros_like(policy_gradient_loss)
     else:
@@ -906,7 +906,7 @@ class PPOAgent(tf_agent.TFAgent):
             loss_info.extra.entropy_regularization_loss)
         kl_penalty_losses.append(loss_info.extra.kl_penalty_loss)
 
-    # TODO(b/1613650790: Move this logic to PPOKLPenaltyAgent.
+    # TODO(b/1613650790): Move this logic to PPOKLPenaltyAgent.
     if self._initial_adaptive_kl_beta > 0:
       # After update epochs, update adaptive kl beta, then update observation
       #   normalizer and reward normalizer.
