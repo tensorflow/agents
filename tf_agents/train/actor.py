@@ -53,6 +53,7 @@ class Actor(object):
                transition_observers=None,
                metrics=None,
                reference_metrics=None,
+               image_metrics=None,
                summary_dir=None,
                summary_interval=1000,
                end_episode_on_boundary=True,
@@ -74,13 +75,14 @@ class Actor(object):
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as
         trajectories are for regular observers.
-      metrics: A list of metric observers.
+      metrics: A list of metric observers that output a scaler.
       reference_metrics: Optional list of metrics for which other metrics are
         plotted against. As an example passing in a metric that tracks number of
         environment episodes will result in having summaries of all other
         metrics over this value. Note summaries against the train_step are done
         by default. If you want reference_metrics to be updated make sure they
         are also added to the metrics list.
+      image_metrics: A list of metric observers that output an image.
       summary_dir: Path used for summaries. If no path is provided no summaries
         are written.
       summary_interval: How often summaries are written.
@@ -96,7 +98,8 @@ class Actor(object):
     # Create a copy of the list to avoid modifying the user provided list.
     self._observers = list(self._observers)
     self._metrics = metrics or []
-    self._observers.extend(self._metrics)
+    self._image_metrics = image_metrics or []
+    self._observers.extend(self._metrics + self._image_metrics)
     self._reference_metrics = reference_metrics or []
     # Make sure metrics are not repeated.
     self._observers = list(set(self._observers))
@@ -135,6 +138,10 @@ class Actor(object):
   @property
   def metrics(self):
     return self._metrics
+
+  @property
+  def image_metrics(self):
+    return self._image_metrics
 
   @property
   def summary_writer(self):
@@ -191,6 +198,15 @@ class Actor(object):
             logging.error(
                 "Scalar summary could not be written for reference_metric %s",
                 m)
+      for m in self._image_metrics:
+        tag = m.name
+        try:
+          tf.summary.image(
+              name=os.path.join("Metrics/", self._name, tag),
+              data=m.result(),
+              step=self._train_step)
+        except ValueError:
+          logging.error("Image summary could not be written for metric %s", m)
 
   def log_metrics(self):
     """Logs metric results to stdout."""

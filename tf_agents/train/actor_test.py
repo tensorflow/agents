@@ -96,7 +96,7 @@ class ActorTest(test_utils.TestCase):
     tf_collect_policy = agent.collect_policy
     collect_policy = py_tf_eager_policy.PyTFEagerPolicy(
         tf_collect_policy, use_tf_function=True)
-    metrics = metrics = actor.collect_metrics(buffer_size=1)
+    metrics = actor.collect_metrics(buffer_size=1)
     step_metric = py_metrics.EnvironmentSteps()
     test_actor = actor.Actor(
         env,
