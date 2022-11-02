@@ -614,10 +614,10 @@ def flatten_and_check_shape_nested_specs(specs, reference_specs):
   try:
     flat_specs, flat_shapes = _flatten_and_check_shape_nested_tensors(
         specs, reference_specs, num_outer_dims=0)
-  except ValueError:
+  except ValueError as exc:
     raise ValueError('specs must be compatible with reference_specs'
                      '; instead got specs=%s, reference_specs=%s' %
-                     (specs, reference_specs))
+                     (specs, reference_specs)) from exc
   return flat_specs, flat_shapes
 
 
@@ -1019,17 +1019,24 @@ def where(condition, true_outputs, false_outputs):
       true_outputs,
       false_outputs,
       message='"true_outputs" and "false_outputs" structures do not match')
-  if tf.nest.flatten(true_outputs):
-    case_rank = tf.rank(tf.nest.flatten(true_outputs)[0])
-    rank_difference = case_rank - tf.rank(condition)
-    condition_shape = tf.concat(
-        [tf.shape(condition),
-         tf.ones(rank_difference, dtype=tf.int32)], axis=0)
-    condition = tf.reshape(condition, condition_shape)
 
-  return tf.nest.map_structure(
-      lambda t, f: tf.compat.v2.where(condition, t, f), true_outputs,
-      false_outputs)
+  if tf.nest.flatten(true_outputs):
+    condition_rank = tf.rank(condition)
+    @tf.function  # allow-tf-function
+    def per_field_where(t, f):
+      tf.debugging.assert_rank_at_least(t, condition_rank)
+      rank_difference = tf.rank(t) - condition_rank
+      condition_shape = tf.concat(
+          [tf.shape(condition),
+           tf.ones(rank_difference, dtype=tf.int32)], axis=0)
+      per_field_condition = tf.reshape(condition, condition_shape)
+      return tf.compat.v2.where(per_field_condition, t, f)
+
+    return tf.nest.map_structure(per_field_where, true_outputs, false_outputs)
+  else:
+    return tf.nest.map_structure(
+        lambda t, f: tf.compat.v2.where(condition, t, f), true_outputs,
+        false_outputs)
 
 
 def remove_singleton_batch_spec_dim(spec: tf.TypeSpec,

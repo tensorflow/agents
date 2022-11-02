@@ -289,6 +289,56 @@ class NestedTensorsTest(tf.test.TestCase):
     with self.assertRaises(ValueError):
       nest_utils.is_batched_nested_tensors(tensors, specs)
 
+  def testDifferentRankCases(self):
+    state_spec = {
+        'first':
+            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int32, name='second'),
+        'second':
+            tensor_spec.TensorSpec(shape=(1, 1), dtype=tf.int32, name='second'),
+        'third':
+            tensor_spec.TensorSpec(
+                shape=(1, 1, 1), dtype=tf.float32, name='third'),
+    }
+    batch_size = 2
+    condition = tf.ones((batch_size,), dtype=tf.bool)
+    a = self.zeros_from_spec(state_spec, batch_size=batch_size)
+    b = self.zeros_from_spec(state_spec, batch_size=batch_size)
+    c = nest_utils.where(condition, a, b)
+    self.assertEqual(c['first'].shape, (batch_size, 1))
+    self.assertEqual(c['second'].shape, (batch_size, 1, 1))
+    self.assertEqual(c['third'].shape, (batch_size, 1, 1, 1))
+
+  def testRankTooSmallRaisesValueError(self):
+    state_spec = {
+        'big':
+            tensor_spec.TensorSpec(shape=(1, 1), dtype=tf.int32, name='second'),
+        'small':
+            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int32, name='second'),
+    }
+    batch_size = 2
+    condition = tf.ones((batch_size, 1, 1), dtype=tf.bool)
+    a = self.zeros_from_spec(state_spec, batch_size=batch_size)
+    b = self.zeros_from_spec(state_spec, batch_size=batch_size)
+    with self.assertRaises(ValueError):
+      nest_utils.where(condition, a, b)
+
+  def testRankTooSmallFunctionRaisesValueError(self):
+    state_spec = {
+        'big':
+            tensor_spec.TensorSpec(shape=(1, 1), dtype=tf.int32, name='second'),
+        'small':
+            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int32, name='second'),
+    }
+    @tf.function
+    def aux_where():
+      batch_size = 2
+      condition = tf.ones((batch_size, 1, 1), dtype=tf.bool)
+      a = self.zeros_from_spec(state_spec, batch_size=batch_size)
+      b = self.zeros_from_spec(state_spec, batch_size=batch_size)
+      return nest_utils.where(condition, a, b)
+    with self.assertRaises(ValueError):
+      aux_where()
+
   def testIsBatchedNestedTensorsMultipleBatchDimsFalse(self):
     shape = [2, 3]
     specs = self.nest_spec(shape)
@@ -458,7 +508,7 @@ class NestedTensorsTest(tf.test.TestCase):
 
     tensors = nest_utils.split_nested_tensors(batched_tensors, specs,
                                               batch_size)
-    self.assertEqual(batch_size, len(tensors))
+    self.assertLen(tensors, batch_size)
 
     for t in tensors:
       tf.nest.assert_same_structure(specs, t)
@@ -467,7 +517,7 @@ class NestedTensorsTest(tf.test.TestCase):
       if not tf.executing_eagerly() and isinstance(t, tf.SparseTensor):
         # Constant value propagation in SparseTensors does not allow us to infer
         # the value of output t.shape from input's t.shape; only its rank.
-        self.assertEqual(len(t.shape), 1 + len(shape))
+        self.assertLen(t.shape, 1 + len(shape))
       else:
         self.assertEqual(t.shape.as_list(), [1] + shape)
     tf.nest.map_structure(assert_shapes, tensors)
@@ -503,7 +553,7 @@ class NestedTensorsTest(tf.test.TestCase):
     tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.unstack_nested_tensors(batched_tensors, specs)
-    self.assertEqual(batch_size, len(tensors))
+    self.assertLen(tensors, batch_size)
 
     for t in tensors:
       tf.nest.assert_same_structure(specs, t)
@@ -539,7 +589,7 @@ class NestedTensorsTest(tf.test.TestCase):
   def testUnBatchedNestedTensors(self, include_sparse=False):
     shape = [2, 3]
 
-    specs = self.nest_spec(shape, include_sparse=False)
+    specs = self.nest_spec(shape, include_sparse=include_sparse)
     unbatched_tensors = self.zeros_from_spec(specs)
     tf.nest.assert_same_structure(unbatched_tensors, specs)
 
@@ -679,7 +729,7 @@ class NestedArraysTest(tf.test.TestCase):
     specs = self.nest_spec(shape)
     batched_arrays = self.zeros_from_spec(specs, outer_dims=[batch_size])
     unbatched_arrays = nest_utils.unstack_nested_arrays(batched_arrays)
-    self.assertEqual(batch_size, len(unbatched_arrays))
+    self.assertLen(unbatched_arrays, batch_size)
 
     for array in unbatched_arrays:
       tf.nest.assert_same_structure(specs, array)
@@ -694,7 +744,7 @@ class NestedArraysTest(tf.test.TestCase):
     batched_arrays = self.zeros_from_spec(specs, outer_dims=[batch_size])
     unbatched_flat_items = nest_utils.unstack_nested_arrays_into_flat_items(
         batched_arrays)
-    self.assertEqual(batch_size, len(unbatched_flat_items))
+    self.assertLen(unbatched_flat_items, batch_size)
 
     for nested_array, flat_item in zip(
         nest_utils.unstack_nested_arrays(batched_arrays), unbatched_flat_items):
@@ -711,7 +761,7 @@ class NestedArraysTest(tf.test.TestCase):
     specs = self.nest_spec(shape)
     batched_arrays = self.zeros_from_spec(specs, outer_dims=[batch_size])
     unbatched_arrays = nest_utils.unstack_nested_arrays(batched_arrays)
-    self.assertEqual(batch_size, len(unbatched_arrays))
+    self.assertLen(unbatched_arrays, batch_size)
 
     for array in unbatched_arrays:
       tf.nest.assert_same_structure(specs, array)
