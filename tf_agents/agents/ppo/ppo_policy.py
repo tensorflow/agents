@@ -145,7 +145,7 @@ class PPOPolicy(actor_policy.ActorPolicy):
 
       if not self._compute_value_and_advantage_in_train:
         info_spec['value_prediction'] = tensor_spec.TensorSpec(
-            shape=[], dtype=tf.float32)
+            shape=[], dtype=tf.float32, name='value_prediction')
     else:
       info_spec = ()
 
