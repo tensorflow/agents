@@ -693,36 +693,45 @@ def log_probability(distributions, actions, action_spec):
 
 
 # TODO(ofirnachum): Move to distribution utils.
-def entropy(distributions, action_spec):
+def entropy(distributions, action_spec, outer_rank=None):
   """Computes total entropy of distribution.
 
   Args:
     distributions: A possibly batched tuple of distributions.
     action_spec: A nested tuple representing the action spec.
+    outer_rank: Optional outer rank of the distributions. If not provided use
+      distribution.mode() to compute it.
 
   Returns:
     A Tensor representing the entropy of each distribution in the batch.
     Assumes actions are independent, so that marginal entropies of each action
     may be summed.
   """
-  nested_modes = tf.nest.map_structure(lambda d: d.mode(), distributions)
-  outer_rank = nest_utils.get_outer_rank(nested_modes, action_spec)
+  if outer_rank is None:
+    nested_modes = tf.nest.map_structure(lambda d: d.mode(), distributions)
+    outer_rank = nest_utils.get_outer_rank(nested_modes, action_spec)
 
   def _compute_entropy(single_distribution):
-    entropies = single_distribution.entropy()
-    # Sum entropies over everything but the batch.
-    rank = entropies.shape.rank
-    reduce_dims = list(range(outer_rank, rank))
-    return tf.reduce_sum(input_tensor=entropies, axis=reduce_dims)
+    try:
+      entropies = single_distribution.entropy()
+      # Sum entropies over everything but the batch.
+      rank = entropies.shape.rank
+      reduce_dims = list(range(outer_rank, rank))
+      return tf.reduce_sum(input_tensor=entropies, axis=reduce_dims)
+    except NotImplementedError:
+      return None
 
-  entropies = [
-      _compute_entropy(dist) for dist in tf.nest.flatten(distributions)
-  ]
+  entropies = []
+  for dist in tf.nest.flatten(distributions):
+    entropy_dist = _compute_entropy(dist)
+    if entropy_dist is not None:
+      entropies.append(entropy_dist)
 
   # Sum entropies over action tuple.
-  total_entropies = tf.add_n(entropies)
+  if not entropies:
+    return None
 
-  return total_entropies
+  return tf.add_n(entropies)
 
 
 def discounted_future_sum(values, gamma, num_steps):

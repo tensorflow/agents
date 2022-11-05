@@ -500,6 +500,18 @@ class EntropyTest(test_utils.TestCase):
                     1.0 + 0.5 * np.log(2 * 3.14) + 0.5 * np.log(8 * 3.14159),
                     0.001)
 
+  def testEntropyOuterRank(self):
+    action_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
+    distribution = tfp.distributions.Normal([0.0, 0.0], [1.0, 2.0])
+    entropies = common.entropy(distribution, action_spec, outer_rank=0)
+
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    entropies_ = self.evaluate(entropies)
+    self.assertEqual(len(entropies_.shape), 0)
+    self.assertNear(entropies_,
+                    1.0 + 0.5 * np.log(2 * 3.14) + 0.5 * np.log(8 * 3.14159),
+                    0.001)
+
   def testNestedEntropy(self):
     action_spec = [
         tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1),

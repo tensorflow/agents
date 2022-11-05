@@ -128,10 +128,11 @@ class DummyActorNet(network.DistributionNetwork):
 
 
 def create_sequential_actor_net(ndims: int):
+
   def create_dist(loc_and_scale):
     return {
-        'my_action': tfp.bijectors.Tanh()(
-            tfp.distributions.MultivariateNormalDiag(
+        'my_action':
+            tfp.bijectors.Tanh()(tfp.distributions.MultivariateNormalDiag(
                 loc=loc_and_scale[..., :ndims],
                 scale_diag=0.01 + tf.math.softplus(loc_and_scale[..., ndims:]),
                 validate_args=True,
@@ -331,12 +332,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           compute_value_and_advantage_in_train=False,
           train_step_counter=counter)
       agent.initialize()
-    observations = tf.constant(
-        [
-            [[1, 2], [3, 4], [5, 6]],
-            [[1, 2], [3, 4], [5, 6]],
-        ],
-        dtype=tf.float32)
+    observations = tf.constant([
+        [[1, 2], [3, 4], [5, 6]],
+        [[1, 2], [3, 4], [5, 6]],
+    ],
+                               dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
@@ -488,12 +488,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
               compute_value_and_advantage_in_train),
           train_step_counter=counter)
       agent.initialize()
-    observations = tf.constant(
-        [
-            [[1, 2], [3, 4], [5, 6]],
-            [[1, 2], [3, 4], [5, 6]],
-        ],
-        dtype=tf.float32)
+    observations = tf.constant([
+        [[1, 2], [3, 4], [5, 6]],
+        [[1, 2], [3, 4], [5, 6]],
+    ],
+                               dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
@@ -755,9 +754,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     # Now request entropy regularization loss.
     # Action stdevs should be ~1.0, and mean entropy ~3.70111.
     expected_loss = -3.70111 * ent_reg
-    loss = agent.entropy_regularization_loss(time_steps,
-                                             current_policy_distribution,
-                                             weights)
+    outer_rank = nest_utils.get_outer_rank(time_steps, agent.time_step_spec)
+    entropy = tf.cast(
+        common.entropy(current_policy_distribution, agent.action_spec,
+                       outer_rank), tf.float32)
+    loss = agent.entropy_regularization_loss(time_steps, entropy, weights)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -1083,12 +1084,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         train_step_counter=counter,
         compute_value_and_advantage_in_train=compute_value_and_advantage_in_train
     )
-    observations = tf.constant(
-        [
-            [[1, 2], [3, 4], [5, 6]],
-            [[1, 2], [3, 4], [5, 6]],
-        ],
-        dtype=tf.float32)
+    observations = tf.constant([
+        [[1, 2], [3, 4], [5, 6]],
+        [[1, 2], [3, 4], [5, 6]],
+    ],
+                               dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
@@ -1177,12 +1177,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         compute_value_and_advantage_in_train=False,
         debug_summaries=True)
 
-    observations = tf.constant(
-        [
-            [[1, 2], [3, 4], [5, 6]],
-            [[1, 2], [3, 4], [5, 6]],
-        ],
-        dtype=tf.float32)
+    observations = tf.constant([
+        [[1, 2], [3, 4], [5, 6]],
+        [[1, 2], [3, 4], [5, 6]],
+    ],
+                               dtype=tf.float32)
 
     observations = (observations, observations, {
         'a': observations,
@@ -1280,12 +1279,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
 
 def _create_experience_trajectory_my_action() -> trajectory.Trajectory:
-  observations = tf.constant(
-      [
-          [[1, 2], [3, 4], [5, 6]],
-          [[1, 2], [3, 4], [5, 6]],
-      ],
-      dtype=tf.float32)
+  observations = tf.constant([
+      [[1, 2], [3, 4], [5, 6]],
+      [[1, 2], [3, 4], [5, 6]],
+  ],
+                             dtype=tf.float32)
 
   mid_time_step_val = ts.StepType.MID.tolist()
   time_steps = ts.TimeStep(
@@ -1316,10 +1314,10 @@ def _create_experience_trajectory_my_action() -> trajectory.Trajectory:
   }
   policy_info['value_prediction'] = value_preds
   experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                     actions, policy_info,
-                                     time_steps.step_type, time_steps.reward,
-                                     time_steps.discount)
+                                     actions, policy_info, time_steps.step_type,
+                                     time_steps.reward, time_steps.discount)
   return experience
+
 
 if __name__ == '__main__':
   tf.test.main()
