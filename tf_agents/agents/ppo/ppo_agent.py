@@ -923,6 +923,7 @@ class PPOAgent(tf_agent.TFAgent):
       kl_divergence = self._kl_divergence(
           time_steps, old_action_distribution_parameters,
           self._collect_policy.distribution(time_steps, policy_state).action)
+      kl_divergence *= masked_weights
       self.update_adaptive_kl_beta(kl_divergence)
 
     if self.update_normalizers_in_train:
