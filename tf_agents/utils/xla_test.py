@@ -43,6 +43,7 @@ class XLATest(tf.test.TestCase):
     if not xla.is_xla_available():
       self.skipTest('Skipping test: XLA is not available.')
 
+    @tf.function
     @xla.compile_in_graph_mode
     def add(x, y):
       return x + y
@@ -50,6 +51,7 @@ class XLATest(tf.test.TestCase):
     z = add(1.0, 2.0)
     self.assertAllClose(3.0, self.evaluate(z))
 
+    @tf.function
     @xla.compile_in_graph_mode
     def add_subtract(x, y):
       return {'add': x + y, 'sub': x - y}
@@ -57,11 +59,18 @@ class XLATest(tf.test.TestCase):
     z = add_subtract(1.0, 2.0)
     self.assertAllClose({'add': 3.0, 'sub': -1.0}, self.evaluate(z))
 
-    @xla.compile_in_graph_mode
-    def add_divide(x, yz):
-      return x + yz['y'] / yz['z']
+    class Divider(object):
 
-    z = add_divide(1.0, {'y': 2.0, 'z': 3.0})
+      def __init__(self, x):
+        self._x = x
+
+      @tf.function
+      @xla.compile_method_in_graph_mode
+      def add_divide(self, yz):
+        return self._x + yz['y'] / yz['z']
+
+    o = Divider(1.0)
+    z = o.add_divide(yz={'y': 2.0, 'z': 3.0})
     self.assertAllClose(1.0 + 2.0 / 3.0, self.evaluate(z))
 
     if not tf.compat.v1.executing_eagerly():
