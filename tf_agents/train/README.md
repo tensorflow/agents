@@ -21,19 +21,20 @@ replay buffer.
 Reverb replay buffer is contained in a separate server, that can be run alongside
 the main training script or as a separate job. The server contains a table with
 specified capacity and sampling and removing mechanisms (see
-[Reverb replay buffer documentation]() for more details on those). Here's
+[Reverb replay buffer documentation](https://github.com/deepmind/reverb#quick-start) for more details on those). Here's
 a complete example of setting up a simple Reverb replay buffer with a uniform
 sampling table of 1000 elements:
 
 ```python
   import reverb
   from tf_agents.agents.sac import sac_agent
+  from tf_agents.replay_buffers import reverb_replay_buffer
 
   # initialize the agent
   agent = sac_agent.SacAgent(...)
 
   table = reverb.Table(
-      table_name='experience',
+      name='uniform_table',
       max_size=1000,
       sampler=reverb.selectors.Uniform(),
       remover=reverb.selectors.Fifo(),
@@ -83,7 +84,7 @@ Below is an example of creating an Actor class:
       train_step,
       steps_per_run=1,
       summary_dir='/tmp/summaries',
-      observers=[replay_buffer_observer])
+      observers=[rb_observer])
 ```
 
 To perform data collection, we can use the `run()` method of the Actor class
@@ -128,10 +129,10 @@ buffer and creating a Learner:
   # checkpoint_interval) to the subdirectories under root_dir.
   # Users can add more summaries via the triggers.
   agent_learner = learner.Learner(
-      root_dir='/tmp/train',
+      '/tmp/train',
       train_step,
       agent,
-      experience_dataset_fn,
+      experience_dataset_fn=experience_dataset_fn,
       summary_interval=100,
       checkpoint_interval=100000,
       triggers=learning_triggers)
