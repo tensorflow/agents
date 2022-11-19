@@ -119,6 +119,24 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     # TimeStep, Action, NextTimeStep
     self.assertLen(transitions[0], 3)
 
+  def testRunInfoObserver(self):
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    infos = []
+    driver = py_driver.PyDriver(
+        env,
+        policy,
+        observers=[],
+        transition_observers=[],
+        info_observers=[infos.append],
+        max_steps=2,
+    )
+    initial_time_step = env.reset()
+    initial_policy_state = policy.get_initial_state()
+    driver.run(initial_time_step, initial_policy_state)
+    self.assertEqual(infos, [{'mock': 1}, {'mock': 1}])
+
   def testMultipleRunMaxSteps(self):
     num_steps = 3
     num_expected_steps = 4

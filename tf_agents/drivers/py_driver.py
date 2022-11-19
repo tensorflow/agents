@@ -40,6 +40,7 @@ class PyDriver(driver.Driver):
       observers: Sequence[Callable[[trajectory.Trajectory], Any]],
       transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
                                                        Any]]] = None,
+      info_observers: Optional[Sequence[Callable[[Any], Any]]] = None,
       max_steps: Optional[types.Int] = None,
       max_episodes: Optional[types.Int] = None,
       end_episode_on_boundary: bool = True):
@@ -64,6 +65,8 @@ class PyDriver(driver.Driver):
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as
         trajectories are for regular observers.
+      info_observers: A list of observers that are notified after every step in
+        the environment. Each observer is a callable(info).
       max_steps: Optional maximum number of steps for each run() call. For
         batched or parallel environments, this is the maximum total number of
         steps summed across all environments. Also see below.  Default: 0.
@@ -85,7 +88,8 @@ class PyDriver(driver.Driver):
       raise ValueError(
           'Either `max_steps` or `max_episodes` should be greater than 0.')
 
-    super(PyDriver, self).__init__(env, policy, observers, transition_observers)
+    super(PyDriver, self).__init__(env, policy, observers, transition_observers,
+                                   info_observers)
     self._max_steps = max_steps or np.inf
     self._max_episodes = max_episodes or np.inf
     self._end_episode_on_boundary = end_episode_on_boundary
@@ -124,6 +128,8 @@ class PyDriver(driver.Driver):
         observer((time_step, action_step_with_previous_state, next_time_step))
       for observer in self.observers:
         observer(traj)
+      for observer in self.info_observers:
+        observer(self.env.get_info())
 
       if self._end_episode_on_boundary:
         num_episodes += np.sum(traj.is_boundary())

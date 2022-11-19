@@ -95,7 +95,7 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
     return self._observation_spec
 
   def get_info(self) -> Any:
-    return {}
+    return {'mock': 1}
 
 
 class TFPolicyMock(tf_policy.TFPolicy):
