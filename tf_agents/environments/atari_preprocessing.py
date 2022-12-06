@@ -29,12 +29,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import cv2
 import gin
 import gym
 from gym import core as gym_core
 from gym.spaces import box
 import numpy as np
-import cv2
 
 
 @gin.configurable
