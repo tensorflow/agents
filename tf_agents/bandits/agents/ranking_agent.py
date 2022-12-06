@@ -285,13 +285,15 @@ class RankingAgent(tf_agent.TFAgent):
     weights = self._construct_sample_weights(flat_reward, flat_obs, weights)
 
     est_reward = self._scoring_network(flat_obs, training)[0]
+    loss_output = self._error_loss_fn(
+        est_reward, score, reduction=tf.compat.v1.losses.Reduction.NONE)
+    if len(list(loss_output.shape)) == 1:
+      # In case the loss is an aggregate over all slots, we only use one weight
+      # per iteration.
+      weights = weights[:, 0]
     return tf_agent.LossInfo(
         tf.reduce_sum(
-            tf.multiply(
-                self._error_loss_fn(
-                    est_reward,
-                    score,
-                    reduction=tf.compat.v1.losses.Reduction.NONE), weights)) /
+            tf.multiply(loss_output, weights)) /
         tf.reduce_sum(weights),
         extra=())
 

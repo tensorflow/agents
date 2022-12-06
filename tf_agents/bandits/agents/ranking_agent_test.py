@@ -68,7 +68,8 @@ def _get_experience(initial_step, action_step, final_step):
     'item_dim': 3,
     'num_items': 10,
     'num_slots': 5,
-    'non_click_score': None
+    'non_click_score': None,
+    'loss': 'default'
 }, {
     'policy_type': ranking_agent.RankingPolicyType.DESCENDING_SCORES,
     'batch_size': 1,
@@ -76,14 +77,23 @@ def _get_experience(initial_step, action_step, final_step):
     'item_dim': 5,
     'num_items': 21,
     'num_slots': 17,
-    'non_click_score': -10
+    'non_click_score': -10,
+    'loss': 'default'
+}, {
+    'policy_type': ranking_agent.RankingPolicyType.DESCENDING_SCORES,
+    'batch_size': 2,
+    'global_dim': 3,
+    'item_dim': 4,
+    'num_items': 13,
+    'num_slots': 11,
+    'non_click_score': 0,
+    'loss': 'softmax_cross_entropy'
 }])
 class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
 
   def testTrainAgentCascadingFeedback(self, policy_type, batch_size, global_dim,
                                       item_dim, num_items, num_slots,
-                                      non_click_score):
-
+                                      non_click_score, loss):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         global_dim, item_dim, num_items)
     scoring_net = (
@@ -136,7 +146,9 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
 
   def testTrainAgentScoreFeedback(self, policy_type, batch_size, global_dim,
                                   item_dim, num_items, num_slots,
-                                  non_click_score):
+                                  non_click_score, loss):
+    if not tf.executing_eagerly():
+      self.skipTest('Only works in eager mode.')
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
         global_dim, item_dim, num_items)
     scoring_net = (
@@ -158,11 +170,19 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
             non_click_score=non_click_score,
             optimizer=optimizer)
       non_click_score = None
+
+    def loss_fn(logits, labels, reduction):
+      del reduction
+      return tf.nn.softmax_cross_entropy_with_logits(
+          labels=labels, logits=logits)
+
     agent = ranking_agent.RankingAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         scoring_network=scoring_net,
         policy_type=policy_type,
+        error_loss_fn=(loss_fn if loss == 'softmax_cross_entropy' else
+                       tf.compat.v1.losses.mean_squared_error),
         feedback_model=ranking_agent.FeedbackModel.SCORE_VECTOR,
         non_click_score=non_click_score,
         optimizer=optimizer)
