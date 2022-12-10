@@ -70,6 +70,7 @@ class Learner(tf.Module):
                strategy=None,
                run_optimizer_variable_init=True,
                use_reverb_v2=False,
+               direct_sampling=False,
                experience_dataset_options=None,
                strategy_run_options=None,
                summary_root_dir=None):
@@ -128,6 +129,8 @@ class Learner(tf.Module):
       use_reverb_v2: If True then we expect the dataset samples to return a
         named_tuple with a data and an info field. If False we expect a
         tuple(data, info).
+      direct_sampling: Do not use replay_buffer, but sample from offline
+        dataset directly.
       experience_dataset_options: (Optional) `tf.distribute.InputOptions` passed
         to `strategy.distribute_datasets_from_function`, used to control options
         on how this dataset is distributed.
@@ -149,6 +152,7 @@ class Learner(tf.Module):
         root_dir if summary_root_dir is None else summary_root_dir)
     self._summary_dir = os.path.join(summary_root_dir, TRAIN_DIR)
     self._use_reverb_v2 = use_reverb_v2
+    self._direct_sampling = direct_sampling
     if summary_interval:
       self.train_summary_writer = tf.compat.v2.summary.create_file_writer(
           self._summary_dir, flush_millis=10000)
@@ -323,7 +327,10 @@ class Learner(tf.Module):
 
   def single_train_step(self, iterator):
     sample = next(iterator)
-    if self._use_reverb_v2:
+
+    if self._direct_sampling:
+      experience, sample_info = sample, None
+    elif self._use_reverb_v2:
       experience, sample_info = sample.data, sample.info
     else:
       experience, sample_info = sample
@@ -386,7 +393,9 @@ class Learner(tf.Module):
 
       if experience_and_sample_info is None:
         sample = next(self._experience_iterator)
-        if self._use_reverb_v2:
+        if self._direct_sampling:
+          experience_and_sample_info = (sample, None)
+        elif self._use_reverb_v2:
           experience_and_sample_info = (sample.data, sample.info)
         else:
           experience_and_sample_info = sample
