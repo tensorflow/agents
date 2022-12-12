@@ -299,7 +299,7 @@ class ExplicitPositionalBiasRankingEnvironment(
 
   def __init__(self, global_sampling_fn: Callable[[], types.Array],
                item_sampling_fn: Callable[[], types.Array],
-               relevance_fn: Callable[[], float],
+               relevance_fn: Callable[[types.Array, types.Array], float],
                num_items: int,
                observation_probs: Sequence[float],
                batch_size: int = 1,
