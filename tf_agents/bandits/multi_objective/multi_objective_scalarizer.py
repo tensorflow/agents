@@ -76,6 +76,9 @@ class ScalarizerTraceType(tf.types.experimental.TraceType):
   def most_specific_common_supertype(self, _):
     return None
 
+  def placeholder_value(self, placeholder_context=None):
+    raise NotImplementedError
+
   def __hash__(self):
     return id(self)
 
