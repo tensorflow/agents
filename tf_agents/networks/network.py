@@ -22,6 +22,7 @@ from __future__ import print_function
 import abc
 import typing
 
+import keras as tf_keras
 import six
 
 import tensorflow as tf
@@ -36,7 +37,6 @@ from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
 # pylint: disable=g-direct-tensorflow-import
-from tensorflow.python import keras as tf_keras  # TF internal
 from tensorflow.python import util as tf_util  # TF internal
 from tensorflow.python.trackable import base  # TF internal
 # pylint: enable=g-direct-tensorflow-import
