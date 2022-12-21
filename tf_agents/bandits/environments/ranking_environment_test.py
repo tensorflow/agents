@@ -76,7 +76,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       return np.random.randint(-2, 3, [item_dim])
 
     scores_weight_matrix = (np.reshape(
-        np.arange(global_dim * item_dim, dtype=np.float),
+        np.arange(global_dim * item_dim, dtype=float),
         newshape=[item_dim, global_dim]) - 10) / 5
 
     env = ranking_environment.RankingPyEnvironment(
@@ -127,7 +127,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     def _item_sampling_fn():
       return np.random.randint(-2, 3, [item_dim])
     scores_weight_matrix = (np.reshape(
-        np.arange(global_dim * item_dim, dtype=np.float),
+        np.arange(global_dim * item_dim, dtype=float),
         newshape=[item_dim, global_dim]) - 10) / 5
     env = ranking_environment.RankingPyEnvironment(
         _global_sampling_fn,

@@ -326,7 +326,7 @@ class PPOPolicyTest(parameterized.TestCase, test_utils.TestCase):
         clip=False)
 
     # Take a step.
-    mask = np.array([True, False, True, False, True], dtype=np.bool)
+    mask = np.array([True, False, True, False, True], dtype=bool)
     self.assertLen(mask, num_categories)
     time_step = ts.TimeStep(
         step_type=tf.constant([1], dtype=tf.int32),

@@ -141,7 +141,7 @@ def mushroom_reward_distribution(r_noeat, r_eat_safe, r_eat_poison_bad,
 
 def convert_covertype_dataset(file_path, buffer_size=40000):
   with tf.io.gfile.GFile(file_path, 'r') as infile:
-    data_array = np.genfromtxt(infile, dtype=np.int, delimiter=',')
+    data_array = np.genfromtxt(infile, dtype=int, delimiter=',')
   contexts = data_array[:, :-1]
   context_tensor = tf.cast(contexts, tf.float32)
   labels = data_array[:, -1] - 1  # Classes are from [1, 7].

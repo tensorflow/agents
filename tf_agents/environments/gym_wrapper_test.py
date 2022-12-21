@@ -46,9 +46,9 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
     self.assertEqual((4,), spec.shape)
     self.assertEqual(np.int32, spec.dtype)
-    np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
+    np.testing.assert_array_equal(np.array([0], dtype=int), spec.minimum)
     np.testing.assert_array_equal(
-        np.array([0, 1, 2, 3], dtype=np.int), spec.maximum)
+        np.array([0, 1, 2, 3], dtype=int), spec.maximum)
 
   def test_spec_from_gym_space_multi_binary(self):
     multi_binary_space = gym.spaces.MultiBinary(4)
@@ -56,8 +56,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
     self.assertEqual((4,), spec.shape)
     self.assertEqual(np.int32, spec.dtype)
-    np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
-    np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
+    np.testing.assert_array_equal(np.array([0], dtype=int), spec.minimum)
+    np.testing.assert_array_equal(np.array([1], dtype=int), spec.maximum)
 
   def test_spec_from_gym_space_multi_binary_2d(self):
     multi_binary_space = gym.spaces.MultiBinary((8, 8))
@@ -65,8 +65,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
     self.assertEqual((8, 8), spec.shape)
     self.assertEqual(np.int32, spec.dtype)
-    np.testing.assert_array_equal(np.array([0], dtype=np.int), spec.minimum)
-    np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
+    np.testing.assert_array_equal(np.array([0], dtype=int), spec.minimum)
+    np.testing.assert_array_equal(np.array([1], dtype=int), spec.maximum)
 
   def test_spec_from_gym_space_box_scalars(self):
     for dtype in (np.float32, np.float64):
@@ -84,8 +84,8 @@ class GymWrapperSpecTest(test_utils.TestCase):
 
     self.assertEqual((3, 4), spec.shape)
     self.assertEqual(np.float32, spec.dtype)
-    np.testing.assert_array_equal(np.array([-1], dtype=np.int), spec.minimum)
-    np.testing.assert_array_equal(np.array([1], dtype=np.int), spec.maximum)
+    np.testing.assert_array_equal(np.array([-1], dtype=int), spec.minimum)
+    np.testing.assert_array_equal(np.array([1], dtype=int), spec.maximum)
 
   def test_spec_from_gym_space_when_simplify_box_bounds_false(self):
     # testing on gym.spaces.Dict which makes recursive calls to
@@ -101,13 +101,13 @@ class GymWrapperSpecTest(test_utils.TestCase):
     self.assertEqual(np.float32, spec['box2'].dtype)
     self.assertEqual('box1', spec['box1'].name)
     self.assertEqual('box2', spec['box2'].name)
-    np.testing.assert_array_equal(np.array([-1, -1], dtype=np.int),
+    np.testing.assert_array_equal(np.array([-1, -1], dtype=int),
                                   spec['box1'].minimum)
-    np.testing.assert_array_equal(np.array([1, 1], dtype=np.int),
+    np.testing.assert_array_equal(np.array([1, 1], dtype=int),
                                   spec['box1'].maximum)
-    np.testing.assert_array_equal(np.array([-1, -1], dtype=np.int),
+    np.testing.assert_array_equal(np.array([-1, -1], dtype=int),
                                   spec['box2'].minimum)
-    np.testing.assert_array_equal(np.array([1, 1], dtype=np.int),
+    np.testing.assert_array_equal(np.array([1, 1], dtype=int),
                                   spec['box2'].maximum)
 
   def test_spec_from_gym_space_box_array(self):
