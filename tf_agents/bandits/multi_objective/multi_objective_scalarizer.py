@@ -70,6 +70,9 @@ class ScalarizerTraceType(tf.types.experimental.TraceType):
   Protocol.
   """
 
+  def __init__(self, value):
+    self._value = value
+
   def is_subtype_of(self, _):
     return False
 
@@ -77,7 +80,7 @@ class ScalarizerTraceType(tf.types.experimental.TraceType):
     return None
 
   def placeholder_value(self, placeholder_context=None):
-    raise NotImplementedError
+    return self._value
 
   def __hash__(self):
     return id(self)
@@ -182,7 +185,7 @@ class Scalarizer(tf.Module):
 
   def __tf_tracing_type__(self, _):
     """Default TraceType Protocol for Scalarizaer Class."""
-    return ScalarizerTraceType()
+    return ScalarizerTraceType(self)
 
 
 class LinearScalarizer(Scalarizer):
