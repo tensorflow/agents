@@ -88,6 +88,7 @@ class RankingPyEnvironment(
                scores_weight_matrix: types.Float,
                feedback_model: int = FeedbackModel.CASCADING,
                click_model: int = ClickModel.GHOST_ACTIONS,
+               real_cascade: bool = False,
                distance_threshold: Optional[float] = None,
                batch_size: Optional[int] = 1,
                name: Optional[Text] = 'ranking_environment'):
@@ -123,6 +124,8 @@ class RankingPyEnvironment(
            items gets selected, it results in a `no-click`.
         -- `distance_based`: Inner-product scores are calculated, and if none of
            the scores exceed a given parameter, no item is clicked.
+      real_cascade: If true, the user is actually modeled as a sequentional
+        decision maker, clicking on the first relevant item.
       distance_threshold: (float) In case the diversity model is distance based,
         this threshold governs if the user actually clicked on any of the items.
       batch_size: The batch size.
@@ -141,6 +144,7 @@ class RankingPyEnvironment(
           'If the diversity model is `DISTANCE_BASED`, '
           'the distance threshold must be set.')
     self._distance_threshold = distance_threshold
+    self._real_cascade = real_cascade
 
     global_spec = array_spec.ArraySpec.from_array(global_sampling_fn())
     item_spec = array_spec.add_outer_dims_nest(
@@ -278,6 +282,9 @@ class RankingPyEnvironment(
     scores = np.concatenate(
         [scores,
          np.ones([self._batch_size, 1]) * self._distance_threshold], axis=1)
+    if self._real_cascade:
+      return np.array(
+          [np.min(np.where(s >= self._distance_threshold)) for s in scores])
     return np.argmax(scores, axis=1)
 
 

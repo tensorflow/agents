@@ -55,7 +55,17 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       'num_items': 7,
       'num_slots': 5,
       'feedback_model': ranking_environment.FeedbackModel.CASCADING,
-      'click_model': ranking_environment.ClickModel.GHOST_ACTIONS
+      'click_model': ranking_environment.ClickModel.GHOST_ACTIONS,
+      'real_cascade': False,
+  }, {
+      'batch_size': 4,
+      'global_dim': 5,
+      'item_dim': 3,
+      'num_items': 8,
+      'num_slots': 6,
+      'feedback_model': ranking_environment.FeedbackModel.CASCADING,
+      'click_model': ranking_environment.ClickModel.DISTANCE_BASED,
+      'real_cascade': True,
   }, {
       'batch_size': 8,
       'global_dim': 12,
@@ -63,11 +73,13 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
       'num_items': 23,
       'num_slots': 9,
       'feedback_model': ranking_environment.FeedbackModel.SCORE_VECTOR,
-      'click_model': ranking_environment.ClickModel.DISTANCE_BASED
+      'click_model': ranking_environment.ClickModel.DISTANCE_BASED,
+      'real_cascade': False,
+
   }])
   def test_ranking_environment(self, batch_size, global_dim, item_dim,
                                num_items, num_slots, feedback_model,
-                               click_model):
+                               click_model, real_cascade):
 
     def _global_sampling_fn():
       return np.random.randint(-10, 10, [global_dim])
@@ -87,6 +99,7 @@ class RankingPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
         scores_weight_matrix=scores_weight_matrix,
         feedback_model=feedback_model,
         click_model=click_model,
+        real_cascade=real_cascade,
         distance_threshold=10.0,
         batch_size=batch_size)
     time_step_spec = env.time_step_spec()
