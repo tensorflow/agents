@@ -176,7 +176,7 @@ def get_required_packages():
       'cloudpickle >= 1.3',
       'gin-config >= 0.4.0',
       'gym >= 0.17.0, <=0.23.0',
-      'numpy >= 1.13.3',
+      'numpy >= 1.19.0',
       'pillow',
       'six >= 1.10.0',
       'protobuf >= 3.11.3',
