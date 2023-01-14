@@ -108,7 +108,7 @@ $ pip install --user tf-agents[reverb]
 # Use this tag get the matching examples and colabs.
 $ git clone https://github.com/tensorflow/agents.git
 $ cd agents
-$ git checkout v0.14.0
+$ git checkout v0.15.0
 ```
 
 If you want to install TF-Agents with versions of Tensorflow or
@@ -175,21 +175,24 @@ users that may be locked into a specific version of TensorFlow. 0.9.0 was the
 last release compatible with Python 3.6. 0.3.0 was the last release compatible
 with Python 2.
 
-Release | Branch / Tag                                               | TensorFlow Version
-------- | ---------------------------------------------------------- | ------------------
-Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly
-0.14.0  | [v0.14.0](https://github.com/tensorflow/agents/tree/v0.14.0) | 2.10.0
-0.13.0  | [v0.13.0](https://github.com/tensorflow/agents/tree/v0.13.0) | 2.9.0
-0.12.0  | [v0.12.0](https://github.com/tensorflow/agents/tree/v0.12.0) | 2.8.0
-0.11.0  | [v0.11.0](https://github.com/tensorflow/agents/tree/v0.11.0) | 2.7.0
-0.10.0  | [v0.10.0](https://github.com/tensorflow/agents/tree/v0.10.0) | 2.6.0
-0.9.0   | [v0.9.0](https://github.com/tensorflow/agents/tree/v0.9.0) | 2.6.0
-0.8.0   | [v0.8.0](https://github.com/tensorflow/agents/tree/v0.8.0) | 2.5.0
-0.7.1   | [v0.7.1](https://github.com/tensorflow/agents/tree/v0.7.1) | 2.4.0
-0.6.0   | [v0.6.0](https://github.com/tensorflow/agents/tree/v0.6.0) | 2.3.0
-0.5.0   | [v0.5.0](https://github.com/tensorflow/agents/tree/v0.5.0) | 2.2.0
-0.4.0   | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0
-0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0
+If using numpy < 1.19, then use TF-Agents 0.15.0 or earlier.
+
+Release | Branch / Tag                                               | TensorFlow Version | dm-reverb Version
+------- | ---------------------------------------------------------- | ------------------ | -----------
+Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly         | dm-reverb-nightly
+0.15.0  | [v0.15.0](https://github.com/tensorflow/agents/tree/v0.15.0) | 2.11.0           | 0.10.0
+0.14.0  | [v0.14.0](https://github.com/tensorflow/agents/tree/v0.14.0) | 2.10.0           | 0.9.0
+0.13.0  | [v0.13.0](https://github.com/tensorflow/agents/tree/v0.13.0) | 2.9.0            | 0.8.0
+0.12.0  | [v0.12.0](https://github.com/tensorflow/agents/tree/v0.12.0) | 2.8.0            | 0.7.0
+0.11.0  | [v0.11.0](https://github.com/tensorflow/agents/tree/v0.11.0) | 2.7.0            | 0.6.0
+0.10.0  | [v0.10.0](https://github.com/tensorflow/agents/tree/v0.10.0) | 2.6.0            |
+0.9.0   | [v0.9.0](https://github.com/tensorflow/agents/tree/v0.9.0) | 2.6.0              |
+0.8.0   | [v0.8.0](https://github.com/tensorflow/agents/tree/v0.8.0) | 2.5.0              |
+0.7.1   | [v0.7.1](https://github.com/tensorflow/agents/tree/v0.7.1) | 2.4.0              |
+0.6.0   | [v0.6.0](https://github.com/tensorflow/agents/tree/v0.6.0) | 2.3.0              |
+0.5.0   | [v0.5.0](https://github.com/tensorflow/agents/tree/v0.5.0) | 2.2.0              |
+0.4.0   | [v0.4.0](https://github.com/tensorflow/agents/tree/v0.4.0) | 2.1.0              |
+0.3.0   | [v0.3.0](https://github.com/tensorflow/agents/tree/v0.3.0) | 1.15.0 and 2.0.0.  |
 
 <a id='Principles'></a>
 
