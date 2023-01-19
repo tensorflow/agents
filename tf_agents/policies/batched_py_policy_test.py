@@ -116,7 +116,7 @@ class BatchedPyPolicyTest(tf.test.TestCase, parameterized.TestCase):
                                           num_policies=num_policies)
     time_steps = np.array([
         ts.restart(observation=np.array([1]))
-        for _ in range(num_policies)])
+        for _ in range(num_policies)], dtype=object)
 
     # Call policy.action() and assert PolicySteps are batched correctly.
     policy_step = policy.action(time_steps)
