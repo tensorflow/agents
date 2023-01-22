@@ -80,6 +80,8 @@ NestedSpecTensorOrArray = Union[NestedSpec, NestedTensor, NestedArray]
 Int = Union[int, np.int16, np.int32, np.int64, Tensor, Array]
 Bool = Union[bool, bool, Tensor, Array]
 
+Dict = typing.Dict
+
 Float = Union[float, np.float16, np.float32, np.float64, Tensor, Array]
 FloatOrReturningFloat = Union[Float, Callable[[], Float]]
 

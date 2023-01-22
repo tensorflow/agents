@@ -11,3 +11,4 @@ __pycache__
 .eggs/
 *.egg-info/
 /.vs
+venv
