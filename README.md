@@ -1,6 +1,7 @@
 # TF-Agents: A reliable, scalable and easy to use TensorFlow library for Contextual Bandits and Reinforcement Learning.
 
 [![PyPI tf-agents](https://badge.fury.io/py/tf-agents.svg)](https://badge.fury.io/py/tf-agents)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/tf-agents)
 
 [TF-Agents](https://github.com/tensorflow/agents) makes implementing, deploying,
 and testing new Bandits and RL algorithms easier. It provides well tested and
