@@ -328,7 +328,7 @@ if __name__ == '__main__':
       type=str,
       default=None,
       help='Overrides TF version required when Reverb is installed, e.g.'
-      'tensorflow>=2.3.0')
+      'tensorflow~=2.11.0')
   parser.add_argument(
       '--reverb-version',
       type=str,
@@ -339,13 +339,13 @@ if __name__ == '__main__':
       type=str,
       default=None,
       help='Overrides tfp version required, e.g. '
-      'tensorflow-probability==0.11.0rc0')
+      'tensorflow-probability==0.19.0')
   parser.add_argument(
       '--rlds-version',
       type=str,
       default=None,
       help='Overrides rlds version required, e.g. '
-      'rlds==0.1.4')
+      'rlds==0.1.7')
   parser.add_argument(
       '--broken_tests',
       type=str,
