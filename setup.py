@@ -185,7 +185,7 @@ def get_required_packages():
       # Used by gym >= 0.22.0. Only installed as a dependency when gym[all] is
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
-      'pygame == 2.1.0',
+      'pygame == 2.1.3',
   ]
   add_additional_packages(required_packages)
   return required_packages
