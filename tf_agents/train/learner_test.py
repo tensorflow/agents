@@ -236,7 +236,7 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
     # Create strategy. Skip the test if the strategy is unsupported.
     strategy = strategy_fn()
     if strategy is None:
-      logging.info(('The strategy creted using the function %s is not '
+      logging.info(('The strategy created using the function %s is not '
                     'supported. Skipping the test.'), strategy_fn)
 
     # Create learner.
