@@ -387,11 +387,9 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
       if not tf.test.is_gpu_available():
         # TODO(b/191406764): This segfaults due to GPU+Flex ops in
         # Python interpreter.  Allow to run with GPU once bug is fixed.
-        _ = tflite_runner(**tflite_action_input_dict)
+        tflite_output = tflite_runner(**tflite_action_input_dict)
 
-        # Disable to unblock OSS presubmit. TODO(b/261435065).
-        # tflite_output = tflite_runner(**tflite_action_input_dict)
-        # self.assertAllClose(tflite_output, action_output_dict)
+        self.assertAllClose(tflite_output, action_output_dict)
 
   def match_dtype_shape(self, x, y, msg=None):
     self.assertEqual(x.shape, y.shape, msg=msg)
@@ -690,8 +688,8 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
       saver.save(path)
 
     reloaded = tf.compat.v2.saved_model.load(path)
-    with self.assertRaisesRegexp(tf.errors.InvalidArgumentError,
-                                 '_distribution has not been implemented'):
+    with self.assertRaisesRegex(tf.errors.InvalidArgumentError,
+                                '_distribution has not been implemented'):
       self.evaluate(
           reloaded.distribution(
               ts.TimeStep(step_type=(), reward=(), discount=(), observation=()))
