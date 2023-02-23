@@ -103,7 +103,7 @@ def main(_):
           start_episode=start_index,
           end_episode=end_index,
           use_trajectories=FLAGS.use_trajectories)
-      job = context.Process(
+      job = context.Process(  # pytype: disable=attribute-error  # re-none
           target=file_utils.write_samples_to_tfrecord, kwargs=kwargs)
       job.start()
       jobs.append(job)

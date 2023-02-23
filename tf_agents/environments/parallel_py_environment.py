@@ -268,7 +268,7 @@ class ProcessPyEnvironment(object):
     """
     mp_context = multiprocessing.get_context()
     self._conn, conn = mp_context.Pipe()
-    self._process = mp_context.Process(target=self._worker, args=(conn,))
+    self._process = mp_context.Process(target=self._worker, args=(conn,))  # pytype: disable=attribute-error  # re-none
     atexit.register(self.close)
     self._process.start()
     if wait_to_start:
