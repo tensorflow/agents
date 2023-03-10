@@ -151,7 +151,7 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
           time_step_spec=self._time_step_with_mask_spec,
           action_spec=self._action_spec,
           reward_network=DummyNet(self._obs_spec),
-          exploitation_coefficient=0.0,
+          exploitation_coefficient=exploitation_coefficient,
           num_samples_list=num_samples_list,
           emit_policy_info=(utils.InfoFields.LOG_PROBABILITY,),
           observation_and_action_constraint_splitter=split_fn)
