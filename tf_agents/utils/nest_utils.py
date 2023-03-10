@@ -485,12 +485,30 @@ def is_batched_nested_tensors(tensors,
     raise ValueError('All tensors should have ndims defined.  Saw shapes: %s' %
                      (tf.nest.pack_sequence_as(specs, tensor_shapes),))
 
-  if (check_dtypes and
-      any(s_dtype != t_dtype
-          for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes))):
-    raise TypeError('Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}'
-                    .format(tf.nest.pack_sequence_as(specs, tensor_dtypes),
-                            tf.nest.pack_sequence_as(specs, spec_dtypes)))
+  if check_dtypes and any(
+      s_dtype != t_dtype for s_dtype, t_dtype in zip(spec_dtypes, tensor_dtypes)
+  ):
+    packed_tensor_dtypes = tf.nest.pack_sequence_as(specs, tensor_dtypes)
+    packed_spec_dtypes = tf.nest.pack_sequence_as(specs, spec_dtypes)
+
+    mismatched = tf.nest.map_structure(
+        lambda t, s: t != s, packed_tensor_dtypes, packed_spec_dtypes
+    )
+
+    num_mismatched = tf.math.count_nonzero(
+        tf.nest.flatten(mismatched), dtype=tf.int32
+    )
+
+    raise TypeError(
+        'Tensor dtypes do not match spec dtypes:\n{}\nvs.\n{}\nNumber of'
+        ' mismatched entries: {}\nMismatch:\n{}'.format(
+            tf.nest.pack_sequence_as(specs, tensor_dtypes),
+            tf.nest.pack_sequence_as(specs, spec_dtypes),
+            num_mismatched,
+            mismatched,
+        )
+    )
+
   is_unbatched = [
       s_shape.is_compatible_with(t_shape)
       for s_shape, t_shape in zip(spec_shapes, tensor_shapes)
