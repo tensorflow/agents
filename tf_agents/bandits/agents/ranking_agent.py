@@ -128,6 +128,9 @@ class RankingAgent(tf_agent.TFAgent):
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
       feedback_model: FeedbackModel = FeedbackModel.CASCADING,
       non_click_score: Optional[float] = None,
+      positional_bias_type: Optional[Text] = None,
+      positional_bias_severity: Optional[float] = None,
+      positional_bias_positive_only: bool = False,
       logits_temperature: float = 1.,
       summarize_grads_and_vars: bool = False,
       enable_summaries: bool = True,
@@ -157,6 +160,21 @@ class RankingAgent(tf_agent.TFAgent):
       non_click_score: (float) For the cascading feedback model, this is the
         score value for items lying "before" the clicked item. If not set, -1 is
         used. It is recommended (but not enforced) to use a negative value.
+      positional_bias_type: (string) If not set (or set to `None`), the agent
+        does not apply bias adjustment. If set to either `base` or `exponent`,
+        it parameter determines what way the positional bias is accounted for.
+          `base`: The bias weight for each slot position is `k^s`, where
+        `s` is the bias severity (set in the next parameter), and `k` is the
+        position.
+          `exponent`: The weights are `s^k`.
+        These bias adjustment types are inspired by Ovaisi et al. `Correcting
+        for Selection Bias in Learning-to-rank Systems` (WWW 2020).
+
+      positional_bias_severity: (float) The severity `s`, used as explained
+        above. If `positional_bias_type` is unset, this parameter has no effect.
+      positional_bias_positive_only: Whether to use the above defined bias
+        weights only for positives (that is, clicked items). If
+        `positional_bias_type` is unset, this parameter has no effect.
       logits_temperature: temperature parameter for non-deterministic policies.
         This value must be positive.
       summarize_grads_and_vars: A Python bool, default False. When True,
@@ -198,6 +216,9 @@ class RankingAgent(tf_agent.TFAgent):
       if non_click_score is not None:
         raise ValueError('Parameter `non_click_score` should only be used '
                          'together with CASCADING feedback model.')
+    self._positional_bias_type = positional_bias_type
+    self._positional_bias_severity = positional_bias_severity
+    self._positional_bias_positive_only = positional_bias_positive_only
     if policy_type == RankingPolicyType.UNKNOWN:
       policy_type = RankingPolicyType.COSINE_DISTANCE
     if policy_type == RankingPolicyType.COSINE_DISTANCE:
@@ -283,6 +304,8 @@ class RankingAgent(tf_agent.TFAgent):
     elif self._feedback_model == FeedbackModel.SCORE_VECTOR:
       score = flat_reward
     weights = self._construct_sample_weights(flat_reward, flat_obs, weights)
+    if self._positional_bias_positive_only:
+      weights = tf.where(score > 0, weights, 1.0)
 
     est_reward = self._scoring_network(flat_obs, training)[0]
     loss_output = self._error_loss_fn(
@@ -316,6 +339,22 @@ class RankingAgent(tf_agent.TFAgent):
     return tf_agent.LossInfo(loss, extra=())
 
   def _construct_sample_weights(self, reward, observation, weights):
+    """Returns the training weights based on all the necessary information.
+
+    The input weights might be `None` or of shape `[1]`, or [`batch_size`]. The
+    shape of the output shape is always `[batch_size, num_slots]`.
+
+    Args:
+      reward: The reward tensor or nest. Its structure depends on the feedback
+        model.
+      observation: The observation nest.
+      weights: The input weights, with structure explained above.
+
+    Returns:
+      A tensor of shape `[batch_size, num_slots]` containing the constructed
+        output weights, depending on the feedback model and the positional bias
+        model.
+    """
     batch_size = tf.shape(tf.nest.flatten(reward)[0])[0]
     if weights is None:
       weights = tf.ones([batch_size, self._num_slots])
@@ -335,5 +374,21 @@ class RankingAgent(tf_agent.TFAgent):
       multiplier = tf.sequence_mask(
           chosen_index + 1, self._num_slots, dtype=tf.float32)
       weights = multiplier * weights
-
+    if self._positional_bias_type is not None:
+      batched_range = tf.broadcast_to(
+          tf.range(self._num_slots, dtype=tf.float32),
+          tf.shape(weights))
+      if self._positional_bias_type == 'base':
+        position_bias_multipliers = tf.pow(
+            batched_range + 1, self._positional_bias_severity
+        )
+      elif self._positional_bias_type == 'exponent':
+        position_bias_multipliers = tf.pow(
+            self._positional_bias_severity, batched_range
+        )
+      else:
+        raise ValueError(
+            'non-existing bias type: ' + self._positional_bias_type
+        )
+      weights = position_bias_multipliers * weights
     return weights

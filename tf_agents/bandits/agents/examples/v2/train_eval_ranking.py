@@ -41,7 +41,14 @@ flags.DEFINE_string('click_model', 'ghost_actions', 'The way diversity is '
 flags.DEFINE_float('distance_threshold', 10.0, 'If the diversity model is '
                    '`distance_based`, this is the distance threshold.')
 flags.DEFINE_string('env_type', 'base', 'The environment used. Possible values'
-                    ' are `base` and `exp_pos_bias`.')
+                    ' are `base` and `exp_pos_pias`.')
+flags.DEFINE_string('bias_type', '', 'Whether the agent models the positional '
+                    'bias with the basis or the exponent changes. If unset, the'
+                    ' agent applies no positional bias.')
+flags.DEFINE_float('bias_severity', 1.0, 'The severity of the bias adjustment '
+                   'by the agent.')
+flags.DEFINE_bool('bias_positive_only', False, 'If set to True, only positive '
+                  'training samples will be bias-adjusted.')
 
 FLAGS = flags.FLAGS
 
@@ -125,9 +132,12 @@ def main(unused_argv):
     policy_type = ranking_agent.RankingPolicyType.COSINE_DISTANCE
   elif FLAGS.policy_type == 'no_penalty':
     policy_type = ranking_agent.RankingPolicyType.NO_PENALTY
+  elif FLAGS.policy_type == 'descending_scores':
+    policy_type = ranking_agent.RankingPolicyType.DESCENDING_SCORES
   else:
     raise NotImplementedError('Policy type {} is not implemented'.format(
         FLAGS.policy_type))
+  positional_bias_type = FLAGS.bias_type or None
   agent = ranking_agent.RankingAgent(
       time_step_spec=environment.time_step_spec(),
       action_spec=environment.action_spec(),
@@ -135,6 +145,9 @@ def main(unused_argv):
       optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
       policy_type=policy_type,
       feedback_model=feedback_model,
+      positional_bias_type=positional_bias_type,
+      positional_bias_severity=FLAGS.bias_severity,
+      positional_bias_positive_only=FLAGS.bias_positive_only,
       summarize_grads_and_vars=True)
 
   def order_items_from_action_fn(orig_trajectory):
