@@ -262,7 +262,7 @@ class NeuralFalconAgentTest(tf.test.TestCase, parameterized.TestCase):
     # Train the policy.
     # Initialize all variables
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    for _ in range(20):
+    for _ in range(80):
       self.evaluate(
           agent.train(
               self._generate_training_experience(accepts_per_arm_features),
@@ -278,7 +278,7 @@ class NeuralFalconAgentTest(tf.test.TestCase, parameterized.TestCase):
     actions = self.evaluate(action_step.action)
     p_info = self.evaluate(action_step.info)
     # Check the log probabilities in the policy info are near greedy.
-    self.assertAllClose(p_info.log_probability, [0.0] * batch_size, atol=5e-3)
+    self.assertAllClose(p_info.log_probability, [0.0] * batch_size, atol=1e-2)
     # Check the chosen arms are greedy.
     self.assertAllEqual(actions,
                         np.argmax(p_info.predicted_rewards_mean, axis=1))

@@ -154,11 +154,14 @@ class NeuralFalconAgent(
         time_step_spec,
         action_spec,
         reward_network,
-        exploitation_coefficient,
-        observation_and_action_constraint_splitter,
+        exploitation_coefficient=exploitation_coefficient,
+        observation_and_action_constraint_splitter=(
+            observation_and_action_constraint_splitter
+        ),
         constraints=constraints,
         accepts_per_arm_features=accepts_per_arm_features,
         emit_policy_info=emit_policy_info,
-        num_samples_list=num_samples_list)
+        num_samples_list=num_samples_list,
+    )
 
     self._collect_policy = self._policy
