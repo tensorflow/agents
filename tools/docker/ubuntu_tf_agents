@@ -67,8 +67,8 @@ RUN $python_version get-pip.py
 RUN $python_version -m pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
 
 # Only installs the packages if one is passed.
-RUN if [[ -n "$tensorflow_pip_spec" ]] ; then $python_version -m pip install ${tensorflow_pip_spec}; fi
-RUN if [[ -n "$tf_agents_pip_spec" ]] ; then $python_version -m pip install ${tf_agents_pip_spec}; fi
+RUN if [ -n "${tensorflow_pip_spec}" ] ; then $python_version -m pip install ${tensorflow_pip_spec}; fi
+RUN if [ -n "${tf_agents_pip_spec}" ] ; then $python_version -m pip install ${tf_agents_pip_spec}; fi
 RUN $python_version -m pip install wheel \
       opencv-python \
       gym \
