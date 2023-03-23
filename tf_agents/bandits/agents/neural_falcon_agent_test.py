@@ -15,8 +15,9 @@
 
 """Tests for neural_falcon_agent."""
 
-from absl.testing import parameterized
+from typing import Optional
 
+from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.bandits.agents import neural_falcon_agent
@@ -92,7 +93,10 @@ class NeuralFalconAgentTest(tf.test.TestCase, parameterized.TestCase):
 
   def _create_agent(
       self,
-      accepts_per_arm_features: bool) -> neural_falcon_agent.NeuralFalconAgent:
+      accepts_per_arm_features: bool,
+      exploitation_coefficient: Optional[float] = 10000.0,
+      max_exploration_probability_hint: Optional[float] = None,
+  ) -> neural_falcon_agent.NeuralFalconAgent:
     if accepts_per_arm_features:
       optimizer = tf.compat.v1.train.GradientDescentOptimizer(
           learning_rate=1e-2)
@@ -117,10 +121,14 @@ class NeuralFalconAgentTest(tf.test.TestCase, parameterized.TestCase):
           num_samples_list=[
               tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples')
           ],
-          exploitation_coefficient=10000.0,
-          emit_policy_info=(policy_utils.InfoFields.LOG_PROBABILITY,
-                            policy_utils.InfoFields.PREDICTED_REWARDS_MEAN),
-          optimizer=optimizer)
+          exploitation_coefficient=exploitation_coefficient,
+          max_exploration_probability_hint=max_exploration_probability_hint,
+          emit_policy_info=(
+              policy_utils.InfoFields.LOG_PROBABILITY,
+              policy_utils.InfoFields.PREDICTED_REWARDS_MEAN,
+          ),
+          optimizer=optimizer,
+      )
     else:
       optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=1.0)
       reward_net = DummyNet(self._observation_spec, self._action_spec)
@@ -131,12 +139,16 @@ class NeuralFalconAgentTest(tf.test.TestCase, parameterized.TestCase):
           num_samples_list=[
               tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples_0'),
               tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples_1'),
-              tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples_2')
+              tf.compat.v2.Variable(0, dtype=tf.int64, name='num_samples_2'),
           ],
-          exploitation_coefficient=10000.0,
-          emit_policy_info=(policy_utils.InfoFields.LOG_PROBABILITY,
-                            policy_utils.InfoFields.PREDICTED_REWARDS_MEAN),
-          optimizer=optimizer)
+          exploitation_coefficient=exploitation_coefficient,
+          max_exploration_probability_hint=max_exploration_probability_hint,
+          emit_policy_info=(
+              policy_utils.InfoFields.LOG_PROBABILITY,
+              policy_utils.InfoFields.PREDICTED_REWARDS_MEAN,
+          ),
+          optimizer=optimizer,
+      )
     return agent
 
   def _generate_observations(
@@ -282,6 +294,59 @@ class NeuralFalconAgentTest(tf.test.TestCase, parameterized.TestCase):
     # Check the chosen arms are greedy.
     self.assertAllEqual(actions,
                         np.argmax(p_info.predicted_rewards_mean, axis=1))
+
+  @parameterized.named_parameters(
+      {
+          'testcase_name': 'accepts_per_arm_features',
+          'accepts_per_arm_features': True,
+      },
+      {'testcase_name': 'simple_action', 'accepts_per_arm_features': False},
+  )
+  def testTrainedPolicyWithMaxExplorationProbabilityHint(
+      self, accepts_per_arm_features
+  ):
+    # Creates two agents, with and without `max_exploration_probability_hint`.
+    agent_with_limited_exploration = self._create_agent(
+        accepts_per_arm_features,
+        exploitation_coefficient=0.1,
+        max_exploration_probability_hint=0.05,
+    )
+    agent = self._create_agent(
+        accepts_per_arm_features, exploitation_coefficient=0.1
+    )
+    # Initialize all variables and train the agents over one batch.
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    experience = self._generate_training_experience(accepts_per_arm_features)
+    self.evaluate(agent_with_limited_exploration.train(experience, None).loss)
+    self.evaluate(agent.train(experience, None).loss)
+
+    batch_size = 1000
+    observations = self._generate_observations(
+        batch_size, accepts_per_arm_features
+    )
+    time_step = ts.restart(observations, batch_size)
+
+    # With `max_exploration_probability_hint` set to 5%, the trained agent is
+    # expected to choose greedy actions at least 95% of the time.
+    action_step = agent_with_limited_exploration.policy.action(
+        time_step, seed=1
+    )
+    actions = self.evaluate(action_step.action)
+    p_info = self.evaluate(action_step.info)
+    greedy_actions = np.argmax(p_info.predicted_rewards_mean, axis=1)
+    self.assertNotAllEqual(actions, greedy_actions)
+    # Sets the threshold to be smaller than 95% to be robust against random
+    # sampling in the test.
+    self.assertGreater(np.sum(actions == greedy_actions), batch_size * 0.9)
+
+    # Without `max_exploration_probability_hint`, the agent is expected to
+    # explore a lot due to few training data.
+    action_step = agent.policy.action(time_step, seed=1)
+    actions = self.evaluate(action_step.action)
+    p_info = self.evaluate(action_step.info)
+    greedy_actions = np.argmax(p_info.predicted_rewards_mean, axis=1)
+    self.assertLess(np.sum(actions == greedy_actions), batch_size * 0.6)
+
 
 if __name__ == '__main__':
   tf.test.main()

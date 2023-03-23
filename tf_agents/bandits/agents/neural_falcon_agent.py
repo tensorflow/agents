@@ -51,6 +51,9 @@ class NeuralFalconAgent(
       optimizer: types.Optimizer,
       num_samples_list: Sequence[tf.Variable],
       exploitation_coefficient: types.FloatOrReturningFloat = 1.0,
+      max_exploration_probability_hint: Optional[
+          types.FloatOrReturningFloat
+      ] = None,
       observation_and_action_constraint_splitter: Optional[
           types.Splitter] = None,
       accepts_per_arm_features: bool = False,
@@ -88,6 +91,16 @@ class NeuralFalconAgent(
         exploitative the policy behaves with respect to the predicted rewards: A
         larger value makes the policy sample the greedy action (one with the
         best predicted reward) with a higher probability.
+      max_exploration_probability_hint: An optional float, representing a hint
+        on the maximum exploration probability, internally clipped to [0, 1].
+        When this argument is set, `exploitation_coefficient` is ignored and the
+        policy attempts to choose non-greedy actions with at most this
+        probability. When such an upper bound cannot be achieved, e.g. due to
+        insufficient training data, the policy attempts to minimize the
+        probability of choosing non-greedy actions on a best-effort basis. For a
+        demonstration of how it affects the policy behavior, see the unit test
+        `testTrainedPolicyWithMaxExplorationProbabilityHint` in
+        `neural_falcon_agent_test`.
       observation_and_action_constraint_splitter: A function used for masking
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
@@ -155,6 +168,7 @@ class NeuralFalconAgent(
         action_spec,
         reward_network,
         exploitation_coefficient=exploitation_coefficient,
+        max_exploration_probability_hint=max_exploration_probability_hint,
         observation_and_action_constraint_splitter=(
             observation_and_action_constraint_splitter
         ),
