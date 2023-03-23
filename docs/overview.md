@@ -15,6 +15,11 @@ TF-Agents publishes nightly and stable builds. For a list of releases read the
 TF-Agents stable and nightly from [pypi.org](https://pypi.org) as well as from a
 GitHub clone.
 
+> :warning: If using Reverb (replay buffer), which is very common,
+TF-Agents will only work with Linux.
+
+> Note: Python 3.11 requires pygame 2.1.3+.
+
 ### Stable
 
 Run the commands below to install the most recent stable release. API
@@ -90,14 +95,19 @@ By participating, you are expected to uphold this code.
 
 TF Agents has stable and nightly releases. The nightly releases are often fine
 but can have issues due to upstream libraries being in flux. The table below
-lists the version(s) of TensorFlow tested with each TF Agents' release to help
-users that may be locked into a specific version of TensorFlow. 0.9.0 was the
-last release compatible with Python 3.6. 0.3.0 was the last release compatible
-with Python 2.
+lists the version(s) of TensorFlow that align with each TF Agents' release.
+Release versions of interest:
+
+  * 0.16.0 is the first version to support Python 3.11.
+  * 0.15.0 is the last release compatible with Python 3.7.
+  * If using numpy < 1.19, then use TF-Agents 0.15.0 or earlier.
+  * 0.9.0 is the last release compatible with Python 3.6.
+  * 0.3.0 is the last release compatible with Python 2.x.
 
 Release | Branch / Tag                                               | TensorFlow Version | dm-reverb Version
 ------- | ---------------------------------------------------------- | ------------------ | -----------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly         | dm-reverb-nightly
+0.16.0  | [v0.16.0](https://github.com/tensorflow/agents/tree/v0.16.0) | 2.12.0           | 0.11.0
 0.15.0  | [v0.15.0](https://github.com/tensorflow/agents/tree/v0.15.0) | 2.11.0           | 0.10.0
 0.14.0  | [v0.14.0](https://github.com/tensorflow/agents/tree/v0.14.0) | 2.10.0           | 0.9.0
 0.13.0  | [v0.13.0](https://github.com/tensorflow/agents/tree/v0.13.0) | 2.9.0            | 0.8.0
