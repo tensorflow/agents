@@ -214,7 +214,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
 class NumpyDequeTest(tf.test.TestCase):
 
   def testSimple(self):
-    buf = py_metrics.NumpyDeque(maxlen=10, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=10, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -222,7 +222,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(4, buf.mean())
 
   def testFullLength(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -230,7 +230,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(4, buf.mean())
 
   def testPastMaxLen(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -240,7 +240,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(7, buf.mean())
 
   def testClear(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.clear()
@@ -248,13 +248,13 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(5, buf.mean())
 
   def testUnbounded(self):
-    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     for i in range(101):
       buf.add(i)
     self.assertEqual(50, buf.mean())
 
   def testUnboundedClear(self):
-    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     for i in range(101):
       buf.add(i)
     buf.clear()
@@ -263,7 +263,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(5, buf.mean())
 
   def testLast(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
 
     buf.add(2)
     self.assertEqual(2, buf.last)

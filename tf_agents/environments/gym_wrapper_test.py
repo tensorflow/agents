@@ -270,7 +270,7 @@ class GymWrapperSpecTest(test_utils.TestCase):
     ))
 
     dtype_map = {gym.spaces.Discrete: np.uint8, gym.spaces.Box: np.uint16}
-    spec = gym_wrapper.spec_from_gym_space(tuple_space, dtype_map=dtype_map)
+    spec = gym_wrapper.spec_from_gym_space(tuple_space, dtype_map=dtype_map)  # pytype: disable=wrong-arg-types  # numpy-scalars
     self.assertEqual(np.uint8, spec[0].dtype)
     self.assertEqual(np.uint16, spec[1].dtype)
     self.assertEqual(np.uint8, spec[2][0].dtype)

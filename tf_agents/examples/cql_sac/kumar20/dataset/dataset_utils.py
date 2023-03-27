@@ -68,7 +68,7 @@ def create_collect_data_spec(
         next_time_step=time_step_spec)
 
 
-def create_episode_dataset(
+def create_episode_dataset(  # pytype: disable=annotation-type-mismatch  # numpy-scalars
     d4rl_dataset: Dict[str, D4RLListType],
     exclude_timeouts: bool,
     observation_dtype: np.dtype = np.float32) -> EpisodeDictType:

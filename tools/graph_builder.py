@@ -176,7 +176,7 @@ class StatsBuilder(object):
       values.append(mean_val)
       entry += values
       agg_data.append(entry)
-    return agg_data
+    return agg_data  # pytype: disable=bad-return-type  # numpy-scalars
 
   def _output_csv(self, agg_data: List[Sequence[Number]]):
     """Exports the `agg_data` as a csv.
