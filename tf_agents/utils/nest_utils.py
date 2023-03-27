@@ -265,7 +265,7 @@ def prune_extra_keys(narrow, wide):
       subset = type(wide)(ordered_items)
     return subset
 
-  if nest.is_sequence(narrow):
+  if nest.is_nested(narrow):
     if _is_attrs(wide):
       items = [prune_extra_keys(n, w)
                for n, w in zip(_attr_items(narrow), _attr_items(wide))]
