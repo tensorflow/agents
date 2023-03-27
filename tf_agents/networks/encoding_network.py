@@ -198,7 +198,7 @@ class EncodingNetwork(network.Network):
       # Given the flatten on preprocessing_layers above we need to make sure
       # input_tensor_spec is a sequence for the shallow_structure check below
       # to work.
-      if not nest.is_sequence(input_tensor_spec):
+      if not nest.is_nested(input_tensor_spec):
         input_nest = [input_tensor_spec]
       nest.assert_shallow_structure(preprocessing_layers, input_nest)
 
