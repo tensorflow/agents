@@ -47,7 +47,11 @@ _PPO_AGENT_FN = dist_test_utils.create_ppo_agent_and_dataset_fn
 _DEFAULT_STRATEGY_FN = tf.distribute.get_strategy
 _ONE_DEVICE_STRATEGY_FN = functools.partial(tf.distribute.OneDeviceStrategy,
                                             '/cpu:0')
-_MIRRORED_STRATEGY_FN = tf.distribute.MirroredStrategy
+
+
+def _get_mirrored_strategy():
+  tf.distribute.MirroredStrategy._collective_key_base += 1
+  return tf.distribute.MirroredStrategy()
 
 
 def _get_tpu_strategy():
@@ -61,6 +65,7 @@ def _get_tpu_strategy():
   return tf.distribute.experimental.TPUStrategy(resolver)
 
 
+_MIRRORED_STRATEGY_FN = _get_mirrored_strategy
 _TPU_STRATEGY_FN = _get_tpu_strategy
 
 
@@ -396,7 +401,7 @@ class LearnerTest(test_utils.TestCase, parameterized.TestCase):
         'default': (tf.distribute.get_strategy(), 4 * bs_multiplier),
         'one_device':
             (tf.distribute.OneDeviceStrategy('/cpu:0'), 4 * bs_multiplier),
-        'mirrored': (tf.distribute.MirroredStrategy(), 1 * bs_multiplier),
+        'mirrored': (_get_mirrored_strategy(), 1 * bs_multiplier),
     }
     if tf.config.list_logical_devices('TPU'):
       strategies['TPU'] = (_get_tpu_strategy(), 2 * bs_multiplier)
