@@ -240,7 +240,7 @@ class PolicySaver(object):
           dtype=tf.int64,
           aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
           shape=())
-    elif not isinstance(train_step, tf.Variable):
+    elif not isinstance(train_step, tf.compat.v2.Variable):
       raise ValueError('train_step must be a TensorFlow variable: %s' %
                        train_step)
 
@@ -252,7 +252,7 @@ class PolicySaver(object):
     for key, value in self._metadata.items():
       if not isinstance(key, str):
         raise TypeError('Keys of metadata must be strings: %s' % key)
-      if not isinstance(value, tf.Variable):
+      if not isinstance(value, tf.compat.v2.Variable):
         raise TypeError('Values of metadata must be tf.Variable: %s' % value)
     saved_policy.metadata = self._metadata
 
