@@ -37,15 +37,14 @@ from tf_agents.utils import nest_utils
 from tf_agents.utils import object_identity
 
 # pylint: disable=g-direct-tensorflow-import
-from tensorflow.python import util as tf_util  # TF internal
 from tensorflow.python.trackable import base  # TF internal
+from tensorflow.python.util import tf_decorator  # TF internal
+from tensorflow.python.util import tf_inspect  # TF internal
 # pylint: enable=g-direct-tensorflow-import
 
 
 _ = tf.keras.layers  # Force loading of keras layers.
 layer_utils = tf_keras.utils.layer_utils
-tf_decorator = tf_util.tf_decorator
-tf_inspect = tf_util.tf_inspect
 
 
 class _NetworkMeta(abc.ABCMeta):
