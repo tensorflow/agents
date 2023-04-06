@@ -5,5 +5,4 @@ system.multiprocessing_test
 # TestSuite.
 environments.random_py_environment_test
 environments.random_tf_environment_test
-# Removing temporarily due to b/274504707
-# train.learner_test
+train.learner_test
