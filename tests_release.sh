@@ -177,7 +177,7 @@ run_tests() {
     # rlds does not do nightly builds.
     # b/275356962 Need to pin keras-nightly and tfp-nighlty until layers_utils
     # situation is resolved.
-    install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly==0.20.0.dev20230323" "rlds"
+    install_optional_dependencies "tf-nightly" "dm-reverb-nightly" "tfp-nightly" "rlds"
     $PYTHON_VERSION -mpip install keras-nightly==2.13.0.dev2023032107
 
     # Run the tests
