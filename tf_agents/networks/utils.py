@@ -187,8 +187,8 @@ def mlp_layers(conv_layer_params=None,
                          'lists have different lengths (%d vs. %d.)' %
                          (len(weight_decay_params), len(fc_layer_params)))
 
-    for num_units, dropout_params, weight_decay in zip(
-        fc_layer_params, dropout_layer_params, weight_decay_params):
+    for i, (num_units, dropout_params, weight_decay) in enumerate(zip(
+        fc_layer_params, dropout_layer_params, weight_decay_params)):
       kernel_regularizer = None
       if weight_decay is not None:
         kernel_regularizer = tf.keras.regularizers.l2(weight_decay)
@@ -197,7 +197,7 @@ def mlp_layers(conv_layer_params=None,
           activation=activation_fn,
           kernel_initializer=clone_initializer(kernel_initializer),
           kernel_regularizer=kernel_regularizer,
-          name='/'.join([name, 'dense']) if name else None))
+          name='/'.join([name, 'dense%d' % i]) if name else None))
       if not isinstance(dropout_params, dict):
         dropout_params = {'rate': dropout_params} if dropout_params else None
 
