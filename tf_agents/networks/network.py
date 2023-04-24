@@ -22,13 +22,13 @@ from __future__ import print_function
 import abc
 import typing
 
-import keras as tf_keras
 import six
 
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tf_agents.distributions import utils as distribution_utils
+from tf_agents.networks import layer_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step
 from tf_agents.typing import types
@@ -44,7 +44,6 @@ from tensorflow.python.util import tf_inspect  # TF internal
 
 
 _ = tf.keras.layers  # Force loading of keras layers.
-layer_utils = tf_keras.utils.layer_utils
 
 
 class _NetworkMeta(abc.ABCMeta):
