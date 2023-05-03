@@ -47,7 +47,7 @@ class DistributionPolicy(tf_policy.TFPolicy):
         info_spec=info_spec,
         name=name)
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     return policy_step.PolicyStep(tf.constant(1., shape=(1,)), policy_state,
                                   {'test_info': tf.constant(2, shape=(1,))})
 

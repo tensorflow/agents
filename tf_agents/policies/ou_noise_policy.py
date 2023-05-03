@@ -72,7 +72,7 @@ class OUNoisePolicy(tf_policy.TFPolicy):
   def _variables(self):
     return self._wrapped_policy.variables()
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     seed_stream = tfp.util.SeedStream(seed=seed, salt='ou_noise')
 
     def _create_ou_process(action_spec):

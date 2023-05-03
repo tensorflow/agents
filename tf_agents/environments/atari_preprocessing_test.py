@@ -73,7 +73,7 @@ class MockEnvironment(gym_core.Env):
     self.ale.screen_value -= 2
     return (self.get_observation(), reward, is_terminal, unused)
 
-  def render(self, mode):
+  def render(self, mode):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     pass
 
 

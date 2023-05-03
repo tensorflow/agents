@@ -96,7 +96,7 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
     current_info.update(self._updater_fn(step))
     return policy_step.PolicyStep(step.action, step.state, current_info)
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     action_step = self._wrapped_policy.action(time_step, policy_state, seed)
     return self._update_info(action_step)
 

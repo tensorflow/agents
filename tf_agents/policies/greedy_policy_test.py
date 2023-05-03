@@ -39,7 +39,7 @@ class DistributionPolicy(tf_policy.TFPolicy):
     super(DistributionPolicy, self).__init__(
         time_step_spec, action_spec, name=name)
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     raise NotImplementedError('Not implemented.')
 
   def _distribution(self, time_step, policy_state):

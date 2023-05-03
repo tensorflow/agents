@@ -110,7 +110,7 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
     else:
       return self._epsilon
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     seed_stream = tfp.util.SeedStream(seed=seed, salt='epsilon_greedy')
     greedy_action = self._greedy_policy.action(time_step, policy_state)
     random_action = self._random_policy.action(time_step, (), seed_stream())

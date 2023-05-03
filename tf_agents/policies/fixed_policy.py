@@ -98,7 +98,7 @@ class FixedPolicy(tf_policy.TFPolicy):
                                    self._action_value)
     return policy_info, action
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     del seed
     policy_info, action = self._get_policy_info_and_action(time_step)
     return policy_step.PolicyStep(action, policy_state, policy_info)

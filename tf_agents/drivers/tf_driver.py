@@ -96,7 +96,7 @@ class TFDriver(driver.Driver):
     if not disable_tf_function:
       self.run = common.function(self.run, autograph=True)
 
-  def run(
+  def run(  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
       self, time_step: ts.TimeStep,
       policy_state: types.NestedTensor = ()
   ) -> Tuple[ts.TimeStep, types.NestedTensor]:

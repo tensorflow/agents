@@ -94,7 +94,7 @@ class PyDriver(driver.Driver):
     self._max_episodes = max_episodes or np.inf
     self._end_episode_on_boundary = end_episode_on_boundary
 
-  def run(
+  def run(  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
       self,
       time_step: ts.TimeStep,
       policy_state: types.NestedArray = ()

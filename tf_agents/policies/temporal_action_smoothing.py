@@ -70,7 +70,7 @@ class TemporalActionSmoothing(tf_policy.TFPolicy):
     raise NotImplementedError(
         '`distribution` not implemented for TemporalActionSmoothingWrapper.')
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     # Get action from the wrapped policy.
     wrapped_policy_state, moving_average = policy_state
     wrapped_policy_step = self._wrapped_policy.action(time_step,

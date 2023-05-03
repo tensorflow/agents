@@ -40,11 +40,11 @@ class StateIncrementPolicy(tf_policy.TFPolicy):
         policy_state_spec=action_spec,
     )
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     actions = tf.nest.map_structure(lambda t: t + 1, policy_state)
     return policy_step.PolicyStep(actions, actions, ())
 
-  def _distribution(self):
+  def _distribution(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     return policy_step.PolicyStep(())
 
 

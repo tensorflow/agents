@@ -99,7 +99,7 @@ class PYEnvironmentMock(py_environment.PyEnvironment):
   def observation_spec(self):
     return specs.ArraySpec([], np.int64, name='observation')
 
-  def render(self, mode):
+  def render(self, mode):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     assert isinstance(mode, (str, Text)), 'Got: {}'.format(type(mode))
     if mode == 'rgb_array':
       return np.ones((4, 4, 3), dtype=np.uint8)

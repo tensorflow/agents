@@ -223,7 +223,7 @@ class LinearScalarizer(Scalarizer):
                                             {'weights': self._weights})
     return tf.reduce_sum(transformed_multi_objectives * self._weights, axis=1)
 
-  def set_parameters(self, weights: tf.Tensor):
+  def set_parameters(self, weights: tf.Tensor):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     """Set the scalarization parameter of the LinearScalarizer.
 
     Args:
@@ -280,7 +280,7 @@ class ChebyshevScalarizer(Scalarizer):
         (transformed_multi_objectives - self._reference_point) * self._weights,
         axis=-1)
 
-  def set_parameters(self, weights: tf.Tensor, reference_point: tf.Tensor):
+  def set_parameters(self, weights: tf.Tensor, reference_point: tf.Tensor):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     """Set the scalarization parameters for the ChebyshevScalarizer.
 
     Args:
@@ -397,7 +397,7 @@ class HyperVolumeScalarizer(Scalarizer):
                  transformed_multi_objectives.dtype.max),
         axis=1)
 
-  def set_parameters(self, direction: tf.Tensor,
+  def set_parameters(self, direction: tf.Tensor,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                      transform_params: Dict[str, tf.Tensor]):
     """Set the scalarization parameters for the HyperVolumeScalarizer.
 

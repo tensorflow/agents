@@ -118,7 +118,7 @@ class RandomTFPolicy(tf_policy.TFPolicy):
   def _variables(self):
     return []
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     observation_and_action_constraint_splitter = (
         self.observation_and_action_constraint_splitter)
 

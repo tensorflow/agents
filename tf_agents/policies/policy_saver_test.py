@@ -50,10 +50,10 @@ class PolicyNoDistribution(tf_policy.TFPolicy):
             step_type=(), reward=(), discount=(), observation=()),
         action_spec=())
 
-  def _action(self, **kwargs):
+  def _action(self, **kwargs):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     return policy_step.PolicyStep((), ())
 
-  def _distribution(self, **kwargs):
+  def _distribution(self, **kwargs):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     raise NotImplementedError('_distribution has not been implemented.')
 
 

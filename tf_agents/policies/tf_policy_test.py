@@ -58,7 +58,7 @@ class TfPolicyHoldsVariables(tf_policy.TFPolicy):
   def _variables(self):
     return self._variables_list
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     return policy_step.PolicyStep(())
 
   def _distribution(self, time_step, policy_state):
@@ -74,7 +74,7 @@ class TFPolicyMismatchedDtypes(tf_policy.TFPolicy):
     action_spec = tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
     super(TFPolicyMismatchedDtypes, self).__init__(time_step_spec, action_spec)
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     # This action's dtype intentionally doesn't match action_spec's dtype.
     return policy_step.PolicyStep(action=tf.constant([0], dtype=tf.int64))
 
@@ -95,7 +95,7 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.TFPolicy):
     super(TFPolicyMismatchedDtypesListAction,
           self).__init__(time_step_spec, action_spec)
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     # This time, the action is a list where only the second dtype doesn't match.
     return policy_step.PolicyStep(action=[
         tf.constant([0], dtype=tf.int64),
@@ -108,7 +108,7 @@ class TFPolicyMismatchedDtypesListAction(tf_policy.TFPolicy):
 
 class TfPassThroughPolicy(tf_policy.TFPolicy):
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     distributions = self._distribution(time_step, policy_state)
     actions = tf.nest.map_structure(lambda d: d.sample(), distributions.action)
     return policy_step.PolicyStep(actions, policy_state, ())

@@ -54,7 +54,7 @@ class MockPyPolicy(py_policy.PyPolicy):
         action_spec=action_spec,
         policy_state_spec=policy_state_spec)
 
-  def _action(self,
+  def _action(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
               time_step: ts.TimeStep,
               policy_state: types.NestedArray) -> ps.PolicyStep:
     random_action = array_spec.sample_spec_nest(

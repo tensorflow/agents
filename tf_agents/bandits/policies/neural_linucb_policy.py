@@ -316,7 +316,7 @@ class NeuralLinUCBPolicy(tf_policy.TFPolicy):
     raise NotImplementedError(
         'This policy outputs an action and not a distribution.')
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     observation = time_step.observation
     if self.observation_and_action_constraint_splitter is not None:
       observation, _ = self.observation_and_action_constraint_splitter(
