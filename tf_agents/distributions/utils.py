@@ -38,7 +38,7 @@ def scale_distribution_to_spec(distribution, spec):
   return SquashToSpecNormal(distribution, spec)
 
 
-class SquashToSpecNormal(tfp.distributions.Distribution):
+class SquashToSpecNormal(tfp.distributions.AutoCompositeTensorDistribution):
   """Scales an input normalized action distribution to match spec bounds.
 
   Unlike the normal distribution computed when NormalProjectionNetwork
@@ -79,7 +79,7 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
         outputs.
       name: Python `str` name prefixed to Ops created by this class.
     """
-
+    parameters = dict(locals())
     if not isinstance(
         distribution,
         (tfp.distributions.Normal, tfp.distributions.MultivariateNormalDiag)):
@@ -87,13 +87,8 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
                        "got {} instead".format(distribution))
     self.action_means, self.action_magnitudes = common.spec_means_and_magnitudes(
         spec)
-    # Parameters here describe the actor network's output, which is a normalized
-    # distribution prior to squashing to the action spec.
-    # This is necessary (and sufficient) in order for policy info to compare an
-    # old policy to a new policy.
-    parameters = {"loc": distribution.loc, "scale": distribution.scale}
-    # The raw action distribution
-    self.input_distribution = distribution
+    self._distribution = distribution
+    self._spec = spec
 
     bijectors = [
         tfp.bijectors.Shift(self.action_means)(
@@ -103,7 +98,7 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
     bijector_chain = tfp.bijectors.Chain(bijectors)
     self._squashed_distribution = tfp.distributions.TransformedDistribution(
         distribution=distribution, bijector=bijector_chain)
-    super(SquashToSpecNormal, self).__init__(
+    super().__init__(
         dtype=distribution.dtype,
         reparameterization_type=distribution.reparameterization_type,
         validate_args=validate_args,
@@ -115,6 +110,16 @@ class SquashToSpecNormal(tfp.distributions.Distribution):
             distribution._graph_parents +  # pylint: disable=protected-access
             bijector_chain.graph_parents),
         name=name)
+
+  @classmethod
+  def _parameter_properties(cls, dtype, num_classes=None):
+    return dict(
+        distribution=tfp.util.BatchedComponentProperties())
+
+  @property
+  def input_distribution(self):
+    """The raw action distribution."""
+    return self._distribution
 
   def kl_divergence(self, other, name="kl_divergence"):
     """Computes the KL Divergence between two SquashToSpecNormal distributions."""
