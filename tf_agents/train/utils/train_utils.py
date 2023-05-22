@@ -176,7 +176,13 @@ def wait_for_file(file_path: Text,
       stat = tf.io.gfile.stat(file_path)
     except tf.errors.NotFoundError:
       return True
-    return stat.length <= 0
+    found_file = stat.length <= 0
+    logging.info(
+        'Checking for file %s (%s)',
+        file_path,
+        'found' if found_file else 'not found',
+    )
+    return found_file
 
   wait_for_predicate(
       wait_predicate_fn=_is_file_missing,
