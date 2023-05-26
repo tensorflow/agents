@@ -44,7 +44,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg \
       python3-opencv \
       python3-dev \
-      python3-scipy \
       gfortran \
       libopenblas-dev \
       liblapack-dev
@@ -52,7 +51,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -O https://bootstrap.pypa.io/get-pip.py
 
 ARG pip_dependencies=' \
-       virtualenv'
+       virtualenv \
+       scipy'
 
 # No need to install tf-agents as that should be part of the test setup.
 # Doing it for now to test.
