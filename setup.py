@@ -181,7 +181,7 @@ def get_required_packages():
       'six >= 1.10.0',
       'protobuf >= 3.11.3',
       'wrapt >= 1.11.1',
-      'typing-extensions >= 3.7.4.3',
+      'typing-extensions >= 3.7.4.3, <4.6.0',
       # Used by gym >= 0.22.0. Only installed as a dependency when gym[all] is
       # installed or if gym[*] (where * is an environment which lists pygame as
       # a dependency).
