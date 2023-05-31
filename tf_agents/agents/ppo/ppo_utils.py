@@ -214,8 +214,11 @@ def get_metric_observers(metrics):
 
 def get_learning_rate(optimizer):
   """Gets the current learning rate from an optimizer to be graphed."""
+  # Keras optimizers uses `learning_rate`.
+  if hasattr(optimizer, 'learning_rate'):
+    learning_rate = optimizer.learning_rate  # pylint: disable=protected-access
   # Adam optimizers store their learning rate in `_lr`.
-  if hasattr(optimizer, '_lr'):
+  elif hasattr(optimizer, '_lr'):
     if callable(optimizer._lr):  # pylint: disable=protected-access
       learning_rate = optimizer._lr()  # pylint: disable=protected-access
     else:
