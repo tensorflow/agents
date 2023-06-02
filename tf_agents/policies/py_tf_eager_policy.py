@@ -209,10 +209,15 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
         lambda s: tf.zeros(s.shape, s.dtype), policy_state_spec)
     dummy_policy_state = nest_utils.batch_nested_tensors(dummy_policy_state)
     self._policy_action_fn(dummy_time_step, dummy_policy_state)
+    self._train_step_from_last_restored_checkpoint_path = None
 
   def get_train_step(self) -> types.Int:
     """Returns the training global step of the saved model."""
     return self._policy.get_train_step().numpy()
+
+  def get_train_step_from_last_restored_checkpoint_path(self) -> Optional[int]:
+    """Returns the training step of the restored checkpoint."""
+    return self._train_step_from_last_restored_checkpoint_path
 
   def get_metadata(self):
     """Returns the metadata of the saved model."""
@@ -236,6 +241,19 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
                                tf.saved_model.VARIABLES_DIRECTORY,
                                tf.saved_model.VARIABLES_FILENAME)
     status = self._checkpoint.read(file_prefix)
+    # Checkpoints are assumed to have the format
+    # <PATH>/<TO>/policy_checkpoint_xxxx where xxxx is the train step for that
+    # checkpoint. We split based on '_' and take the last item which gives us
+    # the train step.
+    try:
+      self._train_step_from_last_restored_checkpoint_path = int(
+          checkpoint_path.split('_')[-1])
+    except ValueError:
+      # In case the checkpoint format is not as expected.
+      self._train_step_from_last_restored_checkpoint_path = None
+    logging.info('Checkpoint path: %s, train step: %d',
+                 checkpoint_path,
+                 self._train_step_from_last_restored_checkpoint_path)
     # Check that all the variables in the policy were updated, but allow the
     # checkpoint to have additional variables. This helps sharing checkpoints
     # across policies.

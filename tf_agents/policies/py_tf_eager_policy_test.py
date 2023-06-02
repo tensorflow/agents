@@ -253,7 +253,12 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
 
     self.assertEqual(expected_train_step, eager_py_policy.get_train_step())
 
-  def testUpdateFromCheckpoint(self):
+  @parameterized.parameters(
+      ('checkpoint', None),
+      ('checkpoint_00100', 100),
+      ('checkpoint_12345', 12345),
+  )
+  def testUpdateFromCheckpoint(self, checkpoint_name, expected_train_step):
     if not common.has_eager_been_enabled():
       self.skipTest('Only supported in TF2.x.')
 
@@ -263,7 +268,7 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     self.evaluate(
         tf.nest.map_structure(lambda v: v.assign(v * 0 + -1),
                               self.tf_policy.variables()))
-    checkpoint_path = os.path.join(self.get_temp_dir(), 'checkpoint')
+    checkpoint_path = os.path.join(self.get_temp_dir(), checkpoint_name)
     saver.save_checkpoint(checkpoint_path)
 
     eager_py_policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
@@ -273,6 +278,9 @@ class SavedModelPYTFEagerPolicyTest(test_utils.TestCase,
     saved_model_variables = self.evaluate(eager_py_policy.variables())
 
     eager_py_policy.update_from_checkpoint(checkpoint_path)
+    self.assertEqual(
+        expected_train_step,
+        eager_py_policy.get_train_step_from_last_restored_checkpoint_path())
 
     assert_np_not_equal = lambda a, b: self.assertFalse(np.equal(a, b).all())
     tf.nest.map_structure(assert_np_not_equal, saved_model_variables,
