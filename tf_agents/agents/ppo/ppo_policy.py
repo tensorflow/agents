@@ -32,6 +32,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 from tf_agents.utils import tensor_normalizer
 
@@ -271,12 +272,12 @@ class PPOPolicy(actor_policy.ActorPolicy):
       policy_info = ()
 
     # Disable lint for TF arrays.
-    if (new_policy_state['actor_network_state'] is () and  # pylint: disable=literal-comparison
-        new_policy_state['value_network_state'] is ()):  # pylint: disable=literal-comparison
+    if (not common.safe_has_state(new_policy_state['actor_network_state']) and
+        not common.safe_has_state(new_policy_state['value_network_state'])):
       new_policy_state = ()
-    elif new_policy_state['value_network_state'] is ():  # pylint: disable=literal-comparison
+    elif not common.safe_has_state(new_policy_state['value_network_state']):
       del new_policy_state['value_network_state']
-    elif new_policy_state['actor_network_state'] is ():  # pylint: disable=literal-comparison
+    elif not common.safe_has_state(new_policy_state['actor_network_state']):
       del new_policy_state['actor_network_state']
 
     return policy_step.PolicyStep(distributions, new_policy_state, policy_info)

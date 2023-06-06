@@ -20,6 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from tf_agents.utils import common
+
 
 __all__ = ['RNNWrapper']
 
@@ -167,11 +169,8 @@ class RNNWrapper(tf.keras.layers.Layer):
       inputs_flat = [tf.expand_dims(t, axis=1) for t in inputs_flat]
     inputs = tf.nest.pack_sequence_as(inputs, inputs_flat)
 
-    # TODO(b/158804957): tf.function changes "if tensor:" to tensor bool expr.
-    # pylint: disable=literal-comparison
-    if initial_state is None or initial_state is () or initial_state is []:
+    if not common.safe_has_state(initial_state):
       initial_state = self._layer.get_initial_state(inputs)
-    # pylint: enable=literal-comparison
 
     outputs = self._layer(
         inputs, initial_state=initial_state, mask=mask, training=training)

@@ -33,6 +33,7 @@ from tf_agents.policies.samplers import qtopt_cem_actions_sampler
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
+from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 try:
@@ -320,23 +321,44 @@ class CEMPolicy(tf_policy.TFPolicy):
     best_scores = tf.zeros([batch_size, self._num_elites], dtype=tf.float32)
 
     # Run the while loop for CEM in-graph.
+    mean_shape = tf.nest.map_structure(
+        lambda m: [None] + m.get_shape()[1:], mean
+    )
+    var_shape = tf.nest.map_structure(lambda v: [None] + v.get_shape()[1:], var)
+    best_action_shape = tf.nest.map_structure(
+        lambda a: [None] + a.get_shape()[1:], best_actions
+    )
+    elites_shape = tf.TensorShape([None, self._num_elites])
+    policy_state_shape = ()
+    if common.safe_has_state(policy_state):
+      policy_state_shape = tf.nest.map_structure(
+          lambda state: state.get_shape(), policy_state
+      )
+
     _, _, _, _, best_actions, best_scores, best_next_policy_state = (
         tf.while_loop(
             cond=cond,
             body=body,
-            loop_vars=[mean, var, 0, iters, best_actions, best_scores,
-                       policy_state],
+            loop_vars=[
+                mean,
+                var,
+                0,
+                iters,
+                best_actions,
+                best_scores,
+                policy_state,
+            ],
             shape_invariants=[
-                tf.nest.map_structure(
-                    lambda m: [None] + m.get_shape()[1:], mean),
-                tf.nest.map_structure(
-                    lambda v: [None] + v.get_shape()[1:], var),
-                tf.TensorShape(()), iters.get_shape(),
-                tf.nest.map_structure(
-                    lambda a: [None] + a.get_shape()[1:], best_actions),
-                tf.TensorShape([None, self._num_elites]),
-                () if policy_state is () else tf.nest.map_structure(  # pylint: disable=literal-comparison
-                    lambda state: state.get_shape(), policy_state)]))
+                mean_shape,
+                var_shape,
+                tf.TensorShape(()),
+                iters.get_shape(),
+                best_action_shape,
+                elites_shape,
+                policy_state_shape,
+            ],
+        )
+    )
 
     if outer_rank == 2:
       best_actions = tf.nest.map_structure(

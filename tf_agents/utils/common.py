@@ -26,6 +26,7 @@ import functools
 import importlib
 import os
 from typing import Dict, Optional, Text
+import warnings
 
 from absl import logging
 
@@ -1434,6 +1435,21 @@ def deduped_network_variables(network, *args):
   other_vars = object_identity.ObjectIdentitySet(
       [v for n in args for v in n.variables])  # pylint:disable=g-complex-comprehension
   return [v for v in network.variables if v not in other_vars]
+
+
+# Filter warnings about comparing literals with "is" (b/229309809).
+warnings.filterwarnings(
+    'ignore',
+    '"is" with a literal. Did you mean "=="?',
+    category=SyntaxWarning,
+    module=__name__,
+)
+warnings.filterwarnings(
+    'ignore',
+    '"is not" with a literal. Did you mean "!="?',
+    category=SyntaxWarning,
+    module=__name__,
+)
 
 
 def safe_has_state(state):

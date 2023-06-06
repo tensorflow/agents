@@ -27,6 +27,7 @@ import tensorflow as tf
 from tf_agents.keras_layers import rnn_wrapper
 from tf_agents.networks import network
 from tf_agents.typing import types
+from tf_agents.utils import common
 
 
 def _infer_state_specs(
@@ -203,12 +204,13 @@ class Sequential(network.Network):
 
           input_state = maybe_network_state
 
-          # pylint: disable=literal-comparison
           if maybe_network_state is None:
             input_state = layer.get_initial_state(inputs)
-          elif input_state is not () and self._layer_state_is_list[i]:
+          elif (
+              common.safe_has_state(input_state)
+              and self._layer_state_is_list[i]
+          ):
             input_state = list(input_state)
-          # pylint: enable=literal-comparison
 
           outputs = layer(inputs, input_state, **layer_kwargs)
           inputs, next_state = outputs

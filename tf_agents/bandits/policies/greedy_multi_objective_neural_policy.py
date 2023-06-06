@@ -37,6 +37,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
+from tf_agents.utils import common
 
 
 @tf.function
@@ -235,10 +236,7 @@ class GreedyMultiObjectiveNeuralPolicy(tf_policy.TFPolicy):
       ValueError: If the output size of any objective network does not match the
         expected number of actions.
     """
-    # TODO(b/158804957): Use literal comparison because in some strange cases
-    # (tf.function? autograph?) the expression "x in (None, (), [])" gets
-    # converted to a tensor.
-    if policy_state is None or policy_state is () or policy_state is []:  # pylint: disable=literal-comparison
+    if not common.safe_has_state(policy_state):
       policy_state = [()] * self._num_objectives
     predicted_objective_values = []
     updated_policy_state = []
