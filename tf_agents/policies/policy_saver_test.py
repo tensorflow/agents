@@ -690,10 +690,11 @@ class PolicySaverTest(test_utils.TestCase, parameterized.TestCase):
     reloaded = tf.compat.v2.saved_model.load(path)
     with self.assertRaisesRegex(tf.errors.InvalidArgumentError,
                                 '_distribution has not been implemented'):
-      self.evaluate(
-          reloaded.distribution(
-              ts.TimeStep(step_type=(), reward=(), discount=(), observation=()))
+      reloaded.distribution(
+          ts.TimeStep(step_type=(), reward=(), discount=(), observation=())
       )
+      # Latest op in graph is the call op for fn so evaluate it.
+      self.evaluate(tf.compat.v1.get_default_graph().get_operations()[-1])
 
   def testCheckpointSave(self):
     network = q_network.QNetwork(

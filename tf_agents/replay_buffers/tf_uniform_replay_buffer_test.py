@@ -43,6 +43,11 @@ def _get_add_op(spec, replay_buffer, batch_size):
 
 class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
+  def evaluate_last_func_if_graph_mode(self):
+    if not tf.executing_eagerly():
+      # Latest op in graph is the call op for fn so evaluate it.
+      self.evaluate(tf.compat.v1.get_default_graph().get_operations()[-1])
+
   def _assertContains(self, list1, list2):
     self.assertTrue(
         test_utils.contains(list1, list2), '%s vs. %s' % (list1, list2))
@@ -212,7 +217,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
           num_steps=2, time_stacked=False)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
 
     for _ in range(100):
       (step_, next_step_), _ = self.evaluate(sample)
@@ -238,7 +244,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       steps, _ = replay_buffer.get_next(num_steps=2)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
     for _ in range(100):
       steps_ = self.evaluate(steps)
       self.assertEqual((steps_[0] + 1) % 10, steps_[1])
@@ -258,7 +265,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         replay_buffer.add_batch(tf.ones((batch_size,), dtype=tf.int64) * i)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
 
     if tf.executing_eagerly():
       steps = lambda: replay_buffer._get_next(3,  # pylint: disable=g-long-lambda
@@ -288,7 +296,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         replay_buffer.add_batch(batch)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
 
     items = replay_buffer.gather_all()
     expected = [list(range(i, i + 10)) for i in range(0, batch_size)]
@@ -317,7 +326,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     ]
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
     items = replay_buffer.gather_all()
     items_ = self.evaluate(items)
     self.assertAllClose(expected, items_)
@@ -363,7 +373,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     num_adds = 3
     for i in range(1, num_adds):
-      self.evaluate(add(actions))
+      add(actions)
+      self.evaluate_last_func_if_graph_mode()
       expected_probabilities = [1. /
                                 (i * buffer_batch_size)] * sample_batch_size
       probabilities_ = self.evaluate(probabilities())
@@ -394,7 +405,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     num_adds = 5
     for i in range(1, num_adds):
-      self.evaluate(add(actions))
+      add(actions)
+      self.evaluate_last_func_if_graph_mode()
       probabilities_ = self.evaluate(probabilities())
       expected_probability = (
           1. / min(i * buffer_batch_size, max_length * buffer_batch_size))
@@ -613,14 +625,16 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         replay_buffer.add_batch(batch)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
 
     num_frames = replay_buffer.num_frames()
     num_frames_value = self.evaluate(num_frames)
     expected = 10 * batch_size
     self.assertEqual(expected, num_frames_value)
 
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
     num_frames = replay_buffer.num_frames()
     num_frames_value = self.evaluate(num_frames)
     capacity = self.evaluate(replay_buffer._capacity)
@@ -639,7 +653,8 @@ class TFUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
         replay_buffer.add_batch(obs)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(add_data())
+    add_data()
+    self.evaluate_last_func_if_graph_mode()
 
     experience, _ = replay_buffer.get_next(sample_batch_size=256, num_steps=2,
                                            time_stacked=True)

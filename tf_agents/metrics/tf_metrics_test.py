@@ -29,6 +29,11 @@ from tensorflow.python.eager import context  # pylint: disable=g-direct-tensorfl
 
 class TFDequeTest(tf.test.TestCase):
 
+  def evaluate_last_func_if_graph_mode(self):
+    if not tf.executing_eagerly():
+      # Latest op in graph is the call op for fn so evaluate it.
+      self.evaluate(tf.compat.v1.get_default_graph().get_operations()[-1])
+
   def test_data_is_zero(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -38,36 +43,48 @@ class TFDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add(1))
-    self.evaluate(d.add(2))
-    self.evaluate(d.add(3))
+    d.add(1)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(2)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(3)
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([1, 2, 3], self.evaluate(d.data))
 
-    self.evaluate(d.add(4))
+    d.add(4)
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([4, 2, 3], self.evaluate(d.data))
 
   def test_clear(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add(1))
-    self.evaluate(d.add(2))
-    self.evaluate(d.add(3))
+    d.add(1)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(2)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(3)
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([1, 2, 3], self.evaluate(d.data))
 
-    self.evaluate(d.clear())
+    d.clear()
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([], self.evaluate(d.data))
 
-    self.evaluate(d.add(4))
-    self.evaluate(d.add(5))
+    d.add(4)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(5)
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([4, 5], self.evaluate(d.data))
 
   def test_mean_not_full(self):
     d = tf_metrics.TFDeque(3, tf.int32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add(2))
-    self.evaluate(d.add(4))
+    d.add(2)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(4)
+    self.evaluate_last_func_if_graph_mode()
     self.assertEqual(3, self.evaluate(d.mean()))
     self.assertEqual(tf.int32, d.mean().dtype)
 
@@ -86,10 +103,15 @@ class TFDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add(1))
-    self.evaluate(d.add(2))
-    self.evaluate(d.add(3))
-    self.evaluate(d.add(4))
+    d.add(1)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(2)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(3)
+    self.evaluate_last_func_if_graph_mode()
+    d.add(4)
+    self.evaluate_last_func_if_graph_mode()
+
     self.assertEqual(3.0, self.evaluate(d.mean()))
     self.assertEqual(tf.float32, d.mean().dtype)
 
@@ -97,24 +119,31 @@ class TFDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.extend([1, 2, 3, 4]))
+    d.extend([1, 2, 3, 4])
+    self.evaluate_last_func_if_graph_mode()
     self.assertEqual(3.0, self.evaluate(d.mean()))
     self.assertEqual(tf.float32, d.mean().dtype)
 
   def test_min(self):
     d = tf_metrics.TFDeque(4, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(d.extend([1, 2, 3, 4]))
+    d.extend([1, 2, 3, 4])
+    self.evaluate_last_func_if_graph_mode()
     self.assertEqual(1.0, self.evaluate(d.min()))
 
   def test_max(self):
     d = tf_metrics.TFDeque(4, tf.float32)
     self.evaluate(tf.compat.v1.global_variables_initializer())
-    self.evaluate(d.extend([1, 2, 3, 4]))
+    d.extend([1, 2, 3, 4])
+    self.evaluate_last_func_if_graph_mode()
     self.assertEqual(4.0, self.evaluate(d.max()))
 
 
 class TFShapedDequeTest(tf.test.TestCase):
+
+  def evaluate_last_func_if_graph_mode(self):
+    if not tf.executing_eagerly():
+      self.evaluate(tf.compat.v1.get_default_graph().get_operations()[-1])
 
   def test_data_is_zero(self):
     d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
@@ -126,34 +155,45 @@ class TFShapedDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add([1, 1]))
-    self.evaluate(d.add([2, 2]))
-    self.evaluate(d.add([3, 3]))
+    d.add([1, 1])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([2, 2])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([3, 3])
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([[1, 1], [2, 2], [3, 3]], self.evaluate(d.data))
 
-    self.evaluate(d.add([4, 4]))
+    d.add([4, 4])
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([[4, 4], [2, 2], [3, 3]], self.evaluate(d.data))
 
   def test_clear(self):
     d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add([1, 1]))
+    d.add([1, 1])
+    self.evaluate_last_func_if_graph_mode()
 
-    self.evaluate(d.clear())
+    d.clear()
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual((0, 2), self.evaluate(d.data).shape)
 
-    self.evaluate(d.add([2, 2]))
-    self.evaluate(d.add([3, 3]))
+    d.add([2, 2])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([3, 3])
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([[2, 2], [3, 3]], self.evaluate(d.data))
 
   def test_mean_full(self):
     d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add([1, 1]))
-    self.evaluate(d.add([2, 2]))
-    self.evaluate(d.add([3, 3]))
+    d.add([1, 1])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([2, 2])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([3, 3])
+    self.evaluate_last_func_if_graph_mode()
     self.assertAllEqual([2, 2], self.evaluate(d.mean()))
     self.assertEqual(tf.int32, d.mean().dtype)
 
@@ -161,8 +201,11 @@ class TFShapedDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add([1, 1]))
-    self.evaluate(d.add([3, 3]))
+    d.add([1, 1])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([3, 3])
+    self.evaluate_last_func_if_graph_mode()
+
     self.assertAllEqual([2, 2], self.evaluate(d.mean()))
     self.assertEqual(tf.int32, d.mean().dtype)
 
@@ -177,10 +220,15 @@ class TFShapedDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.float32, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.add([1, 1]))
-    self.evaluate(d.add([2, 2]))
-    self.evaluate(d.add([3, 3]))
-    self.evaluate(d.add([4, 4]))
+    d.add([1, 1])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([2, 2])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([3, 3])
+    self.evaluate_last_func_if_graph_mode()
+    d.add([4, 4])
+    self.evaluate_last_func_if_graph_mode()
+
     self.assertAllEqual([3.0, 3.0], self.evaluate(d.mean()))
     self.assertEqual(tf.float32, d.mean().dtype)
 
@@ -188,12 +236,18 @@ class TFShapedDequeTest(tf.test.TestCase):
     d = tf_metrics.TFDeque(3, tf.int32, shape=(2,))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
-    self.evaluate(d.extend([[1, 1], [2, 2], [3, 3], [4, 4]]))
+    d.extend([[1, 1], [2, 2], [3, 3], [4, 4]])
+    self.evaluate_last_func_if_graph_mode()
+
     self.assertAllEqual([[4, 4], [2, 2], [3, 3]], self.evaluate(d.data))
     self.assertAllEqual([3, 3], self.evaluate(d.mean()))
 
 
 class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
+
+  def evaluate_last_func_if_graph_mode(self):
+    if not tf.executing_eagerly():
+      self.evaluate(tf.compat.v1.get_default_graph().get_operations()[-1])
 
   def _create_trajectories(self):
 
@@ -305,7 +359,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         self.evaluate(metric(trajectories[i]))
 
       self.assertEqual(expected_result, self.evaluate(metric.result()))
-      self.evaluate(metric.reset())
+      metric.reset()
+      self.evaluate_last_func_if_graph_mode()
       self.assertEqual(empty_queue_expected_result,
                        self.evaluate(metric.result()))
 
@@ -325,7 +380,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         self.evaluate(metric(trajectories[i]))
 
       self.assertAllEqual(expected_result, self.evaluate(metric.result()))
-      self.evaluate(metric.reset())
+      metric.reset()
+      self.evaluate_last_func_if_graph_mode()
       self.assertEmpty(self.evaluate(metric.result()))
 
   @parameterized.named_parameters([
@@ -404,7 +460,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         self.evaluate(metric(multi_trajectories[i]))
 
       self.assertAllClose(expected_result, self.evaluate(metric.result()))
-      self.evaluate(metric.reset())
+      metric.reset()
+      self.evaluate_last_func_if_graph_mode()
       reset_result = self.evaluate(
           tf.nest.map_structure(tf.zeros_like, expected_result))
       self.assertAllClose(reset_result, self.evaluate(metric.result()))
@@ -450,7 +507,8 @@ class TFMetricsTest(parameterized.TestCase, tf.test.TestCase):
         self.evaluate(metric(multi_trajectories[i]))
 
       self.assertAllEqual(expected_result, self.evaluate(metric.result()))
-      self.evaluate(metric.reset())
+      metric.reset()
+      self.evaluate_last_func_if_graph_mode()
       self.assertAllEqual([0.0, 0.0], self.evaluate(metric.result()))
 
 if __name__ == '__main__':

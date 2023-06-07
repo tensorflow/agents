@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.drivers import driver
@@ -39,9 +38,9 @@ def is_bandit_env(env):
     actual_env = env.pyenv
     if isinstance(actual_env, wrappers.PyEnvironmentBaseWrapper):
       actual_env = actual_env.wrapped_env()
-  is_bandit = (
-      isinstance(actual_env, bandit_py_environment.BanditPyEnvironment) or
-      isinstance(actual_env, bandit_tf_environment.BanditTFEnvironment))
+  is_bandit = isinstance(
+      actual_env, bandit_py_environment.BanditPyEnvironment
+  ) or isinstance(actual_env, bandit_tf_environment.BanditTFEnvironment)
   return is_bandit
 
 
@@ -82,20 +81,20 @@ class DynamicStepDriver(driver.Driver):
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)).
-      num_steps: The number of steps to take in the environment. For batched
-        or parallel environments, this is the total number of steps taken
-        summed across all environments.
+      num_steps: The number of steps to take in the environment. For batched or
+        parallel environments, this is the total number of steps taken summed
+        across all environments.
 
     Raises:
       ValueError:
         If env is not a tf_environment.Base or policy is not an instance of
         tf_policy.TFPolicy.
     """
-    super(DynamicStepDriver, self).__init__(env, policy, observers,
-                                            transition_observers)
+    super(DynamicStepDriver, self).__init__(
+        env, policy, observers, transition_observers
+    )
     self._num_steps = num_steps
-    self._run_fn = common.function_in_tf1(reduce_retracing=False)(
-        self._run)
+    self._run_fn = common.function_in_tf1(reduce_retracing=False)(self._run)
     self._is_bandit_env = is_bandit_env(env)
 
   def _loop_condition_fn(self):
@@ -142,18 +141,30 @@ class DynamicStepDriver(driver.Driver):
         # the step type of the current `time_step` to FIRST.
         batch_size = tf.shape(input=time_step.discount)
         time_step = time_step._replace(
-            step_type=tf.fill(batch_size, ts.StepType.FIRST))
+            step_type=tf.fill(batch_size, ts.StepType.FIRST)
+        )
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
-      observer_ops = [observer(traj) for observer in self._observers]
+
+      observer_ops = []
+      for observer in self._observers:
+        observer(traj)
+        if not tf.executing_eagerly():
+          # Latest op in graph is the call op for above fn so get it.
+          observer_ops.append(
+              tf.compat.v1.get_default_graph().get_operations()[-1]
+          )
+
       transition_observer_ops = [
           observer((time_step, action_step, next_time_step))
           for observer in self._transition_observers
       ]
       with tf.control_dependencies(
-          [tf.group(observer_ops + transition_observer_ops)]):
+          [tf.group(observer_ops + transition_observer_ops)]
+      ):
         time_step, next_time_step, policy_state = tf.nest.map_structure(
-            tf.identity, (time_step, next_time_step, policy_state))
+            tf.identity, (time_step, next_time_step, policy_state)
+        )
 
       # While loop counter should not be incremented for episode reset steps.
       counter += tf.cast(~traj.is_boundary(), dtype=tf.int32)
@@ -182,7 +193,8 @@ class DynamicStepDriver(driver.Driver):
     return self._run_fn(
         time_step=time_step,
         policy_state=policy_state,
-        maximum_iterations=maximum_iterations)
+        maximum_iterations=maximum_iterations,
+    )
 
   # TODO(b/113529538): Add tests for policy_state.
   def _run(self, time_step=None, policy_state=None, maximum_iterations=None):
@@ -193,8 +205,9 @@ class DynamicStepDriver(driver.Driver):
       policy_state = self.policy.get_initial_state(self.env.batch_size)
 
     # Batch dim should be first index of tensors during data collection.
-    batch_dims = nest_utils.get_outer_shape(time_step,
-                                            self.env.time_step_spec())
+    batch_dims = nest_utils.get_outer_shape(
+        time_step, self.env.time_step_spec()
+    )
     counter = tf.zeros(batch_dims, tf.int32)
 
     [_, time_step, policy_state] = tf.nest.map_structure(
@@ -205,5 +218,7 @@ class DynamicStepDriver(driver.Driver):
             loop_vars=[counter, time_step, policy_state],
             parallel_iterations=1,
             maximum_iterations=maximum_iterations,
-            name='driver_loop'))
+            name='driver_loop',
+        ),
+    )
     return time_step, policy_state

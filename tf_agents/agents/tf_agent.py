@@ -265,7 +265,10 @@ class TFAgent(tf.Module):
           "Cannot find _initialize_fn.  Did %s.__init__ call super?"
           % type(self).__name__)
     if self._enable_functions:
-      return self._initialize_fn()
+      self._initialize_fn()
+      if not tf.executing_eagerly():
+        # Latest op in graph is the call op for above fn so return it.
+        return tf.compat.v1.get_default_graph().get_operations()[-1]
     else:
       return self._initialize()
 
