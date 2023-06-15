@@ -283,7 +283,7 @@ class PolicySaver(object):
         time_step = cast(ts.TimeStep, time_step)
         outs = policy.distribution(
             time_step=time_step, policy_state=policy_state)
-        return tf.nest.map_structure(_composite_distribution, outs)
+        return tf.nest.map_structure(_check_composite_distribution, outs)
       except (TypeError, NotImplementedError) as e:
         # TODO(b/156526399): Move this to just the policy.distribution() call
         # once tfp.experimental.as_composite() properly handles LinearOperator*
@@ -754,8 +754,9 @@ def specs_from_collect_data_spec(
       info_spec=info_spec)
 
 
-def _composite_distribution(d):
-  """Converts tfp Distributions to CompositeTensors."""
-  return (tfp.experimental.as_composite(d)
-          if isinstance(d, tfp.distributions.Distribution)
-          else d)
+def _check_composite_distribution(d):
+  """Checks that the tfp Distributions is a CompositeTensor."""
+  if isinstance(d, tfp.distributions.Distribution):
+    if not hasattr(d, '_type_spec'):
+      raise TypeError(f'{d} is not a composite tensor.')
+  return d
