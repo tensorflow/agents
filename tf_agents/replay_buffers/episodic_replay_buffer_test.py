@@ -131,7 +131,7 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
         spec, capacity=2)
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'Buffer cannot create episode_ids when '
         'num_episodes 3 > capacity 2.'):
       replay_buffer.create_episode_ids(num_episodes=3)
@@ -487,7 +487,7 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
         'sure to add items before sampling the buffer.'):
       sample, _ = replay_buffer.get_next()
@@ -501,21 +501,21 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
         'sure to add items before sampling the buffer.'):
       sample_two_steps = sample_as_dataset(
           replay_buffer, num_steps=2, batch_size=1)[0]
       self.evaluate(sample_two_steps)
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
         'sure to add items before sampling the buffer.'):
       sample_episode = sample_as_dataset(replay_buffer, num_steps=2,
                                          batch_size=1)[0]
       self.evaluate(sample_episode)
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         tf.errors.InvalidArgumentError, 'EpisodicReplayBuffer is empty. Make '
         'sure to add items before sampling the buffer.'):
       sample_episode = sample_as_dataset(
@@ -821,6 +821,7 @@ class EpisodicReplayBufferTest(test_utils.TestCase, parameterized.TestCase):
 
     if stateless:
       extend_ids = replay_buffer.create_episode_ids(3)
+      stateful_replay_buffer = None
     else:
       stateful_replay_buffer = (
           episodic_replay_buffer.StatefulEpisodicReplayBuffer(
@@ -1140,7 +1141,7 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     replay_buffer = episodic_replay_buffer.EpisodicReplayBuffer(
         spec, capacity=2)
 
-    with self.assertRaisesRegexp(
+    with self.assertRaisesRegex(
         ValueError, 'Buffer cannot create episode_ids when '
         'num_episodes 3 > capacity 2.'):
       episodic_replay_buffer.StatefulEpisodicReplayBuffer(
@@ -1458,11 +1459,13 @@ class StatefulEpisodicReplayBufferTest(test_utils.TestCase):
     def add_elem_0(variable):
       elem = tf.expand_dims(variable, 0)
       replay_buffer_stateful_0.add_batch(elem)
+      return elem
 
     @common.function
     def add_elem_1(variable):
       elem = tf.expand_dims(variable, 0)
       replay_buffer_stateful_1.add_batch(elem)
+      return elem
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
