@@ -68,7 +68,7 @@ class NumpyState(base.Trackable):
   TensorFlow variables when graph building.
   """
 
-  def _lookup_dependency(self, name):
+  def _lookup_dependency(self, name, cached_dependencies=None):
     """Create placeholder NumPy arrays for to-be-restored attributes.
 
     Typically `_lookup_dependency` is used to check by name whether a dependency
@@ -78,18 +78,24 @@ class NumpyState(base.Trackable):
 
     Args:
       name: The name of the dependency being checked.
+      cached_dependencies: Optional dictionary of dependencies.
 
     Returns:
       An existing dependency if one exists, or a new `_NumpyWrapper` placeholder
       dependency (which will generally be restored immediately).
     """
-    value = super(NumpyState, self)._lookup_dependency(name)
+    if cached_dependencies is not None:
+      value = cached_dependencies.get(name)
+    else:
+      value = super(NumpyState, self)._lookup_dependency(name)
     if value is None:
       value = _NumpyWrapper(np.array([]))
       new_reference = base.TrackableReference(name=name, ref=value)
       self._unconditional_checkpoint_dependencies.append(new_reference)
       self._unconditional_dependency_names[name] = value
       super(NumpyState, self).__setattr__(name, value)
+      if cached_dependencies:
+        cached_dependencies[name] = value
     return value
 
   def __getattribute__(self, name):
