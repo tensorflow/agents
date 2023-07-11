@@ -32,7 +32,7 @@ $ pip install --user tf-agents[reverb]
 # Use this tag get the matching examples and colabs.
 $ git clone https://github.com/tensorflow/agents.git
 $ cd agents
-$ git checkout v0.15.0
+$ git checkout v0.17.0
 ```
 
 If you want to install TF-Agents with versions of Tensorflow or
@@ -107,6 +107,7 @@ Release versions of interest:
 Release | Branch / Tag                                               | TensorFlow Version | dm-reverb Version
 ------- | ---------------------------------------------------------- | ------------------ | -----------
 Nightly | [master](https://github.com/tensorflow/agents)             | tf-nightly         | dm-reverb-nightly
+0.17.0  | [v0.17.0](https://github.com/tensorflow/agents/tree/v0.17.0) | 2.13.0           | 0.12.0
 0.16.0  | [v0.16.0](https://github.com/tensorflow/agents/tree/v0.16.0) | 2.12.0           | 0.11.0
 0.15.0  | [v0.15.0](https://github.com/tensorflow/agents/tree/v0.15.0) | 2.11.0           | 0.10.0
 0.14.0  | [v0.14.0](https://github.com/tensorflow/agents/tree/v0.14.0) | 2.10.0           | 0.9.0
