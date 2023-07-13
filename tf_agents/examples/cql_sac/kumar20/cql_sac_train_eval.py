@@ -64,7 +64,7 @@ _REVERB_PORT = flags.DEFINE_integer(
 flags.DEFINE_string('env_name', 'antmaze-medium-play-v0',
                     'Name of the environment.')
 _DATASET_NAME = flags.DEFINE_string(
-    'dataset_name', 'd4rl_antmaze/medium-play-v0',
+    'dataset_name', 'd4rl_antmaze/medium-play-v0:1.1.0',
     'RLDS dataset name. Please select the RLDS dataset'
     'corresponding to D4RL environment chosen for training.')
 flags.DEFINE_integer('learner_iterations_per_call', 500,
