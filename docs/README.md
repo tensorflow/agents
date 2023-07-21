@@ -1,7 +1,10 @@
 # TensorFlow Agents
 ![TF](https://github.com/Bhaney44/agents/assets/43055154/f836e67a-e3ac-43ad-bde6-2711861a4036)
 
+# Overview
 
+This directory contains data and tutorials for programming TensorFlow Agents. 
+Agents is a reinforcement learning software stack for artificial intelligence automation and programming.
 
 # Tutorials
 
