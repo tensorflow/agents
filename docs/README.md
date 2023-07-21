@@ -20,9 +20,18 @@ The primary goal of TensorFlow Agents is to offer a convenient and standardized 
 7. Customizability: While providing pre-built agents, TensorFlow Agents also allows users to create and experiment with their custom RL algorithms. This flexibility is beneficial for advanced users who want to explore novel approaches.
 8. Scalability: TensorFlow's underlying computational power enables TensorFlow Agents to efficiently handle large-scale RL tasks and accelerate training using hardware accelerators like GPUs or TPUs.
 
-# Software
-[![PyPI tf-agents](https://badge.fury.io/py/tf-agents.svg)](https://badge.fury.io/py/tf-agents)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/tf-agents)
+# Getting Start
+
+From the terminal, you will need to first install Pythong and TensorFlow.
+
+##Install Python
+```
+pip install python
+```
+##Install TensorFlow
+```
+pip install tensorflow
+```
 
 # Tutorials
 
