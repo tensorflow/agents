@@ -1,5 +1,6 @@
 # TensorFlow Agents
-![TF](https://github.com/Bhaney44/agents/assets/43055154/f836e67a-e3ac-43ad-bde6-2711861a4036)
+<img width="754" alt="Screenshot 2023-07-21 at 12 26 28 PM" src="https://github.com/Bhaney44/agents/assets/43055154/d01dd17b-cd24-45b4-a98d-b84b5afc965e">
+
 
 # Overview
 
