@@ -11,21 +11,14 @@ The primary goal of TensorFlow Agents is to offer a convenient and standardized 
 
 # Capabilities
 
-Agents: The library offers a range of pre-implemented RL agents based on popular algorithms such as DQN (Deep Q-Networks), SAC (Soft Actor-Critic), PPO (Proximal Policy Optimization), and more. These agents can be easily customized and used to solve different types of RL problems.
-
-Environments: TensorFlow Agents supports a variety of RL environments, making it easy to interface with popular gym-based environments or custom environments. This flexibility allows users to adapt the RL algorithms to their specific tasks.
-
-Networks: The library provides standard neural network architectures that can be used as function approximators in RL agents. Users can also customize network structures to suit their specific requirements.
-
-Policies: TensorFlow Agents allows users to define different policies for agents, such as epsilon-greedy, Gaussian policies, etc., and easily switch between them during training and evaluation.
-
-Replay Buffers: To facilitate experience replay, TensorFlow Agents offers replay buffers that store and sample experiences for efficient training of RL agents.
-
-Training Utilities: The library comes with built-in training utilities that help manage training processes, saving and loading checkpoints, logging training metrics, and more.
-
-Customizability: While providing pre-built agents, TensorFlow Agents also allows users to create and experiment with their custom RL algorithms. This flexibility is beneficial for advanced users who want to explore novel approaches.
-
-Scalability: TensorFlow's underlying computational power enables TensorFlow Agents to efficiently handle large-scale RL tasks and accelerate training using hardware accelerators like GPUs or TPUs.
+1. Agents: The library offers a range of pre-implemented RL agents based on popular algorithms such as DQN (Deep Q-Networks), SAC (Soft Actor-Critic), PPO (Proximal Policy Optimization), and more. These agents can be easily customized and used to solve different types of RL problems.
+2. Environments: TensorFlow Agents supports a variety of RL environments, making it easy to interface with popular gym-based environments or custom environments. This flexibility allows users to adapt the RL algorithms to their specific tasks.
+3. Networks: The library provides standard neural network architectures that can be used as function approximators in RL agents. Users can also customize network structures to suit their specific requirements.
+4. Policies: TensorFlow Agents allows users to define different policies for agents, such as epsilon-greedy, Gaussian policies, etc., and easily switch between them during training and evaluation.
+5. Replay Buffers: To facilitate experience replay, TensorFlow Agents offers replay buffers that store and sample experiences for efficient training of RL agents.
+6. Training Utilities: The library comes with built-in training utilities that help manage training processes, saving and loading checkpoints, logging training metrics, and more.
+7. Customizability: While providing pre-built agents, TensorFlow Agents also allows users to create and experiment with their custom RL algorithms. This flexibility is beneficial for advanced users who want to explore novel approaches.
+8. Scalability: TensorFlow's underlying computational power enables TensorFlow Agents to efficiently handle large-scale RL tasks and accelerate training using hardware accelerators like GPUs or TPUs.
 
 # Tutorials
 
