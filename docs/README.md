@@ -24,11 +24,11 @@ The primary goal of TensorFlow Agents is to offer a convenient and standardized 
 
 From the terminal, you will need to first install Pythong and TensorFlow.
 
-##Install Python
+Install Python
 ```
 pip install python
 ```
-##Install TensorFlow
+Install TensorFlow
 ```
 pip install tensorflow
 ```
