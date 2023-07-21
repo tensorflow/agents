@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import gin
 import numpy as np
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import wrappers

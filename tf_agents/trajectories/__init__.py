@@ -18,7 +18,6 @@
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
 from tf_agents.trajectories import trajectory
-
 from tf_agents.trajectories.policy_step import PolicyInfo
 from tf_agents.trajectories.policy_step import PolicyStep
 from tf_agents.trajectories.time_step import restart

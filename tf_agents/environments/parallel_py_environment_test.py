@@ -25,7 +25,6 @@ import time
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import parallel_py_environment
 from tf_agents.environments import py_environment
 from tf_agents.environments import random_py_environment
@@ -47,23 +46,24 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
   def _set_default_specs(self):
     self.observation_spec = array_spec.ArraySpec((3, 3), np.float32)
     self.time_step_spec = ts.time_step_spec(self.observation_spec)
-    self.action_spec = array_spec.BoundedArraySpec([7],
-                                                   dtype=np.float32,
-                                                   minimum=-1.0,
-                                                   maximum=1.0)
+    self.action_spec = array_spec.BoundedArraySpec(
+        [7], dtype=np.float32, minimum=-1.0, maximum=1.0
+    )
 
-  def _make_parallel_py_environment(self,
-                                    constructor=None,
-                                    num_envs=2,
-                                    start_serially=True,
-                                    blocking=True):
+  def _make_parallel_py_environment(
+      self, constructor=None, num_envs=2, start_serially=True, blocking=True
+  ):
     self._set_default_specs()
     constructor = constructor or functools.partial(
-        random_py_environment.RandomPyEnvironment, self.observation_spec,
-        self.action_spec)
+        random_py_environment.RandomPyEnvironment,
+        self.observation_spec,
+        self.action_spec,
+    )
     return parallel_py_environment.ParallelPyEnvironment(
-        env_constructors=[constructor] * num_envs, blocking=blocking,
-        start_serially=start_serially)
+        env_constructors=[constructor] * num_envs,
+        blocking=blocking,
+        start_serially=start_serially,
+    )
 
   def test_close_no_hang_after_init(self):
     env = self._make_parallel_py_environment()
@@ -83,10 +83,12 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     action_spec = env.action_spec()
     observation_spec = env.observation_spec()
     rng = np.random.RandomState()
-    action = np.array([
-        array_spec.sample_bounded_spec(action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    action = np.array(
+        [
+            array_spec.sample_bounded_spec(action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
     env.reset()
 
     # Take one step and assert observation is batched the right way.
@@ -98,18 +100,22 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
 
     # Take another step and assert that observations have the same shape.
     time_step2 = env.step(action)
-    self.assertAllEqual(time_step.observation.shape,
-                        time_step2.observation.shape)
+    self.assertAllEqual(
+        time_step.observation.shape, time_step2.observation.shape
+    )
     env.close()
 
   def test_checks_constructors(self):
     self._set_default_specs()
     # pytype: disable=wrong-arg-types
     with self.assertRaisesRegex(TypeError, '.*non-callable.*'):
-      parallel_py_environment.ParallelPyEnvironment([
-          random_py_environment.RandomPyEnvironment(self.observation_spec,
-                                                    self.action_spec)
-      ])
+      parallel_py_environment.ParallelPyEnvironment(
+          [
+              random_py_environment.RandomPyEnvironment(
+                  self.observation_spec, self.action_spec
+              )
+          ]
+      )
     # pytype: enable=wrong-arg-types
 
   def test_non_blocking_start_processes_in_parallel(self):
@@ -118,17 +124,23 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         SlowStartingEnvironment,
         self.observation_spec,
         self.action_spec,
-        time_sleep=5.0)
+        time_sleep=5.0,
+    )
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=2, start_serially=False,
-        blocking=False)
+        constructor=constructor,
+        num_envs=2,
+        start_serially=False,
+        blocking=False,
+    )
     end_time = time.time()
     self.assertLessEqual(
         end_time - start_time,
         10.0,
-        msg=('Expected all processes to start together, '
-             'got {} wait time').format(end_time - start_time))
+        msg=(
+            'Expected all processes to start together, got {} wait time'
+        ).format(end_time - start_time),
+    )
     env.close()
 
   def test_blocking_start_processes_one_after_another(self):
@@ -137,17 +149,21 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         SlowStartingEnvironment,
         self.observation_spec,
         self.action_spec,
-        time_sleep=1.0)
+        time_sleep=1.0,
+    )
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=10, start_serially=True,
-        blocking=True)
+        constructor=constructor, num_envs=10, start_serially=True, blocking=True
+    )
     end_time = time.time()
     self.assertGreater(
         end_time - start_time,
         10,
-        msg=('Expected all processes to start one '
-             'after another, got {} wait time').format(end_time - start_time))
+        msg=(
+            'Expected all processes to start one '
+            'after another, got {} wait time'
+        ).format(end_time - start_time),
+    )
     env.close()
 
   def test_unstack_actions(self):
@@ -155,10 +171,12 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     env = self._make_parallel_py_environment(num_envs=num_envs)
     action_spec = env.action_spec()
     rng = np.random.RandomState()
-    batched_action = np.array([
-        array_spec.sample_bounded_spec(action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    batched_action = np.array(
+        [
+            array_spec.sample_bounded_spec(action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
 
     # Test that actions are correctly unstacked when just batched in np.array.
     unstacked_actions = env._unstack_actions(batched_action)
@@ -171,18 +189,22 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     env = self._make_parallel_py_environment(num_envs=num_envs)
     action_spec = env.action_spec()
     rng = np.random.RandomState()
-    batched_action = np.array([
-        array_spec.sample_bounded_spec(action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    batched_action = np.array(
+        [
+            array_spec.sample_bounded_spec(action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
 
     # Test that actions are correctly unstacked when nested in namedtuple.
     class NestedAction(
-        collections.namedtuple('NestedAction', ['action', 'other_var'])):
+        collections.namedtuple('NestedAction', ['action', 'other_var'])
+    ):
       pass
 
     nested_action = NestedAction(
-        action=batched_action, other_var=np.array([13.0] * num_envs))
+        action=batched_action, other_var=np.array([13.0] * num_envs)
+    )
     unstacked_actions = env._unstack_actions(nested_action)
     for nested_action in unstacked_actions:
       self.assertAllEqual(action_spec.shape, nested_action.action.shape)
@@ -195,11 +217,13 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
     env.seed(seeds)
     self.assertEqual(
         np.random.RandomState(0).get_state()[1][-1],
-        env._envs[0].access('_rng').get_state()[1][-1])
+        env._envs[0].access('_rng').get_state()[1][-1],
+    )
 
     self.assertEqual(
         np.random.RandomState(1).get_state()[1][-1],
-        env._envs[1].access('_rng').get_state()[1][-1])
+        env._envs[1].access('_rng').get_state()[1][-1],
+    )
     env.close()
 
   def test_render(self):
@@ -221,7 +245,8 @@ class ProcessPyEnvironmentTest(tf.test.TestCase):
         array_spec.BoundedArraySpec([1], np.float32, minimum=-1.0, maximum=1.0),
         episode_end_probability=0,
         min_duration=2,
-        max_duration=2)
+        max_duration=2,
+    )
     env = parallel_py_environment.ProcessPyEnvironment(constructor)
     env.start()
     env.close()
@@ -233,7 +258,8 @@ class ProcessPyEnvironmentTest(tf.test.TestCase):
         array_spec.BoundedArraySpec([1], np.float32, minimum=-1.0, maximum=1.0),
         episode_end_probability=0,
         min_duration=5,
-        max_duration=5)
+        max_duration=5,
+    )
     rng = np.random.RandomState()
     env = parallel_py_environment.ProcessPyEnvironment(constructor)
     env.start()
@@ -316,7 +342,8 @@ class MockEnvironmentCrashInStep(random_py_environment.RandomPyEnvironment):
         array_spec.BoundedArraySpec([1], np.float32, minimum=-1.0, maximum=1.0),
         episode_end_probability=0,
         min_duration=crash_at_step + 1,
-        max_duration=crash_at_step + 1)
+        max_duration=crash_at_step + 1,
+    )
     self._crash_at_step = crash_at_step
     self._steps = 0
 

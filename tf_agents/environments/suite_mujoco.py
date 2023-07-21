@@ -20,7 +20,6 @@
 Follow the instructions at:
 
 https://github.com/openai/mujoco-py
-
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -31,7 +30,6 @@ from typing import Dict, Optional, Sequence, Text
 import gin
 import gym
 import numpy as np
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.typing import types
@@ -58,7 +56,7 @@ def load(
     max_episode_steps: Optional[types.Int] = None,
     gym_env_wrappers: Sequence[types.GymEnvWrapper] = (),
     env_wrappers: Sequence[types.PyEnvWrapper] = (),
-    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None
+    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
 ) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers.
 
@@ -87,5 +85,11 @@ def load(
   if spec_dtype_map is None:
     # Use float32 for Observations.
     spec_dtype_map = {gym.spaces.Box: np.float32}
-  return suite_gym.load(environment_name, discount, max_episode_steps,
-                        gym_env_wrappers, env_wrappers, spec_dtype_map)
+  return suite_gym.load(
+      environment_name,
+      discount,
+      max_episode_steps,
+      gym_env_wrappers,
+      env_wrappers,
+      spec_dtype_map,
+  )

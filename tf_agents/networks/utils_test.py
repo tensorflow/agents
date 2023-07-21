@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.keras_layers import permanent_variable_rate_dropout
 from tf_agents.networks import utils
 
@@ -38,7 +37,8 @@ class NetworkUtilsTest(tf.test.TestCase):
         tf.SparseTensor(
             indices=tf.zeros((0, 5), dtype=tf.int64),
             values=tf.zeros((0,), dtype=tf.float32),
-            dense_shape=tf.constant([5, 4, 3, 2, 1], dtype=tf.int64))
+            dense_shape=tf.constant([5, 4, 3, 2, 1], dtype=tf.int64),
+        ),
     ]
 
   def test_flatten_and_unflatten_ops(self):
@@ -77,7 +77,8 @@ class NetworkUtilsTest(tf.test.TestCase):
       # Construct a tensor with some unknown shapes.
       x_default = tf.random.uniform([2, 2, 128, 128, 3])
       input_tensor = tf.compat.v1.placeholder_with_default(
-          x_default, shape=[2, 2, None, None, None])
+          x_default, shape=[2, 2, None, None, None]
+      )
       flat = batch_squash.flatten(input_tensor)
 
       self.assertAllEqual((4, None, None, None), flat.shape)
@@ -92,7 +93,8 @@ class NetworkUtilsTest(tf.test.TestCase):
       # Construct a SparseTensor with some unknown shapes.
       x_default = tf.random.uniform([2, 2, 128, 128, 3])
       input_dense = tf.compat.v1.placeholder_with_default(
-          x_default, shape=[2, 2, None, None, None])
+          x_default, shape=[2, 2, None, None, None]
+      )
       input_sparse = tf.sparse.from_dense(input_dense)
       flat = batch_squash.flatten(input_sparse)
 
@@ -104,59 +106,88 @@ class NetworkUtilsTest(tf.test.TestCase):
     tf_fn()
 
   def test_mlp_layers(self):
-    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
-                              fc_layer_params=[10, 20],
-                              activation_fn=tf.keras.activations.tanh,
-                              name='testnet')
+    layers = utils.mlp_layers(
+        conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+        fc_layer_params=[10, 20],
+        activation_fn=tf.keras.activations.tanh,
+        name='testnet',
+    )
     self.assertEqual(5, len(layers))
 
-    self.assertAllEqual([tf.keras.layers.Conv2D, tf.keras.layers.Conv2D,
-                         tf.keras.layers.Flatten, tf.keras.layers.Dense,
-                         tf.keras.layers.Dense],
-                        [type(layer) for layer in layers])
+    self.assertAllEqual(
+        [
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Flatten,
+            tf.keras.layers.Dense,
+            tf.keras.layers.Dense,
+        ],
+        [type(layer) for layer in layers],
+    )
 
-    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
-                              fc_layer_params=[10, 20],
-                              activation_fn=tf.keras.activations.tanh,
-                              dropout_layer_params=[0.5, 0.3],
-                              name='testnet')
+    layers = utils.mlp_layers(
+        conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+        fc_layer_params=[10, 20],
+        activation_fn=tf.keras.activations.tanh,
+        dropout_layer_params=[0.5, 0.3],
+        name='testnet',
+    )
     self.assertEqual(7, len(layers))
 
-    self.assertAllEqual([
-        tf.keras.layers.Conv2D, tf.keras.layers.Conv2D, tf.keras.layers.Flatten,
-        tf.keras.layers.Dense,
-        permanent_variable_rate_dropout.PermanentVariableRateDropout,
-        tf.keras.layers.Dense,
-        permanent_variable_rate_dropout.PermanentVariableRateDropout
-    ], [type(layer) for layer in layers])
+    self.assertAllEqual(
+        [
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Flatten,
+            tf.keras.layers.Dense,
+            permanent_variable_rate_dropout.PermanentVariableRateDropout,
+            tf.keras.layers.Dense,
+            permanent_variable_rate_dropout.PermanentVariableRateDropout,
+        ],
+        [type(layer) for layer in layers],
+    )
 
-    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
-                              fc_layer_params=[10, 20],
-                              activation_fn=tf.keras.activations.tanh,
-                              dropout_layer_params=[None, 0.3],
-                              name='testnet')
+    layers = utils.mlp_layers(
+        conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+        fc_layer_params=[10, 20],
+        activation_fn=tf.keras.activations.tanh,
+        dropout_layer_params=[None, 0.3],
+        name='testnet',
+    )
     self.assertEqual(6, len(layers))
 
-    self.assertAllEqual([
-        tf.keras.layers.Conv2D, tf.keras.layers.Conv2D, tf.keras.layers.Flatten,
-        tf.keras.layers.Dense, tf.keras.layers.Dense,
-        permanent_variable_rate_dropout.PermanentVariableRateDropout
-    ], [type(layer) for layer in layers])
+    self.assertAllEqual(
+        [
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Flatten,
+            tf.keras.layers.Dense,
+            tf.keras.layers.Dense,
+            permanent_variable_rate_dropout.PermanentVariableRateDropout,
+        ],
+        [type(layer) for layer in layers],
+    )
 
-    layers = utils.mlp_layers(conv_layer_params=[(3, 4, 5), (4, 6, 8)],
-                              fc_layer_params=[10, 20],
-                              activation_fn=tf.keras.activations.tanh,
-                              dropout_layer_params=[
-                                  dict(rate=0.5, permanent=True), None],
-                              name='testnet')
+    layers = utils.mlp_layers(
+        conv_layer_params=[(3, 4, 5), (4, 6, 8)],
+        fc_layer_params=[10, 20],
+        activation_fn=tf.keras.activations.tanh,
+        dropout_layer_params=[dict(rate=0.5, permanent=True), None],
+        name='testnet',
+    )
     self.assertEqual(6, len(layers))
 
-    self.assertAllEqual([
-        tf.keras.layers.Conv2D, tf.keras.layers.Conv2D, tf.keras.layers.Flatten,
-        tf.keras.layers.Dense,
-        permanent_variable_rate_dropout.PermanentVariableRateDropout,
-        tf.keras.layers.Dense
-    ], [type(layer) for layer in layers])
+    self.assertAllEqual(
+        [
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Flatten,
+            tf.keras.layers.Dense,
+            permanent_variable_rate_dropout.PermanentVariableRateDropout,
+            tf.keras.layers.Dense,
+        ],
+        [type(layer) for layer in layers],
+    )
 
 
 if __name__ == '__main__':

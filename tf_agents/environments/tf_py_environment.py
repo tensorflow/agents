@@ -33,6 +33,7 @@ from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
 from tf_agents.specs import tensor_spec
 from tf_agents.typing import types
+
 from tensorflow.python.framework import tensor_shape  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
@@ -55,7 +56,8 @@ def _check_not_called_concurrently(lock):
   if not lock.acquire(False):  # Non-blocking.
     raise RuntimeError(
         'Detected concurrent execution of TFPyEnvironment ops. Make sure the '
-        'appropriate step_state is passed to step().')
+        'appropriate step_state is passed to step().'
+    )
   try:
     yield
   finally:
@@ -78,43 +80,39 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
   * This class currently cast rewards and discount to float32.
   """
 
-  def __init__(self,
-               environment: py_environment.PyEnvironment,
-               check_dims: bool = False,
-               isolation: bool = False):
+  def __init__(
+      self,
+      environment: py_environment.PyEnvironment,
+      check_dims: bool = False,
+      isolation: bool = False,
+  ):
     """Initializes a new `TFPyEnvironment`.
 
     Args:
       environment: Environment to interact with, implementing
-        `py_environment.PyEnvironment`.  Or a `callable` that returns
-        an environment of this form.  If a `callable` is provided and
+        `py_environment.PyEnvironment`.  Or a `callable` that returns an
+        environment of this form.  If a `callable` is provided and
         `thread_isolation` is provided, the callable is executed in the
         dedicated thread.
       check_dims: Whether should check batch dimensions of actions in `step`.
-      isolation: If this value is `False` (default), interactions with
-        the environment will occur within whatever thread the methods of the
+      isolation: If this value is `False` (default), interactions with the
+        environment will occur within whatever thread the methods of the
         `TFPyEnvironment` are run from.  For example, in TF graph mode, methods
         like `step` are called from multiple threads created by the TensorFlow
         engine; calls to step the environment are guaranteed to be sequential,
         but not from the same thread.  This creates problems for environments
-        that are not thread-safe.
-
-        Using isolation ensures not only that a dedicated thread (or
-        thread-pool) is used to interact with the environment, but also that
-        interaction with the environment happens in a serialized manner.
-
-        If `isolation == True`, a dedicated thread is created for
-        interactions with the environment.
-
-        If `isolation` is an instance of `multiprocessing.pool.Pool` (this
-        includes instances of `multiprocessing.pool.ThreadPool`, nee
-        `multiprocessing.dummy.Pool` and `multiprocessing.Pool`, then this
-        pool is used to interact with the environment.
-
-        **NOTE** If using `isolation` with a `BatchedPyEnvironment`, ensure
-        you create the `BatchedPyEnvironment` with `multithreading=False`, since
-        otherwise the multithreading in that wrapper reverses the effects of
-        this one.
+        that are not thread-safe.  Using isolation ensures not only that a
+        dedicated thread (or thread-pool) is used to interact with the
+        environment, but also that interaction with the environment happens in a
+        serialized manner.  If `isolation == True`, a dedicated thread is
+        created for interactions with the environment.  If `isolation` is an
+        instance of `multiprocessing.pool.Pool` (this includes instances of
+        `multiprocessing.pool.ThreadPool`, nee `multiprocessing.dummy.Pool` and
+        `multiprocessing.Pool`, then this pool is used to interact with the
+        environment.  **NOTE** If using `isolation` with a
+        `BatchedPyEnvironment`, ensure you create the `BatchedPyEnvironment`
+        with `multithreading=False`, since otherwise the multithreading in that
+        wrapper reverses the effects of this one.
 
     Raises:
       TypeError: If `environment` is not an instance of
@@ -132,19 +130,22 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     else:
       raise TypeError(
           'isolation should be True, False, or an instance of '
-          'a multiprocessing Pool or ThreadPool.  Saw: {}'.format(isolation))
+          'a multiprocessing Pool or ThreadPool.  Saw: {}'.format(isolation)
+      )
 
     if callable(environment):
       environment = self._execute(environment)
     if not isinstance(environment, py_environment.PyEnvironment):
       raise TypeError(
-          'Environment should implement py_environment.PyEnvironment')
+          'Environment should implement py_environment.PyEnvironment'
+      )
 
     if not environment.batched:
       # If executing in an isolated thread, do not enable multiprocessing for
       # this environment.
       environment = batched_py_environment.BatchedPyEnvironment(
-          [environment], multithreading=not self._pool)
+          [environment], multithreading=not self._pool
+      )
     self._env = environment
     self._check_dims = check_dims
 
@@ -155,16 +156,18 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
           'or it is a ParallelPyEnvironment.  This conflicts with the '
           '`isolation` arg passed to TFPyEnvironment: interactions with the '
           'wrapped environment are no longer guaranteed to happen in a common '
-          'thread.  Environment: %s', (self._env,))
+          'thread.  Environment: %s',
+          (self._env,),
+      )
 
     action_spec = tensor_spec.from_spec(self._env.action_spec())
     time_step_spec = tensor_spec.from_spec(self._env.time_step_spec())
     batch_size = self._env.batch_size if self._env.batch_size else 1
     self._render_shape = None
 
-    super(TFPyEnvironment, self).__init__(time_step_spec,
-                                          action_spec,
-                                          batch_size)
+    super(TFPyEnvironment, self).__init__(
+        time_step_spec, action_spec, batch_size
+    )
 
     # Gather all the dtypes and shapes of the elements in time_step.
     self._time_step_dtypes = [
@@ -238,7 +241,8 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
           _isolated_current_time_step_py,
           [],  # No inputs.
           self._time_step_dtypes,
-          name='current_time_step_py_func')
+          name='current_time_step_py_func',
+      )
       return self._time_step_from_numpy_function_outputs(outputs)
 
   def _reset(self):
@@ -263,10 +267,8 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
 
     with tf.name_scope('reset'):
       reset_op = tf.numpy_function(
-          _isolated_reset_py,
-          [],  # No inputs.
-          [],
-          name='reset_py_func')
+          _isolated_reset_py, [], [], name='reset_py_func'  # No inputs.
+      )
       with tf.control_dependencies([reset_op]):
         return self.current_time_step()
 
@@ -294,7 +296,8 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     def _step_py(*flattened_actions):
       with _check_not_called_concurrently(self._lock):
         packed = tf.nest.pack_sequence_as(
-            structure=self.action_spec(), flat_sequence=flattened_actions)
+            structure=self.action_spec(), flat_sequence=flattened_actions
+        )
         self._time_step = self._env.step(packed)
         return tf.nest.flatten(self._time_step)
 
@@ -306,17 +309,20 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
       if self._check_dims:
         for action in flat_actions:
           dim_value = tensor_shape.dimension_value(action.shape[0])
-          if (action.shape.rank == 0 or
-              (dim_value is not None and dim_value != self.batch_size)):
+          if action.shape.rank == 0 or (
+              dim_value is not None and dim_value != self.batch_size
+          ):
             raise ValueError(
                 'Expected actions whose major dimension is batch_size (%d), '
-                'but saw action with shape %s:\n   %s' %
-                (self.batch_size, action.shape, action))
+                'but saw action with shape %s:\n   %s'
+                % (self.batch_size, action.shape, action)
+            )
       outputs = tf.numpy_function(
           _isolated_step_py,
           flat_actions,
           self._time_step_dtypes,
-          name='step_py_func')
+          name='step_py_func',
+      )
       return self._time_step_from_numpy_function_outputs(outputs)
 
   def render(self, mode: Text = 'rgb_array') -> Optional[types.NestedTensor]:
@@ -360,8 +366,11 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
         return np.zeros(self._render_shape, dtype=np.uint8)
 
     img = tf.numpy_function(
-        lambda mode: self._execute(_render, mode), [mode], [tf.uint8],
-        name='render_py_func')
+        lambda mode: self._execute(_render, mode),
+        [mode],
+        [tf.uint8],
+        name='render_py_func',
+    )
 
     if not tf.executing_eagerly():
       # Extract from list returned from np_function.
@@ -373,7 +382,7 @@ class TFPyEnvironment(tf_environment.TFEnvironment):
     """Forms a `TimeStep` from the output of the numpy_function outputs."""
     batch_shape = () if not self.batched else (self.batch_size,)
     batch_shape = tf.TensorShape(batch_shape)
-    time_step = _pack_named_sequence(outputs,
-                                     self.time_step_spec(),
-                                     batch_shape)
+    time_step = _pack_named_sequence(
+        outputs, self.time_step_spec(), batch_shape
+    )
     return time_step

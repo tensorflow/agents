@@ -22,7 +22,6 @@ Implements the Qt-Opt algorithm from
 
  Dmitry Kalashnikov et al., 2018
  https://arxiv.org/abs/1806.10293
-
 """
 
 from __future__ import absolute_import
@@ -45,9 +44,9 @@ from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
 
-def compute_td_targets(next_q_values: types.Tensor,
-                       rewards: types.Tensor,
-                       discounts: types.Tensor) -> types.Tensor:
+def compute_td_targets(
+    next_q_values: types.Tensor, rewards: types.Tensor, discounts: types.Tensor
+) -> types.Tensor:
   return tf.stop_gradient(rewards + discounts * next_q_values)
 
 
@@ -70,6 +69,7 @@ class QtOptLossInfo(typing.NamedTuple):
     Note that, unlike `td_loss`, `td_error` may contain a time dimension when
     training with RNN mode.  For `td_loss`, this axis is averaged out.
   """
+
   td_loss: types.Tensor
   td_error: types.Tensor
 
@@ -85,7 +85,6 @@ class QtOptAgent(tf_agent.TFAgent):
 
    Dmitry Kalashnikov et al., 2018
    https://arxiv.org/abs/1806.10293
-
   """
 
   def __init__(
@@ -124,7 +123,8 @@ class QtOptAgent(tf_agent.TFAgent):
       summarize_grads_and_vars=False,
       train_step_counter=None,
       info_spec=None,
-      name=None):
+      name=None,
+  ):
     """Creates a Qtopt Agent.
 
     Args:
@@ -156,37 +156,30 @@ class QtOptAgent(tf_agent.TFAgent):
       num_samples_cem: Number of samples to sample for each iteration in CEM.
       num_elites_cem: Number of elites to select for each iteration in CEM.
       num_iter_cem: Number of iterations in CEM.
-      target_q_network: (Optional.)  A `tf_agents.network.Network`
-        to be used as the target network during Q learning.  Every
-        `target_update_period` train steps, the weights from
-        `q_network` are copied (possibly with smoothing via
-        `target_update_tau`) to `target_q_network`.
-
-        If `target_q_network` is not provided, it is created by
-        making a copy of `q_network`, which initializes a new
-        network with the same structure and its own layers and weights.
-
-        Network copying is performed via the `Network.copy` superclass method,
-        with the same arguments used during the original network's construction
-        and may inadvertently lead to weights being shared between networks.
-        This can happen if, for example, the original
-        network accepted a pre-built Keras layer in its `__init__`, or
-        accepted a Keras layer that wasn't built, but neglected to create
-        a new copy.
-
-        In these cases, it is up to you to provide a target Network having
-        weights that are not shared with the original `q_network`.
-        If you provide a `target_q_network` that shares any
-        weights with `q_network`, an exception is thrown.
-
+      target_q_network: (Optional.)  A `tf_agents.network.Network` to be used as
+        the target network during Q learning.  Every `target_update_period`
+        train steps, the weights from `q_network` are copied (possibly with
+        smoothing via `target_update_tau`) to `target_q_network`.  If
+        `target_q_network` is not provided, it is created by making a copy of
+        `q_network`, which initializes a new network with the same structure and
+        its own layers and weights.  Network copying is performed via the
+        `Network.copy` superclass method, with the same arguments used during
+        the original network's construction and may inadvertently lead to
+        weights being shared between networks. This can happen if, for example,
+        the original network accepted a pre-built Keras layer in its `__init__`,
+        or accepted a Keras layer that wasn't built, but neglected to create a
+        new copy.  In these cases, it is up to you to provide a target Network
+        having weights that are not shared with the original `q_network`. If you
+        provide a `target_q_network` that shares any weights with `q_network`,
+        an exception is thrown.
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       enable_td3: Whether or not to enable using a delayed target network to
         calculate q value and assign min(q_delayed, q_delayed_2) as
         q_next_state.
-      target_q_network_delayed: (Optional.) Similar network as
-        target_q_network but lags behind even more. See documentation
-        for target_q_network. Will only be used if 'enable_td3' is True.
+      target_q_network_delayed: (Optional.) Similar network as target_q_network
+        but lags behind even more. See documentation for target_q_network. Will
+        only be used if 'enable_td3' is True.
       target_q_network_delayed_2: (Optional.) Similar network as
         target_q_network_delayed but lags behind even more. See documentation
         for target_q_network. Will only be used if 'enable_td3' is True.
@@ -197,8 +190,8 @@ class QtOptAgent(tf_agent.TFAgent):
         input the target and the estimated Q values and returns the loss for
         each element of the batch.
       auxiliary_loss_fns: An optional list of functions for computing auxiliary
-        losses. Each auxiliary_loss_fn expects network and transition as
-        input and should output auxiliary_loss and auxiliary_reg_loss.
+        losses. Each auxiliary_loss_fn expects network and transition as input
+        and should output auxiliary_loss and auxiliary_reg_loss.
       gamma: A discount factor for future rewards.
       reward_scale_factor: Multiplicative scale for the reward.
       gradient_clipping: Norm length to clip gradients.
@@ -245,37 +238,50 @@ class QtOptAgent(tf_agent.TFAgent):
       target_q_network.create_variables(net_observation_spec)
 
     self._target_q_network = common.maybe_copy_target_network_with_checks(
-        self._q_network, target_q_network, input_spec=net_observation_spec,
-        name='TargetQNetwork')
+        self._q_network,
+        target_q_network,
+        input_spec=net_observation_spec,
+        name='TargetQNetwork',
+    )
 
-    self._target_updater = self._get_target_updater(target_update_tau,
-                                                    target_update_period)
+    self._target_updater = self._get_target_updater(
+        target_update_tau, target_update_period
+    )
 
     self._enable_td3 = enable_td3
 
-    if (not self._enable_td3 and
-        (target_q_network_delayed or target_q_network_delayed_2)):
-      raise ValueError('enable_td3 is set to False but target_q_network_delayed'
-                       ' or target_q_network_delayed_2 is passed.')
+    if not self._enable_td3 and (
+        target_q_network_delayed or target_q_network_delayed_2
+    ):
+      raise ValueError(
+          'enable_td3 is set to False but target_q_network_delayed'
+          ' or target_q_network_delayed_2 is passed.'
+      )
 
     if self._enable_td3:
       if target_q_network_delayed:
         target_q_network_delayed.create_variables()
       self._target_q_network_delayed = (
           common.maybe_copy_target_network_with_checks(
-              self._q_network, target_q_network_delayed,
-              'TargetQNetworkDelayed'))
+              self._q_network, target_q_network_delayed, 'TargetQNetworkDelayed'
+          )
+      )
       self._target_updater_delayed = self._get_target_updater_delayed(
-          1.0, delayed_target_update_period)
+          1.0, delayed_target_update_period
+      )
 
       if target_q_network_delayed_2:
         target_q_network_delayed_2.create_variables()
       self._target_q_network_delayed_2 = (
           common.maybe_copy_target_network_with_checks(
-              self._q_network, target_q_network_delayed_2,
-              'TargetQNetworkDelayed2'))
+              self._q_network,
+              target_q_network_delayed_2,
+              'TargetQNetworkDelayed2',
+          )
+      )
       self._target_updater_delayed_2 = self._get_target_updater_delayed_2(
-          1.0, delayed_target_update_period)
+          1.0, delayed_target_update_period
+      )
 
       self._update_target = self._update_both
     else:
@@ -290,23 +296,27 @@ class QtOptAgent(tf_agent.TFAgent):
     self._n_step_update = n_step_update
     self._optimizer = optimizer
     self._td_errors_loss_fn = (
-        td_errors_loss_fn or common.element_wise_huber_loss)
+        td_errors_loss_fn or common.element_wise_huber_loss
+    )
     self._auxiliary_loss_fns = auxiliary_loss_fns
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
 
-    policy, collect_policy = self._setup_policy(time_step_spec, action_spec,
-                                                emit_log_probability)
+    policy, collect_policy = self._setup_policy(
+        time_step_spec, action_spec, emit_log_probability
+    )
 
     if q_network.state_spec and n_step_update != 1:
       raise NotImplementedError(
           'QtOptAgent does not currently support n-step updates with stateful '
-          'networks (i.e., RNNs), but n_step_update = {}'.format(n_step_update))
+          'networks (i.e., RNNs), but n_step_update = {}'.format(n_step_update)
+      )
 
     # Bypass the train_sequence_length check when RNN is used.
     train_sequence_length = (
-        n_step_update + 1 if not q_network.state_spec else None)
+        n_step_update + 1 if not q_network.state_spec else None
+    )
 
     super(QtOptAgent, self).__init__(
         time_step_spec,
@@ -337,19 +347,24 @@ class QtOptAgent(tf_agent.TFAgent):
             action_spec=self._action_spec,
             info_spec=self._collect_policy.info_spec,
             policy_state_spec=self._q_network.state_spec,
-            use_half_transition=True)
+            use_half_transition=True,
+        )
         self._as_transition = data_converter.AsHalfTransition(
-            self.data_context, squeeze_time_dim=False)
+            self.data_context, squeeze_time_dim=False
+        )
       else:
         self._data_context = data_converter.DataContext(
             time_step_spec=self._time_step_spec,
             action_spec=self._action_spec,
             info_spec=self._collect_policy.info_spec,
             policy_state_spec=self._q_network.state_spec,
-            use_half_transition=False)
+            use_half_transition=False,
+        )
         self._as_transition = data_converter.AsTransition(
-            self.data_context, squeeze_time_dim=False,
-            prepend_t0_to_next_time_step=True)
+            self.data_context,
+            squeeze_time_dim=False,
+            prepend_t0_to_next_time_step=True,
+        )
     else:
       if not self._in_graph_bellman_update:
         self._data_context = data_converter.DataContext(
@@ -357,16 +372,19 @@ class QtOptAgent(tf_agent.TFAgent):
             action_spec=self._action_spec,
             info_spec=self._collect_policy.info_spec,
             policy_state_spec=self._q_network.state_spec,
-            use_half_transition=True)
+            use_half_transition=True,
+        )
 
         self._as_transition = data_converter.AsHalfTransition(
-            self.data_context, squeeze_time_dim=True)
+            self.data_context, squeeze_time_dim=True
+        )
       else:
         # This reduces the n-step return and removes the extra time dimension,
         # allowing the rest of the computations to be independent of the
         # n-step parameter.
         self._as_transition = data_converter.AsNStepTransition(
-            self.data_context, gamma=gamma, n=n_step_update)
+            self.data_context, gamma=gamma, n=n_step_update
+        )
 
   def _setup_policy(self, time_step_spec, action_spec, emit_log_probability):
     policy = qtopt_cem_policy.CEMPolicy(
@@ -381,27 +399,35 @@ class QtOptAgent(tf_agent.TFAgent):
         num_elites=self._num_elites_cem,
         num_iterations=self._num_iter_cem,
         emit_log_probability=emit_log_probability,
-        training=False)
+        training=False,
+    )
 
     collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-        policy, epsilon=self._epsilon_greedy)
+        policy, epsilon=self._epsilon_greedy
+    )
 
     return policy, collect_policy
 
   def _check_network_output(self, net, label):
     network_utils.check_single_floating_network_output(
-        net.create_variables(), expected_output_shape=(), label=label)
+        net.create_variables(), expected_output_shape=(), label=label
+    )
 
   def _initialize(self):
     common.soft_variables_update(
-        self._q_network.variables, self._target_q_network.variables, tau=1.0)
+        self._q_network.variables, self._target_q_network.variables, tau=1.0
+    )
     if self._enable_td3:
       common.soft_variables_update(
           self._q_network.variables,
-          self._target_q_network_delayed.variables, tau=1.0)
+          self._target_q_network_delayed.variables,
+          tau=1.0,
+      )
       common.soft_variables_update(
           self._q_network.variables,
-          self._target_q_network_delayed_2.variables, tau=1.0)
+          self._target_q_network_delayed_2.variables,
+          tau=1.0,
+      )
 
   def _update_both(self):
     self._target_updater_delayed_2()
@@ -431,7 +457,8 @@ class QtOptAgent(tf_agent.TFAgent):
             self._q_network.variables,
             self._target_q_network.variables,
             tau,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
 
       return common.Periodically(update, period, 'periodic_update_targets')
 
@@ -458,10 +485,12 @@ class QtOptAgent(tf_agent.TFAgent):
             self._target_q_network.variables,
             self._target_q_network_delayed.variables,
             tau_delayed,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
 
-      return common.Periodically(update_delayed, period_delayed,
-                                 'periodic_update_targets_delayed')
+      return common.Periodically(
+          update_delayed, period_delayed, 'periodic_update_targets_delayed'
+      )
 
   def _get_target_updater_delayed_2(self, tau_delayed=1.0, period_delayed=1):
     """Performs a soft update of the delayed target network.
@@ -486,18 +515,17 @@ class QtOptAgent(tf_agent.TFAgent):
             self._target_q_network_delayed.variables,
             self._target_q_network_delayed_2.variables,
             tau_delayed,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
 
-      return common.Periodically(update_delayed, period_delayed,
-                                 'periodic_update_targets_delayed')
+      return common.Periodically(
+          update_delayed, period_delayed, 'periodic_update_targets_delayed'
+      )
 
   # Use @common.function in graph mode or for speeding up.
   def _train(self, experience, weights):
     with tf.GradientTape() as tape:
-      loss_info = self._loss(
-          experience,
-          weights=weights,
-          training=True)
+      loss_info = self._loss(experience, weights=weights, training=True)
 
     tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
@@ -508,16 +536,20 @@ class QtOptAgent(tf_agent.TFAgent):
     # Tuple is used for py3, where zip is a generator producing values once.
     grads_and_vars = list(zip(grads, variables_to_train))
     if self._gradient_clipping is not None:
-      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
-                                                       self._gradient_clipping)
+      grads_and_vars = eager_utils.clip_gradient_norms(
+          grads_and_vars, self._gradient_clipping
+      )
 
     if self._summarize_grads_and_vars:
-      grads_and_vars_with_non_trainable = (
-          grads_and_vars + [(None, v) for v in non_trainable_weights])
-      eager_utils.add_variables_summaries(grads_and_vars_with_non_trainable,
-                                          self.train_step_counter)
-      eager_utils.add_gradients_summaries(grads_and_vars,
-                                          self.train_step_counter)
+      grads_and_vars_with_non_trainable = grads_and_vars + [
+          (None, v) for v in non_trainable_weights
+      ]
+      eager_utils.add_variables_summaries(
+          grads_and_vars_with_non_trainable, self.train_step_counter
+      )
+      eager_utils.add_gradients_summaries(
+          grads_and_vars, self.train_step_counter
+      )
     self._optimizer.apply_gradients(grads_and_vars)
     self.train_step_counter.assign_add(1)
 
@@ -531,39 +563,36 @@ class QtOptAgent(tf_agent.TFAgent):
     if self._auxiliary_loss_fns is not None:
       for auxiliary_loss_fn in self._auxiliary_loss_fns:
         auxiliary_loss, auxiliary_reg_loss = auxiliary_loss_fn(
-            network=self._q_network, transition=transition)
+            network=self._q_network, transition=transition
+        )
         agg_auxiliary_loss = common.aggregate_losses(
             per_example_loss=auxiliary_loss,
             sample_weight=weights,
-            regularization_loss=auxiliary_reg_loss)
+            regularization_loss=auxiliary_reg_loss,
+        )
         total_auxiliary_loss += agg_auxiliary_loss.total_loss
-        losses_dict.update(
-            {'auxiliary_loss_{}'.format(
+        losses_dict.update({
+            'auxiliary_loss_{}'.format(
                 auxiliary_loss_fn.__name__
-                ): agg_auxiliary_loss.weighted,
-             'auxiliary_reg_loss_{}'.format(
-                 auxiliary_loss_fn.__name__
-                 ): agg_auxiliary_loss.regularization,
-             })
+            ): agg_auxiliary_loss.weighted,
+            'auxiliary_reg_loss_{}'.format(
+                auxiliary_loss_fn.__name__
+            ): agg_auxiliary_loss.regularization,
+        })
     return total_auxiliary_loss
 
-  def _loss(self,
-            experience,
-            weights=None,
-            training=False):
+  def _loss(self, experience, weights=None, training=False):
     """Computes loss for QtOpt training.
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory` or
         `Transition`. The structure of `experience` must match that of
-        `self.collect_policy.step_spec`.
-
-        If a `Trajectory`, all tensors in `experience` must be shaped
-        `[B, T, ...]` where `T` must be equal to `self.train_sequence_length`
-        if that property is not `None`.
+        `self.collect_policy.step_spec`.  If a `Trajectory`, all tensors in
+        `experience` must be shaped `[B, T, ...]` where `T` must be equal to
+        `self.train_sequence_length` if that property is not `None`.
       weights: Optional scalar or elementwise (per-batch-entry) importance
-        weights.  The output td_loss will be scaled by these weights, and
-        the final scalar loss is the mean of these values.
+        weights.  The output td_loss will be scaled by these weights, and the
+        final scalar loss is the mean of these values.
       training: Whether this loss is being used for training.
 
     Returns:
@@ -578,17 +607,20 @@ class QtOptAgent(tf_agent.TFAgent):
 
     with tf.name_scope('loss'):
       q_values = self._compute_q_values(
-          time_steps, actions, policy_steps.state, training=training)
+          time_steps, actions, policy_steps.state, training=training
+      )
 
       next_q_values = self._compute_next_q_values(
-          next_time_steps, policy_steps.info, policy_steps.state)
+          next_time_steps, policy_steps.info, policy_steps.state
+      )
 
       # This applies to any value of n_step_update and also in RNN-QtOpt.
       # In the RNN-QtOpt case, inputs and outputs contain a time dimension.
       td_targets = compute_td_targets(
           next_q_values,
           rewards=self._reward_scale_factor * next_time_steps.reward,
-          discounts=self._gamma * next_time_steps.discount)
+          discounts=self._gamma * next_time_steps.discount,
+      )
 
       valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
       td_error = valid_mask * (td_targets - q_values)
@@ -596,8 +628,8 @@ class QtOptAgent(tf_agent.TFAgent):
       td_loss = valid_mask * self._td_errors_loss_fn(td_targets, q_values)
 
       if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec, num_outer_dims=2):
-
+          time_steps, self.time_step_spec, num_outer_dims=2
+      ):
         # Do a sum over the time dimension.
         td_loss = tf.reduce_sum(input_tensor=td_loss, axis=1)
 
@@ -612,20 +644,24 @@ class QtOptAgent(tf_agent.TFAgent):
       agg_loss = common.aggregate_losses(
           per_example_loss=td_loss,
           sample_weight=weights,
-          regularization_loss=self._q_network.losses)
+          regularization_loss=self._q_network.losses,
+      )
       total_loss = agg_loss.total_loss
 
-      losses_dict = {'td_loss': agg_loss.weighted,
-                     'reg_loss': agg_loss.regularization}
+      losses_dict = {
+          'td_loss': agg_loss.weighted,
+          'reg_loss': agg_loss.regularization,
+      }
       total_auxiliary_loss = self._add_auxiliary_losses(
-          transition, weights, losses_dict)
+          transition, weights, losses_dict
+      )
       total_loss += total_auxiliary_loss
 
       losses_dict['total_loss'] = total_loss
 
-      common.summarize_scalar_dict(losses_dict,
-                                   step=self.train_step_counter,
-                                   name_scope='Losses/')
+      common.summarize_scalar_dict(
+          losses_dict, step=self.train_step_counter, name_scope='Losses/'
+      )
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
@@ -633,29 +669,39 @@ class QtOptAgent(tf_agent.TFAgent):
             tf.compat.v2.summary.histogram(
                 name=var.name.replace(':', '_'),
                 data=var,
-                step=self.train_step_counter)
+                step=self.train_step_counter,
+            )
       if self._debug_summaries:
         diff_q_values = q_values - next_q_values
-        common.generate_tensor_summaries('td_error', td_error,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('q_values', q_values,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('next_q_values', next_q_values,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('diff_q_values', diff_q_values,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('reward', next_time_steps.reward,
-                                         self.train_step_counter)
+        common.generate_tensor_summaries(
+            'td_error', td_error, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'q_values', q_values, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'next_q_values', next_q_values, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'diff_q_values', diff_q_values, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'reward', next_time_steps.reward, self.train_step_counter
+        )
 
-      return tf_agent.LossInfo(total_loss, QtOptLossInfo(td_loss=td_loss,
-                                                         td_error=td_error))
+      return tf_agent.LossInfo(
+          total_loss, QtOptLossInfo(td_loss=td_loss, td_error=td_error)
+      )
 
   def _compute_q_values(
-      self, time_steps, actions, network_state=(), training=False):
-    q_values, _ = self._q_network((time_steps.observation, actions),
-                                  step_type=time_steps.step_type,
-                                  network_state=network_state,
-                                  training=training)
+      self, time_steps, actions, network_state=(), training=False
+  ):
+    q_values, _ = self._q_network(
+        (time_steps.observation, actions),
+        step_type=time_steps.step_type,
+        network_state=network_state,
+        training=training,
+    )
 
     return q_values
 
@@ -664,29 +710,34 @@ class QtOptAgent(tf_agent.TFAgent):
       return info['target_q']
 
     next_action_policy_step = self._policy.action(
-        next_time_steps, network_state)
+        next_time_steps, network_state
+    )
 
     if self._enable_td3:
       q_values_target_delayed, _ = self._target_q_network_delayed(
           (next_time_steps.observation, next_action_policy_step.action),
           step_type=next_time_steps.step_type,
           network_state=network_state,
-          training=False)
+          training=False,
+      )
 
       q_values_target_delayed_2, _ = self._target_q_network_delayed_2(
           (next_time_steps.observation, next_action_policy_step.action),
           step_type=next_time_steps.step_type,
           network_state=network_state,
-          training=False)
+          training=False,
+      )
 
-      q_next_state = tf.minimum(q_values_target_delayed_2,
-                                q_values_target_delayed)
+      q_next_state = tf.minimum(
+          q_values_target_delayed_2, q_values_target_delayed
+      )
     else:
       q_next_state, _ = self._target_q_network(
           (next_time_steps.observation, next_action_policy_step.action),
           step_type=next_time_steps.step_type,
           network_state=network_state,
-          training=False)
+          training=False,
+      )
 
     if self._q_network.state_spec:
       q_next_state = q_next_state[:, 1:]

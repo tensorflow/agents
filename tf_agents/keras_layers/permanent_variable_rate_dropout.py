@@ -49,7 +49,8 @@ class PermanentVariableRateDropout(tf.keras.layers.Dropout):
           inputs,
           noise_shape=self._get_noise_shape(inputs),
           seed=self.seed,
-          rate=rate)
+          rate=rate,
+      )
       return outputs
     else:
       return inputs

@@ -18,7 +18,6 @@ from typing import Optional, Sequence
 
 import gin
 import numpy as np
-
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.specs import array_spec
 from tf_agents.typing import types
@@ -35,9 +34,9 @@ class BernoulliPyEnvironment(bandit_py_environment.BanditPyEnvironment):
   Russo et al. (https://web.stanford.edu/~bvr/pubs/TS_Tutorial.pdf)
   """
 
-  def __init__(self,
-               means: Sequence[types.Float],
-               batch_size: Optional[types.Int] = 1):
+  def __init__(
+      self, means: Sequence[types.Float], batch_size: Optional[types.Int] = 1
+  ):
     """Initializes a Bernoulli Bandit environment.
 
     Args:
@@ -56,21 +55,23 @@ class BernoulliPyEnvironment(bandit_py_environment.BanditPyEnvironment):
         dtype=np.int32,
         minimum=0,
         maximum=self._num_actions - 1,
-        name='action')
+        name='action',
+    )
     observation_spec = array_spec.ArraySpec(
-        shape=(), dtype=np.float32, name='observation')
-    super(BernoulliPyEnvironment, self).__init__(
-        observation_spec,
-        action_spec)
+        shape=(), dtype=np.float32, name='observation'
+    )
+    super(BernoulliPyEnvironment, self).__init__(observation_spec, action_spec)
 
   def _observe(self) -> types.NestedArray:
     return np.ones(
         shape=[self._batch_size] + list(self.observation_spec().shape),
-        dtype=self.observation_spec().dtype)
+        dtype=self.observation_spec().dtype,
+    )
 
   def _apply_action(self, action: types.NestedArray) -> types.Float:
     return np.array(
-        [np.floor(self._means[i] + np.random.random()) for i in action])
+        [np.floor(self._means[i] + np.random.random()) for i in action]
+    )
 
   @property
   def batched(self) -> bool:

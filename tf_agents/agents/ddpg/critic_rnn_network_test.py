@@ -19,23 +19,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from absl.testing import parameterized
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 
 
 def lstm_keras_fn(lstm_size):
-  return tf.keras.layers.LSTM(lstm_size, return_state=True,
-                              return_sequences=True)
+  return tf.keras.layers.LSTM(
+      lstm_size, return_state=True, return_sequences=True
+  )
 
 
 def rnn_keras_fn(lstm_size):
   cell = tf.keras.layers.SimpleRNNCell(lstm_size)
-  return tf.keras.layers.RNN(cell, return_state=True,
-                             return_sequences=True)
+  return tf.keras.layers.RNN(cell, return_state=True, return_sequences=True)
 
 
 class CriticRnnNetworkTest(parameterized.TestCase, tf.test.TestCase):
@@ -44,8 +42,9 @@ class CriticRnnNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('RNNKerasUnroll', None, rnn_keras_fn),
   )
   def testBuildsRnn(self, lstm_size, rnn_construction_fn):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
@@ -61,11 +60,13 @@ class CriticRnnNetworkTest(parameterized.TestCase, tf.test.TestCase):
         lstm_size=lstm_size,
         output_fc_layer_params=(5,),
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
     network_input = (time_step.observation, action)
-    q_values, network_state = net(network_input, time_step.step_type,
-                                  net.get_initial_state(batch_size=1))
+    q_values, network_state = net(
+        network_input, time_step.step_type, net.get_initial_state(batch_size=1)
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1], q_values.shape.as_list())
@@ -110,8 +111,9 @@ class CriticRnnNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('LSTMKerasUnroll', None, lstm_keras_fn),
   )
   def testBuilds(self, lstm_size, rnn_construction_fn):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
@@ -127,11 +129,13 @@ class CriticRnnNetworkTest(parameterized.TestCase, tf.test.TestCase):
         lstm_size=lstm_size,
         output_fc_layer_params=(5,),
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
     network_input = (time_step.observation, action)
-    q_values, network_state = net(network_input, time_step.step_type,
-                                  net.get_initial_state(batch_size=1))
+    q_values, network_state = net(
+        network_input, time_step.step_type, net.get_initial_state(batch_size=1)
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1], q_values.shape.as_list())
@@ -179,15 +183,17 @@ class CriticRnnNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('RNNKerasUnroll', None, rnn_keras_fn),
   )
   def testInit(self, lstm_size, rnn_construction_fn):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     action_spec = tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3)
     network_input_spec = (observation_spec, action_spec)
     critic_rnn_network.CriticRnnNetwork(
         network_input_spec,
         lstm_size=lstm_size,
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
 
 if __name__ == '__main__':

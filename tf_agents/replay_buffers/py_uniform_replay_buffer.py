@@ -57,8 +57,9 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
     """
     super(PyUniformReplayBuffer, self).__init__(data_spec, capacity)
 
-    self._storage = numpy_storage.NumpyStorage(self._encoded_data_spec(),
-                                               capacity)
+    self._storage = numpy_storage.NumpyStorage(
+        self._encoded_data_spec(), capacity
+    )
     self._lock = threading.Lock()
     self._np_state = numpy_storage.NumpyState()
 
@@ -93,14 +94,17 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
   def _num_frames(self):
     raise NotImplementedError(
-        'num_frames is not yet implemented in PyUniformReplayBuffer')
+        'num_frames is not yet implemented in PyUniformReplayBuffer'
+    )
 
   def _add_batch(self, items):
     outer_shape = nest_utils.get_outer_array_shape(items, self._data_spec)
     if outer_shape[0] != 1:
-      raise NotImplementedError('PyUniformReplayBuffer only supports a batch '
-                                'size of 1, but received `items` with batch '
-                                'size {}.'.format(outer_shape[0]))
+      raise NotImplementedError(
+          'PyUniformReplayBuffer only supports a batch '
+          'size of 1, but received `items` with batch '
+          'size {}.'.format(outer_shape[0])
+      )
 
     item = nest_utils.unbatch_nested_array(items)
     with self._lock:
@@ -108,25 +112,28 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
         # If we are at capacity, we are deleting element cur_id.
         self._on_delete(self._storage.get(self._np_state.cur_id))
       self._storage.set(self._np_state.cur_id, self._encode(item))
-      self._np_state.size = np.minimum(self._np_state.size + 1,
-                                       self._capacity)
+      self._np_state.size = np.minimum(self._np_state.size + 1, self._capacity)
       self._np_state.cur_id = (self._np_state.cur_id + 1) % self._capacity
       self._np_state.item_count += 1
 
-  def _get_next(self,
-                sample_batch_size=None,
-                num_steps=None,
-                time_stacked=True):
+  def _get_next(
+      self, sample_batch_size=None, num_steps=None, time_stacked=True
+  ):
     num_steps_value = num_steps if num_steps is not None else 1
+
     def get_single():
       """Gets a single item from the replay buffer."""
       with self._lock:
         if self._np_state.size <= 0:
+
           def empty_item(spec):
             return np.empty(spec.shape, dtype=spec.dtype)
+
           if num_steps is not None:
-            item = [tf.nest.map_structure(empty_item, self.data_spec)
-                    for n in range(num_steps)]
+            item = [
+                tf.nest.map_structure(empty_item, self.data_spec)
+                for n in range(num_steps)
+            ]
             if time_stacked:
               item = nest_utils.stack_nested_arrays(item)
           else:
@@ -142,8 +149,10 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
         if num_steps is not None:
           # TODO(b/120242830): Try getting data from numpy in one shot rather
           # than num_steps_value.
-          item = [self._decode(self._storage.get((idx + n) % self._capacity))
-                  for n in range(num_steps)]
+          item = [
+              self._decode(self._storage.get((idx + n) % self._capacity))
+              for n in range(num_steps)
+          ]
         else:
           item = self._decode(self._storage.get(idx % self._capacity))
 
@@ -157,18 +166,26 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
       samples = [get_single() for _ in range(sample_batch_size)]
       return nest_utils.stack_nested_arrays(samples)
 
-  def _as_dataset(self, sample_batch_size=None, num_steps=None,
-                  sequence_preprocess_fn=None, num_parallel_calls=None):
+  def _as_dataset(
+      self,
+      sample_batch_size=None,
+      num_steps=None,
+      sequence_preprocess_fn=None,
+      num_parallel_calls=None,
+  ):
     if sequence_preprocess_fn is not None:
       raise NotImplementedError('sequence_preprocess_fn is not supported.')
     if num_parallel_calls is not None:
-      raise NotImplementedError('PyUniformReplayBuffer does not support '
-                                'num_parallel_calls (must be None).')
+      raise NotImplementedError(
+          'PyUniformReplayBuffer does not support '
+          'num_parallel_calls (must be None).'
+      )
 
     data_spec = self._data_spec
     if sample_batch_size is not None:
       data_spec = array_spec.add_outer_dims_nest(
-          data_spec, (sample_batch_size,))
+          data_spec, (sample_batch_size,)
+      )
     if num_steps is not None:
       data_spec = (data_spec,) * num_steps
     shapes = tuple(s.shape for s in tf.nest.flatten(data_spec))
@@ -177,8 +194,10 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
     def generator_fn():
       while True:
         if sample_batch_size is not None:
-          batch = [self._get_next(num_steps=num_steps, time_stacked=False)
-                   for _ in range(sample_batch_size)]
+          batch = [
+              self._get_next(num_steps=num_steps, time_stacked=False)
+              for _ in range(sample_batch_size)
+          ]
           item = nest_utils.stack_nested_arrays(batch)
         else:
           item = self._get_next(num_steps=num_steps, time_stacked=False)
@@ -187,19 +206,21 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
     def time_stack(*structures):
       time_axis = 0 if sample_batch_size is None else 1
       return tf.nest.map_structure(
-          lambda *elements: tf.stack(elements, axis=time_axis), *structures)
+          lambda *elements: tf.stack(elements, axis=time_axis), *structures
+      )
 
-    ds = tf.data.Dataset.from_generator(
-        generator_fn, dtypes,
-        shapes).map(lambda *items: tf.nest.pack_sequence_as(data_spec, items))
+    ds = tf.data.Dataset.from_generator(generator_fn, dtypes, shapes).map(
+        lambda *items: tf.nest.pack_sequence_as(data_spec, items)
+    )
     if num_steps is not None:
       return ds.map(time_stack)
     else:
       return ds
 
   def _gather_all(self):
-    data = [self._decode(self._storage.get(idx))
-            for idx in range(self._capacity)]
+    data = [
+        self._decode(self._storage.get(idx)) for idx in range(self._capacity)
+    ]
     stacked = nest_utils.stack_nested_arrays(data)
     batched = tf.nest.map_structure(lambda t: np.expand_dims(t, 0), stacked)
     return batched

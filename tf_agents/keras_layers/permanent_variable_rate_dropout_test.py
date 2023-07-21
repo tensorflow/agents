@@ -16,7 +16,6 @@
 """Tests for tf_agents.keras_layers.permanent_variable_rate_dropout."""
 
 import tensorflow as tf
-
 from tf_agents.keras_layers import permanent_variable_rate_dropout
 from tf_agents.utils import test_utils
 
@@ -25,11 +24,13 @@ class PermanentVariableRateDropoutTest(test_utils.TestCase):
 
   def testPermanent(self):
     var = tf.Variable(0.5, dtype=tf.float32)
+
     def dropout_fn():
       return tf.identity(var)
 
     layer = permanent_variable_rate_dropout.PermanentVariableRateDropout(
-        rate=dropout_fn, permanent=True)
+        rate=dropout_fn, permanent=True
+    )
     inputs = tf.reshape(tf.range(4 * 12, dtype=tf.float32), shape=(2, 2, 3, 4))
     out = layer(inputs)
     scaled = inputs * 2
@@ -46,11 +47,13 @@ class PermanentVariableRateDropoutTest(test_utils.TestCase):
 
   def testNonPermanent(self):
     var = tf.Variable(0.5, dtype=tf.float32)
+
     def dropout_fn():
       return tf.identity(var)
 
     layer = permanent_variable_rate_dropout.PermanentVariableRateDropout(
-        rate=dropout_fn)
+        rate=dropout_fn
+    )
     inputs = tf.reshape(tf.range(4 * 12, dtype=tf.float32), shape=(2, 2, 3, 4))
     out = layer(inputs, training=True)
     scaled = inputs * 2

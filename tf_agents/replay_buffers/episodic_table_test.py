@@ -23,7 +23,6 @@ import os
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents import specs
 from tf_agents.replay_buffers import episodic_table
 
@@ -33,14 +32,17 @@ from tensorflow.python.framework import test_util  # TF internal
 class EpisodicTableTest(tf.test.TestCase):
 
   def default_specs(self):
-    return {'action': specs.TensorSpec([3], tf.float32, 'action'),
-            'camera': specs.TensorSpec([5], tf.float32, 'camera'),
-            'lidar': specs.TensorSpec([3, 2], tf.float32, 'lidar')}
+    return {
+        'action': specs.TensorSpec([3], tf.float32, 'action'),
+        'camera': specs.TensorSpec([5], tf.float32, 'camera'),
+        'lidar': specs.TensorSpec([3, 2], tf.float32, 'lidar'),
+    }
 
   def np_values(self, spec, batch_size=1):
     def ones(sp):
       return np.ones(
-          [batch_size] + sp.shape.as_list(), dtype=sp.dtype.as_numpy_dtype)
+          [batch_size] + sp.shape.as_list(), dtype=sp.dtype.as_numpy_dtype
+      )
 
     return tf.nest.map_structure(ones, spec)
 
@@ -53,7 +55,8 @@ class EpisodicTableTest(tf.test.TestCase):
 
     tensors = tf.nest.map_structure(
         lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32),
-        expected_values)
+        expected_values,
+    )
 
     add_op = replay_table.add([0], tensors)
     values = replay_table.get_episode_values(0)
@@ -85,7 +88,8 @@ class EpisodicTableTest(tf.test.TestCase):
     expected_values = self.np_values(spec)
     empty_values = self.np_values(spec, 0)
     tensors = tf.nest.map_structure(
-        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values
+    )
 
     write_op = replay_table.add([0, 1], tensors)
     values_0 = replay_table.get_episode_values(0)
@@ -94,12 +98,15 @@ class EpisodicTableTest(tf.test.TestCase):
     values_2 = replay_table.get_episode_values(2)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_0))
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_1))
-    tf.nest.map_structure(self.assertAllClose, empty_values,
-                          self.evaluate(values_2))
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_0)
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_1)
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, empty_values, self.evaluate(values_2)
+    )
 
   @test_util.run_in_graph_and_eager_modes()
   def testGetAddAppendMultiple(self):
@@ -111,16 +118,19 @@ class EpisodicTableTest(tf.test.TestCase):
     expected_values = self.np_values(spec)
     empty_values = self.np_values(spec, 0)
     tensors = tf.nest.map_structure(
-        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values
+    )
 
     # Pull out the first entry in the batch, and add an outer
     # dimension to represent a single time step that we'll append.
     tensors_batch0 = tf.nest.map_structure(
-        lambda x: tf.expand_dims(x[0, ...], 0), tensors)
+        lambda x: tf.expand_dims(x[0, ...], 0), tensors
+    )
 
     # We will append tensors_batch0 to row 0, which contains x[0].
     expected_appended_values = tf.nest.map_structure(
-        lambda x: np.stack((x[0], x[0])), input_values)
+        lambda x: np.stack((x[0], x[0])), input_values
+    )
 
     # batch_size == 2, so add [0, 1]
     write_op = replay_table.add([0, 1], tensors)
@@ -131,16 +141,20 @@ class EpisodicTableTest(tf.test.TestCase):
     values_2 = lambda: replay_table.get_episode_values(2)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_0()))
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_1()))
-    tf.nest.map_structure(self.assertAllClose, empty_values,
-                          self.evaluate(values_2()))
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_0())
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_1())
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, empty_values, self.evaluate(values_2())
+    )
 
     self.evaluate(append_op_0())
-    tf.nest.map_structure(self.assertAllClose, expected_appended_values,
-                          self.evaluate(values_0()))
+    tf.nest.map_structure(
+        self.assertAllClose, expected_appended_values, self.evaluate(values_0())
+    )
 
   @test_util.run_in_graph_and_eager_modes()
   def testExtend(self):
@@ -153,9 +167,11 @@ class EpisodicTableTest(tf.test.TestCase):
     self.evaluate(replay_table.extend(2, replay_table.get_episode_lists(1)))
     # Extend rows 0 and 1 by the contents of rows 1 and 2.
     self.evaluate(
-        replay_table.extend([0, 1], replay_table.get_episode_lists([1, 2])))
+        replay_table.extend([0, 1], replay_table.get_episode_lists([1, 2]))
+    )
     episode_0, episode_1, episode_2 = self.evaluate(
-        [replay_table.get_episode_values(r) for r in range(3)])
+        [replay_table.get_episode_values(r) for r in range(3)]
+    )
     self.assertAllClose(episode_0, self.np_values(spec, 5))
     self.assertAllClose(episode_1, self.np_values(spec, 10))
     self.assertAllClose(episode_2, self.np_values(spec, 5))
@@ -170,7 +186,8 @@ class EpisodicTableTest(tf.test.TestCase):
     expected_values = self.np_values(spec)
     empty_values = self.np_values(spec, 0)
     tensors = tf.nest.map_structure(
-        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values
+    )
 
     write_op = replay_table.add([0, 1], tensors)
     values_0 = replay_table.get_episode_values(0)
@@ -181,15 +198,19 @@ class EpisodicTableTest(tf.test.TestCase):
     values_1_after_clear = replay_table.get_episode_values(1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_0))
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_1))
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_0)
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_1)
+    )
     self.evaluate(clear_op)
-    tf.nest.map_structure(self.assertAllClose, empty_values,
-                          self.evaluate(values_0_after_clear))
-    tf.nest.map_structure(self.assertAllClose, empty_values,
-                          self.evaluate(values_1_after_clear))
+    tf.nest.map_structure(
+        self.assertAllClose, empty_values, self.evaluate(values_0_after_clear)
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, empty_values, self.evaluate(values_1_after_clear)
+    )
 
   @test_util.run_in_graph_and_eager_modes()
   def testClearRows(self):
@@ -201,7 +222,8 @@ class EpisodicTableTest(tf.test.TestCase):
     expected_values = self.np_values(spec)
     empty_values = self.np_values(spec, 0)
     tensors = tf.nest.map_structure(
-        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values)
+        lambda x: tf.convert_to_tensor(value=x, dtype=tf.float32), input_values
+    )
 
     write_op = replay_table.add([0, 1], tensors)
     values_0 = replay_table.get_episode_values(0)
@@ -212,15 +234,21 @@ class EpisodicTableTest(tf.test.TestCase):
     values_1_after_clear = replay_table.get_episode_values(1)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(write_op)
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_0))
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_1))
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_0)
+    )
+    tf.nest.map_structure(
+        self.assertAllClose, expected_values, self.evaluate(values_1)
+    )
     self.evaluate(clear_0)
-    tf.nest.map_structure(self.assertAllClose, empty_values,
-                          self.evaluate(values_0_after_clear))
-    tf.nest.map_structure(self.assertAllClose, expected_values,
-                          self.evaluate(values_1_after_clear))
+    tf.nest.map_structure(
+        self.assertAllClose, empty_values, self.evaluate(values_0_after_clear)
+    )
+    tf.nest.map_structure(
+        self.assertAllClose,
+        expected_values,
+        self.evaluate(values_1_after_clear),
+    )
 
   @test_util.run_in_graph_and_eager_modes()
   def testGetEpisodeListsOneRow(self):
@@ -234,8 +262,9 @@ class EpisodicTableTest(tf.test.TestCase):
     episode_lists = replay_table.get_episode_lists(1)
     for episode_list_slot in tf.nest.flatten(episode_lists):
       self.assertEqual(episode_list_slot.shape.rank, 0)
-    episode_tensors = tf.nest.map_structure(replay_table._stack_tensor_list,
-                                            replay_table.slots, episode_lists)
+    episode_tensors = tf.nest.map_structure(
+        replay_table._stack_tensor_list, replay_table.slots, episode_lists
+    )
     self.assertAllClose(self.evaluate(episode_tensors), test_values)
 
   @test_util.run_in_graph_and_eager_modes()
@@ -258,12 +287,16 @@ class EpisodicTableTest(tf.test.TestCase):
     # {'action': <five items>, 'camera': <five items>, 'lidar': <five items>}
     episode_tensors_1 = tf.nest.map_structure(
         lambda slot, lists: replay_table._stack_tensor_list(slot, lists[0]),
-        replay_table.slots, episode_lists)
+        replay_table.slots,
+        episode_lists,
+    )
     # Should be equivalent to
     # Stack episode tensors for row 2, which is empty.
     episode_tensors_2 = tf.nest.map_structure(
         lambda slot, lists: replay_table._stack_tensor_list(slot, lists[1]),
-        replay_table.slots, episode_lists)
+        replay_table.slots,
+        episode_lists,
+    )
     self.assertAllClose(self.evaluate(episode_tensors_1), test_values)
     self.assertAllClose(self.evaluate(episode_tensors_2), empty_values)
 
@@ -289,13 +322,19 @@ class EpisodicTableTest(tf.test.TestCase):
     # Stack each row individually.
     episode_tensors_0 = tf.nest.map_structure(
         lambda slot, lists: replay_table._stack_tensor_list(slot, lists[0]),
-        replay_table.slots, episode_lists)
+        replay_table.slots,
+        episode_lists,
+    )
     episode_tensors_1 = tf.nest.map_structure(
         lambda slot, lists: replay_table._stack_tensor_list(slot, lists[1]),
-        replay_table.slots, episode_lists)
+        replay_table.slots,
+        episode_lists,
+    )
     episode_tensors_2 = tf.nest.map_structure(
         lambda slot, lists: replay_table._stack_tensor_list(slot, lists[2]),
-        replay_table.slots, episode_lists)
+        replay_table.slots,
+        episode_lists,
+    )
     # Only row 1 should have non-empty values.
     self.assertAllClose(self.evaluate(episode_tensors_0), empty_values)
     self.assertAllClose(self.evaluate(episode_tensors_1), test_values)

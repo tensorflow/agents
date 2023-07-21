@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import abc
 from typing import Optional
 
@@ -65,13 +64,16 @@ class PyPolicy(object):
   """
 
   # TODO(kbanoop): Expose a batched/batch_size property.
-  def __init__(self,
-               time_step_spec: ts.TimeStep,
-               action_spec: types.NestedArraySpec,
-               policy_state_spec: types.NestedArraySpec = (),
-               info_spec: types.NestedArraySpec = (),
-               observation_and_action_constraint_splitter: Optional[
-                   types.Splitter] = None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedArraySpec,
+      policy_state_spec: types.NestedArraySpec = (),
+      info_spec: types.NestedArraySpec = (),
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter
+      ] = None,
+  ):
     """Initialization of PyPolicy class.
 
     Args:
@@ -91,15 +93,14 @@ class PyPolicy(object):
         the network and 2) the constraint. An example
         `observation_and_action_constraint_splitter` could be as simple as: ```
         def observation_and_action_constraint_splitter(observation): return
-          observation['network_input'], observation['constraint'] ```
-        *Note*: when using `observation_and_action_constraint_splitter`, make
-          sure the provided `q_network` is compatible with the network-specific
-          half of the output of the
-          `observation_and_action_constraint_splitter`. In particular,
-          `observation_and_action_constraint_splitter` will be called on the
-          observation before passing to the network. If
-          `observation_and_action_constraint_splitter` is None, action
-          constraints are not applied.
+        observation['network_input'], observation['constraint'] ``` *Note*: when
+        using `observation_and_action_constraint_splitter`, make sure the
+        provided `q_network` is compatible with the network-specific half of the
+        output of the `observation_and_action_constraint_splitter`. In
+        particular, `observation_and_action_constraint_splitter` will be called
+        on the observation before passing to the network. If
+        `observation_and_action_constraint_splitter` is None, action constraints
+        are not applied.
     """
     common.tf_agents_gauge.get_cell('TFAPolicy').set(True)
     common.assert_members_are_not_overridden(base_cls=PyPolicy, instance=self)
@@ -110,23 +111,29 @@ class PyPolicy(object):
     self._info_spec = tensor_spec.to_array_spec(info_spec)
     self._setup_specs()
     self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
+        observation_and_action_constraint_splitter
+    )
 
   def _setup_specs(self):
     self._policy_step_spec = policy_step.PolicyStep(
-        action=self._action_spec, state=self._policy_state_spec,
-        info=self._info_spec)
+        action=self._action_spec,
+        state=self._policy_state_spec,
+        info=self._info_spec,
+    )
     self._trajectory_spec = trajectory.from_transition(
-        self._time_step_spec, self._policy_step_spec, self._time_step_spec)
+        self._time_step_spec, self._policy_step_spec, self._time_step_spec
+    )
     self._collect_data_spec = self._trajectory_spec
 
   @property
   def observation_and_action_constraint_splitter(
-      self) -> Optional[types.Splitter]:
+      self,
+  ) -> Optional[types.Splitter]:
     return self._observation_and_action_constraint_splitter
 
-  def get_initial_state(self,
-                        batch_size: Optional[int] = None) -> types.NestedArray:
+  def get_initial_state(
+      self, batch_size: Optional[int] = None
+  ) -> types.NestedArray:
     """Returns an initial state usable by the policy.
 
     Args:
@@ -137,12 +144,13 @@ class PyPolicy(object):
     """
     return self._get_initial_state(batch_size)
 
-  def action(self,
-             time_step: ts.TimeStep,
-             policy_state: types.NestedArray = (),
-             seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
+  def action(
+      self,
+      time_step: ts.TimeStep,
+      policy_state: types.NestedArray = (),
+      seed: Optional[types.Seed] = None,
+  ) -> policy_step.PolicyStep:
     """Generates next action given the time_step and policy_state.
-
 
     Args:
       time_step: A `TimeStep` tuple corresponding to `time_step_spec()`.
@@ -237,10 +245,12 @@ class PyPolicy(object):
     return self._collect_data_spec
 
   @abc.abstractmethod
-  def _action(self,
-              time_step: ts.TimeStep,
-              policy_state: types.NestedArray,
-              seed: Optional[types.Seed] = None) -> policy_step.PolicyStep:
+  def _action(
+      self,
+      time_step: ts.TimeStep,
+      policy_state: types.NestedArray,
+      seed: Optional[types.Seed] = None,
+  ) -> policy_step.PolicyStep:
     """Implementation of `action`.
 
     Args:
@@ -269,6 +279,7 @@ class PyPolicy(object):
       A nested object of type `policy_state` containing properly
       initialized Arrays.
     """
+
     def _zero_array(spec):
       if batch_size is None:
         shape = spec.shape

@@ -23,7 +23,6 @@ import numpy as np
 import portpicker
 import reverb
 import tensorflow.compat.v2 as tf
-
 from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.typing import types
@@ -35,10 +34,12 @@ def _create_server(
     table: Text = reverb_variable_container.DEFAULT_TABLE,
     max_size: int = 1,
     signature: Optional[types.NestedTensorSpec] = (
-        tf.TensorSpec((), tf.int64), {
+        tf.TensorSpec((), tf.int64),
+        {
             'var1': (tf.TensorSpec((2), tf.float64),),
-            'var2': tf.TensorSpec((2, 1), tf.int32)
-        })
+            'var2': tf.TensorSpec((2, 1), tf.int32),
+        },
+    ),
 ) -> Tuple[reverb.Server, Text]:
   server = reverb.Server(
       tables=[
@@ -49,17 +50,22 @@ def _create_server(
               rate_limiter=reverb.rate_limiters.MinSize(1),
               max_size=max_size,
               max_times_sampled=0,
-              signature=signature)
+              signature=signature,
+          )
       ],
-      port=portpicker.pick_unused_port())
+      port=portpicker.pick_unused_port(),
+  )
   return server, 'localhost:{}'.format(server.port)
 
 
 def _create_nested_variable() -> types.NestedVariable:
-  return (tf.Variable(0, dtype=tf.int64, shape=()), {
-      'var1': (tf.Variable([1, 1], dtype=tf.float64, shape=(2,)),),
-      'var2': tf.Variable([[2], [3]], dtype=tf.int32, shape=(2, 1))
-  })
+  return (
+      tf.Variable(0, dtype=tf.int64, shape=()),
+      {
+          'var1': (tf.Variable([1, 1], dtype=tf.float64, shape=(2,)),),
+          'var2': tf.Variable([[2], [3]], dtype=tf.int32, shape=(2, 1)),
+      },
+  )
 
 
 class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
@@ -98,7 +104,8 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
 
     # Push the input to the server.
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     variable_container.push(variables)
 
     # Check the content of the server.
@@ -107,16 +114,20 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
   def test_push_with_not_exact_sequence_type_matching(self) -> None:
     # The second element (i.e the value of `var1`) was in a tuple in the
     # original signature, here we place it into a list.
-    variables = (tf.Variable(0, dtype=tf.int64, shape=()), {
-        'var1': [tf.Variable([1, 1], dtype=tf.float64, shape=(2,))],
-        'var2': tf.Variable([[2], [3]], dtype=tf.int32, shape=(2, 1))
-    })
+    variables = (
+        tf.Variable(0, dtype=tf.int64, shape=()),
+        {
+            'var1': [tf.Variable([1, 1], dtype=tf.float64, shape=(2,))],
+            'var2': tf.Variable([[2], [3]], dtype=tf.int32, shape=(2, 1)),
+        },
+    )
 
     # Sequence type check is turned off by default allowing sequence type
     # differences in the signature. This is required to be able work with
     # policies loaded from file which often change tuple to e.g. `ListWrapper`.
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     variable_container.push(variables)
 
     # Check the content of the server.
@@ -124,25 +135,31 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
 
   def test_push_raises_key_error_on_unknown_table(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     with self.assertRaises(KeyError):
       variable_container.push(tf.Variable(1), 'unknown_table')
 
   def test_push_raises_error_if_variable_struct_not_match(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     with self.assertRaises(tf.errors.InvalidArgumentError):
       variable_container.push(tf.Variable(1))
 
   def test_push_raises_error_if_variable_type_is_wrong(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     # The first element has a type `tf.int64` in the signature, but here we
     # declare `tf.int32`.
-    variables_with_wrong_type = (tf.Variable(-1, dtype=tf.int32, shape=()), {
-        'var1': (tf.Variable([0, 0], dtype=tf.float64, shape=(2,)),),
-        'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1))
-    })
+    variables_with_wrong_type = (
+        tf.Variable(-1, dtype=tf.int32, shape=()),
+        {
+            'var1': (tf.Variable([0, 0], dtype=tf.float64, shape=(2,)),),
+            'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1)),
+        },
+    )
     with self.assertRaises(tf.errors.InvalidArgumentError):
       variable_container.push(variables_with_wrong_type)
 
@@ -151,14 +168,18 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     self._push_nested_data()
 
     # Get the values from the server.
-    variables = (tf.Variable(-1, dtype=tf.int64, shape=()), {
-        'var1': (tf.Variable([0, 0], dtype=tf.float64, shape=(2,)),),
-        'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1))
-    })
+    variables = (
+        tf.Variable(-1, dtype=tf.int64, shape=()),
+        {
+            'var1': (tf.Variable([0, 0], dtype=tf.float64, shape=(2,)),),
+            'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1)),
+        },
+    )
 
     # Update variables based on value pulled from the server.
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     variable_container.update(variables)
 
     # Check the values of the `variables`.
@@ -170,16 +191,20 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
 
     # The second element (i.e the value of `var1`) was in a tuple in the
     # original signature, here we place it into a list.
-    variables = (tf.Variable(-1, dtype=tf.int64, shape=()), {
-        'var1': [tf.Variable([0, 0], dtype=tf.float64, shape=(2,))],
-        'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1))
-    })
+    variables = (
+        tf.Variable(-1, dtype=tf.int64, shape=()),
+        {
+            'var1': [tf.Variable([0, 0], dtype=tf.float64, shape=(2,))],
+            'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1)),
+        },
+    )
 
     # Sequence type check is turned off by default allowing sequence type
     # differences in the signature. This is required to be able work with
     # policies loaded from file which often change tuple to e.g. `ListWrapper`.
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     variable_container.update(variables)
 
     # Check the values of the `variables`.
@@ -187,7 +212,8 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
 
   def test_update_raises_key_error_on_unknown_table(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     with self.assertRaises(KeyError):
       variable_container.update(tf.Variable(1), 'unknown_table')
 
@@ -196,7 +222,8 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     self._push_nested_data()
 
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     with self.assertRaises(ValueError):
       variable_container.update(tf.Variable(1))
 
@@ -205,28 +232,35 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     self._push_nested_data()
 
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     # The first element has a type `tf.int64` in the signature, but here we
     # declare `tf.int32`.
-    variables_with_wrong_type = (tf.Variable(-1, dtype=tf.int32, shape=()), {
-        'var1': (tf.Variable([0, 0], dtype=tf.float64, shape=(2,)),),
-        'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1))
-    })
+    variables_with_wrong_type = (
+        tf.Variable(-1, dtype=tf.int32, shape=()),
+        {
+            'var1': (tf.Variable([0, 0], dtype=tf.float64, shape=(2,)),),
+            'var2': tf.Variable([[0], [0]], dtype=tf.int32, shape=(2, 1)),
+        },
+    )
     with self.assertRaises(ValueError):
       variable_container.update(variables_with_wrong_type)
 
   def test_pull_raises_key_error_on_unknown_table(self) -> None:
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     with self.assertRaises(KeyError):
       variable_container.pull('unknown_table')
 
   @parameterized.named_parameters(
       ('_default', tf.distribute.get_strategy()),
       ('_one_device', tf.distribute.OneDeviceStrategy('/cpu:0')),
-      ('_mirrored', tf.distribute.MirroredStrategy(('/cpu:0', '/cpu:1'))))
+      ('_mirrored', tf.distribute.MirroredStrategy(('/cpu:0', '/cpu:1'))),
+  )
   def test_push_under_distribute_strategy(
-      self, strategy: tf.distribute.Strategy) -> None:
+      self, strategy: tf.distribute.Strategy
+  ) -> None:
     # Prepare nested variables under strategy scope to push into the server.
     with strategy.scope():
       variables = _create_nested_variable()
@@ -234,7 +268,8 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
 
     # Push the input to the server.
     variable_container = reverb_variable_container.ReverbVariableContainer(
-        self._server_address)
+        self._server_address
+    )
     variable_container.push(variables)
 
     # Check the content of the server.
@@ -248,26 +283,35 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
       writer.append([
           np.array(0, dtype=np.int64),
           np.array([1, 1], dtype=np.float64),
-          np.array([[2], [3]], dtype=np.int32)
+          np.array([[2], [3]], dtype=np.int32),
       ])
       writer.create_item(reverb_variable_container.DEFAULT_TABLE, 1, 1.0)
     self.assertEqual(
         client.server_info()[
-            reverb_variable_container.DEFAULT_TABLE].current_size, 1)
+            reverb_variable_container.DEFAULT_TABLE
+        ].current_size,
+        1,
+    )
 
-  def _assert_nested_variable_in_server(self,
-                                        server_address: Optional[Text] = None
-                                       ) -> None:
+  def _assert_nested_variable_in_server(
+      self, server_address: Optional[Text] = None
+  ) -> None:
     # Create Python client.
     address = server_address or self._server_address
     client = reverb.Client(address)
     self.assertEqual(
         client.server_info()[
-            reverb_variable_container.DEFAULT_TABLE].current_size, 1)
+            reverb_variable_container.DEFAULT_TABLE
+        ].current_size,
+        1,
+    )
 
     # Draw one sample from the server using the Python client.
     content = next(
-        iter(client.sample(reverb_variable_container.DEFAULT_TABLE, 1)))[0].data  # pytype: disable=attribute-error  # strict_namedtuple_checks
+        iter(client.sample(reverb_variable_container.DEFAULT_TABLE, 1))
+    )[
+        0
+    ].data  # pytype: disable=attribute-error  # strict_namedtuple_checks
     # Internally in Reverb the data is stored in the form of flat numpy lists.
     self.assertLen(content, 3)
     self.assertAllEqual(content[0], np.array(0, dtype=np.int64))
@@ -275,21 +319,25 @@ class ReverbVariableContainerTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllEqual(content[2], np.array([[2], [3]], dtype=np.int32))
 
   def _assert_nested_variable_updated(
-      self,
-      variables: types.NestedVariable,
-      check_nest_seq_types: bool = True) -> None:
+      self, variables: types.NestedVariable, check_nest_seq_types: bool = True
+  ) -> None:
     # Prepare the exptected content of the variables.
-    expected_values = (tf.constant(0, dtype=tf.int64, shape=()), {
-        'var1': (tf.constant([1, 1], dtype=tf.float64, shape=(2,)),),
-        'var2': tf.constant([[2], [3]], dtype=tf.int32, shape=(2, 1))
-    })
+    expected_values = (
+        tf.constant(0, dtype=tf.int64, shape=()),
+        {
+            'var1': (tf.constant([1, 1], dtype=tf.float64, shape=(2,)),),
+            'var2': tf.constant([[2], [3]], dtype=tf.int32, shape=(2, 1)),
+        },
+    )
     flat_expected_values = tf.nest.flatten(expected_values)
 
     # Assert that the variables have the same content as the expected values.
     # Meaning that the two nested structure have to be the same.
     self.assertIsNone(
         nest_utils.assert_same_structure(
-            variables, expected_values, check_types=check_nest_seq_types))
+            variables, expected_values, check_types=check_nest_seq_types
+        )
+    )
     # And the values in `variables` have to be equal to (or close to, depending
     # on the component type) to the expected ones.
     flat_variables = tf.nest.flatten(variables)

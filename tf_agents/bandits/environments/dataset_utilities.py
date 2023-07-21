@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import csv
+
 import gin
 import numpy as np
-
 from six.moves import range
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -40,12 +40,13 @@ def _validate_mushroom_data(numpy_data):
 
   Args:
     numpy_data: numpy array of rank 2 consisting of single characters. It should
-    contain the mushroom dataset with each column being a feature and each row
-    being a sample.
+      contain the mushroom dataset with each column being a feature and each row
+      being a sample.
   """
   assert numpy_data.shape[1] == 23, 'The dataset should have 23 columns.'
   assert set(numpy_data[:, 0]) == {
-      'e', 'p'
+      'e',
+      'p',
   }, 'The first column should be the label with values `e` and `p`.'
 
 
@@ -105,8 +106,9 @@ def convert_mushroom_csv_to_tf_dataset(file_path, buffer_size=40000):
 
 
 @gin.configurable
-def mushroom_reward_distribution(r_noeat, r_eat_safe, r_eat_poison_bad,
-                                 r_eat_poison_good, prob_poison_bad):
+def mushroom_reward_distribution(
+    r_noeat, r_eat_safe, r_eat_poison_bad, r_eat_poison_good, prob_poison_bad
+):
   """Creates a distribution for rewards for the mushroom environment.
 
   Args:
@@ -128,14 +130,13 @@ def mushroom_reward_distribution(r_noeat, r_eat_safe, r_eat_poison_bad,
   # to the desired values.
 
   distr = tfd.Bernoulli(probs=[[0, prob_poison_bad], [0, 0]], dtype=tf.float32)
-  reward_distr = (
-      tfp.bijectors.Shift(
-          [[r_noeat, r_eat_poison_bad],
-           [r_noeat, r_eat_safe]])
-      (tfp.bijectors.Scale(
-          [[1, r_eat_poison_good - r_eat_poison_bad],
-           [1, 1]])
-       (distr)))
+  reward_distr = tfp.bijectors.Shift(
+      [[r_noeat, r_eat_poison_bad], [r_noeat, r_eat_safe]]
+  )(
+      tfp.bijectors.Scale([[1, r_eat_poison_good - r_eat_poison_bad], [1, 1]])(
+          distr
+      )
+  )
   return tfd.Independent(reward_distr, reinterpreted_batch_ndims=2)
 
 
@@ -146,8 +147,11 @@ def convert_covertype_dataset(file_path, buffer_size=40000):
   context_tensor = tf.cast(contexts, tf.float32)
   labels = data_array[:, -1] - 1  # Classes are from [1, 7].
   label_tensor = tf.cast(labels, tf.int32)
-  return tf.data.Dataset.from_tensor_slices(
-      (context_tensor, label_tensor)).repeat().shuffle(buffer_size=buffer_size)
+  return (
+      tf.data.Dataset.from_tensor_slices((context_tensor, label_tensor))
+      .repeat()
+      .shuffle(buffer_size=buffer_size)
+  )
 
 
 def load_movielens_data(data_file, delimiter=','):

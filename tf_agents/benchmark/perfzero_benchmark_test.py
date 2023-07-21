@@ -40,7 +40,7 @@ class PerfzeroBenchmarkTest(test_utils.TestCase):
     expected_metric = {
         'name': metric_name,
         'value': value,
-        'min_value': min_value
+        'min_value': min_value,
     }
     metric = bench.build_metric(metric_name, value, min_value=min_value)
     self.assertEqual(metric, expected_metric)
@@ -55,7 +55,7 @@ class PerfzeroBenchmarkTest(test_utils.TestCase):
     expected_metric = {
         'name': metric_name,
         'value': value,
-        'max_value': max_value
+        'max_value': max_value,
     }
     metric = bench.build_metric(metric_name, value, max_value=max_value)
     self.assertEqual(metric, expected_metric)
@@ -72,10 +72,11 @@ class PerfzeroBenchmarkTest(test_utils.TestCase):
         'name': metric_name,
         'value': value,
         'min_value': min_value,
-        'max_value': max_value
+        'max_value': max_value,
     }
     metric = bench.build_metric(
-        metric_name, value, min_value=min_value, max_value=max_value)
+        metric_name, value, min_value=min_value, max_value=max_value
+    )
     self.assertEqual(metric, expected_metric)
 
 

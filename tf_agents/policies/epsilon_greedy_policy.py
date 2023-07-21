@@ -42,12 +42,14 @@ tfd = tfp.distributions
 class EpsilonGreedyPolicy(tf_policy.TFPolicy):
   """Returns epsilon-greedy samples of a given policy."""
 
-  def __init__(self,
-               policy: tf_policy.TFPolicy,
-               epsilon: types.FloatOrReturningFloat,
-               exploration_mask: Optional[Sequence[int]] = None,
-               info_fields_to_inherit_from_greedy: Sequence[Text] = (),
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      policy: tf_policy.TFPolicy,
+      epsilon: types.FloatOrReturningFloat,
+      exploration_mask: Optional[Sequence[int]] = None,
+      info_fields_to_inherit_from_greedy: Sequence[Text] = (),
+      name: Optional[Text] = None,
+  ):
     """Builds an epsilon-greedy MixturePolicy wrapping the given policy.
 
     Args:
@@ -67,7 +69,8 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
     """
     try:
       observation_and_action_constraint_splitter = (
-          policy.observation_and_action_constraint_splitter)
+          policy.observation_and_action_constraint_splitter
+      )
     except AttributeError:
       observation_and_action_constraint_splitter = None
     try:
@@ -83,10 +86,12 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
         policy.action_spec,
         emit_log_probability=policy.emit_log_probability,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=accepts_per_arm_features,
         stationary_mask=exploration_mask,
-        info_spec=policy.info_spec)
+        info_spec=policy.info_spec,
+    )
     super(EpsilonGreedyPolicy, self).__init__(
         policy.time_step_spec,
         policy.action_spec,
@@ -94,8 +99,10 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
         policy.info_spec,
         emit_log_probability=policy.emit_log_probability,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
-        name=name)
+            observation_and_action_constraint_splitter
+        ),
+        name=name,
+    )
 
   @property
   def wrapped_policy(self) -> tf_policy.TFPolicy:
@@ -117,7 +124,8 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
 
     outer_shape = nest_utils.get_outer_shape(time_step, self._time_step_spec)
     rng = tf.random.uniform(
-        outer_shape, maxval=1.0, seed=seed_stream(), name='epsilon_rng')
+        outer_shape, maxval=1.0, seed=seed_stream(), name='epsilon_rng'
+    )
     cond = tf.greater_equal(rng, self._get_epsilon())
 
     # Selects the action/info from the random policy with probability epsilon.
@@ -128,17 +136,24 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
     outer_ndims = int(outer_shape.shape[0])
     if outer_ndims >= 2:
       raise ValueError(
-          'Only supports batched time steps with a single batch dimension')
-    action = tf.nest.map_structure(lambda g, r: tf.compat.v1.where(cond, g, r),
-                                   greedy_action.action, random_action.action)
+          'Only supports batched time steps with a single batch dimension'
+      )
+    action = tf.nest.map_structure(
+        lambda g, r: tf.compat.v1.where(cond, g, r),
+        greedy_action.action,
+        random_action.action,
+    )
 
     if greedy_action.info:
       if not random_action.info:
         raise ValueError('Incompatible info field')
       # Note that the objects in PolicyInfo may have different shapes, so we
       # need to call nest_utils.where() on each type of object.
-      info = tf.nest.map_structure(lambda x, y: nest_utils.where(cond, x, y),
-                                   greedy_action.info, random_action.info)
+      info = tf.nest.map_structure(
+          lambda x, y: nest_utils.where(cond, x, y),
+          greedy_action.info,
+          random_action.info,
+      )
       if self._emit_log_probability:
         # At this point, info.log_probability contains the log prob of the
         # action chosen, conditioned on the policy that was chosen. We want to
@@ -146,27 +161,31 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
         # probability of choosing the policy.
         random_log_prob = tf.nest.map_structure(
             lambda t: tf.math.log(tf.zeros_like(t) + self._get_epsilon()),
-            info.log_probability)
+            info.log_probability,
+        )
         greedy_log_prob = tf.nest.map_structure(
             lambda t: tf.math.log(tf.ones_like(t) - self._get_epsilon()),
-            random_log_prob)
-        log_prob_of_chosen_policy = nest_utils.where(cond, greedy_log_prob,
-                                                     random_log_prob)
-        log_prob = tf.nest.map_structure(lambda a, b: a + b,
-                                         log_prob_of_chosen_policy,
-                                         info.log_probability)
+            random_log_prob,
+        )
+        log_prob_of_chosen_policy = nest_utils.where(
+            cond, greedy_log_prob, random_log_prob
+        )
+        log_prob = tf.nest.map_structure(
+            lambda a, b: a + b, log_prob_of_chosen_policy, info.log_probability
+        )
         info = policy_step.set_log_probability(info, log_prob)
       # Overwrite bandit policy info type.
       if policy_utilities.has_bandit_policy_type(info, check_for_tensor=True):
         # Generate mask of the same shape as bandit_policy_type (batch_size, 1).
         # This is the opposite of `cond`, which is 1-D bool tensor (batch_size,)
         # that is true when greedy policy was used, otherwise `cond` is false.
-        random_policy_mask = tf.reshape(tf.logical_not(cond),
-                                        tf.shape(info.bandit_policy_type))  # pytype: disable=attribute-error
+        random_policy_mask = tf.reshape(
+            tf.logical_not(cond), tf.shape(info.bandit_policy_type)
+        )  # pytype: disable=attribute-error
         bandit_policy_type = policy_utilities.bandit_policy_uniform_mask(
-            info.bandit_policy_type, mask=random_policy_mask)  # pytype: disable=attribute-error
-        info = policy_utilities.set_bandit_policy_type(
-            info, bandit_policy_type)
+            info.bandit_policy_type, mask=random_policy_mask
+        )  # pytype: disable=attribute-error
+        info = policy_utilities.set_bandit_policy_type(info, bandit_policy_type)
 
       # TODO(b/196644931): Should not assume info is a named tuple.
       if self.info_fields_to_inherit_from_greedy:
@@ -174,7 +193,8 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
             **{
                 f: getattr(greedy_action.info, f)
                 for f in self.info_fields_to_inherit_from_greedy
-            })
+            }
+        )
     else:
       if random_action.info:
         raise ValueError('Incompatible info field')
@@ -191,4 +211,5 @@ class EpsilonGreedyPolicy(tf_policy.TFPolicy):
 
   def _distribution(self, time_step, policy_state):
     raise NotImplementedError(
-        'EpsilonGreedyPolicy does not support distributions yet.')
+        'EpsilonGreedyPolicy does not support distributions yet.'
+    )

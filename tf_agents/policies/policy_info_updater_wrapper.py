@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from typing import Callable, Text, Dict, Union, Sequence, Optional
+from typing import Callable, Dict, Optional, Sequence, Text, Union
 
 import tensorflow.compat.v2 as tf
 from tf_agents.policies import tf_policy
@@ -28,19 +28,21 @@ from tf_agents.typing import types
 
 # A callable that receives a `PolicyStep` and returns a dictionary of a
 # tf.Tensor or a sequence of tf.Tensor`s used to update the policy_info.
-UpdaterFnType = Callable[[policy_step.PolicyStep],
-                         Dict[Text, Union[tf.Tensor, Sequence[tf.Tensor]]]]
+UpdaterFnType = Callable[
+    [policy_step.PolicyStep], Dict[Text, Union[tf.Tensor, Sequence[tf.Tensor]]]
+]
 
 
 class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
-  """Returns samples with updated `policy_info` (a dictionary).
-  """
+  """Returns samples with updated `policy_info` (a dictionary)."""
 
-  def __init__(self,
-               policy: tf_policy.TFPolicy,
-               info_spec: types.NestedTensorSpec,
-               updater_fn: UpdaterFnType,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      policy: tf_policy.TFPolicy,
+      info_spec: types.NestedTensorSpec,
+      updater_fn: UpdaterFnType,
+      name: Optional[Text] = None,
+  ):
     """Builds a TFPolicy wrapping the given policy.
 
     PolicyInfoUpdaterWrapper class updates `policy_info` using a user-defined
@@ -54,12 +56,11 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
         applying the updater function.
       updater_fn: An updater function that updates the `policy_info`. This is a
         callable that receives a `PolicyStep` and will return a dictionary of a
-        tf.Tensor or sequence of tf.Tensor`s.
-
-        **NOTE** If `policy.distribution` is called, the `PolicyStep.action`
-        object may contain a `tfp.distributions.Distribution` object instead
-        of a `Tensor`.  The `updater_fn` must be able to handle both cases
-        to be compatible with `PolicySaver`.
+        tf.Tensor or sequence of tf.Tensor`s.  **NOTE** If `policy.distribution`
+        is called, the `PolicyStep.action` object may contain a
+        `tfp.distributions.Distribution` object instead of a `Tensor`.  The
+        `updater_fn` must be able to handle both cases to be compatible with
+        `PolicySaver`.
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
@@ -69,7 +70,8 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
         policy_state_spec=policy.policy_state_spec,
         info_spec=info_spec,
         emit_log_probability=policy.emit_log_probability,
-        name=name)
+        name=name,
+    )
     self._wrapped_policy = policy
     self._info_spec = info_spec
     self._updater_fn = updater_fn
@@ -81,10 +83,13 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
   # `_info_spec`.
   def _check_value(self, tensor: tf.Tensor, tensorspec: tf.TensorSpec):
     if not tf.TensorShape(tf.squeeze(tensor.get_shape())).is_compatible_with(
-        tensorspec.shape):
+        tensorspec.shape
+    ):
       raise ValueError(
           'Tensor {} is not compatible with specification {}.'.format(
-              tensor, tensorspec))
+              tensor, tensorspec
+          )
+      )
 
   def apply_value_network(self, *args, **kwargs):
     return self._wrapped_policy.apply_value_network(*args, **kwargs)
@@ -102,5 +107,6 @@ class PolicyInfoUpdaterWrapper(tf_policy.TFPolicy):
 
   def _distribution(self, time_step, policy_state):
     distribution_step = self._wrapped_policy.distribution(
-        time_step, policy_state)
+        time_step, policy_state
+    )
     return self._update_info(distribution_step)

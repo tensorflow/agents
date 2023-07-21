@@ -54,8 +54,9 @@ else:
   _TF1_MODE_ALLOWED = True
 
 
-tf_agents_gauge = monitoring.BoolGauge('/tensorflow/agents/agents',
-                                       'TF-Agents usage', 'method')
+tf_agents_gauge = monitoring.BoolGauge(
+    '/tensorflow/agents/agents', 'TF-Agents usage', 'method'
+)
 
 
 MISSING_RESOURCE_VARIABLES_ERROR = """
@@ -75,7 +76,8 @@ def check_tf1_allowed():
         'You are using TF1 or running TF with eager mode disabled.  '
         'TF-Agents no longer supports TF1 mode (except for a shrinking list of '
         'internal allowed users).  If this negatively affects you, please '
-        'reach out to the TF-Agents team.  Otherwise please use TF2.')
+        'reach out to the TF-Agents team.  Otherwise please use TF2.'
+    )
 
 
 def resource_variables_enabled():
@@ -85,8 +87,11 @@ def resource_variables_enabled():
 _IN_LEGACY_TF1 = (
     tf.__git_version__ != 'unknown'
     and tf.__version__ != '1.15.0'
-    and (distutils.version.LooseVersion(tf.__version__) <=
-         distutils.version.LooseVersion('1.15.0.dev20190821')))
+    and (
+        distutils.version.LooseVersion(tf.__version__)
+        <= distutils.version.LooseVersion('1.15.0.dev20190821')
+    )
+)
 
 
 def in_legacy_tf1():
@@ -103,6 +108,7 @@ def set_default_tf_function_parameters(*args, **kwargs):
   Returns:
     Function decorator with preconfigured defaults for `tf.function`.
   """
+
   def maybe_wrap(fn):
     """Helper function."""
     wrapped = [None]
@@ -141,10 +147,8 @@ def function(*args, **kwargs):
   autograph = kwargs.pop('autograph', False)
   reduce_retracing = kwargs.pop('reduce_retracing', True)
   return tf.function(  # allow-tf-function
-      *args,
-      autograph=autograph,
-      reduce_retracing=reduce_retracing,
-      **kwargs)
+      *args, autograph=autograph, reduce_retracing=reduce_retracing, **kwargs
+  )
 
 
 def has_eager_been_enabled():
@@ -198,14 +202,16 @@ def function_in_tf1(*args, **kwargs):
   return maybe_wrap
 
 
-def create_variable(name,
-                    initial_value=0,
-                    shape=(),
-                    dtype=tf.int64,
-                    use_local_variable=False,
-                    trainable=False,
-                    initializer=None,
-                    unique_name=True):
+def create_variable(
+    name,
+    initial_value=0,
+    shape=(),
+    dtype=tf.int64,
+    use_local_variable=False,
+    trainable=False,
+    initializer=None,
+    unique_name=True,
+):
   """Create a variable."""
   check_tf1_allowed()
   if has_eager_been_enabled():
@@ -220,7 +226,8 @@ def create_variable(name,
       else:
         initial_value = initializer
     return tf.compat.v2.Variable(
-        initial_value, trainable=trainable, dtype=dtype, name=name)
+        initial_value, trainable=trainable, dtype=dtype, name=name
+    )
   collections = [tf.compat.v1.GraphKeys.GLOBAL_VARIABLES]
   if use_local_variable:
     collections = [tf.compat.v1.GraphKeys.LOCAL_VARIABLES]
@@ -237,14 +244,17 @@ def create_variable(name,
       initializer=initializer,
       collections=collections,
       use_resource=True,
-      trainable=trainable)
+      trainable=trainable,
+  )
 
 
-def soft_variables_update(source_variables,
-                          target_variables,
-                          tau=1.0,
-                          tau_non_trainable=None,
-                          sort_variables_by_name=False):
+def soft_variables_update(
+    source_variables,
+    target_variables,
+    tau=1.0,
+    tau_non_trainable=None,
+    sort_variables_by_name=False,
+):
   """Performs a soft/hard update of variables from the source to the target.
 
   Note: **when using this function with TF DistributionStrategy**, the
@@ -294,14 +304,15 @@ def soft_variables_update(source_variables,
   if len(source_variables) != len(target_variables):
     raise ValueError(
         'Source and target variable lists have different lengths: '
-        '{} vs. {}'.format(len(source_variables), len(target_variables)))
+        '{} vs. {}'.format(len(source_variables), len(target_variables))
+    )
   if sort_variables_by_name:
     source_variables = sorted(source_variables, key=lambda x: x.name)
     target_variables = sorted(target_variables, key=lambda x: x.name)
 
   strategy = tf.distribute.get_strategy()
 
-  for (v_s, v_t) in zip(source_variables, target_variables):
+  for v_s, v_t in zip(source_variables, target_variables):
     v_t.shape.assert_is_compatible_with(v_s.shape)
 
     def update_fn(v1, v2):
@@ -387,9 +398,12 @@ def index_with_actions(q_values, actions, multi_dim_actions=False):
 
   outer_shape = tf.shape(input=actions)
   batch_indices = tf.meshgrid(
-      *[tf.range(outer_shape[i]) for i in range(batch_dims)], indexing='ij')
-  batch_indices = [tf.cast(tf.expand_dims(batch_index, -1), dtype=tf.int32)
-                   for batch_index in batch_indices]
+      *[tf.range(outer_shape[i]) for i in range(batch_dims)], indexing='ij'
+  )
+  batch_indices = [
+      tf.cast(tf.expand_dims(batch_index, -1), dtype=tf.int32)
+      for batch_index in batch_indices
+  ]
   if not multi_dim_actions:
     actions = tf.expand_dims(actions, -1)
   # Cast actions to tf.int32 in order to avoid a TypeError in tf.concat.
@@ -474,7 +488,6 @@ class Periodically(tf.Module):
     self._counter = create_variable(self.name + '/counter', 0)
 
   def __call__(self):
-
     def call(strategy=None):
       del strategy  # unused
       if self._period is None:
@@ -484,7 +497,8 @@ class Periodically(tf.Module):
       period = tf.cast(self._period, self._counter.dtype)
       remainder = tf.math.mod(self._counter.assign_add(1), period)
       return tf.cond(
-          pred=tf.equal(remainder, 0), true_fn=self._body, false_fn=tf.no_op)
+          pred=tf.equal(remainder, 0), true_fn=self._body, false_fn=tf.no_op
+      )
 
     # TODO(b/129083817) add an explicit unit test to ensure correct behavior
     ctx = tf.distribute.get_replica_context()
@@ -548,12 +562,14 @@ def clip_to_spec(value, spec):
 def spec_means_and_magnitudes(action_spec):
   """Get the center and magnitude of the ranges in action spec."""
   action_means = tf.nest.map_structure(
-      lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec)
+      lambda spec: (spec.maximum + spec.minimum) / 2.0, action_spec
+  )
   action_magnitudes = tf.nest.map_structure(
-      lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec)
-  return np.array(
-      action_means, dtype=np.float32), np.array(
-          action_magnitudes, dtype=np.float32)
+      lambda spec: (spec.maximum - spec.minimum) / 2.0, action_spec
+  )
+  return np.array(action_means, dtype=np.float32), np.array(
+      action_magnitudes, dtype=np.float32
+  )
 
 
 def scale_to_spec(tensor, spec):
@@ -576,11 +592,13 @@ def scale_to_spec(tensor, spec):
   return tf.cast(tensor, spec.dtype)
 
 
-def ornstein_uhlenbeck_process(initial_value,
-                               damping=0.15,
-                               stddev=0.2,
-                               seed=None,
-                               scope='ornstein_uhlenbeck_noise'):
+def ornstein_uhlenbeck_process(
+    initial_value,
+    damping=0.15,
+    stddev=0.2,
+    seed=None,
+    scope='ornstein_uhlenbeck_noise',
+):
   """An op for generating noise from a zero-mean Ornstein-Uhlenbeck process.
 
   The Ornstein-Uhlenbeck process is a process that generates temporally
@@ -614,12 +632,14 @@ def ornstein_uhlenbeck_process(initial_value,
 class OUProcess(tf.Module):
   """A zero-mean Ornstein-Uhlenbeck process."""
 
-  def __init__(self,
-               initial_value,
-               damping=0.15,
-               stddev=0.2,
-               seed=None,
-               scope='ornstein_uhlenbeck_noise'):
+  def __init__(
+      self,
+      initial_value,
+      damping=0.15,
+      stddev=0.2,
+      seed=None,
+      scope='ornstein_uhlenbeck_noise',
+  ):
     """A Class for generating noise from a zero-mean Ornstein-Uhlenbeck process.
 
     The Ornstein-Uhlenbeck process is a process that generates temporally
@@ -647,15 +667,17 @@ class OUProcess(tf.Module):
     self._seed = seed
     with tf.name_scope(scope):
       self._x = tf.compat.v2.Variable(
-          initial_value=initial_value, trainable=False)
+          initial_value=initial_value, trainable=False
+      )
 
   def __call__(self):
     noise = tf.random.normal(
         shape=self._x.shape,
         stddev=self._stddev,
         dtype=self._x.dtype,
-        seed=self._seed)
-    return self._x.assign((1. - self._damping) * self._x + noise)
+        seed=self._seed,
+    )
+    return self._x.assign((1.0 - self._damping) * self._x + noise)
 
 
 def log_probability(distributions, actions, action_spec):
@@ -676,15 +698,14 @@ def log_probability(distributions, actions, action_spec):
     single_log_prob = single_distribution.log_prob(single_action)
     rank = single_log_prob.shape.rank
     reduce_dims = list(range(outer_rank, rank))
-    return tf.reduce_sum(
-        input_tensor=single_log_prob,
-        axis=reduce_dims)
+    return tf.reduce_sum(input_tensor=single_log_prob, axis=reduce_dims)
 
   nest_utils.assert_same_structure(distributions, actions)
   log_probs = [
       _compute_log_prob(dist, action)
-      for (dist, action
-          ) in zip(tf.nest.flatten(distributions), tf.nest.flatten(actions))
+      for (dist, action) in zip(
+          tf.nest.flatten(distributions), tf.nest.flatten(actions)
+      )
   ]
 
   # sum log-probs over action tuple
@@ -759,14 +780,16 @@ def discounted_future_sum(values, gamma, num_steps):
     ValueError: If values is not of rank 2.
   """
   if values.get_shape().rank != 2:
-    raise ValueError('Input must be rank 2 tensor.  Got %d.' %
-                     values.get_shape().rank)
+    raise ValueError(
+        'Input must be rank 2 tensor.  Got %d.' % values.get_shape().rank
+    )
 
   (batch_size, total_steps) = values.get_shape().as_list()
 
   num_steps = tf.minimum(num_steps, total_steps)
-  discount_filter = tf.reshape(gamma**tf.cast(tf.range(num_steps), tf.float32),
-                               [-1, 1, 1])
+  discount_filter = tf.reshape(
+      gamma ** tf.cast(tf.range(num_steps), tf.float32), [-1, 1, 1]
+  )
   padded_values = tf.concat([values, tf.zeros([batch_size, num_steps - 1])], 1)
 
   convolved_values = tf.squeeze(
@@ -774,7 +797,10 @@ def discounted_future_sum(values, gamma, num_steps):
           input=tf.expand_dims(padded_values, -1),
           filters=discount_filter,
           stride=1,
-          padding='VALID'), -1)
+          padding='VALID',
+      ),
+      -1,
+  )
 
   return convolved_values
 
@@ -801,11 +827,14 @@ def discounted_future_sum_masked(values, gamma, num_steps, episode_lengths):
 
   total_steps = tf.compat.dimension_value(values.shape[1])
   if total_steps is None:
-    raise ValueError('total_steps dimension in input '
-                     'values[batch_size, total_steps] must be fully defined.')
+    raise ValueError(
+        'total_steps dimension in input '
+        'values[batch_size, total_steps] must be fully defined.'
+    )
 
   episode_mask = tf.cast(
-      tf.sequence_mask(episode_lengths, total_steps), tf.float32)
+      tf.sequence_mask(episode_lengths, total_steps), tf.float32
+  )
   values *= episode_mask
   return discounted_future_sum(values, gamma, num_steps)
 
@@ -829,8 +858,9 @@ def shift_values(values, gamma, num_steps, final_values=None):
     ValueError: If values is not of rank 2.
   """
   if values.get_shape().rank != 2:
-    raise ValueError('Input must be rank 2 tensor.  Got %d.' %
-                     values.get_shape().rank)
+    raise ValueError(
+        'Input must be rank 2 tensor.  Got %d.' % values.get_shape().rank
+    )
 
   (batch_size, total_steps) = values.get_shape().as_list()
   num_steps = tf.minimum(num_steps, total_steps)
@@ -839,11 +869,16 @@ def shift_values(values, gamma, num_steps, final_values=None):
     final_values = tf.zeros([batch_size])
 
   padding_exponent = tf.expand_dims(
-      tf.cast(tf.range(num_steps, 0, -1), tf.float32), 0)
+      tf.cast(tf.range(num_steps, 0, -1), tf.float32), 0
+  )
   final_pad = tf.expand_dims(final_values, 1) * gamma**padding_exponent
-  return tf.concat([
-      gamma**tf.cast(num_steps, tf.float32) * values[:, num_steps:], final_pad
-  ], 1)
+  return tf.concat(
+      [
+          gamma ** tf.cast(num_steps, tf.float32) * values[:, num_steps:],
+          final_pad,
+      ],
+      1,
+  )
 
 
 def get_episode_mask(time_steps):
@@ -856,7 +891,8 @@ def get_episode_mask(time_steps):
     A float32 Tensor with 0s where step_type == LAST and 1s otherwise.
   """
   episode_mask = tf.cast(
-      tf.not_equal(time_steps.step_type, ts.StepType.LAST), tf.float32)
+      tf.not_equal(time_steps.step_type, ts.StepType.LAST), tf.float32
+  )
   return episode_mask
 
 
@@ -874,10 +910,13 @@ def get_contiguous_sub_episodes(next_time_steps_discount):
       [1.0] * a + [0.0] * b, where a >= 1 and b >= 0, and in which the initial
       sequence of ones corresponds to a contiguous sub-episode.
   """
-  episode_end = tf.equal(next_time_steps_discount,
-                         tf.constant(0, dtype=next_time_steps_discount.dtype))
+  episode_end = tf.equal(
+      next_time_steps_discount,
+      tf.constant(0, dtype=next_time_steps_discount.dtype),
+  )
   mask = tf.math.cumprod(
-      1.0 - tf.cast(episode_end, tf.float32), axis=1, exclusive=True)
+      1.0 - tf.cast(episode_end, tf.float32), axis=1, exclusive=True
+  )
   return mask
 
 
@@ -906,21 +945,27 @@ def generate_tensor_summaries(tag, tensor, step):
   with tf.name_scope(tag):
     tf.compat.v2.summary.histogram(name='histogram', data=tensor, step=step)
     tf.compat.v2.summary.scalar(
-        name='mean', data=tf.reduce_mean(input_tensor=tensor), step=step)
+        name='mean', data=tf.reduce_mean(input_tensor=tensor), step=step
+    )
     tf.compat.v2.summary.scalar(
         name='mean_abs',
         data=tf.reduce_mean(input_tensor=tf.abs(tensor)),
-        step=step)
+        step=step,
+    )
     tf.compat.v2.summary.scalar(
-        name='max', data=tf.reduce_max(input_tensor=tensor), step=step)
+        name='max', data=tf.reduce_max(input_tensor=tensor), step=step
+    )
     tf.compat.v2.summary.scalar(
-        name='min', data=tf.reduce_min(input_tensor=tensor), step=step)
+        name='min', data=tf.reduce_min(input_tensor=tensor), step=step
+    )
     tf.compat.v2.summary.scalar(
-        name='std', data=tf.math.reduce_std(input_tensor=tensor), step=step)
+        name='std', data=tf.math.reduce_std(input_tensor=tensor), step=step
+    )
 
 
-def summarize_tensor_dict(tensor_dict: Dict[Text, types.Tensor],
-                          step: Optional[types.Tensor]):
+def summarize_tensor_dict(
+    tensor_dict: Dict[Text, types.Tensor], step: Optional[types.Tensor]
+):
   """Generates summaries of all tensors in `tensor_dict`.
 
   Args:
@@ -931,9 +976,9 @@ def summarize_tensor_dict(tensor_dict: Dict[Text, types.Tensor],
     generate_tensor_summaries(tag, tensor_dict[tag], step)
 
 
-def compute_returns(rewards: types.Tensor,
-                    discounts: types.Tensor,
-                    time_major: bool = False):
+def compute_returns(
+    rewards: types.Tensor, discounts: types.Tensor, time_major: bool = False
+):
   """Compute the return from each index in an episode.
 
   Args:
@@ -947,10 +992,13 @@ def compute_returns(rewards: types.Tensor,
     Tensor of per-timestep cumulative returns.
   """
   rewards.shape.assert_is_compatible_with(discounts.shape)
-  if (not rewards.shape.is_fully_defined() or
-      not discounts.shape.is_fully_defined()):
-    tf.debugging.assert_equal(tf.shape(input=rewards),
-                              tf.shape(input=discounts))
+  if (
+      not rewards.shape.is_fully_defined()
+      or not discounts.shape.is_fully_defined()
+  ):
+    tf.debugging.assert_equal(
+        tf.shape(input=rewards), tf.shape(input=discounts)
+    )
 
   def discounted_accumulate_rewards(next_step_return, reward_and_discount):
     reward, discount = reward_and_discount
@@ -965,9 +1013,11 @@ def compute_returns(rewards: types.Tensor,
   # As discount is 0 for terminal states, ends of episode will not include
   #   reward from subsequent timesteps.
   returns = tf.scan(
-      discounted_accumulate_rewards, [rewards, discounts],
+      discounted_accumulate_rewards,
+      [rewards, discounts],
       initializer=tf.zeros_like(rewards[0]),
-      reverse=True)
+      reverse=True,
+  )
   # Reverse transpose if needed.
   if returns.shape.rank > 1 and not time_major:
     returns = tf.transpose(returns, perm=[1, 0])
@@ -979,14 +1029,17 @@ def initialize_uninitialized_variables(session, var_list=None):
   if var_list is None:
     var_list = tf.compat.v1.global_variables() + tf.compat.v1.local_variables()
   is_initialized = session.run(
-      [tf.compat.v1.is_variable_initialized(v) for v in var_list])
+      [tf.compat.v1.is_variable_initialized(v) for v in var_list]
+  )
   uninitialized_vars = []
   for flag, v in zip(is_initialized, var_list):
     if not flag:
       uninitialized_vars.append(v)
   if uninitialized_vars:
-    logging.info('uninitialized_vars: %s',
-                 ', '.join([str(x) for x in uninitialized_vars]))
+    logging.info(
+        'uninitialized_vars: %s',
+        ', '.join([str(x) for x in uninitialized_vars]),
+    )
     session.run(tf.compat.v1.variables_initializer(uninitialized_vars))
 
 
@@ -1010,7 +1063,8 @@ class Checkpointer(object):
       tf.io.gfile.makedirs(ckpt_dir)
 
     self._manager = tf.train.CheckpointManager(
-        self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep)
+        self._checkpoint, directory=ckpt_dir, max_to_keep=max_to_keep
+    )
 
     if self._manager.latest_checkpoint is not None:
       logging.info('Checkpoint available: %s', self._manager.latest_checkpoint)
@@ -1019,7 +1073,8 @@ class Checkpointer(object):
       logging.info('No checkpoint available at %s', ckpt_dir)
       self._checkpoint_exists = False
     self._load_status = self._checkpoint.restore(
-        self._manager.latest_checkpoint)
+        self._manager.latest_checkpoint
+    )
 
   @property
   def checkpoint_exists(self):
@@ -1035,11 +1090,13 @@ class Checkpointer(object):
     self._load_status.initialize_or_restore(session)
     return self._load_status
 
-  def save(self, global_step: tf.Tensor,
-           options: tf.train.CheckpointOptions = None):
+  def save(
+      self, global_step: tf.Tensor, options: tf.train.CheckpointOptions = None
+  ):
     """Save state to checkpoint."""
     saved_checkpoint = self._manager.save(
-        checkpoint_number=global_step, options=options)
+        checkpoint_number=global_step, options=options
+    )
     self._checkpoint_exists = True
     logging.info('%s', 'Saved checkpoint: {}'.format(saved_checkpoint))
 
@@ -1082,17 +1139,18 @@ def replicate(tensor, outer_shape):
     tensor = tensor[None]
 
   # Replicate tensor "t" along the 1st dimension.
-  tiled_tensor = tf.tile(tensor, [tf.reduce_prod(input_tensor=outer_shape)] +
-                         [1] * (tensor_ndims - 1))
+  tiled_tensor = tf.tile(
+      tensor,
+      [tf.reduce_prod(input_tensor=outer_shape)] + [1] * (tensor_ndims - 1),
+  )
 
   # Reshape to match outer_shape.
   return tf.reshape(tiled_tensor, target_shape)
 
 
-def assert_members_are_not_overridden(base_cls,
-                                      instance,
-                                      allowlist=(),
-                                      denylist=()):
+def assert_members_are_not_overridden(
+    base_cls, instance, allowlist=(), denylist=()
+):
   """Asserts public members of `base_cls` are not overridden in `instance`.
 
   If both `allowlist` and `denylist` are empty, no public member of
@@ -1118,7 +1176,8 @@ def assert_members_are_not_overridden(base_cls,
   instance_type = type(instance)
   subclass_members = set(instance_type.__dict__.keys())
   public_members = set(
-      [m for m in base_cls.__dict__.keys() if not m.startswith('_')])
+      [m for m in base_cls.__dict__.keys() if not m.startswith('_')]
+  )
   common_members = public_members & subclass_members
 
   if allowlist:
@@ -1127,23 +1186,27 @@ def assert_members_are_not_overridden(base_cls,
     common_members = common_members & set(denylist)
 
   overridden_members = [
-      m for m in common_members
+      m
+      for m in common_members
       if base_cls.__dict__[m] != instance_type.__dict__[m]
   ]
   if overridden_members:
     raise ValueError(
         'Subclasses of {} cannot override most of its base members, but '
-        '{} overrides: {}'.format(base_cls, instance_type, overridden_members))
+        '{} overrides: {}'.format(base_cls, instance_type, overridden_members)
+    )
 
 
 def element_wise_squared_loss(x, y):
   return tf.compat.v1.losses.mean_squared_error(
-      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
+      x, y, reduction=tf.compat.v1.losses.Reduction.NONE
+  )
 
 
 def element_wise_huber_loss(x, y):
   return tf.compat.v1.losses.huber_loss(
-      x, y, reduction=tf.compat.v1.losses.Reduction.NONE)
+      x, y, reduction=tf.compat.v1.losses.Reduction.NONE
+  )
 
 
 def transpose_batch_time(x):
@@ -1166,8 +1229,9 @@ def transpose_batch_time(x):
   x_t = tf.transpose(a=x, perm=tf.concat(([1, 0], tf.range(2, x_rank)), axis=0))
   x_t.set_shape(
       tf.TensorShape(
-          [x_static_shape.dims[1].value,
-           x_static_shape.dims[0].value]).concatenate(x_static_shape[2:]))
+          [x_static_shape.dims[1].value, x_static_shape.dims[0].value]
+      ).concatenate(x_static_shape[2:])
+  )
   return x_t
 
 
@@ -1205,6 +1269,7 @@ def load_spec(file_path):
 
   Args:
     file_path: Path to the saved data spec.
+
   Returns:
     A nested structure of TensorSpecs.
   """
@@ -1234,8 +1299,11 @@ def extract_shared_variables(variables_1, variables_2):
   var_refs2 = object_identity.ObjectIdentitySet(variables_2)
 
   shared_vars = var_refs1.intersection(var_refs2)
-  return (var_refs1.difference(shared_vars), var_refs2.difference(shared_vars),
-          shared_vars)
+  return (
+      var_refs1.difference(shared_vars),
+      var_refs2.difference(shared_vars),
+      shared_vars,
+  )
 
 
 def check_no_shared_variables(network_1, network_2):
@@ -1255,8 +1323,8 @@ def check_no_shared_variables(network_1, network_2):
   shared_variables = variables_1 & variables_2
   if shared_variables:
     raise ValueError(
-        'After making a copy of network \'{}\' to create a target '
-        'network \'{}\', the target network shares weights with '
+        "After making a copy of network '{}' to create a target "
+        "network '{}', the target network shares weights with "
         'the original network.  This is not allowed.  If '
         'you want explicitly share weights with the target network, or '
         'if your input network shares weights with others, please '
@@ -1265,9 +1333,10 @@ def check_no_shared_variables(network_1, network_2):
         'share weights make sure all the weights are created inside the Network'
         ' since a copy will be created by creating a new Network with the same '
         'args but a new name. Shared variables found: '
-        '\'{}\'.'.format(
-            network_1.name, network_2.name,
-            [x.name for x in shared_variables]))
+        "'{}'.".format(
+            network_1.name, network_2.name, [x.name for x in shared_variables]
+        )
+    )
 
 
 def check_matching_networks(network_1, network_2):
@@ -1284,23 +1353,27 @@ def check_matching_networks(network_1, network_2):
       (e.g. user must call `create_variables`).
   """
   if network_1.input_tensor_spec != network_2.input_tensor_spec:
-    raise ValueError('Input tensor specs of network and target network '
-                     'do not match: {} vs. {}.'.format(
-                         network_1.input_tensor_spec,
-                         network_2.input_tensor_spec))
+    raise ValueError(
+        'Input tensor specs of network and target network '
+        'do not match: {} vs. {}.'.format(
+            network_1.input_tensor_spec, network_2.input_tensor_spec
+        )
+    )
   if len(network_1.variables) != len(network_2.variables):
     raise ValueError(
         'Variables lengths do not match between Q network and target network: '
-        '{} vs. {}'.format(network_1.variables, network_2.variables))
+        '{} vs. {}'.format(network_1.variables, network_2.variables)
+    )
   for v1, v2 in zip(network_1.variables, network_2.variables):
     if v1.dtype != v2.dtype or v1.shape != v2.shape:
       raise ValueError(
-          'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2))
+          'Variable dtypes or shapes do not match: {} vs. {}'.format(v1, v2)
+      )
 
 
-def maybe_copy_target_network_with_checks(network, target_network=None,
-                                          name=None,
-                                          input_spec=None):
+def maybe_copy_target_network_with_checks(
+    network, target_network=None, name=None, input_spec=None
+):
   """Copies the network into target if None and checks for shared variables."""
   if target_network is None:
     target_network = network.copy(name=name)
@@ -1317,16 +1390,20 @@ def maybe_copy_target_network_with_checks(network, target_network=None,
 
 AggregatedLosses = cs.namedtuple(
     'AggregatedLosses',
-    ['total_loss',  # Total loss = weighted + regularization
-     'weighted',  # Weighted sum of per_example_loss by sample_weight.
-     'regularization',  # Total of regularization losses.
-    ])
+    [
+        'total_loss',  # Total loss = weighted + regularization
+        'weighted',  # Weighted sum of per_example_loss by sample_weight.
+        'regularization',  # Total of regularization losses.
+    ],
+)
 
 
-def aggregate_losses(per_example_loss=None,
-                     sample_weight=None,
-                     global_batch_size=None,
-                     regularization_loss=None):
+def aggregate_losses(
+    per_example_loss=None,
+    sample_weight=None,
+    global_batch_size=None,
+    regularization_loss=None,
+):
   """Aggregates and scales per example loss and regularization losses.
 
   If `global_batch_size` is given it would be used for scaling, otherwise it
@@ -1334,10 +1411,10 @@ def aggregate_losses(per_example_loss=None,
 
   Args:
     per_example_loss: Per-example loss [B] or [B, T, ...].
-    sample_weight: Optional weighting for each example, Tensor shaped [B] or
-      [B, T, ...], or a scalar float.
+    sample_weight: Optional weighting for each example, Tensor shaped [B] or [B,
+      T, ...], or a scalar float.
     global_batch_size: Optional global batch size value. Defaults to (size of
-    first dimension of `losses`) * (number of replicas).
+      first dimension of `losses`) * (number of replicas).
     regularization_loss: Regularization loss.
 
   Returns:
@@ -1362,14 +1439,16 @@ def aggregate_losses(per_example_loss=None,
       # In this case, we should respect the zero sample_weight and ignore the
       # frame.
       per_example_loss = tf.math.multiply_no_nan(
-          per_example_loss, sample_weight)
+          per_example_loss, sample_weight
+      )
 
     if loss_rank is not None and loss_rank == 0:
       err_msg = (
           'Need to use a loss function that computes losses per sample, ex: '
           'replace losses.mean_squared_error with tf.math.squared_difference. '
           'Invalid value passed for `per_example_loss`. Expected a tensor '
-          'tensor with at least rank 1, received: {}'.format(per_example_loss))
+          'tensor with at least rank 1, received: {}'.format(per_example_loss)
+      )
       if tf.distribute.has_strategy():
         raise ValueError(err_msg)
       else:
@@ -1381,11 +1460,12 @@ def aggregate_losses(per_example_loss=None,
       # across the extra dimensions, ex. time, as well.
       per_example_loss = tf.reduce_mean(per_example_loss, range(1, loss_rank))
 
-    global_batch_size = global_batch_size and tf.cast(global_batch_size,
-                                                      per_example_loss.dtype)
+    global_batch_size = global_batch_size and tf.cast(
+        global_batch_size, per_example_loss.dtype
+    )
     weighted_loss = tf.nn.compute_average_loss(
-        per_example_loss,
-        global_batch_size=global_batch_size)
+        per_example_loss, global_batch_size=global_batch_size
+    )
     total_loss = weighted_loss
   # Add scaled regularization losses.
   if regularization_loss is not None:
@@ -1402,8 +1482,7 @@ def summarize_scalar_dict(name_data, step, name_scope='Losses/'):
     with tf.name_scope(name_scope):
       for name, data in name_data.items():
         if data is not None:
-          tf.compat.v2.summary.scalar(
-              name=name, data=data, step=step)
+          tf.compat.v2.summary.scalar(name=name, data=data, step=step)
 
 
 @contextlib.contextmanager
@@ -1433,7 +1512,8 @@ def deduped_network_variables(network, *args):
     *args: other networks to check for duplicate variables.
   """
   other_vars = object_identity.ObjectIdentitySet(
-      [v for n in args for v in n.variables])  # pylint:disable=g-complex-comprehension
+      [v for n in args for v in n.variables]
+  )  # pylint:disable=g-complex-comprehension
   return [v for v in network.variables if v not in other_vars]
 
 

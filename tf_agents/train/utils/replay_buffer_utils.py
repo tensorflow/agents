@@ -26,10 +26,9 @@ reverb = lazy_loader.LazyLoader('reverb', globals(), 'reverb')
 
 # Default table creation function that creates a uniform sampling table
 # and default paramenters.
-def _create_uniform_table(table_name,
-                          table_signature,
-                          table_capacity=1000,
-                          min_size_limiter_size=1):
+def _create_uniform_table(
+    table_name, table_signature, table_capacity=1000, min_size_limiter_size=1
+):
   """Creates a uniform table with default parameters.
 
   Args:
@@ -38,6 +37,7 @@ def _create_uniform_table(table_name,
     table_capacity:  capacity of the replay table in number of items.
     min_size_limiter_size: Minimum number of items required in the RB before
       sampling can begin.
+
   Returns:
     an instance of uniform sampling table.
   """
@@ -48,18 +48,21 @@ def _create_uniform_table(table_name,
       sampler=reverb.selectors.Uniform(),
       remover=reverb.selectors.Fifo(),
       rate_limiter=rate_limiter,
-      signature=table_signature)
+      signature=table_signature,
+  )
   return uniform_table
 
 
-def get_reverb_buffer(data_spec,
-                      sequence_length=None,
-                      table_name='uniform_table',
-                      table=None,
-                      reverb_server_address=None,
-                      port=None,
-                      replay_capacity=1000,
-                      min_size_limiter_size=1):
+def get_reverb_buffer(
+    data_spec,
+    sequence_length=None,
+    table_name='uniform_table',
+    table=None,
+    reverb_server_address=None,
+    port=None,
+    replay_capacity=1000,
+    min_size_limiter_size=1,
+):
   """Returns an instance of Reverb replay buffer and observer to add items.
 
   Either creates a local reverb server or uses a remote reverb server at
@@ -70,20 +73,21 @@ def get_reverb_buffer(data_spec,
 
   Args:
     data_spec: spec of the data elements to be stored in the replay buffer
-    sequence_length: integer specifying sequence_lenghts used to write
-      to the given table.
+    sequence_length: integer specifying sequence_lenghts used to write to the
+      given table.
     table_name: Name of the table to create.
     table: Optional table for the backing local server. If None, automatically
       creates a uniform sampling table.
     reverb_server_address: Address of the remote reverb server, if None a local
       server is created.
     port: Port to launch the server in.
-    replay_capacity: Optinal (for default uniform sampling table
-      only, i.e if table=None) capacity of the uniform sampling table for the
-      local replay server.
-    min_size_limiter_size: Optional (for default uniform sampling
-      table only, i.e if table=None) minimum number of items
-      required in the RB before sampling can begin, used for local server only.
+    replay_capacity: Optinal (for default uniform sampling table only, i.e if
+      table=None) capacity of the uniform sampling table for the local replay
+      server.
+    min_size_limiter_size: Optional (for default uniform sampling table only,
+      i.e if table=None) minimum number of items required in the RB before
+      sampling can begin, used for local server only.
+
   Returns:
     Reverb replay buffer instance
 
@@ -98,33 +102,38 @@ def get_reverb_buffer(data_spec,
           table_name,
           table_signature,
           table_capacity=replay_capacity,
-          min_size_limiter_size=min_size_limiter_size)
+          min_size_limiter_size=min_size_limiter_size,
+      )
 
     reverb_server = reverb.Server([table], port=port)
     reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
         data_spec,
         sequence_length=sequence_length,
         table_name=table_name,
-        local_server=reverb_server)
+        local_server=reverb_server,
+    )
   else:
     reverb_replay = reverb_replay_buffer.ReverbReplayBuffer(
         data_spec,
         sequence_length=sequence_length,
         table_name=table_name,
-        server_address=reverb_server_address)
+        server_address=reverb_server_address,
+    )
 
   return reverb_replay
 
 
-def get_reverb_buffer_and_observer(data_spec,
-                                   sequence_length=None,
-                                   table_name='uniform_table',
-                                   table=None,
-                                   reverb_server_address=None,
-                                   port=None,
-                                   replay_capacity=1000,
-                                   min_size_limiter_size=1,
-                                   stride_length=1):
+def get_reverb_buffer_and_observer(
+    data_spec,
+    sequence_length=None,
+    table_name='uniform_table',
+    table=None,
+    reverb_server_address=None,
+    port=None,
+    replay_capacity=1000,
+    min_size_limiter_size=1,
+    stride_length=1,
+):
   """Returns an instance of Reverb replay buffer and observer to add items.
 
   Either creates a local reverb server or uses a remote reverb server at
@@ -135,8 +144,8 @@ def get_reverb_buffer_and_observer(data_spec,
 
   Args:
     data_spec: spec of the data elements to be stored in the replay buffer
-    sequence_length: integer specifying sequence_lenghts used to write
-      to the given table.
+    sequence_length: integer specifying sequence_lenghts used to write to the
+      given table.
     table_name: Name of the uniform table to create.
     table: Optional table for the backing local server. If None, automatically
       creates a uniform sampling table.
@@ -149,6 +158,7 @@ def get_reverb_buffer_and_observer(data_spec,
       sampling can begin, used for local server only.
     stride_length: Integer strides for the sliding window for overlapping
       sequences.
+
   Returns:
     A tuple consisting of:
       - reverb replay buffer instance
@@ -158,17 +168,22 @@ def get_reverb_buffer_and_observer(data_spec,
       retrieved by calling local_server() on the returned replay buffer.
   """
 
-  reverb_replay = get_reverb_buffer(data_spec=data_spec,
-                                    sequence_length=sequence_length,
-                                    table_name=table_name,
-                                    table=table,
-                                    reverb_server_address=reverb_server_address,
-                                    port=port,
-                                    replay_capacity=replay_capacity,
-                                    min_size_limiter_size=min_size_limiter_size)
+  reverb_replay = get_reverb_buffer(
+      data_spec=data_spec,
+      sequence_length=sequence_length,
+      table_name=table_name,
+      table=table,
+      reverb_server_address=reverb_server_address,
+      port=port,
+      replay_capacity=replay_capacity,
+      min_size_limiter_size=min_size_limiter_size,
+  )
 
   rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
-      reverb_replay.py_client, table_name, sequence_length=sequence_length,
-      stride_length=stride_length)
+      reverb_replay.py_client,
+      table_name,
+      sequence_length=sequence_length,
+      stride_length=stride_length,
+  )
 
   return reverb_replay, rb_observer

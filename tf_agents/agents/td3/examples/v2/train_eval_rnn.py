@@ -37,11 +37,9 @@ import time
 from absl import app
 from absl import flags
 from absl import logging
-
 import gin
 from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.ddpg import actor_rnn_network
 from tf_agents.agents.ddpg import critic_rnn_network
 from tf_agents.agents.td3 import td3_agent
@@ -55,10 +53,14 @@ from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_integer('num_iterations', 100000,
-                     'Total number train/eval iterations to perform.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
+flags.DEFINE_integer(
+    'num_iterations', 100000, 'Total number train/eval iterations to perform.'
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 
@@ -109,50 +111,59 @@ def train_eval(
     summaries_flush_secs=10,
     debug_summaries=False,
     summarize_grads_and_vars=False,
-    eval_metrics_callback=None):
-
+    eval_metrics_callback=None,
+):
   """A simple train and eval for TD3."""
   root_dir = os.path.expanduser(root_dir)
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
 
   train_summary_writer = tf.compat.v2.summary.create_file_writer(
-      train_dir, flush_millis=summaries_flush_secs * 1000)
+      train_dir, flush_millis=summaries_flush_secs * 1000
+  )
   train_summary_writer.set_as_default()
 
   eval_summary_writer = tf.compat.v2.summary.create_file_writer(
-      eval_dir, flush_millis=summaries_flush_secs * 1000)
+      eval_dir, flush_millis=summaries_flush_secs * 1000
+  )
   eval_metrics = [
       tf_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
-      tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes)
+      tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
 
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
-      lambda: tf.math.equal(global_step % summary_interval, 0)):
+      lambda: tf.math.equal(global_step % summary_interval, 0)
+  ):
     if observations_allowlist is not None:
       env_wrappers = [
           functools.partial(
               wrappers.FlattenObservationsWrapper,
-              observations_allowlist=[observations_allowlist])
+              observations_allowlist=[observations_allowlist],
+          )
       ]
     else:
       env_wrappers = []
 
     tf_env = tf_py_environment.TFPyEnvironment(
-        suite_dm_control.load(env_name, task_name, env_wrappers=env_wrappers))
+        suite_dm_control.load(env_name, task_name, env_wrappers=env_wrappers)
+    )
     eval_tf_env = tf_py_environment.TFPyEnvironment(
-        suite_dm_control.load(env_name, task_name, env_wrappers=env_wrappers))
+        suite_dm_control.load(env_name, task_name, env_wrappers=env_wrappers)
+    )
 
     actor_net = actor_rnn_network.ActorRnnNetwork(
         tf_env.time_step_spec().observation,
         tf_env.action_spec(),
         input_fc_layer_params=actor_fc_layers,
         lstm_size=actor_lstm_size,
-        output_fc_layer_params=actor_output_fc_layers)
+        output_fc_layer_params=actor_output_fc_layers,
+    )
 
-    critic_net_input_specs = (tf_env.time_step_spec().observation,
-                              tf_env.action_spec())
+    critic_net_input_specs = (
+        tf_env.time_step_spec().observation,
+        tf_env.action_spec(),
+    )
 
     critic_net = critic_rnn_network.CriticRnnNetwork(
         critic_net_input_specs,
@@ -169,9 +180,11 @@ def train_eval(
         actor_network=actor_net,
         critic_network=critic_net,
         actor_optimizer=tf.keras.optimizers.Adam(
-            learning_rate=actor_learning_rate),
+            learning_rate=actor_learning_rate
+        ),
         critic_optimizer=tf.keras.optimizers.Adam(
-            learning_rate=critic_learning_rate),
+            learning_rate=critic_learning_rate
+        ),
         exploration_noise_std=exploration_noise_std,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
@@ -199,19 +212,22 @@ def train_eval(
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
         batch_size=tf_env.batch_size,
-        max_length=replay_buffer_capacity)
+        max_length=replay_buffer_capacity,
+    )
 
     initial_collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_episodes=initial_collect_episodes)
+        num_episodes=initial_collect_episodes,
+    )
 
     collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_episodes=collect_episodes_per_iteration)
+        num_episodes=collect_episodes_per_iteration,
+    )
 
     if use_tf_functions:
       initial_collect_driver.run = common.function(initial_collect_driver.run)
@@ -221,7 +237,9 @@ def train_eval(
     # Collect initial replay data.
     logging.info(
         'Initializing replay buffer by collecting experience for %d episodes '
-        'with a random policy.', initial_collect_episodes)
+        'with a random policy.',
+        initial_collect_episodes,
+    )
     initial_collect_driver.run()
 
     results = metric_utils.eager_compute(
@@ -247,7 +265,8 @@ def train_eval(
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=batch_size,
-        num_steps=train_sequence_length + 1).prefetch(3)
+        num_steps=train_sequence_length + 1,
+    ).prefetch(3)
     iterator = iter(dataset)
 
     def train_step():
@@ -268,18 +287,21 @@ def train_eval(
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
-        logging.info('step = %d, loss = %f', global_step.numpy(),
-                     train_loss.loss)
+        logging.info(
+            'step = %d, loss = %f', global_step.numpy(), train_loss.loss
+        )
         steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
         logging.info('%.3f steps/sec', steps_per_sec)
         tf.compat.v2.summary.scalar(
-            name='global_steps_per_sec', data=steps_per_sec, step=global_step)
+            name='global_steps_per_sec', data=steps_per_sec, step=global_step
+        )
         timed_at_step = global_step.numpy()
         time_acc = 0
 
       for train_metric in train_metrics:
         train_metric.tf_summaries(
-            train_step=global_step, step_metrics=train_metrics[:2])
+            train_step=global_step, step_metrics=train_metrics[:2]
+        )
 
       if global_step.numpy() % eval_interval == 0:
         results = metric_utils.eager_compute(

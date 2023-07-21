@@ -17,22 +17,20 @@
 
 from absl.testing import parameterized
 from absl.testing.absltest import mock
-
 import numpy as np
-
 import reverb
-
 import tensorflow as tf
-
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.train.utils import test_utils as dist_test_utils
 from tf_agents.train.utils import train_utils
 from tf_agents.utils import test_utils
 
 _CPUS = ('/cpu:0', '/cpu:1', '/cpu:2', '/cpu:3')
-_TESTS = (('_default', tf.distribute.get_strategy),
-          ('_one_device', lambda: tf.distribute.OneDeviceStrategy('/cpu:0')),
-          ('_mirrored', lambda: tf.distribute.MirroredStrategy(devices=_CPUS)))
+_TESTS = (
+    ('_default', tf.distribute.get_strategy),
+    ('_one_device', lambda: tf.distribute.OneDeviceStrategy('/cpu:0')),
+    ('_mirrored', lambda: tf.distribute.MirroredStrategy(devices=_CPUS)),
+)
 
 
 class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
@@ -54,24 +52,30 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
       after_train_step_fn = (
           train_utils.create_staleness_metrics_after_train_step_fn(
               train_step,
-              train_steps_per_policy_update=train_steps_per_policy_update))
+              train_steps_per_policy_update=train_steps_per_policy_update,
+          )
+      )
       observation_train_steps = np.array([[200], [200], [200]], dtype=np.int64)
 
       # Define the expectations (expected scalar summary calls).
       expected_scalar_summary_calls = [
           mock.call(
-              name='staleness/max_train_step_delta_in_batch', data=0, step=225),
+              name='staleness/max_train_step_delta_in_batch', data=0, step=225
+          ),
           mock.call(
               name='staleness/max_policy_update_delta_in_batch',
               data=0,
-              step=225),
+              step=225,
+          ),
           mock.call(
-              name='staleness/num_stale_obserations_in_batch', data=0, step=225)
+              name='staleness/num_stale_obserations_in_batch', data=0, step=225
+          ),
       ]
 
       # Call the after train function and check the expectations.
       with mock.patch.object(
-          tf.summary, 'scalar', autospec=True) as mock_scalar_summary:
+          tf.summary, 'scalar', autospec=True
+      ) as mock_scalar_summary:
         # Call the `after_train_function` on the test input. Assumed the
         # observation train steps are stored in the field `priority` of the
         # the sample info of Reverb.
@@ -81,7 +85,8 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
 
         # Check if the expected calls happened on the scalar summary.
         mock_scalar_summary.assert_has_calls(
-            expected_scalar_summary_calls, any_order=False)
+            expected_scalar_summary_calls, any_order=False
+        )
 
   @parameterized.named_parameters(*_TESTS)
   def test_after_train_step_fn_with_stale_data(self, create_strategy_fn):
@@ -96,26 +101,30 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
       after_train_step_fn = (
           train_utils.create_staleness_metrics_after_train_step_fn(
               train_step,
-              train_steps_per_policy_update=train_steps_per_policy_update))
+              train_steps_per_policy_update=train_steps_per_policy_update,
+          )
+      )
       observation_train_steps = np.array([[100], [200]], dtype=np.int64)
 
       # Define the expectations (expected scalar summary calls).
       expected_scalar_summary_calls = [
           mock.call(
-              name='staleness/max_train_step_delta_in_batch',
-              data=100,
-              step=225),
+              name='staleness/max_train_step_delta_in_batch', data=100, step=225
+          ),
           mock.call(
               name='staleness/max_policy_update_delta_in_batch',
               data=1,
-              step=225),
+              step=225,
+          ),
           mock.call(
-              name='staleness/num_stale_obserations_in_batch', data=1, step=225)
+              name='staleness/num_stale_obserations_in_batch', data=1, step=225
+          ),
       ]
 
       # Call the after train function and check the expectations.
       with mock.patch.object(
-          tf.summary, 'scalar', autospec=True) as mock_scalar_summary:
+          tf.summary, 'scalar', autospec=True
+      ) as mock_scalar_summary:
         # Call the `after_train_function` on the test input. Assumed the
         # observation train steps are stored in the field `priority` of the
         # the sample info of Reverb.
@@ -125,7 +134,8 @@ class TrainUtilsTest(parameterized.TestCase, test_utils.TestCase):
 
         # Check if the expected calls happened on the scalar summary.
         mock_scalar_summary.assert_has_calls(
-            expected_scalar_summary_calls, any_order=False)
+            expected_scalar_summary_calls, any_order=False
+        )
 
   def test_wait_for_predicate_instant_false(self):
     """Tests predicate returning False on first call."""

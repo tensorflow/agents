@@ -22,15 +22,13 @@ import collections
 import cProfile
 import math
 import pstats
-from typing import cast, Mapping, Text, Any
+from typing import Any, Mapping, Text, cast
 
 from absl.testing import parameterized
 from absl.testing.absltest import mock
-
 import gym
 import gym.spaces
 import numpy as np
-
 from tf_agents.environments import gym_wrapper
 from tf_agents.environments import random_py_environment
 from tf_agents.environments import test_envs
@@ -43,14 +41,8 @@ from tf_agents.utils import test_utils
 class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      {
-          'testcase_name': 'scalar',
-          'batch_size': None
-      },
-      {
-          'testcase_name': 'batched',
-          'batch_size': 2
-      },
+      {'testcase_name': 'scalar', 'batch_size': None},
+      {'testcase_name': 'batched', 'batch_size': 2},
   )
   def test_batch_properties(self, batch_size):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
@@ -59,7 +51,8 @@ class PyEnvironmentBaseWrapperTest(parameterized.TestCase):
         obs_spec,
         action_spec,
         reward_fn=lambda *_: np.array([1.0]),
-        batch_size=batch_size)
+        batch_size=batch_size,
+    )
     wrap_env = wrappers.PyEnvironmentBaseWrapper(env)
     self.assertEqual(wrap_env.batched, env.batched)
     self.assertEqual(wrap_env.batch_size, env.batch_size)
@@ -106,8 +99,9 @@ class TimeLimitWrapperTest(test_utils.TestCase):
     self.assertEqual((4,), observation_spec.shape)
     high = np.array([
         4.8,
-        np.finfo(np.float32).max, 2 / 15.0 * math.pi,
-        np.finfo(np.float32).max
+        np.finfo(np.float32).max,
+        2 / 15.0 * math.pi,
+        np.finfo(np.float32).max,
     ])
     np.testing.assert_array_almost_equal(-high, observation_spec.minimum)
     np.testing.assert_array_almost_equal(high, observation_spec.maximum)
@@ -194,8 +188,9 @@ class FixedLengthWrapperTest(test_utils.TestCase):
     self.assertEqual((4,), observation_spec.shape)
     high = np.array([
         4.8,
-        np.finfo(np.float32).max, 2 / 15.0 * math.pi,
-        np.finfo(np.float32).max
+        np.finfo(np.float32).max,
+        2 / 15.0 * math.pi,
+        np.finfo(np.float32).max,
     ])
     np.testing.assert_array_almost_equal(-high, observation_spec.minimum)
     np.testing.assert_array_almost_equal(high, observation_spec.maximum)
@@ -301,7 +296,6 @@ class FixedLengthWrapperTest(test_utils.TestCase):
       self.assertEqual(1.0, time_step.discount)
 
   def test_expected_returns_dont_change(self):
-
     def compute_returns(rewards, discounts):
       """Python implementation of computing discounted returns."""
       returns = np.zeros(len(rewards))
@@ -333,8 +327,8 @@ class FixedLengthWrapperTest(test_utils.TestCase):
       # Verify episode length.
       final_returns = compute_returns(rewards, discounts)
 
-      self.assertAllEqual(final_returns[:len(returns)], returns)
-      self.assertEqual(final_returns[len(returns):].sum(), 1.0)
+      self.assertAllEqual(final_returns[: len(returns)], returns)
+      self.assertEqual(final_returns[len(returns) :].sum(), 1.0)
 
 
 class ActionRepeatWrapperTest(test_utils.TestCase):
@@ -369,8 +363,7 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
 
     env.step([2])
     env.step([3])
-    mock_env.step.assert_has_calls([mock.call([2])] +
-                                   [mock.call([3])] * 3)
+    mock_env.step.assert_has_calls([mock.call([2])] + [mock.call([3])] * 3)
 
   def test_action_stops_on_last(self):
     mock_env = self._get_mock_env_episode()
@@ -380,9 +373,9 @@ class ActionRepeatWrapperTest(test_utils.TestCase):
     env.step([2])
     env.step([3])
     time_step = env.step([4])
-    mock_env.step.assert_has_calls([mock.call([2])] +
-                                   [mock.call([3])] * 3 +
-                                   [mock.call([4])])
+    mock_env.step.assert_has_calls(
+        [mock.call([2])] + [mock.call([3])] * 3 + [mock.call([4])]
+    )
 
     self.assertEqual(7, time_step.reward)
     self.assertEqual([4], time_step.observation)
@@ -418,7 +411,8 @@ class FlattenActionWrapperTest(test_utils.TestCase):
         array_spec.ArraySpec((5,), dtype=np.float32),
     )
     env = random_py_environment.RandomPyEnvironment(
-        self._observation_spec, action_spec=action_spec)
+        self._observation_spec, action_spec=action_spec
+    )
     env = wrappers.FlattenActionWrapper(env)
     flat_action_spec = env.action_spec()
 
@@ -427,44 +421,44 @@ class FlattenActionWrapperTest(test_utils.TestCase):
 
   def test_bounds_computed(self):
     action_spec = (
-        array_spec.BoundedArraySpec((3,),
-                                    dtype=np.float32,
-                                    minimum=-1,
-                                    maximum=1),
-        array_spec.BoundedArraySpec((), dtype=np.float32, minimum=-2,
-                                    maximum=2),
-        array_spec.BoundedArraySpec((5,),
-                                    dtype=np.float32,
-                                    minimum=-3,
-                                    maximum=3),
+        array_spec.BoundedArraySpec(
+            (3,), dtype=np.float32, minimum=-1, maximum=1
+        ),
+        array_spec.BoundedArraySpec(
+            (), dtype=np.float32, minimum=-2, maximum=2
+        ),
+        array_spec.BoundedArraySpec(
+            (5,), dtype=np.float32, minimum=-3, maximum=3
+        ),
     )
     env = random_py_environment.RandomPyEnvironment(
-        self._observation_spec, action_spec=action_spec)
+        self._observation_spec, action_spec=action_spec
+    )
     env = wrappers.FlattenActionWrapper(env)
     flat_action_spec = env.action_spec()
 
     self.assertEqual((9,), flat_action_spec.shape)
     self.assertEqual(np.float32, flat_action_spec.dtype)
-    self.assertAllEqual([-1, -1, -1, -2, -3, -3, -3, -3, -3],
-                        flat_action_spec.minimum)
-    self.assertAllEqual([1, 1, 1, 2, 3, 3, 3, 3, 3],
-                        flat_action_spec.maximum)
+    self.assertAllEqual(
+        [-1, -1, -1, -2, -3, -3, -3, -3, -3], flat_action_spec.minimum
+    )
+    self.assertAllEqual([1, 1, 1, 2, 3, 3, 3, 3, 3], flat_action_spec.maximum)
 
   def test_env_step(self):
     action_spec = (
-        array_spec.BoundedArraySpec((3,),
-                                    dtype=np.float32,
-                                    minimum=-1,
-                                    maximum=1),
-        array_spec.BoundedArraySpec((), dtype=np.float32, minimum=-2,
-                                    maximum=2),
-        array_spec.BoundedArraySpec((5,),
-                                    dtype=np.float32,
-                                    minimum=-3,
-                                    maximum=3),
+        array_spec.BoundedArraySpec(
+            (3,), dtype=np.float32, minimum=-1, maximum=1
+        ),
+        array_spec.BoundedArraySpec(
+            (), dtype=np.float32, minimum=-2, maximum=2
+        ),
+        array_spec.BoundedArraySpec(
+            (5,), dtype=np.float32, minimum=-3, maximum=3
+        ),
     )
     env = random_py_environment.RandomPyEnvironment(
-        self._observation_spec, action_spec=action_spec)
+        self._observation_spec, action_spec=action_spec
+    )
     flat_env = wrappers.FlattenActionWrapper(env)
 
     rng = np.random.RandomState()
@@ -512,10 +506,10 @@ class ObservationFilterWrapperTest(test_utils.TestCase):
 
   def test_checks_nested_obs(self):
     mock_env = self._get_mock_env_step()
-    mock_env.observation_spec.side_effect = [
-        [array_spec.BoundedArraySpec((2,), np.int32, -10, 10),
-         array_spec.BoundedArraySpec((2,), np.int32, -10, 10)]
-    ]
+    mock_env.observation_spec.side_effect = [[
+        array_spec.BoundedArraySpec((2,), np.int32, -10, 10),
+        array_spec.BoundedArraySpec((2,), np.int32, -10, 10),
+    ]]
     with self.assertRaises(ValueError):
       _ = wrappers.ObservationFilterWrapper(mock_env, [0])
 
@@ -610,11 +604,13 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
     limits = 3
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     env = wrappers.ActionDiscretizeWrapper(env, limits)
 
-    expected_spec = array_spec.BoundedArraySpec((), np.int32, 0,
-                                                np.asarray(limits) - 1)
+    expected_spec = array_spec.BoundedArraySpec(
+        (), np.int32, 0, np.asarray(limits) - 1
+    )
     self.assertEqual(expected_spec, env.action_spec())
 
   def test_discrete_spec_1d(self):
@@ -623,11 +619,13 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
     limits = [5, 3]
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     env = wrappers.ActionDiscretizeWrapper(env, limits)
 
-    expected_spec = array_spec.BoundedArraySpec((2,), np.int32, 0,
-                                                np.asarray(limits) - 1)
+    expected_spec = array_spec.BoundedArraySpec(
+        (2,), np.int32, 0, np.asarray(limits) - 1
+    )
     self.assertEqual(expected_spec, env.action_spec())
 
   def test_discrete_spec_nd(self):
@@ -636,7 +634,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
     limits = np.array([[2, 4], [3, 2]])
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     env = wrappers.ActionDiscretizeWrapper(env, limits)
 
     expected_spec = array_spec.BoundedArraySpec((2, 2), np.int32, 0, limits - 1)
@@ -657,7 +656,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec, auto_reset=False)
+          obs_spec, action_spec=action_spec, auto_reset=False
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -681,7 +681,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec, auto_reset=False)
+          obs_spec, action_spec=action_spec, auto_reset=False
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -703,7 +704,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -725,7 +727,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -739,7 +742,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
 
     with self.assertRaisesRegexp(ValueError, '.*size 2.'):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
 
   def test_check_action_shape(self):
@@ -749,7 +753,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
 
     with self.assertRaisesRegexp(ValueError, '.*incorrect shape.*'):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
       env.step([0, 0])
@@ -769,7 +774,8 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec, auto_reset=False)
+          obs_spec, action_spec=action_spec, auto_reset=False
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
@@ -799,13 +805,15 @@ class ActionDiscretizeWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec)
+          obs_spec, action_spec=action_spec
+      )
       env = wrappers.ActionDiscretizeWrapper(env, limits)
       env.reset()
 
       action = env.step(np.array([[0, 2], [1, 4]]))
-      np.testing.assert_array_almost_equal([[-10.0, 0.0], [10.0, 10.0]],
-                                           action['action1'])
+      np.testing.assert_array_almost_equal(
+          [[-10.0, 0.0], [10.0, 10.0]], action['action1']
+      )
 
 
 class ActionClipWrapper(test_utils.TestCase):
@@ -824,7 +832,8 @@ class ActionClipWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec, auto_reset=False)
+          obs_spec, action_spec=action_spec, auto_reset=False
+      )
       env = wrappers.ActionClipWrapper(env)
       env.reset()
 
@@ -848,10 +857,11 @@ class ActionClipWrapper(test_utils.TestCase):
   def test_nested(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = [
-        array_spec.BoundedArraySpec((2,), np.float32, -1, 1), [
+        array_spec.BoundedArraySpec((2,), np.float32, -1, 1),
+        [
             array_spec.BoundedArraySpec((2,), np.float32, -2, 2),
-            array_spec.BoundedArraySpec((2,), np.float32, -3, 3)
-        ]
+            array_spec.BoundedArraySpec((2,), np.float32, -3, 3),
+        ],
     ]
 
     def mock_step(_, action):
@@ -864,7 +874,8 @@ class ActionClipWrapper(test_utils.TestCase):
         autospec=True,
     ):
       env = random_py_environment.RandomPyEnvironment(
-          obs_spec, action_spec=action_spec, auto_reset=False)
+          obs_spec, action_spec=action_spec, auto_reset=False
+      )
       env = wrappers.ActionClipWrapper(env)
       env.reset()
 
@@ -888,10 +899,11 @@ class ActionOffsetWrapperTest(test_utils.TestCase):
   def test_nested(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = [
-        array_spec.BoundedArraySpec((2,), np.int32, -1, 1), [
+        array_spec.BoundedArraySpec((2,), np.int32, -1, 1),
+        [
             array_spec.BoundedArraySpec((2,), np.int32, -2, 2),
-            array_spec.BoundedArraySpec((2,), np.int32, -3, 3)
-        ]
+            array_spec.BoundedArraySpec((2,), np.int32, -3, 3),
+        ],
     ]
     with self.assertRaisesRegexp(ValueError, 'single-array action specs'):
       env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
@@ -916,43 +928,51 @@ class ActionOffsetWrapperTest(test_utils.TestCase):
     action_spec = array_spec.BoundedArraySpec((3,), np.int32, -1, 1)
     env = random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
     env = wrappers.ActionOffsetWrapper(env)
-    self.assertEqual(array_spec.BoundedArraySpec((3,), np.int32, 0, 2),
-                     env.action_spec())
+    self.assertEqual(
+        array_spec.BoundedArraySpec((3,), np.int32, 0, 2), env.action_spec()
+    )
 
   def test_step(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = array_spec.BoundedArraySpec((3,), np.int32, -1, 1)
     mock_env = mock.Mock(
-        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
+        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+    )
     env = wrappers.ActionOffsetWrapper(mock_env)
     env.reset()
 
     env.step(np.array([0, 1, 2]))
     self.assertTrue(mock_env.step.called)
-    np.testing.assert_array_equal(np.array([-1, 0, 1]),
-                                  mock_env.step.call_args[0][0])
+    np.testing.assert_array_equal(
+        np.array([-1, 0, 1]), mock_env.step.call_args[0][0]
+    )
 
 
 class FlattenObservationsWrapper(parameterized.TestCase):
 
-  @parameterized.parameters((['obs1', 'obs2'], [(4,), (5,)], np.int32),
-                            (['obs1', 'obs2', 'obs3'], [(1,), (1,),
-                                                        (4,)], np.float32),
-                            ((['obs1', 'obs2'], [(5, 2), (3, 3)], np.float32)))
+  @parameterized.parameters(
+      (['obs1', 'obs2'], [(4,), (5,)], np.int32),
+      (['obs1', 'obs2', 'obs3'], [(1,), (1,), (4,)], np.float32),
+      ((['obs1', 'obs2'], [(5, 2), (3, 3)], np.float32)),
+  )
   def test_with_varying_observation_specs(
-      self, observation_keys, observation_shapes, observation_dtypes):
+      self, observation_keys, observation_shapes, observation_dtypes
+  ):
     """Vary the observation spec and step the environment."""
     obs_spec = collections.OrderedDict()
     for idx, key in enumerate(observation_keys):
-      obs_spec[key] = array_spec.ArraySpec(observation_shapes[idx],
-                                           observation_dtypes)
+      obs_spec[key] = array_spec.ArraySpec(
+          observation_shapes[idx], observation_dtypes
+      )
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     env = wrappers.FlattenObservationsWrapper(env)
     time_step = env.step(
-        array_spec.sample_bounded_spec(action_spec, np.random.RandomState()))
+        array_spec.sample_bounded_spec(action_spec, np.random.RandomState())
+    )
     # Check that all observations returned from environment is packed into one
     # dimension.
     expected_shape = self._get_expected_shape(obs_spec, obs_spec.keys())
@@ -962,28 +982,33 @@ class FlattenObservationsWrapper(parameterized.TestCase):
         array_spec.ArraySpec(
             shape=expected_shape,
             dtype=observation_dtypes,
-            name='packed_observations'))
+            name='packed_observations',
+        ),
+    )
 
-  @parameterized.parameters((('obs1'),), (('obs1', 'obs3'),))
+  @parameterized.parameters(('obs1',), (('obs1', 'obs3'),))
   def test_with_varying_observation_filters(self, observations_to_keep):
     """Vary the observations to save from the environment."""
     obs_spec = collections.OrderedDict({
         'obs1': array_spec.ArraySpec((1,), np.int32),
         'obs2': array_spec.ArraySpec((2,), np.int32),
-        'obs3': array_spec.ArraySpec((3,), np.int32)
+        'obs3': array_spec.ArraySpec((3,), np.int32),
     })
 
     observations_to_keep = np.array([observations_to_keep]).flatten()
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     # Create the wrapper with list of observations to keep before packing it
     # into one dimension.
     env = wrappers.FlattenObservationsWrapper(
-        env, observations_allowlist=observations_to_keep)
+        env, observations_allowlist=observations_to_keep
+    )
     time_step = env.step(
-        array_spec.sample_bounded_spec(action_spec, np.random.RandomState()))
+        array_spec.sample_bounded_spec(action_spec, np.random.RandomState())
+    )
     # The expected shape is the sum of observation lengths in the observation
     # spec that has been filtered by the observations_to_keep list.
     expected_shape = self._get_expected_shape(obs_spec, observations_to_keep)
@@ -993,20 +1018,23 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     self.assertEqual(
         env.observation_spec(),
         array_spec.ArraySpec(
-            shape=expected_shape, dtype=np.int32, name='packed_observations'))
+            shape=expected_shape, dtype=np.int32, name='packed_observations'
+        ),
+    )
 
   def test_env_reset(self):
     """Test the observations returned after an environment reset."""
     obs_spec = collections.OrderedDict({
         'obs1': array_spec.ArraySpec((1,), np.int32),
         'obs2': array_spec.ArraySpec((2,), np.int32),
-        'obs3': array_spec.ArraySpec((3,), np.int32)
+        'obs3': array_spec.ArraySpec((3,), np.int32),
     })
 
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     # Create the wrapper with list of observations to keep before packing it
     # into one dimension.
     env = wrappers.FlattenObservationsWrapper(env)
@@ -1016,21 +1044,27 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     self.assertEqual(
         env.observation_spec(),
         array_spec.ArraySpec(
-            shape=expected_shape, dtype=np.int32, name='packed_observations'))
+            shape=expected_shape, dtype=np.int32, name='packed_observations'
+        ),
+    )
 
-  @parameterized.parameters(([array_spec.ArraySpec((1,), np.int32)],),
-                            array_spec.ArraySpec((1,), np.int32))
+  @parameterized.parameters(
+      ([array_spec.ArraySpec((1,), np.int32)],),
+      array_spec.ArraySpec((1,), np.int32),
+  )
   def test_observations_wrong_spec_for_allowlist(self, observation_spec):
     """Test the Wrapper has ValueError if the observation spec is invalid."""
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
-        observation_spec, action_spec=action_spec)
+        observation_spec, action_spec=action_spec
+    )
     # Create the wrapper with list of observations to keep before packing it
     # into one dimension.
     with self.assertRaises(ValueError):
       env = wrappers.FlattenObservationsWrapper(
-          env, observations_allowlist=['obs1'])
+          env, observations_allowlist=['obs1']
+      )
 
   def test_observations_unknown_allowlist(self):
     """Test the Wrapper has ValueError if given unknown keys."""
@@ -1039,17 +1073,19 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     obs_spec = collections.OrderedDict({
         'obs1': array_spec.ArraySpec((1,), np.int32),
         'obs2': array_spec.ArraySpec((2,), np.int32),
-        'obs3': array_spec.ArraySpec((3,), np.int32)
+        'obs3': array_spec.ArraySpec((3,), np.int32),
     })
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
 
     allowlist_unknown_keys = ['obs1', 'obs4']
 
     with self.assertRaises(ValueError):
       env = wrappers.FlattenObservationsWrapper(
-          env, observations_allowlist=allowlist_unknown_keys)
+          env, observations_allowlist=allowlist_unknown_keys
+      )
 
   def test_observations_multiple_dtypes(self):
     """Test the Wrapper has ValueError if given unknown keys."""
@@ -1061,7 +1097,8 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     })
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
 
     with self.assertRaises(ValueError):
       env = wrappers.FlattenObservationsWrapper(env)
@@ -1078,19 +1115,24 @@ class FlattenObservationsWrapper(parameterized.TestCase):
     # Generate a randomy py environment with batch size.
     batch_size = 4
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec, batch_size=batch_size)
+        obs_spec, action_spec=action_spec, batch_size=batch_size
+    )
 
     env = wrappers.FlattenObservationsWrapper(env)
     time_step = env.step(
-        array_spec.sample_bounded_spec(action_spec, np.random.RandomState()))
+        array_spec.sample_bounded_spec(action_spec, np.random.RandomState())
+    )
 
     expected_shape = self._get_expected_shape(obs_spec, obs_spec.keys())
-    self.assertEqual(time_step.observation.shape,
-                     (batch_size, expected_shape[0]))
+    self.assertEqual(
+        time_step.observation.shape, (batch_size, expected_shape[0])
+    )
     self.assertEqual(
         env.observation_spec(),
         array_spec.ArraySpec(
-            shape=expected_shape, dtype=np.int32, name='packed_observations'))
+            shape=expected_shape, dtype=np.int32, name='packed_observations'
+        ),
+    )
 
   def _get_expected_shape(self, observation, observations_to_keep):
     """Gets the expected shape of a flattened observation nest."""
@@ -1118,35 +1160,38 @@ class MockGoalReplayEnvWrapper(wrappers.GoalReplayEnvWrapper):
 
 class GoalReplayEnvWrapperTest(parameterized.TestCase):
 
-  @parameterized.parameters((['obs1', 'obs2'], [(4,), (5,)], np.int32),
-                            (['obs1', 'obs2', 'obs3'], [(1,), (1,),
-                                                        (4,)], np.float32),
-                            ((['obs1', 'obs2'], [(5, 2), (3, 3)], np.float32)))
+  @parameterized.parameters(
+      (['obs1', 'obs2'], [(4,), (5,)], np.int32),
+      (['obs1', 'obs2', 'obs3'], [(1,), (1,), (4,)], np.float32),
+      ((['obs1', 'obs2'], [(5, 2), (3, 3)], np.float32)),
+  )
   def test_with_varying_observation_specs(
-      self, observation_keys, observation_shapes, observation_dtypes):
+      self, observation_keys, observation_shapes, observation_dtypes
+  ):
     """Vary the observation spec and step the environment."""
     obs_spec = collections.OrderedDict()
     for idx, key in enumerate(observation_keys):
-      obs_spec[key] = array_spec.ArraySpec(observation_shapes[idx],
-                                           observation_dtypes)
+      obs_spec[key] = array_spec.ArraySpec(
+          observation_shapes[idx], observation_dtypes
+      )
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
 
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec)
+        obs_spec, action_spec=action_spec
+    )
     env = MockGoalReplayEnvWrapper(env)
-    random_action = array_spec.sample_bounded_spec(action_spec,
-                                                   np.random.RandomState())
+    random_action = array_spec.sample_bounded_spec(
+        action_spec, np.random.RandomState()
+    )
     time_step = env.step(random_action)
     self.assertIsInstance(time_step.observation, dict)
     observation = cast(Mapping[Text, Any], time_step.observation)
     observation_spec = cast(Mapping[Text, Any], env.observation_spec())
-    self.assertEqual(observation.keys(),
-                     observation_spec.keys())
+    self.assertEqual(observation.keys(), observation_spec.keys())
     time_step = env.reset()
     self.assertIsInstance(time_step.observation, dict)
     observation = cast(Mapping[Text, Any], time_step.observation)
-    self.assertEqual(observation.keys(),
-                     observation_spec.keys())
+    self.assertEqual(observation.keys(), observation_spec.keys())
 
   def test_batch_env(self):
     """Test batched version of the environment."""
@@ -1159,22 +1204,22 @@ class GoalReplayEnvWrapperTest(parameterized.TestCase):
     # Generate a randomy py environment with batch size.
     batch_size = 4
     env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec=action_spec, batch_size=batch_size)
+        obs_spec, action_spec=action_spec, batch_size=batch_size
+    )
     env = MockGoalReplayEnvWrapper(env)
-    random_action = array_spec.sample_bounded_spec(action_spec,
-                                                   np.random.RandomState())
+    random_action = array_spec.sample_bounded_spec(
+        action_spec, np.random.RandomState()
+    )
 
     time_step = env.step(random_action)
     self.assertIsInstance(time_step.observation, dict)
     observation = cast(Mapping[Text, Any], time_step.observation)
     observation_spec = cast(Mapping[Text, Any], env.observation_spec())
-    self.assertEqual(observation.keys(),
-                     observation_spec.keys())
+    self.assertEqual(observation.keys(), observation_spec.keys())
     time_step = env.reset()
     self.assertIsInstance(time_step.observation, dict)
     observation = cast(Mapping[Text, Any], time_step.observation)
-    self.assertEqual(observation.keys(),
-                     observation_spec.keys())
+    self.assertEqual(observation.keys(), observation_spec.keys())
 
 
 class HistoryWrapperTest(test_utils.TestCase):
@@ -1194,10 +1239,12 @@ class HistoryWrapperTest(test_utils.TestCase):
     action_shape = env.action_spec().shape
 
     history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
-    self.assertEqual((3,) + obs_shape,
-                     history_env.observation_spec()['observation'].shape)
-    self.assertEqual((3,) + action_shape,
-                     history_env.observation_spec()['action'].shape)
+    self.assertEqual(
+        (3,) + obs_shape, history_env.observation_spec()['observation'].shape
+    )
+    self.assertEqual(
+        (3,) + action_shape, history_env.observation_spec()['action'].shape
+    )
 
   def test_observation_stacked(self):
     env = test_envs.CountingEnv()
@@ -1255,80 +1302,67 @@ class HistoryWrapperTest(test_utils.TestCase):
     env = test_envs.NestedCountingEnv()
     history_env = wrappers.HistoryWrapper(env, 3)
     time_step = history_env.reset()
-    self.assertCountEqual({
-        'total_steps': [0, 0, 0],
-        'current_steps': [0, 0, 0]
-    }, time_step.observation)
+    self.assertCountEqual(
+        {'total_steps': [0, 0, 0], 'current_steps': [0, 0, 0]},
+        time_step.observation,
+    )
 
     time_step = history_env.step(0)
-    self.assertCountEqual({
-        'total_steps': [0, 0, 1],
-        'current_steps': [0, 0, 1]
-    }, time_step.observation)
+    self.assertCountEqual(
+        {'total_steps': [0, 0, 1], 'current_steps': [0, 0, 1]},
+        time_step.observation,
+    )
 
     time_step = history_env.step(0)
-    self.assertCountEqual({
-        'total_steps': [0, 1, 2],
-        'current_steps': [0, 1, 2]
-    }, time_step.observation)
+    self.assertCountEqual(
+        {'total_steps': [0, 1, 2], 'current_steps': [0, 1, 2]},
+        time_step.observation,
+    )
 
     time_step = history_env.step(0)
-    self.assertCountEqual({
-        'total_steps': [1, 2, 3],
-        'current_steps': [1, 2, 3]
-    }, time_step.observation)
+    self.assertCountEqual(
+        {'total_steps': [1, 2, 3], 'current_steps': [1, 2, 3]},
+        time_step.observation,
+    )
 
   def test_observation_and_action_nested(self):
     env = test_envs.NestedCountingEnv(nested_action=True)
     history_env = wrappers.HistoryWrapper(env, 3, include_actions=True)
     time_step = history_env.reset()
-    self.assertCountEqual({
-        'total_steps': [0, 0, 0],
-        'current_steps': [0, 0, 0]
-    }, time_step.observation['observation'])
-    self.assertCountEqual({
-        'foo': [0, 0, 0],
-        'bar': [0, 0, 0]
-    }, time_step.observation['action'])
+    self.assertCountEqual(
+        {'total_steps': [0, 0, 0], 'current_steps': [0, 0, 0]},
+        time_step.observation['observation'],
+    )
+    self.assertCountEqual(
+        {'foo': [0, 0, 0], 'bar': [0, 0, 0]}, time_step.observation['action']
+    )
 
-    time_step = history_env.step({
-        'foo': 5,
-        'bar': 5
-    })
-    self.assertCountEqual({
-        'total_steps': [0, 0, 1],
-        'current_steps': [0, 0, 1]
-    }, time_step.observation['observation'])
-    self.assertCountEqual({
-        'foo': [0, 0, 5],
-        'bar': [0, 0, 5]
-    }, time_step.observation['action'])
+    time_step = history_env.step({'foo': 5, 'bar': 5})
+    self.assertCountEqual(
+        {'total_steps': [0, 0, 1], 'current_steps': [0, 0, 1]},
+        time_step.observation['observation'],
+    )
+    self.assertCountEqual(
+        {'foo': [0, 0, 5], 'bar': [0, 0, 5]}, time_step.observation['action']
+    )
 
-    time_step = history_env.step({
-        'foo': 6,
-        'bar': 6
-    })
-    self.assertCountEqual({
-        'total_steps': [0, 1, 2],
-        'current_steps': [0, 1, 2]
-    }, time_step.observation['observation'])
-    self.assertCountEqual({
-        'foo': [0, 5, 6],
-        'bar': [0, 5, 6]
-    }, time_step.observation['action'])
+    time_step = history_env.step({'foo': 6, 'bar': 6})
+    self.assertCountEqual(
+        {'total_steps': [0, 1, 2], 'current_steps': [0, 1, 2]},
+        time_step.observation['observation'],
+    )
+    self.assertCountEqual(
+        {'foo': [0, 5, 6], 'bar': [0, 5, 6]}, time_step.observation['action']
+    )
 
-    time_step = history_env.step({
-        'foo': 7,
-        'bar': 7
-    })
-    self.assertCountEqual({
-        'total_steps': [1, 2, 3],
-        'current_steps': [1, 2, 3]
-    }, time_step.observation['observation'])
-    self.assertCountEqual({
-        'foo': [5, 6, 7],
-        'bar': [5, 6, 7]
-    }, time_step.observation['action'])
+    time_step = history_env.step({'foo': 7, 'bar': 7})
+    self.assertCountEqual(
+        {'total_steps': [1, 2, 3], 'current_steps': [1, 2, 3]},
+        time_step.observation['observation'],
+    )
+    self.assertCountEqual(
+        {'foo': [5, 6, 7], 'bar': [5, 6, 7]}, time_step.observation['action']
+    )
 
 
 class PerformanceProfilerWrapperTest(test_utils.TestCase):
@@ -1337,13 +1371,14 @@ class PerformanceProfilerWrapperTest(test_utils.TestCase):
     cartpole_env = gym.make('CartPole-v1')
     env = gym_wrapper.GymWrapper(cartpole_env)
     profile = [None]
+
     def profile_fn(p):
       self.assertIsInstance(p, cProfile.Profile)
       profile[0] = p
 
     env = wrappers.PerformanceProfiler(
-        env, process_profile_fn=profile_fn,
-        process_steps=2)
+        env, process_profile_fn=profile_fn, process_steps=2
+    )
 
     env.reset()
 
@@ -1379,69 +1414,71 @@ class OneHotActionWrapperTest(test_utils.TestCase):
         dtype=np.int64,
         minimum=0,
         maximum=1,
-        name='one_hot_action_spec')
+        name='one_hot_action_spec',
+    )
     self.assertEqual(one_hot_action_wrapper.action_spec(), expected_spec)
 
   def testStepDiscrete(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = array_spec.BoundedArraySpec((1,), np.int32, 1, 3)
     mock_env = mock.Mock(
-        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
+        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+    )
     one_hot_action_wrapper = wrappers.OneHotActionWrapper(mock_env)
     one_hot_action_wrapper.reset()
 
     one_hot_action_wrapper.step(np.array([[0, 1, 0]]).astype(np.int32))
     self.assertTrue(mock_env.step.called)
     np.testing.assert_array_equal(
-        np.array([2]).astype(np.int32), mock_env.step.call_args[0][0])
+        np.array([2]).astype(np.int32), mock_env.step.call_args[0][0]
+    )
 
   def testStepContinuous(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = array_spec.ArraySpec((2,), np.float32)
     mock_env = mock.Mock(
-        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
+        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+    )
     one_hot_action_wrapper = wrappers.OneHotActionWrapper(mock_env)
     one_hot_action_wrapper.reset()
 
     one_hot_action_wrapper.step(np.array([0.5, 0.3]).astype(np.float32))
     self.assertTrue(mock_env.step.called)
-    np.testing.assert_array_equal(np.array([0.5, 0.3]).astype(np.float32),
-                                  mock_env.step.call_args[0][0])
+    np.testing.assert_array_equal(
+        np.array([0.5, 0.3]).astype(np.float32), mock_env.step.call_args[0][0]
+    )
 
   def testStepHybrid(self):
     obs_spec = array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10)
     action_spec = {
-        'discrete':
-            array_spec.BoundedArraySpec((1,), np.int32, 1, 3),
-        'continuous':
-            array_spec.ArraySpec((2,), np.float32)
+        'discrete': array_spec.BoundedArraySpec((1,), np.int32, 1, 3),
+        'continuous': array_spec.ArraySpec((2,), np.float32),
     }
     mock_env = mock.Mock(
-        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec))
+        wraps=random_py_environment.RandomPyEnvironment(obs_spec, action_spec)
+    )
     one_hot_action_wrapper = wrappers.OneHotActionWrapper(mock_env)
     one_hot_action_wrapper.reset()
 
     action = {
-        'discrete':
-            np.array([[0, 1, 0]]).astype(np.int32),
-        'continuous':
-            np.array([0.5, 0.3]).astype(np.float32)
+        'discrete': np.array([[0, 1, 0]]).astype(np.int32),
+        'continuous': np.array([0.5, 0.3]).astype(np.float32),
     }
 
     one_hot_action_wrapper.step(action)
     self.assertTrue(mock_env.step.called)
 
     expected_action = {
-        'discrete':
-            np.array([2]),
-        'continuous':
-            np.array([0.5, 0.3])
+        'discrete': np.array([2]),
+        'continuous': np.array([0.5, 0.3]),
     }
     np.testing.assert_array_almost_equal(
-        expected_action['discrete'], mock_env.step.call_args[0][0]['discrete'])
+        expected_action['discrete'], mock_env.step.call_args[0][0]['discrete']
+    )
     np.testing.assert_array_almost_equal(
         expected_action['continuous'],
-        mock_env.step.call_args[0][0]['continuous'])
+        mock_env.step.call_args[0][0]['continuous'],
+    )
 
 
 class ExtraDisabledActionsWrapperTest(test_utils.TestCase):
@@ -1452,11 +1489,13 @@ class ExtraDisabledActionsWrapperTest(test_utils.TestCase):
         'obs2': array_spec.ArraySpec((2,), np.int32),
     })
     action_spec = array_spec.BoundedArraySpec((), np.int32, -10, 10)
+
     def reward_fn(unused_step_type, action, unused_observation):
       return action
 
     orig_env = random_py_environment.RandomPyEnvironment(
-        obs_spec, action_spec, reward_fn=reward_fn, batch_size=5)
+        obs_spec, action_spec, reward_fn=reward_fn, batch_size=5
+    )
     wrapped_env = wrappers.ExtraDisabledActionsWrapper(orig_env, 25)
     wrapped_env.reset()
     action = np.array([3, -7, 4, 2, 6])

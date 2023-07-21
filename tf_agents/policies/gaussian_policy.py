@@ -23,7 +23,6 @@ from typing import Optional, Text
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
@@ -35,11 +34,13 @@ tfd = tfp.distributions
 class GaussianPolicy(tf_policy.TFPolicy):
   """Actor Policy with Gaussian exploration noise."""
 
-  def __init__(self,
-               wrapped_policy: tf_policy.TFPolicy,
-               scale: types.Float = 1.,
-               clip: bool = True,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      wrapped_policy: tf_policy.TFPolicy,
+      scale: types.Float = 1.0,
+      clip: bool = True,
+      name: Optional[Text] = None,
+  ):
     """Builds an GaussianPolicy wrapping wrapped_policy.
 
     Args:
@@ -52,7 +53,8 @@ class GaussianPolicy(tf_policy.TFPolicy):
     def _validate_action_spec(action_spec):
       if not tensor_spec.is_continuous(action_spec):
         raise ValueError(
-            'Gaussian Noise is applicable only to continuous actions.')
+            'Gaussian Noise is applicable only to continuous actions.'
+        )
 
     tf.nest.map_structure(_validate_action_spec, wrapped_policy.action_spec)
 
@@ -62,16 +64,19 @@ class GaussianPolicy(tf_policy.TFPolicy):
         wrapped_policy.policy_state_spec,
         wrapped_policy.info_spec,
         clip=clip,
-        name=name)
+        name=name,
+    )
     self._wrapped_policy = wrapped_policy
 
     def _create_normal_distribution(action_spec):
       return tfd.Normal(
           loc=tf.zeros(action_spec.shape, dtype=action_spec.dtype),
-          scale=tf.ones(action_spec.shape, dtype=action_spec.dtype) * scale)
+          scale=tf.ones(action_spec.shape, dtype=action_spec.dtype) * scale,
+      )
 
     self._noise_distribution = tf.nest.map_structure(
-        _create_normal_distribution, self._action_spec)
+        _create_normal_distribution, self._action_spec
+    )
 
   def _variables(self):
     return self._wrapped_policy.variables()
@@ -79,14 +84,16 @@ class GaussianPolicy(tf_policy.TFPolicy):
   def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     seed_stream = tfp.util.SeedStream(seed=seed, salt='gaussian_noise')
 
-    action_step = self._wrapped_policy.action(time_step, policy_state,
-                                              seed_stream())
+    action_step = self._wrapped_policy.action(
+        time_step, policy_state, seed_stream()
+    )
 
     def _add_noise(action, distribution):
       return action + distribution.sample(seed=seed_stream())
 
-    actions = tf.nest.map_structure(_add_noise, action_step.action,
-                                    self._noise_distribution)
+    actions = tf.nest.map_structure(
+        _add_noise, action_step.action, self._noise_distribution
+    )
     return policy_step.PolicyStep(actions, action_step.state, action_step.info)
 
   def _distribution(self, time_step, policy_state):

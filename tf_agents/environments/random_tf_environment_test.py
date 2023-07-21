@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import random_tf_environment
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -33,46 +32,58 @@ class RandomTFEnvironmentTest(test_utils.TestCase):
   def setUp(self):
     self.observation_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
     self.reward_spec = tensor_spec.TensorSpec((2,), tf.float32)
-    self.time_step_spec = ts.time_step_spec(self.observation_spec,
-                                            reward_spec=self.reward_spec)
+    self.time_step_spec = ts.time_step_spec(
+        self.observation_spec, reward_spec=self.reward_spec
+    )
     self.action_spec = tensor_spec.TensorSpec((2,), tf.float32)
     self.random_env = random_tf_environment.RandomTFEnvironment(
-        self.time_step_spec, self.action_spec)
+        self.time_step_spec, self.action_spec
+    )
 
   def test_state_saved_after_reset(self):
     initial_time_step = self.evaluate(self.random_env.reset())
     current_time_step = self.evaluate(self.random_env.current_time_step())
 
-    np.testing.assert_almost_equal(initial_time_step.step_type,
-                                   current_time_step.step_type)
-    np.testing.assert_almost_equal(initial_time_step.observation,
-                                   current_time_step.observation)
-    np.testing.assert_almost_equal(initial_time_step.discount,
-                                   current_time_step.discount)
-    np.testing.assert_almost_equal(initial_time_step.reward,
-                                   current_time_step.reward)
+    np.testing.assert_almost_equal(
+        initial_time_step.step_type, current_time_step.step_type
+    )
+    np.testing.assert_almost_equal(
+        initial_time_step.observation, current_time_step.observation
+    )
+    np.testing.assert_almost_equal(
+        initial_time_step.discount, current_time_step.discount
+    )
+    np.testing.assert_almost_equal(
+        initial_time_step.reward, current_time_step.reward
+    )
 
   def test_state_saved_after_step(self):
     self.evaluate(self.random_env.reset())
     random_action = self.evaluate(
-        tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(1,)))
+        tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(1,))
+    )
 
     expected_time_step = self.evaluate(self.random_env.step(random_action))
     current_time_step = self.evaluate(self.random_env.current_time_step())
 
-    np.testing.assert_almost_equal(expected_time_step.step_type,
-                                   current_time_step.step_type)
-    np.testing.assert_almost_equal(expected_time_step.observation,
-                                   current_time_step.observation)
-    np.testing.assert_almost_equal(expected_time_step.discount,
-                                   current_time_step.discount)
-    np.testing.assert_almost_equal(expected_time_step.reward,
-                                   current_time_step.reward)
+    np.testing.assert_almost_equal(
+        expected_time_step.step_type, current_time_step.step_type
+    )
+    np.testing.assert_almost_equal(
+        expected_time_step.observation, current_time_step.observation
+    )
+    np.testing.assert_almost_equal(
+        expected_time_step.discount, current_time_step.discount
+    )
+    np.testing.assert_almost_equal(
+        expected_time_step.reward, current_time_step.reward
+    )
 
   def test_auto_reset(self):
     time_step = self.evaluate(self.random_env.reset())
     random_action = self.evaluate(
-        tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(1,)))
+        tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(1,))
+    )
 
     attempts = 0
 
@@ -95,7 +106,8 @@ class RandomTFEnvironmentTest(test_utils.TestCase):
   def test_step_batched_action(self):
     self.evaluate(self.random_env.reset())
     random_action = self.evaluate(
-        tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(5,)))
+        tensor_spec.sample_spec_nest(self.action_spec, outer_dims=(5,))
+    )
 
     self.evaluate(self.random_env.step(random_action))
 

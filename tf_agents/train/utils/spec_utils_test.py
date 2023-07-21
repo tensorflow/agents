@@ -25,8 +25,9 @@ class SpecUtilsTest(test_utils.TestCase):
 
   def test_get_tensor_specs(self):
     collect_env = suite_gym.load('CartPole-v0')
-    observation_spec, action_spec, time_step_spec = (
-        spec_utils.get_tensor_specs(collect_env))
+    observation_spec, action_spec, time_step_spec = spec_utils.get_tensor_specs(
+        collect_env
+    )
     self.assertEqual(observation_spec.name, 'observation')
     self.assertEqual(action_spec.name, 'action')
     self.assertEqual(time_step_spec.observation.name, 'observation')
@@ -34,12 +35,15 @@ class SpecUtilsTest(test_utils.TestCase):
 
   def test_get_collect_data_spec(self):
     env = suite_gym.load('CartPole-v0')
-    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
-    collect_spec = spec_utils.get_collect_data_spec_from_policy_and_env(env,
-                                                                        policy)
+    policy = driver_test_utils.PyPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
+    collect_spec = spec_utils.get_collect_data_spec_from_policy_and_env(
+        env, policy
+    )
     self.assertEqual(collect_spec.observation.name, 'observation')
     self.assertEqual(collect_spec.reward.name, 'reward')
+
 
 if __name__ == '__main__':
   test_utils.main()

@@ -19,7 +19,6 @@ from typing import Callable, Optional
 
 import gin
 import numpy as np
-
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.specs import array_spec
 from tf_agents.typing import types
@@ -27,7 +26,8 @@ from tf_agents.typing import types
 
 @gin.configurable
 class PiecewiseBernoulliPyEnvironment(
-    bandit_py_environment.BanditPyEnvironment):
+    bandit_py_environment.BanditPyEnvironment
+):
   """Implements piecewise stationary finite-armed Bernoulli Bandits.
 
   This environment implements piecewise stationary finite-armed non-contextual
@@ -64,31 +64,29 @@ class PiecewiseBernoulliPyEnvironment(
   Knowledge Management (https://arxiv.org/pdf/1805.09365.pdf.)
   """
 
-  def __init__(self,
-               piece_means: np.ndarray,
-               change_duration_generator: Callable[[], int],
-               batch_size: Optional[int] = 1):
+  def __init__(
+      self,
+      piece_means: np.ndarray,
+      change_duration_generator: Callable[[], int],
+      batch_size: Optional[int] = 1,
+  ):
     """Initializes a piecewise stationary Bernoulli Bandit environment.
 
     Args:
       piece_means: a matrix (list of lists) with shape (num_pieces, num_arms)
-        containing floats in [0, 1]. Each list contains the mean rewards for
-        the num_arms actions of the num_pieces pieces. The list is wrapped
-        around after the last piece.
+        containing floats in [0, 1]. Each list contains the mean rewards for the
+        num_arms actions of the num_pieces pieces. The list is wrapped around
+        after the last piece.
       change_duration_generator: a generator of the time durations. If this
         yields the values d0, d1, d2, ..., then the reward parameters change at
-        steps d0, d0 + d1, d0 + d1 + d2, ..., as following:
-
-        piece_means[0] for 0 <= t < d0
-        piece_means[1] for d0 <= t < d0 + d1
-        piece_means[2] for d0 + d1 <= t < d0 + d1 + d2
-        ...
-
-        Note that the values generated have to be non-negative. The value zero
-        means that the corresponding parameters in the piece_means list are
-        skipped, i.e. the duration of the piece is zero steps.
-        If the generator ends (e.g. if it is obtained with iter(<list>)) and the
-        step goes beyond the last piece, a StopIteration exception is raised.
+        steps d0, d0 + d1, d0 + d1 + d2, ..., as following:  piece_means[0] for
+        0 <= t < d0 piece_means[1] for d0 <= t < d0 + d1 piece_means[2] for d0 +
+        d1 <= t < d0 + d1 + d2 ...  Note that the values generated have to be
+        non-negative. The value zero means that the corresponding parameters in
+        the piece_means list are skipped, i.e. the duration of the piece is zero
+        steps. If the generator ends (e.g. if it is obtained with iter(<list>))
+        and the step goes beyond the last piece, a StopIteration exception is
+        raised.
       batch_size: If specified, this is the batch size for observation and
         actions.
     """
@@ -108,11 +106,14 @@ class PiecewiseBernoulliPyEnvironment(
         dtype=np.int32,
         minimum=0,
         maximum=self._num_actions - 1,
-        name='action')
+        name='action',
+    )
     observation_spec = array_spec.ArraySpec(
-        shape=(1,), dtype=np.int32, name='observation')
+        shape=(1,), dtype=np.int32, name='observation'
+    )
     super(PiecewiseBernoulliPyEnvironment, self).__init__(
-        observation_spec, action_spec)
+        observation_spec, action_spec
+    )
 
   @property
   def batch_size(self) -> int:
@@ -128,17 +129,20 @@ class PiecewiseBernoulliPyEnvironment(
       duration = int(next(self._change_duration_generator))  # pytype: disable=wrong-arg-types  # trace-all-classes
       if duration < 0:
         raise ValueError(
-            'Generated duration must be non-negative. Got {}.'.format(duration))
+            'Generated duration must be non-negative. Got {}.'.format(duration)
+        )
       self._next_change += duration
       self._current_piece = (self._current_piece + 1) % self._num_pieces
 
   def _observe(self) -> types.NestedArray:
     return np.zeros(
-        shape=[self._batch_size, 1],
-        dtype=self.observation_spec().dtype)
+        shape=[self._batch_size, 1], dtype=self.observation_spec().dtype
+    )
 
   def _apply_action(self, action: types.NestedArray) -> types.NestedArray:
-    reward = np.floor(self._piece_means[self._current_piece, action] +
-                      np.random.random((self._batch_size,)))
+    reward = np.floor(
+        self._piece_means[self._current_piece, action]
+        + np.random.random((self._batch_size,))
+    )
     self._increment_time()
     return reward

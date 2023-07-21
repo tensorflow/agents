@@ -19,8 +19,8 @@ from __future__ import division
 from __future__ import print_function
 
 from typing import Optional, Text
-from absl import logging
 
+from absl import logging
 import tensorflow as tf
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
@@ -46,10 +46,12 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
   # In that case, the initial policy state could be given with no batch
   # dimension.
   # TODO(sfishman): Remove batch_size param entirely.
-  def __init__(self,
-               policy: tf_policy.TFPolicy,
-               batch_size: Optional[int] = None,
-               seed: Optional[types.Seed] = None):
+  def __init__(
+      self,
+      policy: tf_policy.TFPolicy,
+      batch_size: Optional[int] = None,
+      seed: Optional[types.Seed] = None,
+  ):
     """Initializes a new `PyTFPolicy`.
 
     Args:
@@ -61,20 +63,24 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
       logging.warning('Policy should implement tf_policy.TFPolicy')
 
     if batch_size is not None:
-      logging.warning('In PyTFPolicy constructor, `batch_size` is deprecated, '
-                      'this parameter has no effect. This argument will be '
-                      'removed on 2019-05-01')
+      logging.warning(
+          'In PyTFPolicy constructor, `batch_size` is deprecated, '
+          'this parameter has no effect. This argument will be '
+          'removed on 2019-05-01'
+      )
 
     time_step_spec = tensor_spec.to_nest_array_spec(policy.time_step_spec)
     action_spec = tensor_spec.to_nest_array_spec(policy.action_spec)
     super(PyTFPolicy, self).__init__(
-        time_step_spec, action_spec, policy_state_spec=(), info_spec=())
+        time_step_spec, action_spec, policy_state_spec=(), info_spec=()
+    )
 
     self._tf_policy = policy
     self.session = None
 
     self._policy_state_spec = tensor_spec.to_nest_array_spec(
-        self._tf_policy.policy_state_spec)
+        self._tf_policy.policy_state_spec
+    )
 
     self._batch_size = None
     self._batched = None
@@ -90,22 +96,25 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     outer_dims = [self._batch_size] if self._batched else [1]
     with graph.as_default():
       self._time_step = tensor_spec.to_nest_placeholder(
-          self._tf_policy.time_step_spec, outer_dims=outer_dims)
+          self._tf_policy.time_step_spec, outer_dims=outer_dims
+      )
       self._tf_initial_state = self._tf_policy.get_initial_state(
-          batch_size=self._batch_size or 1)
+          batch_size=self._batch_size or 1
+      )
 
       self._policy_state = tf.nest.map_structure(
           lambda ps: tf.compat.v1.placeholder(  # pylint: disable=g-long-lambda
-              ps.dtype,
-              ps.shape,
-              name='policy_state'),
-          self._tf_initial_state)
+              ps.dtype, ps.shape, name='policy_state'
+          ),
+          self._tf_initial_state,
+      )
       self._action_step = self._tf_policy.action(
-          self._time_step, self._policy_state, seed=self._seed)
+          self._time_step, self._policy_state, seed=self._seed
+      )
 
-  def initialize(self,
-                 batch_size: Optional[int],
-                 graph: Optional[tf.Graph] = None):
+  def initialize(
+      self, batch_size: Optional[int], graph: Optional[tf.Graph] = None
+  ):
     if self._built:
       raise RuntimeError('PyTFPolicy can only be initialized once.')
 
@@ -117,9 +126,9 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     common.initialize_uninitialized_variables(self.session, var_list)
     self._built = True
 
-  def save(self,
-           policy_dir: Optional[Text] = None,
-           graph: Optional[tf.Graph] = None):
+  def save(
+      self, policy_dir: Optional[Text] = None, graph: Optional[tf.Graph] = None
+  ):
     if not self._built:
       raise RuntimeError('PyTFPolicy has not been initialized yet.')
 
@@ -129,22 +138,25 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     with graph.as_default():
       global_step = tf.compat.v1.train.get_or_create_global_step()
       policy_checkpointer = common.Checkpointer(
-          ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
+          ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step
+      )
       policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():
         policy_checkpointer.save(global_step)
 
-  def restore(self,
-              policy_dir: Text,
-              graph: Optional[tf.Graph] = None,
-              assert_consumed: bool = True):
+  def restore(
+      self,
+      policy_dir: Text,
+      graph: Optional[tf.Graph] = None,
+      assert_consumed: bool = True,
+  ):
     """Restores the policy from the checkpoint.
 
     Args:
       policy_dir: Directory with the checkpoint.
       graph: A graph, inside which policy the is restored (optional).
-      assert_consumed: If true, contents of the checkpoint will be checked
-        for a match against graph variables.
+      assert_consumed: If true, contents of the checkpoint will be checked for a
+        match against graph variables.
 
     Returns:
       step: Global step associated with the restored policy checkpoint.
@@ -153,19 +165,20 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
       RuntimeError: if the policy is not initialized.
       AssertionError: if the checkpoint contains variables which do not have
         matching names in the graph, and assert_consumed is set to True.
-
     """
 
     if not self._built:
       raise RuntimeError(
-          'PyTFPolicy must be initialized before being restored.')
+          'PyTFPolicy must be initialized before being restored.'
+      )
     if not graph:
       graph = tf.compat.v1.get_default_graph()
 
     with graph.as_default():
       global_step = tf.compat.v1.train.get_or_create_global_step()
       policy_checkpointer = common.Checkpointer(
-          ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step)
+          ckpt_dir=policy_dir, policy=self._tf_policy, global_step=global_step
+      )
       status = policy_checkpointer.initialize_or_restore(self.session)
       with self.session.as_default():
         if assert_consumed:
@@ -174,8 +187,9 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
       return self.session.run(global_step)
 
   def _build_from_time_step(self, time_step):
-    outer_shape = nest_utils.get_outer_array_shape(time_step,
-                                                   self._time_step_spec)
+    outer_shape = nest_utils.get_outer_array_shape(
+        time_step, self._time_step_spec
+    )
     if len(outer_shape) == 1:
       self.initialize(outer_shape[0])
     elif not outer_shape:
@@ -183,7 +197,8 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     else:
       raise ValueError(
           'Cannot handle more than one outer dimension. Saw {} outer '
-          'dimensions: {}'.format(len(outer_shape), outer_shape))
+          'dimensions: {}'.format(len(outer_shape), outer_shape)
+      )
 
   def _get_initial_state(self, batch_size):
     if not self._built:
@@ -192,8 +207,10 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     if batch_size not in [self._batch_size, self._batch_size or 1]:
       raise ValueError(
           '`batch_size` argument is different from the batch size provided '
-          'previously. Expected {}, but saw {}.'.format(self._batch_size,
-                                                        batch_size))
+          'previously. Expected {}, but saw {}.'.format(
+              self._batch_size, batch_size
+          )
+      )
     return self.session.run(self._tf_initial_state)
 
   def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
@@ -209,7 +226,9 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
       raise ValueError(
           'The batch size of time_step is different from the batch size '
           'provided previously. Expected {}, but saw {}.'.format(
-              self._batch_size, batch_size))
+              self._batch_size, batch_size
+          )
+      )
 
     if not self._batched:
       # Since policy_state is given in a batched form from the policy and we
@@ -222,7 +241,8 @@ class PyTFPolicy(py_policy.PyPolicy, session_utils.SessionUser):
     if policy_state is not None:
       # Flatten policy_state to handle specs that are not hashable due to lists.
       for state_ph, state in zip(
-          tf.nest.flatten(self._policy_state), tf.nest.flatten(policy_state)):
+          tf.nest.flatten(self._policy_state), tf.nest.flatten(policy_state)
+      ):
         feed_dict[state_ph] = state
 
     action_step = self.session.run(self._action_step, feed_dict)

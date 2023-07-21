@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.utils import numpy_storage
 
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
@@ -38,13 +38,14 @@ class NumpyStorageTest(tf.test.TestCase):
     directory = self.get_temp_dir()
     prefix = os.path.join(directory, 'ckpt')
     save_path = checkpoint.save(prefix)
-    arrays.x[:] = 0.
+    arrays.x[:] = 0.0
     self.assertAllEqual(arrays.x, np.zeros([3, 4]))
     checkpoint.restore(save_path).assert_consumed()
     self.assertAllEqual(arrays.x, np.ones([3, 4]))
 
     second_checkpoint = tf.train.Checkpoint(
-        numpy_arrays=numpy_storage.NumpyState())
+        numpy_arrays=numpy_storage.NumpyState()
+    )
     # Attributes of NumpyState objects are created automatically by restore()
     second_checkpoint.restore(save_path).assert_consumed()
     self.assertAllEqual(np.ones([3, 4]), second_checkpoint.numpy_arrays.x)

@@ -56,7 +56,8 @@ class GreedyPolicy(tf_policy.TFPolicy):
         policy.policy_state_spec,
         policy.info_spec,
         emit_log_probability=policy.emit_log_probability,
-        name=name)
+        name=name,
+    )
     self._wrapped_policy = policy
 
   @property
@@ -71,14 +72,18 @@ class GreedyPolicy(tf_policy.TFPolicy):
       try:
         greedy_action = dist.mode()
       except NotImplementedError:
-        raise ValueError("Your network's distribution does not implement mode "
-                         'making it incompatible with a greedy policy.'
-                        ) from NotImplementedError
+        raise ValueError(
+            "Your network's distribution does not implement mode "
+            'making it incompatible with a greedy policy.'
+        ) from NotImplementedError
 
       return tfp.distributions.Deterministic(loc=greedy_action)
 
     distribution_step = self._wrapped_policy.distribution(
-        time_step, policy_state)
+        time_step, policy_state
+    )
     return policy_step.PolicyStep(
         tf.nest.map_structure(dist_fn, distribution_step.action),
-        distribution_step.state, distribution_step.info)
+        distribution_step.state,
+        distribution_step.info,
+    )

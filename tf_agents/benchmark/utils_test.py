@@ -17,7 +17,6 @@
 import os
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.benchmark import utils
 from tf_agents.utils import test_utils
 
@@ -30,7 +29,8 @@ class UtilsTest(test_utils.TestCase):
     """Tests extracting data from all steps in the event log."""
     values, walltime = utils.extract_event_log_values(
         os.path.join(TEST_DATA, 'event_log_3m/events.out.tfevents.1599310762'),
-        'AverageReturn')
+        'AverageReturn',
+    )
     # Verifies all (3M) records were examined 0-3M = 301.
     self.assertLen(values, 301)
     self.assertAlmostEqual(walltime, 1152.09573, places=4)
@@ -41,7 +41,9 @@ class UtilsTest(test_utils.TestCase):
     """Tests extracting data from the first 1M steps in the event log."""
     values, walltime = utils.extract_event_log_values(
         os.path.join(TEST_DATA, 'event_log_3m/events.out.tfevents.1599310762'),
-        'AverageReturn', 1000000)
+        'AverageReturn',
+        1000000,
+    )
     # Verifies only 1M records were examined 0-1M = 101.
     self.assertLen(values, 101)
     self.assertAlmostEqual(walltime, 370.61673, places=4)
@@ -52,7 +54,10 @@ class UtilsTest(test_utils.TestCase):
     """Tests extracting data starting at step 1k."""
     values, walltime = utils.extract_event_log_values(
         os.path.join(TEST_DATA, 'event_log_3m/events.out.tfevents.1599310762'),
-        'AverageReturn', 1000000, start_step=10000)
+        'AverageReturn',
+        1000000,
+        start_step=10000,
+    )
     # Verifies only 1M records were examined 0-1M = 101.
     self.assertLen(values, 100)
     # Wall time is less than if counting started at step 0.

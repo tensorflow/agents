@@ -22,9 +22,7 @@ from __future__ import print_function
 import os
 
 from absl import logging
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import eager_utils
@@ -68,13 +66,15 @@ def parse_encoded_spec_from_file(input_path):
   signature_proto_string = eager_utils.get_next(dataset_iterator)
   if tf.executing_eagerly():
     signature_proto = struct_pb2.StructuredValue.FromString(
-        signature_proto_string.numpy())
+        signature_proto_string.numpy()
+    )
   else:
     # In non-eager mode a session must be run in order to get the value
     with tf.Session() as sess:
       signature_proto_string_value = sess.run(signature_proto_string)
     signature_proto = struct_pb2.StructuredValue.FromString(
-        signature_proto_string_value)
+        signature_proto_string_value
+    )
   return tensor_spec.from_proto(signature_proto)
 
 
@@ -100,12 +100,14 @@ class TFRecordObserver(object):
     return within a `tf.group` operation.
   """
 
-  def __init__(self,
-               output_path,
-               tensor_data_spec,
-               py_mode=False,
-               compress_image=False,
-               image_quality=95):
+  def __init__(
+      self,
+      output_path,
+      tensor_data_spec,
+      py_mode=False,
+      compress_image=False,
+      image_quality=95,
+  ):
     """Creates observer object.
 
     Args:
@@ -127,7 +129,8 @@ class TFRecordObserver(object):
     self._encoder = example_encoding.get_example_serializer(
         self._array_data_spec,
         compress_image=compress_image,
-        image_quality=image_quality)
+        image_quality=image_quality,
+    )
     # Two output files: a tfrecord file and a file with the serialized spec
     self.output_path = output_path
     tf.io.gfile.makedirs(os.path.dirname(self.output_path))
@@ -168,15 +171,17 @@ class TFRecordObserver(object):
       tf.numpy_function(self.write, flat_data, [], name='encoder_observer')
 
 
-def load_tfrecord_dataset(dataset_files,
-                          buffer_size=1000,
-                          as_experience=False,
-                          as_trajectories=False,
-                          add_batch_dim=True,
-                          decoder=None,
-                          num_parallel_reads=None,
-                          compress_image=False,
-                          spec=None):
+def load_tfrecord_dataset(
+    dataset_files,
+    buffer_size=1000,
+    as_experience=False,
+    as_trajectories=False,
+    add_batch_dim=True,
+    decoder=None,
+    num_parallel_reads=None,
+    compress_image=False,
+    spec=None,
+):
   """Loads a TFRecord dataset from file, sequencing samples as Trajectories.
 
   Args:
@@ -197,8 +202,8 @@ def load_tfrecord_dataset(dataset_files,
     num_parallel_reads: Optional, number of parallel reads in the TFRecord
       dataset. If not specified, len(dataset_files) will be used.
     compress_image: Whether to decompress image. It is assumed that any uint8
-      tensor of rank 3 with shape (w,h,c) is an image.
-      If the tensor was compressed in the encoder, it needs to be decompressed.
+      tensor of rank 3 with shape (w,h,c) is an image. If the tensor was
+      compressed in the encoder, it needs to be decompressed.
     spec: Optional, the dataspec of the TFRecord dataset to be parsed. If not
       provided, parses the dataspec of the TFRecord directly.
 
@@ -222,7 +227,8 @@ def load_tfrecord_dataset(dataset_files,
       spec = specs[0]
 
     decoder = example_encoding.get_example_decoder(
-        spec, compress_image=compress_image)
+        spec, compress_image=compress_image
+    )
 
   logging.info('Loading TFRecord dataset...')
   if not num_parallel_reads:
@@ -230,7 +236,8 @@ def load_tfrecord_dataset(dataset_files,
   dataset = tf.data.TFRecordDataset(
       dataset_files,
       buffer_size=buffer_size,
-      num_parallel_reads=num_parallel_reads)
+      num_parallel_reads=num_parallel_reads,
+  )
 
   def decode_fn(proto):
     """Decodes a proto object."""
@@ -243,17 +250,20 @@ def load_tfrecord_dataset(dataset_files,
 
   if as_experience:
     dataset = dataset.map(
-        decode_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(
-            2, drop_remainder=True)
+        decode_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE
+    ).batch(2, drop_remainder=True)
   elif add_batch_dim:
     dataset = dataset.map(
-        decode_and_batch_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        decode_and_batch_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
   else:
     dataset = dataset.map(
-        decode_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        decode_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
   if as_trajectories:
     as_trajectories_fn = lambda sample: trajectory.Trajectory(*sample)
     dataset = dataset.map(
-        as_trajectories_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        as_trajectories_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
   return dataset

@@ -26,8 +26,8 @@ class ExpandDims(tf.keras.layers.Layer):
   """Expands dims along a particular axis.
 
   Args:
-      axis: Axis to expand.  A new dim is added before this axis.
-         May be a negative value.  Must not be a tensor.
+      axis: Axis to expand.  A new dim is added before this axis. May be a
+        negative value.  Must not be a tensor.
 
   Input shape:
       `(batch_size,) + shape`
@@ -54,9 +54,10 @@ class ExpandDims(tf.keras.layers.Layer):
       output_shape = input_shape + [1]
     elif self.axis < 0:
       output_shape = (
-          input_shape[:self.axis + 1] + [1] + input_shape[self.axis + 1:])
+          input_shape[: self.axis + 1] + [1] + input_shape[self.axis + 1 :]
+      )
     else:
-      output_shape = input_shape[:self.axis] + [1] + input_shape[self.axis:]
+      output_shape = input_shape[: self.axis] + [1] + input_shape[self.axis :]
     return tf.TensorShape(output_shape)
 
   def call(self, inputs):

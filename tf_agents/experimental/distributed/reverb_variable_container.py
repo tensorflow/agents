@@ -21,7 +21,6 @@ This is just a client. The server needs to be consructed and held separately.
 from typing import Iterable, Text
 
 import tensorflow as tf
-
 from tf_agents.typing import types
 from tf_agents.utils import common
 from tf_agents.utils import lazy_loader
@@ -50,9 +49,9 @@ class ReverbVariableContainer(object):
   defined and the `max_size=1`).
   """
 
-  def __init__(self,
-               server_address: Text,
-               table_names: Iterable[Text] = (DEFAULT_TABLE,)):
+  def __init__(
+      self, server_address: Text, table_names: Iterable[Text] = (DEFAULT_TABLE,)
+  ):
     """Initializes the class.
 
     Args:
@@ -74,16 +73,18 @@ class ReverbVariableContainer(object):
       if table_info.max_size != 1:
         raise ValueError(
             'The max_size of the table {} is {} which different from the '
-            'expected capacity 1.'.format(table, table_info.max_size))
+            'expected capacity 1.'.format(table, table_info.max_size)
+        )
       if not table_info.signature:
         raise TypeError('Signature is not defined for table {}.'.format(table))
-      self._dtypes[table] = tf.nest.map_structure(lambda spec: spec.dtype,
-                                                  table_info.signature)
+      self._dtypes[table] = tf.nest.map_structure(
+          lambda spec: spec.dtype, table_info.signature
+      )
     self._tf_client = reverb.TFClient(server_address)
 
-  def push(self,
-           values: types.NestedTensor,
-           table: Text = DEFAULT_TABLE) -> None:
+  def push(
+      self, values: types.NestedTensor, table: Text = DEFAULT_TABLE
+  ) -> None:
     """Pushes values into a Reverb table.
 
     Args:
@@ -98,8 +99,11 @@ class ReverbVariableContainer(object):
         type differences.
     """
     if table not in self._dtypes:
-      raise KeyError('Could not find the table {}. Available tables: {}'.format(
-          table, self._dtypes.keys()))
+      raise KeyError(
+          'Could not find the table {}. Available tables: {}'.format(
+              table, self._dtypes.keys()
+          )
+      )
 
     # Sequence type check is turned off in Reverb client allowing sequence type
     # differences in the signature. This is required to be able work with
@@ -107,7 +111,8 @@ class ReverbVariableContainer(object):
     self._tf_client.insert(
         data=tf.nest.flatten(values),
         tables=tf.constant([table]),
-        priorities=tf.constant([1.0], dtype=tf.float64))
+        priorities=tf.constant([1.0], dtype=tf.float64),
+    )
 
   def pull(self, table: Text = DEFAULT_TABLE) -> types.NestedTensor:
     """Pulls values from a Reverb table and returns them as nested tensors."""
@@ -116,9 +121,9 @@ class ReverbVariableContainer(object):
     # container the sequence length is always one.
     return sample.data[0]
 
-  def update(self,
-             variables: types.NestedVariable,
-             table: Text = DEFAULT_TABLE) -> None:
+  def update(
+      self, variables: types.NestedVariable, table: Text = DEFAULT_TABLE
+  ) -> None:
     """Updates variables using values pulled from a Reverb table.
 
     Args:
@@ -135,12 +140,15 @@ class ReverbVariableContainer(object):
 
   # TODO(b/157554434): Move this to `nest_utils`.
   @common.function
-  def _assign(self,
-              variables: types.NestedVariable,
-              values: types.NestedTensor,
-              check_types: bool = False) -> None:
+  def _assign(
+      self,
+      variables: types.NestedVariable,
+      values: types.NestedTensor,
+      check_types: bool = False,
+  ) -> None:
     """Assigns the nested values to variables."""
     nest_utils.assert_same_structure(variables, values, check_types=check_types)
     for variable, value in zip(
-        tf.nest.flatten(variables), tf.nest.flatten(values)):
+        tf.nest.flatten(variables), tf.nest.flatten(values)
+    ):
       variable.assign(value)

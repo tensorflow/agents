@@ -37,15 +37,17 @@ from tf_agents.utils import nest_utils
 class ActorRnnNetwork(network.Network):
   """Creates a recurrent actor network."""
 
-  def __init__(self,
-               input_tensor_spec,
-               output_tensor_spec,
-               conv_layer_params=None,
-               input_fc_layer_params=(200, 100),
-               lstm_size=(40,),
-               output_fc_layer_params=(200, 100),
-               activation_fn=tf.keras.activations.relu,
-               name='ActorRnnNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      output_tensor_spec,
+      conv_layer_params=None,
+      input_fc_layer_params=(200, 100),
+      lstm_size=(40,),
+      output_fc_layer_params=(200, 100),
+      activation_fn=tf.keras.activations.relu,
+      name='ActorRnnNetwork',
+  ):
     """Creates an instance of `ActorRnnNetwork`.
 
     Args:
@@ -80,22 +82,27 @@ class ActorRnnNetwork(network.Network):
         input_fc_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=tf.compat.v1.keras.initializers.glorot_uniform(),
-        name='input_mlp')
+        name='input_mlp',
+    )
 
     # Create RNN cell
     if len(lstm_size) == 1:
       cell = tf.keras.layers.LSTMCell(lstm_size[0])
     else:
       cell = tf.keras.layers.StackedRNNCells(
-          [tf.keras.layers.LSTMCell(size) for size in lstm_size])
+          [tf.keras.layers.LSTMCell(size) for size in lstm_size]
+      )
 
     state_spec = tf.nest.map_structure(
         functools.partial(
-            tensor_spec.TensorSpec, dtype=tf.float32,
-            name='network_state_spec'), list(cell.state_size))
+            tensor_spec.TensorSpec, dtype=tf.float32, name='network_state_spec'
+        ),
+        list(cell.state_size),
+    )
 
-    output_layers = utils.mlp_layers(fc_layer_params=output_fc_layer_params,
-                                     name='output')
+    output_layers = utils.mlp_layers(
+        fc_layer_params=output_fc_layer_params, name='output'
+    )
 
     flat_action_spec = tf.nest.flatten(output_tensor_spec)
     action_layers = [
@@ -103,14 +110,16 @@ class ActorRnnNetwork(network.Network):
             single_action_spec.shape.num_elements(),
             activation=tf.keras.activations.tanh,
             kernel_initializer=tf.keras.initializers.RandomUniform(
-                minval=-0.003, maxval=0.003),
-            name='action') for single_action_spec in flat_action_spec
+                minval=-0.003, maxval=0.003
+            ),
+            name='action',
+        )
+        for single_action_spec in flat_action_spec
     ]
 
     super(ActorRnnNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=state_spec,
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=state_spec, name=name
+    )
 
     self._output_tensor_spec = output_tensor_spec
     self._flat_action_spec = flat_action_spec
@@ -122,19 +131,23 @@ class ActorRnnNetwork(network.Network):
 
   # TODO(kbanoop): Standardize argument names across different networks.
   def call(self, observation, step_type, network_state=(), training=False):
-    num_outer_dims = nest_utils.get_outer_rank(observation,
-                                               self.input_tensor_spec)
+    num_outer_dims = nest_utils.get_outer_rank(
+        observation, self.input_tensor_spec
+    )
     if num_outer_dims not in (1, 2):
       raise ValueError(
-          'Input observation must have a batch or batch x time outer shape.')
+          'Input observation must have a batch or batch x time outer shape.'
+      )
 
     has_time_dim = num_outer_dims == 2
     if not has_time_dim:
       # Add a time dimension to the inputs.
-      observation = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
-                                          observation)
-      step_type = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1),
-                                        step_type)
+      observation = tf.nest.map_structure(
+          lambda t: tf.expand_dims(t, 1), observation
+      )
+      step_type = tf.nest.map_structure(
+          lambda t: tf.expand_dims(t, 1), step_type
+      )
 
     states = tf.cast(tf.nest.flatten(observation)[0], tf.float32)
     batch_squash = utils.BatchSquash(2)  # Squash B, and T dims.
@@ -152,7 +165,8 @@ class ActorRnnNetwork(network.Network):
         states,
         reset_mask=reset_mask,
         initial_state=network_state,
-        training=training)
+        training=training,
+    )
 
     states = batch_squash.flatten(states)  # [B, T, ...] -> [B x T, ...]
 

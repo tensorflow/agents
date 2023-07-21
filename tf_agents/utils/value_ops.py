@@ -13,17 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods for computing advantages and target values.
-"""
+"""Methods for computing advantages and target values."""
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
-def discounted_return(rewards,
-                      discounts,
-                      final_value=None,
-                      time_major=True,
-                      provide_all_returns=True):
+def discounted_return(
+    rewards,
+    discounts,
+    final_value=None,
+    time_major=True,
+    provide_all_returns=True,
+):
   """Computes discounted return.
 
   ```
@@ -80,7 +81,9 @@ def discounted_return(rewards,
             fn=discounted_return_fn,
             elems=(rewards, discounts),
             reverse=True,
-            initializer=final_value))
+            initializer=final_value,
+        ),
+    )
 
     if not time_major:
       with tf.name_scope("to_batch_major_tensors"):
@@ -90,17 +93,15 @@ def discounted_return(rewards,
         fn=discounted_return_fn,
         elems=(rewards, discounts),
         initializer=final_value,
-        back_prop=False)
+        back_prop=False,
+    )
 
   return tf.stop_gradient(returns)
 
 
-def generalized_advantage_estimation(values,
-                                     final_value,
-                                     discounts,
-                                     rewards,
-                                     td_lambda=1.0,
-                                     time_major=True):
+def generalized_advantage_estimation(
+    values, final_value, discounts, rewards, td_lambda=1.0, time_major=True
+):
   """Computes generalized advantage estimation (GAE).
 
   For theory, see
@@ -121,8 +122,8 @@ def generalized_advantage_estimation(values,
       following the behavior policy.
     td_lambda: A float32 scalar between [0, 1]. It's used for variance reduction
       in temporal difference.
-    time_major: A boolean indicating whether input tensors are time major.
-      False means input tensors have shape `[B, T]`.
+    time_major: A boolean indicating whether input tensors are time major. False
+      means input tensors have shape `[B, T]`.
 
   Returns:
     A tensor with shape `[T, B]` representing advantages. Shape is `[B, T]` when
@@ -136,9 +137,9 @@ def generalized_advantage_estimation(values,
       values = tf.transpose(values)
 
   with tf.name_scope("gae"):
-
     next_values = tf.concat(
-        [values[1:], tf.expand_dims(final_value, 0)], axis=0)
+        [values[1:], tf.expand_dims(final_value, 0)], axis=0
+    )
     delta = rewards + discounts * next_values - values
     weighted_discounts = discounts * td_lambda
 
@@ -152,7 +153,9 @@ def generalized_advantage_estimation(values,
             fn=weighted_cumulative_td_fn,
             elems=(weighted_discounts, delta),
             initializer=tf.zeros_like(final_value),
-            reverse=True))
+            reverse=True,
+        ),
+    )
 
   if not time_major:
     with tf.name_scope("to_batch_major_tensors"):

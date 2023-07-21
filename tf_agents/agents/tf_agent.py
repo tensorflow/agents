@@ -25,7 +25,6 @@ from typing import Optional
 
 import six
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -141,7 +140,8 @@ class TFAgent(tf.Module):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       enable_summaries: bool = True,
-      train_step_counter: Optional[tf.Variable] = None):
+      train_step_counter: Optional[tf.Variable] = None,
+  ):
     """Meant to be called by subclass constructors.
 
     Args:
@@ -149,8 +149,8 @@ class TFAgent(tf.Module):
         Provided by the user.
       action_spec: A nest of BoundedTensorSpec representing the actions.
         Provided by the user.
-      policy: An instance of `tf_policy.TFPolicy` representing the
-        Agent's current policy.
+      policy: An instance of `tf_policy.TFPolicy` representing the Agent's
+        current policy.
       collect_policy: An instance of `tf_policy.TFPolicy` representing the
         Agent's current data collection policy (used to set `self.step_spec`).
       train_sequence_length: A python integer or `None`, signifying the number
@@ -188,7 +188,8 @@ class TFAgent(tf.Module):
     if not isinstance(time_step_spec, ts.TimeStep):
       raise TypeError(
           "The `time_step_spec` must be an instance of `TimeStep`, but is `{}`."
-          .format(type(time_step_spec)))
+          .format(type(time_step_spec))
+      )
 
     if num_outer_dims not in [1, 2]:
       raise ValueError("num_outer_dims must be in [1, 2].")
@@ -209,7 +210,8 @@ class TFAgent(tf.Module):
     self._collect_data_context = data_converter.DataContext(
         time_step_spec=self._time_step_spec,
         action_spec=self._action_spec,
-        info_spec=collect_policy.info_spec)
+        info_spec=collect_policy.info_spec,
+    )
     # Data context for data passed to train().  May be different if
     # training_data_spec is provided.
     if training_data_spec is not None:
@@ -217,37 +219,45 @@ class TFAgent(tf.Module):
       # training_data_spec can be anything; so build a data_context
       # via best-effort with fall-backs to the collect data spec.
       training_discount_spec = getattr(
-          training_data_spec, "discount", time_step_spec.discount)
+          training_data_spec, "discount", time_step_spec.discount
+      )
       training_observation_spec = getattr(
-          training_data_spec, "observation", time_step_spec.observation)
+          training_data_spec, "observation", time_step_spec.observation
+      )
       training_reward_spec = getattr(
-          training_data_spec, "reward", time_step_spec.reward)
+          training_data_spec, "reward", time_step_spec.reward
+      )
       training_step_type_spec = getattr(
-          training_data_spec, "step_type", time_step_spec.step_type)
+          training_data_spec, "step_type", time_step_spec.step_type
+      )
       training_policy_info_spec = getattr(
-          training_data_spec, "policy_info", collect_policy.info_spec)
-      training_action_spec = getattr(
-          training_data_spec, "action", action_spec)
+          training_data_spec, "policy_info", collect_policy.info_spec
+      )
+      training_action_spec = getattr(training_data_spec, "action", action_spec)
       self._data_context = data_converter.DataContext(
           time_step_spec=ts.TimeStep(
               discount=training_discount_spec,
               observation=training_observation_spec,
               reward=training_reward_spec,
-              step_type=training_step_type_spec),
+              step_type=training_step_type_spec,
+          ),
           action_spec=training_action_spec,
-          info_spec=training_policy_info_spec)
+          info_spec=training_policy_info_spec,
+      )
     else:
       self._data_context = data_converter.DataContext(
           time_step_spec=time_step_spec,
           action_spec=action_spec,
-          info_spec=collect_policy.info_spec)
+          info_spec=collect_policy.info_spec,
+      )
     if train_step_counter is None:
       train_step_counter = tf.compat.v1.train.get_or_create_global_step()
     self._train_step_counter = train_step_counter
     self._train_fn = common.function_in_tf1()(self._train)
     self._initialize_fn = common.function_in_tf1()(self._initialize)
     self._preprocess_sequence_fn = common.function_in_tf1()(
-        self._preprocess_sequence)
+        self._preprocess_sequence
+    )
     self._loss_fn = common.function_in_tf1()(self._loss)
 
   def initialize(self) -> Optional[tf.Operation]:
@@ -263,7 +273,8 @@ class TFAgent(tf.Module):
     if self._enable_functions and getattr(self, "_initialize_fn", None) is None:
       raise RuntimeError(
           "Cannot find _initialize_fn.  Did %s.__init__ call super?"
-          % type(self).__name__)
+          % type(self).__name__
+      )
     if self._enable_functions:
       self._initialize_fn()
       if not tf.executing_eagerly():
@@ -272,8 +283,9 @@ class TFAgent(tf.Module):
     else:
       return self._initialize()
 
-  def preprocess_sequence(self,
-                          experience: types.NestedTensor) -> types.NestedTensor:
+  def preprocess_sequence(
+      self, experience: types.NestedTensor
+  ) -> types.NestedTensor:
     """Defines preprocess_sequence function to be fed into replay buffers.
 
     This defines how we preprocess the collected data before training.
@@ -294,18 +306,20 @@ class TFAgent(tf.Module):
 
     return preprocessed_sequence
 
-  def train(self,
-            experience: types.NestedTensor,
-            weights: Optional[types.Tensor] = None,
-            **kwargs) -> LossInfo:
+  def train(
+      self,
+      experience: types.NestedTensor,
+      weights: Optional[types.Tensor] = None,
+      **kwargs
+  ) -> LossInfo:
     """Trains the agent.
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory`. The
         structure of `experience` must match that of `self.training_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
-        `time` must be equal to `self.train_step_length` if that
-        property is not `None`.
+        `time` must be equal to `self.train_step_length` if that property is not
+        `None`.
       weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
@@ -327,24 +341,29 @@ class TFAgent(tf.Module):
     if self._enable_functions and getattr(self, "_train_fn", None) is None:
       raise RuntimeError(
           "Cannot find _train_fn.  Did %s.__init__ call super?"
-          % type(self).__name__)
+          % type(self).__name__
+      )
 
     if self._enable_functions:
       loss_info = self._train_fn(
-          experience=experience, weights=weights, **kwargs)
+          experience=experience, weights=weights, **kwargs
+      )
     else:
       loss_info = self._train(experience=experience, weights=weights, **kwargs)
 
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
-          "loss_info is not a subclass of LossInfo: {}".format(loss_info))
+          "loss_info is not a subclass of LossInfo: {}".format(loss_info)
+      )
     return loss_info
 
-  def loss(self,
-           experience: types.NestedTensor,
-           weights: Optional[types.Tensor] = None,
-           training: bool = False,
-           **kwargs) -> LossInfo:
+  def loss(
+      self,
+      experience: types.NestedTensor,
+      weights: Optional[types.Tensor] = None,
+      training: bool = False,
+      **kwargs
+  ) -> LossInfo:
     """Gets loss from the agent.
 
     If the user calls this from _train, it must be in a `tf.GradientTape` scope
@@ -357,8 +376,8 @@ class TFAgent(tf.Module):
       experience: A batch of experience data in the form of a `Trajectory`. The
         structure of `experience` must match that of `self.training_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
-        `time` must be equal to `self.train_step_length` if that
-        property is not `None`.
+        `time` must be equal to `self.train_step_length` if that property is not
+        `None`.
       weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,
@@ -377,18 +396,22 @@ class TFAgent(tf.Module):
     if self._enable_functions and getattr(self, "_loss_fn", None) is None:
       raise RuntimeError(
           "Cannot find _loss_fn.  Did %s.__init__ call super?"
-          % type(self).__name__)
+          % type(self).__name__
+      )
 
     if self._enable_functions:
       loss_info = self._loss_fn(
-          experience=experience, weights=weights, training=training, **kwargs)
+          experience=experience, weights=weights, training=training, **kwargs
+      )
     else:
       loss_info = self._loss(
-          experience=experience, weights=weights, training=training, **kwargs)
+          experience=experience, weights=weights, training=training, **kwargs
+      )
 
     if not isinstance(loss_info, LossInfo):
       raise TypeError(
-          "loss_info is not a subclass of LossInfo: {}".format(loss_info))
+          "loss_info is not a subclass of LossInfo: {}".format(loss_info)
+      )
     return loss_info
 
   def _apply_loss(self, aggregated_losses, variables_to_train, tape, optimizer):
@@ -400,12 +423,14 @@ class TFAgent(tf.Module):
     grads_and_vars = list(zip(grads, variables_to_train))
 
     if self._gradient_clipping is not None:
-      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
-                                                       self._gradient_clipping)
+      grads_and_vars = eager_utils.clip_gradient_norms(
+          grads_and_vars, self._gradient_clipping
+      )
 
     if self.summarize_grads_and_vars:
-      eager_utils.add_variables_summaries(grads_and_vars,
-                                          self.train_step_counter)
+      eager_utils.add_variables_summaries(
+          grads_and_vars, self.train_step_counter
+      )
 
     optimizer.apply_gradients(grads_and_vars)
 
@@ -413,10 +438,11 @@ class TFAgent(tf.Module):
       dict_losses = {
           "loss": aggregated_losses.weighted,
           "reg_loss": aggregated_losses.regularization,
-          "total_loss": total_loss
+          "total_loss": total_loss,
       }
       common.summarize_scalar_dict(
-          dict_losses, step=self.train_step_counter, name_scope="Losses/")
+          dict_losses, step=self.train_step_counter, name_scope="Losses/"
+      )
 
   def post_process_policy(self) -> tf_policy.TFPolicy:
     """Post process policies after training.
@@ -539,7 +565,8 @@ class TFAgent(tf.Module):
     pass
 
   def _preprocess_sequence(
-      self, experience: types.NestedTensor) -> types.NestedTensor:
+      self, experience: types.NestedTensor
+  ) -> types.NestedTensor:
     """Defines preprocess_sequence function to be fed into replay buffers.
 
     This defines how we preprocess the collected data before training.
@@ -554,10 +581,13 @@ class TFAgent(tf.Module):
     """
     return experience
 
-  def _loss(self, experience: types.NestedTensor,
-            weights: types.Tensor,
-            training: bool,
-            **kwargs) -> Optional[LossInfo]:
+  def _loss(
+      self,
+      experience: types.NestedTensor,
+      weights: types.Tensor,
+      training: bool,
+      **kwargs
+  ) -> Optional[LossInfo]:
     """Computes loss.
 
     This method does not increment self.train_step_counter or upgrade gradients.
@@ -591,8 +621,9 @@ class TFAgent(tf.Module):
 
   # Subclasses must implement these methods.
   @abc.abstractmethod
-  def _train(self, experience: types.NestedTensor,
-             weights: types.Tensor) -> LossInfo:
+  def _train(
+      self, experience: types.NestedTensor, weights: types.Tensor
+  ) -> LossInfo:
     """Returns an op to train the agent.
 
     This method *must* increment self.train_step_counter exactly once.
@@ -602,8 +633,8 @@ class TFAgent(tf.Module):
       experience: A batch of experience data in the form of a `Trajectory`. The
         structure of `experience` must match that of `self.training_data_spec`.
         All tensors in `experience` must be shaped `[batch, time, ...]` where
-        `time` must be equal to `self.train_step_length` if that property is
-        not `None`.
+        `time` must be equal to `self.train_step_length` if that property is not
+        `None`.
       weights: (optional).  A `Tensor`, either `0-D` or shaped `[batch]`,
         containing weights to be used when calculating the total train loss.
         Weights are typically multiplied elementwise against the per-batch loss,

@@ -18,6 +18,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 from typing import Any, Callable, Optional, Sequence, Tuple
 
 import numpy as np
@@ -26,7 +27,6 @@ from tf_agents.environments import py_environment
 from tf_agents.policies import py_policy
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
-
 from tf_agents.typing import types
 
 
@@ -38,12 +38,14 @@ class PyDriver(driver.Driver):
       env: py_environment.PyEnvironment,
       policy: py_policy.PyPolicy,
       observers: Sequence[Callable[[trajectory.Trajectory], Any]],
-      transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
-                                                       Any]]] = None,
+      transition_observers: Optional[
+          Sequence[Callable[[trajectory.Transition], Any]]
+      ] = None,
       info_observers: Optional[Sequence[Callable[[Any], Any]]] = None,
       max_steps: Optional[types.Int] = None,
       max_episodes: Optional[types.Int] = None,
-      end_episode_on_boundary: bool = True):
+      end_episode_on_boundary: bool = True,
+  ):
     """A driver that runs a python policy in a python environment.
 
     **Note** about bias when using batched environments with `max_episodes`:
@@ -59,8 +61,8 @@ class PyDriver(driver.Driver):
     Args:
       env: A py_environment.Base environment.
       policy: A py_policy.PyPolicy policy.
-      observers: A list of observers that are notified after every step
-        in the environment. Each observer is a callable(trajectory.Trajectory).
+      observers: A list of observers that are notified after every step in the
+        environment. Each observer is a callable(trajectory.Trajectory).
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as
@@ -74,8 +76,7 @@ class PyDriver(driver.Driver):
         batched or parallel environments, this is the maximum total number of
         episodes summed across all environments. At least one of max_steps or
         max_episodes must be provided. If both are set, run() terminates when at
-        least one of the conditions is
-        satisfied.  Default: 0.
+        least one of the conditions is satisfied.  Default: 0.
       end_episode_on_boundary: This parameter should be False when using
         transition observers and be True when using trajectory observers.
 
@@ -86,18 +87,18 @@ class PyDriver(driver.Driver):
     max_episodes = max_episodes or 0
     if max_steps < 1 and max_episodes < 1:
       raise ValueError(
-          'Either `max_steps` or `max_episodes` should be greater than 0.')
+          'Either `max_steps` or `max_episodes` should be greater than 0.'
+      )
 
-    super(PyDriver, self).__init__(env, policy, observers, transition_observers,
-                                   info_observers)
+    super(PyDriver, self).__init__(
+        env, policy, observers, transition_observers, info_observers
+    )
     self._max_steps = max_steps or np.inf
     self._max_episodes = max_episodes or np.inf
     self._end_episode_on_boundary = end_episode_on_boundary
 
   def run(  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
-      self,
-      time_step: ts.TimeStep,
-      policy_state: types.NestedArray = ()
+      self, time_step: ts.TimeStep, policy_state: types.NestedArray = ()
   ) -> Tuple[ts.TimeStep, types.NestedArray]:
     """Run policy in environment given initial time_step and policy_state.
 
@@ -123,7 +124,8 @@ class PyDriver(driver.Driver):
       # consume it w/ the observer.
       action_step_with_previous_state = action_step._replace(state=policy_state)
       traj = trajectory.from_transition(
-          time_step, action_step_with_previous_state, next_time_step)
+          time_step, action_step_with_previous_state, next_time_step
+      )
       for observer in self._transition_observers:
         observer((time_step, action_step_with_previous_state, next_time_step))
       for observer in self.observers:

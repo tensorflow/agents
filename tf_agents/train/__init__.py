@@ -18,6 +18,5 @@
 from tf_agents.train import actor
 from tf_agents.train import learner
 from tf_agents.train import triggers
-
 from tf_agents.train.actor import Actor
 from tf_agents.train.learner import Learner

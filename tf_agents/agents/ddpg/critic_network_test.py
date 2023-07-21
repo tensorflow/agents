@@ -18,7 +18,6 @@
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.ddpg import critic_network
 from tf_agents.specs import tensor_spec
 
@@ -48,7 +47,8 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     obs_spec = tensor_spec.TensorSpec([3, 3, num_obs_dims], tf.float32)
     action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
     critic_net = critic_network.CriticNetwork(
-        (obs_spec, action_spec), observation_conv_layer_params=[(16, 3, 2)])
+        (obs_spec, action_spec), observation_conv_layer_params=[(16, 3, 2)]
+    )
 
     obs = tf.random.uniform([batch_size, 3, 3, num_obs_dims])
     actions = tf.random.uniform([batch_size, num_actions_dims])
@@ -64,7 +64,8 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     obs_spec = tensor_spec.TensorSpec([3, num_obs_dims], tf.float32)
     action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
     critic_net = critic_network.CriticNetwork(
-        (obs_spec, action_spec), observation_fc_layer_params=[20, 10])
+        (obs_spec, action_spec), observation_fc_layer_params=[20, 10]
+    )
 
     obs = tf.random.uniform([batch_size, num_obs_dims])
     actions = tf.random.uniform([batch_size, num_actions_dims])
@@ -81,7 +82,8 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
     action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
     critic_net = critic_network.CriticNetwork(
-        (obs_spec, action_spec), action_fc_layer_params=[20])
+        (obs_spec, action_spec), action_fc_layer_params=[20]
+    )
 
     obs = tf.random.uniform([batch_size, num_obs_dims])
     actions = tf.random.uniform([batch_size, num_actions_dims])
@@ -97,7 +99,8 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
     action_spec = tensor_spec.TensorSpec([num_actions_dims], tf.float32)
     critic_net = critic_network.CriticNetwork(
-        (obs_spec, action_spec), joint_fc_layer_params=[20])
+        (obs_spec, action_spec), joint_fc_layer_params=[20]
+    )
 
     obs = tf.random.uniform([batch_size, num_obs_dims])
     actions = tf.random.uniform([batch_size, num_actions_dims])
@@ -106,8 +109,12 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     self.assertLen(critic_net.trainable_variables, 4)
 
   @parameterized.named_parameters(
-      ('TrainingTrue', True,),
-      ('TrainingFalse', False))
+      (
+          'TrainingTrue',
+          True,
+      ),
+      ('TrainingFalse', False),
+  )
   def testDropoutJointFCLayers(self, training):
     batch_size = 3
     num_obs_dims = 5
@@ -118,7 +125,8 @@ class CriticNetworkTest(tf.test.TestCase, parameterized.TestCase):
     critic_net = critic_network.CriticNetwork(
         (obs_spec, action_spec),
         joint_fc_layer_params=[20],
-        joint_dropout_layer_params=[0.5])
+        joint_dropout_layer_params=[0.5],
+    )
     obs = tf.random.uniform([batch_size, num_obs_dims])
     actions = tf.random.uniform([batch_size, num_actions_dims])
     q_values1, _ = critic_net((obs, actions), training=training)

@@ -33,7 +33,8 @@ from tf_agents.typing import types
 
 @gin.configurable
 class NeuralFalconAgent(
-    greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
+    greedy_reward_prediction_agent.GreedyRewardPredictionAgent
+):
   """A neural network based agent implementing the Falcon sampling strategy.
 
   This agent receives a neural network that it trains to predict rewards. The
@@ -55,7 +56,8 @@ class NeuralFalconAgent(
           types.FloatOrReturningFloat
       ] = None,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       accepts_per_arm_features: bool = False,
       constraints: Iterable[constr.BaseConstraint] = (),
       # Params for training.
@@ -69,7 +71,8 @@ class NeuralFalconAgent(
       train_step_counter: Optional[tf.Variable] = None,
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Neural Falcon Agent.
 
     Args:
@@ -149,7 +152,8 @@ class NeuralFalconAgent(
         reward_network=reward_network,
         optimizer=optimizer,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=accepts_per_arm_features,
         constraints=constraints,
         error_loss_fn=error_loss_fn,
@@ -162,7 +166,8 @@ class NeuralFalconAgent(
         num_samples_list=num_samples_list,
         laplacian_smoothing_weight=laplacian_smoothing_weight,
         laplacian_matrix=laplacian_matrix,
-        name=name)
+        name=name,
+    )
     self._policy = falcon_reward_prediction_policy.FalconRewardPredictionPolicy(
         time_step_spec,
         action_spec,

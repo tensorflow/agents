@@ -33,7 +33,9 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
   def test_empty_layers(self):
     input_spec = tensor_spec.TensorSpec((2, 3), tf.float32)
-    network = encoding_network.EncodingNetwork(input_spec,)
+    network = encoding_network.EncodingNetwork(
+        input_spec,
+    )
 
     # Only one layer to flatten input.
     self.assertLen(network.layers, 1)
@@ -124,7 +126,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
           conv_layer_params=((16, 2, 1), (15, 2, 1)),
           fc_layer_params=(10, 5, 2),
           activation_fn=tf.keras.activations.tanh,
-          conv_type='3d')
+          conv_type='3d',
+      )
 
   def test_conv_dilation_params(self):
     with self.subTest(name='no dilations'):
@@ -171,19 +174,20 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
         network = encoding_network.EncodingNetwork(
             input_spec,
             conv_layer_params=((16, 2, 1, 2, 4), (15, 2, 1)),
-            )
+        )
       with self.assertRaises(ValueError):
         network = encoding_network.EncodingNetwork(
             input_spec,
             conv_layer_params=((16, 2, 1), (15, 2)),
-            )
+        )
 
   def test_preprocessing_layer_no_combiner(self):
     network = encoding_network.EncodingNetwork(
         input_tensor_spec=tensor_spec.TensorSpec([5], tf.float32),
         preprocessing_layers=tf.keras.layers.Lambda(lambda x: x),
         preprocessing_combiner=None,
-        fc_layer_params=(2,))
+        fc_layer_params=(2,),
+    )
     out, _ = network(tf.ones((3, 5)))
     self.assertAllEqual(out.shape.as_list(), [3, 2])
 
@@ -192,27 +196,29 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
       encoding_network.EncodingNetwork(
           input_tensor_spec=[
               tensor_spec.TensorSpec([5], tf.float32),
-              tensor_spec.TensorSpec([5], tf.float32)
+              tensor_spec.TensorSpec([5], tf.float32),
           ],
           preprocessing_layers=[
               tf.keras.layers.Lambda(lambda x: x),
-              tf.keras.layers.Lambda(lambda x: x)
+              tf.keras.layers.Lambda(lambda x: x),
           ],
           preprocessing_combiner=None,
-          fc_layer_params=(2,))
+          fc_layer_params=(2,),
+      )
 
   def test_error_raised_if_missing_preprocessing_layer(self):
     with self.assertRaisesRegex(ValueError, 'sequence length'):
       encoding_network.EncodingNetwork(
           input_tensor_spec=[
               tensor_spec.TensorSpec([5], tf.float32),
-              tensor_spec.TensorSpec([5], tf.float32)
+              tensor_spec.TensorSpec([5], tf.float32),
           ],
           preprocessing_layers=[
               tf.keras.layers.Lambda(lambda x: x),
           ],
           preprocessing_combiner=None,
-          fc_layer_params=(2,))
+          fc_layer_params=(2,),
+      )
 
   def test_error_raised_extra_preprocessing_layer(self):
     with self.assertRaisesRegex(ValueError, 'sequence length'):
@@ -220,26 +226,25 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
           input_tensor_spec=tensor_spec.TensorSpec([5], tf.float32),
           preprocessing_layers=[
               tf.keras.layers.Lambda(lambda x: x),
-              tf.keras.layers.Lambda(lambda x: x)
+              tf.keras.layers.Lambda(lambda x: x),
           ],
           preprocessing_combiner=None,
-          fc_layer_params=(2,))
+          fc_layer_params=(2,),
+      )
 
   def test_dict_spec_and_pre_processing(self):
     input_spec = {
         'a': tensor_spec.TensorSpec((32, 32, 3), tf.float32),
-        'b': tensor_spec.TensorSpec((32, 32, 3), tf.float32)
+        'b': tensor_spec.TensorSpec((32, 32, 3), tf.float32),
     }
     network = encoding_network.EncodingNetwork(
         input_spec,
         preprocessing_layers={
-            'a':
-                tf.keras.Sequential([
-                    tf.keras.layers.Dense(4, activation='tanh'),
-                    tf.keras.layers.Flatten()
-                ]),
-            'b':
-                tf.keras.layers.Flatten()
+            'a': tf.keras.Sequential([
+                tf.keras.layers.Dense(4, activation='tanh'),
+                tf.keras.layers.Flatten(),
+            ]),
+            'b': tf.keras.layers.Flatten(),
         },
         fc_layer_params=(),
         preprocessing_combiner=tf.keras.layers.Concatenate(axis=-1),
@@ -254,18 +259,16 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
   def test_layers_buildable(self):
     input_spec = {
         'a': tensor_spec.TensorSpec((32, 32, 3), tf.float32),
-        'b': tensor_spec.TensorSpec((32, 32, 3), tf.float32)
+        'b': tensor_spec.TensorSpec((32, 32, 3), tf.float32),
     }
     network = encoding_network.EncodingNetwork(
         input_spec,
         preprocessing_layers={
-            'a':
-                tf.keras.Sequential([
-                    tf.keras.layers.Dense(4, activation='tanh'),
-                    tf.keras.layers.Flatten()
-                ]),
-            'b':
-                tf.keras.layers.Flatten()
+            'a': tf.keras.Sequential([
+                tf.keras.layers.Dense(4, activation='tanh'),
+                tf.keras.layers.Flatten(),
+            ]),
+            'b': tf.keras.layers.Flatten(),
         },
         fc_layer_params=(),
         preprocessing_combiner=tf.keras.layers.Concatenate(axis=-1),
@@ -282,7 +285,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     dense_features = tf.compat.v1.keras.layers.DenseFeatures([column])
     with self.assertRaisesRegex(ValueError, 'DenseFeatures'):
       encoding_network.EncodingNetwork(
-          input_spec, preprocessing_combiner=dense_features)
+          input_spec, preprocessing_combiner=dense_features
+      )
 
   def testNumericKerasInput(self):
     key = 'feature_key'
@@ -294,7 +298,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     input_spec = {key: tensor_spec.TensorSpec([state_dims], tf.int32)}
 
     network = encoding_network.EncodingNetwork(
-        input_spec, preprocessing_combiner=tf.keras.Sequential([keras_input]))
+        input_spec, preprocessing_combiner=tf.keras.Sequential([keras_input])
+    )
 
     output, _ = network(state)
     self.assertEqual(input_shape, output.shape)
@@ -308,7 +313,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
     keras_input = tf.keras.Input(shape=(1,), name=key, dtype=tf.dtypes.int32)
     id_input = keras_preprocessing.IntegerLookup(
-        vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot')
+        vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot'
+    )
 
     state_input = [3, 2, 2, 4, 3]
     state = {key: tf.expand_dims(state_input, -1)}
@@ -316,7 +322,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
 
     network = encoding_network.EncodingNetwork(
         input_spec,
-        preprocessing_combiner=tf.keras.Sequential([keras_input, id_input]))
+        preprocessing_combiner=tf.keras.Sequential([keras_input, id_input]),
+    )
 
     output, _ = network(state)
     expected_shape = (len(state_input), len(vocab_list))
@@ -335,10 +342,11 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     indicator_key = 'indicator_key'
     vocab_list = [2, 3, 4]
     inputs[indicator_key] = tf.keras.Input(
-        shape=(1,), dtype=tf.dtypes.int32, name=indicator_key)
+        shape=(1,), dtype=tf.dtypes.int32, name=indicator_key
+    )
     features[indicator_key] = keras_preprocessing.IntegerLookup(
-        vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot')(
-            inputs[indicator_key])
+        vocabulary=vocab_list, num_oov_indices=0, output_mode='multi_hot'
+    )(inputs[indicator_key])
     state_input = [3, 2, 2, 4, 3]
     tensors[indicator_key] = tf.expand_dims(state_input, -1)
     specs[indicator_key] = tensor_spec.TensorSpec([1], tf.int32)
@@ -348,13 +356,14 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     embedding_dim = 3
     vocab_list = [2, 3, 4]
     inputs[embedding_key] = tf.keras.Input(
-        shape=(1,), dtype=tf.dtypes.int32, name=embedding_key)
+        shape=(1,), dtype=tf.dtypes.int32, name=embedding_key
+    )
     id_input = keras_preprocessing.IntegerLookup(
-        vocabulary=vocab_list, num_oov_indices=0)(
-            inputs[embedding_key])
+        vocabulary=vocab_list, num_oov_indices=0
+    )(inputs[embedding_key])
     embedding_input = tf.keras.layers.Embedding(
-        input_dim=len(vocab_list),
-        output_dim=embedding_dim)(id_input)
+        input_dim=len(vocab_list), output_dim=embedding_dim
+    )(id_input)
     features[embedding_key] = tf.reduce_sum(embedding_input, axis=-2)
     state_input = [3, 2, 2, 4, 3]
     tensors[embedding_key] = tf.expand_dims(state_input, -1)
@@ -366,7 +375,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     state_dims = 3
     input_shape = (batch_size, state_dims)
     inputs[numeric_key] = tf.keras.Input(
-        shape=[state_dims], dtype=tf.float32, name=numeric_key)
+        shape=[state_dims], dtype=tf.float32, name=numeric_key
+    )
     features[numeric_key] = inputs[numeric_key]
     tensors[numeric_key] = tf.ones(input_shape, tf.float32)
     specs[numeric_key] = tensor_spec.TensorSpec([state_dims], tf.float32)
@@ -376,22 +386,26 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     # TODO(b/170645185): Replace Model with FunctionalPreprocessingStage.
     network = encoding_network.EncodingNetwork(
         specs,
-        preprocessing_combiner=tf.keras.Model(inputs=inputs, outputs=features))
+        preprocessing_combiner=tf.keras.Model(inputs=inputs, outputs=features),
+    )
     output, _ = network(tensors)
     expected_shape = (batch_size, expected_dim)
     self.assertEqual(expected_shape, output.shape)
 
   @parameterized.named_parameters(
-      ('TrainingTrue', True,),
-      ('TrainingFalse', False))
+      (
+          'TrainingTrue',
+          True,
+      ),
+      ('TrainingFalse', False),
+  )
   def testDropoutFCLayers(self, training):
     batch_size = 3
     num_obs_dims = 5
     obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
     network = encoding_network.EncodingNetwork(
-        obs_spec,
-        fc_layer_params=[20],
-        dropout_layer_params=[0.5])
+        obs_spec, fc_layer_params=[20], dropout_layer_params=[0.5]
+    )
     obs = tf.random.uniform([batch_size, num_obs_dims])
     output1, _ = network(obs, training=training)
     output2, _ = network(obs, training=training)
@@ -407,9 +421,8 @@ class EncodingNetworkTest(test_utils.TestCase, parameterized.TestCase):
     num_obs_dims = 5
     obs_spec = tensor_spec.TensorSpec([num_obs_dims], tf.float32)
     network = encoding_network.EncodingNetwork(
-        obs_spec,
-        fc_layer_params=[20],
-        weight_decay_params=[0.5])
+        obs_spec, fc_layer_params=[20], weight_decay_params=[0.5]
+    )
     obs = tf.random.uniform([batch_size, num_obs_dims])
     network(obs)
     self.evaluate(tf.compat.v1.global_variables_initializer())

@@ -53,8 +53,9 @@ class MaskedCartPoleEnv(cartpole.CartPoleEnv):
     return self._mask_observation(observation)
 
   def step(self, action):
-    observation, reward, done, info = super(MaskedCartPoleEnv,
-                                            self).step(action)
+    observation, reward, done, info = super(MaskedCartPoleEnv, self).step(
+        action
+    )
     # Get rid of velocity components at index 1, and 3.
     return self._mask_observation(observation), reward, done, info
 

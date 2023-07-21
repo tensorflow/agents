@@ -40,7 +40,8 @@ class FrameStack4(gym.Wrapper):
     space = self._env.observation_space
     shape = space.shape[0:2] + (FrameStack4.STACK_SIZE,)
     self.observation_space = gym.spaces.Box(
-        low=0, high=255, shape=shape, dtype=np.uint8)
+        low=0, high=255, shape=shape, dtype=np.uint8
+    )
 
   def __getattr__(self, name: Text) -> Any:
     """Forward all other calls to the base environment."""

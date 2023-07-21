@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents import specs
 from tf_agents.replay_buffers import replay_buffer
 
@@ -38,8 +37,8 @@ class ReplayBufferInitTest(tf.test.TestCase):
         specs.TensorSpec([3], tf.float32, 'action'),
         (
             specs.TensorSpec([5], tf.float32, 'lidar'),
-            specs.TensorSpec([3, 2], tf.float32, 'camera')
-        )
+            specs.TensorSpec([3, 2], tf.float32, 'camera'),
+        ),
     )
 
   def testReplayBufferInit(self):

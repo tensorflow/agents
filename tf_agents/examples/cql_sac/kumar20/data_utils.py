@@ -18,7 +18,6 @@ import functools
 from typing import Any, Callable, MutableSequence, Optional, Text, Tuple
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.typing import types
@@ -28,16 +27,20 @@ from tf_agents.utils import example_encoding_dataset
 DecoderFnType = Callable[[types.Tensor], types.NestedTensor]
 
 
-def updated_sample(sample: Any, reward_shift: float,
-                   action_clipping: Optional[Tuple[float, float]],
-                   use_trajectories: bool):
+def updated_sample(
+    sample: Any,
+    reward_shift: float,
+    action_clipping: Optional[Tuple[float, float]],
+    use_trajectories: bool,
+):
   """Create a sample with reward_shift and action_clipping."""
 
   def _clip_actions(actions):
     return tf.clip_by_value(
         actions,
         clip_value_min=action_clipping[0],
-        clip_value_max=action_clipping[1])
+        clip_value_max=action_clipping[1],
+    )
 
   if use_trajectories:
     # Update trajectory.
@@ -45,7 +48,8 @@ def updated_sample(sample: Any, reward_shift: float,
     if action_clipping:
       return sample._replace(
           action=tf.nest.map_structure(_clip_actions, sample.action),
-          reward=shifted_reward)
+          reward=shifted_reward,
+      )
     else:
       return sample._replace(reward=shifted_reward)
   else:
@@ -55,15 +59,18 @@ def updated_sample(sample: Any, reward_shift: float,
         step_type=next_time_step.step_type,
         reward=next_time_step.reward + reward_shift,
         discount=next_time_step.discount,
-        observation=next_time_step.observation)
+        observation=next_time_step.observation,
+    )
     action_step = sample.action_step
     if action_clipping:
       action_step = action_step._replace(
-          action=tf.nest.map_structure(_clip_actions, action_step.action))
+          action=tf.nest.map_structure(_clip_actions, action_step.action)
+      )
     return trajectory.Transition(
         time_step=sample.time_step,
         action_step=action_step,
-        next_time_step=next_time_step)
+        next_time_step=next_time_step,
+    )
 
 
 def create_single_tf_record_dataset(
@@ -106,12 +113,14 @@ def create_single_tf_record_dataset(
 
   def _sample_to_experience(sample):
     dummy_info = ()
-    return updated_sample(sample, reward_shift, action_clipping,
-                          use_trajectories), dummy_info
+    return (
+        updated_sample(sample, reward_shift, action_clipping, use_trajectories),
+        dummy_info,
+    )
 
   dataset = dataset.map(
-      _sample_to_experience,
-      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+      _sample_to_experience, num_parallel_calls=tf.data.experimental.AUTOTUNE
+  )
 
   dataset = dataset.shuffle(shuffle_buffer_size)
   dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -189,7 +198,7 @@ def create_tf_record_dataset(
           decoder=decoder,
           reward_shift=reward_shift,
           action_clipping=action_clipping,
-          use_trajectories=use_trajectories
+          use_trajectories=use_trajectories,
       ),
       cycle_length=cycle_length,
       block_length=block_length,
@@ -199,7 +208,9 @@ def create_tf_record_dataset(
 
   use_tpu = isinstance(
       strategy,
-      (tf.distribute.experimental.TPUStrategy, tf.distribute.TPUStrategy))
-  example_ds = example_ds.batch(
-      batch_size, drop_remainder=use_tpu).prefetch(num_prefetch)
+      (tf.distribute.experimental.TPUStrategy, tf.distribute.TPUStrategy),
+  )
+  example_ds = example_ds.batch(batch_size, drop_remainder=use_tpu).prefetch(
+      num_prefetch
+  )
   return example_ds

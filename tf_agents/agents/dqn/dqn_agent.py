@@ -31,7 +31,6 @@ from typing import Optional, Text, cast
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.networks import network
@@ -48,8 +47,9 @@ from tf_agents.utils import eager_utils
 from tf_agents.utils import nest_utils
 
 
-class DqnLossInfo(collections.namedtuple('DqnLossInfo',
-                                         ('td_loss', 'td_error'))):
+class DqnLossInfo(
+    collections.namedtuple('DqnLossInfo', ('td_loss', 'td_error'))
+):
   """DqnLossInfo is stored in the `extras` field of the LossInfo instance.
 
   Both `td_loss` and `td_error` have a validity mask applied to ensure that
@@ -68,12 +68,13 @@ class DqnLossInfo(collections.namedtuple('DqnLossInfo',
     Note that, unlike `td_loss`, `td_error` may contain a time dimension when
     training with RNN mode.  For `td_loss`, this axis is averaged out.
   """
+
   pass
 
 
-def compute_td_targets(next_q_values: types.Tensor,
-                       rewards: types.Tensor,
-                       discounts: types.Tensor) -> types.Tensor:
+def compute_td_targets(
+    next_q_values: types.Tensor, rewards: types.Tensor, discounts: types.Tensor
+) -> types.Tensor:
   return tf.stop_gradient(rewards + discounts * next_q_values)
 
 
@@ -99,7 +100,8 @@ class DqnAgent(tf_agent.TFAgent):
       q_network: network.Network,
       optimizer: types.Optimizer,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       epsilon_greedy: Optional[types.FloatOrReturningFloat] = 0.1,
       n_step_update: int = 1,
       boltzmann_temperature: Optional[types.FloatOrReturningFloat] = None,
@@ -118,7 +120,8 @@ class DqnAgent(tf_agent.TFAgent):
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
       training_data_spec: Optional[types.NestedTensorSpec] = None,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a DQN Agent.
 
     Args:
@@ -131,22 +134,19 @@ class DqnAgent(tf_agent.TFAgent):
       observation_and_action_constraint_splitter: A function used to process
         observations with action constraints. These constraints can indicate,
         for example, a mask of valid/invalid actions for a given state of the
-        environment.
-        The function takes in a full observation and returns a tuple consisting
-        of 1) the part of the observation intended as input to the network and
-        2) the constraint. An example
-        `observation_and_action_constraint_splitter` could be as simple as:
-        ```
-        def observation_and_action_constraint_splitter(observation):
-          return observation['network_input'], observation['constraint']
-        ```
-        *Note*: when using `observation_and_action_constraint_splitter`, make
-        sure the provided `q_network` is compatible with the network-specific
-        half of the output of the `observation_and_action_constraint_splitter`.
-        In particular, `observation_and_action_constraint_splitter` will be
-        called on the observation before passing to the network.
-        If `observation_and_action_constraint_splitter` is None, action
-        constraints are not applied.
+        environment. The function takes in a full observation and returns a
+        tuple consisting of 1) the part of the observation intended as input to
+        the network and 2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as: ```
+        def observation_and_action_constraint_splitter(observation): return
+        observation['network_input'], observation['constraint'] ``` *Note*: when
+        using `observation_and_action_constraint_splitter`, make sure the
+        provided `q_network` is compatible with the network-specific half of the
+        output of the `observation_and_action_constraint_splitter`. In
+        particular, `observation_and_action_constraint_splitter` will be called
+        on the observation before passing to the network. If
+        `observation_and_action_constraint_splitter` is None, action constraints
+        are not applied.
       epsilon_greedy: probability of choosing a random action in the default
         epsilon-greedy collect policy (used only if a wrapper is not provided to
         the collect_policy method). Only one of epsilon_greedy and
@@ -162,34 +162,24 @@ class DqnAgent(tf_agent.TFAgent):
         probability of choosing the best action. Only one of epsilon_greedy and
         boltzmann_temperature should be provided.
       emit_log_probability: Whether policies emit log probabilities or not.
-      target_q_network: (Optional.)  A `tf_agents.network.Network`
-        to be used as the target network during Q learning.  Every
-        `target_update_period` train steps, the weights from
-        `q_network` are copied (possibly with smoothing via
-        `target_update_tau`) to `target_q_network`.
-
-        If `target_q_network` is not provided, it is created by
-        making a copy of `q_network`, which initializes a new
-        network with the same structure and its own layers and weights.
-
-        Network copying is performed via the `Network.copy` superclass method,
-        and may inadvertently lead to the resulting network to share weights
-        with the original.  This can happen if, for example, the original
-        network accepted a pre-built Keras layer in its `__init__`, or
-        accepted a Keras layer that wasn't built, but neglected to create
-        a new copy.
-
-        In these cases, it is up to you to provide a target Network having
-        weights that are not shared with the original `q_network`.
-        If you provide a `target_q_network` that shares any
-        weights with `q_network`, a warning will be logged but
-        no exception is thrown.
-
-        Note; shallow copies of Keras layers may be built via the code:
-
-        ```python
-        new_layer = type(layer).from_config(layer.get_config())
-        ```
+      target_q_network: (Optional.)  A `tf_agents.network.Network` to be used as
+        the target network during Q learning.  Every `target_update_period`
+        train steps, the weights from `q_network` are copied (possibly with
+        smoothing via `target_update_tau`) to `target_q_network`.  If
+        `target_q_network` is not provided, it is created by making a copy of
+        `q_network`, which initializes a new network with the same structure and
+        its own layers and weights.  Network copying is performed via the
+        `Network.copy` superclass method, and may inadvertently lead to the
+        resulting network to share weights with the original.  This can happen
+        if, for example, the original network accepted a pre-built Keras layer
+        in its `__init__`, or accepted a Keras layer that wasn't built, but
+        neglected to create a new copy.  In these cases, it is up to you to
+        provide a target Network having weights that are not shared with the
+        original `q_network`. If you provide a `target_q_network` that shares
+        any weights with `q_network`, a warning will be logged but no exception
+        is thrown.  Note; shallow copies of Keras layers may be built via the
+        code ```python new_layer =
+        type(layer).from_config(layer.get_config())```
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -207,8 +197,8 @@ class DqnAgent(tf_agent.TFAgent):
       training_data_spec: A nest of TensorSpec specifying the structure of data
         the train() function expects. If None, defaults to the trajectory_spec
         of the collect_policy.
-      name: The name of this agent. All variables in this module will fall
-        under that name. Defaults to the class name.
+      name: The name of this agent. All variables in this module will fall under
+        that name. Defaults to the class name.
 
     Raises:
       ValueError: If `action_spec` contains more than one action or action
@@ -227,21 +217,28 @@ class DqnAgent(tf_agent.TFAgent):
       raise ValueError(
           'Configured both epsilon_greedy value {} and temperature {}, '
           'however only one of them can be used for exploration.'.format(
-              epsilon_greedy, boltzmann_temperature))
+              epsilon_greedy, boltzmann_temperature
+          )
+      )
 
     self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
+        observation_and_action_constraint_splitter
+    )
     self._q_network = q_network
     net_observation_spec = time_step_spec.observation
     if observation_and_action_constraint_splitter:
       net_observation_spec, _ = observation_and_action_constraint_splitter(
-          net_observation_spec)
+          net_observation_spec
+      )
     q_network.create_variables(net_observation_spec)
     if target_q_network:
       target_q_network.create_variables(net_observation_spec)
     self._target_q_network = common.maybe_copy_target_network_with_checks(
-        self._q_network, target_q_network, input_spec=net_observation_spec,
-        name='TargetQNetwork')
+        self._q_network,
+        target_q_network,
+        input_spec=net_observation_spec,
+        name='TargetQNetwork',
+    )
 
     self._check_network_output(self._q_network, 'q_network')
     self._check_network_output(self._target_q_network, 'target_q_network')
@@ -251,24 +248,28 @@ class DqnAgent(tf_agent.TFAgent):
     self._boltzmann_temperature = boltzmann_temperature
     self._optimizer = optimizer
     self._td_errors_loss_fn = (
-        td_errors_loss_fn or common.element_wise_huber_loss)
+        td_errors_loss_fn or common.element_wise_huber_loss
+    )
     self._gamma = gamma
     self._reward_scale_factor = reward_scale_factor
     self._gradient_clipping = gradient_clipping
     self._update_target = self._get_target_updater(
-        target_update_tau, target_update_period)
+        target_update_tau, target_update_period
+    )
 
-    policy, collect_policy = self._setup_policy(time_step_spec, action_spec,
-                                                boltzmann_temperature,
-                                                emit_log_probability)
+    policy, collect_policy = self._setup_policy(
+        time_step_spec, action_spec, boltzmann_temperature, emit_log_probability
+    )
 
     if q_network.state_spec and n_step_update != 1:
       raise NotImplementedError(
           'DqnAgent does not currently support n-step updates with stateful '
-          'networks (i.e., RNNs), but n_step_update = {}'.format(n_step_update))
+          'networks (i.e., RNNs), but n_step_update = {}'.format(n_step_update)
+      )
 
     train_sequence_length = (
-        n_step_update + 1 if not q_network.state_spec else None)
+        n_step_update + 1 if not q_network.state_spec else None
+    )
 
     super(DqnAgent, self).__init__(
         time_step_spec,
@@ -286,13 +287,15 @@ class DqnAgent(tf_agent.TFAgent):
       # AsNStepTransition does not support emitting [B, T, ...] tensors,
       # which we need for DQN-RNN.
       self._as_transition = data_converter.AsTransition(
-          self.data_context, squeeze_time_dim=False)
+          self.data_context, squeeze_time_dim=False
+      )
     else:
       # This reduces the n-step return and removes the extra time dimension,
       # allowing the rest of the computations to be independent of the
       # n-step parameter.
       self._as_transition = data_converter.AsNStepTransition(
-          self.data_context, gamma=gamma, n=n_step_update)
+          self.data_context, gamma=gamma, n=n_step_update
+      )
 
   def _check_action_spec(self, action_spec):
     flat_action_spec = tf.nest.flatten(action_spec)
@@ -301,7 +304,8 @@ class DqnAgent(tf_agent.TFAgent):
     if len(flat_action_spec) > 1 or flat_action_spec[0].shape.rank > 0:
       raise ValueError(
           'Only scalar actions are supported now, but action spec is: {}'
-          .format(action_spec))
+          .format(action_spec)
+      )
 
     spec = flat_action_spec[0]
 
@@ -309,7 +313,8 @@ class DqnAgent(tf_agent.TFAgent):
     # negative-valued actions.
     if spec.minimum != 0:
       raise ValueError(
-          'Action specs should have minimum of 0, but saw: {0}'.format(spec))
+          'Action specs should have minimum of 0, but saw: {0}'.format(spec)
+      )
 
     self._num_actions = spec.maximum - spec.minimum + 1
 
@@ -326,25 +331,34 @@ class DqnAgent(tf_agent.TFAgent):
     network_utils.check_single_floating_network_output(
         net.create_variables(),
         expected_output_shape=(self._num_actions,),
-        label=label)
+        label=label,
+    )
 
-  def _setup_policy(self, time_step_spec, action_spec,
-                    boltzmann_temperature, emit_log_probability):
-
+  def _setup_policy(
+      self,
+      time_step_spec,
+      action_spec,
+      boltzmann_temperature,
+      emit_log_probability,
+  ):
     policy = q_policy.QPolicy(
         time_step_spec,
         action_spec,
         q_network=self._q_network,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=(
-            self._observation_and_action_constraint_splitter))
+            self._observation_and_action_constraint_splitter
+        ),
+    )
 
     if boltzmann_temperature is not None:
       collect_policy = boltzmann_policy.BoltzmannPolicy(
-          policy, temperature=self._boltzmann_temperature)
+          policy, temperature=self._boltzmann_temperature
+      )
     else:
       collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-          policy, epsilon=self._epsilon_greedy)
+          policy, epsilon=self._epsilon_greedy
+      )
     policy = greedy_policy.GreedyPolicy(policy)
 
     # Create self._target_greedy_policy in order to compute target Q-values.
@@ -353,14 +367,17 @@ class DqnAgent(tf_agent.TFAgent):
         action_spec,
         q_network=self._target_q_network,
         observation_and_action_constraint_splitter=(
-            self._observation_and_action_constraint_splitter))
+            self._observation_and_action_constraint_splitter
+        ),
+    )
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
     return policy, collect_policy
 
   def _initialize(self):
     common.soft_variables_update(
-        self._q_network.variables, self._target_q_network.variables, tau=1.0)
+        self._q_network.variables, self._target_q_network.variables, tau=1.0
+    )
 
   def _get_target_updater(self, tau=1.0, period=1):
     """Performs a soft update of the target network parameters.
@@ -383,7 +400,8 @@ class DqnAgent(tf_agent.TFAgent):
             self._q_network.variables,
             self._target_q_network.variables,
             tau,
-            tau_non_trainable=1.0)
+            tau_non_trainable=1.0,
+        )
 
       return common.Periodically(update, period, 'periodic_update_targets')
 
@@ -396,7 +414,8 @@ class DqnAgent(tf_agent.TFAgent):
           gamma=self._gamma,
           reward_scale_factor=self._reward_scale_factor,
           weights=weights,
-          training=True)
+          training=True,
+      )
     tf.debugging.check_numerics(loss_info.loss, 'Loss is inf or nan')
     variables_to_train = self._q_network.trainable_weights
     non_trainable_weights = self._q_network.non_trainable_weights
@@ -405,16 +424,20 @@ class DqnAgent(tf_agent.TFAgent):
     # Tuple is used for py3, where zip is a generator producing values once.
     grads_and_vars = list(zip(grads, variables_to_train))
     if self._gradient_clipping is not None:
-      grads_and_vars = eager_utils.clip_gradient_norms(grads_and_vars,
-                                                       self._gradient_clipping)
+      grads_and_vars = eager_utils.clip_gradient_norms(
+          grads_and_vars, self._gradient_clipping
+      )
 
     if self._summarize_grads_and_vars:
-      grads_and_vars_with_non_trainable = (
-          grads_and_vars + [(None, v) for v in non_trainable_weights])
-      eager_utils.add_variables_summaries(grads_and_vars_with_non_trainable,
-                                          self.train_step_counter)
-      eager_utils.add_gradients_summaries(grads_and_vars,
-                                          self.train_step_counter)
+      grads_and_vars_with_non_trainable = grads_and_vars + [
+          (None, v) for v in non_trainable_weights
+      ]
+      eager_utils.add_variables_summaries(
+          grads_and_vars_with_non_trainable, self.train_step_counter
+      )
+      eager_utils.add_gradients_summaries(
+          grads_and_vars, self.train_step_counter
+      )
     self._optimizer.apply_gradients(grads_and_vars)
     self.train_step_counter.assign_add(1)
 
@@ -423,40 +446,40 @@ class DqnAgent(tf_agent.TFAgent):
     return loss_info
 
   def _td_loss(self, q_values, next_q_values, rewards, discounts):
-
     # This applies to any value of n_step_update and also in the RNN-DQN case.
     # In the RNN-DQN case, inputs and outputs contain a time dimension.
     td_targets = compute_td_targets(
-        next_q_values, rewards=rewards, discounts=discounts)
-    td_error = (td_targets - q_values)
+        next_q_values, rewards=rewards, discounts=discounts
+    )
+    td_error = td_targets - q_values
     td_loss = self._td_errors_loss_fn(td_targets, q_values)
 
     return td_loss, td_error
 
-  def _loss(self,
-            experience,
-            td_errors_loss_fn=None,
-            gamma=1.0,
-            reward_scale_factor=1.0,
-            weights=None,
-            training=False):
+  def _loss(
+      self,
+      experience,
+      td_errors_loss_fn=None,
+      gamma=1.0,
+      reward_scale_factor=1.0,
+      weights=None,
+      training=False,
+  ):
     """Computes loss for DQN training.
 
     Args:
       experience: A batch of experience data in the form of a `Trajectory` or
         `Transition`. The structure of `experience` must match that of
-        `self.collect_policy.step_spec`.
-
-        If a `Trajectory`, all tensors in `experience` must be shaped
-        `[B, T, ...]` where `T` must be equal to `self.train_sequence_length`
-        if that property is not `None`.
+        `self.collect_policy.step_spec`.  If a `Trajectory`, all tensors in
+        `experience` must be shaped `[B, T, ...]` where `T` must be equal to
+        `self.train_sequence_length` if that property is not `None`.
       td_errors_loss_fn: A function(td_targets, predictions) to compute the
         element wise loss.
       gamma: Discount for future rewards.
       reward_scale_factor: Multiplicative factor to scale rewards.
       weights: Optional scalar or elementwise (per-batch-entry) importance
-        weights.  The output td_loss will be scaled by these weights, and
-        the final scalar loss is the mean of these values.
+        weights.  The output td_loss will be scaled by these weights, and the
+        final scalar loss is the mean of these values.
       training: Whether this loss is being used for training.
 
     Returns:
@@ -475,13 +498,15 @@ class DqnAgent(tf_agent.TFAgent):
       q_values = self._compute_q_values(time_steps, actions, training=training)
 
       next_q_values = self._compute_next_q_values(
-          next_time_steps, policy_steps.info)
+          next_time_steps, policy_steps.info
+      )
 
       rewards = reward_scale_factor * next_time_steps.reward
       discounts = gamma * next_time_steps.discount
 
-      td_loss, td_error = self._td_loss(q_values, next_q_values, rewards,
-                                        discounts)
+      td_loss, td_error = self._td_loss(
+          q_values, next_q_values, rewards, discounts
+      )
 
       valid_mask = tf.cast(~time_steps.is_last(), tf.float32)
       td_error = valid_mask * td_error
@@ -489,7 +514,8 @@ class DqnAgent(tf_agent.TFAgent):
       td_loss = valid_mask * td_loss
 
       if nest_utils.is_batched_nested_tensors(
-          time_steps, self.time_step_spec, num_outer_dims=2):
+          time_steps, self.time_step_spec, num_outer_dims=2
+      ):
         # Do a sum over the time dimension.
         td_loss = tf.reduce_sum(input_tensor=td_loss, axis=1)
 
@@ -504,16 +530,19 @@ class DqnAgent(tf_agent.TFAgent):
       agg_loss = common.aggregate_losses(
           per_example_loss=td_loss,
           sample_weight=weights,
-          regularization_loss=self._q_network.losses)
+          regularization_loss=self._q_network.losses,
+      )
       total_loss = agg_loss.total_loss
 
-      losses_dict = {'td_loss': agg_loss.weighted,
-                     'reg_loss': agg_loss.regularization,
-                     'total_loss': total_loss}
+      losses_dict = {
+          'td_loss': agg_loss.weighted,
+          'reg_loss': agg_loss.regularization,
+          'total_loss': total_loss,
+      }
 
-      common.summarize_scalar_dict(losses_dict,
-                                   step=self.train_step_counter,
-                                   name_scope='Losses/')
+      common.summarize_scalar_dict(
+          losses_dict, step=self.train_step_counter, name_scope='Losses/'
+      )
 
       if self._summarize_grads_and_vars:
         with tf.name_scope('Variables/'):
@@ -521,34 +550,42 @@ class DqnAgent(tf_agent.TFAgent):
             tf.compat.v2.summary.histogram(
                 name=var.name.replace(':', '_'),
                 data=var,
-                step=self.train_step_counter)
+                step=self.train_step_counter,
+            )
 
       if self._debug_summaries:
         diff_q_values = q_values - next_q_values
-        common.generate_tensor_summaries('td_error', td_error,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('td_loss', td_loss,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('q_values', q_values,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('next_q_values', next_q_values,
-                                         self.train_step_counter)
-        common.generate_tensor_summaries('diff_q_values', diff_q_values,
-                                         self.train_step_counter)
+        common.generate_tensor_summaries(
+            'td_error', td_error, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'td_loss', td_loss, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'q_values', q_values, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'next_q_values', next_q_values, self.train_step_counter
+        )
+        common.generate_tensor_summaries(
+            'diff_q_values', diff_q_values, self.train_step_counter
+        )
 
-      return tf_agent.LossInfo(total_loss, DqnLossInfo(td_loss=td_loss,
-                                                       td_error=td_error))
+      return tf_agent.LossInfo(
+          total_loss, DqnLossInfo(td_loss=td_loss, td_error=td_error)
+      )
 
   def _compute_q_values(self, time_steps, actions, training=False):
     network_observation = time_steps.observation
 
     if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
-          network_observation)
+          network_observation
+      )
 
-    q_values, _ = self._q_network(network_observation,
-                                  step_type=time_steps.step_type,
-                                  training=training)
+    q_values, _ = self._q_network(
+        network_observation, step_type=time_steps.step_type, training=training
+    )
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
     action_spec = cast(tensor_spec.BoundedTensorSpec, self._action_spec)
@@ -556,7 +593,8 @@ class DqnAgent(tf_agent.TFAgent):
     return common.index_with_actions(
         q_values,
         tf.cast(actions, dtype=tf.int32),
-        multi_dim_actions=multi_dim_actions)
+        multi_dim_actions=multi_dim_actions,
+    )
 
   def _compute_next_q_values(self, next_time_steps, info):
     """Compute the q value of the next state for TD error computation.
@@ -573,17 +611,21 @@ class DqnAgent(tf_agent.TFAgent):
 
     if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
-          network_observation)
+          network_observation
+      )
 
     next_target_q_values, _ = self._target_q_network(
-        network_observation, step_type=next_time_steps.step_type)
+        network_observation, step_type=next_time_steps.step_type
+    )
     batch_size = (
-        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
+        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0]
+    )
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
     # Find the greedy actions using our target greedy policy. This ensures that
     # action constraints are respected and helps centralize the greedy logic.
     greedy_actions = self._target_greedy_policy.action(
-        next_time_steps, dummy_state).action
+        next_time_steps, dummy_state
+    ).action
 
     # Handle action_spec.shape=(), and shape=(1,) by using the multi_dim_actions
     # param. Note: assumes len(tf.nest.flatten(action_spec)) == 1.
@@ -591,7 +633,8 @@ class DqnAgent(tf_agent.TFAgent):
     return common.index_with_actions(
         next_target_q_values,
         greedy_actions,
-        multi_dim_actions=multi_dim_actions)
+        multi_dim_actions=multi_dim_actions,
+    )
 
 
 @gin.configurable
@@ -603,7 +646,6 @@ class DdqnAgent(DqnAgent):
   "Deep Reinforcement Learning with Double Q-learning"
    Hasselt et al., 2015
    https://arxiv.org/abs/1509.06461
-
   """
 
   def _compute_next_q_values(self, next_time_steps, info):
@@ -623,12 +665,15 @@ class DdqnAgent(DqnAgent):
 
     if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
-          network_observation)
+          network_observation
+      )
 
     next_target_q_values, _ = self._target_q_network(
-        network_observation, step_type=next_time_steps.step_type)
+        network_observation, step_type=next_time_steps.step_type
+    )
     batch_size = (
-        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0])
+        next_target_q_values.shape[0] or tf.shape(next_target_q_values)[0]
+    )
     dummy_state = self._policy.get_initial_state(batch_size)
     # Find the greedy actions using our greedy policy. This ensures that action
     # constraints are respected and helps centralize the greedy logic.
@@ -640,4 +685,5 @@ class DdqnAgent(DqnAgent):
     return common.index_with_actions(
         next_target_q_values,
         best_next_actions,
-        multi_dim_actions=multi_dim_actions)
+        multi_dim_actions=multi_dim_actions,
+    )

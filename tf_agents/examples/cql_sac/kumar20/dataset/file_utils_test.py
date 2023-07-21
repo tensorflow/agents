@@ -17,16 +17,16 @@
 import mock
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.examples.cql_sac.kumar20.dataset.file_utils import create_trajectory
 from tf_agents.examples.cql_sac.kumar20.dataset.file_utils import create_transition
 from tf_agents.examples.cql_sac.kumar20.dataset.file_utils import write_samples_to_tfrecord
-
 from tf_agents.utils import test_utils
 
-TFRECORD_OBSERVER_PREFIX = ('tf_agents.examples.cql_sac.' +
-                            'kumar20.dataset.file_utils.' +
-                            'example_encoding_dataset.TFRecordObserver')
+TFRECORD_OBSERVER_PREFIX = (
+    'tf_agents.examples.cql_sac.'
+    + 'kumar20.dataset.file_utils.'
+    + 'example_encoding_dataset.TFRecordObserver'
+)
 
 
 class FileUtilsTest(test_utils.TestCase):
@@ -34,32 +34,36 @@ class FileUtilsTest(test_utils.TestCase):
   @mock.patch('%s.__init__' % TFRECORD_OBSERVER_PREFIX)
   @mock.patch('%s.__call__' % TFRECORD_OBSERVER_PREFIX)
   @mock.patch('%s.close' % TFRECORD_OBSERVER_PREFIX)
-  def test_write_transitions_to_tfrecord(self, mock_close, mock_call,
-                                         mock_init):
+  def test_write_transitions_to_tfrecord(
+      self, mock_close, mock_call, mock_init
+  ):
     mock_init.return_value = None
     mock_close.return_value = None
     episode_dict = {
-        'states':
-            np.array([[1., 2.], [3., 4.], [5., 6.], [7., 8.], [9., 10.],
-                      [11., 12.], [13., 14.]]),
-        'actions':
-            np.array([[1.], [2.], [3.], [4.], [5.], [6.], [7.]]),
-        'rewards':
-            np.array([[0.], [1.], [0.], [1.], [0.], [0.], [1.]]),
-        'discounts':
-            np.array([1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0]),
-        'episode_start_index':
-            np.array([0, 2, 4])
+        'states': np.array([
+            [1.0, 2.0],
+            [3.0, 4.0],
+            [5.0, 6.0],
+            [7.0, 8.0],
+            [9.0, 10.0],
+            [11.0, 12.0],
+            [13.0, 14.0],
+        ]),
+        'actions': np.array([[1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0]]),
+        'rewards': np.array([[0.0], [1.0], [0.0], [1.0], [0.0], [0.0], [1.0]]),
+        'discounts': np.array([1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0]),
+        'episode_start_index': np.array([0, 2, 4]),
     }
 
     first_transition = create_transition(
-        state=np.array([5., 6.]),
-        action=np.array([3.]),
-        next_state=np.array([7., 8.]),
-        discount=np.array(1.),
-        reward=np.array([0.]),
+        state=np.array([5.0, 6.0]),
+        action=np.array([3.0]),
+        next_state=np.array([7.0, 8.0]),
+        discount=np.array(1.0),
+        reward=np.array([0.0]),
         step_type=np.array(0),
-        next_step_type=np.array(2))
+        next_step_type=np.array(2),
+    )
 
     write_samples_to_tfrecord(
         episode_dict,
@@ -67,42 +71,47 @@ class FileUtilsTest(test_utils.TestCase):
         dataset_path='dataset_path',
         start_episode=1,
         end_episode=3,
-        use_trajectories=False)
+        use_trajectories=False,
+    )
 
     expected_transitions = [
         first_transition,
         create_transition(
-            state=np.array([7., 8.]),
-            action=np.array([4.]),
-            next_state=np.array([0., 0.]),
-            discount=np.array(0.),
-            reward=np.array([1.]),
+            state=np.array([7.0, 8.0]),
+            action=np.array([4.0]),
+            next_state=np.array([0.0, 0.0]),
+            discount=np.array(0.0),
+            reward=np.array([1.0]),
             step_type=np.array(2),
-            next_step_type=np.array(0)),
+            next_step_type=np.array(0),
+        ),
         create_transition(
-            state=np.array([9., 10.]),
-            action=np.array([5.]),
-            next_state=np.array([11., 12.]),
-            discount=np.array(1.),
-            reward=np.array([0.]),
+            state=np.array([9.0, 10.0]),
+            action=np.array([5.0]),
+            next_state=np.array([11.0, 12.0]),
+            discount=np.array(1.0),
+            reward=np.array([0.0]),
             step_type=np.array(0),
-            next_step_type=np.array(1)),
+            next_step_type=np.array(1),
+        ),
         create_transition(
-            state=np.array([11., 12.]),
-            action=np.array([6.]),
-            next_state=np.array([13., 14.]),
-            discount=np.array(1.),
-            reward=np.array([0.]),
+            state=np.array([11.0, 12.0]),
+            action=np.array([6.0]),
+            next_state=np.array([13.0, 14.0]),
+            discount=np.array(1.0),
+            reward=np.array([0.0]),
             step_type=np.array(1),
-            next_step_type=np.array(2)),
+            next_step_type=np.array(2),
+        ),
         create_transition(
-            state=np.array([13., 14.]),
-            action=np.array([7.]),
-            next_state=np.array([0., 0.]),
-            discount=np.array(0.),
-            reward=np.array([1.]),
+            state=np.array([13.0, 14.0]),
+            action=np.array([7.0]),
+            next_state=np.array([0.0, 0.0]),
+            discount=np.array(0.0),
+            reward=np.array([1.0]),
             step_type=np.array(2),
-            next_step_type=np.array(0))
+            next_step_type=np.array(0),
+        ),
     ]
 
     # Check that the transitions passed to the mock TFRecordObserver
@@ -120,8 +129,9 @@ class FileUtilsTest(test_utils.TestCase):
       self.assertAllEqual(ts_actual.discount, ts_expected.discount)
 
       self.assertAllEqual(next_ts_actual.step_type, next_ts_expected.step_type)
-      self.assertAllEqual(next_ts_actual.observation,
-                          next_ts_expected.observation)
+      self.assertAllEqual(
+          next_ts_actual.observation, next_ts_expected.observation
+      )
       self.assertAllEqual(next_ts_actual.reward, next_ts_expected.reward)
       self.assertAllEqual(next_ts_actual.discount, next_ts_expected.discount)
 
@@ -131,31 +141,35 @@ class FileUtilsTest(test_utils.TestCase):
   @mock.patch('%s.__init__' % TFRECORD_OBSERVER_PREFIX)
   @mock.patch('%s.__call__' % TFRECORD_OBSERVER_PREFIX)
   @mock.patch('%s.close' % TFRECORD_OBSERVER_PREFIX)
-  def test_write_trajectories_to_tfrecord(self, mock_close, mock_call,
-                                          mock_init):
+  def test_write_trajectories_to_tfrecord(
+      self, mock_close, mock_call, mock_init
+  ):
     mock_init.return_value = None
     mock_close.return_value = None
     episode_dict = {
-        'states':
-            np.array([[1., 2.], [3., 4.], [5., 6.], [7., 8.], [9., 10.],
-                      [11., 12.], [13., 14.]]),
-        'actions':
-            np.array([[1.], [2.], [3.], [4.], [5.], [6.], [7.]]),
-        'rewards':
-            np.array([[0.], [1.], [0.], [1.], [0.], [0.], [1.]]),
-        'discounts':
-            np.array([1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0]),
-        'episode_start_index':
-            np.array([0, 2, 4])
+        'states': np.array([
+            [1.0, 2.0],
+            [3.0, 4.0],
+            [5.0, 6.0],
+            [7.0, 8.0],
+            [9.0, 10.0],
+            [11.0, 12.0],
+            [13.0, 14.0],
+        ]),
+        'actions': np.array([[1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0]]),
+        'rewards': np.array([[0.0], [1.0], [0.0], [1.0], [0.0], [0.0], [1.0]]),
+        'discounts': np.array([1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0]),
+        'episode_start_index': np.array([0, 2, 4]),
     }
 
     first_trajectory = create_trajectory(
-        state=np.array([5., 6.]),
-        action=np.array([3.]),
-        discount=np.array(1.),
-        reward=np.array([0.]),
+        state=np.array([5.0, 6.0]),
+        action=np.array([3.0]),
+        discount=np.array(1.0),
+        reward=np.array([0.0]),
         step_type=np.array(0),
-        next_step_type=np.array(2))
+        next_step_type=np.array(2),
+    )
 
     write_samples_to_tfrecord(
         episode_dict,
@@ -163,38 +177,43 @@ class FileUtilsTest(test_utils.TestCase):
         dataset_path='dataset_path',
         start_episode=1,
         end_episode=3,
-        use_trajectories=True)
+        use_trajectories=True,
+    )
 
     expected_trajectories = [
         first_trajectory,
         create_trajectory(
-            state=np.array([7., 8.]),
-            action=np.array([4.]),
-            discount=np.array(0.),
-            reward=np.array([1.]),
+            state=np.array([7.0, 8.0]),
+            action=np.array([4.0]),
+            discount=np.array(0.0),
+            reward=np.array([1.0]),
             step_type=np.array(2),
-            next_step_type=np.array(0)),
+            next_step_type=np.array(0),
+        ),
         create_trajectory(
-            state=np.array([9., 10.]),
-            action=np.array([5.]),
-            discount=np.array(1.),
-            reward=np.array([0.]),
+            state=np.array([9.0, 10.0]),
+            action=np.array([5.0]),
+            discount=np.array(1.0),
+            reward=np.array([0.0]),
             step_type=np.array(0),
-            next_step_type=np.array(1)),
+            next_step_type=np.array(1),
+        ),
         create_trajectory(
-            state=np.array([11., 12.]),
-            action=np.array([6.]),
-            discount=np.array(1.),
-            reward=np.array([0.]),
+            state=np.array([11.0, 12.0]),
+            action=np.array([6.0]),
+            discount=np.array(1.0),
+            reward=np.array([0.0]),
             step_type=np.array(1),
-            next_step_type=np.array(2)),
+            next_step_type=np.array(2),
+        ),
         create_trajectory(
-            state=np.array([13., 14.]),
-            action=np.array([7.]),
-            discount=np.array(0.),
-            reward=np.array([1.]),
+            state=np.array([13.0, 14.0]),
+            action=np.array([7.0]),
+            discount=np.array(0.0),
+            reward=np.array([1.0]),
             step_type=np.array(2),
-            next_step_type=np.array(0))
+            next_step_type=np.array(0),
+        ),
     ]
 
     # Check that the trajectories passed to the mock TFRecordObserver
@@ -209,8 +228,9 @@ class FileUtilsTest(test_utils.TestCase):
       self.assertAllEqual(actual_traj.observation, expected_traj.observation)
       self.assertAllEqual(actual_traj.action, expected_traj.action)
       self.assertAllEqual(actual_traj.policy_info, expected_traj.policy_info)
-      self.assertAllEqual(actual_traj.next_step_type,
-                          expected_traj.next_step_type)
+      self.assertAllEqual(
+          actual_traj.next_step_type, expected_traj.next_step_type
+      )
       self.assertAllEqual(actual_traj.reward, expected_traj.reward)
       self.assertAllEqual(actual_traj.discount, expected_traj.discount)
 

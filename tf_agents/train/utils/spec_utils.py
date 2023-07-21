@@ -46,9 +46,8 @@ def get_collect_data_spec_from_policy_and_env(env, policy):
   """
   observation_tensor_spec = tensor_spec.from_spec(env.observation_spec())
   time_step_tensor_spec = ts.time_step_spec(observation_tensor_spec)
-  policy_step_tensor_spec = tensor_spec.from_spec(
-      policy.policy_step_spec)
-  collect_data_spec = trajectory.from_transition(time_step_tensor_spec,
-                                                 policy_step_tensor_spec,
-                                                 time_step_tensor_spec)
+  policy_step_tensor_spec = tensor_spec.from_spec(policy.policy_step_spec)
+  collect_data_spec = trajectory.from_transition(
+      time_step_tensor_spec, policy_step_tensor_spec, time_step_tensor_spec
+  )
   return collect_data_spec

@@ -23,7 +23,6 @@ from typing import Callable, Optional, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.policies import constraints
 from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.metrics import tf_metric
@@ -35,10 +34,12 @@ from tf_agents.utils import common
 class RegretMetric(tf_metric.TFStepMetric):
   """Computes the regret with respect to a baseline."""
 
-  def __init__(self,
-               baseline_reward_fn: Callable[[types.Tensor], types.Tensor],
-               name: Optional[Text] = 'RegretMetric',
-               dtype: float = tf.float32):
+  def __init__(
+      self,
+      baseline_reward_fn: Callable[[types.Tensor], types.Tensor],
+      name: Optional[Text] = 'RegretMetric',
+      dtype: float = tf.float32,
+  ):
     """Computes the regret with respect to a baseline.
 
     The regret is computed by computing the difference of the current reward
@@ -55,7 +56,8 @@ class RegretMetric(tf_metric.TFStepMetric):
     self._baseline_reward_fn = baseline_reward_fn
     self.dtype = dtype
     self.regret = common.create_variable(
-        initial_value=0, dtype=self.dtype, shape=(), name='regret')
+        initial_value=0, dtype=self.dtype, shape=(), name='regret'
+    )
     super(RegretMetric, self).__init__(name=name)
 
   def call(self, trajectory):
@@ -76,18 +78,19 @@ class RegretMetric(tf_metric.TFStepMetric):
     return trajectory
 
   def result(self):
-    return tf.identity(
-        self.regret, name=self.name)
+    return tf.identity(self.regret, name=self.name)
 
 
 @gin.configurable
 class SuboptimalArmsMetric(tf_metric.TFStepMetric):
   """Computes the number of suboptimal arms with respect to a baseline."""
 
-  def __init__(self,
-               baseline_action_fn: Callable[[types.Tensor], types.Tensor],
-               name: Optional[Text] = 'SuboptimalArmsMetric',
-               dtype: float = tf.float32):
+  def __init__(
+      self,
+      baseline_action_fn: Callable[[types.Tensor], types.Tensor],
+      name: Optional[Text] = 'SuboptimalArmsMetric',
+      dtype: float = tf.float32,
+  ):
     """Computes the number of suboptimal arms with respect to a baseline.
 
     Args:
@@ -99,7 +102,8 @@ class SuboptimalArmsMetric(tf_metric.TFStepMetric):
     self._baseline_action_fn = baseline_action_fn
     self.dtype = dtype
     self.suboptimal_arms = common.create_variable(
-        initial_value=0, dtype=self.dtype, shape=(), name='suboptimal_arms')
+        initial_value=0, dtype=self.dtype, shape=(), name='suboptimal_arms'
+    )
     super(SuboptimalArmsMetric, self).__init__(name=name)
 
   def call(self, trajectory):
@@ -113,23 +117,25 @@ class SuboptimalArmsMetric(tf_metric.TFStepMetric):
     """
     baseline_action = self._baseline_action_fn(trajectory.observation)
     disagreement = tf.cast(
-        tf.not_equal(baseline_action, trajectory.action), tf.float32)
+        tf.not_equal(baseline_action, trajectory.action), tf.float32
+    )
     self.suboptimal_arms.assign(tf.reduce_mean(disagreement))
     return trajectory
 
   def result(self):
-    return tf.identity(
-        self.suboptimal_arms, name=self.name)
+    return tf.identity(self.suboptimal_arms, name=self.name)
 
 
 @gin.configurable
 class ConstraintViolationsMetric(tf_metric.TFStepMetric):
   """Computes the violations of a certain constraint."""
 
-  def __init__(self,
-               constraint: constraints.BaseConstraint,
-               name: Optional[Text] = 'ConstraintViolationMetric',
-               dtype: float = tf.float32):
+  def __init__(
+      self,
+      constraint: constraints.BaseConstraint,
+      name: Optional[Text] = 'ConstraintViolationMetric',
+      dtype: float = tf.float32,
+  ):
     """Computes the constraint violations given an input constraint.
 
     Given a certain constraint, this metric computes how often the selected
@@ -146,7 +152,8 @@ class ConstraintViolationsMetric(tf_metric.TFStepMetric):
         initial_value=0.0,
         dtype=self.dtype,
         shape=(),
-        name='constraint_violations')
+        name='constraint_violations',
+    )
     super(ConstraintViolationsMetric, self).__init__(name=name)
 
   def call(self, trajectory):
@@ -160,10 +167,11 @@ class ConstraintViolationsMetric(tf_metric.TFStepMetric):
     """
     feasibility_prob_all_actions = self._constraint(trajectory.observation)
     feasibility_prob_selected_actions = common.index_with_actions(
-        feasibility_prob_all_actions,
-        tf.cast(trajectory.action, dtype=tf.int32))
-    self.constraint_violations.assign(tf.reduce_mean(
-        1.0 - feasibility_prob_selected_actions))
+        feasibility_prob_all_actions, tf.cast(trajectory.action, dtype=tf.int32)
+    )
+    self.constraint_violations.assign(
+        tf.reduce_mean(1.0 - feasibility_prob_selected_actions)
+    )
     return trajectory
 
   def result(self):
@@ -182,10 +190,12 @@ class DistanceFromGreedyMetric(tf_metric.TFStepMetric):
   'belief'.
   """
 
-  def __init__(self,
-               estimated_reward_fn: Callable[[types.Tensor], types.Tensor],
-               name: Optional[Text] = 'DistanceFromGreedyMetric',
-               dtype: float = tf.float32):
+  def __init__(
+      self,
+      estimated_reward_fn: Callable[[types.Tensor], types.Tensor],
+      name: Optional[Text] = 'DistanceFromGreedyMetric',
+      dtype: float = tf.float32,
+  ):
     """Init function for the metric.
 
     Args:
@@ -197,7 +207,8 @@ class DistanceFromGreedyMetric(tf_metric.TFStepMetric):
     self._estimated_reward_fn = estimated_reward_fn
     self.dtype = dtype
     self.safe_explore = common.create_variable(
-        initial_value=0, dtype=self.dtype, shape=(), name='safe_explore')
+        initial_value=0, dtype=self.dtype, shape=(), name='safe_explore'
+    )
     super(DistanceFromGreedyMetric, self).__init__(name=name)
 
   def call(self, trajectory):
@@ -212,9 +223,11 @@ class DistanceFromGreedyMetric(tf_metric.TFStepMetric):
     all_estimated_rewards = self._estimated_reward_fn(trajectory.observation)
     max_estimated_rewards = tf.reduce_max(all_estimated_rewards, axis=-1)
     estimated_action_rewards = tf.gather(
-        all_estimated_rewards, trajectory.action, batch_dims=1)
+        all_estimated_rewards, trajectory.action, batch_dims=1
+    )
     self.safe_explore.assign(
-        tf.reduce_mean(max_estimated_rewards - estimated_action_rewards))
+        tf.reduce_mean(max_estimated_rewards - estimated_action_rewards)
+    )
     return trajectory
 
   def result(self):

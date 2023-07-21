@@ -20,8 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from typing import Optional, Text
-import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.policies import py_policy
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
@@ -41,10 +41,12 @@ class TFPyPolicy(tf_policy.TFPolicy):
   # converting between TF and Py policies.
   """
 
-  def __init__(self,
-               policy: py_policy.PyPolicy,
-               py_policy_is_batched: bool = False,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      policy: py_policy.PyPolicy,
+      py_policy_is_batched: bool = False,
+      name: Optional[Text] = None,
+  ):
     """Initializes a new `TFPyPolicy` instance with an Pyton policy .
 
     Args:
@@ -62,17 +64,24 @@ class TFPyPolicy(tf_policy.TFPolicy):
     """
     if not isinstance(policy, py_policy.PyPolicy):
       raise TypeError(
-          'Input policy should implement py_policy.PyPolicy, but saw %s.' %
-          type(policy).__name__)
+          'Input policy should implement py_policy.PyPolicy, but saw %s.'
+          % type(policy).__name__
+      )
 
     self._py_policy = policy
     self._py_policy_is_batched = py_policy_is_batched
 
-    (time_step_spec, action_spec,
-     policy_state_spec, info_spec) = tf.nest.map_structure(
-         tensor_spec.from_spec,
-         (policy.time_step_spec, policy.action_spec, policy.policy_state_spec,
-          policy.info_spec))
+    (time_step_spec, action_spec, policy_state_spec, info_spec) = (
+        tf.nest.map_structure(
+            tensor_spec.from_spec,
+            (
+                policy.time_step_spec,
+                policy.action_spec,
+                policy.policy_state_spec,
+                policy.info_spec,
+            ),
+        )
+    )
 
     super(TFPyPolicy, self).__init__(
         time_step_spec=time_step_spec,
@@ -81,13 +90,16 @@ class TFPyPolicy(tf_policy.TFPolicy):
         info_spec=info_spec,
         clip=False,
         name=name,
-        automatic_state_reset=False)
+        automatic_state_reset=False,
+    )
 
     # Output types of py_funcs.
     self._policy_state_dtypes = map_tensor_spec_to_dtypes_list(
-        self.policy_state_spec)
+        self.policy_state_spec
+    )
     self._policy_step_dtypes = map_tensor_spec_to_dtypes_list(
-        self.policy_step_spec)
+        self.policy_step_spec
+    )
 
   # Wrapped in common.function to avoid failures in eager mode. This happens
   # when the policy_state is empty and it gets dropped by tf.nest.flatten
@@ -108,15 +120,19 @@ class TFPyPolicy(tf_policy.TFPolicy):
 
     def _get_initial_state_fn(*batch_size):
       return tf.nest.flatten(
-          self._py_policy.get_initial_state(batch_size=batch_size))
+          self._py_policy.get_initial_state(batch_size=batch_size)
+      )
 
     with tf.name_scope('get_initial_state'):
       flat_policy_state = tf.numpy_function(
-          _get_initial_state_fn, [batch_size],
+          _get_initial_state_fn,
+          [batch_size],
           self._policy_state_dtypes,
-          name='get_initial_state_numpy_function')
+          name='get_initial_state_numpy_function',
+      )
       return tf.nest.pack_sequence_as(
-          structure=self.policy_state_spec, flat_sequence=flat_policy_state)
+          structure=self.policy_state_spec, flat_sequence=flat_policy_state
+      )
 
   # Wrapped in common.function to avoid failures in eager mode. This happens
   # when empty fields in the policy_step get dropped by tf.nest.flatten
@@ -125,15 +141,20 @@ class TFPyPolicy(tf_policy.TFPolicy):
   def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
     if seed is not None:
       raise NotImplementedError(
-          'seed is not supported; but saw seed: {}'.format(seed))
+          'seed is not supported; but saw seed: {}'.format(seed)
+      )
 
     def _action_fn(*flattened_time_step_and_policy_state):
       packed_py_time_step, packed_py_policy_state = tf.nest.pack_sequence_as(
-          structure=(self._py_policy.time_step_spec,
-                     self._py_policy.policy_state_spec),
-          flat_sequence=flattened_time_step_and_policy_state)
+          structure=(
+              self._py_policy.time_step_spec,
+              self._py_policy.policy_state_spec,
+          ),
+          flat_sequence=flattened_time_step_and_policy_state,
+      )
       py_action_step = self._py_policy.action(
-          time_step=packed_py_time_step, policy_state=packed_py_policy_state)
+          time_step=packed_py_time_step, policy_state=packed_py_policy_state
+      )
       return tf.nest.flatten(py_action_step)
 
     with tf.name_scope('action'):
@@ -145,12 +166,15 @@ class TFPyPolicy(tf_policy.TFPolicy):
           _action_fn,
           flattened_input_tensors,
           self._policy_step_dtypes,
-          name='action_numpy_function')
+          name='action_numpy_function',
+      )
       action_step = tf.nest.pack_sequence_as(
-          structure=self.policy_step_spec, flat_sequence=flat_action_step)
+          structure=self.policy_step_spec, flat_sequence=flat_action_step
+      )
       if not self._py_policy_is_batched:
         action_step = action_step._replace(
-            action=nest_utils.batch_nested_tensors(action_step.action))
+            action=nest_utils.batch_nested_tensors(action_step.action)
+        )
       return action_step
 
   def _variables(self):
@@ -158,5 +182,6 @@ class TFPyPolicy(tf_policy.TFPolicy):
     return []
 
   def _distribution(self, time_step, policy_state):
-    raise NotImplementedError('%s does not support distribution yet.' %
-                              self.__class__.__name__)
+    raise NotImplementedError(
+        '%s does not support distribution yet.' % self.__class__.__name__
+    )

@@ -13,20 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Keras layer to reshape inner dimensions (keeping outer dimensions the same).
-"""
+"""Keras layer to reshape inner dimensions (keeping outer dimensions the same)."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import tensorflow.compat.v2 as tf
-
 from tf_agents.typing import types
 
 
-def InnerReshape(current_shape: types.Shape,  # pylint: disable=invalid-name
-                 new_shape: types.Shape,
-                 **kwargs) -> tf.keras.layers.Layer:
+def InnerReshape(
+    current_shape: types.Shape,  # pylint: disable=invalid-name
+    new_shape: types.Shape,
+    **kwargs
+) -> tf.keras.layers.Layer:
   """Returns a Keras layer that reshapes the inner dimensions of tensors.
 
   Each tensor passed to an instance of `InnerReshape`, will be reshaped to:
@@ -57,16 +57,14 @@ def InnerReshape(current_shape: types.Shape,  # pylint: disable=invalid-name
   ```
 
   Args:
-    current_shape: The current (partial) shape for the inner dims.
-      This should be a `list`, `tuple`, or `tf.TensorShape` with known rank.
-      The given current_shape must be compatible with the inner shape of the
-      input.  Examples - `[]`, `[None]`, `[None] * 3`, `[3, 3, 4]`,
-      `[3, None, 4]`.
-    new_shape: The new shape for the inner dims.  The length of
-      `new_shape` need not match the length of `current_shape`, but if both
-      shapes are fully defined then the total number of elements must match.
-      It may have up to one flexible (`-1`) dimension.  Examples -
-      `[3]`, `[]`, `[-1]`, `[-1, 3]`.
+    current_shape: The current (partial) shape for the inner dims. This should
+      be a `list`, `tuple`, or `tf.TensorShape` with known rank. The given
+      current_shape must be compatible with the inner shape of the input.
+      Examples - `[]`, `[None]`, `[None] * 3`, `[3, 3, 4]`, `[3, None, 4]`.
+    new_shape: The new shape for the inner dims.  The length of `new_shape` need
+      not match the length of `current_shape`, but if both shapes are fully
+      defined then the total number of elements must match. It may have up to
+      one flexible (`-1`) dimension.  Examples - `[3]`, `[]`, `[-1]`, `[-1, 3]`.
     **kwargs: Additionnal args to the Keras core layer constructor, e.g. `name`.
 
   Returns:
@@ -80,36 +78,41 @@ def InnerReshape(current_shape: types.Shape,  # pylint: disable=invalid-name
   current_shape = tf.TensorShape(tf.get_static_value(current_shape))
   if current_shape.rank is None:
     raise ValueError('current_shape must have known rank')
-  new_shape = tf.TensorShape([
-      None if d == -1 else d for d in tf.get_static_value(new_shape)])
-  if (current_shape.is_fully_defined()
+  new_shape = tf.TensorShape(
+      [None if d == -1 else d for d in tf.get_static_value(new_shape)]
+  )
+  if (
+      current_shape.is_fully_defined()
       and new_shape.is_fully_defined()
-      and (current_shape.num_elements()
-           != new_shape.num_elements())):
+      and (current_shape.num_elements() != new_shape.num_elements())
+  ):
     raise ValueError(
         'Mismatched number of elements in current and new inner shapes: '
-        '{} vs. {}'.format(current_shape, new_shape))
+        '{} vs. {}'.format(current_shape, new_shape)
+    )
 
   def reshape(t):
     return _reshape_inner_dims(t, current_shape, new_shape)
+
   return tf.keras.layers.Lambda(
-      lambda inputs: tf.nest.map_structure(reshape, inputs), **kwargs)
+      lambda inputs: tf.nest.map_structure(reshape, inputs), **kwargs
+  )
 
 
 def _reshape_inner_dims(
-    tensor: tf.Tensor,
-    shape: tf.TensorShape,
-    new_shape: tf.TensorShape) -> tf.Tensor:
+    tensor: tf.Tensor, shape: tf.TensorShape, new_shape: tf.TensorShape
+) -> tf.Tensor:
   """Reshapes tensor to: shape(tensor)[:-len(shape)] + new_shape."""
   tensor_shape = tf.shape(tensor)
   ndims = shape.rank
   tensor.shape[-ndims:].assert_is_compatible_with(shape)
   new_shape_inner_tensor = tf.cast(
-      [-1 if d is None else d for d in new_shape.as_list()], tf.int32)
-  new_shape_outer_tensor = tf.cast(
-      tensor_shape[:-ndims], tf.int32)
+      [-1 if d is None else d for d in new_shape.as_list()], tf.int32
+  )
+  new_shape_outer_tensor = tf.cast(tensor_shape[:-ndims], tf.int32)
   full_new_shape = tf.concat(
-      (new_shape_outer_tensor, new_shape_inner_tensor), axis=0)
+      (new_shape_outer_tensor, new_shape_inner_tensor), axis=0
+  )
   new_tensor = tf.reshape(tensor, full_new_shape)
   new_tensor.set_shape(tensor.shape[:-ndims] + new_shape)
   return new_tensor

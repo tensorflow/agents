@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_bsuite
 from tf_agents.utils import test_utils
@@ -39,12 +38,12 @@ class SuiteBsuiteTest(test_utils.TestCase):
 
   def testBsuiteEnvRegisteredWithRecord(self):
     env = suite_bsuite.load(
-        'deep_sea/0', record=True, save_path=None, logging_mode='terminal')
+        'deep_sea/0', record=True, save_path=None, logging_mode='terminal'
+    )
     self.assertIsInstance(env, py_environment.PyEnvironment)
 
   def testBsuiteEnvRegistered(self):
-    env = suite_bsuite.load(
-        'deep_sea/0', record=False)
+    env = suite_bsuite.load('deep_sea/0', record=False)
     self.assertIsInstance(env, py_environment.PyEnvironment)
 
   def testGinConfig(self):

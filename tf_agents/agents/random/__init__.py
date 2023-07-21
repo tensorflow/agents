@@ -16,4 +16,3 @@
 """A random Agent."""
 from tf_agents.agents.random import fixed_policy_agent
 from tf_agents.agents.random import random_agent
-

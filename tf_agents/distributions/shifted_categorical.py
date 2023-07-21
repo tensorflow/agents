@@ -72,7 +72,7 @@ class ShiftedCategorical(tfp.distributions.Categorical):
       name: Python `str` name prefixed to Ops created by this class.
     """
     if shift is None:
-      raise ValueError("ShiftedCategorical expects a shift value.""")
+      raise ValueError("ShiftedCategorical expects a shift value.")
 
     self._shift = shift
     super(ShiftedCategorical, self).__init__(
@@ -113,7 +113,8 @@ class ShiftedCategorical(tfp.distributions.Categorical):
   def sample(self, sample_shape=(), seed=None, name="sample", **kwargs):
     """Generate samples of the specified shape."""
     sample = super(ShiftedCategorical, self).sample(
-        sample_shape=sample_shape, seed=seed, name=name, **kwargs)
+        sample_shape=sample_shape, seed=seed, name=name, **kwargs
+    )
     return sample + self._shift
 
   @property

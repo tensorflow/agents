@@ -21,10 +21,8 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 from absl.testing.absltest import mock
-
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.agents.reinforce import reinforce_agent
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.networks import network
@@ -39,22 +37,26 @@ from tf_agents.utils import nest_utils
 
 class DummyActorNet(network.Network):
 
-  def __init__(self,
-               input_tensor_spec,
-               output_tensor_spec,
-               unbounded_actions=False,
-               stateful=False):
+  def __init__(
+      self,
+      input_tensor_spec,
+      output_tensor_spec,
+      unbounded_actions=False,
+      stateful=False,
+  ):
     # When unbounded_actions=True, we skip the final tanh activation and the
     # action shift and scale. This allows us to compute the actor and critic
     # losses by hand more easily.
     # If stateful=True, the network state has the same shape as
     # `input_tensor_spec`. Otherwise it is empty.
-    state_spec = (tf.TensorSpec(input_tensor_spec.shape, tf.float32)
-                  if stateful else ())
+    state_spec = (
+        tf.TensorSpec(input_tensor_spec.shape, tf.float32) if stateful else ()
+    )
     super(DummyActorNet, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=state_spec,
-        name='DummyActorNet')
+        name='DummyActorNet',
+    )
     single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
     activation_fn = None if unbounded_actions else tf.nn.tanh
     self._output_tensor_spec = output_tensor_spec
@@ -87,7 +89,8 @@ class DummyActorNet(network.Network):
         self._output_tensor_spec,
         tfp.distributions.MultivariateNormalDiag,
         actions,
-        stdevs)
+        stdevs,
+    )
     return distribution, network_state
 
 
@@ -100,7 +103,8 @@ class DummyValueNet(network.Network):
         tf.keras.layers.Dense(
             1,
             kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5]))
+            bias_initializer=tf.constant_initializer([5]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -128,7 +132,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=False),
+            self._obs_spec, self._action_spec, unbounded_actions=False
+        ),
         optimizer=None,
     )
 
@@ -137,7 +142,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=False),
+            self._obs_spec, self._action_spec, unbounded_actions=False
+        ),
         value_network=DummyValueNet(self._obs_spec),
         value_estimation_loss_coef=0.5,
         optimizer=None,
@@ -148,20 +154,21 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=None,
     )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     actions = tf.constant([[0], [1]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy.distribution(
-        time_steps).action
+    actions_distribution = agent.collect_policy.distribution(time_steps).action
     returns = tf.constant([1.9, 1.0], dtype=tf.float32)
 
     expected_loss = 10.983667373657227
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, 1)
+        actions_distribution, actions, time_steps.is_last(), returns, 1
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -172,27 +179,32 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=None,
     )
 
-    step_type = tf.constant(
-        [ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
-         ts.StepType.LAST])
+    step_type = tf.constant([
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+    ])
     reward = tf.constant([0, 0, 0, 0], dtype=tf.float32)
     discount = tf.constant([1, 1, 1, 1], dtype=tf.float32)
     observations = tf.constant(
-        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32
+    )
     time_steps = ts.TimeStep(step_type, reward, discount, observations)
 
     actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy.distribution(
-        time_steps).action
+    actions_distribution = agent.collect_policy.distribution(time_steps).action
     returns = tf.constant([1.9, 1.9, 1.0, 1.0], dtype=tf.float32)
 
     expected_loss = 5.140229225158691
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, 2)
+        actions_distribution, actions, time_steps.is_last(), returns, 2
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -222,7 +234,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=None,
     )
 
@@ -233,14 +246,14 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     time_steps = ts.TimeStep(step_type, reward, discount, observations)
 
     actions = tf.constant([[0], [1]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy.distribution(
-        time_steps).action
+    actions_distribution = agent.collect_policy.distribution(time_steps).action
     returns = tf.constant([3.0, 0.0], dtype=tf.float32)
 
     # Returns on the StepType.FIRST should be counted.
     expected_loss = 10.8935775757
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, 1)
+        actions_distribution, actions, time_steps.is_last(), returns, 1
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -270,26 +283,26 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=None,
     )
 
     step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST])
     reward = tf.constant([0, 3], dtype=tf.float32)
     discount = tf.constant([1, 0], dtype=tf.float32)
-    observations = tf.constant(
-        [[1, 2], [1, 2]], dtype=tf.float32)
+    observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
     time_steps = ts.TimeStep(step_type, reward, discount, observations)
 
     actions = tf.constant([[0], [1]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy.distribution(
-        time_steps).action
+    actions_distribution = agent.collect_policy.distribution(time_steps).action
     returns = tf.constant([0.0, 3.0], dtype=tf.float32)
 
     # Returns on the StepType.LAST should not be counted.
     expected_loss = 0.0
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, 1)
+        actions_distribution, actions, time_steps.is_last(), returns, 1
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -319,28 +332,33 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=None,
     )
 
-    step_type = tf.constant(
-        [ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
-         ts.StepType.LAST])
+    step_type = tf.constant([
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+    ])
     reward = tf.constant([3, 0, 4, 0], dtype=tf.float32)
     discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
     observations = tf.constant(
-        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32
+    )
     time_steps = ts.TimeStep(step_type, reward, discount, observations)
 
     actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy.distribution(
-        time_steps).action
+    actions_distribution = agent.collect_policy.distribution(time_steps).action
     returns = tf.constant([3.0, 0.0, 4.0, 0.0], dtype=tf.float32)
 
     # Returns on the StepType.FIRST should be counted.
     expected_loss = 12.2091741562
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, 2)
+        actions_distribution, actions, time_steps.is_last(), returns, 2
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -370,55 +388,66 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=None,
     )
 
-    step_type = tf.constant(
-        [ts.StepType.FIRST, ts.StepType.LAST, ts.StepType.FIRST,
-         ts.StepType.LAST])
+    step_type = tf.constant([
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+    ])
     reward = tf.constant([0, 3, 0, 4], dtype=tf.float32)
     discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
     observations = tf.constant(
-        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32
+    )
     time_steps = ts.TimeStep(step_type, reward, discount, observations)
 
     actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
-    actions_distribution = agent.collect_policy.distribution(
-        time_steps).action
+    actions_distribution = agent.collect_policy.distribution(time_steps).action
     returns = tf.constant([0.0, 3.0, 0.0, 4.0], dtype=tf.float32)
 
     # Returns on the StepType.LAST should not be counted.
     expected_loss = 0.0
     loss = agent.policy_gradient_loss(
-        actions_distribution, actions, time_steps.is_last(), returns, 2)
+        actions_distribution, actions, time_steps.is_last(), returns, 2
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
   @parameterized.parameters(
-      ([[[0.8, 0.2]]], [1],),
-      ([[[0.8, 0.2]], [[0.3, 0.7]]], [0.5, 0.5],),
+      (
+          [[[0.8, 0.2]]],
+          [1],
+      ),
+      (
+          [[[0.8, 0.2]], [[0.3, 0.7]]],
+          [0.5, 0.5],
+      ),
   )
   def testEntropyLoss(self, probs, weights):
     probs = tf.convert_to_tensor(probs)
     distribution = tfp.distributions.Categorical(probs=probs)
     shape = probs.shape.as_list()
     action_spec = tensor_spec.TensorSpec(shape[2:-1], dtype=tf.int32)
-    expected = tf.reduce_mean(
-        -tf.reduce_mean(distribution.entropy()) * weights)
-    actual = reinforce_agent._entropy_loss(
-        distribution, action_spec, weights)
-    self.assertAlmostEqual(self.evaluate(actual), self.evaluate(expected),
-                           places=4)
+    expected = tf.reduce_mean(-tf.reduce_mean(distribution.entropy()) * weights)
+    actual = reinforce_agent._entropy_loss(distribution, action_spec, weights)
+    self.assertAlmostEqual(
+        self.evaluate(actual), self.evaluate(expected), places=4
+    )
 
   def testValueEstimationLoss(self):
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=False),
+            self._obs_spec, self._action_spec, unbounded_actions=False
+        ),
         value_network=DummyValueNet(self._obs_spec),
         value_estimation_loss_coef=0.5,
         optimizer=None,
@@ -427,12 +456,12 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     returns = tf.constant([1.9, 1.0], dtype=tf.float32)
-    value_preds, _ = agent._value_network(time_steps.observation,
-                                          time_steps.step_type)
+    value_preds, _ = agent._value_network(
+        time_steps.observation, time_steps.step_type
+    )
 
     expected_loss = 123.20500
-    loss = agent.value_estimation_loss(
-        value_preds, returns, 1)
+    loss = agent.value_estimation_loss(value_preds, returns, 1)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -463,7 +492,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
@@ -476,8 +506,17 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     actions = tf.constant([[0]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards should be counted.
     expected_loss = 10.8935775757
@@ -517,7 +556,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
@@ -530,8 +570,17 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
     actions = tf.constant([[0], [2]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards on the StepType.FIRST should be counted.
     expected_loss = 12.2091741562
@@ -570,7 +619,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
@@ -583,8 +633,17 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     observations = tf.constant([[1, 2], [1, 2]], dtype=tf.float32)
     actions = tf.constant([[0], [1]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards on the StepType.FIRST should be counted.
     expected_loss = 10.8935775757
@@ -602,16 +661,24 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_info = self.evaluate(loss)
     self.assertAllClose(loss_info.loss, expected_loss)
-    self.assertAllClose(loss_info.extra.policy_gradient_loss,
-                        expected_policy_gradient_loss)
-    self.assertAllClose(loss_info.extra.policy_network_regularization_loss,
-                        expected_policy_network_regularization_loss)
-    self.assertAllClose(loss_info.extra.entropy_regularization_loss,
-                        expected_entropy_regularization_loss)
-    self.assertAllClose(loss_info.extra.value_estimation_loss,
-                        expected_value_estimation_loss)
-    self.assertAllClose(loss_info.extra.value_network_regularization_loss,
-                        expected_value_network_regularization_loss)
+    self.assertAllClose(
+        loss_info.extra.policy_gradient_loss, expected_policy_gradient_loss
+    )
+    self.assertAllClose(
+        loss_info.extra.policy_network_regularization_loss,
+        expected_policy_network_regularization_loss,
+    )
+    self.assertAllClose(
+        loss_info.extra.entropy_regularization_loss,
+        expected_entropy_regularization_loss,
+    )
+    self.assertAllClose(
+        loss_info.extra.value_estimation_loss, expected_value_estimation_loss
+    )
+    self.assertAllClose(
+        loss_info.extra.value_network_regularization_loss,
+        expected_value_network_regularization_loss,
+    )
 
   def testTrainMaskingRewardSingleEpisodeRewardOnLast(self):
     # Test that train reacts correctly to experience when there are:
@@ -637,7 +704,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
@@ -651,8 +719,17 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
 
     actions = tf.constant([[0], [1]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards on the StepType.LAST should not be counted.
     expected_loss = 0.0
@@ -691,24 +768,43 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
     )
 
-    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST,
-                             ts.StepType.FIRST, ts.StepType.LAST])
-    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST,
-                                  ts.StepType.LAST, ts.StepType.FIRST])
+    step_type = tf.constant([
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+    ])
+    next_step_type = tf.constant([
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+    ])
     reward = tf.constant([3, 0, 4, 0], dtype=tf.float32)
     discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
     observations = tf.constant(
-        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32
+    )
     actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards on the StepType.FIRST should be counted.
     expected_loss = 12.2091741562
@@ -751,24 +847,40 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
     )
 
-    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST,
-                             ts.StepType.FIRST, ts.StepType.MID])
-    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST,
-                                  ts.StepType.MID, ts.StepType.MID])
+    step_type = tf.constant([
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.MID,
+    ])
+    next_step_type = tf.constant(
+        [ts.StepType.LAST, ts.StepType.FIRST, ts.StepType.MID, ts.StepType.MID]
+    )
     reward = tf.constant([3, 0, 4, 0], dtype=tf.float32)
     discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
     observations = tf.constant(
-        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32
+    )
     actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards on the StepType.FIRST should be counted.
     expected_loss = 10.8935775757
@@ -806,24 +918,43 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=True),
+            self._obs_spec, self._action_spec, unbounded_actions=True
+        ),
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
         use_advantage_loss=False,
         normalize_returns=False,
     )
 
-    step_type = tf.constant([ts.StepType.FIRST, ts.StepType.LAST,
-                             ts.StepType.FIRST, ts.StepType.LAST])
-    next_step_type = tf.constant([ts.StepType.LAST, ts.StepType.FIRST,
-                                  ts.StepType.LAST, ts.StepType.FIRST])
+    step_type = tf.constant([
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+    ])
+    next_step_type = tf.constant([
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+    ])
     reward = tf.constant([0, 3, 0, 4], dtype=tf.float32)
     discount = tf.constant([1, 0, 1, 0], dtype=tf.float32)
     observations = tf.constant(
-        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32)
+        [[1, 2], [1, 2], [1, 2], [1, 2]], dtype=tf.float32
+    )
     actions = tf.constant([[0], [1], [2], [3]], dtype=tf.float32)
 
-    experience = nest_utils.batch_nested_tensors(trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount))
+    experience = nest_utils.batch_nested_tensors(
+        trajectory.Trajectory(
+            step_type,
+            observations,
+            actions,
+            (),
+            next_step_type,
+            reward,
+            discount,
+        )
+    )
 
     # Rewards on the StepType.LAST should be counted.
     expected_loss = 0.0
@@ -842,7 +973,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=False),
+            self._obs_spec, self._action_spec, unbounded_actions=False
+        ),
         optimizer=None,
     )
     observations = tf.constant([[1, 2]], dtype=tf.float32)
@@ -853,7 +985,9 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
     action_values = self.evaluate(actions)
     tf.nest.map_structure(
         lambda v, s: self.assertAllInRange(v, s.minimum, s.maximum),
-        action_values, self._action_spec)
+        action_values,
+        self._action_spec,
+    )
 
   @parameterized.parameters(
       (False,),
@@ -866,17 +1000,23 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=False,
-            stateful=stateful),
+            self._obs_spec,
+            self._action_spec,
+            unbounded_actions=False,
+            stateful=stateful,
+        ),
         optimizer=None,
     )
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=3)
     initial_state = reinforce_agent._get_initial_policy_state(
-        agent.collect_policy, time_steps)
+        agent.collect_policy, time_steps
+    )
     if stateful:
-      self.assertAllEqual(self.evaluate(initial_state),
-                          self.evaluate(tf.zeros((3, 2), dtype=tf.float32)))
+      self.assertAllEqual(
+          self.evaluate(initial_state),
+          self.evaluate(tf.zeros((3, 2), dtype=tf.float32)),
+      )
     else:
       self.assertEqual(initial_state, ())
 
@@ -887,7 +1027,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         input_fc_layer_params=None,
         output_fc_layer_params=None,
         conv_layer_params=None,
-        lstm_size=(40,))
+        lstm_size=(40,),
+    )
 
     counter = common.create_variable('test_train_counter')
     agent = reinforce_agent.ReinforceAgent(
@@ -895,22 +1036,30 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._action_spec,
         actor_network=actor_net,
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
-        train_step_counter=counter
+        train_step_counter=counter,
     )
 
     batch_size = 5
     observations = tf.constant(
-        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
+        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32
+    )
     time_steps = ts.TimeStep(
         step_type=tf.constant([[1, 1, 2]] * batch_size, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32)
 
     experience = trajectory.Trajectory(
-        time_steps.step_type, observations, actions, (),
-        time_steps.step_type, time_steps.reward, time_steps.discount)
+        time_steps.step_type,
+        observations,
+        actions,
+        (),
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
 
     # Force variable creation.
     agent.policy.variables()
@@ -932,7 +1081,8 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         input_fc_layer_params=None,
         output_fc_layer_params=None,
         conv_layer_params=None,
-        lstm_size=(40,))
+        lstm_size=(40,),
+    )
 
     counter = common.create_variable('test_train_counter')
     agent = reinforce_agent.ReinforceAgent(
@@ -940,61 +1090,74 @@ class ReinforceAgentTest(tf.test.TestCase, parameterized.TestCase):
         self._action_spec,
         actor_network=actor_net,
         optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
-        train_step_counter=counter
+        train_step_counter=counter,
     )
 
     batch_size = 5
     observations = tf.constant(
-        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
+        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32
+    )
     time_steps = ts.TimeStep(
         step_type=tf.constant([[1, 1, 1]] * batch_size, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = policy_step.PolicyStep(
-        tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32))
+        tf.constant([[[0], [1], [1]]] * batch_size, dtype=tf.float32)
+    )
     next_time_steps = ts.TimeStep(
         step_type=tf.constant([[1, 1, 2]] * batch_size, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
 
     experience = trajectory.Transition(time_steps, actions, next_time_steps)
 
     agent.initialize()
     agent.train(experience)
 
-  @parameterized.parameters(
-      (False,), (True,)
-  )
+  @parameterized.parameters((False,), (True,))
   def testWithAdvantageFn(self, with_value_network):
-    advantage_fn = mock.Mock(
-        side_effect=lambda returns, _: returns)
+    advantage_fn = mock.Mock(side_effect=lambda returns, _: returns)
 
-    value_network = (DummyValueNet(self._obs_spec) if with_value_network
-                     else None)
+    value_network = (
+        DummyValueNet(self._obs_spec) if with_value_network else None
+    )
     agent = reinforce_agent.ReinforceAgent(
         self._time_step_spec,
         self._action_spec,
         actor_network=DummyActorNet(
-            self._obs_spec, self._action_spec, unbounded_actions=False),
+            self._obs_spec, self._action_spec, unbounded_actions=False
+        ),
         value_network=value_network,
         advantage_fn=advantage_fn,
         optimizer=None,
     )
 
-    step_type = tf.constant([[ts.StepType.FIRST, ts.StepType.LAST,
-                              ts.StepType.FIRST, ts.StepType.LAST]])
-    next_step_type = tf.constant([[ts.StepType.LAST, ts.StepType.FIRST,
-                                   ts.StepType.LAST, ts.StepType.FIRST]])
+    step_type = tf.constant([[
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+    ]])
+    next_step_type = tf.constant([[
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+        ts.StepType.LAST,
+        ts.StepType.FIRST,
+    ]])
     reward = tf.constant([[0, 0, 0, 0]], dtype=tf.float32)
     discount = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
     observations = tf.constant(
-        [[[1, 2], [1, 2], [1, 2], [1, 2]]], dtype=tf.float32)
+        [[[1, 2], [1, 2], [1, 2], [1, 2]]], dtype=tf.float32
+    )
     actions = tf.constant([[[0], [1], [2], [3]]], dtype=tf.float32)
 
     experience = trajectory.Trajectory(
-        step_type, observations, actions, (), next_step_type, reward, discount)
+        step_type, observations, actions, (), next_step_type, reward, discount
+    )
 
     agent.total_loss(experience, reward, None)
 

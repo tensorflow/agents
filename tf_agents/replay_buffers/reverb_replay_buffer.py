@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow.compat.v2 as tf
-
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.typing import types
 from tf_agents.utils import lazy_loader
@@ -38,18 +37,19 @@ DEFAULT_TABLE = 'experience'
 class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
   """Reverb ReplayBuffer exposed as a TF-Agents replay buffer."""
 
-  def __init__(self,
-               data_spec,
-               table_name,
-               sequence_length,
-               server_address=None,
-               local_server=None,
-               dataset_buffer_size=None,
-               max_cycle_length=32,
-               num_workers_per_iterator=-1,
-               max_samples_per_stream=-1,
-               rate_limiter_timeout_ms=-1,
-               ):
+  def __init__(
+      self,
+      data_spec,
+      table_name,
+      sequence_length,
+      server_address=None,
+      local_server=None,
+      dataset_buffer_size=None,
+      max_cycle_length=32,
+      num_workers_per_iterator=-1,
+      max_samples_per_stream=-1,
+      rate_limiter_timeout_ms=-1,
+  ):
     """Initializes a reverb replay buffer.
 
     *NOTE*: If the user calls `as_dataset()` with a value of `num_steps` that
@@ -74,21 +74,18 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
       sequence_length: (can be set to `None`, i.e unknown) The number of
         timesteps that each sample consists of. If not `None`, then the lengths
         of samples received from the server will be validated against this
-        number.
-
-        **NOTE** This replay buffer will be at its most performant
-        if the `sequence_length` here is equal to `num_steps` passed to
-        `as_dataset`, and is also used when writing to the replay buffer
-        (for example, see the `sequence_lengths` argument of the
-        `Reverb.*Observer` classes).
+        number.  **NOTE** This replay buffer will be at its most performant if
+        the `sequence_length` here is equal to `num_steps` passed to
+        `as_dataset`, and is also used when writing to the replay buffer (for
+        example, see the `sequence_lengths` argument of the `Reverb.*Observer`
+        classes).
       server_address: (Optional) Address of the reverb replay server. One of
         `server_address` or `local_server` must be provided.
-      local_server: (Optional) An instance of `reverb.Server` that holds
-        the replay's data.
-      dataset_buffer_size: (Optional) This is the prefetch buffer size
-        (in number of items) of the Reverb Dataset object.  A good rule of
-        thumb is to set this value to 2-3x times the sample_batch_size you
-        will use.
+      local_server: (Optional) An instance of `reverb.Server` that holds the
+        replay's data.
+      dataset_buffer_size: (Optional) This is the prefetch buffer size (in
+        number of items) of the Reverb Dataset object.  A good rule of thumb is
+        to set this value to 2-3x times the sample_batch_size you will use.
       max_cycle_length: (Optional) The number of sequences used to populate the
         batches of `as_dataset`.  By default, `min(32, sample_batch_size)` is
         used, but the number can be between `1` and `sample_batch_size`.
@@ -102,15 +99,16 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         number of samples to fetch from a stream before a new call is made.
         Keeping this number low ensures that the data is fetched uniformly from
         all servers.
-      rate_limiter_timeout_ms: (Defaults to -1: infinite).  Timeout
-        (in milliseconds) to wait on the rate limiter when sampling from the
-        table. If `rate_limiter_timeout_ms >= 0`, this is the timeout passed to
+      rate_limiter_timeout_ms: (Defaults to -1: infinite).  Timeout (in
+        milliseconds) to wait on the rate limiter when sampling from the table.
+        If `rate_limiter_timeout_ms >= 0`, this is the timeout passed to
         `Table::Sample` describing how long to wait for the rate limiter to
         allow sampling.
     """
     if (server_address is None) == (local_server is None):
       raise ValueError(
-          'Exactly one of the server_address or local_server must be provided.')
+          'Exactly one of the server_address or local_server must be provided.'
+      )
 
     self._table_name = table_name
     self._sequence_length = sequence_length
@@ -132,11 +130,13 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
     sampler = self._table_info.sampler_options
     remover = self._table_info.remover_options
     self._deterministic_table = (
-        sampler.is_deterministic and remover.is_deterministic)
+        sampler.is_deterministic and remover.is_deterministic
+    )
 
     capacity = self._table_info.max_size
     super(ReverbReplayBuffer, self).__init__(
-        data_spec=data_spec, capacity=capacity, stateful_dataset=True)
+        data_spec=data_spec, capacity=capacity, stateful_dataset=True
+    )
 
   @property
   def py_client(self) -> types.ReverbClient:
@@ -184,7 +184,8 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
     raise NotImplementedError(
         'ReverbReplayBuffer does not support `add_batch`. See '
         '`reverb_utils.ReverbObserver` for more information on how to add data '
-        'to the buffer.')
+        'to the buffer.'
+    )
 
   def get_next(self, sample_batch_size=None, num_steps=None, time_stacked=True):
     """Returns an item or batch of items from the buffer.
@@ -206,11 +207,13 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
     """
     raise NotImplementedError('ReverbReplayBuffer does not support `get_next`.')
 
-  def _as_dataset(self,
-                  sample_batch_size,
-                  num_steps,
-                  sequence_preprocess_fn,
-                  num_parallel_calls):
+  def _as_dataset(
+      self,
+      sample_batch_size,
+      num_steps,
+      sequence_preprocess_fn,
+      num_parallel_calls,
+  ):
     """Creates and returns a dataset that returns entries from the buffer.
 
     *NOTE*: If `num_steps` does not match the `sequence_length` used in the
@@ -254,11 +257,15 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
     """
     self._verify_num_steps(num_steps)
 
-    if (num_parallel_calls and sample_batch_size
-        and num_parallel_calls > sample_batch_size):
+    if (
+        num_parallel_calls
+        and sample_batch_size
+        and num_parallel_calls > sample_batch_size
+    ):
       raise ValueError(
           'num_parallel_calls cannot be bigger than sample_batch_size '
-          '{} > {}'.format(num_parallel_calls, sample_batch_size))
+          '{} > {}'.format(num_parallel_calls, sample_batch_size)
+      )
     num_parallel_calls = num_parallel_calls or tf.data.experimental.AUTOTUNE
     total_batch_size = sample_batch_size or 1
     # This determines how many parallel Reverb dataset pipelines we create -
@@ -267,10 +274,12 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
     batch_size_per_interleave = total_batch_size // cycle_length
     # Recomended buffer_size per connection is ~2-3x the batch size.
     dataset_buffer_size = (
-        self._dataset_buffer_size or 3 * batch_size_per_interleave)
+        self._dataset_buffer_size or 3 * batch_size_per_interleave
+    )
     # Set a maximum number of workers per iterator due to interleave
     num_workers_per_iterator = min(
-        self._num_workers_per_iterator, batch_size_per_interleave)
+        self._num_workers_per_iterator, batch_size_per_interleave
+    )
 
     def per_sequence_fn(sample):
       # At this point, each sample data contains a sequence of trajectories.
@@ -287,7 +296,8 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
             .map(lambda *s: truncate_reshape_rows_by_num_steps(s, num_steps))
             # Unbatch to get elements shaped [num_steps, ...]; each element
             # contains non-overlapping time steps.
-            .unbatch())
+            .unbatch()
+        )
         shuffle_size = 100
         if self._sequence_length:
           shuffle_size = self._sequence_length // num_steps
@@ -311,15 +321,18 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         per_sequence_fn=per_sequence_fn,
         dataset_transformation=dataset_transformation,
         num_workers_per_iterator=num_workers_per_iterator,
-        rate_limiter_timeout_ms=self._rate_limiter_timeout_ms)
+        rate_limiter_timeout_ms=self._rate_limiter_timeout_ms,
+    )
 
     return dataset
 
-  def _single_deterministic_pass_dataset(self,
-                                         sample_batch_size=None,
-                                         num_steps=None,
-                                         sequence_preprocess_fn=None,
-                                         num_parallel_calls=None):
+  def _single_deterministic_pass_dataset(
+      self,
+      sample_batch_size=None,
+      num_steps=None,
+      sequence_preprocess_fn=None,
+      num_parallel_calls=None,
+  ):
     """Creates and returns a dataset that returns entries from the buffer.
 
     *NOTE*: If `num_steps` does not match the `sequence_length` used in the
@@ -358,7 +371,8 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
       raise ValueError(
           'Unable to perform a single deterministic pass over the dataset, '
           'since either the sampler or the remover is not deterministic '
-          '(FIFO or Heap).  Table info:\n{}'.format(self._table_info))
+          '(FIFO or Heap).  Table info:\n{}'.format(self._table_info)
+      )
     self._verify_num_steps(num_steps)
 
     def per_sequence_fn(sample):
@@ -376,7 +390,8 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
             .map(lambda *s: truncate_reshape_rows_by_num_steps(s, num_steps))
             # Unbatch to get elements shaped [num_steps, ...]; each element
             # contains non-overlapping time steps.
-            .unbatch())
+            .unbatch()
+        )
       return dataset
 
     dataset = make_reverb_dataset(
@@ -392,7 +407,8 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         num_parallel_calls=1,
         max_in_flight_samples_per_worker=1,
         num_workers_per_iterator=1,
-        rate_limiter_timeout_ms=self._rate_limiter_timeout_ms)
+        rate_limiter_timeout_ms=self._rate_limiter_timeout_ms,
+    )
 
     return dataset
 
@@ -408,10 +424,10 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
 
     Raises:
       NotImplementedError
-
     """
     raise NotImplementedError(
-        'ReverbReplayBuffer does not support `gather_all`.')
+        'ReverbReplayBuffer does not support `gather_all`.'
+    )
 
   def _clear(self):
     """Clears the replay buffer."""
@@ -428,29 +444,35 @@ class ReverbReplayBuffer(replay_buffer.ReplayBuffer):
         raise ValueError(
             'Can not guarantee sequential data for num_steps as sequence '
             'length of the data is smaller.  This is not supported.  '
-            'num_steps > sequence_length ({} vs. {})'
-            .format(num_steps, self._sequence_length))
+            'num_steps > sequence_length ({} vs. {})'.format(
+                num_steps, self._sequence_length
+            )
+        )
       if self._sequence_length % num_steps != 0:
         raise ValueError(
             'Can not guarantee sequential data since sequence_length is not a '
-            'multiple of num_steps ({} vs. {})'
-            .format(num_steps, self._sequence_length))
+            'multiple of num_steps ({} vs. {})'.format(
+                num_steps, self._sequence_length
+            )
+        )
 
 
-def make_reverb_dataset(server_address: str,
-                        table: str,
-                        data_spec,
-                        max_in_flight_samples_per_worker=10,
-                        batch_size=None,
-                        prefetch_size=None,
-                        sequence_length=None,
-                        cycle_length=None,
-                        num_parallel_calls=None,
-                        per_sequence_fn=None,
-                        dataset_transformation=None,
-                        num_workers_per_iterator=-1,
-                        max_samples_per_stream=-1,
-                        rate_limiter_timeout_ms=-1) -> tf.data.Dataset:
+def make_reverb_dataset(
+    server_address: str,
+    table: str,
+    data_spec,
+    max_in_flight_samples_per_worker=10,
+    batch_size=None,
+    prefetch_size=None,
+    sequence_length=None,
+    cycle_length=None,
+    num_parallel_calls=None,
+    per_sequence_fn=None,
+    dataset_transformation=None,
+    num_workers_per_iterator=-1,
+    max_samples_per_stream=-1,
+    rate_limiter_timeout_ms=-1,
+) -> tf.data.Dataset:
   """Makes a TensorFlow dataset.
 
   Args:
@@ -471,12 +493,12 @@ def make_reverb_dataset(server_address: str,
       iterleave. By default use `tf.data.experimental.AUTOTUNE`.
     per_sequence_fn: Optional, per sequence function.
     dataset_transformation: Optional, per dataset interleave transformation.
-    num_workers_per_iterator: (Defaults to -1, i.e auto selected) The number
-      of worker threads to create per dataset iterator. When the selected
-      table uses a FIFO sampler (i.e a queue) then exactly 1 worker must be
-      used to avoid races causing invalid ordering of items. For all other
-      samplers, this value should be roughly equal to the number of threads
-      available on the CPU.
+    num_workers_per_iterator: (Defaults to -1, i.e auto selected) The number of
+      worker threads to create per dataset iterator. When the selected table
+      uses a FIFO sampler (i.e a queue) then exactly 1 worker must be used to
+      avoid races causing invalid ordering of items. For all other samplers,
+      this value should be roughly equal to the number of threads available on
+      the CPU.
     max_samples_per_stream: (Defaults to -1, i.e auto selected) The maximum
       number of samples to fetch from a stream before a new call is made.
       Keeping this number low ensures that the data is fetched uniformly from
@@ -509,7 +531,7 @@ def make_reverb_dataset(server_address: str,
     )
 
     def broadcast_info(
-        info_traj: types.ReverbReplaySample
+        info_traj: types.ReverbReplaySample,
     ) -> types.ReverbReplaySample:
       # Assumes that the first element of traj is shaped
       # (sequence_length, ...); and we extract this length.
@@ -536,7 +558,8 @@ def make_reverb_dataset(server_address: str,
     dataset = tf.data.Dataset.range(cycle_length).interleave(
         generate_reverb_dataset,
         cycle_length=cycle_length,
-        num_parallel_calls=num_parallel_calls)
+        num_parallel_calls=num_parallel_calls,
+    )
 
   # Allows interleave to retrieve data from the first `reverb.TrajectoryDataset`
   # available.
@@ -578,11 +601,13 @@ def truncate_reshape_rows_by_num_steps(sample, num_steps):
   else:
     num_rows = tf.shape(first_elem)[0] // num_steps
     static_num_rows = None
+
   def _truncate_and_reshape(t):
-    truncated = t[:(num_rows * num_steps), ...]
+    truncated = t[: (num_rows * num_steps), ...]
     reshaped = tf.reshape(
-        truncated,
-        tf.concat(([num_rows, num_steps], tf.shape(t)[1:]), axis=0))
+        truncated, tf.concat(([num_rows, num_steps], tf.shape(t)[1:]), axis=0)
+    )
     reshaped.set_shape([static_num_rows, num_steps] + t.shape[1:])
     return reshaped
+
   return tf.nest.map_structure(_truncate_and_reshape, sample)

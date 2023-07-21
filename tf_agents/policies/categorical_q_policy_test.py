@@ -20,11 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-from absl import flags
 
+from absl import flags
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import categorical_q_network
 from tf_agents.networks import network
 from tf_agents.policies import categorical_q_policy
@@ -36,17 +35,12 @@ from tf_agents.utils import test_utils
 
 class DummyCategoricalNet(network.Network):
 
-  def __init__(self,
-               input_tensor_spec,
-               num_atoms=51,
-               num_actions=2,
-               name=None):
+  def __init__(self, input_tensor_spec, num_atoms=51, num_actions=2, name=None):
     self._num_atoms = num_atoms
     self._num_actions = num_actions
     super(DummyCategoricalNet, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     # In CategoricalDQN we are dealing with a distribution over Q-values, which
     # are represented as num_atoms bins, ranging from min_q_value to
@@ -60,7 +54,8 @@ class DummyCategoricalNet(network.Network):
     # value for the first action.
     weights_initializer = np.array([
         np.concatenate((np.arange(num_atoms), np.ones(num_atoms))),
-        np.concatenate((np.ones(num_atoms), np.ones(num_atoms)))])
+        np.concatenate((np.ones(num_atoms), np.ones(num_atoms))),
+    ])
     kernel_initializer = tf.constant_initializer(weights_initializer)
     bias_initializer = tf.keras.initializers.Ones()
 
@@ -70,7 +65,9 @@ class DummyCategoricalNet(network.Network):
         tf.keras.layers.Dense(
             num_actions * num_atoms,
             kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer))
+            bias_initializer=bias_initializer,
+        )
+    )
 
   @property
   def num_atoms(self):
@@ -95,14 +92,17 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     self._min_q_value = -10
     self._max_q_value = 10
     self._q_network = DummyCategoricalNet(
-        input_tensor_spec=self._obs_spec,
-        num_atoms=3,
-        num_actions=2)
+        input_tensor_spec=self._obs_spec, num_atoms=3, num_actions=2
+    )
 
   def testBuild(self):
     policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, self._action_spec, self._q_network,
-        self._min_q_value, self._max_q_value)
+        self._time_step_spec,
+        self._action_spec,
+        self._q_network,
+        self._min_q_value,
+        self._max_q_value,
+    )
 
     self.assertEqual(policy.time_step_spec, self._time_step_spec)
     self.assertEqual(policy.action_spec, self._action_spec)
@@ -113,22 +113,32 @@ class CategoricalQPolicyTest(test_utils.TestCase):
 
   def testMultipleActionsRaiseError(self):
     with self.assertRaisesRegexp(
-        TypeError, '.*action_spec must be a BoundedTensorSpec.*'):
+        TypeError, '.*action_spec must be a BoundedTensorSpec.*'
+    ):
       # Replace the action_spec for this test.
       action_spec = [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)] * 2
       q_network = categorical_q_network.CategoricalQNetwork(
           input_tensor_spec=self._obs_spec,
           action_spec=action_spec,
           num_atoms=3,
-          fc_layer_params=[4])
+          fc_layer_params=[4],
+      )
       categorical_q_policy.CategoricalQPolicy(
-          self._time_step_spec, action_spec, q_network,
-          self._min_q_value, self._max_q_value)
+          self._time_step_spec,
+          action_spec,
+          q_network,
+          self._min_q_value,
+          self._max_q_value,
+      )
 
   def testAction(self):
     policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, self._action_spec, self._q_network,
-        self._min_q_value, self._max_q_value)
+        self._time_step_spec,
+        self._action_spec,
+        self._q_network,
+        self._min_q_value,
+        self._max_q_value,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
@@ -148,8 +158,12 @@ class CategoricalQPolicyTest(test_utils.TestCase):
 
   def testSample(self):
     policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, self._action_spec, self._q_network,
-        self._min_q_value, self._max_q_value)
+        self._time_step_spec,
+        self._action_spec,
+        self._q_network,
+        self._min_q_value,
+        self._max_q_value,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
@@ -168,12 +182,20 @@ class CategoricalQPolicyTest(test_utils.TestCase):
 
   def testUpdate(self):
     policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, self._action_spec, self._q_network,
-        self._min_q_value, self._max_q_value)
+        self._time_step_spec,
+        self._action_spec,
+        self._q_network,
+        self._min_q_value,
+        self._max_q_value,
+    )
 
     new_policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, self._action_spec, self._q_network,
-        self._min_q_value, self._max_q_value)
+        self._time_step_spec,
+        self._action_spec,
+        self._q_network,
+        self._min_q_value,
+        self._max_q_value,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations)
@@ -217,7 +239,8 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     time_step = ts.restart(observations, batch_size=batch_size)
     input_tensor_spec = tensor_spec.TensorSpec([num_state_dims], tf.float32)
     action_spec = tensor_spec.BoundedTensorSpec(
-        [1], tf.int32, 0, num_actions - 1)
+        [1], tf.int32, 0, num_actions - 1
+    )
 
     # We create a fixed mask here for testing purposes. Normally the mask would
     # be part of the observation.
@@ -228,12 +251,18 @@ class CategoricalQPolicyTest(test_utils.TestCase):
         input_tensor_spec=input_tensor_spec,
         action_spec=action_spec,
         num_atoms=3,
-        fc_layer_params=[4])
+        fc_layer_params=[4],
+    )
     policy = categorical_q_policy.CategoricalQPolicy(
-        self._time_step_spec, action_spec, q_network,
-        self._min_q_value, self._max_q_value,
+        self._time_step_spec,
+        action_spec,
+        q_network,
+        self._min_q_value,
+        self._max_q_value,
         observation_and_action_constraint_splitter=(
-            lambda observation: (observation, tf_mask)))
+            lambda observation: (observation, tf_mask)
+        ),
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
@@ -245,19 +274,22 @@ class CategoricalQPolicyTest(test_utils.TestCase):
     self.assertAllEqual(np_mask[action], np.ones([batch_size]))
 
   def testSaver(self):
-    policy = categorical_q_policy.CategoricalQPolicy(self._time_step_spec,
-                                                     self._action_spec,
-                                                     self._q_network,
-                                                     self._min_q_value,
-                                                     self._max_q_value)
+    policy = categorical_q_policy.CategoricalQPolicy(
+        self._time_step_spec,
+        self._action_spec,
+        self._q_network,
+        self._min_q_value,
+        self._max_q_value,
+    )
 
     train_step = tf.compat.v1.train.get_or_create_global_step()
     saver = policy_saver.PolicySaver(policy, train_step=train_step)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(tf.compat.v1.local_variables_initializer())
 
-    save_path = os.path.join(flags.FLAGS.test_tmpdir,
-                             'saved_categorical_q_policy')
+    save_path = os.path.join(
+        flags.FLAGS.test_tmpdir, 'saved_categorical_q_policy'
+    )
 
     # For TF1 Compatibility we set the cached session as default. This is a
     # no-op in TF2.

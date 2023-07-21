@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+
 from absl import logging
 import gin
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import py_driver
@@ -48,10 +48,7 @@ def log_metrics(metrics, prefix=''):
 
 
 @gin.configurable
-def compute(metrics,
-            environment,
-            policy,
-            num_episodes=1):
+def compute(metrics, environment, policy, num_episodes=1):
   """Compute metrics using `policy` on the `environment`.
 
   Args:
@@ -75,7 +72,8 @@ def compute(metrics,
       policy,
       observers=metrics,
       max_steps=None,
-      max_episodes=num_episodes)
+      max_episodes=num_episodes,
+  )
   driver.run(time_step, policy_state)
 
   results = [(metric.name, metric.result()) for metric in metrics]
@@ -83,14 +81,16 @@ def compute(metrics,
 
 
 @gin.configurable
-def compute_summaries(metrics,
-                      environment,
-                      policy,
-                      num_episodes=1,
-                      global_step=None,
-                      tf_summaries=True,
-                      log=False,
-                      callback=None):
+def compute_summaries(
+    metrics,
+    environment,
+    policy,
+    num_episodes=1,
+    global_step=None,
+    tf_summaries=True,
+    log=False,
+    callback=None,
+):
   """Compute metrics using `policy` on the `environment` and logs summaries.
 
   Args:
@@ -120,14 +120,16 @@ def compute_summaries(metrics,
 
 # TODO(b/130250285): Match compute and compute_summaries signatures.
 @gin.configurable
-def eager_compute(metrics,
-                  environment,
-                  policy,
-                  num_episodes=1,
-                  train_step=None,
-                  summary_writer=None,
-                  summary_prefix='',
-                  use_function=True):
+def eager_compute(
+    metrics,
+    environment,
+    policy,
+    num_episodes=1,
+    train_step=None,
+    summary_writer=None,
+    summary_prefix='',
+    use_function=True,
+):
   """Compute metrics using `policy` on the `environment`.
 
   *NOTE*: Because placeholders are not compatible with Eager mode we can not use
@@ -145,6 +147,7 @@ def eager_compute(metrics,
     summary_prefix: An optional prefix scope for metric summaries.
     use_function: Option to enable use of `tf.function` when collecting the
       metrics.
+
   Returns:
     A dictionary of results {metric_name: metric_value}
   """
@@ -155,10 +158,8 @@ def eager_compute(metrics,
   policy_state = policy.get_initial_state(environment.batch_size)
 
   driver = dynamic_episode_driver.DynamicEpisodeDriver(
-      environment,
-      policy,
-      observers=metrics,
-      num_episodes=num_episodes)
+      environment, policy, observers=metrics, num_episodes=num_episodes
+  )
   if use_function:
     common.function(driver.run)(time_step, policy_state)
   else:

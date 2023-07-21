@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.utils import nest_utils
@@ -42,15 +42,13 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def nest_spec(self, shape=(2, 3), dtype=tf.float32, include_sparse=True):
     spec = {
-        'tensor_spec_1':
-            tensor_spec.TensorSpec(shape, dtype),
-        'bounded_spec_1':
-            tensor_spec.BoundedTensorSpec(shape, dtype, -10, 10),
+        'tensor_spec_1': tensor_spec.TensorSpec(shape, dtype),
+        'bounded_spec_1': tensor_spec.BoundedTensorSpec(shape, dtype, -10, 10),
         'dict_spec': {
-            'tensor_spec_2':
-                tensor_spec.TensorSpec(shape, dtype),
-            'bounded_spec_2':
-                tensor_spec.BoundedTensorSpec(shape, dtype, -10, 10)
+            'tensor_spec_2': tensor_spec.TensorSpec(shape, dtype),
+            'bounded_spec_2': tensor_spec.BoundedTensorSpec(
+                shape, dtype, -10, 10
+            ),
         },
         'tuple_spec': (
             tensor_spec.TensorSpec(shape, dtype),
@@ -58,11 +56,12 @@ class NestedTensorsTest(tf.test.TestCase):
         ),
         'list_spec': [
             tensor_spec.TensorSpec(shape, dtype),
-            (tensor_spec.TensorSpec(shape, dtype),
-             tensor_spec.BoundedTensorSpec(shape, dtype, -10, 10)),
+            (
+                tensor_spec.TensorSpec(shape, dtype),
+                tensor_spec.BoundedTensorSpec(shape, dtype, -10, 10),
+            ),
         ],
-        'sparse_tensor_spec': tf.SparseTensorSpec(
-            shape=shape, dtype=dtype)
+        'sparse_tensor_spec': tf.SparseTensorSpec(shape=shape, dtype=dtype),
     }
     if not include_sparse:
       del spec['sparse_tensor_spec']
@@ -73,8 +72,8 @@ class NestedTensorsTest(tf.test.TestCase):
 
     Args:
       spec: A `tf.TypeSpec`, e.g. `tf.TensorSpec` or `tf.SparseTensorSpec`.
-      batch_size: The desired batch size; the size of the first dimension of
-        all tensors.
+      batch_size: The desired batch size; the size of the first dimension of all
+        tensors.
       extra_sizes: An optional list of additional dimension sizes beyond the
         batch_size.
 
@@ -95,11 +94,14 @@ class NestedTensorsTest(tf.test.TestCase):
             tf.SparseTensor(
                 indices=tf.zeros([7, rank], dtype=tf.int64),
                 values=tf.zeros([7], dtype=s.dtype),
-                dense_shape=tf.constant(shape.as_list(), dtype=tf.int64)))
+                dense_shape=tf.constant(shape.as_list(), dtype=tf.int64),
+            )
+        )
       elif isinstance(s, tf.TensorSpec):
         if batch_size:
           shape = tf.TensorShape([batch_size] + extra_sizes).concatenate(
-              s.shape)
+              s.shape
+          )
         else:
           shape = s.shape
         tensors.append(tf.zeros(shape, dtype=s.dtype))
@@ -123,7 +125,9 @@ class NestedTensorsTest(tf.test.TestCase):
         shape = tf.TensorShape([None]).concatenate(s.shape)
         tensors.append(
             tf.sparse.from_dense(
-                tf.compat.v1.placeholder(dtype=s.dtype, shape=shape)))
+                tf.compat.v1.placeholder(dtype=s.dtype, shape=shape)
+            )
+        )
       elif isinstance(s, tf.TensorSpec):
         shape = tf.TensorShape([None]).concatenate(s.shape)
         tensors.append(tf.compat.v1.placeholder(dtype=s.dtype, shape=shape))
@@ -277,7 +281,8 @@ class NestedTensorsTest(tf.test.TestCase):
     tensors = self.zeros_from_spec(specs, batch_size=2)
     tensors['extra_field'] = tf.constant([1, 2, 3])
     is_batched = nest_utils.is_batched_nested_tensors(
-        tensors, specs, allow_extra_fields=True)
+        tensors, specs, allow_extra_fields=True
+    )
     self.assertTrue(is_batched)
 
   def testIsBatchedNestedTensorsMixed(self):
@@ -291,13 +296,15 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def testDifferentRankCases(self):
     state_spec = {
-        'first':
-            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int32, name='second'),
-        'second':
-            tensor_spec.TensorSpec(shape=(1, 1), dtype=tf.int32, name='second'),
-        'third':
-            tensor_spec.TensorSpec(
-                shape=(1, 1, 1), dtype=tf.float32, name='third'),
+        'first': tensor_spec.TensorSpec(
+            shape=(1,), dtype=tf.int32, name='second'
+        ),
+        'second': tensor_spec.TensorSpec(
+            shape=(1, 1), dtype=tf.int32, name='second'
+        ),
+        'third': tensor_spec.TensorSpec(
+            shape=(1, 1, 1), dtype=tf.float32, name='third'
+        ),
     }
     batch_size = 2
     condition = tf.ones((batch_size,), dtype=tf.bool)
@@ -310,10 +317,12 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def testRankTooSmallRaisesValueError(self):
     state_spec = {
-        'big':
-            tensor_spec.TensorSpec(shape=(1, 1), dtype=tf.int32, name='second'),
-        'small':
-            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int32, name='second'),
+        'big': tensor_spec.TensorSpec(
+            shape=(1, 1), dtype=tf.int32, name='second'
+        ),
+        'small': tensor_spec.TensorSpec(
+            shape=(1,), dtype=tf.int32, name='second'
+        ),
     }
     batch_size = 2
     condition = tf.ones((batch_size, 1, 1), dtype=tf.bool)
@@ -324,11 +333,14 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def testRankTooSmallFunctionRaisesValueError(self):
     state_spec = {
-        'big':
-            tensor_spec.TensorSpec(shape=(1, 1), dtype=tf.int32, name='second'),
-        'small':
-            tensor_spec.TensorSpec(shape=(1,), dtype=tf.int32, name='second'),
+        'big': tensor_spec.TensorSpec(
+            shape=(1, 1), dtype=tf.int32, name='second'
+        ),
+        'small': tensor_spec.TensorSpec(
+            shape=(1,), dtype=tf.int32, name='second'
+        ),
     }
+
     @tf.function
     def aux_where():
       batch_size = 2
@@ -336,6 +348,7 @@ class NestedTensorsTest(tf.test.TestCase):
       a = self.zeros_from_spec(state_spec, batch_size=batch_size)
       b = self.zeros_from_spec(state_spec, batch_size=batch_size)
       return nest_utils.where(condition, a, b)
+
     with self.assertRaises(ValueError):
       aux_where()
 
@@ -345,7 +358,8 @@ class NestedTensorsTest(tf.test.TestCase):
     tensors = self.zeros_from_spec(specs)
 
     is_batched = nest_utils.is_batched_nested_tensors(
-        tensors, specs, num_outer_dims=2)
+        tensors, specs, num_outer_dims=2
+    )
     self.assertFalse(is_batched)
 
   def testIsBatchedNestedTensorsMultipleBatchDimsTrue(self):
@@ -354,7 +368,8 @@ class NestedTensorsTest(tf.test.TestCase):
     tensors = self.zeros_from_spec(specs, batch_size=2, extra_sizes=[2])
 
     is_batched = nest_utils.is_batched_nested_tensors(
-        tensors, specs, num_outer_dims=2)
+        tensors, specs, num_outer_dims=2
+    )
     self.assertTrue(is_batched)
 
   def testIsBatchedNestedTensorsMultipleBatchDimsWrongBatchDimNumber(self):
@@ -363,9 +378,9 @@ class NestedTensorsTest(tf.test.TestCase):
     # Tensors only have one batch dim.
     tensors = self.zeros_from_spec(specs, batch_size=2)
 
-    is_batched = nest_utils.is_batched_nested_tensors(tensors,
-                                                      specs,
-                                                      num_outer_dims=2)
+    is_batched = nest_utils.is_batched_nested_tensors(
+        tensors, specs, num_outer_dims=2
+    )
     self.assertFalse(is_batched)
 
   def testIsBatchedNestedTensorsMultipleBatchDimsRightBatchDimNumber(self):
@@ -374,9 +389,9 @@ class NestedTensorsTest(tf.test.TestCase):
     # Tensors only have one batch dim.
     tensors = self.zeros_from_spec(specs, batch_size=2, extra_sizes=[1])
 
-    is_batched = nest_utils.is_batched_nested_tensors(tensors,
-                                                      specs,
-                                                      num_outer_dims=2)
+    is_batched = nest_utils.is_batched_nested_tensors(
+        tensors, specs, num_outer_dims=2
+    )
     self.assertTrue(is_batched)
 
   def testIsBatchedNestedTensorsMultipleBatchDimsMixed(self):
@@ -506,8 +521,9 @@ class NestedTensorsTest(tf.test.TestCase):
     batched_tensors = self.zeros_from_spec(specs, batch_size=batch_size)
     tf.nest.assert_same_structure(batched_tensors, specs)
 
-    tensors = nest_utils.split_nested_tensors(batched_tensors, specs,
-                                              batch_size)
+    tensors = nest_utils.split_nested_tensors(
+        batched_tensors, specs, batch_size
+    )
     self.assertLen(tensors, batch_size)
 
     for t in tensors:
@@ -520,6 +536,7 @@ class NestedTensorsTest(tf.test.TestCase):
         self.assertLen(t.shape, 1 + len(shape))
       else:
         self.assertEqual(t.shape.as_list(), [1] + shape)
+
     tf.nest.map_structure(assert_shapes, tensors)
 
   def testSplitNestedTensorsSizeSplits(self):
@@ -532,14 +549,16 @@ class NestedTensorsTest(tf.test.TestCase):
     tf.nest.assert_same_structure(batched_tensors, specs)
 
     tensors = nest_utils.split_nested_tensors(
-        batched_tensors, specs, size_splits)
+        batched_tensors, specs, size_splits
+    )
     self.assertEqual(len(tensors), len(size_splits))
 
     for i, tensor in enumerate(tensors):
       tf.nest.assert_same_structure(specs, tensor)
       tf.nest.map_structure(
           lambda t: self.assertEqual(t.shape.as_list()[0], size_splits[i]),  # pylint: disable=cell-var-from-loop
-          tensor)
+          tensor,
+      )
 
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list()[1:], shape)
     tf.nest.map_structure(assert_shapes, tensors)
@@ -563,7 +582,9 @@ class NestedTensorsTest(tf.test.TestCase):
   def testStackNestedTensors(self):
     shape = [5, 8]
     batch_size = 3
-    batched_shape = [batch_size,] + shape
+    batched_shape = [
+        batch_size,
+    ] + shape
 
     specs = self.nest_spec(shape, include_sparse=False)
     unstacked_tensors = [self.zeros_from_spec(specs) for _ in range(batch_size)]
@@ -603,8 +624,9 @@ class NestedTensorsTest(tf.test.TestCase):
     spec = tensor_spec.TensorSpec([2, 3], dtype=tf.float32)
     tensor = self.zeros_from_spec(spec, batch_size=7, extra_sizes=[5])
 
-    (batch_flattened_tensor,
-     batch_dims) = nest_utils.flatten_multi_batched_nested_tensors(tensor, spec)
+    (batch_flattened_tensor, batch_dims) = (
+        nest_utils.flatten_multi_batched_nested_tensors(tensor, spec)
+    )
 
     self.assertEqual(batch_flattened_tensor.shape.as_list(), [35, 2, 3])
 
@@ -616,9 +638,9 @@ class NestedTensorsTest(tf.test.TestCase):
     shape = [2, 3]
     specs = self.nest_spec(shape)
     tensors = self.zeros_from_spec(specs, batch_size=7, extra_sizes=[5])
-    (batch_flattened_tensors,
-     batch_dims) = nest_utils.flatten_multi_batched_nested_tensors(
-         tensors, specs)
+    (batch_flattened_tensors, batch_dims) = (
+        nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    )
 
     tf.nest.assert_same_structure(specs, batch_flattened_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [35, 2, 3])
@@ -630,15 +652,17 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def testFlattenMultiBatchedNestedTensorsWithPartiallyKnownShape(self):
     if tf.executing_eagerly():
-      self.skipTest('Do not check nest processing of data in eager mode. '
-                    'Placeholders are not compatible with eager execution.')
+      self.skipTest(
+          'Do not check nest processing of data in eager mode. '
+          'Placeholders are not compatible with eager execution.'
+      )
     shape = [2, 3]
     specs = self.nest_spec(shape, include_sparse=False)
     tensors = self.placeholders_from_spec(specs)
 
-    (batch_flattened_tensors,
-     _) = nest_utils.flatten_multi_batched_nested_tensors(
-         tensors, specs)
+    (batch_flattened_tensors, _) = (
+        nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    )
 
     tf.nest.assert_same_structure(specs, batch_flattened_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [None, 2, 3])
@@ -646,28 +670,34 @@ class NestedTensorsTest(tf.test.TestCase):
 
   def testFlattenMultiBatchedNestedTensorsWithSparseTensor(self):
     if tf.executing_eagerly():
-      self.skipTest('Do not check nest processing of data in eager mode. '
-                    'Placeholders are not compatible with eager execution.')
+      self.skipTest(
+          'Do not check nest processing of data in eager mode. '
+          'Placeholders are not compatible with eager execution.'
+      )
     shape = [2, 3]
     specs = self.nest_spec(shape)
     tensors = self.zeros_from_spec(specs, batch_size=7, extra_sizes=[5])
 
-    (batch_flattened_tensors,
-     _) = nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    (batch_flattened_tensors, _) = (
+        nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    )
     tf.nest.assert_same_structure(specs, batch_flattened_tensors)
     assert_shapes = lambda t: self.assertEqual(t.shape.as_list(), [35, 2, 3])
     tf.nest.map_structure(assert_shapes, batch_flattened_tensors)
 
   def testFlattenMultiBatchedNestedTensorsWithPartiallyKnownSparseTensor(self):
     if tf.executing_eagerly():
-      self.skipTest('Do not check nest processing of data in eager mode. '
-                    'Placeholders are not compatible with eager execution.')
+      self.skipTest(
+          'Do not check nest processing of data in eager mode. '
+          'Placeholders are not compatible with eager execution.'
+      )
     shape = [2, None]
     specs = self.nest_spec(shape)
     tensors = self.placeholders_from_spec(specs)
 
-    (batch_flattened_tensors,
-     _) = nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    (batch_flattened_tensors, _) = (
+        nest_utils.flatten_multi_batched_nested_tensors(tensors, specs)
+    )
     tf.nest.assert_same_structure(specs, batch_flattened_tensors)
 
     def assert_shapes(t):
@@ -684,15 +714,13 @@ class NestedArraysTest(tf.test.TestCase):
 
   def nest_spec(self, shape=(2, 3), dtype=np.float32):
     return {
-        'array_spec_1':
-            array_spec.ArraySpec(shape, dtype),
-        'bounded_spec_1':
-            array_spec.BoundedArraySpec(shape, dtype, -10, 10),
+        'array_spec_1': array_spec.ArraySpec(shape, dtype),
+        'bounded_spec_1': array_spec.BoundedArraySpec(shape, dtype, -10, 10),
         'dict_spec': {
-            'tensor_spec_2':
-                array_spec.ArraySpec(shape, dtype),
-            'bounded_spec_2':
-                array_spec.BoundedArraySpec(shape, dtype, -10, 10)
+            'tensor_spec_2': array_spec.ArraySpec(shape, dtype),
+            'bounded_spec_2': array_spec.BoundedArraySpec(
+                shape, dtype, -10, 10
+            ),
         },
         'tuple_spec': (
             array_spec.ArraySpec(shape, dtype),
@@ -700,8 +728,10 @@ class NestedArraysTest(tf.test.TestCase):
         ),
         'list_spec': [
             array_spec.ArraySpec(shape, dtype),
-            (array_spec.ArraySpec(shape, dtype),
-             array_spec.BoundedArraySpec(shape, dtype, -10, 10)),
+            (
+                array_spec.ArraySpec(shape, dtype),
+                array_spec.BoundedArraySpec(shape, dtype, -10, 10),
+            ),
         ],
     }
 
@@ -743,14 +773,17 @@ class NestedArraysTest(tf.test.TestCase):
     specs = self.nest_spec(shape)
     batched_arrays = self.zeros_from_spec(specs, outer_dims=[batch_size])
     unbatched_flat_items = nest_utils.unstack_nested_arrays_into_flat_items(
-        batched_arrays)
+        batched_arrays
+    )
     self.assertLen(unbatched_flat_items, batch_size)
 
     for nested_array, flat_item in zip(
-        nest_utils.unstack_nested_arrays(batched_arrays), unbatched_flat_items):
+        nest_utils.unstack_nested_arrays(batched_arrays), unbatched_flat_items
+    ):
       self.assertAllEqual(flat_item, tf.nest.flatten(nested_array))
-      tf.nest.assert_same_structure(specs,
-                                    tf.nest.pack_sequence_as(specs, flat_item))
+      tf.nest.assert_same_structure(
+          specs, tf.nest.pack_sequence_as(specs, flat_item)
+      )
     assert_shapes = lambda a: self.assertEqual(a.shape, shape)
     tf.nest.map_structure(assert_shapes, unbatched_flat_items)
 
@@ -784,8 +817,10 @@ class NestedArraysTest(tf.test.TestCase):
   def testGetOuterArrayShape(self):
     spec = (
         array_spec.ArraySpec([5, 8], np.float32),
-        (array_spec.ArraySpec([1], np.int32),
-         array_spec.ArraySpec([2, 2, 2], np.float32))
+        (
+            array_spec.ArraySpec([1], np.int32),
+            array_spec.ArraySpec([2, 2, 2], np.float32),
+        ),
     )
 
     batch_size = 3
@@ -805,10 +840,12 @@ class NestedArraysTest(tf.test.TestCase):
 
   def testWhere(self):
     condition = tf.convert_to_tensor([True, False, False, True, False])
-    true_output = tf.nest.map_structure(tf.convert_to_tensor,
-                                        (np.array([0] * 5), np.arange(1, 6)))
-    false_output = tf.nest.map_structure(tf.convert_to_tensor,
-                                         (np.array([1] * 5), np.arange(6, 11)))
+    true_output = tf.nest.map_structure(
+        tf.convert_to_tensor, (np.array([0] * 5), np.arange(1, 6))
+    )
+    false_output = tf.nest.map_structure(
+        tf.convert_to_tensor, (np.array([1] * 5), np.arange(6, 11))
+    )
 
     result = nest_utils.where(condition, true_output, false_output)
     result = self.evaluate(result)
@@ -820,25 +857,35 @@ class NestedArraysTest(tf.test.TestCase):
     condition = tf.convert_to_tensor([True, False, False, True, False])
     true_output = tf.nest.map_structure(
         tf.convert_to_tensor,
-        (np.reshape(np.array([0] * 10),
-                    (5, 2)), np.reshape(np.arange(1, 11), (5, 2))))
+        (
+            np.reshape(np.array([0] * 10), (5, 2)),
+            np.reshape(np.arange(1, 11), (5, 2)),
+        ),
+    )
     false_output = tf.nest.map_structure(
         tf.convert_to_tensor,
-        (np.reshape(np.array([1] * 10),
-                    (5, 2)), np.reshape(np.arange(12, 22), (5, 2))))
+        (
+            np.reshape(np.array([1] * 10), (5, 2)),
+            np.reshape(np.arange(12, 22), (5, 2)),
+        ),
+    )
 
     result = nest_utils.where(condition, true_output, false_output)
     result = self.evaluate(result)
 
-    expected = (np.array([[0, 0], [1, 1], [1, 1], [0, 0], [1, 1]]),
-                np.array([[1, 2], [14, 15], [16, 17], [7, 8], [20, 21]]))
+    expected = (
+        np.array([[0, 0], [1, 1], [1, 1], [0, 0], [1, 1]]),
+        np.array([[1, 2], [14, 15], [16, 17], [7, 8], [20, 21]]),
+    )
     self.assertAllEqual(expected, result)
 
   def testWhereSameRankDifferentDimension(self):
     condition = tf.convert_to_tensor([True, False, True])
     true_output = (tf.convert_to_tensor([1]), tf.convert_to_tensor([2]))
-    false_output = (tf.convert_to_tensor([3, 4, 5]),
-                    tf.convert_to_tensor([6, 7, 8]))
+    false_output = (
+        tf.convert_to_tensor([3, 4, 5]),
+        tf.convert_to_tensor([6, 7, 8]),
+    )
 
     result = nest_utils.where(condition, true_output, false_output)
     result = self.evaluate(result)
@@ -852,105 +899,135 @@ class PruneExtraKeysTest(tf.test.TestCase):
   def testPruneExtraKeys(self):
     self.assertEqual(nest_utils.prune_extra_keys({}, {'a': 1}), {})
     self.assertEqual(nest_utils.prune_extra_keys((), {'a': 1}), ())
-    self.assertEqual(nest_utils.prune_extra_keys(
-        {'a': 1}, {'a': 'a'}), {'a': 'a'})
     self.assertEqual(
-        nest_utils.prune_extra_keys({'a': 1}, {'a': 'a', 'b': 2}), {'a': 'a'})
+        nest_utils.prune_extra_keys({'a': 1}, {'a': 'a'}), {'a': 'a'}
+    )
+    self.assertEqual(
+        nest_utils.prune_extra_keys({'a': 1}, {'a': 'a', 'b': 2}), {'a': 'a'}
+    )
     self.assertEqual(
         nest_utils.prune_extra_keys([{'a': 1}], [{'a': 'a', 'b': 2}]),
-        [{'a': 'a'}])
+        [{'a': 'a'}],
+    )
     self.assertEqual(
         nest_utils.prune_extra_keys({'a': (), 'b': None}, {'a': 1, 'b': 2}),
-        {'a': (), 'b': 2})
+        {'a': (), 'b': 2},
+    )
     self.assertEqual(
         nest_utils.prune_extra_keys(
             {'a': {'aa': 1, 'ab': 2}, 'b': {'ba': 1}},
-            {'a': {'aa': 'aa', 'ab': 'ab', 'ac': 'ac'},
-             'b': {'ba': 'ba', 'bb': 'bb'},
-             'c': 'c'}),
-        {'a': {'aa': 'aa', 'ab': 'ab'}, 'b': {'ba': 'ba'}})
+            {
+                'a': {'aa': 'aa', 'ab': 'ab', 'ac': 'ac'},
+                'b': {'ba': 'ba', 'bb': 'bb'},
+                'c': 'c',
+            },
+        ),
+        {'a': {'aa': 'aa', 'ab': 'ab'}, 'b': {'ba': 'ba'}},
+    )
 
     self.assertEqual(
         nest_utils.prune_extra_keys(
-            {'a': ()},
-            DictWrapper({'a': DictWrapper({'b': None})})),
-        {'a': ()})
+            {'a': ()}, DictWrapper({'a': DictWrapper({'b': None})})
+        ),
+        {'a': ()},
+    )
 
     self.assertEqual(
         nest_utils.prune_extra_keys(
-            {'a': 1, 'c': 2},
-            DictWrapper({'a': DictWrapper({'b': None})})),
-        {'a': {'b': None}})
+            {'a': 1, 'c': 2}, DictWrapper({'a': DictWrapper({'b': None})})
+        ),
+        {'a': {'b': None}},
+    )
 
   def testInvalidWide(self):
     self.assertEqual(nest_utils.prune_extra_keys(None, {'a': 1}), {'a': 1})
     self.assertEqual(nest_utils.prune_extra_keys({'a': 1}, {}), {})
-    self.assertEqual(nest_utils.prune_extra_keys(
-        {'a': 1}, {'c': 'c'}), {'c': 'c'})
+    self.assertEqual(
+        nest_utils.prune_extra_keys({'a': 1}, {'c': 'c'}), {'c': 'c'}
+    )
     self.assertEqual(nest_utils.prune_extra_keys([], ['a']), ['a'])
     self.assertEqual(
-        nest_utils.prune_extra_keys([{}, {}], [{'a': 1}]), [{'a': 1}])
+        nest_utils.prune_extra_keys([{}, {}], [{'a': 1}]), [{'a': 1}]
+    )
 
   def testNamedTuple(self):
-
     class A(collections.namedtuple('A', ('a', 'b'))):
       pass
 
     self.assertEqual(
         nest_utils.prune_extra_keys(
             [A(a={'aa': 1}, b=3), {'c': 4}],
-            [A(a={'aa': 'aa', 'ab': 'ab'}, b='b'), {'c': 'c', 'd': 'd'}]),
-        [A(a={'aa': 'aa'}, b='b'), {'c': 'c'}])
+            [A(a={'aa': 'aa', 'ab': 'ab'}, b='b'), {'c': 'c', 'd': 'd'}],
+        ),
+        [A(a={'aa': 'aa'}, b='b'), {'c': 'c'}],
+    )
 
   def testSubtypesOfListAndDict(self):
-
     class A(collections.namedtuple('A', ('a', 'b'))):
       pass
 
     self.assertEqual(
         nest_utils.prune_extra_keys(
-            [data_structures.ListWrapper([None, DictWrapper({'a': 3, 'b': 4})]),
-             None,
-             TupleWrapper((DictWrapper({'g': 5}),)),
-             TupleWrapper(A(None, DictWrapper({'h': 6}))),
+            [
+                data_structures.ListWrapper(
+                    [None, DictWrapper({'a': 3, 'b': 4})]
+                ),
+                None,
+                TupleWrapper((DictWrapper({'g': 5}),)),
+                TupleWrapper(A(None, DictWrapper({'h': 6}))),
             ],
-            [['x', {'a': 'a', 'b': 'b', 'c': 'c'}],
-             'd',
-             ({'g': 'g', 'gg': 'gg'},),
-             A(None, {'h': 'h', 'hh': 'hh'}),
-            ]),
-        [data_structures.ListWrapper([
-            'x', DictWrapper({'a': 'a', 'b': 'b'})]),
-         'd',
-         TupleWrapper((DictWrapper({'g': 'g'}),)),
-         TupleWrapper(A(None, DictWrapper({'h': 'h'}),)),
-        ])
+            [
+                ['x', {'a': 'a', 'b': 'b', 'c': 'c'}],
+                'd',
+                ({'g': 'g', 'gg': 'gg'},),
+                A(None, {'h': 'h', 'hh': 'hh'}),
+            ],
+        ),
+        [
+            data_structures.ListWrapper(
+                ['x', DictWrapper({'a': 'a', 'b': 'b'})]
+            ),
+            'd',
+            TupleWrapper((DictWrapper({'g': 'g'}),)),
+            TupleWrapper(
+                A(
+                    None,
+                    DictWrapper({'h': 'h'}),
+                )
+            ),
+        ],
+    )
 
   def testOrderedDict(self):
     OD = collections.OrderedDict  # pylint: disable=invalid-name
 
     self.assertEqual(
         nest_utils.prune_extra_keys(
-            OD([('a', OD([('aa', 1), ('ab', 2)])),
-                ('b', OD([('ba', 1)]))]),
-            OD([('a', OD([('aa', 'aa'), ('ab', 'ab'), ('ac', 'ac')])),
+            OD([('a', OD([('aa', 1), ('ab', 2)])), ('b', OD([('ba', 1)]))]),
+            OD([
+                ('a', OD([('aa', 'aa'), ('ab', 'ab'), ('ac', 'ac')])),
                 ('b', OD([('ba', 'ba'), ('bb', 'bb')])),
-                ('c', 'c')])),
-        OD([('a', OD([('aa', 'aa'), ('ab', 'ab')])),
-            ('b', OD([('ba', 'ba')]))])
+                ('c', 'c'),
+            ]),
+        ),
+        OD(
+            [('a', OD([('aa', 'aa'), ('ab', 'ab')])), ('b', OD([('ba', 'ba')]))]
+        ),
     )
 
 
 class TileBatchTest(tf.test.TestCase):
 
   def test_tile_batch(self):
-    t = tf.constant([[1., 2., 3.], [4., 5., 6.]])
+    t = tf.constant([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
     t_tile_batched = nest_utils.tile_batch(t, 2)
 
     expected_t_tile_batched = tf.constant(
-        [[1., 2., 3.], [1., 2., 3.], [4., 5., 6.], [4., 5., 6.]])
+        [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [4.0, 5.0, 6.0]]
+    )
     self.assertAllEqual(
-        self.evaluate(expected_t_tile_batched), self.evaluate(t_tile_batched))
+        self.evaluate(expected_t_tile_batched), self.evaluate(t_tile_batched)
+    )
     self.assertAllEqual((4, 3), t_tile_batched.shape)
 
 

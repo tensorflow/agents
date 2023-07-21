@@ -37,7 +37,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-
 from tf_agents.utils import common
 
 __all__ = ["DynamicUnroll"]
@@ -74,7 +73,8 @@ def _infer_state_dtype(explicit_dtype, state):
     if not all_same:
       raise ValueError(
           "State has tensors of different inferred_dtypes. Unable to infer a "
-          "single representative dtype.")
+          "single representative dtype."
+      )
     return inferred_dtypes[0]
   else:
     return state.dtype
@@ -84,9 +84,8 @@ def _best_effort_input_batch_size(flat_input):
   """Get static input batch size if available, with fallback to the dynamic one.
 
   Args:
-    flat_input: An iterable of time major input Tensors of shape
-      `[max_time, batch_size, ...]`.
-    All inputs should have compatible batch sizes.
+    flat_input: An iterable of time major input Tensors of shape `[max_time,
+      batch_size, ...]`. All inputs should have compatible batch sizes.
 
   Returns:
     The batch size in Python integer if available, or a scalar Tensor otherwise.
@@ -100,7 +99,8 @@ def _best_effort_input_batch_size(flat_input):
       continue
     if shape.rank < 2:
       raise ValueError(
-          "Expected input tensor %s to have rank at least 2" % input_)
+          "Expected input tensor %s to have rank at least 2" % input_
+      )
     batch_size = shape.dims[1].value
     if batch_size is not None:
       return batch_size
@@ -132,21 +132,20 @@ class DynamicUnroll(tf.keras.layers.Layer):
   computation.
   """
 
-  def __init__(self, cell, parallel_iterations=20, swap_memory=None,
-               **kwargs):
+  def __init__(self, cell, parallel_iterations=20, swap_memory=None, **kwargs):
     """Create a `DynamicUnroll` layer.
 
     Args:
       cell: A `tf.nn.rnn_cell.RNNCell` or Keras `RNNCell` (e.g. `LSTMCell`)
-        whose `call()` method has the signature `call(input, state, ...)`.
-        Each tensor in the tuple is shaped `[batch_size, ...]`.
-      parallel_iterations: Parallel iterations to pass to `tf.while_loop`.
-        The default value is a good trades off between memory use and
-        performance.  See documentation of `tf.while_loop` for more details.
+        whose `call()` method has the signature `call(input, state, ...)`. Each
+        tensor in the tuple is shaped `[batch_size, ...]`.
+      parallel_iterations: Parallel iterations to pass to `tf.while_loop`. The
+        default value is a good trades off between memory use and performance.
+        See documentation of `tf.while_loop` for more details.
       swap_memory: Python bool.  Whether to swap memory from GPU to CPU when
         storing activations for backprop.  This may sometimes have a negligible
-        performance impact, but can improve memory usage.  See documentation
-        of `tf.while_loop` for more details.
+        performance impact, but can improve memory usage.  See documentation of
+        `tf.while_loop` for more details.
       **kwargs: Additional layer arguments, such as `dtype` and `name`.
 
     Raises:
@@ -170,8 +169,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
         "swap_memory": self.swap_memory,
         "cell": {
             "class_name": self.cell.__class__.__name__,
-            "config": self.cell.get_config()
-        }
+            "config": self.cell.get_config(),
+        },
     }
     base_config = dict(super(DynamicUnroll, self).get_config())
     base_config.update(config)
@@ -180,7 +179,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
   @classmethod
   def from_config(cls, config, custom_objects=None):
     cell = tf.keras.layers.deserialize(
-        config.pop("cell"), custom_objects=custom_objects)
+        config.pop("cell"), custom_objects=custom_objects
+    )
     layer = cls(cell, **config)
     return layer
 
@@ -222,20 +222,19 @@ class DynamicUnroll(tf.keras.layers.Layer):
       return self.cell.get_initial_state(inputs)
     else:
       return self.cell.get_initial_state(
-          batch_size=batch_size, dtype=dtype or self.dtype)
+          batch_size=batch_size, dtype=dtype or self.dtype
+      )
 
   def call(self, inputs, initial_state=None, reset_mask=None, training=False):
     """Perform the computation.
 
     Args:
-      inputs: A tuple containing tensors in batch-major format,
-        each shaped `[batch_size, n, ...]`.
-
-        If none of the inputs has rank greater than 2 (i.e., all inputs
-        are shaped `[batch_size, d]` or `[batch_size]`) then it is assumed that
-        a single frame is being calculated and that no time dimension
-        was provided.  In this case, a single step is taken and the outputs
-        will also not have a singleton time dimension either.
+      inputs: A tuple containing tensors in batch-major format, each shaped
+        `[batch_size, n, ...]`.  If none of the inputs has rank greater than 2
+        (i.e., all inputs are shaped `[batch_size, d]` or `[batch_size]`) then
+        it is assumed that a single frame is being calculated and that no time
+        dimension was provided.  In this case, a single step is taken and the
+        outputs will also not have a singleton time dimension either.
       initial_state: (Optional) An initial state for `cell`.  If not provided,
         `dtype` must be set and `cell.get_initial_state()` is used instead.
       reset_mask (Optional): A `bool` matrix shaped `[batch_size, n]`,
@@ -243,10 +242,9 @@ class DynamicUnroll(tf.keras.layers.Layer):
         Typically this is the value `time_steps.is_first()` where `time_steps`
         is a `TimeStep` containing tensors of the shape `[batch_size, n, ...]`.
         The `zero_state` of the cell will be used whenever `reset` is `True`,
-        instead of either the current state or the `initial_state`.
-
-        If this argument is not provided, state resetting is not performed
-        (this tends to speed up the computation by a non-negligible amount).
+        instead of either the current state or the `initial_state`.  If this
+        argument is not provided, state resetting is not performed (this tends
+        to speed up the computation by a non-negligible amount).
       training: Whether the output is being used for training.
 
     Returns:
@@ -270,9 +268,11 @@ class DynamicUnroll(tf.keras.layers.Layer):
       raise ValueError("Must provide either dtype or initial_state")
 
     inputs_flat = [
-        tf.convert_to_tensor(x, name="input") for x in tf.nest.flatten(inputs)]
+        tf.convert_to_tensor(x, name="input") for x in tf.nest.flatten(inputs)
+    ]
     has_time_axis = all(
-        [x.shape.ndims is None or x.shape.ndims > 2 for x in inputs_flat])
+        [x.shape.ndims is None or x.shape.ndims > 2 for x in inputs_flat]
+    )
 
     if not has_time_axis:
       # No time axis; and we're converting to time major anyway; add a time axis
@@ -299,16 +299,19 @@ class DynamicUnroll(tf.keras.layers.Layer):
       if got_batch_size is not None and const_batch_size != got_batch_size:
         raise ValueError(
             "batch_size is not the same for all the elements in the input. "
-            "Saw values %s and %s" % (const_batch_size, got_batch_size))
+            "Saw values %s and %s" % (const_batch_size, got_batch_size)
+        )
 
     if initial_state_missing:
       dtype = self.dtype
       initial_state = zero_state = self.cell.get_initial_state(
-          batch_size=batch_size, dtype=self.dtype)
+          batch_size=batch_size, dtype=self.dtype
+      )
     else:
       dtype = _infer_state_dtype(self.dtype, initial_state)
       zero_state = self.cell.get_initial_state(
-          batch_size=batch_size, dtype=dtype)
+          batch_size=batch_size, dtype=dtype
+      )
 
     # Try to get the iteration count statically; if that's not possible,
     # access it dynamically at runtime.
@@ -323,7 +326,8 @@ class DynamicUnroll(tf.keras.layers.Layer):
           reset_mask,
           state=initial_state,
           zero_state=zero_state,
-          training=training)
+          training=training,
+      )
     else:
       outputs, new_state = _dynamic_unroll_multi_step(
           self.cell,
@@ -336,12 +340,12 @@ class DynamicUnroll(tf.keras.layers.Layer):
           swap_memory=self.swap_memory,
           iterations=iterations,
           const_batch_size=const_batch_size,
-          training=training)
+          training=training,
+      )
 
     if not has_time_axis:
       # Remove the time axis.
-      outputs = tf.nest.map_structure(
-          lambda o: tf.squeeze(o, axis=1), outputs)
+      outputs = tf.nest.map_structure(lambda o: tf.squeeze(o, axis=1), outputs)
 
     return outputs, new_state
 
@@ -353,13 +357,11 @@ def _maybe_reset_state(reset, s_zero, s):
     return s
 
 
-def _static_unroll_single_step(cell,
-                               inputs,
-                               reset_mask,
-                               state,
-                               zero_state,
-                               training):
+def _static_unroll_single_step(
+    cell, inputs, reset_mask, state, zero_state, training
+):
   """Helper for dynamic_unroll which runs a single step."""
+
   def _squeeze(t):
     if not isinstance(t, tf.TensorArray) and t.shape.rank > 0:
       return tf.squeeze(t, [0])
@@ -371,8 +373,10 @@ def _static_unroll_single_step(cell,
   if reset_mask is not None:
     reset_mask = _squeeze(reset_mask)
     state = tf.nest.map_structure(
-        lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s), state,
-        zero_state)
+        lambda s, s_zero: _maybe_reset_state(reset_mask, s_zero, s),
+        state,
+        zero_state,
+    )
 
   outputs, final_state = cell(inputs, state, training=training)
   outputs = tf.nest.map_structure(lambda t: tf.expand_dims(t, 1), outputs)
@@ -380,25 +384,26 @@ def _static_unroll_single_step(cell,
   return (outputs, final_state)
 
 
-def _dynamic_unroll_multi_step(cell,
-                               inputs,
-                               reset_mask,
-                               initial_state,
-                               zero_state,
-                               dtype,
-                               parallel_iterations,
-                               swap_memory,
-                               iterations,
-                               const_batch_size,
-                               training):
+def _dynamic_unroll_multi_step(
+    cell,
+    inputs,
+    reset_mask,
+    initial_state,
+    zero_state,
+    dtype,
+    parallel_iterations,
+    swap_memory,
+    iterations,
+    const_batch_size,
+    training,
+):
   """Helper for dynamic_unroll which uses a tf.while_loop."""
 
   # Convert all inputs to TensorArrays
   def ta_and_unstack(x):
-    return (tf.TensorArray(dtype=x.dtype,
-                           size=iterations,
-                           element_shape=x.shape[1:])
-            .unstack(x))
+    return tf.TensorArray(
+        dtype=x.dtype, size=iterations, element_shape=x.shape[1:]
+    ).unstack(x)
 
   inputs_tas = tf.nest.map_structure(ta_and_unstack, inputs)
   if reset_mask is None:
@@ -411,8 +416,12 @@ def _dynamic_unroll_multi_step(cell,
     return tf.TensorArray(
         dtype=_infer_state_dtype(dtype, initial_state),
         size=iterations,
-        element_shape=(tf.TensorShape([const_batch_size])
-                       .concatenate(_maybe_tensor_shape_from_tensor(s))))
+        element_shape=(
+            tf.TensorShape([const_batch_size]).concatenate(
+                _maybe_tensor_shape_from_tensor(s)
+            )
+        ),
+    )
 
   output_tas = tf.nest.map_structure(create_output_ta, cell.output_size)
 
@@ -437,13 +446,16 @@ def _dynamic_unroll_multi_step(cell,
     if reset_mask_ta is not None:
       is_reset = reset_mask_ta.read(time)
       state = tf.nest.map_structure(
-          lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s), zero_state,
-          state)
+          lambda s_zero, s: _maybe_reset_state(is_reset, s_zero, s),
+          zero_state,
+          state,
+      )
 
     outputs, next_state = cell(input_, state, training=training)
 
-    output_tas = tf.nest.map_structure(lambda ta, x: ta.write(time, x),
-                                       output_tas, outputs)
+    output_tas = tf.nest.map_structure(
+        lambda ta, x: ta.write(time, x), output_tas, outputs
+    )
 
     return (time + 1, next_state, output_tas)
 
@@ -451,18 +463,19 @@ def _dynamic_unroll_multi_step(cell,
   # determined by the parent scope, or is set to place the cached
   # Variable using the same placement as for the rest of the RNN.
   with tf.compat.v1.variable_scope(
-      tf.compat.v1.get_variable_scope()) as varscope:
-    if (not tf.executing_eagerly() and varscope.caching_device is None):
+      tf.compat.v1.get_variable_scope()
+  ) as varscope:
+    if not tf.executing_eagerly() and varscope.caching_device is None:
       varscope.set_caching_device(lambda op: op.device)
 
-    _, final_state, output_tas = (
-        tf.while_loop(
-            cond=pred,
-            body=body,
-            loop_vars=(tf.constant(0, name="time"), initial_state, output_tas),
-            parallel_iterations=parallel_iterations,
-            swap_memory=swap_memory,
-            maximum_iterations=iterations))
+    _, final_state, output_tas = tf.while_loop(
+        cond=pred,
+        body=body,
+        loop_vars=(tf.constant(0, name="time"), initial_state, output_tas),
+        parallel_iterations=parallel_iterations,
+        swap_memory=swap_memory,
+        maximum_iterations=iterations,
+    )
 
   outputs = tf.nest.map_structure(lambda ta: ta.stack(), output_tas)
 
@@ -472,7 +485,8 @@ def _dynamic_unroll_multi_step(cell,
     iterations_shape = tf.TensorShape([iterations])
     tf.nest.map_structure(
         lambda t: t.set_shape(iterations_shape.concatenate(t.shape[1:])),
-        outputs)
+        outputs,
+    )
 
   # Convert everything back to batch major
   outputs = tf.nest.map_structure(common.transpose_batch_time, outputs)

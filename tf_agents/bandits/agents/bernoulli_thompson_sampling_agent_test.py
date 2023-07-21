@@ -30,25 +30,27 @@ def _get_initial_and_final_steps(observations, rewards):
   batch_size = tf.nest.flatten(observations)[0].shape[0]
   if isinstance(observations, np.ndarray):
     observations = tf.constant(
-        observations, dtype=tf.float32, name='observation')
+        observations, dtype=tf.float32, name='observation'
+    )
   initial_step = ts.TimeStep(
       tf.constant(
           ts.StepType.FIRST,
           dtype=tf.int32,
           shape=[batch_size],
-          name='step_type'),
+          name='step_type',
+      ),
       tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
       tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
-      observations)
+      observations,
+  )
   final_step = ts.TimeStep(
       tf.constant(
-          ts.StepType.LAST,
-          dtype=tf.int32,
-          shape=[batch_size],
-          name='step_type'),
+          ts.StepType.LAST, dtype=tf.int32, shape=[batch_size], name='step_type'
+      ),
       tf.constant(rewards, dtype=tf.float32, name='reward'),
       tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
-      observations)
+      observations,
+  )
   return initial_step, final_step
 
 
@@ -59,36 +61,40 @@ def _get_initial_and_final_steps_with_action_mask(observations, rewards):
           ts.StepType.FIRST,
           dtype=tf.int32,
           shape=[batch_size],
-          name='step_type'),
+          name='step_type',
+      ),
       tf.constant(0.0, dtype=tf.float32, shape=[batch_size], name='reward'),
       tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
-      (observations[0], observations[1]))
+      (observations[0], observations[1]),
+  )
   final_step = ts.TimeStep(
       tf.constant(
-          ts.StepType.LAST,
-          dtype=tf.int32,
-          shape=[batch_size],
-          name='step_type'),
+          ts.StepType.LAST, dtype=tf.int32, shape=[batch_size], name='step_type'
+      ),
       tf.constant(rewards, dtype=tf.float32, name='reward'),
-      tf.constant(1.0, dtype=tf.float32, shape=[batch_size],
-                  name='discount'), (tf.nest.map_structure(
-                      lambda x: x + 100., observations[0]), observations[1]))
+      tf.constant(1.0, dtype=tf.float32, shape=[batch_size], name='discount'),
+      (
+          tf.nest.map_structure(lambda x: x + 100.0, observations[0]),
+          observations[1],
+      ),
+  )
   return initial_step, final_step
 
 
 def _get_action_step(action):
   return policy_step.PolicyStep(
-      action=tf.convert_to_tensor(action),
-      info=policy_utilities.PolicyInfo())
+      action=tf.convert_to_tensor(action), info=policy_utilities.PolicyInfo()
+  )
 
 
 def _get_experience(initial_step, action_step, final_step):
   single_experience = driver_utils.trajectory_for_bandit(
-      initial_step, action_step, final_step)
+      initial_step, action_step, final_step
+  )
   # Adds a 'time' dimension.
   return tf.nest.map_structure(
-      lambda x: tf.expand_dims(tf.convert_to_tensor(x), 1),
-      single_experience)
+      lambda x: tf.expand_dims(tf.convert_to_tensor(x), 1), single_experience
+  )
 
 
 class AgentTest(tf.test.TestCase):
@@ -99,20 +105,21 @@ class AgentTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
     self._num_actions = 3
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateAgent(self):
     agent = bern_ts_agent.BernoulliThompsonSamplingAgent(
-        self._time_step_spec,
-        self._action_spec)
+        self._time_step_spec, self._action_spec
+    )
     self.assertIsNotNone(agent.policy)
 
   def testInitializeAgent(self):
     agent = bern_ts_agent.BernoulliThompsonSamplingAgent(
-        self._time_step_spec,
-        self._action_spec)
+        self._time_step_spec, self._action_spec
+    )
     init_op = agent.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -121,9 +128,8 @@ class AgentTest(tf.test.TestCase):
 
   def testPolicy(self):
     agent = bern_ts_agent.BernoulliThompsonSamplingAgent(
-        self._time_step_spec,
-        self._action_spec,
-        batch_size=2)
+        self._time_step_spec, self._action_spec, batch_size=2
+    )
     observations = tf.constant([[1, 1]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
@@ -139,14 +145,14 @@ class AgentTest(tf.test.TestCase):
     actions = np.array([0, 1], dtype=np.int32)
     rewards = np.array([0.0, 1.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps(
-        observations, rewards)
+        observations, rewards
+    )
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
 
     agent = bern_ts_agent.BernoulliThompsonSamplingAgent(
-        self._time_step_spec,
-        self._action_spec,
-        batch_size=2)
+        self._time_step_spec, self._action_spec, batch_size=2
+    )
     init_op = agent.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -158,18 +164,22 @@ class AgentTest(tf.test.TestCase):
     self.assertAllClose(self.evaluate(loss), -1.0)
 
   def testTrainAgentWithMask(self):
-    time_step_spec = ts.time_step_spec((tensor_spec.TensorSpec([], tf.float32),
-                                        tensor_spec.TensorSpec([3], tf.int32)))
+    time_step_spec = ts.time_step_spec((
+        tensor_spec.TensorSpec([], tf.float32),
+        tensor_spec.TensorSpec([3], tf.int32),
+    ))
     agent = bern_ts_agent.BernoulliThompsonSamplingAgent(
-        time_step_spec,
-        self._action_spec,
-        batch_size=2)
-    observations = (np.array([1, 1], dtype=np.float32),
-                    np.array([[0, 0, 1], [0, 0, 1]], dtype=np.int32))
+        time_step_spec, self._action_spec, batch_size=2
+    )
+    observations = (
+        np.array([1, 1], dtype=np.float32),
+        np.array([[0, 0, 1], [0, 0, 1]], dtype=np.int32),
+    )
     actions = np.array([0, 1], dtype=np.int32)
     rewards = np.array([1.0, 0.0], dtype=np.float32)
     initial_step, final_step = _get_initial_and_final_steps_with_action_mask(
-        observations, rewards)
+        observations, rewards
+    )
     action_step = _get_action_step(actions)
     experience = _get_experience(initial_step, action_step, final_step)
     loss, _ = agent.train(experience, None)

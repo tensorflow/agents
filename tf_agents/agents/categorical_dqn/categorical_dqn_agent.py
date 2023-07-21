@@ -30,7 +30,6 @@ from typing import Optional, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import tf_agent
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.networks import network
@@ -58,7 +57,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       categorical_q_network: network.Network,
       optimizer: types.Optimizer,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       min_q_value: types.Float = -10.0,
       max_q_value: types.Float = 10.0,
       epsilon_greedy: Optional[types.FloatOrReturningFloat] = 0.1,
@@ -77,7 +77,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       debug_summaries: bool = False,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Categorical DQN Agent.
 
     Args:
@@ -89,22 +90,19 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       observation_and_action_constraint_splitter: A function used to process
         observations with action constraints. These constraints can indicate,
         for example, a mask of valid/invalid actions for a given state of the
-        environment.
-        The function takes in a full observation and returns a tuple consisting
-        of 1) the part of the observation intended as input to the network and
-        2) the constraint. An example
-        `observation_and_action_constraint_splitter` could be as simple as:
-        ```
-        def observation_and_action_constraint_splitter(observation):
-          return observation['network_input'], observation['constraint']
-        ```
-        *Note*: when using `observation_and_action_constraint_splitter`, make
-        sure the provided `q_network` is compatible with the network-specific
-        half of the output of the `observation_and_action_constraint_splitter`.
-        In particular, `observation_and_action_constraint_splitter` will be
-        called on the observation before passing to the network.
-        If `observation_and_action_constraint_splitter` is None, action
-        constraints are not applied.
+        environment. The function takes in a full observation and returns a
+        tuple consisting of 1) the part of the observation intended as input to
+        the network and 2) the constraint. An example
+        `observation_and_action_constraint_splitter` could be as simple as: ```
+        def observation_and_action_constraint_splitter(observation): return
+        observation['network_input'], observation['constraint'] ``` *Note*: when
+        using `observation_and_action_constraint_splitter`, make sure the
+        provided `q_network` is compatible with the network-specific half of the
+        output of the `observation_and_action_constraint_splitter`. In
+        particular, `observation_and_action_constraint_splitter` will be called
+        on the observation before passing to the network. If
+        `observation_and_action_constraint_splitter` is None, action constraints
+        are not applied.
       min_q_value: A float specifying the minimum Q-value, used for setting up
         the support.
       max_q_value: A float specifying the maximum Q-value, used for setting up
@@ -127,30 +125,21 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         to be used as the target network during Q learning.  Every
         `target_update_period` train steps, the weights from
         `categorical_q_network` are copied (possibly with smoothing via
-        `target_update_tau`) to `target_categorical_q_network`.
-
-        If `target_categorical_q_network` is not provided, it is created by
-        making a copy of `categorical_q_network`, which initializes a new
-        network with the same structure and its own layers and weights.
-
-        Network copying is performed via the `Network.copy` superclass method,
-        and may inadvertently lead to the resulting network to share weights
-        with the original.  This can happen if, for example, the original
-        network accepted a pre-built Keras layer in its `__init__`, or
-        accepted a Keras layer that wasn't built, but neglected to create
-        a new copy.
-
-        In these cases, it is up to you to provide a target Network having
-        weights that are not shared with the original `categorical_q_network`.
-        If you provide a `target_categorical_q_network` that shares any
-        weights with `categorical_q_network`, a warning will be logged but
-        no exception is thrown.
-
-        Note; shallow copies of Keras layers may be built via the code:
-
-        ```python
-        new_layer = type(layer).from_config(layer.get_config())
-        ```
+        `target_update_tau`) to `target_categorical_q_network`.  If
+        `target_categorical_q_network` is not provided, it is created by making
+        a copy of `categorical_q_network`, which initializes a new network with
+        the same structure and its own layers and weights.  Network copying is
+        performed via the `Network.copy` superclass method, and may
+        inadvertently lead to the resulting network to share weights with the
+        original.  This can happen if, for example, the original network
+        accepted a pre-built Keras layer in its `__init__`, or accepted a Keras
+        layer that wasn't built, but neglected to create a new copy.  In these
+        cases, it is up to you to provide a target Network having weights that
+        are not shared with the original `categorical_q_network`. If you provide
+        a `target_categorical_q_network` that shares any weights with
+        `categorical_q_network`, a warning will be logged but no exception is
+        thrown.  Note; shallow copies of Keras layers may be built via the code:
+        ```python new_layer = type(layer).from_config(layer.get_config()) ```
       target_update_tau: Factor for soft update of the target networks.
       target_update_period: Period for soft update of the target networks.
       td_errors_loss_fn: A function for computing the TD errors loss. If None, a
@@ -165,34 +154,40 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         will be written during training.
       train_step_counter: An optional counter to increment every time the train
         op is run.  Defaults to the global_step.
-      name: The name of this agent. All variables in this module will fall
-        under that name. Defaults to the class name.
+      name: The name of this agent. All variables in this module will fall under
+        that name. Defaults to the class name.
 
     Raises:
       TypeError: If the action spec contains more than one action.
       TypeError: If the q network(s) lack a `num_atoms` property.
     """
+
     def check_atoms(net, label):
       try:
         num_atoms = net.num_atoms
       except AttributeError:
-        raise TypeError('Expected {} to have property `num_atoms`, but it '
-                        'doesn\'t. (Note: you likely want to use a '
-                        'CategoricalQNetwork.) Network is: {}'.format(
-                            label, net))
+        raise TypeError(
+            'Expected {} to have property `num_atoms`, but it '
+            "doesn't. (Note: you likely want to use a "
+            'CategoricalQNetwork.) Network is: {}'.format(label, net)
+        )
       return num_atoms
 
     self._num_atoms = check_atoms(
-        categorical_q_network, 'categorical_q_network')
+        categorical_q_network, 'categorical_q_network'
+    )
 
     if target_categorical_q_network is not None:
       target_num_atoms = check_atoms(
-          target_categorical_q_network, 'target_categorical_q_network')
+          target_categorical_q_network, 'target_categorical_q_network'
+      )
       if self._num_atoms != target_num_atoms:
         raise ValueError(
             'categorical_q_network and target_categorical_q_network have '
             'different numbers of atoms: {} vs. {}'.format(
-                self._num_atoms, target_num_atoms))
+                self._num_atoms, target_num_atoms
+            )
+        )
 
     self._min_q_value = min_q_value
     self._max_q_value = max_q_value
@@ -206,7 +201,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         categorical_q_network,
         optimizer,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         epsilon_greedy=epsilon_greedy,
         n_step_update=n_step_update,
         boltzmann_temperature=boltzmann_temperature,
@@ -220,10 +216,16 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
-        name=name)
+        name=name,
+    )
 
-  def _setup_policy(self, time_step_spec, action_spec,
-                    boltzmann_temperature, emit_log_probability):
+  def _setup_policy(
+      self,
+      time_step_spec,
+      action_spec,
+      boltzmann_temperature,
+      emit_log_probability,
+  ):
     policy = categorical_q_policy.CategoricalQPolicy(
         time_step_spec,
         action_spec,
@@ -231,14 +233,18 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         self._min_q_value,
         self._max_q_value,
         observation_and_action_constraint_splitter=(
-            self._observation_and_action_constraint_splitter))
+            self._observation_and_action_constraint_splitter
+        ),
+    )
 
     if boltzmann_temperature is not None:
       collect_policy = boltzmann_policy.BoltzmannPolicy(
-          policy, temperature=boltzmann_temperature)
+          policy, temperature=boltzmann_temperature
+      )
     else:
       collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
-          policy, epsilon=self._epsilon_greedy)
+          policy, epsilon=self._epsilon_greedy
+      )
     policy = greedy_policy.GreedyPolicy(policy)
 
     target_policy = categorical_q_policy.CategoricalQPolicy(
@@ -248,7 +254,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         self._min_q_value,
         self._max_q_value,
         observation_and_action_constraint_splitter=(
-            self._observation_and_action_constraint_splitter))
+            self._observation_and_action_constraint_splitter
+        ),
+    )
     self._target_greedy_policy = greedy_policy.GreedyPolicy(target_policy)
 
     return policy, collect_policy
@@ -257,15 +265,18 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     network_utils.check_single_floating_network_output(
         net.create_variables(),
         expected_output_shape=(self._num_actions, self._num_atoms),
-        label=label)
+        label=label,
+    )
 
-  def _loss(self,
-            experience,
-            td_errors_loss_fn=tf.compat.v1.losses.huber_loss,
-            gamma=1.0,
-            reward_scale_factor=1.0,
-            weights=None,
-            training=False):
+  def _loss(
+      self,
+      experience,
+      td_errors_loss_fn=tf.compat.v1.losses.huber_loss,
+      gamma=1.0,
+      reward_scale_factor=1.0,
+      weights=None,
+      training=False,
+  ):
     """Computes critic loss for CategoricalDQN training.
 
     See Algorithm 1 and the discussion immediately preceding it in page 6 of
@@ -284,6 +295,7 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       reward_scale_factor: Multiplicative factor to scale rewards.
       weights: Optional weights used for importance sampling.
       training: Whether the loss is being used for training.
+
     Returns:
       critic_loss: A scalar critic loss.
     Raises:
@@ -293,7 +305,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
     squeeze_time_dim = not self._q_network.state_spec
     if self._n_step_update == 1:
       time_steps, policy_steps, next_time_steps = (
-          trajectory.experience_to_transitions(experience, squeeze_time_dim))
+          trajectory.experience_to_transitions(experience, squeeze_time_dim)
+      )
       actions = policy_steps.action
     else:
       # To compute n-step returns, we need the first time steps, the first
@@ -301,39 +314,44 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
       # last transitions from our Trajectory.
       first_two_steps = tf.nest.map_structure(lambda x: x[:, :2], experience)
       last_two_steps = tf.nest.map_structure(lambda x: x[:, -2:], experience)
-      time_steps, policy_steps, _ = (
-          trajectory.experience_to_transitions(
-              first_two_steps, squeeze_time_dim))
+      time_steps, policy_steps, _ = trajectory.experience_to_transitions(
+          first_two_steps, squeeze_time_dim
+      )
       actions = policy_steps.action
-      _, _, next_time_steps = (
-          trajectory.experience_to_transitions(
-              last_two_steps, squeeze_time_dim))
+      _, _, next_time_steps = trajectory.experience_to_transitions(
+          last_two_steps, squeeze_time_dim
+      )
 
     with tf.name_scope('critic_loss'):
       nest_utils.assert_same_structure(actions, self.action_spec)
       nest_utils.assert_same_structure(time_steps, self.time_step_spec)
       nest_utils.assert_same_structure(next_time_steps, self.time_step_spec)
 
-      rank = nest_utils.get_outer_rank(time_steps.observation,
-                                       self._time_step_spec.observation)
+      rank = nest_utils.get_outer_rank(
+          time_steps.observation, self._time_step_spec.observation
+      )
 
       # If inputs have a time dimension and the q_network is stateful,
       # combine the batch and time dimension.
-      batch_squash = (None
-                      if rank <= 1 or self._q_network.state_spec in ((), None)
-                      else network_utils.BatchSquash(rank))
+      batch_squash = (
+          None
+          if rank <= 1 or self._q_network.state_spec in ((), None)
+          else network_utils.BatchSquash(rank)
+      )
 
       network_observation = time_steps.observation
 
       if self._observation_and_action_constraint_splitter is not None:
         network_observation, _ = (
             self._observation_and_action_constraint_splitter(
-                network_observation))
+                network_observation
+            )
+        )
 
       # q_logits contains the Q-value logits for all actions.
-      q_logits, _ = self._q_network(network_observation,
-                                    step_type=time_steps.step_type,
-                                    training=training)
+      q_logits, _ = self._q_network(
+          network_observation, step_type=time_steps.step_type, training=training
+      )
 
       if batch_squash is not None:
         # Squash outer dimensions to a single dimensions for facilitation
@@ -341,8 +359,9 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         # inputs, for example.
         q_logits = batch_squash.flatten(q_logits)
         actions = batch_squash.flatten(actions)
-        next_time_steps = tf.nest.map_structure(batch_squash.flatten,
-                                                next_time_steps)
+        next_time_steps = tf.nest.map_structure(
+            batch_squash.flatten, next_time_steps
+        )
 
       next_q_distribution = self._next_q_distribution(next_time_steps)
 
@@ -362,20 +381,21 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
           # tiled_support will have a shape of [batch_size, num_atoms]. To
           # multiply these, we add a second dimension of 1 to the discount.
           discount = tf.expand_dims(discount, -1)
-        next_value_term = tf.multiply(discount,
-                                      tiled_support,
-                                      name='next_value_term')
+        next_value_term = tf.multiply(
+            discount, tiled_support, name='next_value_term'
+        )
 
         reward = next_time_steps.reward
         if reward.shape.rank == 1:
           # See the explanation above.
           reward = tf.expand_dims(reward, -1)
-        reward_term = tf.multiply(reward_scale_factor,
-                                  reward,
-                                  name='reward_term')
+        reward_term = tf.multiply(
+            reward_scale_factor, reward, name='reward_term'
+        )
 
-        target_support = tf.add(reward_term, gamma * next_value_term,
-                                name='target_support')
+        target_support = tf.add(
+            reward_term, gamma * next_value_term, name='target_support'
+        )
       else:
         # When computing discounted return, we need to throw out the last time
         # index of both reward and discount, which are filled with dummy values
@@ -391,7 +411,8 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
             discounts=discounts,
             final_value=tf.zeros([batch_size], dtype=discounts.dtype),
             time_major=False,
-            provide_all_returns=False)
+            provide_all_returns=False,
+        )
 
         # Convert discounted_returns from [batch_size] to [batch_size, 1]
         discounted_returns = tf.expand_dims(discounted_returns, -1)
@@ -404,12 +425,17 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         self._discounted_returns = discounted_returns
         self._final_value_discount = final_value_discount
 
-        target_support = tf.add(discounted_returns,
-                                final_value_discount * tiled_support,
-                                name='target_support')
+        target_support = tf.add(
+            discounted_returns,
+            final_value_discount * tiled_support,
+            name='target_support',
+        )
 
-      target_distribution = tf.stop_gradient(project_distribution(
-          target_support, next_q_distribution, self._support))
+      target_distribution = tf.stop_gradient(
+          project_distribution(
+              target_support, next_q_distribution, self._support
+          )
+      )
 
       # Obtain the current Q-value logits for the selected actions.
       indices = tf.range(batch_size)
@@ -425,54 +451,71 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
         chosen_action_logits = batch_squash.unflatten(chosen_action_logits)
         critic_loss = tf.reduce_sum(
             tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
-                labels=target_distribution,
-                logits=chosen_action_logits),
-            axis=1)
+                labels=target_distribution, logits=chosen_action_logits
+            ),
+            axis=1,
+        )
       else:
         critic_loss = tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
-            labels=target_distribution,
-            logits=chosen_action_logits)
+            labels=target_distribution, logits=chosen_action_logits
+        )
 
       agg_loss = common.aggregate_losses(
           per_example_loss=critic_loss,
-          regularization_loss=self._q_network.losses)
+          regularization_loss=self._q_network.losses,
+      )
       total_loss = agg_loss.total_loss
 
-      dict_losses = {'critic_loss': agg_loss.weighted,
-                     'reg_loss': agg_loss.regularization,
-                     'total_loss': total_loss}
+      dict_losses = {
+          'critic_loss': agg_loss.weighted,
+          'reg_loss': agg_loss.regularization,
+          'total_loss': total_loss,
+      }
 
-      common.summarize_scalar_dict(dict_losses,
-                                   step=self.train_step_counter,
-                                   name_scope='Losses/')
+      common.summarize_scalar_dict(
+          dict_losses, step=self.train_step_counter, name_scope='Losses/'
+      )
 
       if self._debug_summaries:
         distribution_errors = target_distribution - chosen_action_logits
         with tf.name_scope('distribution_errors'):
           common.generate_tensor_summaries(
-              'distribution_errors', distribution_errors,
-              step=self.train_step_counter)
+              'distribution_errors',
+              distribution_errors,
+              step=self.train_step_counter,
+          )
           tf.compat.v2.summary.scalar(
-              'mean', tf.reduce_mean(distribution_errors),
-              step=self.train_step_counter)
+              'mean',
+              tf.reduce_mean(distribution_errors),
+              step=self.train_step_counter,
+          )
           tf.compat.v2.summary.scalar(
-              'mean_abs', tf.reduce_mean(tf.abs(distribution_errors)),
-              step=self.train_step_counter)
+              'mean_abs',
+              tf.reduce_mean(tf.abs(distribution_errors)),
+              step=self.train_step_counter,
+          )
           tf.compat.v2.summary.scalar(
-              'max', tf.reduce_max(distribution_errors),
-              step=self.train_step_counter)
+              'max',
+              tf.reduce_max(distribution_errors),
+              step=self.train_step_counter,
+          )
           tf.compat.v2.summary.scalar(
-              'min', tf.reduce_min(distribution_errors),
-              step=self.train_step_counter)
+              'min',
+              tf.reduce_min(distribution_errors),
+              step=self.train_step_counter,
+          )
         with tf.name_scope('target_distribution'):
           common.generate_tensor_summaries(
-              'target_distribution', target_distribution,
-              step=self.train_step_counter)
+              'target_distribution',
+              target_distribution,
+              step=self.train_step_counter,
+          )
 
       # TODO(b/127318640): Give appropriate values for td_loss and td_error for
       # prioritized replay.
-      return tf_agent.LossInfo(total_loss, dqn_agent.DqnLossInfo(td_loss=(),
-                                                                 td_error=()))
+      return tf_agent.LossInfo(
+          total_loss, dqn_agent.DqnLossInfo(td_loss=(), td_error=())
+      )
 
   def _next_q_distribution(self, next_time_steps):
     """Compute the q distribution of the next state for TD error computation.
@@ -488,24 +531,27 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 
     if self._observation_and_action_constraint_splitter is not None:
       network_observation, _ = self._observation_and_action_constraint_splitter(
-          network_observation)
+          network_observation
+      )
 
     next_target_logits, _ = self._target_q_network(
-        network_observation,
-        step_type=next_time_steps.step_type,
-        training=False)
+        network_observation, step_type=next_time_steps.step_type, training=False
+    )
     batch_size = next_target_logits.shape[0] or tf.shape(next_target_logits)[0]
     next_target_probabilities = tf.nn.softmax(next_target_logits)
     next_target_q_values = tf.reduce_sum(
-        self._support * next_target_probabilities, axis=-1)
+        self._support * next_target_probabilities, axis=-1
+    )
     dummy_state = self._target_greedy_policy.get_initial_state(batch_size)
     # Find the greedy actions using our target greedy policy. This ensures that
     # action constraints are respected and helps centralize the greedy logic.
     greedy_actions = self._target_greedy_policy.action(
-        next_time_steps, dummy_state).action
+        next_time_steps, dummy_state
+    ).action
     next_qt_argmax = tf.cast(greedy_actions, tf.int32)[:, None]
     batch_indices = tf.range(
-        tf.cast(tf.shape(next_target_q_values)[0], tf.int32))[:, None]
+        tf.cast(tf.shape(next_target_q_values)[0], tf.int32)
+    )[:, None]
     next_qt_argmax = tf.concat([batch_indices, next_qt_argmax], axis=-1)
     return tf.gather_nd(next_target_probabilities, next_qt_argmax)
 
@@ -513,10 +559,12 @@ class CategoricalDqnAgent(dqn_agent.DqnAgent):
 # The following method is copied from the Dopamine codebase with permission
 # (https://github.com/google/dopamine). Thanks to Marc Bellemare and also to
 # Pablo Castro, who wrote the original version of this method.
-def project_distribution(supports: types.Tensor,
-                         weights: types.Tensor,
-                         target_support: types.Tensor,
-                         validate_args: bool = False) -> types.Tensor:
+def project_distribution(
+    supports: types.Tensor,
+    weights: types.Tensor,
+    target_support: types.Tensor,
+    validate_args: bool = False,
+) -> types.Tensor:
   """Projects a batch of (support, weights) onto target_support.
 
   Based on equation (7) in (Bellemare et al., 2017):
@@ -545,8 +593,8 @@ def project_distribution(supports: types.Tensor,
       distribution. The values must be monotonically increasing. Vmin and Vmax
       will be inferred from the first and last elements of this tensor,
       respectively. The values in this tensor must be equally spaced.
-    validate_args: Whether we will verify the contents of the
-      target_support parameter.
+    validate_args: Whether we will verify the contents of the target_support
+      parameter.
 
   Returns:
     A Tensor of shape (batch_size, num_dims) with the projection of a batch of
@@ -568,25 +616,35 @@ def project_distribution(supports: types.Tensor,
     validate_deps.append(
         tf.Assert(
             tf.reduce_all(tf.equal(tf.shape(supports), tf.shape(weights))),
-            [supports, weights]))
+            [supports, weights],
+        )
+    )
     # Assert that elements of supports and target_support have the same shape.
     validate_deps.append(
         tf.Assert(
             tf.reduce_all(
-                tf.equal(tf.shape(supports)[1], tf.shape(target_support))),
-            [supports, target_support]))
+                tf.equal(tf.shape(supports)[1], tf.shape(target_support))
+            ),
+            [supports, target_support],
+        )
+    )
     # Assert that target_support has a single dimension.
     validate_deps.append(
         tf.Assert(
-            tf.equal(tf.size(tf.shape(target_support)), 1), [target_support]))
+            tf.equal(tf.size(tf.shape(target_support)), 1), [target_support]
+        )
+    )
     # Assert that the target_support is monotonically increasing.
     validate_deps.append(
-        tf.Assert(tf.reduce_all(target_support_deltas > 0), [target_support]))
+        tf.Assert(tf.reduce_all(target_support_deltas > 0), [target_support])
+    )
     # Assert that the values in target_support are equally spaced.
     validate_deps.append(
         tf.Assert(
             tf.reduce_all(tf.equal(target_support_deltas, delta_z)),
-            [target_support]))
+            [target_support],
+        )
+    )
 
   with tf.control_dependencies(validate_deps):
     # Ex: `v_min, v_max = 4, 8`.
@@ -622,8 +680,9 @@ def project_distribution(supports: types.Tensor,
     #                                  [ 7.]
     #                                  [ 8.]]]`.
     reshaped_target_support = tf.tile(target_support[:, None], [batch_size, 1])
-    reshaped_target_support = tf.reshape(reshaped_target_support,
-                                         [batch_size, num_dims, 1])
+    reshaped_target_support = tf.reshape(
+        reshaped_target_support, [batch_size, num_dims, 1]
+    )
     # numerator = `|clipped_support - z_i|` in Eq7.
     # Ex: `numerator = [[[[ 0.  0.  0.  2.  4.]
     #                     [ 1.  1.  1.  1.  3.]

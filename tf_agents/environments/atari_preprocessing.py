@@ -23,7 +23,6 @@ This includes:
   . Emitting a terminal signal when losing a life (optional).
   . Frame skipping and color pooling.
   . Resizing the image before it is provided to the agent.
-
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -54,11 +53,13 @@ class AtariPreprocessing(gym_core.Wrapper):
   Evaluation Protocols and Open Problems for General Agents".
   """
 
-  def __init__(self,
-               env: gym.Env,
-               frame_skip: int = 4,
-               terminal_on_life_loss: bool = False,
-               screen_size: int = 84):
+  def __init__(
+      self,
+      env: gym.Env,
+      frame_skip: int = 4,
+      terminal_on_life_loss: bool = False,
+      screen_size: int = 84,
+  ):
     """Constructor for an Atari 2600 preprocessor.
 
     Args:
@@ -76,17 +77,19 @@ class AtariPreprocessing(gym_core.Wrapper):
     # Return the observation space adjusted to match the shape of the processed
     # observations.
     self.observation_space = box.Box(
-        low=0,
-        high=255,
-        shape=(screen_size, screen_size, 1),
-        dtype=np.uint8)
+        low=0, high=255, shape=(screen_size, screen_size, 1), dtype=np.uint8
+    )
 
     if frame_skip <= 0:
       raise ValueError(
-          'Frame skip should be strictly positive, got {}'.format(frame_skip))
+          'Frame skip should be strictly positive, got {}'.format(frame_skip)
+      )
     if screen_size <= 0:
-      raise ValueError('Target screen size should be strictly positive, got {}'
-                       .format(screen_size))
+      raise ValueError(
+          'Target screen size should be strictly positive, got {}'.format(
+              screen_size
+          )
+      )
 
     self.terminal_on_life_loss = terminal_on_life_loss
     self.frame_skip = frame_skip
@@ -97,7 +100,7 @@ class AtariPreprocessing(gym_core.Wrapper):
     # frames.
     self.screen_buffer = [
         np.empty((obs_dims.shape[0], obs_dims.shape[1]), dtype=np.uint8),
-        np.empty((obs_dims.shape[0], obs_dims.shape[1]), dtype=np.uint8)
+        np.empty((obs_dims.shape[0], obs_dims.shape[1]), dtype=np.uint8),
     ]
 
     self.game_over = False
@@ -138,7 +141,7 @@ class AtariPreprocessing(gym_core.Wrapper):
         episode is over.
       info: Gym API's info data structure.
     """
-    accumulated_reward = 0.
+    accumulated_reward = 0.0
 
     for time_step in range(self.frame_skip):
       # We bypass the Gym observation altogether and directly fetch the
@@ -195,10 +198,13 @@ class AtariPreprocessing(gym_core.Wrapper):
       np.maximum(
           self.screen_buffer[0],
           self.screen_buffer[1],
-          out=self.screen_buffer[0])
+          out=self.screen_buffer[0],
+      )
 
     transformed_image = cv2.resize(
-        self.screen_buffer[0], (self.screen_size, self.screen_size),
-        interpolation=cv2.INTER_AREA)
+        self.screen_buffer[0],
+        (self.screen_size, self.screen_size),
+        interpolation=cv2.INTER_AREA,
+    )
     int_image = np.asarray(transformed_image, dtype=np.uint8)
     return np.expand_dims(int_image, axis=2)

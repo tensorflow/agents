@@ -38,6 +38,7 @@ class StepPerSecondTracker(object):
     self.last_time = time.time()
 
   def steps_per_second(self):
-    value = ((self.step.numpy() - self.last_iteration) /
-             (time.time() - self.last_time))
+    value = (self.step.numpy() - self.last_iteration) / (
+        time.time() - self.last_time
+    )
     return value

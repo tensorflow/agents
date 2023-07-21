@@ -21,11 +21,10 @@ Simpler Optimal Algorithm for Contextual Bandits under Realizability",
 Mathematics of Operations Research, 2021. https://arxiv.org/pdf/2003.12699.pdf
 """
 
-from typing import Iterable, Optional, Text, Tuple, Sequence
+from typing import Iterable, Optional, Sequence, Text, Tuple
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.bandits.policies import constraints as constr
 from tf_agents.bandits.policies import reward_prediction_base_policy
 from tf_agents.distributions import shifted_categorical
@@ -61,7 +60,8 @@ def get_number_of_trainable_elements(network: types.Network) -> types.Float:
     if num_elements is None:
       raise ValueError(
           f'Variable:{var} is expected to have a known shape, but found '
-          'otherwise.')
+          'otherwise.'
+      )
     num_elements_list.append(num_elements)
   return sum(num_elements_list)
 
@@ -156,7 +156,8 @@ def _find_action_probabilities(
 
 
 class FalconRewardPredictionPolicy(
-    reward_prediction_base_policy.RewardPredictionBasePolicy):
+    reward_prediction_base_policy.RewardPredictionBasePolicy
+):
   """Policy that samples actions based on the FALCON algorithm."""
 
   def __init__(
@@ -234,11 +235,16 @@ class FalconRewardPredictionPolicy(
       NotImplementedError: If `action_spec` contains more than one
         `BoundedTensorSpec` or the `BoundedTensorSpec` is not valid.
     """
-    super(FalconRewardPredictionPolicy,
-          self).__init__(time_step_spec, action_spec, reward_network,
-                         observation_and_action_constraint_splitter,
-                         accepts_per_arm_features, constraints,
-                         emit_policy_info, name)
+    super(FalconRewardPredictionPolicy, self).__init__(
+        time_step_spec,
+        action_spec,
+        reward_network,
+        observation_and_action_constraint_splitter,
+        accepts_per_arm_features,
+        constraints,
+        emit_policy_info,
+        name,
+    )
 
     self._exploitation_coefficient = exploitation_coefficient
     self._max_exploration_probability_hint = max_exploration_probability_hint
@@ -246,23 +252,33 @@ class FalconRewardPredictionPolicy(
       self._num_samples_list = num_samples_list
     else:
       self._num_samples_list = [tf.Variable(0, dtype=tf.int64)] * (
-          1 if self.accepts_per_arm_features else self._expected_num_actions)
+          1 if self.accepts_per_arm_features else self._expected_num_actions
+      )
     if self.accepts_per_arm_features and len(self._num_samples_list) != 1:
-      raise ValueError('num_samples_list is expected to be of length 1 when'
-                       'accepts_per_arm_features is True, but found otherwise: '
-                       f'{self._num_samples_list} ')
-    if not self.accepts_per_arm_features and (len(self._num_samples_list) !=
-                                              self._expected_num_actions):
-      raise ValueError('Size of num_samples_list: ',
-                       len(self._num_samples_list),
-                       ' does not match the expected number of actions:',
-                       self._expected_num_actions)
+      raise ValueError(
+          'num_samples_list is expected to be of length 1 when'
+          'accepts_per_arm_features is True, but found otherwise: '
+          f'{self._num_samples_list} '
+      )
+    if not self.accepts_per_arm_features and (
+        len(self._num_samples_list) != self._expected_num_actions
+    ):
+      raise ValueError(
+          'Size of num_samples_list: ',
+          len(self._num_samples_list),
+          ' does not match the expected number of actions:',
+          self._expected_num_actions,
+      )
     self._num_trainable_elements = get_number_of_trainable_elements(
-        self._reward_network)
+        self._reward_network
+    )
 
   def _get_exploitation_coefficient(self) -> types.FloatOrReturningFloat:
-    coef = self._exploitation_coefficient() if callable(
-        self._exploitation_coefficient) else self._exploitation_coefficient
+    coef = (
+        self._exploitation_coefficient()
+        if callable(self._exploitation_coefficient)
+        else self._exploitation_coefficient
+    )
     coef = tf.cast(coef, dtype=tf.float32)
     return tf.maximum(coef, 0.0)
 
@@ -275,7 +291,8 @@ class FalconRewardPredictionPolicy(
     return self._num_samples_list
 
   def _get_number_of_allowed_actions(
-      self, mask: Optional[types.Tensor]) -> types.Float:
+      self, mask: Optional[types.Tensor]
+  ) -> types.Float:
     """Gets the number of allowed actions.
 
     Args:
@@ -286,9 +303,11 @@ class FalconRewardPredictionPolicy(
       The number of allowed actions. It can be either a scalar (when `mask` is
       None), or a tensor shaped as [batch_size].
     """
-    return (tf.cast(self._expected_num_actions, dtype=tf.float32)
-            if mask is None else tf.reduce_sum(
-                tf.cast(tf.cast(mask, tf.bool), tf.float32), axis=1))
+    return (
+        tf.cast(self._expected_num_actions, dtype=tf.float32)
+        if mask is None
+        else tf.reduce_sum(tf.cast(tf.cast(mask, tf.bool), tf.float32), axis=1)
+    )
 
   def _compute_gamma(
       self, mask: Optional[types.Tensor], dtype: tf.DType, batch_size: int
@@ -316,9 +335,11 @@ class FalconRewardPredictionPolicy(
     """
     num_samples_list_float = tf.maximum(
         [tf.cast(x.read_value(), tf.float32) for x in self.num_samples_list],
-        0.0)
+        0.0,
+    )
     num_trainable_elements_float = tf.cast(
-        tf.math.maximum(self.num_trainable_elements, 1), tf.float32)
+        tf.math.maximum(self.num_trainable_elements, 1), tf.float32
+    )
     num_allowed_actions = self._get_number_of_allowed_actions(mask)
     exploitation_coefficient = (
         self._get_exploitation_coefficient()
@@ -341,13 +362,20 @@ class FalconRewardPredictionPolicy(
     batch_size = tf.shape(predicted_rewards)[0]
     gamma = self._compute_gamma(mask, predicted_rewards.dtype, batch_size)
     # Replace predicted rewards of masked actions with -inf.
-    predictions = predicted_rewards if mask is None else tf.where(
-        tf.cast(mask, tf.bool), predicted_rewards, -float('Inf') *
-        tf.ones_like(predicted_rewards))
+    predictions = (
+        predicted_rewards
+        if mask is None
+        else tf.where(
+            tf.cast(mask, tf.bool),
+            predicted_rewards,
+            -float('Inf') * tf.ones_like(predicted_rewards),
+        )
+    )
 
     # Get the predicted rewards of the greedy actions.
     greedy_action_predictions = tf.reshape(
-        tf.reduce_max(predictions, axis=-1), shape=[-1, 1])
+        tf.reduce_max(predictions, axis=-1), shape=[-1, 1]
+    )
 
     # `other_actions_probs` is a tensor shaped as [batch_size, num_actions, d]
     # that contains valid sampling probabilities for all non-greedy actions.
@@ -383,7 +411,8 @@ class FalconRewardPredictionPolicy(
     # Get the greedy action.
     greedy_actions = tf.reshape(
         tf.argmax(predictions, axis=-1, output_type=self.action_spec.dtype),
-        [-1, 1])
+        [-1, 1],
+    )
 
     # Compute the probabilities of sampling the greedy actions, which is
     # 1 - (the total probability of sampling other actions),
@@ -414,23 +443,34 @@ class FalconRewardPredictionPolicy(
     # Compute the sampling probabilities for all actions by combining
     # `greedy_action_prob` and `other_actions_probs`.
     greedy_action_mask = tf.equal(
-        tf.tile([
-            tf.range(self._expected_num_actions, dtype=self.action_spec.dtype)
-        ], [batch_size, 1]), greedy_actions)
+        tf.tile(
+            [
+                tf.range(
+                    self._expected_num_actions, dtype=self.action_spec.dtype
+                )
+            ],
+            [batch_size, 1],
+        ),
+        greedy_actions,
+    )
     action_probs = tf.where(
         greedy_action_mask,
         tf.tile(greedy_action_prob, [1, self._expected_num_actions]),
-        other_actions_probs)
+        other_actions_probs,
+    )
 
     if self._action_offset != 0:
       distribution = shifted_categorical.ShiftedCategorical(
           probs=action_probs,
           dtype=self._action_spec.dtype,
-          shift=self._action_offset)
+          shift=self._action_offset,
+      )
     else:
       distribution = tfp.distributions.Categorical(
-          probs=action_probs, dtype=self._action_spec.dtype)
+          probs=action_probs, dtype=self._action_spec.dtype
+      )
 
-    bandit_policy_values = tf.fill([batch_size, 1],
-                                   policy_utilities.BanditPolicyType.FALCON)
+    bandit_policy_values = tf.fill(
+        [batch_size, 1], policy_utilities.BanditPolicyType.FALCON
+    )
     return distribution, bandit_policy_values

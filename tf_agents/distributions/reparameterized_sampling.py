@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helper function to do reparameterized sampling if the distributions supports it.
-"""
+"""Helper function to do reparameterized sampling if the distributions supports it."""
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import tensorflow_probability as tfp
-
 from tf_agents.distributions import gumbel_softmax
 
 
@@ -36,10 +34,13 @@ def sample(distribution, reparam=False, **kwargs):
   Returns:
   """
   if reparam:
-    if (distribution.reparameterization_type !=
-        tfp.distributions.FULLY_REPARAMETERIZED):
-      raise ValueError('This distribution cannot be reparameterized'
-                       ': {}'.format(distribution))
+    if (
+        distribution.reparameterization_type
+        != tfp.distributions.FULLY_REPARAMETERIZED
+    ):
+      raise ValueError(
+          'This distribution cannot be reparameterized: {}'.format(distribution)
+      )
     else:
       return distribution.sample(**kwargs)
   else:

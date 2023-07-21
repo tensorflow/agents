@@ -21,11 +21,11 @@ from __future__ import print_function
 
 import functools
 import os
+
 from absl import app
 from absl import flags
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.agents import lin_ucb_agent
 from tf_agents.bandits.agents import linear_thompson_sampling_agent as lin_ts_agent
 from tf_agents.bandits.agents import neural_epsilon_greedy_agent
@@ -38,24 +38,38 @@ from tf_agents.bandits.specs import utils as bandit_spec_utils
 from tf_agents.environments import tf_py_environment
 from tf_agents.policies import utils as policy_utilities
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_enum(
-    'agent', 'LinUCB', ['LinUCB', 'LinTS', 'epsGreedy', 'NeuralLinUCB'],
+    'agent',
+    'LinUCB',
+    ['LinUCB', 'LinTS', 'epsGreedy', 'NeuralLinUCB'],
     'Which agent to use. Possible values: `LinUCB`, `LinTS`, `epsGreedy`, and '
-    '`NeuralLinUCB`.'
+    '`NeuralLinUCB`.',
 )
 
 flags.DEFINE_enum(
-    'network', 'commontower', ['commontower', 'dotproduct'],
+    'network',
+    'commontower',
+    ['commontower', 'dotproduct'],
     'Which network architecture to use for the eps-Greedy agent. '
-    'Possible values are `commontower` and `dotproduct`.')
+    'Possible values are `commontower` and `dotproduct`.',
+)
 
-flags.DEFINE_bool('drop_arm_obs', False, 'Whether to wipe the arm observations '
-                  'from the trajectories.')
+flags.DEFINE_bool(
+    'drop_arm_obs',
+    False,
+    'Whether to wipe the arm observations from the trajectories.',
+)
 
-flags.DEFINE_bool('add_num_actions_feature', False,
-                  'Whether to add a `num_actions` feature key.')
+flags.DEFINE_bool(
+    'add_num_actions_feature',
+    False,
+    'Whether to add a `num_actions` feature key.',
+)
 
 FLAGS = flags.FLAGS
 
@@ -117,7 +131,8 @@ def main(unused_argv):
       NUM_ACTIONS,
       reward_fn,
       num_actions_fn,
-      batch_size=BATCH_SIZE)
+      batch_size=BATCH_SIZE,
+  )
   environment = tf_py_environment.TFPyEnvironment(env)
 
   if FLAGS.agent == 'LinUCB':
@@ -126,28 +141,29 @@ def main(unused_argv):
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
         accepts_per_arm_features=True,
-        dtype=tf.float32)
+        dtype=tf.float32,
+    )
   elif FLAGS.agent == 'LinTS':
     agent = lin_ts_agent.LinearThompsonSamplingAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
         alpha=AGENT_ALPHA,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=True,
-        dtype=tf.float32)
+        dtype=tf.float32,
+    )
   elif FLAGS.agent == 'epsGreedy':
     obs_spec = environment.observation_spec()
     if FLAGS.network == 'commontower':
-      network = (
-          global_and_arm_feature_network
-          .create_feed_forward_common_tower_network(obs_spec, (40, 30),
-                                                    (30, 40), (40, 20)))
+      network = global_and_arm_feature_network.create_feed_forward_common_tower_network(
+          obs_spec, (40, 30), (30, 40), (40, 20)
+      )
     elif FLAGS.network == 'dotproduct':
-      network = (
-          global_and_arm_feature_network
-          .create_feed_forward_dot_product_network(obs_spec, (4, 3, 6),
-                                                   (3, 4, 6)))
+      network = global_and_arm_feature_network.create_feed_forward_dot_product_network(
+          obs_spec, (4, 3, 6), (3, 4, 6)
+      )
     agent = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
@@ -155,14 +171,18 @@ def main(unused_argv):
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=LR),
         epsilon=EPSILON,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=True,
-        emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
+        emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,
+    )
   elif FLAGS.agent == 'NeuralLinUCB':
     obs_spec = environment.observation_spec()
     network = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            obs_spec, (40, 30), (30, 40), (40, 20), ENCODING_DIM))
+            obs_spec, (40, 30), (30, 40), (40, 20), ENCODING_DIM
+        )
+    )
     agent = neural_linucb_agent.NeuralLinUCBAgent(
         time_step_spec=environment.time_step_spec(),
         action_spec=environment.action_spec(),
@@ -176,7 +196,8 @@ def main(unused_argv):
         accepts_per_arm_features=True,
         debug_summaries=True,
         summarize_grads_and_vars=True,
-        emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN)
+        emit_policy_info=policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,
+    )
 
   def _all_rewards(observation, hidden_param):
     """Outputs rewards for all actions, given an observation."""
@@ -185,7 +206,8 @@ def main(unused_argv):
     per_arm_obs = observation[bandit_spec_utils.PER_ARM_FEATURE_KEY]
     num_actions = tf.shape(per_arm_obs)[1]
     tiled_global = tf.tile(
-        tf.expand_dims(global_obs, axis=1), [1, num_actions, 1])
+        tf.expand_dims(global_obs, axis=1), [1, num_actions, 1]
+    )
     concatenated = tf.concat([tiled_global, per_arm_obs], axis=-1)
     rewards = tf.linalg.matvec(concatenated, hidden_param)
     return rewards
@@ -195,19 +217,24 @@ def main(unused_argv):
 
   def optimal_action(observation, hidden_param):
     return tf.argmax(
-        _all_rewards(observation, hidden_param), axis=1, output_type=tf.int32)
+        _all_rewards(observation, hidden_param), axis=1, output_type=tf.int32
+    )
 
   optimal_reward_fn = functools.partial(
-      optimal_reward, hidden_param=HIDDEN_PARAM)
+      optimal_reward, hidden_param=HIDDEN_PARAM
+  )
   optimal_action_fn = functools.partial(
-      optimal_action, hidden_param=HIDDEN_PARAM)
+      optimal_action, hidden_param=HIDDEN_PARAM
+  )
   regret_metric = tf_bandit_metrics.RegretMetric(optimal_reward_fn)
   suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
-      optimal_action_fn)
+      optimal_action_fn
+  )
 
   if FLAGS.drop_arm_obs:
     drop_arm_feature_fn = functools.partial(
-        bandit_spec_utils.drop_arm_observation)
+        bandit_spec_utils.drop_arm_observation
+    )
   else:
     drop_arm_feature_fn = None
   trainer.train(
@@ -217,7 +244,8 @@ def main(unused_argv):
       training_loops=TRAINING_LOOPS,
       steps_per_loop=STEPS_PER_LOOP,
       additional_metrics=[regret_metric, suboptimal_arms_metric],
-      training_data_spec_transformation_fn=drop_arm_feature_fn)
+      training_data_spec_transformation_fn=drop_arm_feature_fn,
+  )
 
 
 if __name__ == '__main__':

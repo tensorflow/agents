@@ -29,10 +29,10 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+
 import gin
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.replay_buffers import table
 from tf_agents.specs import tensor_spec
@@ -40,24 +40,25 @@ from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
 
-BufferInfo = collections.namedtuple('BufferInfo',
-                                    ['ids', 'probabilities'])
+BufferInfo = collections.namedtuple('BufferInfo', ['ids', 'probabilities'])
 
 
 @gin.configurable
 class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
   """A TFUniformReplayBuffer with batched adds and uniform sampling."""
 
-  def __init__(self,
-               data_spec,
-               batch_size,
-               max_length=1000,
-               scope='TFUniformReplayBuffer',
-               device='cpu:*',
-               table_fn=table.Table,
-               dataset_drop_remainder=False,
-               dataset_window_shift=None,
-               stateful_dataset=False):
+  def __init__(
+      self,
+      data_spec,
+      batch_size,
+      max_length=1000,
+      scope='TFUniformReplayBuffer',
+      device='cpu:*',
+      table_fn=table.Table,
+      dataset_drop_remainder=False,
+      dataset_window_shift=None,
+      stateful_dataset=False,
+  ):
     """Creates a TFUniformReplayBuffer.
 
     The TFUniformReplayBuffer stores episodes in `B == batch_size` blocks of
@@ -102,31 +103,27 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       device: A TensorFlow device to place the Variables and ops.
       table_fn: Function to create tables `table_fn(data_spec, capacity)` that
         can read/write nested tensors.
-      dataset_drop_remainder: If `True`, then when calling
-        `as_dataset` with arguments `single_deterministic_pass=True` and
-        `sample_batch_size is not None`, the final batch will be dropped if it
-        does not contain exactly `sample_batch_size` items.  This is helpful for
-        static shape inference as the resulting tensors will always have
-        leading dimension `sample_batch_size` instead of `None`.
+      dataset_drop_remainder: If `True`, then when calling `as_dataset` with
+        arguments `single_deterministic_pass=True` and `sample_batch_size is not
+        None`, the final batch will be dropped if it does not contain exactly
+        `sample_batch_size` items.  This is helpful for static shape inference
+        as the resulting tensors will always have leading dimension
+        `sample_batch_size` instead of `None`.
       dataset_window_shift: Window shift used when calling `as_dataset` with
         arguments `single_deterministic_pass=True` and `num_steps is not None`.
         This determines how the resulting frames are windowed.  If `None`, then
         there is no overlap created between frames and each frame is seen
         exactly once.  For example, if `max_length=5`, `num_steps=2`,
         `sample_batch_size=None`, and `dataset_window_shift=None`, then the
-        datasets returned will have frames `{[0, 1], [2, 3], [4]}`.
-
-        If `dataset_window_shift is not None`, then windows are created with a
+        datasets returned will have frames `{[0, 1], [2, 3], [4]}`.  If
+        `dataset_window_shift is not None`, then windows are created with a
         window overlap of `dataset_window_shift` and you will see each frame up
         to `num_steps` times.  For example, if `max_length=5`, `num_steps=2`,
         `sample_batch_size=None`, and `dataset_window_shift=1`, then the
-        datasets returned will have windows of shifted repeated frames:
-        `{[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]}`.
-
-        For more details, see the documentation of `tf.data.Dataset.window`,
-        specifically for the `shift` argument.
-
-        The default behavior is to not overlap frames
+        datasets returned will have windows of shifted repeated frames: `{[0,
+        1], [1, 2], [2, 3], [3, 4], [4, 5]}`.  For more details, see the
+        documentation of `tf.data.Dataset.window`, specifically for the `shift`
+        argument.  The default behavior is to not overlap frames
         (`dataset_window_shift=None`) but users often want to see all
         combinations of frame sequences, in which case `dataset_window_shift=1`
         is the appropriate value.
@@ -136,12 +133,14 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     self._max_length = max_length
     capacity = self._batch_size * self._max_length
     super(TFUniformReplayBuffer, self).__init__(
-        data_spec, capacity, stateful_dataset)
+        data_spec, capacity, stateful_dataset
+    )
 
     self._id_spec = tensor_spec.TensorSpec([], dtype=tf.int64, name='id')
     self._capacity_value = np.int64(self._capacity)
     self._batch_offsets = (
-        tf.range(self._batch_size, dtype=tf.int64) * self._max_length)
+        tf.range(self._batch_size, dtype=tf.int64) * self._max_length
+    )
     self._scope = scope
     self._device = device
     self._table_fn = table_fn
@@ -155,9 +154,11 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       self._last_id_cs = tf.CriticalSection(name='last_id')
 
   def variables(self):
-    return (self._data_table.variables() +
-            self._id_table.variables() +
-            [self._last_id])
+    return (
+        self._data_table.variables()
+        + self._id_table.variables()
+        + [self._last_id]
+    )
 
   @property
   def device(self):
@@ -183,8 +184,10 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
     Args:
       items: A tensor or list/tuple/nest of tensors representing a batch of
-      items to be added to the replay buffer. Each element of `items` must match
-      the data_spec of this class. Should be shape [batch_size, data_spec, ...]
+        items to be added to the replay buffer. Each element of `items` must
+        match the data_spec of this class. Should be shape [batch_size,
+        data_spec, ...]
+
     Returns:
       An op that adds `items` to the replay buffer.
     Raises:
@@ -195,8 +198,8 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     # outer rank. This was not usually an issue, but now that it's easier to
     # call this from an eager context it's easy to make the mistake.
     nest_utils.get_outer_rank(
-        tf.nest.map_structure(tf.convert_to_tensor, items),
-        self._data_spec)
+        tf.nest.map_structure(tf.convert_to_tensor, items), self._data_spec
+    )
 
     with tf.device(self._device), tf.name_scope(self._scope):
       id_ = self._increment_last_id()
@@ -205,10 +208,9 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       write_data_op = self._data_table.write(write_rows, items)
       return tf.group(write_id_op, write_data_op)
 
-  def _get_next(self,
-                sample_batch_size=None,
-                num_steps=None,
-                time_stacked=True):
+  def _get_next(
+      self, sample_batch_size=None, num_steps=None, time_stacked=True
+  ):
     """Returns an item or batch of items sampled uniformly from the buffer.
 
     Sample transitions uniformly from replay buffer. When sub-episodes are
@@ -224,6 +226,7 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       time_stacked: Bool, when true and num_steps > 1 get_next on the buffer
         would return the items stack on the time dimension. The outputs would be
         [B, T, ..] if sample_batch_size is given or [T, ..] otherwise.
+
     Returns:
       A 2 tuple, containing:
         - An item, sequence of items, or batch thereof sampled uniformly
@@ -237,26 +240,36 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     with tf.device(self._device), tf.name_scope(self._scope):
       with tf.name_scope('get_next'):
         min_val, max_val = _valid_range_ids(
-            self._get_last_id(), self._max_length, num_steps)
+            self._get_last_id(), self._max_length, num_steps
+        )
         rows_shape = () if sample_batch_size is None else (sample_batch_size,)
         assert_nonempty = tf.compat.v1.assert_greater(
             max_val,
             min_val,
-            message='TFUniformReplayBuffer is empty. Make sure to add items '
-            'before sampling the buffer.')
+            message=(
+                'TFUniformReplayBuffer is empty. Make sure to add items '
+                'before sampling the buffer.'
+            ),
+        )
         with tf.control_dependencies([assert_nonempty]):
           num_ids = max_val - min_val
           probability = tf.cond(
               pred=tf.equal(num_ids, 0),
-              true_fn=lambda: 0.,
-              false_fn=lambda: 1. / tf.cast(num_ids * self._batch_size,  # pylint: disable=g-long-lambda
-                                            tf.float32))
+              true_fn=lambda: 0.0,
+              false_fn=lambda: 1.0
+              / tf.cast(
+                  num_ids * self._batch_size,  # pylint: disable=g-long-lambda
+                  tf.float32,
+              ),
+          )
           ids = tf.random.uniform(
-              rows_shape, minval=min_val, maxval=max_val, dtype=tf.int64)
+              rows_shape, minval=min_val, maxval=max_val, dtype=tf.int64
+          )
 
         # Move each id sample to a random batch.
         batch_offsets = tf.random.uniform(
-            rows_shape, minval=0, maxval=self._batch_size, dtype=tf.int64)
+            rows_shape, minval=0, maxval=self._batch_size, dtype=tf.int64
+        )
         batch_offsets *= self._max_length
 
         if num_steps is None:
@@ -274,16 +287,18 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
             else:
               step_range = tf.reshape(step_range, [num_steps])
 
-            rows_to_get = tf.math.mod(step_range + ids,
-                                      self._max_length) + batch_offsets
+            rows_to_get = (
+                tf.math.mod(step_range + ids, self._max_length) + batch_offsets
+            )
             data = self._data_table.read(rows_to_get)
             data_ids = self._id_table.read(rows_to_get)
           else:
             data = []
             data_ids = []
             for step in range(num_steps):
-              steps_to_get = tf.math.mod(ids + step,
-                                         self._max_length) + batch_offsets
+              steps_to_get = (
+                  tf.math.mod(ids + step, self._max_length) + batch_offsets
+              )
               items = self._data_table.read(steps_to_get)
               data.append(items)
               data_ids.append(self._id_table.read(steps_to_get))
@@ -291,26 +306,33 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
             data_ids = tuple(data_ids)
         probabilities = tf.fill(rows_shape, probability)
 
-        buffer_info = BufferInfo(ids=data_ids,
-                                 probabilities=probabilities)
+        buffer_info = BufferInfo(ids=data_ids, probabilities=probabilities)
     return data, buffer_info
 
   @gin.configurable(
-      'tf_agents.tf_uniform_replay_buffer.TFUniformReplayBuffer.as_dataset')
-  def as_dataset(self,
-                 sample_batch_size=None,
-                 num_steps=None,
-                 num_parallel_calls=None,
-                 single_deterministic_pass=False):
+      'tf_agents.tf_uniform_replay_buffer.TFUniformReplayBuffer.as_dataset'
+  )
+  def as_dataset(
+      self,
+      sample_batch_size=None,
+      num_steps=None,
+      num_parallel_calls=None,
+      single_deterministic_pass=False,
+  ):
     return super(TFUniformReplayBuffer, self).as_dataset(
-        sample_batch_size, num_steps, num_parallel_calls,
-        single_deterministic_pass=single_deterministic_pass)
+        sample_batch_size,
+        num_steps,
+        num_parallel_calls,
+        single_deterministic_pass=single_deterministic_pass,
+    )
 
-  def _as_dataset(self,
-                  sample_batch_size=None,
-                  num_steps=None,
-                  sequence_preprocess_fn=None,
-                  num_parallel_calls=None):
+  def _as_dataset(
+      self,
+      sample_batch_size=None,
+      num_steps=None,
+      sequence_preprocess_fn=None,
+      num_parallel_calls=None,
+  ):
     """Creates a dataset that returns entries from the buffer in shuffled order.
 
     Args:
@@ -340,14 +362,17 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       return self.get_next(sample_batch_size, num_steps, time_stacked=True)
 
     dataset = tf.data.experimental.Counter().map(
-        get_next, num_parallel_calls=num_parallel_calls)
+        get_next, num_parallel_calls=num_parallel_calls
+    )
     return dataset
 
-  def _single_deterministic_pass_dataset(self,
-                                         sample_batch_size=None,
-                                         num_steps=None,
-                                         sequence_preprocess_fn=None,
-                                         num_parallel_calls=None):
+  def _single_deterministic_pass_dataset(
+      self,
+      sample_batch_size=None,
+      num_steps=None,
+      sequence_preprocess_fn=None,
+      num_parallel_calls=None,
+  ):
     """Creates a dataset that returns entries from the buffer in fixed order.
 
     Args:
@@ -379,24 +404,30 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
     static_num_steps = tf.get_static_value(num_steps)
     static_self_batch_size = tf.get_static_value(self._batch_size)
     static_self_max_length = tf.get_static_value(self._max_length)
-    if (self._dataset_drop_remainder
+    if (
+        self._dataset_drop_remainder
         and static_size is not None
         and static_self_batch_size is not None
-        and static_size > static_self_batch_size):
+        and static_size > static_self_batch_size
+    ):
       raise ValueError(
           'sample_batch_size ({}) > self.batch_size ({}) and '
           'dataset_drop_remainder is True.  In '
           'this case, ALL data will be dropped by the deterministic dataset.'
-          .format(static_size, static_self_batch_size))
-    if (self._dataset_drop_remainder
+          .format(static_size, static_self_batch_size)
+      )
+    if (
+        self._dataset_drop_remainder
         and static_num_steps is not None
         and static_self_max_length is not None
-        and static_num_steps > static_self_max_length):
+        and static_num_steps > static_self_max_length
+    ):
       raise ValueError(
           'num_steps_size ({}) > self.max_length ({}) and '
           'dataset_drop_remainder is True.  In '
           'this case, ALL data will be dropped by the deterministic dataset.'
-          .format(static_num_steps, static_self_max_length))
+          .format(static_num_steps, static_self_max_length)
+      )
 
     def get_row_ids(_):
       """Passed to Dataset.range(self._batch_size).flat_map(.), gets row ids."""
@@ -409,44 +440,60 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
           # num_steps-length blocks.  The window mechanism handles this stuff
           # for us.
           min_frame_offset, max_frame_offset = _valid_range_ids(
-              self._get_last_id(), self._max_length, num_steps=None)
+              self._get_last_id(), self._max_length, num_steps=None
+          )
           tf.compat.v1.assert_less(
               min_frame_offset,
               max_frame_offset,
-              message='TFUniformReplayBuffer is empty. Make sure to add items '
-              'before asking the buffer for data.')
+              message=(
+                  'TFUniformReplayBuffer is empty. Make sure to add items '
+                  'before asking the buffer for data.'
+              ),
+          )
 
           min_max_frame_range = tf.range(min_frame_offset, max_frame_offset)
 
           window_shift = self._dataset_window_shift
+
           def group_windows(ds_, drop_remainder=self._dataset_drop_remainder):
             return ds_.batch(num_steps, drop_remainder=drop_remainder)
 
           if sample_batch_size is None:
+
             def row_ids(b):
               # Create a vector of shape [num_frames] and slice it along each
               # frame.
               ids = tf.data.Dataset.from_tensor_slices(
-                  b * self._max_length + min_max_frame_range)
+                  b * self._max_length + min_max_frame_range
+              )
               if num_steps is not None:
-                ids = (ids.window(num_steps, shift=window_shift)
-                       .flat_map(group_windows))
+                ids = ids.window(num_steps, shift=window_shift).flat_map(
+                    group_windows
+                )
               return ids
+
             return tf.data.Dataset.range(self._batch_size).flat_map(row_ids)
           else:
+
             def batched_row_ids(batch):
               # Create a matrix of indices shaped [num_frames, batch_size]
               # and slice it along each frame row to get groups of batches
               # for frame 0, frame 1, ...
               return tf.data.Dataset.from_tensor_slices(
-                  (min_max_frame_range[:, tf.newaxis]
-                   + batch * self._max_length))
+                  (
+                      min_max_frame_range[:, tf.newaxis]
+                      + batch * self._max_length
+                  )
+              )
 
             indices_ds = (
                 tf.data.Dataset.range(self._batch_size)
-                .batch(sample_batch_size,
-                       drop_remainder=self._dataset_drop_remainder)
-                .flat_map(batched_row_ids))
+                .batch(
+                    sample_batch_size,
+                    drop_remainder=self._dataset_drop_remainder,
+                )
+                .flat_map(batched_row_ids)
+            )
 
             if num_steps is not None:
               # We have sequences of num_frames rows shaped [sample_batch_size].
@@ -457,9 +504,11 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
               def group_windows_drop_remainder(d):
                 return group_windows(d, drop_remainder=True)
 
-              indices_ds = (indices_ds.window(num_steps, shift=window_shift)
-                            .flat_map(group_windows_drop_remainder)
-                            .map(tf.transpose))
+              indices_ds = (
+                  indices_ds.window(num_steps, shift=window_shift)
+                  .flat_map(group_windows_drop_remainder)
+                  .map(tf.transpose)
+              )
 
             return indices_ds
 
@@ -491,15 +540,16 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
       with tf.name_scope('gather_all'):
         # Make ids, repeated over batch_size. Shape [batch_size, num_ids, ...].
         min_val, max_val = _valid_range_ids(
-            self._get_last_id(), self._max_length)
+            self._get_last_id(), self._max_length
+        )
         ids = tf.range(min_val, max_val)
         ids = tf.stack([ids] * self._batch_size)
         rows = tf.math.mod(ids, self._max_length)
 
         # Make batch_offsets, shape [batch_size, 1], then add to rows.
         batch_offsets = tf.expand_dims(
-            tf.range(self._batch_size, dtype=tf.int64) * self._max_length,
-            1)
+            tf.range(self._batch_size, dtype=tf.int64) * self._max_length, 1
+        )
         rows += batch_offsets
 
         # Expected shape is [batch_size, max_length, ...].
@@ -511,20 +561,21 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
     Args:
       clear_all_variables: boolean indicating if all variables should be
-        cleared. By default, table contents will be unlinked from
-        replay buffer, but values are unmodified for efficiency. Set
-        `clear_all_variables=True` to reset all variables including Table
-        contents.
+        cleared. By default, table contents will be unlinked from replay buffer,
+        but values are unmodified for efficiency. Set `clear_all_variables=True`
+        to reset all variables including Table contents.
 
     Returns:
       op that clears or unlinks the replay buffer contents.
     """
     table_vars = self._data_table.variables() + self._id_table.variables()
+
     def _init_vars():
       assignments = [self._last_id.assign(-1)]
       if clear_all_variables:
         assignments += [v.assign(tf.zeros_like(v)) for v in table_vars]
       return tf.group(*assignments, name='clear')
+
     return self._last_id_cs.execute(_init_vars)
 
   #  Helper functions.
@@ -533,15 +584,17 @@ class TFUniformReplayBuffer(replay_buffer.ReplayBuffer):
 
     Args:
       increment: amount to increment last_id by.
+
     Returns:
       An op that increments the last_id.
     """
+
     def _assign_add():
       return self._last_id.assign_add(increment).value()
+
     return self._last_id_cs.execute(_assign_add)
 
   def _get_last_id(self):
-
     def last_id():
       return self._last_id.value()
 
@@ -563,6 +616,7 @@ def _valid_range_ids(last_id, max_length, num_steps=None):
     last_id: The last id added to the buffer.
     max_length: The max length of each batch segment in the buffer.
     num_steps: Optional way to specify that how many ids need to be valid.
+
   Returns:
     A tuple (min_id, max_id) for the range [min_id, max_id) of valid ids.
   """
@@ -575,5 +629,7 @@ def _valid_range_ids(last_id, max_length, num_steps=None):
   min_id_full = last_id + 1 - max_length
   max_id_full = last_id + 1 - num_steps + 1
 
-  return (tf.where(last_id < max_length, min_id_not_full, min_id_full),
-          tf.where(last_id < max_length, max_id_not_full, max_id_full))
+  return (
+      tf.where(last_id < max_length, min_id_not_full, min_id_full),
+      tf.where(last_id < max_length, max_id_not_full, max_id_full),
+  )

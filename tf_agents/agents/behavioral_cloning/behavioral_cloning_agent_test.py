@@ -58,12 +58,11 @@ def create_arbitrary_trajectory():
   """
 
   time_step_spec = ts.time_step_spec(
-      tensor_spec.TensorSpec([], tf.int32, name='observation'))
-  action_spec = tensor_spec.BoundedTensorSpec([],
-                                              tf.int32,
-                                              minimum=1,
-                                              maximum=2,
-                                              name='action')
+      tensor_spec.TensorSpec([], tf.int32, name='observation')
+  )
+  action_spec = tensor_spec.BoundedTensorSpec(
+      [], tf.int32, minimum=1, maximum=2, name='action'
+  )
 
   observation = tf.constant([[1], [2], [3], [4], [5], [6]], dtype=tf.int32)
   action = tf.constant([[1], [1], [1], [2], [2], [2]], dtype=tf.int32)
@@ -99,42 +98,53 @@ def get_dummy_net(action_spec, observation_spec=None):
     bias_initializer = None
     final_shape = flat_action_spec.shape
 
-  return sequential.Sequential([
-      tf.keras.layers.Dense(
-          num_actions,
-          kernel_initializer=kernel_initializer,
-          bias_initializer=bias_initializer,
-          dtype=tf.float32),
-      inner_reshape.InnerReshape([None], final_shape)
-  ], input_spec=observation_spec)
+  return sequential.Sequential(
+      [
+          tf.keras.layers.Dense(
+              num_actions,
+              kernel_initializer=kernel_initializer,
+              bias_initializer=bias_initializer,
+              dtype=tf.float32,
+          ),
+          inner_reshape.InnerReshape([None], final_shape),
+      ],
+      input_spec=observation_spec,
+  )
 
 
 def get_mock_hybrid_loss(actor_net, action_spec):
   def hybrid_loss(experience, training=False):
     del training
     batch_size = (
-        tf.compat.dimension_value(experience.step_type.shape[0]) or
-        tf.shape(experience.step_type)[0])
+        tf.compat.dimension_value(experience.step_type.shape[0])
+        or tf.shape(experience.step_type)[0]
+    )
     network_state = actor_net.get_initial_state(batch_size)
     # actor may define random ops like cropping. Pass training=False to disable.
     bc_output, _ = actor_net(
         experience.observation,
         step_type=experience.step_type,
         training=False,
-        network_state=network_state)
+        network_state=network_state,
+    )
+
     def _compute_loss(dist, label, spec):
       prediction = dist.mean()
       if spec.dtype.is_integer:
         cross_entropy = tf.keras.losses.CategoricalCrossentropy(
-            reduction=tf.keras.losses.Reduction.NONE)
+            reduction=tf.keras.losses.Reduction.NONE
+        )
         return cross_entropy(label, prediction)
       else:
         return tf.reduce_sum(
-            tf.math.squared_difference(label, prediction), axis=-1)
+            tf.math.squared_difference(label, prediction), axis=-1
+        )
+
     losses_dict = tf.nest.map_structure(
-        _compute_loss, bc_output, experience.action,
-        action_spec)
+        _compute_loss, bc_output, experience.action, action_spec
+    )
     return tf.add_n(tf.nest.flatten(losses_dict))
+
   return hybrid_loss
 
 
@@ -153,34 +163,52 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         cloning_network=cloning_net,
-        optimizer=None)
+        optimizer=None,
+    )
     self.assertIsNotNone(agent.policy)
 
   @parameterized.named_parameters(
-      ('MultipleActions', [
-          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
-          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)],
-       '.* single, scalar discrete.*'),
-      ('NonScalarAction', [
-          tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)],
-       '.* single, scalar discrete.*'),
-      ('ScalarDiscreteAction', [
-          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)],
-       None),
-      ('SingleNonScalarFloatAction',
-       tensor_spec.BoundedTensorSpec([3, 2], tf.float32, 0, 1),
-       None),
-      ('MultipleContinuous', [
-          tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1),
-          tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1)],
-       '.* single, scalar discrete.*'),
-      ('MixedDiscreteAndContinuous', [
-          tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
-          tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1)],
-       '.* single, scalar discrete.*'))
-  def testCreateAgentNestSizeChecks(self,
-                                    action_spec,
-                                    expected_error):
+      (
+          'MultipleActions',
+          [
+              tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
+              tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
+          ],
+          '.* single, scalar discrete.*',
+      ),
+      (
+          'NonScalarAction',
+          [tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)],
+          '.* single, scalar discrete.*',
+      ),
+      (
+          'ScalarDiscreteAction',
+          [tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1)],
+          None,
+      ),
+      (
+          'SingleNonScalarFloatAction',
+          tensor_spec.BoundedTensorSpec([3, 2], tf.float32, 0, 1),
+          None,
+      ),
+      (
+          'MultipleContinuous',
+          [
+              tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1),
+              tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1),
+          ],
+          '.* single, scalar discrete.*',
+      ),
+      (
+          'MixedDiscreteAndContinuous',
+          [
+              tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1),
+              tensor_spec.BoundedTensorSpec([], tf.float32, 0, 1),
+          ],
+          '.* single, scalar discrete.*',
+      ),
+  )
+  def testCreateAgentNestSizeChecks(self, action_spec, expected_error):
     cloning_net = get_dummy_net(action_spec, self._observation_spec)
     if expected_error is not None:
       with self.assertRaisesRegex(ValueError, expected_error):
@@ -188,19 +216,19 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
             self._time_step_spec,
             action_spec,
             cloning_network=cloning_net,
-            optimizer=None)
+            optimizer=None,
+        )
     else:
       behavioral_cloning_agent.BehavioralCloningAgent(
           self._time_step_spec,
           action_spec,
           cloning_network=cloning_net,
-          optimizer=None)
+          optimizer=None,
+      )
 
-  def verifyVariableAssignAndRestore(self,
-                                     observation_spec,
-                                     action_spec,
-                                     actor_net,
-                                     loss_fn=None):
+  def verifyVariableAssignAndRestore(
+      self, observation_spec, action_spec, actor_net, loss_fn=None
+  ):
     strategy = tf.distribute.get_strategy()
     time_step_spec = ts.time_step_spec(observation_spec)
     with strategy.scope():
@@ -210,14 +238,14 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
           action_spec,
           cloning_network=actor_net,
           optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-          loss_fn=loss_fn)
+          loss_fn=loss_fn,
+      )
     # Assign all vars to 0.
     for var in tf.nest.flatten(agent.variables):
       var.assign(tf.zeros_like(var))
     # Save checkpoint
     ckpt_dir = self.create_tempdir()
-    checkpointer = common.Checkpointer(
-        ckpt_dir=ckpt_dir, agent=agent)
+    checkpointer = common.Checkpointer(ckpt_dir=ckpt_dir, agent=agent)
     global_step = tf.constant(0)
     checkpointer.save(global_step)
     # Assign all vars to 1.
@@ -231,20 +259,22 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         self.assertEqual(value, 0)
       else:
         self.assertAllEqual(
-            value, np.zeros_like(value),
-            msg='{} has var mean {}, expected 0.'.format(var.name, value))
+            value,
+            np.zeros_like(value),
+            msg='{} has var mean {}, expected 0.'.format(var.name, value),
+        )
 
-  def verifyTrainAndRestore(self,
-                            observation_spec,
-                            action_spec,
-                            actor_net,
-                            loss_fn=None):
+  def verifyTrainAndRestore(
+      self, observation_spec, action_spec, actor_net, loss_fn=None
+  ):
     """Helper function for testing correct variable updating and restoring."""
     batch_size = 2
     observations = tensor_spec.sample_spec_nest(
-        observation_spec, outer_dims=(batch_size,))
+        observation_spec, outer_dims=(batch_size,)
+    )
     actions = tensor_spec.sample_spec_nest(
-        action_spec, outer_dims=(batch_size,))
+        action_spec, outer_dims=(batch_size,)
+    )
     rewards = tf.constant([10, 20], dtype=tf.float32)
     discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
     experience = trajectory.first(
@@ -252,7 +282,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         action=actions,
         policy_info=(),
         reward=rewards,
-        discount=discounts)
+        discount=discounts,
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     strategy = tf.distribute.get_strategy()
     with strategy.scope():
@@ -262,7 +293,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
           action_spec,
           cloning_network=actor_net,
           optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-          loss_fn=loss_fn)
+          loss_fn=loss_fn,
+      )
     loss_before_train = agent.loss(experience).loss
     # Check loss is stable.
     self.assertEqual(loss_before_train, agent.loss(experience).loss)
@@ -293,7 +325,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
   def testAssignAndRestore(self):
     cloning_net = get_dummy_net(self._action_spec)
     self.verifyVariableAssignAndRestore(
-        self._observation_spec, self._action_spec, cloning_net)
+        self._observation_spec, self._action_spec, cloning_net
+    )
 
   # TODO(kbanoop): Add a test where the target network has different values.
   def testLoss(self):
@@ -302,7 +335,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         cloning_network=cloning_net,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001))
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001),
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     actions = tf.constant([0, 1], dtype=tf.int32)
@@ -314,13 +348,16 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         action=actions,
         policy_info=(),
         reward=rewards,
-        discount=discounts)
+        discount=discounts,
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     expected_loss = tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            labels=actions, logits=cloning_net(observations)[0]))
+            labels=actions, logits=cloning_net(observations)[0]
+        )
+    )
 
     loss_info = agent.train(experience)
     total_loss = self.evaluate(loss_info.loss)
@@ -331,7 +368,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         test=self,
         expect_equal_loss_values=True,
         agent=agent,
-        experience=experience)
+        experience=experience,
+    )
 
   @parameterized.named_parameters(
       ('TrainOnMultipleStepsDist', False, True),
@@ -352,7 +390,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
           expand_dims_layer.ExpandDims(-1),
           tf.keras.layers.Dense(action_spec.maximum - action_spec.minimum + 1),
           tf.keras.layers.Lambda(
-              lambda t: tfp.distributions.Categorical(logits=t)),
+              lambda t: tfp.distributions.Categorical(logits=t)
+          ),
       ])
     else:
       cloning_net = q_network.QNetwork(time_step_spec.observation, action_spec)
@@ -361,7 +400,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         action_spec,
         cloning_network=cloning_net,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.001),
-        num_outer_dims=2)
+        num_outer_dims=2,
+    )
     # Disable clipping to make sure we can see the difference in behavior
     agent.policy._clip = False
     # TODO(b/123883319)
@@ -390,7 +430,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         time_step_spec,
         action_spec,
         cloning_network=cloning_net,
-        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01))
+        optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01),
+    )
     # Disable clipping to make sure we can see the difference in behavior
     agent.policy._clip = False
     # Remove policy_info, as BehavioralCloningAgent expects none.
@@ -409,13 +450,15 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
     # Hard code a trajectory shaped (time=6, batch=1, ...).
     traj, time_step_spec, action_spec = create_arbitrary_trajectory()
     cloning_net = q_rnn_network.QRnnNetwork(
-        time_step_spec.observation, action_spec, lstm_size=(40,))
+        time_step_spec.observation, action_spec, lstm_size=(40,)
+    )
     agent = behavioral_cloning_agent.BehavioralCloningAgent(
         time_step_spec,
         action_spec,
         cloning_network=cloning_net,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.01),
-        num_outer_dims=2)
+        num_outer_dims=2,
+    )
     # Disable clipping to make sure we can see the difference in behavior
     agent.policy._clip = False
     # Remove policy_info, as BehavioralCloningAgent expects none.
@@ -441,7 +484,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         cloning_network=cloning_net,
-        optimizer=None)
+        optimizer=None,
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy
@@ -462,7 +506,8 @@ class BehavioralCloningAgentTest(test_utils.TestCase, parameterized.TestCase):
         self._time_step_spec,
         self._action_spec,
         cloning_network=cloning_net,
-        optimizer=None)
+        optimizer=None,
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     policy = agent.policy

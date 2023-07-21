@@ -18,9 +18,9 @@ from __future__ import absolute_import
 
 import random
 from typing import Optional, Text
+
 import gin
 import numpy as np
-
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.bandits.environments import dataset_utilities
 from tf_agents.bandits.specs import utils as bandit_spec_utils
@@ -51,18 +51,20 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
   The reward of recommending movie `v` to user `u` is `u * Sigma * v^T`.
   """
 
-  def __init__(self,
-               data_dir: Text,
-               rank_k: int,
-               batch_size: int = 1,
-               num_actions: int = 50,
-               csv_delimiter=',',
-               name: Optional[Text] = 'movielens_per_arm'):
+  def __init__(
+      self,
+      data_dir: Text,
+      rank_k: int,
+      batch_size: int = 1,
+      num_actions: int = 50,
+      csv_delimiter=',',
+      name: Optional[Text] = 'movielens_per_arm',
+  ):
     """Initializes the Per-arm MovieLens Bandit environment.
 
     Args:
       data_dir: (string) Directory where the data lies (in text form).
-      rank_k : (int) Which rank to use in the matrix factorization. This will
+      rank_k: (int) Which rank to use in the matrix factorization. This will
         also be the feature dimension of both the user and the movie features.
       batch_size: (int) Number of observations generated per call.
       num_actions: (int) How many movies to choose from per round.
@@ -75,7 +77,8 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
 
     # Compute the matrix factorization.
     self._data_matrix = dataset_utilities.load_movielens_data(
-        data_dir, delimiter=csv_delimiter)
+        data_dir, delimiter=csv_delimiter
+    )
     self._num_users, self._num_movies = self._data_matrix.shape
 
     # Compute the SVD.
@@ -86,41 +89,43 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     self._s_hat = s[:rank_k].astype(np.float32)
     self._v_hat = np.transpose(vh[:rank_k]).astype(np.float32)
 
-    self._approx_ratings_matrix = np.matmul(self._u_hat * self._s_hat,
-                                            np.transpose(self._v_hat))
+    self._approx_ratings_matrix = np.matmul(
+        self._u_hat * self._s_hat, np.transpose(self._v_hat)
+    )
 
     self._action_spec = array_spec.BoundedArraySpec(
         shape=(),
         dtype=np.int32,
         minimum=0,
         maximum=num_actions - 1,
-        name='action')
+        name='action',
+    )
     observation_spec = {
-        GLOBAL_KEY:
-            array_spec.ArraySpec(shape=[rank_k], dtype=np.float32),
-        PER_ARM_KEY:
-            array_spec.ArraySpec(
-                shape=[num_actions, rank_k], dtype=np.float32),
+        GLOBAL_KEY: array_spec.ArraySpec(shape=[rank_k], dtype=np.float32),
+        PER_ARM_KEY: array_spec.ArraySpec(
+            shape=[num_actions, rank_k], dtype=np.float32
+        ),
     }
     self._time_step_spec = ts.time_step_spec(observation_spec)
 
     self._current_user_indices = np.zeros(batch_size, dtype=np.int32)
     self._previous_user_indices = np.zeros(batch_size, dtype=np.int32)
 
-    self._current_movie_indices = np.zeros([batch_size, num_actions],
-                                           dtype=np.int32)
-    self._previous_movie_indices = np.zeros([batch_size, num_actions],
-                                            dtype=np.int32)
+    self._current_movie_indices = np.zeros(
+        [batch_size, num_actions], dtype=np.int32
+    )
+    self._previous_movie_indices = np.zeros(
+        [batch_size, num_actions], dtype=np.int32
+    )
 
     self._observation = {
-        GLOBAL_KEY:
-            np.zeros([batch_size, rank_k]),
-        PER_ARM_KEY:
-            np.zeros([batch_size, num_actions, rank_k]),
+        GLOBAL_KEY: np.zeros([batch_size, rank_k]),
+        PER_ARM_KEY: np.zeros([batch_size, num_actions, rank_k]),
     }
 
     super(MovieLensPerArmPyEnvironment, self).__init__(
-        observation_spec, self._action_spec, name=name)
+        observation_spec, self._action_spec, name=name
+    )
 
   @property
   def batch_size(self):
@@ -132,40 +137,45 @@ class MovieLensPerArmPyEnvironment(bandit_py_environment.BanditPyEnvironment):
 
   def _observe(self):
     sampled_user_indices = np.random.randint(
-        self._num_users, size=self._batch_size)
+        self._num_users, size=self._batch_size
+    )
     self._previous_user_indices = self._current_user_indices
     self._current_user_indices = sampled_user_indices
 
-    sampled_movie_indices = np.array([
-        random.sample(range(self._num_movies), self._num_actions)
-        for _ in range(self._batch_size)
-    ])
+    sampled_movie_indices = np.array(
+        [
+            random.sample(range(self._num_movies), self._num_actions)
+            for _ in range(self._batch_size)
+        ]
+    )
     movie_index_vector = sampled_movie_indices.reshape(-1)
     flat_movie_list = self._v_hat[movie_index_vector]
     current_movies = flat_movie_list.reshape(
-        [self._batch_size, self._num_actions, self._context_dim])
+        [self._batch_size, self._num_actions, self._context_dim]
+    )
 
     self._previous_movie_indices = self._current_movie_indices
     self._current_movie_indices = sampled_movie_indices
 
     batched_observations = {
-        GLOBAL_KEY:
-            self._u_hat[sampled_user_indices],
-        PER_ARM_KEY:
-            current_movies,
+        GLOBAL_KEY: self._u_hat[sampled_user_indices],
+        PER_ARM_KEY: current_movies,
     }
     return batched_observations
 
   def _apply_action(self, action):
-    chosen_arm_indices = self._current_movie_indices[range(self._batch_size),
-                                                     action]
-    return self._approx_ratings_matrix[self._current_user_indices,
-                                       chosen_arm_indices]
+    chosen_arm_indices = self._current_movie_indices[
+        range(self._batch_size), action
+    ]
+    return self._approx_ratings_matrix[
+        self._current_user_indices, chosen_arm_indices
+    ]
 
   def _rewards_for_all_actions(self):
     rewards_matrix = self._approx_ratings_matrix[
         np.expand_dims(self._previous_user_indices, axis=-1),
-        self._previous_movie_indices]
+        self._previous_movie_indices,
+    ]
     return rewards_matrix
 
   def compute_optimal_action(self):

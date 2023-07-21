@@ -28,7 +28,6 @@ from typing import List, Optional, Text
 import gin
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.agents import mixture_agent
 from tf_agents.bandits.policies import mixture_policy
@@ -46,10 +45,12 @@ class Exp3MixtureVariableCollection(tf.Module):
   collections of the respective sub-agents.
   """
 
-  def __init__(self,
-               num_agents: int,
-               reward_aggregates: Optional[List[float]] = None,
-               inverse_temperature: float = 0.0):
+  def __init__(
+      self,
+      num_agents: int,
+      reward_aggregates: Optional[List[float]] = None,
+      inverse_temperature: float = 0.0,
+  ):
     """Initializes an instace of 'Exp3MixtureVariableCollection'.
 
     Args:
@@ -65,9 +66,11 @@ class Exp3MixtureVariableCollection(tf.Module):
       if num_agents != len(reward_aggregates):
         raise ValueError('`reward_aggregates` must have `num_agents` elements.')
     self._reward_aggregates = tf.Variable(
-        reward_aggregates, name='reward_aggregates', dtype=tf.float32)
+        reward_aggregates, name='reward_aggregates', dtype=tf.float32
+    )
     self._inverse_temperature = tf.Variable(
-        inverse_temperature, dtype=tf.float32)
+        inverse_temperature, dtype=tf.float32
+    )
 
   @property
   def reward_aggregates(self):
@@ -114,7 +117,8 @@ class Exp3MixtureAgent(mixture_agent.MixtureAgent):
       variable_collection: Optional[Exp3MixtureVariableCollection] = None,
       forgetting: float = 0.999,
       max_inverse_temperature: float = 1000.0,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Initializes an instance of `Exp3MixtureAgent`.
 
     Args:
@@ -123,25 +127,27 @@ class Exp3MixtureAgent(mixture_agent.MixtureAgent):
         A default one will be created. It contains all the variables that are
         needed to restore the mixture agent, excluding the variables of the
         subagents.
-      forgetting: A float value in (0, 1]. This is how much the estimated
-        reward aggregates are shrinked in every training step.
+      forgetting: A float value in (0, 1]. This is how much the estimated reward
+        aggregates are shrinked in every training step.
       max_inverse_temperature: This value caps the inverse temperature that
-       would otherwise grow as the square root of the number of samples seen.
+        would otherwise grow as the square root of the number of samples seen.
       name: Name fo this instance of `Exp3MixtureAgent`.
     """
     self._num_agents = len(agents)
     self._forgetting = forgetting
     self._max_inverse_temperature = max_inverse_temperature
     if variable_collection is None:
-      variable_collection = Exp3MixtureVariableCollection(
-          self._num_agents)
-    elif not isinstance(variable_collection,
-                        Exp3MixtureVariableCollection):
-      raise TypeError('Parameter `variable_collection` should be '
-                      'of type `MixtureVariableCollection`.')
+      variable_collection = Exp3MixtureVariableCollection(self._num_agents)
+    elif not isinstance(variable_collection, Exp3MixtureVariableCollection):
+      raise TypeError(
+          'Parameter `variable_collection` should be '
+          'of type `MixtureVariableCollection`.'
+      )
     elif variable_collection.reward_aggregates.shape != self._num_agents:
-      raise ValueError('`variable_collection.reward_aggregates` should have '
-                       'shape `[len(agents)]`.')
+      raise ValueError(
+          '`variable_collection.reward_aggregates` should have '
+          'shape `[len(agents)]`.'
+      )
     self._variable_collection = variable_collection
 
     # The `_mixture_weights` value is reassigned in every training step and only
@@ -151,59 +157,69 @@ class Exp3MixtureAgent(mixture_agent.MixtureAgent):
     # the categorical distribution is dynamically parameterized.
 
     self._mixture_weights = tf.Variable(
-        tf.zeros_like(variable_collection.reward_aggregates))
-    mixture_distribution = tfd.Categorical(
-        logits=self._mixture_weights)
+        tf.zeros_like(variable_collection.reward_aggregates)
+    )
+    mixture_distribution = tfd.Categorical(logits=self._mixture_weights)
     super(Exp3MixtureAgent, self).__init__(
-        mixture_distribution, agents, name=name)
+        mixture_distribution, agents, name=name
+    )
 
   def _update_mixture_distribution(self, experience):
-
     reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._time_step_spec.reward)
+        experience.reward, self._time_step_spec.reward
+    )
     policy_choice, _ = nest_utils.flatten_multi_batched_nested_tensors(
         experience.policy_info[mixture_policy.MIXTURE_AGENT_ID],
-        self._time_step_spec.reward)
-    batch_size = tf.compat.dimension_value(
-        reward.shape[0]) or tf.shape(reward)[0]
+        self._time_step_spec.reward,
+    )
+    batch_size = (
+        tf.compat.dimension_value(reward.shape[0]) or tf.shape(reward)[0]
+    )
     unnormalized_probabilities = tf.exp(self._mixture_weights)
     probabilities = unnormalized_probabilities / tf.norm(
-        unnormalized_probabilities, 1)
+        unnormalized_probabilities, 1
+    )
 
     normalizer = tf.reduce_sum(unnormalized_probabilities)
     probabilities = unnormalized_probabilities / normalizer
     self._summarize_probabilities(probabilities)
     repeated_probs = tf.tile(
-        tf.expand_dims(probabilities, axis=0), [batch_size, 1])
-    probs_per_step = tf.gather(
-        repeated_probs, policy_choice, batch_dims=1)
+        tf.expand_dims(probabilities, axis=0), [batch_size, 1]
+    )
+    probs_per_step = tf.gather(repeated_probs, policy_choice, batch_dims=1)
     per_step_update_term = tf.expand_dims((1 - reward) / probs_per_step, axis=0)
-    one_hot_policy_choice = tf.one_hot(
-        policy_choice, depth=self._num_agents)
+    one_hot_policy_choice = tf.one_hot(policy_choice, depth=self._num_agents)
     update_term = 1 - tf.squeeze(
-        tf.matmul(per_step_update_term, one_hot_policy_choice))
+        tf.matmul(per_step_update_term, one_hot_policy_choice)
+    )
     self._update_aggregates(update_term)
     self._update_inverse_temperature(batch_size)
     return self._mixture_weights.assign(
-        self._variable_collection.reward_aggregates /
-        self._variable_collection.inverse_temperature)
+        self._variable_collection.reward_aggregates
+        / self._variable_collection.inverse_temperature
+    )
 
   def _summarize_probabilities(self, probabilities):
     for k in range(self._num_agents):
       tf.compat.v2.summary.scalar(
           name='policy_{}_prob'.format(k),
           data=probabilities[k],
-          step=self.train_step_counter)
+          step=self.train_step_counter,
+      )
 
   def _update_aggregates(self, update_term):
     self._variable_collection.reward_aggregates.assign(
-        self._forgetting *
-        (self._variable_collection.reward_aggregates + update_term))
+        self._forgetting
+        * (self._variable_collection.reward_aggregates + update_term)
+    )
 
   def _update_inverse_temperature(self, batch_size):
     self._variable_collection.inverse_temperature.assign(
         tf.maximum(
             self._max_inverse_temperature,
             tf.sqrt(
-                tf.square(self._variable_collection.inverse_temperature) +
-                tf.cast(batch_size, dtype=tf.float32))))
+                tf.square(self._variable_collection.inverse_temperature)
+                + tf.cast(batch_size, dtype=tf.float32)
+            ),
+        )
+    )

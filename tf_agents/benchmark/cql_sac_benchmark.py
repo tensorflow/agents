@@ -23,7 +23,6 @@ import time
 from absl import logging
 import gin
 import tensorflow as tf
-
 from tf_agents.benchmark import utils
 from tf_agents.benchmark.perfzero_benchmark import PerfZeroBenchmark
 from tf_agents.examples.cql_sac.kumar20 import cql_sac_train_eval
@@ -62,11 +61,13 @@ class CqlSacKumar20Return(PerfZeroBenchmark):
         data_num_shards=50,
         data_parallel_reads=500,
         data_prefetch=1000000,
-        eval_interval=10000)
+        eval_interval=10000,
+    )
     wall_time_sec = time.time() - start_time_sec
     event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
     values, _ = utils.extract_event_log_values(
-        event_file, 'Metrics/AverageReturn', start_step=10000)
+        event_file, 'Metrics/AverageReturn', start_step=10000
+    )
 
     # Min/Max ranges are very large to only hard fail if very broken. The system
     # monitoring the results owns looking for anomalies. These numbers are based
@@ -77,10 +78,12 @@ class CqlSacKumar20Return(PerfZeroBenchmark):
         'average_return_at_env_step500000',
         values[500000],
         min_value=4400,
-        max_value=5400)
+        max_value=5400,
+    )
 
     self.report_benchmark(
-        wall_time=wall_time_sec, metrics=[metric_500k], extras={})
+        wall_time=wall_time_sec, metrics=[metric_500k], extras={}
+    )
 
 
 if __name__ == '__main__':

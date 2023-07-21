@@ -17,7 +17,6 @@
 
 from absl.testing.absltest import mock
 import tensorflow.compat.v2 as tf
-
 from tf_agents.environments import test_envs
 from tf_agents.experimental.distributed import reverb_variable_container
 from tf_agents.experimental.distributed.examples import eval_job
@@ -48,8 +47,10 @@ class EvalJobTest(test_utils.TestCase):
     action_tensor_spec = tensor_spec.from_spec(environment.action_spec())
     time_step_tensor_spec = tensor_spec.from_spec(environment.time_step_spec())
     policy = py_tf_eager_policy.PyTFEagerPolicy(
-        random_tf_policy.RandomTFPolicy(time_step_tensor_spec,
-                                        action_tensor_spec))
+        random_tf_policy.RandomTFPolicy(
+            time_step_tensor_spec, action_tensor_spec
+        )
+    )
 
     class VCUpdateIncrementTrainStep(object):
       """Side effect that updates train_step."""
@@ -60,15 +61,18 @@ class EvalJobTest(test_utils.TestCase):
       def __call__(self, variables):
         self.fake_train_step += 1
         variables[reverb_variable_container.TRAIN_STEP_KEY].assign(
-            self.fake_train_step)
+            self.fake_train_step
+        )
 
     mock_variable_container = mock.create_autospec(
-        reverb_variable_container.ReverbVariableContainer)
+        reverb_variable_container.ReverbVariableContainer
+    )
     fake_update = VCUpdateIncrementTrainStep()
     mock_variable_container.update.side_effect = fake_update
 
     with mock.patch.object(
-        tf.summary, 'scalar', autospec=True) as mock_scalar_summary:
+        tf.summary, 'scalar', autospec=True
+    ) as mock_scalar_summary:
       # Run the function tested.
       # 11 loops to do 10 steps becaue the eval occurs on the loop after the
       # train_step is found.
@@ -79,10 +83,12 @@ class EvalJobTest(test_utils.TestCase):
           suite_load_fn=lambda _: environment,
           variable_container=mock_variable_container,
           eval_interval=5,
-          is_running=_NTimesReturnTrue(n=11))
+          is_running=_NTimesReturnTrue(n=11),
+      )
 
       summary_count = self.count_summary_scalar_tags_in_call_list(
-          mock_scalar_summary, 'Metrics/eval_actor/AverageReturn')
+          mock_scalar_summary, 'Metrics/eval_actor/AverageReturn'
+      )
       self.assertEqual(summary_count, 3)
 
   def test_eval_job_constant_eval(self):
@@ -97,10 +103,13 @@ class EvalJobTest(test_utils.TestCase):
     action_tensor_spec = tensor_spec.from_spec(environment.action_spec())
     time_step_tensor_spec = tensor_spec.from_spec(environment.time_step_spec())
     policy = py_tf_eager_policy.PyTFEagerPolicy(
-        random_tf_policy.RandomTFPolicy(time_step_tensor_spec,
-                                        action_tensor_spec))
+        random_tf_policy.RandomTFPolicy(
+            time_step_tensor_spec, action_tensor_spec
+        )
+    )
     mock_variable_container = mock.create_autospec(
-        reverb_variable_container.ReverbVariableContainer)
+        reverb_variable_container.ReverbVariableContainer
+    )
 
     class VCUpdateIncrementEveryOtherTrainStep(object):
       """Side effect that updates train_step on every other call."""
@@ -113,14 +122,16 @@ class EvalJobTest(test_utils.TestCase):
         if self.call_count % 2:
           self.fake_train_step += 1
           variables[reverb_variable_container.TRAIN_STEP_KEY].assign(
-              self.fake_train_step)
+              self.fake_train_step
+          )
         self.call_count += 1
 
     fake_update = VCUpdateIncrementEveryOtherTrainStep()
     mock_variable_container.update.side_effect = fake_update
 
     with mock.patch.object(
-        tf.summary, 'scalar', autospec=True) as mock_scalar_summary:
+        tf.summary, 'scalar', autospec=True
+    ) as mock_scalar_summary:
       eval_job.evaluate(
           summary_dir=summary_dir,
           policy=policy,
@@ -128,10 +139,12 @@ class EvalJobTest(test_utils.TestCase):
           suite_load_fn=lambda _: environment,
           variable_container=mock_variable_container,
           eval_interval=1,
-          is_running=_NTimesReturnTrue(n=2))
+          is_running=_NTimesReturnTrue(n=2),
+      )
 
       summary_count = self.count_summary_scalar_tags_in_call_list(
-          mock_scalar_summary, 'Metrics/eval_actor/AverageReturn')
+          mock_scalar_summary, 'Metrics/eval_actor/AverageReturn'
+      )
       self.assertEqual(summary_count, 2)
 
   def count_summary_scalar_tags_in_call_list(self, mock_summary_scalar, tag):

@@ -18,7 +18,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from absl.testing import parameterized
-
 import tensorflow as tf
 from tf_agents.networks import actor_distribution_rnn_network
 from tf_agents.policies import actor_policy
@@ -27,14 +26,14 @@ from tf_agents.trajectories import time_step as ts
 
 
 def lstm_keras_fn(lstm_size):
-  return tf.keras.layers.LSTM(lstm_size, return_state=True,
-                              return_sequences=True)
+  return tf.keras.layers.LSTM(
+      lstm_size, return_state=True, return_sequences=True
+  )
 
 
 def rnn_keras_fn(lstm_size):
   cell = tf.keras.layers.SimpleRNNCell(lstm_size)
-  return tf.keras.layers.RNN(cell, return_state=True,
-                             return_sequences=True)
+  return tf.keras.layers.RNN(cell, return_state=True, return_sequences=True)
 
 
 class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
@@ -43,14 +42,15 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('RNNKerasUnroll', None, rnn_keras_fn),
   )
   def testBuildsRnn(self, lstm_size, rnn_construction_fn):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
     action_spec = [
         tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
-        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3)
+        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3),
     ]
 
     net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
@@ -61,11 +61,14 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
         output_fc_layer_params=(5,),
         lstm_size=lstm_size,
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
     action_distributions, network_state = net(
-        time_step.observation, time_step.step_type,
-        net.get_initial_state(batch_size=1))
+        time_step.observation,
+        time_step.step_type,
+        net.get_initial_state(batch_size=1),
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], action_distributions[0].mode().shape.as_list())
     self.assertEqual([1, 3], action_distributions[1].mode().shape.as_list())
@@ -108,14 +111,15 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('LSTMKerasUnroll', None, lstm_keras_fn),
   )
   def testBuilds(self, lstm_size, rnn_construction_fn):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1,))
 
     action_spec = [
         tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
-        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3)
+        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3),
     ]
 
     net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
@@ -126,11 +130,14 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
         output_fc_layer_params=(5,),
         lstm_size=lstm_size,
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
     action_distributions, network_state = net(
-        time_step.observation, time_step.step_type,
-        net.get_initial_state(batch_size=1))
+        time_step.observation,
+        time_step.step_type,
+        net.get_initial_state(batch_size=1),
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], action_distributions[0].mode().shape.as_list())
     self.assertEqual([1, 3], action_distributions[1].mode().shape.as_list())
@@ -174,14 +181,15 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('KerasUnroll', None, rnn_keras_fn),
   )
   def testRunsWithLstmStack(self, lstm_size, rnn_construction_fn):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(1, 5))
 
     action_spec = [
         tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
-        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3)
+        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3),
     ]
 
     net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
@@ -192,10 +200,12 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
         output_fc_layer_params=(5,),
         lstm_size=lstm_size,
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
-    initial_state = actor_policy.ActorPolicy(time_step_spec, action_spec,
-                                             net).get_initial_state(1)
+    initial_state = actor_policy.ActorPolicy(
+        time_step_spec, action_spec, net
+    ).get_initial_state(1)
     net_call = net(time_step.observation, time_step.step_type, initial_state)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -206,21 +216,24 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
       ('KerasUnroll', None, rnn_keras_fn),
   )
   def testHandlePreprocessingLayers(self, lstm_size, rnn_construction_fn):
-    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
-                        tensor_spec.TensorSpec([], tf.float32))
+    observation_spec = (
+        tensor_spec.TensorSpec([1], tf.float32),
+        tensor_spec.TensorSpec([], tf.float32),
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     time_step = tensor_spec.sample_spec_nest(time_step_spec, outer_dims=(3, 4))
 
     action_spec = [
         tensor_spec.BoundedTensorSpec((2,), tf.float32, 2, 3),
-        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3)
+        tensor_spec.BoundedTensorSpec((3,), tf.int32, 0, 3),
     ]
 
-    preprocessing_layers = (tf.keras.layers.Dense(4),
-                            tf.keras.Sequential([
-                                tf.keras.layers.Reshape((1,)),
-                                tf.keras.layers.Dense(4)
-                            ]))
+    preprocessing_layers = (
+        tf.keras.layers.Dense(4),
+        tf.keras.Sequential(
+            [tf.keras.layers.Reshape((1,)), tf.keras.layers.Dense(4)]
+        ),
+    )
 
     net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
         observation_spec,
@@ -229,12 +242,15 @@ class ActorDistributionNetworkTest(parameterized.TestCase, tf.test.TestCase):
         lstm_size=lstm_size,
         preprocessing_combiner=tf.keras.layers.Add(),
         rnn_construction_fn=rnn_construction_fn,
-        rnn_construction_kwargs={'lstm_size': 3})
+        rnn_construction_kwargs={'lstm_size': 3},
+    )
 
-    initial_state = actor_policy.ActorPolicy(time_step_spec, action_spec,
-                                             net).get_initial_state(3)
-    action_distributions, _ = net(time_step.observation, time_step.step_type,
-                                  initial_state)
+    initial_state = actor_policy.ActorPolicy(
+        time_step_spec, action_spec, net
+    ).get_initial_state(3)
+    action_distributions, _ = net(
+        time_step.observation, time_step.step_type, initial_state
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([3, 4, 2], action_distributions[0].mode().shape.as_list())

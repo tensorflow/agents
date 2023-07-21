@@ -74,7 +74,8 @@ class MultiprocessingTest(test_utils.TestCase):
     # below).
     remote_queue = ctx.SimpleQueue()
     p = ctx.Process(
-        target=execute_pickled_fn, args=(serialized_get_xval, remote_queue))
+        target=execute_pickled_fn, args=(serialized_get_xval, remote_queue)
+    )
     p.start()
     p.join()
     self.assertFalse(remote_queue.empty())
@@ -101,4 +102,5 @@ class MultiprocessingTest(test_utils.TestCase):
 
 if __name__ == '__main__':
   multiprocessing.handle_test_main(
-      test_utils.main, extra_state_savers=[XValStateSaver()])
+      test_utils.main, extra_state_savers=[XValStateSaver()]
+  )

@@ -19,11 +19,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import categorical_projection_network
 from tf_agents.networks import lstm_encoding_network
 from tf_agents.networks import network
@@ -34,18 +32,20 @@ from tf_agents.utils import nest_utils
 
 def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):
   return categorical_projection_network.CategoricalProjectionNetwork(
-      action_spec, logits_init_output_factor=logits_init_output_factor)
+      action_spec, logits_init_output_factor=logits_init_output_factor
+  )
 
 
-def _normal_projection_net(action_spec,
-                           init_action_stddev=0.35,
-                           init_means_output_factor=0.1):
+def _normal_projection_net(
+    action_spec, init_action_stddev=0.35, init_means_output_factor=0.1
+):
   std_bias_initializer_value = np.log(np.exp(init_action_stddev) - 1)
 
   return normal_projection_network.NormalProjectionNetwork(
       action_spec,
       init_means_output_factor=init_means_output_factor,
-      std_bias_initializer_value=std_bias_initializer_value)
+      std_bias_initializer_value=std_bias_initializer_value,
+  )
 
 
 @gin.configurable
@@ -58,23 +58,25 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
   cannot be returned.
   """
 
-  def __init__(self,
-               input_tensor_spec,
-               output_tensor_spec,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               input_fc_layer_params=(200, 100),
-               input_dropout_layer_params=None,
-               lstm_size=None,
-               output_fc_layer_params=(200, 100),
-               activation_fn=tf.keras.activations.relu,
-               dtype=tf.float32,
-               discrete_projection_net=_categorical_projection_net,
-               continuous_projection_net=_normal_projection_net,
-               rnn_construction_fn=None,
-               rnn_construction_kwargs={},
-               name='ActorDistributionRnnNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      output_tensor_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
+      conv_layer_params=None,
+      input_fc_layer_params=(200, 100),
+      input_dropout_layer_params=None,
+      lstm_size=None,
+      output_fc_layer_params=(200, 100),
+      activation_fn=tf.keras.activations.relu,
+      dtype=tf.float32,
+      discrete_projection_net=_categorical_projection_net,
+      continuous_projection_net=_normal_projection_net,
+      rnn_construction_fn=None,
+      rnn_construction_kwargs={},
+      name='ActorDistributionRnnNetwork',
+  ):
     """Creates an instance of `ActorDistributionRnnNetwork`.
 
     Args:
@@ -83,14 +85,14 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
       output_tensor_spec: A nest of `tensor_spec.BoundedTensorSpec` representing
         the output.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
-        of tensors and combines them. Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        of tensors and combines them. Good options include `tf.keras.layers.Add`
+        and `tf.keras.layers.Concatenate(axis=-1)`. This layer must not be
+        already built. For more details see the documentation of
+        `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -122,13 +124,8 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         tf.keras.layers.LSTM, tf.keras.layers.CuDNNLSTM. It is invalid to
         provide both rnn_construction_fn and lstm_size.
       rnn_construction_kwargs: (Optional.) Dictionary or arguments to pass to
-        rnn_construction_fn.
-
-        The RNN will be constructed via:
-
-        ```
-        rnn_layer = rnn_construction_fn(**rnn_construction_kwargs)
-        ```
+        rnn_construction_fn.  The RNN will be constructed via:  ``` rnn_layer =
+        rnn_construction_fn(**rnn_construction_kwargs) ```
       name: A string representing name of the network.
 
     Raises:
@@ -149,7 +146,8 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         rnn_construction_fn=rnn_construction_fn,
         rnn_construction_kwargs=rnn_construction_kwargs,
         dtype=dtype,
-        name=name)
+        name=name,
+    )
 
     def map_proj(spec):
       if tensor_spec.is_discrete(spec):
@@ -158,14 +156,16 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
         return continuous_projection_net(spec)
 
     projection_networks = tf.nest.map_structure(map_proj, output_tensor_spec)
-    output_spec = tf.nest.map_structure(lambda proj_net: proj_net.output_spec,
-                                        projection_networks)
+    output_spec = tf.nest.map_structure(
+        lambda proj_net: proj_net.output_spec, projection_networks
+    )
 
     super(ActorDistributionRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=lstm_encoder.state_spec,
         output_spec=output_spec,
-        name=name)
+        name=name,
+    )
 
     self._lstm_encoder = lstm_encoder
     self._projection_networks = projection_networks
@@ -177,10 +177,14 @@ class ActorDistributionRnnNetwork(network.DistributionNetwork):
 
   def call(self, observation, step_type, network_state=(), training=False):
     state, network_state = self._lstm_encoder(
-        observation, step_type=step_type, network_state=network_state,
-        training=training)
+        observation,
+        step_type=step_type,
+        network_state=network_state,
+        training=training,
+    )
     outer_rank = nest_utils.get_outer_rank(observation, self.input_tensor_spec)
     output_actions = tf.nest.map_structure(
         lambda proj_net: proj_net(state, outer_rank, training=training)[0],
-        self._projection_networks)
+        self._projection_networks,
+    )
     return output_actions, network_state

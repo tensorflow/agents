@@ -83,25 +83,30 @@ class PpoSchulman17Return(PerfZeroBenchmark):
     start_time_sec = time.time()
     bindings = [
         'schulman17.train_eval_lib.train_eval.env_name= "{}"'.format(
-            training_env),
-        'schulman17.train_eval_lib.train_eval.eval_episodes = 100'
+            training_env
+        ),
+        'schulman17.train_eval_lib.train_eval.eval_episodes = 100',
     ]
     gin.parse_config(bindings)
     ppo_clip_train_eval.ppo_clip_train_eval(
-        output_dir, eval_interval=10000, num_iterations=489)
+        output_dir, eval_interval=10000, num_iterations=489
+    )
     wall_time_sec = time.time() - start_time_sec
     event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
     values, _ = utils.extract_event_log_values(
-        event_file, 'Metrics/AverageReturn/EnvironmentSteps')
+        event_file, 'Metrics/AverageReturn/EnvironmentSteps'
+    )
 
     metric_1m = self.build_metric(
         'average_return_at_env_step1000000',
         values[1001472],
         min_value=expected_min,
-        max_value=expected_max)
+        max_value=expected_max,
+    )
 
     self.report_benchmark(
-        wall_time=wall_time_sec, metrics=[metric_1m], extras={})
+        wall_time=wall_time_sec, metrics=[metric_1m], extras={}
+    )
     self._tearDown()
 
 

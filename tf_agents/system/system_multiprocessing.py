@@ -21,8 +21,6 @@ from typing import Text
 import cloudpickle
 import gin
 import gym
-
-
 from tf_agents.system.default import multiprocessing_core
 from tf_agents.system.default.multiprocessing_core import *  # pylint: disable=wildcard-import
 
@@ -124,7 +122,9 @@ class _WrappedTargetWithState:
       except TypeError as e:
         context.get_logger().error(
             'Error while pickling global state from saver %s: %s.  Skipping.',
-            saver, e)
+            saver,
+            e,
+        )
         self._global_state.append(None)
 
   def __call__(self, *args, **kwargs):
@@ -146,7 +146,8 @@ class _WrappedTargetWithState:
       if len(_STATE_SAVERS) != len(self._global_state):
         raise RuntimeError(
             'Expected number of state savers to match count of state values, '
-            'but saw {} vs. {}'.format(len(_STATE_SAVERS), self._global_state))
+            'but saw {} vs. {}'.format(len(_STATE_SAVERS), self._global_state)
+        )
 
       # Deserialize and restore global state
       for saver, state in zip(_STATE_SAVERS, self._global_state):
@@ -183,30 +184,38 @@ class _PoolWrapper:
       func = _WrappedTargetWithState(self._context, func)
     return self._pool.apply(func, args=args, kwds=kwds)
 
-  def apply_async(self, func, args=None, kwds=None, callback=None,
-                  error_callback=None):
+  def apply_async(
+      self, func, args=None, kwds=None, callback=None, error_callback=None
+  ):
     args = args or ()
     kwds = kwds or {}
     if func is not None:
       func = _WrappedTargetWithState(self._context, func)
-    return self._pool.apply_async(func,
-                                  args=args,
-                                  kwds=kwds,
-                                  callback=callback,
-                                  error_callback=error_callback)
+    return self._pool.apply_async(
+        func,
+        args=args,
+        kwds=kwds,
+        callback=callback,
+        error_callback=error_callback,
+    )
 
   def map(self, func, iterable, chunksize=None):
     if func is not None:
       func = _WrappedTargetWithState(self._context, func)
     return self._pool.map(func, iterable=iterable, chunksize=chunksize)
 
-  def map_async(self, func, iterable, chunksize=None, callback=None,
-                error_callback=None):
+  def map_async(
+      self, func, iterable, chunksize=None, callback=None, error_callback=None
+  ):
     if func is not None:
       func = _WrappedTargetWithState(self._context, func)
-    return self._pool.map_async(func, iterable=iterable, chunksize=chunksize,
-                                callback=callback,
-                                error_callback=error_callback)
+    return self._pool.map_async(
+        func,
+        iterable=iterable,
+        chunksize=chunksize,
+        callback=callback,
+        error_callback=error_callback,
+    )
 
   def imap(self, *args, **kwargs):
     raise NotImplementedError('imap not implemented; try map')
@@ -230,28 +239,46 @@ class _ContextWrapper:
   def __init__(self, context):
     self._context = context
 
-  def Process(self, group=None, target=None, name=None, args=None, kwargs=None,
-              *, daemon=None):
+  def Process(
+      self,
+      group=None,
+      target=None,
+      name=None,
+      args=None,
+      kwargs=None,
+      *,
+      daemon=None
+  ):
     args = args or ()
     kwargs = kwargs or {}
     if target is not None:
       target = _WrappedTargetWithState(self._context, target)
-    return self._context.Process(group=group, target=target, name=name,
-                                 args=args, kwargs=kwargs, daemon=daemon)
+    return self._context.Process(
+        group=group,
+        target=target,
+        name=name,
+        args=args,
+        kwargs=kwargs,
+        daemon=daemon,
+    )
 
-  def Pool(self, processes=None, initializer=None, initargs=(),
-           maxtasksperchild=None):
+  def Pool(
+      self, processes=None, initializer=None, initargs=(), maxtasksperchild=None
+  ):
     return _PoolWrapper(
         self._context,
         self._context.Pool(
             processes=processes,
             initializer=initializer,
             initargs=initargs,
-            maxtasksperchild=maxtasksperchild)
+            maxtasksperchild=maxtasksperchild,
+        ),
     )
 
   def __getattr__(self, k):
     return getattr(self._context, k)
+
+
 # pylint: enable=invalid-name
 
 
@@ -275,8 +302,10 @@ class OpenAIGymStateSaver(multiprocessing_core.StateSaver):
   def restore_state(self, state):
     if not isinstance(state, gym.envs.registration.EnvRegistry):
       raise RuntimeError(
-          'Expected gym registry object of type {}, but saw state {}'
-          .format(gym.envs.registration.EnvRegistry, state))
+          'Expected gym registry object of type {}, but saw state {}'.format(
+              gym.envs.registration.EnvRegistry, state
+          )
+      )
     gym.envs.registration.registry = state
 
 

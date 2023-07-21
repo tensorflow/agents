@@ -22,7 +22,6 @@ from __future__ import print_function
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tensorflow.keras import layers
-
 from tf_agents.networks import lstm_encoding_network
 from tf_agents.networks import q_network
 
@@ -55,14 +54,14 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
         of tensors and combines them.  Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`. This
+        layer must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -78,13 +77,8 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         tf.keras.layers.LSTM, tf.keras.layers.CuDNNLSTM. It is invalid to
         provide both rnn_construction_fn and lstm_size.
       rnn_construction_kwargs: (Optional.) Dictionary or arguments to pass to
-        rnn_construction_fn.
-
-        The RNN will be constructed via:
-
-        ```
-        rnn_layer = rnn_construction_fn(**rnn_construction_kwargs)
-        ```
+        rnn_construction_fn.  The RNN will be constructed via:  ``` rnn_layer =
+        rnn_construction_fn(**rnn_construction_kwargs) ```
       dtype: The dtype to use by the convolution, LSTM, and fully connected
         layers.
       name: A string representing name of the network.
@@ -104,10 +98,12 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         num_actions,
         activation=None,
         kernel_initializer=tf.random_uniform_initializer(
-            minval=-0.03, maxval=0.03),
+            minval=-0.03, maxval=0.03
+        ),
         bias_initializer=tf.constant_initializer(-0.2),
         dtype=dtype,
-        name='num_action_project/dense')
+        name='num_action_project/dense',
+    )
 
     super(QRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
@@ -121,6 +117,7 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         rnn_construction_fn=rnn_construction_fn,
         rnn_construction_kwargs=rnn_construction_kwargs,
         dtype=dtype,
-        name=name)
+        name=name,
+    )
 
     self._output_encoder.append(q_projection)

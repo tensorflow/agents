@@ -26,6 +26,7 @@ def export_metrics(step, metrics, loss_info=None):
     metrics: List of `TF metrics` to log.
     loss_info: An optional instance of `LossInfo` whose value is logged.
   """
+
   def logging_at_step_fn(name, value):
     logging_msg = f'[step={step}] {name} = {value}.'
     logging.info(logging_msg)

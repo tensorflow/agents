@@ -19,12 +19,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 from typing import Any
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents import specs
 from tf_agents.environments import py_environment
 from tf_agents.policies import py_policy
@@ -40,7 +38,8 @@ from tf_agents.utils import common
 def make_replay_buffer(policy):
   """Default replay buffer factory."""
   return tf_uniform_replay_buffer.TFUniformReplayBuffer(
-      policy.trajectory_spec, batch_size=1)
+      policy.trajectory_spec, batch_size=1
+  )
 
 
 class PyEnvironmentMock(py_environment.PyEnvironment):
@@ -53,11 +52,9 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
 
   def __init__(self, final_state=3):
     self._state = np.int32(0)
-    self._action_spec = specs.BoundedArraySpec([],
-                                               np.int32,
-                                               minimum=1,
-                                               maximum=2,
-                                               name='action')
+    self._action_spec = specs.BoundedArraySpec(
+        [], np.int32, minimum=1, maximum=2, name='action'
+    )
     self._observation_spec = specs.ArraySpec([], np.int32, name='observation')
     self._final_state = final_state
     super(PyEnvironmentMock, self).__init__()
@@ -72,8 +69,11 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
 
   def _step(self, action):
     if action < self._action_spec.minimum or action > self._action_spec.maximum:
-      raise ValueError('Action should be in [{0}, {1}], but saw: {2}'.format(
-          self._action_spec.minimum, self._action_spec.maximum, action))
+      raise ValueError(
+          'Action should be in [{0}, {1}], but saw: {2}'.format(
+              self._action_spec.minimum, self._action_spec.maximum, action
+          )
+      )
     if action.shape != ():  # pylint: disable=g-explicit-bool-comparison
       raise ValueError('Action should be a scalar.')
 
@@ -84,9 +84,9 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
     self._state += action
     self._state = np.int32(self._state)
     if self._state < self._final_state:
-      return ts.transition(self._state, 1.)
+      return ts.transition(self._state, 1.0)
     else:
-      return ts.termination(self._state, 1.)
+      return ts.termination(self._state, 1.0)
 
   def action_spec(self):
     return self._action_spec
@@ -101,37 +101,44 @@ class PyEnvironmentMock(py_environment.PyEnvironment):
 class TFPolicyMock(tf_policy.TFPolicy):
   """Mock policy takes actions 1 and 2, alternating."""
 
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               batch_size=1,
-               policy_state_spec_name='policy_state_spec',
-               policy_state_name='policy_state',
-               initial_policy_state=None):
+  def __init__(
+      self,
+      time_step_spec,
+      action_spec,
+      batch_size=1,
+      policy_state_spec_name='policy_state_spec',
+      policy_state_name='policy_state',
+      initial_policy_state=None,
+  ):
     batch_shape = (batch_size,)
     self._batch_shape = batch_shape
     minimum = np.asarray(1, dtype=np.int32)
     maximum = np.asarray(2, dtype=np.int32)
     self._maximum = maximum
-    policy_state_spec = specs.BoundedTensorSpec((),
-                                                tf.int32,
-                                                minimum=minimum,
-                                                maximum=maximum,
-                                                name=policy_state_spec_name)
+    policy_state_spec = specs.BoundedTensorSpec(
+        (),
+        tf.int32,
+        minimum=minimum,
+        maximum=maximum,
+        name=policy_state_spec_name,
+    )
     info_spec = action_spec
     self._policy_state = common.create_variable(
         name=policy_state_name,
         initial_value=maximum,
         shape=batch_shape,
-        dtype=tf.int32)
+        dtype=tf.int32,
+    )
     if initial_policy_state is None:
-      self._initial_policy_state = tf.fill([batch_size],
-                                           tf.constant(0, tf.int32))
+      self._initial_policy_state = tf.fill(
+          [batch_size], tf.constant(0, tf.int32)
+      )
     else:
       self._initial_policy_state = initial_policy_state
 
-    super(TFPolicyMock, self).__init__(time_step_spec, action_spec,
-                                       policy_state_spec, info_spec)
+    super(TFPolicyMock, self).__init__(
+        time_step_spec, action_spec, policy_state_spec, info_spec
+    )
 
   def _get_initial_state(self, batch_size):
     return self._initial_policy_state
@@ -140,13 +147,16 @@ class TFPolicyMock(tf_policy.TFPolicy):
     del seed
 
     # Reset the policy for batch indices that have restarted episode.
-    policy_state = tf.compat.v1.where(time_step.is_first(),
-                                      self._initial_policy_state, policy_state)
+    policy_state = tf.compat.v1.where(
+        time_step.is_first(), self._initial_policy_state, policy_state
+    )
 
     # Take actions 1 and 2 alternating.
     action = tf.cast(tf.math.floormod(policy_state, 2) + 1, tf.int32)
-    new_policy_state = tf.cast(policy_state + tf.constant(
-        1, shape=self._batch_shape, dtype=tf.int32), tf.int32)
+    new_policy_state = tf.cast(
+        policy_state + tf.constant(1, shape=self._batch_shape, dtype=tf.int32),
+        tf.int32,
+    )
     policy_info = tf.cast(action * 2, tf.int32)
     return policy_step.PolicyStep(action, new_policy_state, policy_info)
 
@@ -161,23 +171,19 @@ class PyPolicyMock(py_policy.PyPolicy):
   """Mock policy takes actions 1 and 2, alternating."""
 
   # For batched environments, use a initial policy state of size [batch_size].
-  def __init__(self,
-               time_step_spec,
-               action_spec,
-               initial_policy_state=np.int32(2)):
-    policy_state_spec = specs.BoundedArraySpec((),
-                                               np.int32,
-                                               minimum=1,
-                                               maximum=2,
-                                               name='policy_state_spec')
-    policy_info_spec = specs.BoundedArraySpec((),
-                                              np.int32,
-                                              minimum=1,
-                                              maximum=2,
-                                              name='policy_info_spec')
+  def __init__(
+      self, time_step_spec, action_spec, initial_policy_state=np.int32(2)
+  ):
+    policy_state_spec = specs.BoundedArraySpec(
+        (), np.int32, minimum=1, maximum=2, name='policy_state_spec'
+    )
+    policy_info_spec = specs.BoundedArraySpec(
+        (), np.int32, minimum=1, maximum=2, name='policy_info_spec'
+    )
     self._initial_policy_state = initial_policy_state
-    super(PyPolicyMock, self).__init__(time_step_spec, action_spec,
-                                       policy_state_spec, policy_info_spec)
+    super(PyPolicyMock, self).__init__(
+        time_step_spec, action_spec, policy_state_spec, policy_info_spec
+    )
     self.get_initial_state_call_count = 0
 
   def _get_initial_state(self, batch_size=None):
@@ -192,7 +198,8 @@ class PyPolicyMock(py_policy.PyPolicy):
         policy_state = self._initial_policy_state
     else:
       policy_state[is_time_step_first] = self._initial_policy_state[
-          is_time_step_first]
+          is_time_step_first
+      ]
 
     # Take actions 1 and 2 alternating.
     action = (policy_state % 2) + 1
@@ -208,7 +215,8 @@ class NumStepsObserver(object):
   def __init__(self, variable_scope='num_steps_step_observer'):
     with tf.compat.v1.variable_scope(variable_scope):
       self._num_steps = common.create_variable(
-          'num_steps', 0, shape=[], dtype=tf.int32)
+          'num_steps', 0, shape=[], dtype=tf.int32
+      )
 
   @property
   def num_steps(self):
@@ -220,7 +228,8 @@ class NumStepsObserver(object):
 
   def __call__(self, traj):
     num_steps = tf.reduce_sum(
-        input_tensor=tf.cast(~traj.is_boundary(), dtype=tf.int32))
+        input_tensor=tf.cast(~traj.is_boundary(), dtype=tf.int32)
+    )
     with tf.control_dependencies([self._num_steps.assign_add(num_steps)]):
       return tf.nest.map_structure(tf.identity, traj)
 
@@ -231,7 +240,8 @@ class NumStepsTransitionObserver(object):
   def __init__(self, variable_scope='num_steps_step_observer'):
     with tf.compat.v1.variable_scope(variable_scope):
       self._num_steps = common.create_variable(
-          'num_steps', 0, shape=[], dtype=tf.int32)
+          'num_steps', 0, shape=[], dtype=tf.int32
+      )
 
   @property
   def num_steps(self):
@@ -244,7 +254,8 @@ class NumStepsTransitionObserver(object):
   def __call__(self, transition):
     _, _, next_time_step = transition
     num_steps = tf.reduce_sum(
-        input_tensor=tf.cast(~next_time_step.is_first(), dtype=tf.int32))
+        input_tensor=tf.cast(~next_time_step.is_first(), dtype=tf.int32)
+    )
     with tf.control_dependencies([self._num_steps.assign_add(num_steps)]):
       return tf.nest.map_structure(tf.identity, transition)
 
@@ -255,7 +266,8 @@ class NumEpisodesObserver(object):
   def __init__(self, variable_scope='num_episodes_step_observer'):
     with tf.compat.v1.variable_scope(variable_scope):
       self._num_episodes = common.create_variable(
-          'num_episodes', 0, shape=[], dtype=tf.int32)
+          'num_episodes', 0, shape=[], dtype=tf.int32
+      )
 
   @property
   def num_episodes(self):
@@ -267,10 +279,9 @@ class NumEpisodesObserver(object):
 
   def __call__(self, traj):
     num_episodes = tf.reduce_sum(
-        input_tensor=tf.cast(traj.is_boundary(), dtype=tf.int32))
-    with tf.control_dependencies([
-        self._num_episodes.assign_add(num_episodes)
-    ]):
+        input_tensor=tf.cast(traj.is_boundary(), dtype=tf.int32)
+    )
+    with tf.control_dependencies([self._num_episodes.assign_add(num_episodes)]):
       return tf.nest.map_structure(tf.identity, traj)
 
 
@@ -294,21 +305,23 @@ def make_random_trajectory():
     A `Trajectory`.
   """
   time_step_spec = ts.time_step_spec(
-      tensor_spec.TensorSpec([], tf.int32, name='observation'))
-  action_spec = tensor_spec.BoundedTensorSpec([],
-                                              tf.int32,
-                                              minimum=1,
-                                              maximum=2,
-                                              name='action')
+      tensor_spec.TensorSpec([], tf.int32, name='observation')
+  )
+  action_spec = tensor_spec.BoundedTensorSpec(
+      [], tf.int32, minimum=1, maximum=2, name='action'
+  )
   # info and policy state specs match that of TFPolicyMock.
   outer_dims = [1, 6]  # (batch_size, time)
   traj = trajectory.Trajectory(
       observation=tensor_spec.sample_spec_nest(
-          time_step_spec.observation, outer_dims=outer_dims),
+          time_step_spec.observation, outer_dims=outer_dims
+      ),
       action=tensor_spec.sample_bounded_spec(
-          action_spec, outer_dims=outer_dims),
+          action_spec, outer_dims=outer_dims
+      ),
       policy_info=tensor_spec.sample_bounded_spec(
-          action_spec, outer_dims=outer_dims),
+          action_spec, outer_dims=outer_dims
+      ),
       reward=tf.fill(outer_dims, tf.constant(0, dtype=tf.float32)),
       # step_type is F M L F M L.
       step_type=tf.reshape(tf.range(0, 6) % 3, outer_dims),

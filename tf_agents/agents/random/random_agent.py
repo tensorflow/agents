@@ -37,14 +37,16 @@ from tf_agents.typing import types
 class RandomAgent(fixed_policy_agent.FixedPolicyAgent):
   """An agent with a random policy and no learning."""
 
-  def __init__(self,
-               time_step_spec: ts.TimeStep,
-               action_spec: types.NestedTensorSpec,
-               debug_summaries: bool = False,
-               summarize_grads_and_vars: bool = False,
-               train_step_counter: Optional[tf.Variable] = None,
-               num_outer_dims: int = 1,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedTensorSpec,
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      train_step_counter: Optional[tf.Variable] = None,
+      num_outer_dims: int = 1,
+      name: Optional[Text] = None,
+  ):
     """Creates a random agent.
 
     Args:
@@ -69,4 +71,5 @@ class RandomAgent(fixed_policy_agent.FixedPolicyAgent):
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         train_step_counter=train_step_counter,
-        num_outer_dims=num_outer_dims)
+        num_outer_dims=num_outer_dims,
+    )

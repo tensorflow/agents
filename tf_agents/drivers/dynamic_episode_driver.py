@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.environments import bandit_py_environment
 from tf_agents.bandits.environments import bandit_tf_environment
 from tf_agents.drivers import driver
@@ -36,9 +35,9 @@ def is_bandit_env(env):
   actual_env = env
   if isinstance(env, tf_py_environment.TFPyEnvironment):
     actual_env = env.pyenv
-  is_bandit = (
-      isinstance(actual_env, bandit_py_environment.BanditPyEnvironment) or
-      isinstance(actual_env, bandit_tf_environment.BanditTFEnvironment))
+  is_bandit = isinstance(
+      actual_env, bandit_py_environment.BanditPyEnvironment
+  ) or isinstance(actual_env, bandit_tf_environment.BanditTFEnvironment)
   return is_bandit
 
 
@@ -56,12 +55,14 @@ class DynamicEpisodeDriver(driver.Driver):
   self._loop_condition_fn() method.
   """
 
-  def __init__(self,
-               env,
-               policy,
-               observers=None,
-               transition_observers=None,
-               num_episodes=1):
+  def __init__(
+      self,
+      env,
+      policy,
+      observers=None,
+      transition_observers=None,
+      num_episodes=1,
+  ):
     """Creates a DynamicEpisodeDriver.
 
     **Note** about bias when using batched environments with `num_episodes`:
@@ -91,8 +92,9 @@ class DynamicEpisodeDriver(driver.Driver):
         If env is not a tf_environment.Base or policy is not an instance of
         tf_policy.TFPolicy.
     """
-    super(DynamicEpisodeDriver, self).__init__(env, policy, observers,
-                                               transition_observers)
+    super(DynamicEpisodeDriver, self).__init__(
+        env, policy, observers, transition_observers
+    )
     self._num_episodes = num_episodes
     self._run_fn = common.function_in_tf1()(self._run)
     self._is_bandit_env = is_bandit_env(env)
@@ -148,7 +150,8 @@ class DynamicEpisodeDriver(driver.Driver):
         # the step type of the current `time_step` to FIRST.
         batch_size = tf.shape(input=time_step.discount)
         time_step = time_step._replace(
-            step_type=tf.fill(batch_size, ts.StepType.FIRST))
+            step_type=tf.fill(batch_size, ts.StepType.FIRST)
+        )
 
       traj = trajectory.from_transition(time_step, action_step, next_time_step)
       observer_ops = [observer(traj) for observer in self._observers]
@@ -157,9 +160,11 @@ class DynamicEpisodeDriver(driver.Driver):
           for observer in self._transition_observers
       ]
       with tf.control_dependencies(
-          [tf.group(observer_ops + transition_observer_ops)]):
+          [tf.group(observer_ops + transition_observer_ops)]
+      ):
         time_step, next_time_step, policy_state = tf.nest.map_structure(
-            tf.identity, (time_step, next_time_step, policy_state))
+            tf.identity, (time_step, next_time_step, policy_state)
+        )
 
       # While loop counter is only incremented for episode reset episodes.
       # For Bandits, this is every trajectory, for MDPs, this is at boundaries.
@@ -172,11 +177,13 @@ class DynamicEpisodeDriver(driver.Driver):
 
     return loop_body
 
-  def run(self,
-          time_step=None,
-          policy_state=None,
-          num_episodes=None,
-          maximum_iterations=None):
+  def run(
+      self,
+      time_step=None,
+      policy_state=None,
+      num_episodes=None,
+      maximum_iterations=None,
+  ):
     """Takes episodes in the environment using the policy and update observers.
 
     If `time_step` and `policy_state` are not provided, `run` will reset the
@@ -212,13 +219,16 @@ class DynamicEpisodeDriver(driver.Driver):
         time_step=time_step,
         policy_state=policy_state,
         num_episodes=num_episodes,
-        maximum_iterations=maximum_iterations)
+        maximum_iterations=maximum_iterations,
+    )
 
-  def _run(self,
-           time_step=None,
-           policy_state=None,
-           num_episodes=None,
-           maximum_iterations=None):
+  def _run(
+      self,
+      time_step=None,
+      policy_state=None,
+      num_episodes=None,
+      maximum_iterations=None,
+  ):
     """See `run()` docstring for details."""
     if time_step is None:
       time_step = self.env.reset()
@@ -228,8 +238,9 @@ class DynamicEpisodeDriver(driver.Driver):
 
     # Batch dim should be first index of tensors during data
     # collection.
-    batch_dims = nest_utils.get_outer_shape(time_step,
-                                            self.env.time_step_spec())
+    batch_dims = nest_utils.get_outer_shape(
+        time_step, self.env.time_step_spec()
+    )
     counter = tf.zeros(batch_dims, tf.int32)
 
     num_episodes = num_episodes or self._num_episodes
@@ -241,6 +252,8 @@ class DynamicEpisodeDriver(driver.Driver):
             loop_vars=[counter, time_step, policy_state],
             parallel_iterations=1,
             maximum_iterations=maximum_iterations,
-            name='driver_loop'))
+            name='driver_loop',
+        ),
+    )
 
     return time_step, policy_state

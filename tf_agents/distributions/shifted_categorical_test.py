@@ -18,7 +18,6 @@
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.distributions import shifted_categorical
 
 
@@ -27,7 +26,8 @@ class ShiftedCategoricalTest(tf.test.TestCase):
   def testCopy(self):
     """Confirm we can copy the distribution."""
     distribution = shifted_categorical.ShiftedCategorical(
-        logits=[100.0, 100.0, 100.0], shift=2)
+        logits=[100.0, 100.0, 100.0], shift=2
+    )
     copy = distribution.copy()
     with self.cached_session() as s:
       probs_np = s.run(copy.probs_parameter())
@@ -39,7 +39,8 @@ class ShiftedCategoricalTest(tf.test.TestCase):
 
   def testShiftedSampling(self):
     distribution = shifted_categorical.ShiftedCategorical(
-        probs=[0.1, 0.8, 0.1], shift=2)
+        probs=[0.1, 0.8, 0.1], shift=2
+    )
     sample = distribution.sample()
     log_prob = distribution.log_prob(sample)
     results = []
@@ -59,7 +60,8 @@ class ShiftedCategoricalTest(tf.test.TestCase):
     probabilities = [0.3, 0.3, 0.4]
     distribution = tfp.distributions.Categorical(probs=probabilities)
     shifted_distribution = shifted_categorical.ShiftedCategorical(
-        probs=probabilities, shift=shift)
+        probs=probabilities, shift=shift
+    )
 
     # Compare outputs of basic methods, using the same starting seed.
     tf.compat.v1.set_random_seed(1)  # required per b/131171329, only with TF2.
@@ -81,8 +83,9 @@ class ShiftedCategoricalTest(tf.test.TestCase):
     for fn_name in fns:
       fn = getattr(distribution, fn_name)
       shifted_fn = getattr(shifted_distribution, fn_name)
-      value, shifted_value = self.evaluate([fn(sample),
-                                            shifted_fn(shifted_sample)])
+      value, shifted_value = self.evaluate(
+          [fn(sample), shifted_fn(shifted_sample)]
+      )
       self.assertEqual(value, shifted_value)
 
 

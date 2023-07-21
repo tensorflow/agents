@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+
 import six
 
 
@@ -27,12 +28,14 @@ import six
 class Driver(object):
   """A driver that takes steps in an environment using a policy."""
 
-  def __init__(self,
-               env,
-               policy,
-               observers=None,
-               transition_observers=None,
-               info_observers=None):
+  def __init__(
+      self,
+      env,
+      policy,
+      observers=None,
+      transition_observers=None,
+      info_observers=None,
+  ):
     """Creates a Driver.
 
     Args:
@@ -41,8 +44,8 @@ class Driver(object):
       observers: A list of observers that are updated after the driver is run.
         Each observer is a callable(Trajectory) that returns the input.
         Trajectory.time_step is a stacked batch [N+1, batch_size, ...] of
-        timesteps and Trajectory.action is a stacked batch
-        [N, batch_size, ...] of actions in time major form.
+        timesteps and Trajectory.action is a stacked batch [N, batch_size, ...]
+        of actions in time major form.
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as

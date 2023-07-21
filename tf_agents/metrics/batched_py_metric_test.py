@@ -33,38 +33,40 @@ class BatchedPyMetricTest(tf.test.TestCase):
     # Order of args for trajectory methods:
     # (observation, action, policy_info, reward, discount)
     self._ts0 = nest_utils.stack_nested_arrays([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.boundary((), (), (), 0., 1.)
+        trajectory.boundary((), (), (), 0.0, 1.0),
+        trajectory.boundary((), (), (), 0.0, 1.0),
     ])
     self._ts1 = nest_utils.stack_nested_arrays([
-        trajectory.first((), (), (), 1., 1.),
-        trajectory.first((), (), (), 2., 1.)
+        trajectory.first((), (), (), 1.0, 1.0),
+        trajectory.first((), (), (), 2.0, 1.0),
     ])
     self._ts2 = nest_utils.stack_nested_arrays([
-        trajectory.last((), (), (), 3., 1.),
-        trajectory.last((), (), (), 4., 1.)
+        trajectory.last((), (), (), 3.0, 1.0),
+        trajectory.last((), (), (), 4.0, 1.0),
     ])
     self._ts3 = nest_utils.stack_nested_arrays([
-        trajectory.boundary((), (), (), 0., 1.),
-        trajectory.boundary((), (), (), 0., 1.)
+        trajectory.boundary((), (), (), 0.0, 1.0),
+        trajectory.boundary((), (), (), 0.0, 1.0),
     ])
     self._ts4 = nest_utils.stack_nested_arrays([
-        trajectory.first((), (), (), 5., 1.),
-        trajectory.first((), (), (), 6., 1.)
+        trajectory.first((), (), (), 5.0, 1.0),
+        trajectory.first((), (), (), 6.0, 1.0),
     ])
     self._ts5 = nest_utils.stack_nested_arrays([
-        trajectory.last((), (), (), 7., 1.),
-        trajectory.last((), (), (), 8., 1.)
+        trajectory.last((), (), (), 7.0, 1.0),
+        trajectory.last((), (), (), 8.0, 1.0),
     ])
 
   def testMetricIsComputedCorrectlyNoSteps(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
     self.assertEqual(batched_avg_return_metric.result(), 0)
 
   def testMetricIsComputedCorrectlyPartialEpisode(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
 
     batched_avg_return_metric(self._ts0)
     batched_avg_return_metric(self._ts1)
@@ -72,7 +74,8 @@ class BatchedPyMetricTest(tf.test.TestCase):
 
   def testMetricIsComputedCorrectlyOneEpisode(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
 
     batched_avg_return_metric(self._ts0)
     batched_avg_return_metric(self._ts1)
@@ -82,7 +85,8 @@ class BatchedPyMetricTest(tf.test.TestCase):
 
   def testMetricIsComputedCorrectlyOneAndPartialEpisode(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
     batched_avg_return_metric(self._ts0)
     batched_avg_return_metric(self._ts1)
     batched_avg_return_metric(self._ts2)
@@ -93,7 +97,8 @@ class BatchedPyMetricTest(tf.test.TestCase):
 
   def testMetricIsComputedCorrectlyTwoEpisodes(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
     batched_avg_return_metric(self._ts0)
     batched_avg_return_metric(self._ts1)
     batched_avg_return_metric(self._ts2)
@@ -104,7 +109,8 @@ class BatchedPyMetricTest(tf.test.TestCase):
 
   def testReset(self):
     batched_avg_return_metric = batched_py_metric.BatchedPyMetric(
-        py_metrics.AverageReturnMetric)
+        py_metrics.AverageReturnMetric
+    )
     batched_avg_return_metric(self._ts0)
     batched_avg_return_metric(self._ts1)
     batched_avg_return_metric(self._ts2)

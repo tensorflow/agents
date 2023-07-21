@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import value_network
 from tf_agents.specs import tensor_spec
 
@@ -31,13 +30,16 @@ class ValueNetworkTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testBuilds(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     observation = tensor_spec.sample_spec_nest(
-        observation_spec, outer_dims=(1,))
+        observation_spec, outer_dims=(1,)
+    )
 
     net = value_network.ValueNetwork(
-        observation_spec, conv_layer_params=[(4, 2, 2)], fc_layer_params=(5,))
+        observation_spec, conv_layer_params=[(4, 2, 2)], fc_layer_params=(5,)
+    )
 
     value, _ = net(observation)
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -60,34 +62,42 @@ class ValueNetworkTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testHandlesExtraOuterDims(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
-                                                     1)
+    observation_spec = tensor_spec.BoundedTensorSpec(
+        (8, 8, 3), tf.float32, 0, 1
+    )
     observation = tensor_spec.sample_spec_nest(
-        observation_spec, outer_dims=(3, 3, 2))
+        observation_spec, outer_dims=(3, 3, 2)
+    )
 
     net = value_network.ValueNetwork(
-        observation_spec, conv_layer_params=[(4, 2, 2)], fc_layer_params=(5,))
+        observation_spec, conv_layer_params=[(4, 2, 2)], fc_layer_params=(5,)
+    )
 
     value, _ = net(observation)
     self.assertEqual([3, 3, 2], value.shape.as_list())
 
   @test_util.run_in_graph_and_eager_modes()
   def testHandlePreprocessingLayers(self):
-    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
-                        tensor_spec.TensorSpec([], tf.float32))
+    observation_spec = (
+        tensor_spec.TensorSpec([1], tf.float32),
+        tensor_spec.TensorSpec([], tf.float32),
+    )
     observation = tensor_spec.sample_spec_nest(
-        observation_spec, outer_dims=(3,))
+        observation_spec, outer_dims=(3,)
+    )
 
-    preprocessing_layers = (tf.keras.layers.Dense(4),
-                            tf.keras.Sequential([
-                                tf.keras.layers.Reshape((1,)),
-                                tf.keras.layers.Dense(4)
-                            ]))
+    preprocessing_layers = (
+        tf.keras.layers.Dense(4),
+        tf.keras.Sequential(
+            [tf.keras.layers.Reshape((1,)), tf.keras.layers.Dense(4)]
+        ),
+    )
 
     net = value_network.ValueNetwork(
         observation_spec,
         preprocessing_layers=preprocessing_layers,
-        preprocessing_combiner=tf.keras.layers.Add())
+        preprocessing_combiner=tf.keras.layers.Add(),
+    )
 
     value, _ = net(observation)
     self.assertEqual([3], value.shape.as_list())

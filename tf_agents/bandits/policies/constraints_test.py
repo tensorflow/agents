@@ -65,7 +65,8 @@ class BaseConstraintTest(tf.test.TestCase):
     obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     time_step_spec = ts.time_step_spec(obs_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=5)
+        dtype=tf.int32, shape=(), minimum=0, maximum=5
+    )
     gt2c = GreaterThan2Constraint(time_step_spec, action_spec)
     feasibility_prob = gt2c(observation=None)
     self.assertAllEqual([0, 0, 0, 1, 1], self.evaluate(feasibility_prob))
@@ -75,7 +76,8 @@ class DummyNet(network.Network):
 
   def __init__(self, unused_observation_spec, action_spec, name=None):
     super(DummyNet, self).__init__(
-        unused_observation_spec, state_spec=(), name=name)
+        unused_observation_spec, state_spec=(), name=name
+    )
     action_spec = tf.nest.flatten(action_spec)[0]
     num_actions = action_spec.maximum - action_spec.minimum + 1
 
@@ -83,9 +85,11 @@ class DummyNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[1, 1.5, 2],
-                                                        [1, 1.5, 4]]),
-            bias_initializer=tf.constant_initializer([[1], [1], [-10]]))
+            kernel_initializer=tf.constant_initializer(
+                [[1, 1.5, 2], [1, 1.5, 4]]
+            ),
+            bias_initializer=tf.constant_initializer([[1], [1], [-10]]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -104,7 +108,8 @@ class NeuralConstraintTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateConstraint(self):
@@ -112,14 +117,16 @@ class NeuralConstraintTest(tf.test.TestCase):
     constraints.NeuralConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
 
   def testInitializeConstraint(self):
     constraint_net = DummyNet(self._observation_spec, self._action_spec)
     neural_constraint = constraints.NeuralConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
     init_op = neural_constraint.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -135,16 +142,14 @@ class NeuralConstraintTest(tf.test.TestCase):
     neural_constraint = constraints.NeuralConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
     init_op = neural_constraint.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
         common.initialize_uninitialized_variables(sess)
         self.assertIsNone(sess.run(init_op))
-    loss = neural_constraint.compute_loss(
-        observations,
-        actions,
-        rewards)
+    loss = neural_constraint.compute_loss(observations, actions, rewards)
     self.assertAllClose(self.evaluate(loss), 42.25)
 
   def testComputeLossWithNetworkSetter(self):
@@ -153,9 +158,8 @@ class NeuralConstraintTest(tf.test.TestCase):
     rewards = tf.constant([0.5, 3.0], dtype=tf.float32)
 
     neural_constraint = constraints.NeuralConstraint(
-        self._time_step_spec,
-        self._action_spec,
-        constraint_network=None)
+        self._time_step_spec, self._action_spec, constraint_network=None
+    )
 
     constraint_net = DummyNet(self._observation_spec, self._action_spec)
     neural_constraint.constraint_network = constraint_net
@@ -164,33 +168,30 @@ class NeuralConstraintTest(tf.test.TestCase):
       with self.cached_session() as sess:
         common.initialize_uninitialized_variables(sess)
         self.assertIsNone(sess.run(init_op))
-    loss = neural_constraint.compute_loss(
-        observations,
-        actions,
-        rewards)
+    loss = neural_constraint.compute_loss(observations, actions, rewards)
     self.assertAllClose(self.evaluate(loss), 42.25)
 
   def testComputeLossWithArmFeatures(self):
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        global_dim=2, per_arm_dim=3, max_num_actions=3)
+        global_dim=2, per_arm_dim=3, max_num_actions=3
+    )
     time_step_spec = ts.time_step_spec(obs_spec)
     constraint_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            obs_spec,
-            global_layers=(4,),
-            arm_layers=(4,),
-            common_layers=(4,)))
+            obs_spec, global_layers=(4,), arm_layers=(4,), common_layers=(4,)
+        )
+    )
     neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        self._action_spec,
-        constraint_network=constraint_net)
+        time_step_spec, self._action_spec, constraint_network=constraint_net
+    )
 
     observations = {
-        bandit_spec_utils.GLOBAL_FEATURE_KEY:
-            tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
-        bandit_spec_utils.PER_ARM_FEATURE_KEY:
-            tf.cast(
-                tf.reshape(tf.range(18), shape=[2, 3, 3]), dtype=tf.float32)
+        bandit_spec_utils.GLOBAL_FEATURE_KEY: tf.constant(
+            [[1, 2], [3, 4]], dtype=tf.float32
+        ),
+        bandit_spec_utils.PER_ARM_FEATURE_KEY: tf.cast(
+            tf.reshape(tf.range(18), shape=[2, 3, 3]), dtype=tf.float32
+        ),
     }
     actions = tf.constant([0, 1], dtype=tf.int32)
     rewards = tf.constant([0.5, 3.0], dtype=tf.float32)
@@ -200,10 +201,7 @@ class NeuralConstraintTest(tf.test.TestCase):
       with self.cached_session() as sess:
         common.initialize_uninitialized_variables(sess)
         self.assertIsNone(sess.run(init_op))
-    loss = neural_constraint.compute_loss(
-        observations,
-        actions,
-        rewards)
+    loss = neural_constraint.compute_loss(observations, actions, rewards)
     self.assertGreater(self.evaluate(loss), 0.0)
 
   def testComputeActionFeasibility(self):
@@ -212,7 +210,8 @@ class NeuralConstraintTest(tf.test.TestCase):
     neural_constraint = constraints.NeuralConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
     init_op = neural_constraint.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -232,7 +231,8 @@ class RelativeConstraintTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
 
   def testComputeActionFeasibilityNoBaselineActionFn(self):
     constraint_net = DummyNet(self._obs_spec, self._action_spec)
@@ -240,14 +240,17 @@ class RelativeConstraintTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         constraint_network=constraint_net,
-        baseline_action_fn=None)
+        baseline_action_fn=None,
+    )
     init_op = relative_constraint.initialize()
     self.evaluate(init_op)
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     feasibility_prob = relative_constraint(observation)
-    self.assertAllEqual(self.evaluate(feasibility_prob),
-                        np.array([[0.0, 1.0, 0.0], [0.0, 1.0, 1.0]]))
+    self.assertAllEqual(
+        self.evaluate(feasibility_prob),
+        np.array([[0.0, 1.0, 0.0], [0.0, 1.0, 1.0]]),
+    )
 
   def testComputeActionFeasibility(self):
     constraint_net = DummyNet(self._obs_spec, self._action_spec)
@@ -256,14 +259,17 @@ class RelativeConstraintTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         constraint_network=constraint_net,
-        baseline_action_fn=baseline_action_fn)
+        baseline_action_fn=baseline_action_fn,
+    )
     init_op = relative_constraint.initialize()
     self.evaluate(init_op)
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     feasibility_prob = relative_constraint(observation)
-    self.assertAllEqual(self.evaluate(feasibility_prob),
-                        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]))
+    self.assertAllEqual(
+        self.evaluate(feasibility_prob),
+        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
+    )
 
 
 class AbsoluteConstraintTest(tf.test.TestCase):
@@ -274,7 +280,8 @@ class AbsoluteConstraintTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateConstraint(self):
@@ -282,7 +289,8 @@ class AbsoluteConstraintTest(tf.test.TestCase):
     constraints.AbsoluteConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
 
   def testComputeActionFeasibility(self):
     constraint_net = DummyNet(self._observation_spec, self._action_spec)
@@ -290,7 +298,8 @@ class AbsoluteConstraintTest(tf.test.TestCase):
     absolute_constraint = constraints.AbsoluteConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
     init_op = absolute_constraint.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -311,7 +320,8 @@ class QuantileConstraintTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateConstraint(self):
@@ -319,7 +329,8 @@ class QuantileConstraintTest(tf.test.TestCase):
     constraints.QuantileConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
 
   def testComputeActionFeasibility(self):
     constraint_net = DummyNet(self._observation_spec, self._action_spec)
@@ -327,7 +338,8 @@ class QuantileConstraintTest(tf.test.TestCase):
     quantile_constraint = constraints.QuantileConstraint(
         self._time_step_spec,
         self._action_spec,
-        constraint_network=constraint_net)
+        constraint_network=constraint_net,
+    )
     init_op = quantile_constraint.initialize()
     if not tf.executing_eagerly():
       with self.cached_session() as sess:
@@ -348,7 +360,8 @@ class RelativeQuantileConstraintTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
 
   def testComputeActionFeasibilityNoBaselineActionFn(self):
     constraint_net = DummyNet(self._obs_spec, self._action_spec)
@@ -356,14 +369,17 @@ class RelativeQuantileConstraintTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         constraint_network=constraint_net,
-        baseline_action_fn=None)
+        baseline_action_fn=None,
+    )
     init_op = quantile_constraint.initialize()
     self.evaluate(init_op)
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     feasibility_prob = quantile_constraint(observation)
-    self.assertAllEqual(self.evaluate(feasibility_prob),
-                        np.array([[0.0, 1.0, 0.0], [0.0, 1.0, 1.0]]))
+    self.assertAllEqual(
+        self.evaluate(feasibility_prob),
+        np.array([[0.0, 1.0, 0.0], [0.0, 1.0, 1.0]]),
+    )
 
   def testComputeActionFeasibility(self):
     constraint_net = DummyNet(self._obs_spec, self._action_spec)
@@ -372,14 +388,17 @@ class RelativeQuantileConstraintTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         constraint_network=constraint_net,
-        baseline_action_fn=baseline_action_fn)
+        baseline_action_fn=baseline_action_fn,
+    )
     init_op = quantile_constraint.initialize()
     self.evaluate(init_op)
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     feasibility_prob = quantile_constraint(observation)
-    self.assertAllEqual(self.evaluate(feasibility_prob),
-                        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]))
+    self.assertAllEqual(
+        self.evaluate(feasibility_prob),
+        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
+    )
 
 
 class ConstraintFeasibilityTest(tf.test.TestCase):
@@ -392,8 +411,12 @@ class ConstraintFeasibilityTest(tf.test.TestCase):
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     feasibility_prob = constraints.compute_feasibility_probability(
-        observations, [simple_constraint], batch_size=2, num_actions=3,
-        action_mask=None)
+        observations,
+        [simple_constraint],
+        batch_size=2,
+        num_actions=3,
+        action_mask=None,
+    )
     self.assertAllEqual(0.5 * np.ones([2, 3]), self.evaluate(feasibility_prob))
 
   def testComputeFeasibilityMaskWithActionMask(self):
@@ -402,60 +425,78 @@ class ConstraintFeasibilityTest(tf.test.TestCase):
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)
     constraint_net = DummyNet(observation_spec, action_spec)
     neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        action_spec,
-        constraint_network=constraint_net)
+        time_step_spec, action_spec, constraint_network=constraint_net
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     action_mask = tf.constant([[0, 0, 1], [0, 1, 0]], dtype=tf.int32)
     feasibility_prob = constraints.compute_feasibility_probability(
-        observations, [neural_constraint], batch_size=2, num_actions=3,
-        action_mask=action_mask)
-    self.assertAllEqual(self.evaluate(tf.cast(action_mask, tf.float32)),
-                        self.evaluate(feasibility_prob))
+        observations,
+        [neural_constraint],
+        batch_size=2,
+        num_actions=3,
+        action_mask=action_mask,
+    )
+    self.assertAllEqual(
+        self.evaluate(tf.cast(action_mask, tf.float32)),
+        self.evaluate(feasibility_prob),
+    )
 
   def testComputeMaskFromMultipleSourcesNumActionsFeature(self):
     observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        4, 5, 6, add_num_actions_feature=True)
+        4, 5, 6, add_num_actions_feature=True
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 5)
     constraint_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            observation_spec, (3, 4), (4, 3), (2, 3)))
+            observation_spec, (3, 4), (4, 3), (2, 3)
+        )
+    )
     neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        action_spec,
-        constraint_network=constraint_net)
+        time_step_spec, action_spec, constraint_network=constraint_net
+    )
 
     observations = {
         'global': tf.constant([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32),
         'per_arm': tf.reshape(tf.range(60, dtype=tf.float32), shape=[2, 6, 5]),
-        'num_actions': tf.constant([4, 3], dtype=tf.int32)
+        'num_actions': tf.constant([4, 3], dtype=tf.int32),
     }
     mask = constraints.construct_mask_from_multiple_sources(
-        observations, None, [neural_constraint], 6)
+        observations, None, [neural_constraint], 6
+    )
     implied_mask = [[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]]
     self.assertAllGreaterEqual(implied_mask - mask, 0)
 
   def testComputeMaskFromMultipleSourcesMask(self):
     observation_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        4, 5, 6)
+        4, 5, 6
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 5)
     constraint_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
-            observation_spec, (3, 4), (4, 3), (2, 3)))
+            observation_spec, (3, 4), (4, 3), (2, 3)
+        )
+    )
     neural_constraint = constraints.NeuralConstraint(
-        time_step_spec,
-        action_spec,
-        constraint_network=constraint_net)
+        time_step_spec, action_spec, constraint_network=constraint_net
+    )
     original_mask = [[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]]
-    observations = ({
-        'global': tf.constant([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32),
-        'per_arm': tf.reshape(tf.range(60, dtype=tf.float32), shape=[2, 6, 5]),
-    }, original_mask)
+    observations = (
+        {
+            'global': tf.constant(
+                [[1, 2, 3, 4], [5, 6, 7, 8]], dtype=tf.float32
+            ),
+            'per_arm': tf.reshape(
+                tf.range(60, dtype=tf.float32), shape=[2, 6, 5]
+            ),
+        },
+        original_mask,
+    )
     mask = constraints.construct_mask_from_multiple_sources(
-        observations, lambda x: (x[0], x[1]), [neural_constraint], 6)
+        observations, lambda x: (x[0], x[1]), [neural_constraint], 6
+    )
     self.assertAllGreaterEqual(original_mask - mask, 0)
 
 
@@ -467,15 +508,15 @@ class InputNetworkConstraintTest(tf.test.TestCase):
     self._obs_spec = tensor_spec.TensorSpec([2], tf.float32)
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec(
-        dtype=tf.int32, shape=(), minimum=0, maximum=2)
+        dtype=tf.int32, shape=(), minimum=0, maximum=2
+    )
     self._observation_spec = self._time_step_spec.observation
 
   def testCreateConstraint(self):
     input_net = DummyNet(self._observation_spec, self._action_spec)
     SimpleInputNetworkConstraint(
-        self._time_step_spec,
-        self._action_spec,
-        input_network=input_net)
+        self._time_step_spec, self._action_spec, input_network=input_net
+    )
 
   def testComputeLoss(self):
     input_net = DummyNet(self._observation_spec, self._action_spec)
@@ -484,22 +525,17 @@ class InputNetworkConstraintTest(tf.test.TestCase):
     rewards = tf.constant([0.5, 3.0], dtype=tf.float32)
 
     neural_constraint = SimpleInputNetworkConstraint(
-        self._time_step_spec,
-        self._action_spec,
-        input_network=input_net)
-    loss = neural_constraint.compute_loss(
-        observations,
-        actions,
-        rewards)
+        self._time_step_spec, self._action_spec, input_network=input_net
+    )
+    loss = neural_constraint.compute_loss(observations, actions, rewards)
     self.assertAllClose(self.evaluate(loss), 0.0)
 
   def testComputeActionFeasibility(self):
     input_net = DummyNet(self._observation_spec, self._action_spec)
 
     neural_constraint = SimpleInputNetworkConstraint(
-        self._time_step_spec,
-        self._action_spec,
-        input_network=input_net)
+        self._time_step_spec, self._action_spec, input_network=input_net
+    )
 
     observation = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     feasibility_prob = neural_constraint(observation)

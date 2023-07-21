@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.trajectories import trajectory
 
 
@@ -47,9 +46,11 @@ def stacked_trajectory_from_transition(time_step, action_step, next_time_step):
   # ensure the action, policy_info, next_step_type, reward, and discount match
   # for both values of the time dimension.
   experience1 = trajectory.from_transition(
-      time_step, action_step, next_time_step)
+      time_step, action_step, next_time_step
+  )
   experience2 = trajectory.from_transition(
-      next_time_step, action_step, next_time_step)
-  return tf.nest.map_structure(lambda x, y: tf.stack([x, y], axis=1),
-                               experience1, experience2)
-
+      next_time_step, action_step, next_time_step
+  )
+  return tf.nest.map_structure(
+      lambda x, y: tf.stack([x, y], axis=1), experience1, experience2
+  )

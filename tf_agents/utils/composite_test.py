@@ -37,7 +37,9 @@ class CompositeTest(tf.test.TestCase):
         tf.SparseTensor(
             indices=tf.random.uniform([40, 3], maxval=10, dtype=tf.int64),
             values=tf.random.uniform([40], maxval=1000, dtype=tf.int32),
-            dense_shape=[10, 10, 10]))
+            dense_shape=[10, 10, 10],
+        )
+    )
 
   def testSliceFrom(self):
     from_1 = composite.slice_from(self._x, axis=1, start=1)
@@ -66,6 +68,7 @@ class CompositeTest(tf.test.TestCase):
     sx, s_from_1, s_from_n1 = self.evaluate((sx, s_from_1, s_from_n1))
     self.assertAllEqual(s_from_1, sx[:, :1, :])
     self.assertAllEqual(s_from_n1, sx[:, :-1, :])
+
 
 if __name__ == '__main__':
   tf.test.main()

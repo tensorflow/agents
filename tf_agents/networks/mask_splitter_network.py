@@ -54,20 +54,21 @@ class MaskSplitterNetwork(network.DistributionNetwork):
   observation part of the input of the `MaskSplitterNetwork`.
   """
 
-  def __init__(self,
-               splitter_fn: types.Splitter,
-               wrapped_network: network.Network,
-               passthrough_mask: bool = False,
-               input_tensor_spec: Optional[types.NestedTensorSpec] = None,
-               name: Text = 'MaskSplitterNetwork'):
+  def __init__(
+      self,
+      splitter_fn: types.Splitter,
+      wrapped_network: network.Network,
+      passthrough_mask: bool = False,
+      input_tensor_spec: Optional[types.NestedTensorSpec] = None,
+      name: Text = 'MaskSplitterNetwork',
+  ):
     """Initializes an instance of `MaskSplitterNetwork`.
 
     Args:
       splitter_fn: A function used to process observations with action
-        constraints (i.e. mask).
-        *Note*: The input spec of the wrapped network must be compatible with
-          the network-specific half of the output of the `splitter_fn` on the
-          input spec.
+        constraints (i.e. mask). *Note*: The input spec of the wrapped network
+        must be compatible with the network-specific half of the output of the
+        `splitter_fn` on the input spec.
       wrapped_network: A `network.Network` used to process the network-specific
         part of the observation, and the mask passed as the `mask` parameter of
         the method `call` of the wrapped network.
@@ -84,31 +85,37 @@ class MaskSplitterNetwork(network.DistributionNetwork):
     """
     output_spec = (
         wrapped_network.output_spec
-        if isinstance(wrapped_network, network.DistributionNetwork) else None)
+        if isinstance(wrapped_network, network.DistributionNetwork)
+        else None
+    )
     super(MaskSplitterNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=wrapped_network.state_spec,
         output_spec=output_spec,
-        name=name)
+        name=name,
+    )
     # Check if the input spec without the spec of the mask is compatible with
     # the input spec of wrapped network.
     if input_tensor_spec is not None:
       input_spec_without_mask, _ = splitter_fn(input_tensor_spec)
       if wrapped_network.input_tensor_spec is not None:
         nest_utils.flatten_and_check_shape_nested_specs(
-            input_spec_without_mask, wrapped_network.input_tensor_spec)
+            input_spec_without_mask, wrapped_network.input_tensor_spec
+        )
 
     # Store properties.
     self._wrapped_network = wrapped_network
     self._splitter_fn = splitter_fn
     self._passthrough_mask = passthrough_mask
 
-  def call(self,
-           observation,
-           step_type=None,
-           network_state=(),
-           training=False,
-           **kwargs):
+  def call(
+      self,
+      observation,
+      step_type=None,
+      network_state=(),
+      training=False,
+      **kwargs
+  ):
     observation_without_mask, mask = self._splitter_fn(observation)
     if self._passthrough_mask:
       kwargs['mask'] = mask
@@ -117,7 +124,8 @@ class MaskSplitterNetwork(network.DistributionNetwork):
         step_type=step_type,
         network_state=network_state,
         training=training,
-        **kwargs)
+        **kwargs
+    )
 
   def create_variables(self, input_tensor_spec=None, **kwargs):
     # Mark the current network built.
@@ -129,7 +137,8 @@ class MaskSplitterNetwork(network.DistributionNetwork):
     if input_tensor_spec is not None:
       input_tensor_spec_without_mask, _ = self._splitter_fn(input_tensor_spec)
     return self._wrapped_network.create_variables(
-        input_tensor_spec_without_mask, **kwargs)
+        input_tensor_spec_without_mask, **kwargs
+    )
 
   def copy(self, **kwargs):
     # Create a shallow copy of this network by recreating the instance using the

@@ -31,14 +31,14 @@ from typing import Any, Callable, Dict, Optional, Sequence, Text
 import gin
 import gym
 import numpy as np
-
 from tf_agents.environments import gym_wrapper
 from tf_agents.environments import py_environment
 from tf_agents.environments import wrappers
 from tf_agents.typing import types
 
-TimeLimitWrapperType = Callable[[py_environment.PyEnvironment, int],
-                                py_environment.PyEnvironment]
+TimeLimitWrapperType = Callable[
+    [py_environment.PyEnvironment, int], py_environment.PyEnvironment
+]
 
 
 @gin.configurable
@@ -51,7 +51,7 @@ def load(
     spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
     gym_kwargs: Optional[Dict[str, Any]] = None,
     render_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> py_environment.PyEnvironment:
+) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -93,7 +93,8 @@ def load(
       gym_env_wrappers=gym_env_wrappers,
       env_wrappers=env_wrappers,
       spec_dtype_map=spec_dtype_map,
-      render_kwargs=render_kwargs)
+      render_kwargs=render_kwargs,
+  )
 
 
 @gin.configurable
@@ -107,7 +108,7 @@ def wrap_env(
     spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
     auto_reset: bool = True,
     render_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> py_environment.PyEnvironment:
+) -> py_environment.PyEnvironment:
   """Wraps given gym environment with TF Agent's GymWrapper.
 
   Note that by default a TimeLimit wrapper is used to limit episode lengths
@@ -116,9 +117,8 @@ def wrap_env(
   Args:
     gym_env: An instance of OpenAI gym environment.
     discount: Discount to use for the environment.
-    max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied
-      if set to None or 0. Usually set to `gym_spec.max_episode_steps` in
-      `load`.
+    max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied if
+      set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load`.
     gym_env_wrappers: Iterable with references to wrapper classes to use
       directly on the gym environment.
     time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to

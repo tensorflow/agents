@@ -30,12 +30,15 @@ class DistributionSpec(object):
   """Describes a tfp.distribution.Distribution."""
 
   __slots__ = [
-      "_builder", "_input_params_spec", "_sample_spec",
-      "_distribution_parameters"
+      "_builder",
+      "_input_params_spec",
+      "_sample_spec",
+      "_distribution_parameters",
   ]
 
-  def __init__(self, builder, input_params_spec, sample_spec,
-               **distribution_parameters):
+  def __init__(
+      self, builder, input_params_spec, sample_spec, **distribution_parameters
+  ):
     """Creates a DistributionSpec.
 
     Args:
@@ -88,10 +91,9 @@ class DistributionSpec(object):
     return self._builder(**kwargs)
 
   def __repr__(self):
-    return ("DistributionSpec(builder={}, input_params_spec={}, "
-            "sample_spec={})").format(self.builder,
-                                      repr(self.input_params_spec),
-                                      repr(self.sample_spec))
+    return (
+        "DistributionSpec(builder={}, input_params_spec={}, sample_spec={})"
+    ).format(self.builder, repr(self.input_params_spec), repr(self.sample_spec))
 
 
 def deterministic_distribution_from_spec(spec):
@@ -110,5 +112,8 @@ def nested_distributions_from_specs(specs, parameters):
     Nest of distribution instances with the same structure as the given specs.
   """
   return nest.map_structure_up_to(
-      specs, lambda spec, parameters: spec.build_distribution(**parameters),
-      specs, parameters)
+      specs,
+      lambda spec, parameters: spec.build_distribution(**parameters),
+      specs,
+      parameters,
+  )

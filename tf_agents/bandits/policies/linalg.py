@@ -26,17 +26,22 @@ from tf_agents.utils import common
 
 def _cg_check_shapes(a_mat, b_mat):
   if a_mat.shape[0] != a_mat.shape[1] or a_mat.shape.rank != 2:
-    raise ValueError('`a_mat` must be rank 2 square matrix; '
-                     'got shape {}.'.format(a_mat.shape))
+    raise ValueError(
+        '`a_mat` must be rank 2 square matrix; got shape {}.'.format(
+            a_mat.shape
+        )
+    )
   if a_mat.shape[1] != b_mat.shape[0]:
-    raise ValueError('The dims of `a_mat` and `b_mat` are not compatible; '
-                     'got shapes {} and {}.'.format(a_mat.shape, b_mat.shape))
+    raise ValueError(
+        'The dims of `a_mat` and `b_mat` are not compatible; '
+        'got shapes {} and {}.'.format(a_mat.shape, b_mat.shape)
+    )
 
 
 @common.function
-def conjugate_gradient(a_mat: types.Tensor,
-                       b_mat: types.Tensor,
-                       tol: float = 1e-10) -> types.Float:
+def conjugate_gradient(
+    a_mat: types.Tensor, b_mat: types.Tensor, tol: float = 1e-10
+) -> types.Float:
   """Returns `X` such that `A * X = B`.
 
   Implements the Conjugate Gradient method.
@@ -69,18 +74,20 @@ def conjugate_gradient(a_mat: types.Tensor,
     # Create a boolean mask shaped as [k] indicating the active columns, i.e.,
     # columns corresponding to large residuals. We only update variables
     # corresponding to those columns to avoid numerical issues.
-    active_columns_mask = (rs_old > tol)
+    active_columns_mask = rs_old > tol
     # Replicate the mask along axis 0 to be of shape [n, k].
     active_columns_tiled_mask = tf.tile(
         tf.expand_dims(active_columns_mask, axis=0),
-        multiples=[tf.shape(b_mat)[0], 1])
+        multiples=[tf.shape(b_mat)[0], 1],
+    )
     a_x_p = tf.matmul(a_mat, p)
     alpha = rs_old / tf.reduce_sum(p * a_x_p, axis=0)
     x = tf.where(active_columns_tiled_mask, x + tf.multiply(p, alpha), x)
     r = tf.where(active_columns_tiled_mask, r - tf.multiply(a_x_p, alpha), r)
     rs_new = tf.where(active_columns_mask, tf.einsum('ij,ij->j', r, r), rs_new)
-    p = tf.where(active_columns_tiled_mask, r + tf.multiply(p, rs_new / rs_old),
-                 p)
+    p = tf.where(
+        active_columns_tiled_mask, r + tf.multiply(p, rs_new / rs_old), p
+    )
     rs_old = tf.where(active_columns_mask, rs_new, rs_old)
     i = i + 1
     return i, x, p, r, rs_old, rs_new
@@ -97,25 +104,32 @@ def conjugate_gradient(a_mat: types.Tensor,
 
   _, x, _, _, _, _ = tf.while_loop(
       while_exit_cond,
-      body_fn, [tf.constant(0), x, p, r, rs_old, rs_new],
-      parallel_iterations=1)
+      body_fn,
+      [tf.constant(0), x, p, r, rs_old, rs_new],
+      parallel_iterations=1,
+  )
   return x
 
 
 def _check_shapes(a_inv: types.Tensor, u: types.Tensor):
   if a_inv.shape[0] != a_inv.shape[1] or a_inv.shape.rank != 2:
-    raise ValueError('`a_inv` must be rank 2 square matrix; '
-                     'got shape {}.'.format(a_inv.shape))
+    raise ValueError(
+        '`a_inv` must be rank 2 square matrix; got shape {}.'.format(
+            a_inv.shape
+        )
+    )
   if u.shape.rank != 2:
-    raise ValueError('`u` must be rank 2 matrix; '
-                     'got shape {}.'.format(u.shape))
+    raise ValueError('`u` must be rank 2 matrix; got shape {}.'.format(u.shape))
   if a_inv.shape[1] != u.shape[1]:
-    raise ValueError('`a_inv` and `u` must have shapes [m, m] and [n, m]; '
-                     'got shapes {} and {}.'.format(a_inv.shape, u.shape))
+    raise ValueError(
+        '`a_inv` and `u` must have shapes [m, m] and [n, m]; '
+        'got shapes {} and {}.'.format(a_inv.shape, u.shape)
+    )
 
 
-def simplified_woodbury_update(a_inv: types.Float,
-                               u: types.Float) -> types.Float:
+def simplified_woodbury_update(
+    a_inv: types.Float, u: types.Float
+) -> types.Float:
   """Returns `w` such that `inverse(a + u.T.dot(u)) = a_inv + w`.
 
   Makes use of the Woodbury matrix identity. See
@@ -138,11 +152,12 @@ def simplified_woodbury_update(a_inv: types.Float,
   """
   _check_shapes(a_inv, u)
   u_x_a_inv = tf.matmul(u, a_inv)
-  capacitance = (
-      tf.eye(tf.shape(u)[0], dtype=u.dtype) +
-      tf.matmul(u_x_a_inv, u, transpose_b=True))
-  return -1. * tf.matmul(
-      u_x_a_inv, tf.linalg.solve(capacitance, u_x_a_inv), transpose_a=True)
+  capacitance = tf.eye(tf.shape(u)[0], dtype=u.dtype) + tf.matmul(
+      u_x_a_inv, u, transpose_b=True
+  )
+  return -1.0 * tf.matmul(
+      u_x_a_inv, tf.linalg.solve(capacitance, u_x_a_inv), transpose_a=True
+  )
 
 
 def update_inverse(a_inv: types.Float, x: types.Float) -> types.Float:

@@ -40,11 +40,13 @@ class TFDriver(driver.Driver):
       env: tf_environment.TFEnvironment,
       policy: tf_policy.TFPolicy,
       observers: Sequence[Callable[[trajectory.Trajectory], Any]],
-      transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
-                                                       Any]]] = None,
+      transition_observers: Optional[
+          Sequence[Callable[[trajectory.Transition], Any]]
+      ] = None,
       max_steps: Optional[types.Int] = None,
       max_episodes: Optional[types.Int] = None,
-      disable_tf_function: bool = False):
+      disable_tf_function: bool = False,
+  ):
     """A driver that runs a TF policy in a TF environment.
 
     **Note** about bias when using batched environments with `max_episodes`:
@@ -60,8 +62,8 @@ class TFDriver(driver.Driver):
     Args:
       env: A tf_environment.Base environment.
       policy: A tf_policy.TFPolicy policy.
-      observers: A list of observers that are notified after every step
-        in the environment. Each observer is a callable(trajectory.Trajectory).
+      observers: A list of observers that are notified after every step in the
+        environment. Each observer is a callable(trajectory.Trajectory).
       transition_observers: A list of observers that are updated after every
         step in the environment. Each observer is a callable((TimeStep,
         PolicyStep, NextTimeStep)). The transition is shaped just as
@@ -73,8 +75,7 @@ class TFDriver(driver.Driver):
         batched or parallel environments, this is the maximum total number of
         episodes summed across all environments. At least one of max_steps or
         max_episodes must be provided. If both are set, run() terminates when at
-        least one of the conditions is
-        satisfied.  Default: 0.
+        least one of the conditions is satisfied.  Default: 0.
       disable_tf_function: If True the use of tf.function for the run method is
         disabled.
 
@@ -86,7 +87,8 @@ class TFDriver(driver.Driver):
     max_episodes = max_episodes or 0
     if max_steps < 1 and max_episodes < 1:
       raise ValueError(
-          'Either `max_steps` or `max_episodes` should be greater than 0.')
+          'Either `max_steps` or `max_episodes` should be greater than 0.'
+      )
 
     super(TFDriver, self).__init__(env, policy, observers, transition_observers)
 
@@ -97,8 +99,7 @@ class TFDriver(driver.Driver):
       self.run = common.function(self.run, autograph=True)
 
   def run(  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
-      self, time_step: ts.TimeStep,
-      policy_state: types.NestedTensor = ()
+      self, time_step: ts.TimeStep, policy_state: types.NestedTensor = ()
   ) -> Tuple[ts.TimeStep, types.NestedTensor]:
     """Run policy in environment given initial time_step and policy_state.
 
@@ -123,7 +124,8 @@ class TFDriver(driver.Driver):
         observer(traj)
 
       num_episodes += tf.math.reduce_sum(
-          tf.cast(traj.is_boundary(), tf.float32))
+          tf.cast(traj.is_boundary(), tf.float32)
+      )
       num_steps += tf.math.reduce_sum(tf.cast(~traj.is_boundary(), tf.float32))
 
       time_step = next_time_step

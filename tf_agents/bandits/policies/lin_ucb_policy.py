@@ -18,6 +18,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 from typing import Optional, Sequence, Text
 
 from tf_agents.bandits.policies import linear_bandit_policy as lin_policy
@@ -30,25 +31,27 @@ class LinearUCBPolicy(lin_policy.LinearBanditPolicy):
   Implements the Linear UCB Policy from the following paper:
   "A Contextual Bandit Approach to Personalized News Article Recommendation",
   Lihong Li, Wei Chu, John Langford, Robert Schapire, WWW 2010.
-
   """
 
-  def __init__(self,
-               action_spec: types.BoundedTensorSpec,
-               cov_matrix: Sequence[types.Float],
-               data_vector: Sequence[types.Float],
-               num_samples: Sequence[types.Int],
-               time_step_spec: Optional[types.TimeStep] = None,
-               alpha: float = 1.0,
-               eig_vals: Sequence[types.Float] = (),
-               eig_matrix: Sequence[types.Float] = (),
-               tikhonov_weight: float = 1.0,
-               add_bias: bool = False,
-               emit_policy_info: Sequence[Text] = (),
-               emit_log_probability: bool = False,
-               observation_and_action_constraint_splitter: Optional[
-                   types.Splitter] = None,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      action_spec: types.BoundedTensorSpec,
+      cov_matrix: Sequence[types.Float],
+      data_vector: Sequence[types.Float],
+      num_samples: Sequence[types.Int],
+      time_step_spec: Optional[types.TimeStep] = None,
+      alpha: float = 1.0,
+      eig_vals: Sequence[types.Float] = (),
+      eig_matrix: Sequence[types.Float] = (),
+      tikhonov_weight: float = 1.0,
+      add_bias: bool = False,
+      emit_policy_info: Sequence[Text] = (),
+      emit_log_probability: bool = False,
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter
+      ] = None,
+      name: Optional[Text] = None,
+  ):
     """Initializes `LinUCBPolicy`.
 
     The `a` and `b` arguments may be either `Tensor`s or `tf.Variable`s.
@@ -78,10 +81,10 @@ class LinearUCBPolicy(lin_policy.LinearBanditPolicy):
         valid/invalid actions with each state of the environment. The function
         takes in a full observation and returns a tuple consisting of 1) the
         part of the observation intended as input to the bandit policy and 2)
-        the mask. The mask should be a 0-1 `Tensor` of shape
-        `[batch_size, num_actions]`. This function should also work with a
-        `TensorSpec` as input, and should output `TensorSpec` objects for the
-        observation and mask.
+        the mask. The mask should be a 0-1 `Tensor` of shape `[batch_size,
+        num_actions]`. This function should also work with a `TensorSpec` as
+        input, and should output `TensorSpec` objects for the observation and
+        mask.
       name: The name of this policy.
     """
     super(LinearUCBPolicy, self).__init__(
@@ -99,5 +102,7 @@ class LinearUCBPolicy(lin_policy.LinearBanditPolicy):
         emit_policy_info=emit_policy_info,
         emit_log_probability=emit_log_probability,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
-        name=name)
+            observation_and_action_constraint_splitter
+        ),
+        name=name,
+    )

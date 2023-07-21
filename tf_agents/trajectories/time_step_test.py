@@ -133,10 +133,12 @@ class TimeStepTest(tf.test.TestCase):
     observation = -1
     reward = 2.0
     discount = 1.0
-    time_step = ts.TimeStep(np.asarray(ts.StepType.LAST),
-                            np.asarray(reward),
-                            np.asarray(discount),
-                            np.asarray(observation))
+    time_step = ts.TimeStep(
+        np.asarray(ts.StepType.LAST),
+        np.asarray(reward),
+        np.asarray(discount),
+        np.asarray(observation),
+    )
     self.assertTrue(time_step.is_last())
     self.assertEqual(ts.StepType.LAST, time_step.step_type)
     self.assertEqual(-1, time_step.observation)
@@ -154,12 +156,16 @@ class TimeStepTest(tf.test.TestCase):
 
   def testRestartMultiRewards(self):
     observation = np.array([[-1], [-1]])
-    reward_spec = [array_spec.ArraySpec((1,), np.float32, 'r1'),
-                   array_spec.ArraySpec((2,), np.float32, 'r2')]
+    reward_spec = [
+        array_spec.ArraySpec((1,), np.float32, 'r1'),
+        array_spec.ArraySpec((2,), np.float32, 'r2'),
+    ]
     time_step = ts.restart(observation, batch_size=2, reward_spec=reward_spec)
 
-    expected_reward = [np.array([[0.], [0.]], dtype=np.float32),
-                       np.array([[0., 0.], [0., 0.]], dtype=np.float32)]
+    expected_reward = [
+        np.array([[0.0], [0.0]], dtype=np.float32),
+        np.array([[0.0, 0.0], [0.0, 0.0]], dtype=np.float32),
+    ]
 
     self.assertItemsEqual([ts.StepType.FIRST] * 2, time_step.step_type)
     self.assertItemsEqual(observation, time_step.observation)
@@ -169,8 +175,8 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTransitionBatched(self):
     observation = np.array([[-1], [-1]])
-    reward = np.array([2., 2.])
-    discount = np.array([1., 1.])
+    reward = np.array([2.0, 2.0])
+    discount = np.array([1.0, 1.0])
     time_step = ts.transition(observation, reward, discount)
 
     self.assertItemsEqual([ts.StepType.MID] * 2, time_step.step_type)
@@ -180,17 +186,18 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTransitionMultiRewards(self):
     observation = np.array([[-1], [-1]])
-    reward = [np.array([[2.], [2.]]),
-              np.array([[3., 3.], [4., 4.]])]
-    discount = np.array([1., 1.])
+    reward = [np.array([[2.0], [2.0]]), np.array([[3.0, 3.0], [4.0, 4.0]])]
+    discount = np.array([1.0, 1.0])
     time_step = ts.transition(observation, reward, discount)
 
     time_step_with_outerdims = ts.transition(
-        observation, reward, discount, outer_dims=[2])
+        observation, reward, discount, outer_dims=[2]
+    )
 
     self.assertItemsEqual([ts.StepType.MID] * 2, time_step.step_type)
     self.assertItemsEqual(
-        [ts.StepType.MID] * 2, time_step_with_outerdims.step_type)
+        [ts.StepType.MID] * 2, time_step_with_outerdims.step_type
+    )
     self.assertItemsEqual(observation, time_step.observation)
     self.assertItemsEqual(observation, time_step_with_outerdims.observation)
     self.assertAllEqual(reward[0], time_step.reward[0])
@@ -202,27 +209,26 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTerminationBatched(self):
     observation = np.array([[-1], [-1]])
-    reward = np.array([2., 2.])
+    reward = np.array([2.0, 2.0])
     time_step = ts.termination(observation, reward)
 
     self.assertItemsEqual([ts.StepType.LAST] * 2, time_step.step_type)
     self.assertItemsEqual(observation, time_step.observation)
     self.assertItemsEqual(reward, time_step.reward)
-    self.assertItemsEqual([0., 0.], time_step.discount)
+    self.assertItemsEqual([0.0, 0.0], time_step.discount)
 
   def testTerminationMultiRewards(self):
     observation = np.array([[-1], [-1]])
-    reward = [np.array([[2.], [2.]]),
-              np.array([[3., 3.], [4., 4.]])]
+    reward = [np.array([[2.0], [2.0]]), np.array([[3.0, 3.0], [4.0, 4.0]])]
     time_step = ts.termination(observation, reward)
 
     self.assertItemsEqual([ts.StepType.LAST] * 2, time_step.step_type)
     self.assertItemsEqual(observation, time_step.observation)
     self.assertAllEqual(reward[0], time_step.reward[0])
     self.assertAllEqual(reward[1], time_step.reward[1])
-    self.assertItemsEqual([0., 0.], time_step.discount)
+    self.assertItemsEqual([0.0, 0.0], time_step.discount)
 
-    reward = np.array([[2., 2., 2.], [3., 3., 3.]])
+    reward = np.array([[2.0, 2.0, 2.0], [3.0, 3.0, 3.0]])
     reward_spec = [array_spec.ArraySpec((3,), np.float32, 'multi_r')]
     outer_dims = nest_utils.get_outer_array_shape(reward, reward_spec)
     time_step_batch = ts.termination(observation, reward, outer_dims)
@@ -232,7 +238,7 @@ class TimeStepTest(tf.test.TestCase):
     self.assertItemsEqual(observation, time_step_batch.observation)
     self.assertAllEqual(reward[0], time_step_batch.reward[0])
     self.assertAllEqual(reward[1], time_step_batch.reward[1])
-    self.assertItemsEqual([0., 0.], time_step_batch.discount)
+    self.assertItemsEqual([0.0, 0.0], time_step_batch.discount)
 
     # Check that it gets a different result with no outer_dims
     time_step_no_batch = ts.termination(observation, reward, outer_dims=[])
@@ -240,12 +246,12 @@ class TimeStepTest(tf.test.TestCase):
     self.assertItemsEqual(observation, time_step_no_batch.observation)
     self.assertAllEqual(reward[0], time_step_no_batch.reward[0])
     self.assertAllEqual(reward[1], time_step_no_batch.reward[1])
-    self.assertEqual(0., time_step_no_batch.discount)
+    self.assertEqual(0.0, time_step_no_batch.discount)
 
   def testTruncationBatched(self):
     observation = np.array([[-1], [-1]])
-    reward = np.array([2., 2.])
-    discount = np.array([1., 1.])
+    reward = np.array([2.0, 2.0])
+    discount = np.array([1.0, 1.0])
     time_step = ts.truncation(observation, reward, discount)
 
     self.assertItemsEqual([ts.StepType.LAST] * 2, time_step.step_type)
@@ -255,17 +261,18 @@ class TimeStepTest(tf.test.TestCase):
 
   def testTruncationMultiRewards(self):
     observation = np.array([[-1], [-1]])
-    reward = [np.array([[2.], [2.]]),
-              np.array([[3., 3.], [4., 4.]])]
-    discount = np.array([1., 1.])
+    reward = [np.array([[2.0], [2.0]]), np.array([[3.0, 3.0], [4.0, 4.0]])]
+    discount = np.array([1.0, 1.0])
     time_step = ts.truncation(observation, reward, discount)
 
     time_step_with_outerdims = ts.truncation(
-        observation, reward, discount, outer_dims=[2])
+        observation, reward, discount, outer_dims=[2]
+    )
 
     self.assertItemsEqual([ts.StepType.LAST] * 2, time_step.step_type)
     self.assertItemsEqual(
-        [ts.StepType.LAST] * 2, time_step_with_outerdims.step_type)
+        [ts.StepType.LAST] * 2, time_step_with_outerdims.step_type
+    )
     self.assertItemsEqual(observation, time_step.observation)
     self.assertItemsEqual(observation, time_step_with_outerdims.observation)
     self.assertAllEqual(reward[0], time_step.reward[0])
@@ -279,19 +286,27 @@ class TimeStepTest(tf.test.TestCase):
 class TimeStepSpecTest(tf.test.TestCase):
 
   def testObservationSpec(self):
-    observation_spec = [array_spec.ArraySpec((1, 2, 3), np.int32, 'obs1'),
-                        array_spec.ArraySpec((1, 2, 3), np.float32, 'obs2')]
+    observation_spec = [
+        array_spec.ArraySpec((1, 2, 3), np.int32, 'obs1'),
+        array_spec.ArraySpec((1, 2, 3), np.float32, 'obs2'),
+    ]
     time_step_spec = ts.time_step_spec(observation_spec)
 
     self.assertEqual(time_step_spec.observation, observation_spec)
-    self.assertEqual(time_step_spec.step_type,
-                     array_spec.ArraySpec([], np.int32, name='step_type'))
-    self.assertEqual(time_step_spec.reward,
-                     array_spec.ArraySpec([], np.float32, name='reward'))
-    self.assertEqual(time_step_spec.discount,
-                     array_spec.BoundedArraySpec([], np.float32,
-                                                 minimum=0.0, maximum=1.0,
-                                                 name='discount'))
+    self.assertEqual(
+        time_step_spec.step_type,
+        array_spec.ArraySpec([], np.int32, name='step_type'),
+    )
+    self.assertEqual(
+        time_step_spec.reward,
+        array_spec.ArraySpec([], np.float32, name='reward'),
+    )
+    self.assertEqual(
+        time_step_spec.discount,
+        array_spec.BoundedArraySpec(
+            [], np.float32, minimum=0.0, maximum=1.0, name='discount'
+        ),
+    )
 
 
 class TFTimeStepTest(tf.test.TestCase):
@@ -311,19 +326,27 @@ class TFTimeStepTest(tf.test.TestCase):
     observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
     time_steps = ts.restart(observations, 2)
     time_step_batched = nest_utils.is_batched_nested_tensors(
-        time_steps, time_step_spec)
+        time_steps, time_step_spec
+    )
     self.assertTrue(time_step_batched)
 
   def testRestartMultiRewards(self):
     observation = tf.constant(-1)
-    reward_spec = [tensor_spec.TensorSpec((1,), tf.float32, 'r1'),
-                   tensor_spec.TensorSpec((2,), tf.float32, 'r2')]
-    time_step = ts.restart(observation, batch_size=tf.constant(2, shape=[1]),
-                           reward_spec=reward_spec)
+    reward_spec = [
+        tensor_spec.TensorSpec((1,), tf.float32, 'r1'),
+        tensor_spec.TensorSpec((2,), tf.float32, 'r2'),
+    ]
+    time_step = ts.restart(
+        observation,
+        batch_size=tf.constant(2, shape=[1]),
+        reward_spec=reward_spec,
+    )
     time_step_ = self.evaluate(time_step)
 
-    expected_reward = [np.array([[0.], [0.]], dtype=np.float32),
-                       np.array([[0., 0.], [0., 0.]], dtype=np.float32)]
+    expected_reward = [
+        np.array([[0.0], [0.0]], dtype=np.float32),
+        np.array([[0.0, 0.0], [0.0, 0.0]], dtype=np.float32),
+    ]
 
     self.assertItemsEqual([ts.StepType.FIRST] * 2, time_step_.step_type)
     self.assertEqual(-1, time_step_.observation)
@@ -344,19 +367,23 @@ class TFTimeStepTest(tf.test.TestCase):
 
   def testTransitionMultiRewards(self):
     observation = tf.constant([[-1], [-1]])
-    reward = [tf.constant([[2.], [2.]]),
-              tf.constant([[3., 3.], [4., 4.]])]
+    reward = [
+        tf.constant([[2.0], [2.0]]),
+        tf.constant([[3.0, 3.0], [4.0, 4.0]]),
+    ]
     discount = tf.constant(0.5)
     time_step = ts.transition(observation, reward, discount)
     time_step_ = self.evaluate(time_step)
 
     time_step_with_outerdims = ts.transition(
-        observation, reward, discount, outer_dims=[2])
+        observation, reward, discount, outer_dims=[2]
+    )
     time_step_with_outerdims_ = self.evaluate(time_step_with_outerdims)
 
     self.assertItemsEqual([ts.StepType.MID] * 2, time_step_.step_type)
     self.assertItemsEqual(
-        [ts.StepType.MID] * 2, time_step_with_outerdims_.step_type)
+        [ts.StepType.MID] * 2, time_step_with_outerdims_.step_type
+    )
     self.assertItemsEqual([-1, -1], time_step_.observation)
     self.assertItemsEqual([-1, -1], time_step_with_outerdims_.observation)
     self.assertAllEqual(reward[0], time_step_.reward[0])
@@ -409,8 +436,10 @@ class TFTimeStepTest(tf.test.TestCase):
 
   def testTerminationMultiRewards(self):
     observation = tf.constant(-1)
-    reward = [tf.constant([[2.], [2.]]),
-              tf.constant([[3., 3.], [4., 4.]])]
+    reward = [
+        tf.constant([[2.0], [2.0]]),
+        tf.constant([[3.0, 3.0], [4.0, 4.0]]),
+    ]
     time_step = ts.termination(observation, reward)
     time_step_ = self.evaluate(time_step)
 
@@ -422,19 +451,23 @@ class TFTimeStepTest(tf.test.TestCase):
 
   def testTruncationMultiRewards(self):
     observation = tf.constant([[-1], [-1]])
-    reward = [tf.constant([[2.], [2.]]),
-              tf.constant([[3., 3.], [4., 4.]])]
+    reward = [
+        tf.constant([[2.0], [2.0]]),
+        tf.constant([[3.0, 3.0], [4.0, 4.0]]),
+    ]
     discount = tf.constant(0.5)
     time_step = ts.truncation(observation, reward, discount)
     time_step_ = self.evaluate(time_step)
 
     time_step_with_outerdims = ts.truncation(
-        observation, reward, discount, outer_dims=[2])
+        observation, reward, discount, outer_dims=[2]
+    )
     time_step_with_outerdims_ = self.evaluate(time_step_with_outerdims)
 
     self.assertItemsEqual([ts.StepType.LAST] * 2, time_step_.step_type)
-    self.assertItemsEqual([ts.StepType.LAST] * 2,
-                          time_step_with_outerdims_.step_type)
+    self.assertItemsEqual(
+        [ts.StepType.LAST] * 2, time_step_with_outerdims_.step_type
+    )
     self.assertItemsEqual([-1, -1], time_step_.observation)
     self.assertItemsEqual([-1, -1], time_step_with_outerdims_.observation)
     self.assertAllEqual(reward[0], time_step_.reward[0])
@@ -453,19 +486,27 @@ class TFTimeStepTest(tf.test.TestCase):
 class TFTimeStepSpecTest(tf.test.TestCase):
 
   def testObservationSpec(self):
-    observation_spec = [tensor_spec.TensorSpec((1, 2, 3), tf.int32, 'obs1'),
-                        tensor_spec.TensorSpec((1, 2, 3), tf.float32, 'obs2')]
+    observation_spec = [
+        tensor_spec.TensorSpec((1, 2, 3), tf.int32, 'obs1'),
+        tensor_spec.TensorSpec((1, 2, 3), tf.float32, 'obs2'),
+    ]
     time_step_spec = ts.time_step_spec(observation_spec)
 
     self.assertEqual(time_step_spec.observation, observation_spec)
-    self.assertEqual(time_step_spec.step_type,
-                     tensor_spec.TensorSpec([], tf.int32, name='step_type'))
-    self.assertEqual(time_step_spec.reward,
-                     tensor_spec.TensorSpec([], tf.float32, name='reward'))
-    self.assertEqual(time_step_spec.discount,
-                     tensor_spec.BoundedTensorSpec([], tf.float32,
-                                                   minimum=0.0, maximum=1.0,
-                                                   name='discount'))
+    self.assertEqual(
+        time_step_spec.step_type,
+        tensor_spec.TensorSpec([], tf.int32, name='step_type'),
+    )
+    self.assertEqual(
+        time_step_spec.reward,
+        tensor_spec.TensorSpec([], tf.float32, name='reward'),
+    )
+    self.assertEqual(
+        time_step_spec.discount,
+        tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='discount'
+        ),
+    )
 
 
 if __name__ == '__main__':

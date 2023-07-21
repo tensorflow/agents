@@ -20,9 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing.absltest import mock
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import random_tf_environment
 from tf_agents.environments import tf_wrappers
 from tf_agents.specs import tensor_spec
@@ -72,7 +70,8 @@ def _build_test_env(obs_spec=None, action_spec=None, batch_size=2):
     action_spec = tensor_spec.BoundedTensorSpec((1,), tf.int32, 0, 4)
   time_step_spec = ts.time_step_spec(obs_spec)
   return random_tf_environment.RandomTFEnvironment(
-      time_step_spec, action_spec, batch_size=batch_size)
+      time_step_spec, action_spec, batch_size=batch_size
+  )
 
 
 class OneHotActionWrapperTest(tf.test.TestCase):
@@ -86,12 +85,15 @@ class OneHotActionWrapperTest(tf.test.TestCase):
         dtype=tf.int32,
         minimum=0,
         maximum=1,
-        name='one_hot_action_spec')
+        name='one_hot_action_spec',
+    )
     self.assertEqual(expected_action_spec, wrapper.action_spec())
 
   def test_action_spec_nested(self):
-    action_spec = (tensor_spec.BoundedTensorSpec((1,), tf.int32, 0, 4),
-                   tensor_spec.TensorSpec((2, 2), tf.float32))
+    action_spec = (
+        tensor_spec.BoundedTensorSpec((1,), tf.int32, 0, 4),
+        tensor_spec.TensorSpec((2, 2), tf.float32),
+    )
     env = _build_test_env(action_spec=action_spec)
     wrapper = tf_wrappers.OneHotActionWrapper(env)
     expected_action_spec = (
@@ -100,8 +102,10 @@ class OneHotActionWrapperTest(tf.test.TestCase):
             dtype=tf.int32,
             minimum=0,
             maximum=1,
-            name='one_hot_action_spec'),
-        action_spec[1])
+            name='one_hot_action_spec',
+        ),
+        action_spec[1],
+    )
     self.assertEqual(expected_action_spec, wrapper.action_spec())
 
   def test_raises_invalid_action_spec(self):
@@ -116,8 +120,7 @@ class OneHotActionWrapperTest(tf.test.TestCase):
     wrapper = tf_wrappers.OneHotActionWrapper(mock_env)
     wrapper.reset()
 
-    wrapper.step(tf.constant([[0, 1, 0, 0, 0],
-                              [0, 0, 0, 1, 0]], tf.int32))
+    wrapper.step(tf.constant([[0, 1, 0, 0, 0], [0, 0, 0, 1, 0]], tf.int32))
     self.assertTrue(mock_env.step.called)
     self.assertAllEqual([1, 3], mock_env.step.call_args[0][0])
 

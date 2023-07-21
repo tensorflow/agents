@@ -35,17 +35,12 @@ from tf_agents.utils import common
 
 class DummyCategoricalNet(network.Network):
 
-  def __init__(self,
-               input_tensor_spec,
-               num_atoms=51,
-               num_actions=2,
-               name=None):
+  def __init__(self, input_tensor_spec, num_atoms=51, num_actions=2, name=None):
     self._num_atoms = num_atoms
     self._num_actions = num_actions
     super(DummyCategoricalNet, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     # In CategoricalDQN we are dealing with a distribution over Q-values, which
     # are represented as num_atoms bins, ranging from min_q_value to
@@ -59,7 +54,8 @@ class DummyCategoricalNet(network.Network):
     # value for the first action.
     weights_initializer = np.array([
         np.concatenate((np.arange(num_atoms), np.ones(num_atoms))),
-        np.concatenate((np.ones(num_atoms), np.ones(num_atoms)))])
+        np.concatenate((np.ones(num_atoms), np.ones(num_atoms))),
+    ])
     kernel_initializer = tf.constant_initializer(weights_initializer)
     bias_initializer = tf.keras.initializers.Ones()
 
@@ -69,7 +65,9 @@ class DummyCategoricalNet(network.Network):
         tf.keras.layers.Dense(
             num_actions * num_atoms,
             kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer))
+            bias_initializer=bias_initializer,
+        )
+    )
 
   @property
   def num_atoms(self):
@@ -86,10 +84,12 @@ class DummyCategoricalNet(network.Network):
 
 class KerasLayersNet(network.Network):
 
-  def __init__(self, observation_spec, action_spec, layer, num_atoms=5,
-               name=None):
-    super(KerasLayersNet, self).__init__(observation_spec, state_spec=(),
-                                         name=name)
+  def __init__(
+      self, observation_spec, action_spec, layer, num_atoms=5, name=None
+  ):
+    super(KerasLayersNet, self).__init__(
+        observation_spec, state_spec=(), name=name
+    )
     self._layer = layer
     self.num_atoms = num_atoms  # Dummy, this doesn't match the layer output.
 
@@ -99,7 +99,8 @@ class KerasLayersNet(network.Network):
 
   def create_variables(self, input_spec=None):
     output_spec = network.create_variables(
-        self._layer, input_spec or self._input_tensor_spec)
+        self._layer, input_spec or self._input_tensor_spec
+    )
     self._network_output_spec = output_spec
     self.built = True
     return output_spec
@@ -107,25 +108,24 @@ class KerasLayersNet(network.Network):
 
 class DummyCategoricalQRnnNetwork(q_rnn_network.QRnnNetwork):
 
-  def __init__(self,
-               input_tensor_spec,
-               action_spec,
-               num_atoms=51,
-               **kwargs):
+  def __init__(self, input_tensor_spec, action_spec, num_atoms=51, **kwargs):
     if not isinstance(action_spec, tensor_spec.BoundedTensorSpec):
-      raise TypeError('action_spec must be a BoundedTensorSpec. Got: %s' % (
-          action_spec,))
+      raise TypeError(
+          'action_spec must be a BoundedTensorSpec. Got: %s' % (action_spec,)
+      )
 
     self._num_actions = action_spec.maximum - action_spec.minimum + 1
     self._num_atoms = num_atoms
 
     q_network_action_spec = tensor_spec.BoundedTensorSpec(
-        (), tf.int32, minimum=0, maximum=self._num_actions * num_atoms - 1)
+        (), tf.int32, minimum=0, maximum=self._num_actions * num_atoms - 1
+    )
 
     super(DummyCategoricalQRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         action_spec=q_network_action_spec,
-        **kwargs)
+        **kwargs
+    )
 
   @property
   def num_atoms(self):
@@ -133,7 +133,8 @@ class DummyCategoricalQRnnNetwork(q_rnn_network.QRnnNetwork):
 
   def call(self, observations, step_type=None, network_state=()):
     logits, network_state = super(DummyCategoricalQRnnNetwork, self).call(
-        observations, step_type, network_state)
+        observations, step_type, network_state
+    )
     shape = logits.shape.as_list()
     assert shape[-1] == self._num_actions * self._num_atoms
     new_shape = shape[:-1] + [self._num_actions, self._num_atoms]
@@ -150,16 +151,15 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 1)
     self._categorical_net = categorical_q_network.CategoricalQNetwork(
-        self._obs_spec,
-        self._action_spec,
-        fc_layer_params=[4])
+        self._obs_spec, self._action_spec, fc_layer_params=[4]
+    )
     self._dummy_categorical_net = DummyCategoricalNet(self._obs_spec)
     self._optimizer = tf.compat.v1.train.GradientDescentOptimizer(0.01)
 
   def testCreateAgentNestSizeChecks(self):
     action_spec = [
         tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
-        tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1)
+        tensor_spec.BoundedTensorSpec([1], tf.int32, 0, 1),
     ]
 
     with self.assertRaisesRegex(ValueError, 'Only scalar actions'):
@@ -167,7 +167,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
           self._time_step_spec,
           action_spec,
           self._dummy_categorical_net,
-          self._optimizer)
+          self._optimizer,
+      )
 
   def testCreateAgentDimChecks(self):
     action_spec = tensor_spec.BoundedTensorSpec([1, 2], tf.int32, 0, 1)
@@ -177,14 +178,16 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
           self._time_step_spec,
           action_spec,
           self._dummy_categorical_net,
-          self._optimizer)
+          self._optimizer,
+      )
 
   def testCreateAgentDefaultNetwork(self):
     categorical_dqn_agent.CategoricalDqnAgent(
         self._time_step_spec,
         self._action_spec,
         self._categorical_net,
-        self._optimizer)
+        self._optimizer,
+    )
 
   def testCreateAgentWithPrebuiltPreprocessingLayers(self):
     dense_layer = tf.keras.Sequential([
@@ -193,27 +196,33 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         tf.keras.layers.Reshape([2, 5]),
     ])
     q_net = KerasLayersNet(
-        self._time_step_spec.observation, self._action_spec, dense_layer)
+        self._time_step_spec.observation, self._action_spec, dense_layer
+    )
     with self.assertRaisesRegexp(
-        ValueError, 'shares weights with the original network'):
-      categorical_dqn_agent.CategoricalDqnAgent(
-          self._time_step_spec,
-          self._action_spec,
-          categorical_q_network=q_net,
-          optimizer=None)
-
-    # Explicitly share weights between q and target networks.
-    # This would be an unusual setup so we check that an error is thrown.
-    q_target_net = KerasLayersNet(
-        self._time_step_spec.observation, self._action_spec, dense_layer)
-    with self.assertRaisesRegexp(
-        ValueError, 'shares weights with the original network'):
+        ValueError, 'shares weights with the original network'
+    ):
       categorical_dqn_agent.CategoricalDqnAgent(
           self._time_step_spec,
           self._action_spec,
           categorical_q_network=q_net,
           optimizer=None,
-          target_categorical_q_network=q_target_net)
+      )
+
+    # Explicitly share weights between q and target networks.
+    # This would be an unusual setup so we check that an error is thrown.
+    q_target_net = KerasLayersNet(
+        self._time_step_spec.observation, self._action_spec, dense_layer
+    )
+    with self.assertRaisesRegexp(
+        ValueError, 'shares weights with the original network'
+    ):
+      categorical_dqn_agent.CategoricalDqnAgent(
+          self._time_step_spec,
+          self._action_spec,
+          categorical_q_network=q_net,
+          optimizer=None,
+          target_categorical_q_network=q_target_net,
+      )
 
   def testCreateAgentWithPrebuiltPreprocessingLayersDiffAtoms(self):
     dense_layer = tf.keras.Sequential([
@@ -222,28 +231,34 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         tf.keras.layers.Reshape([2, 5]),
     ])
     q_net = KerasLayersNet(
-        self._time_step_spec.observation, self._action_spec, dense_layer)
+        self._time_step_spec.observation, self._action_spec, dense_layer
+    )
     dense_layer_target = tf.keras.Sequential([
         tf.keras.layers.Dense(10),
         tf.keras.layers.Reshape([2, 5]),
     ])
     q_bad_target_net = KerasLayersNet(
-        self._time_step_spec.observation, self._action_spec, dense_layer_target,
-        num_atoms=3)
+        self._time_step_spec.observation,
+        self._action_spec,
+        dense_layer_target,
+        num_atoms=3,
+    )
     with self.assertRaisesRegexp(ValueError, 'have different numbers of atoms'):
       categorical_dqn_agent.CategoricalDqnAgent(
           self._time_step_spec,
           self._action_spec,
           categorical_q_network=q_net,
           optimizer=None,
-          target_categorical_q_network=q_bad_target_net)
+          target_categorical_q_network=q_bad_target_net,
+      )
 
   def testCriticLoss(self):
     agent = categorical_dqn_agent.CategoricalDqnAgent(
         self._time_step_spec,
         self._action_spec,
         self._dummy_categorical_net,
-        self._optimizer)
+        self._optimizer,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
@@ -257,7 +272,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = test_utils.stacked_trajectory_from_transition(
-        time_steps, action_steps, next_time_steps)
+        time_steps, action_steps, next_time_steps
+    )
 
     # Due to the constant initialization of the DummyCategoricalNet, we can
     # expect the same loss every time.
@@ -272,7 +288,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     # Observations are now a tuple of the usual observation and an action mask.
     observation_spec_with_mask = (
         self._obs_spec,
-        tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1))
+        tensor_spec.BoundedTensorSpec([2], tf.int32, 0, 1),
+    )
     time_step_spec = ts.time_step_spec(observation_spec_with_mask)
     dummy_categorical_net = DummyCategoricalNet(self._obs_spec)
     agent = categorical_dqn_agent.CategoricalDqnAgent(
@@ -280,12 +297,15 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._action_spec,
         dummy_categorical_net,
         self._optimizer,
-        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]))
+        observation_and_action_constraint_splitter=lambda x: (x[0], x[1]),
+    )
 
     # For `observations`, the masks are set up so that only one action is valid
     # for each element in the batch.
-    observations = (tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
-                    tf.constant([[1, 0], [0, 1]], dtype=tf.int32))
+    observations = (
+        tf.constant([[1, 2], [3, 4]], dtype=tf.float32),
+        tf.constant([[1, 0], [0, 1]], dtype=tf.int32),
+    )
     time_steps = ts.restart(observations, batch_size=2)
 
     actions = tf.constant([0, 1], dtype=tf.int32)
@@ -296,12 +316,15 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
 
     # For `next_observations`, the masks are set up so the opposite actions as
     # before are valid.
-    next_observations = (tf.constant([[5, 6], [7, 8]], dtype=tf.float32),
-                         tf.constant([[0, 1], [1, 0]], dtype=tf.int32))
+    next_observations = (
+        tf.constant([[5, 6], [7, 8]], dtype=tf.float32),
+        tf.constant([[0, 1], [1, 0]], dtype=tf.int32),
+    )
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = test_utils.stacked_trajectory_from_transition(
-        time_steps, action_steps, next_time_steps)
+        time_steps, action_steps, next_time_steps
+    )
 
     # Due to the constant initialization of the DummyCategoricalNet, we can
     # expect the same loss every time. Note this is different from the loss in
@@ -319,7 +342,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._action_spec,
         self._dummy_categorical_net,
         self._optimizer,
-        n_step_update=2)
+        n_step_update=2,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
@@ -336,15 +360,21 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     third_time_steps = ts.transition(third_observations, rewards, discounts)
 
     experience1 = trajectory.from_transition(
-        time_steps, action_steps, next_time_steps)
+        time_steps, action_steps, next_time_steps
+    )
     experience2 = trajectory.from_transition(
-        next_time_steps, action_steps, third_time_steps)
+        next_time_steps, action_steps, third_time_steps
+    )
     experience3 = trajectory.from_transition(
-        third_time_steps, action_steps, third_time_steps)
+        third_time_steps, action_steps, third_time_steps
+    )
 
     experience = tf.nest.map_structure(
         lambda x, y, z: tf.stack([x, y, z], axis=1),
-        experience1, experience2, experience3)
+        experience1,
+        experience2,
+        experience3,
+    )
 
     loss_info = agent._loss(experience)
 
@@ -355,8 +385,9 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
 
     # Both final_value_discount values should be 0.9 * 0.9 = 0.81.
     evaluated_final_value_discount = self.evaluate(agent._final_value_discount)
-    self.assertAllClose(evaluated_final_value_discount, [[0.81], [0.81]],
-                        atol=1e-4)
+    self.assertAllClose(
+        evaluated_final_value_discount, [[0.81], [0.81]], atol=1e-4
+    )
 
     # Due to the constant initialization of the DummyCategoricalNet, we can
     # expect the same loss every time.
@@ -370,7 +401,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         self._categorical_net,
-        self._optimizer)
+        self._optimizer,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
@@ -386,7 +418,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         self._categorical_net,
-        self._optimizer)
+        self._optimizer,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
@@ -398,7 +431,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     next_time_steps = ts.transition(observations, rewards, discounts)
 
     experience = test_utils.stacked_trajectory_from_transition(
-        time_steps, action_steps, next_time_steps)
+        time_steps, action_steps, next_time_steps
+    )
 
     loss_info = agent._loss(experience)
     initialize = agent.initialize()
@@ -420,14 +454,16 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         self._categorical_net,
-        self._optimizer)
+        self._optimizer,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
     actions = tf.constant([0, 1], dtype=tf.int32)
     action_steps = policy_step.PolicyStep(actions)
     experience = test_utils.stacked_trajectory_from_transition(
-        time_steps, action_steps, time_steps)
+        time_steps, action_steps, time_steps
+    )
 
     loss_info = agent._loss(experience)
     update_targets = agent._update_target()
@@ -442,7 +478,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         self._time_step_spec,
         self._action_spec,
         self._dummy_categorical_net,
-        self._optimizer)
+        self._optimizer,
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
@@ -456,7 +493,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
     next_time_steps = ts.transition(next_observations, rewards, discounts)
 
     experience = test_utils.stacked_trajectory_from_transition(
-        time_steps, action_steps, next_time_steps)
+        time_steps, action_steps, next_time_steps
+    )
 
     train_step = agent.train(experience, weights=None)
 
@@ -472,13 +510,15 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
 
     batch_size = 5
     observations = tf.constant(
-        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32)
+        [[[1, 2], [3, 4], [5, 6]]] * batch_size, dtype=tf.float32
+    )
     actions = tf.constant([[0, 1, 1]] * batch_size, dtype=tf.int32)
     time_steps = ts.TimeStep(
         step_type=tf.constant([[1] * 3] * batch_size, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * batch_size, dtype=tf.float32),
-        observation=[observations])
+        observation=[observations],
+    )
 
     experience = trajectory.Trajectory(
         step_type=time_steps.step_type,
@@ -487,7 +527,8 @@ class CategoricalDqnAgentTest(tf.test.TestCase):
         policy_info=(),
         next_step_type=time_steps.step_type,
         reward=time_steps.reward,
-        discount=time_steps.discount)
+        discount=time_steps.discount,
+    )
 
     categorical_q_rnn_network = DummyCategoricalQRnnNetwork(
         self._obs_spec,

@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents import specs
 from tf_agents.environments import tf_environment
 from tf_agents.trajectories import time_step as ts
@@ -50,31 +49,45 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
     action_spec = specs.BoundedTensorSpec([], tf.int32, minimum=0, maximum=10)
     time_step_spec = ts.time_step_spec(observation_spec)
     super(TFEnvironmentMock, self).__init__(time_step_spec, action_spec)
-    self._state = common.create_variable('state', initial_state,
-                                         dtype=self._dtype)
+    self._state = common.create_variable(
+        'state', initial_state, dtype=self._dtype
+    )
     self.steps = common.create_variable('steps', 0)
     self.episodes = common.create_variable('episodes', 0)
     self.resets = common.create_variable('resets', 0)
 
   def _current_time_step(self):
     def first():
-      return (tf.constant(FIRST, dtype=tf.int32),
-              tf.constant(0.0, dtype=tf.float32),
-              tf.constant(1.0, dtype=tf.float32))
+      return (
+          tf.constant(FIRST, dtype=tf.int32),
+          tf.constant(0.0, dtype=tf.float32),
+          tf.constant(1.0, dtype=tf.float32),
+      )
+
     def mid():
-      return (tf.constant(MID, dtype=tf.int32),
-              tf.constant(0.0, dtype=tf.float32),
-              tf.constant(1.0, dtype=tf.float32))
+      return (
+          tf.constant(MID, dtype=tf.int32),
+          tf.constant(0.0, dtype=tf.float32),
+          tf.constant(1.0, dtype=tf.float32),
+      )
+
     def last():
-      return (tf.constant(LAST, dtype=tf.int32),
-              tf.constant(1.0, dtype=tf.float32),
-              tf.constant(0.0, dtype=tf.float32))
+      return (
+          tf.constant(LAST, dtype=tf.int32),
+          tf.constant(1.0, dtype=tf.float32),
+          tf.constant(0.0, dtype=tf.float32),
+      )
+
     state_value = tf.math.mod(self._state.value(), 3)
     step_type, reward, discount = tf.case(
-        [(tf.equal(state_value, FIRST), first),
-         (tf.equal(state_value, MID), mid),
-         (tf.equal(state_value, LAST), last)],
-        exclusive=True, strict=True)
+        [
+            (tf.equal(state_value, FIRST), first),
+            (tf.equal(state_value, MID), mid),
+            (tf.equal(state_value, LAST), last),
+        ],
+        exclusive=True,
+        strict=True,
+    )
     return ts.TimeStep(step_type, reward, discount, state_value)
 
   def _reset(self):
@@ -94,11 +107,13 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
       increase_steps = tf.cond(
           pred=tf.equal(tf.math.mod(state_value, 3), FIRST),
           true_fn=self.steps.value,
-          false_fn=lambda: self.steps.assign_add(1))
+          false_fn=lambda: self.steps.assign_add(1),
+      )
       increase_episodes = tf.cond(
           pred=tf.equal(tf.math.mod(state_value, 3), LAST),
           true_fn=lambda: self.episodes.assign_add(1),
-          false_fn=self.episodes.value)
+          false_fn=self.episodes.value,
+      )
     with tf.control_dependencies([increase_steps, increase_episodes]):
       return self.current_time_step()
 
@@ -156,12 +171,12 @@ class TFEnvironmentTest(tf.test.TestCase):
     time_step, next_time_step = self.evaluate([time_step, next_time_step])
 
     self.assertEqual(FIRST, time_step.step_type)
-    self.assertEqual(0., time_step.reward)
+    self.assertEqual(0.0, time_step.reward)
     self.assertEqual(1.0, time_step.discount)
     self.assertEqual([0], time_step.observation)
 
     self.assertEqual(MID, next_time_step.step_type)
-    self.assertEqual(0., next_time_step.reward)
+    self.assertEqual(0.0, next_time_step.reward)
     self.assertEqual(1.0, next_time_step.discount)
     self.assertEqual([1], next_time_step.observation)
 
@@ -181,29 +196,29 @@ class TFEnvironmentTest(tf.test.TestCase):
 
     time_step_np, next_time_step_np = self.evaluate([time_step, next_time_step])
     self.assertEqual(FIRST, time_step_np.step_type)
-    self.assertEqual(0., time_step_np.reward)
+    self.assertEqual(0.0, time_step_np.reward)
     self.assertEqual(1.0, time_step_np.discount)
     self.assertEqual([0], time_step_np.observation)
 
     self.assertEqual(MID, next_time_step_np.step_type)
-    self.assertEqual(0., next_time_step_np.reward)
+    self.assertEqual(0.0, next_time_step_np.reward)
     self.assertEqual(1.0, next_time_step_np.discount)
     self.assertEqual([1], next_time_step_np.observation)
 
     time_step_np, next_time_step_np = self.evaluate([time_step, next_time_step])
     self.assertEqual(MID, time_step_np.step_type)
-    self.assertEqual(0., time_step_np.reward)
+    self.assertEqual(0.0, time_step_np.reward)
     self.assertEqual(1.0, time_step_np.discount)
     self.assertEqual([1], time_step_np.observation)
 
     self.assertEqual(LAST, next_time_step_np.step_type)
-    self.assertEqual(1., next_time_step_np.reward)
+    self.assertEqual(1.0, next_time_step_np.reward)
     self.assertEqual(0.0, next_time_step_np.discount)
     self.assertEqual([2], next_time_step_np.observation)
 
     time_step_np = self.evaluate(time_step)
     self.assertEqual(LAST, time_step_np.step_type)
-    self.assertEqual(1., time_step_np.reward)
+    self.assertEqual(1.0, time_step_np.reward)
     self.assertEqual(0.0, time_step_np.discount)
     self.assertEqual([2], time_step_np.observation)
 
@@ -222,7 +237,7 @@ class TFEnvironmentTest(tf.test.TestCase):
       action = tf.constant(2)
     time_step = self.evaluate(tf_env.step(action))
     self.assertEqual(LAST, time_step.step_type)
-    self.assertEqual(1., time_step.reward)
+    self.assertEqual(1.0, time_step.reward)
     self.assertEqual(0.0, time_step.discount)
     self.assertEqual([2], time_step.observation)
     self.assertEqual(0, self.evaluate(tf_env.resets))
@@ -270,7 +285,8 @@ class TFEnvironmentTest(tf.test.TestCase):
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     [time_step_np, next_time_step_np] = self.evaluate(
-        [time_step, next_time_step])
+        [time_step, next_time_step]
+    )
     self.assertEqual([0], time_step_np.observation)
     self.assertEqual([1], next_time_step_np.observation)
     self.assertEqual(0, self.evaluate(tf_env.resets))

@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.ddpg import ddpg_agent
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
@@ -34,15 +33,16 @@ from tf_agents.utils import test_utils
 class DummyActorNetwork(network.Network):
   """Creates an actor network."""
 
-  def __init__(self,
-               input_tensor_spec,
-               output_tensor_spec,
-               unbounded_actions=False,
-               name=None):
+  def __init__(
+      self,
+      input_tensor_spec,
+      output_tensor_spec,
+      unbounded_actions=False,
+      name=None,
+  ):
     super(DummyActorNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     self._output_tensor_spec = output_tensor_spec
     self._unbounded_actions = unbounded_actions
@@ -54,20 +54,23 @@ class DummyActorNetwork(network.Network):
         activation=activation,
         kernel_initializer=tf.constant_initializer([2, 1]),
         bias_initializer=tf.constant_initializer([5]),
-        name='action')
+        name='action',
+    )
 
   def call(self, observations, step_type=(), network_state=()):
     del step_type  # unused.
     observations = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
     output = self._layer(observations)
-    actions = tf.reshape(output,
-                         [-1] + self._single_action_spec.shape.as_list())
+    actions = tf.reshape(
+        output, [-1] + self._single_action_spec.shape.as_list()
+    )
 
     if not self._unbounded_actions:
       actions = common.scale_to_spec(actions, self._single_action_spec)
 
-    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
-                                              [actions])
+    output_actions = tf.nest.pack_sequence_as(
+        self._output_tensor_spec, [actions]
+    )
     return output_actions, network_state
 
 
@@ -75,14 +78,16 @@ class DummyCriticNetwork(network.Network):
 
   def __init__(self, input_tensor_spec, name=None):
     super(DummyCriticNetwork, self).__init__(
-        input_tensor_spec, state_spec=(), name=name)
+        input_tensor_spec, state_spec=(), name=name
+    )
 
     self._obs_layer = tf.keras.layers.Flatten()
     self._action_layer = tf.keras.layers.Flatten()
     self._joint_layer = tf.keras.layers.Dense(
         1,
         kernel_initializer=tf.constant_initializer([1, 3, 2]),
-        bias_initializer=tf.constant_initializer([4]))
+        bias_initializer=tf.constant_initializer([4]),
+    )
 
   def call(self, inputs, step_type=None, network_state=()):
     observations, actions = inputs
@@ -106,9 +111,11 @@ class DdpgAgentTest(test_utils.TestCase):
     network_input_spec = (self._obs_spec, self._action_spec)
     self._critic_net = DummyCriticNetwork(network_input_spec)
     self._bounded_actor_net = DummyActorNetwork(
-        self._obs_spec, self._action_spec, unbounded_actions=False)
+        self._obs_spec, self._action_spec, unbounded_actions=False
+    )
     self._unbounded_actor_net = DummyActorNetwork(
-        self._obs_spec, self._action_spec, unbounded_actions=True)
+        self._obs_spec, self._action_spec, unbounded_actions=True
+    )
 
   def testCreateAgent(self):
     agent = ddpg_agent.DdpgAgent(
@@ -206,11 +213,14 @@ class DdpgAgentTest(test_utils.TestCase):
         policy_info=(),
         next_step_type=self._time_step_spec.step_type,
         reward=tensor_spec.BoundedTensorSpec(
-            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'),
-        discount=self._time_step_spec.discount)
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'
+        ),
+        discount=self._time_step_spec.discount,
+    )
 
     sample_trajectory_experience = tensor_spec.sample_spec_nest(
-        trajectory_spec, outer_dims=(3, 2))
+        trajectory_spec, outer_dims=(3, 2)
+    )
     agent.train(sample_trajectory_experience)
 
   def testAgentTransitionTrain(self):
@@ -225,17 +235,21 @@ class DdpgAgentTest(test_utils.TestCase):
 
     time_step_spec = self._time_step_spec._replace(
         reward=tensor_spec.BoundedTensorSpec(
-            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'))
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'
+        )
+    )
 
     transition_spec = trajectory.Transition(
         time_step=time_step_spec,
-        action_step=policy_step.PolicyStep(action=self._action_spec,
-                                           state=(),
-                                           info=()),
-        next_time_step=time_step_spec)
+        action_step=policy_step.PolicyStep(
+            action=self._action_spec, state=(), info=()
+        ),
+        next_time_step=time_step_spec,
+    )
 
     sample_trajectory_experience = tensor_spec.sample_spec_nest(
-        transition_spec, outer_dims=(3,))
+        transition_spec, outer_dims=(3,)
+    )
     agent.train(sample_trajectory_experience)
 
 

@@ -39,9 +39,11 @@ class DummyNet(network.Network):
     self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
-            kernel_initializer=tf.constant_initializer([[1, 1.5, 2],
-                                                        [1, 1.5, 4]]),
-            bias_initializer=tf.constant_initializer([[1], [1], [-10]]))
+            kernel_initializer=tf.constant_initializer(
+                [[1, 1.5, 2], [1, 1.5, 4]]
+            ),
+            bias_initializer=tf.constant_initializer([[1], [1], [-10]]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -59,7 +61,10 @@ class GetNumberOfTrainableElementsTest(test_utils.TestCase):
     dummy_net.create_variables()
     self.assertEqual(
         falcon_reward_prediction_policy.get_number_of_trainable_elements(
-            dummy_net), 9)
+            dummy_net
+        ),
+        9,
+    )
 
 
 ALLOWED_VALUES_CASES = (
@@ -75,11 +80,13 @@ ALLOWED_VALUES_CASES = (
 
 
 @test_util.run_all_in_graph_and_eager_modes
-class FalconRewardPredictionPolicyTest(test_utils.TestCase,
-                                       parameterized.TestCase):
+class FalconRewardPredictionPolicyTest(
+    test_utils.TestCase, parameterized.TestCase
+):
 
-  def _check_uniform_actions(self, actions: np.ndarray,
-                             allowed_actions: Set[int]) -> None:
+  def _check_uniform_actions(
+      self, actions: np.ndarray, allowed_actions: Set[int]
+  ) -> None:
     self.assertAllInSet(actions, allowed_actions)
     # Set tolerance in the chosen count to be 4 std.
     num_allow_actions = len(allowed_actions)
@@ -93,9 +100,12 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
           action_chosen_count,
           expected_count,
           tol,
-          msg=f'action: {action} is expected to be chosen between '
-          f'{expected_count - tol} and {expected_count + tol} times, but was '
-          f'actually chosen {action_chosen_count} times.')
+          msg=(
+              f'action: {action} is expected to be chosen between'
+              f' {expected_count - tol} and {expected_count + tol} times, but'
+              f' was actually chosen {action_chosen_count} times.'
+          ),
+      )
 
   def setUp(self):
     super(FalconRewardPredictionPolicyTest, self).setUp()
@@ -103,14 +113,16 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec((), tf.int32, 0, 2)
     self._time_step_with_mask_spec = ts.time_step_spec(
-        (self._obs_spec, tensor_spec.TensorSpec([3], tf.int32)))
+        (self._obs_spec, tensor_spec.TensorSpec([3], tf.int32))
+    )
 
   def testBanditPolicyType(self):
     policy = falcon_reward_prediction_policy.FalconRewardPredictionPolicy(
         self._time_step_spec,
         self._action_spec,
         reward_network=DummyNet(self._obs_spec),
-        emit_policy_info=(utils.InfoFields.BANDIT_POLICY_TYPE,))
+        emit_policy_info=(utils.InfoFields.BANDIT_POLICY_TYPE,),
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -119,7 +131,8 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
     p_info = self.evaluate(action_step.info)
     self.assertAllEqual(
         p_info.bandit_policy_type,
-        [[utils.BanditPolicyType.FALCON], [utils.BanditPolicyType.FALCON]])
+        [[utils.BanditPolicyType.FALCON], [utils.BanditPolicyType.FALCON]],
+    )
 
   def _create_policy(
       self,
@@ -171,14 +184,17 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
         num_samples_list=[
             tf.compat.v2.Variable(2, dtype=tf.int32, name='num_samples_0'),
             tf.compat.v2.Variable(4, dtype=tf.int32, name='num_samples_1'),
-            tf.compat.v2.Variable(1, dtype=tf.int32, name='num_samples_2')
-        ])
+            tf.compat.v2.Variable(1, dtype=tf.int32, name='num_samples_2'),
+        ],
+    )
     batch_size = 3000
     if mask is None:
       observations = tf.constant([[1, 2]] * batch_size, dtype=tf.float32)
     else:
-      observations = (tf.constant([[1, 2]] * batch_size, dtype=tf.float32),
-                      tf.constant([mask] * batch_size, dtype=tf.float32))
+      observations = (
+          tf.constant([[1, 2]] * batch_size, dtype=tf.float32),
+          tf.constant([mask] * batch_size, dtype=tf.float32),
+      )
     time_step = ts.restart(observations, batch_size=batch_size)
     action_step = policy.action(time_step, seed=1)
     # Initialize all variables
@@ -188,14 +204,17 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
     # empirical distribution of the chosen arms is uniform.
     actions = self.evaluate(action_step.action)
     if mask is None:
-      self.assertAllClose(p_info.log_probability,
-                          tf.math.log([1.0 / 3] * batch_size))
+      self.assertAllClose(
+          p_info.log_probability, tf.math.log([1.0 / 3] * batch_size)
+      )
       self._check_uniform_actions(actions=actions, allowed_actions=[0, 1, 2])
     else:
-      self.assertAllClose(p_info.log_probability,
-                          tf.math.log([1.0 / np.sum(mask)] * batch_size))
+      self.assertAllClose(
+          p_info.log_probability, tf.math.log([1.0 / np.sum(mask)] * batch_size)
+      )
       self._check_uniform_actions(
-          actions=actions, allowed_actions=np.nonzero(mask)[0])
+          actions=actions, allowed_actions=np.nonzero(mask)[0]
+      )
 
   def testLargeExploitationCoefficient(self):
     # With a very large exploitation coefficient and a positive number of
@@ -206,8 +225,9 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
         num_samples_list=[
             tf.compat.v2.Variable(0, dtype=tf.int32, name='num_samples_0'),
             tf.compat.v2.Variable(0, dtype=tf.int32, name='num_samples_1'),
-            tf.compat.v2.Variable(10, dtype=tf.int32, name='num_samples_2')
-        ])
+            tf.compat.v2.Variable(10, dtype=tf.int32, name='num_samples_2'),
+        ],
+    )
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_step = ts.restart(observations, batch_size=2)
     action_step = policy.action(time_step, seed=1)
@@ -251,8 +271,10 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
     if mask is None:
       observations = tf.constant([[1, 2]] * batch_size, dtype=tf.float32)
     else:
-      observations = (tf.constant([[1, 2]] * batch_size, dtype=tf.float32),
-                      tf.constant([mask] * batch_size, dtype=tf.float32))
+      observations = (
+          tf.constant([[1, 2]] * batch_size, dtype=tf.float32),
+          tf.constant([mask] * batch_size, dtype=tf.float32),
+      )
     time_step = ts.restart(observations, batch_size=batch_size)
     action_step = policy.action(time_step, seed=1)
     # Initialize all variables
@@ -262,14 +284,17 @@ class FalconRewardPredictionPolicyTest(test_utils.TestCase,
     # empirical distribution of the chosen arms is uniform.
     actions = self.evaluate(action_step.action)
     if mask is None:
-      self.assertAllClose(p_info.log_probability,
-                          tf.math.log([1.0 / 3] * batch_size))
+      self.assertAllClose(
+          p_info.log_probability, tf.math.log([1.0 / 3] * batch_size)
+      )
       self._check_uniform_actions(actions=actions, allowed_actions=[0, 1, 2])
     else:
-      self.assertAllClose(p_info.log_probability,
-                          tf.math.log([1.0 / np.sum(mask)] * batch_size))
+      self.assertAllClose(
+          p_info.log_probability, tf.math.log([1.0 / np.sum(mask)] * batch_size)
+      )
       self._check_uniform_actions(
-          actions=actions, allowed_actions=np.nonzero(mask)[0])
+          actions=actions, allowed_actions=np.nonzero(mask)[0]
+      )
 
   @parameterized.parameters(True, False)
   def testLargeNumSamples(self, set_max_exploration_probability_hint):

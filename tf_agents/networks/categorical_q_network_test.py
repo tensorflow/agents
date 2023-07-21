@@ -20,7 +20,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import categorical_q_network
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
@@ -47,11 +46,13 @@ class CategoricalQNetworkTest(test_utils.TestCase):
     q_network = categorical_q_network.CategoricalQNetwork(
         input_tensor_spec=observations_spec,
         action_spec=action_spec,
-        fc_layer_params=[3])
+        fc_layer_params=[3],
+    )
 
     logits, _ = q_network(time_steps.observation)
-    self.assertAllEqual(logits.shape.as_list(),
-                        [batch_size, num_actions, q_network._num_atoms])
+    self.assertAllEqual(
+        logits.shape.as_list(), [batch_size, num_actions, q_network._num_atoms]
+    )
 
     # There are two trainable layers here: the specified fc_layer and the final
     # logits layer. Each layer has two trainable_variables (kernel and bias),
@@ -72,11 +73,13 @@ class CategoricalQNetworkTest(test_utils.TestCase):
     q_network = categorical_q_network.CategoricalQNetwork(
         input_tensor_spec=observations_spec,
         action_spec=action_spec,
-        fc_layer_params=[3, 3])
+        fc_layer_params=[3, 3],
+    )
 
     logits, _ = q_network(time_steps.observation)
-    self.assertAllEqual(logits.shape.as_list(),
-                        [batch_size, num_actions, q_network._num_atoms])
+    self.assertAllEqual(
+        logits.shape.as_list(), [batch_size, num_actions, q_network._num_atoms]
+    )
 
     # This time there is an extra fc layer, for a total of 6
     # trainable_variables.
@@ -90,18 +93,21 @@ class CategoricalQNetworkTest(test_utils.TestCase):
     self.assertEqual(num_actions, 2)
 
     observations_spec = tensor_spec.TensorSpec(
-        [3, 3, num_state_dims], tf.float32)
+        [3, 3, num_state_dims], tf.float32
+    )
     observations = tf.random.uniform([batch_size, 3, 3, num_state_dims])
     time_steps = ts.restart(observations, batch_size)
 
     q_network = categorical_q_network.CategoricalQNetwork(
         input_tensor_spec=observations_spec,
         action_spec=action_spec,
-        conv_layer_params=[(16, 2, 1), (15, 2, 1)])
+        conv_layer_params=[(16, 2, 1), (15, 2, 1)],
+    )
 
     logits, _ = q_network(time_steps.observation)
-    self.assertAllEqual(logits.shape.as_list(),
-                        [batch_size, num_actions, q_network._num_atoms])
+    self.assertAllEqual(
+        logits.shape.as_list(), [batch_size, num_actions, q_network._num_atoms]
+    )
 
     # This time there are two conv layers and one final logits layer, for a
     # total of 6 trainable_variables.
@@ -121,16 +127,19 @@ class CategoricalQNetworkTest(test_utils.TestCase):
     q_network = categorical_q_network.CategoricalQNetwork(
         input_tensor_spec=observations_spec,
         action_spec=action_spec,
-        fc_layer_params=[3])
+        fc_layer_params=[3],
+    )
 
     logits, _ = q_network(time_steps.observation)
-    self.assertAllEqual(logits.shape.as_list(),
-                        [batch_size, num_actions, q_network._num_atoms])
+    self.assertAllEqual(
+        logits.shape.as_list(), [batch_size, num_actions, q_network._num_atoms]
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     eval_logits = self.evaluate(logits)
     self.assertAllEqual(
-        eval_logits.shape, [batch_size, num_actions, q_network._num_atoms])
+        eval_logits.shape, [batch_size, num_actions, q_network._num_atoms]
+    )
 
   def testGinConfig(self):
     batch_size = 3
@@ -140,7 +149,8 @@ class CategoricalQNetworkTest(test_utils.TestCase):
     self.assertEqual(num_actions, 2)
 
     observations_spec = tensor_spec.TensorSpec(
-        [3, 3, num_state_dims], tf.float32)
+        [3, 3, num_state_dims], tf.float32
+    )
     observations = tf.random.uniform([batch_size, 3, 3, num_state_dims])
     next_observations = tf.random.uniform([batch_size, 3, 3, num_state_dims])
     time_steps = ts.restart(observations, batch_size)
@@ -153,15 +163,18 @@ class CategoricalQNetworkTest(test_utils.TestCase):
     """)
 
     q_network = categorical_q_network.CategoricalQNetwork(
-        input_tensor_spec=observations_spec,
-        action_spec=action_spec)
+        input_tensor_spec=observations_spec, action_spec=action_spec
+    )
 
     logits, _ = q_network(time_steps.observation)
     next_logits, _ = q_network(next_time_steps.observation)
-    self.assertAllEqual(logits.shape.as_list(),
-                        [batch_size, num_actions, q_network.num_atoms])
-    self.assertAllEqual(next_logits.shape.as_list(),
-                        [batch_size, num_actions, q_network.num_atoms])
+    self.assertAllEqual(
+        logits.shape.as_list(), [batch_size, num_actions, q_network.num_atoms]
+    )
+    self.assertAllEqual(
+        next_logits.shape.as_list(),
+        [batch_size, num_actions, q_network.num_atoms],
+    )
 
     # This time there are six layers: two conv layers, three fc layers, and one
     # final logits layer, for 12 trainable_variables in total.

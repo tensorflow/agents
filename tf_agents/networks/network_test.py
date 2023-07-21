@@ -22,7 +22,6 @@ from __future__ import print_function
 from absl.testing import parameterized
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents import specs
 from tf_agents.distributions import utils as distribution_utils
 from tf_agents.keras_layers import rnn_wrapper
@@ -38,6 +37,7 @@ class BaseNetwork(network.Network):
   # pylint: disable=useless-super-delegation
   def __init__(self, v1, **kwargs):
     super(BaseNetwork, self).__init__(v1, **kwargs)
+
   # pylint: enable=useless-super-delegation
 
 
@@ -54,15 +54,15 @@ class MockNetwork(BaseNetwork):
     self.param2 = param2
     self.kwarg1 = kwarg1
     self.kwarg2 = kwarg2
-    super(MockNetwork, self).__init__(param1,
-                                      state_spec=(),
-                                      name='mock')
+    super(MockNetwork, self).__init__(param1, state_spec=(), name='mock')
 
   def build(self, *args, **kwargs):
     self.var1 = common.create_variable(
-        'variable', dtype=tf.float32, trainable=False)
+        'variable', dtype=tf.float32, trainable=False
+    )
     self.var2 = common.create_variable(
-        'trainable_variable', dtype=tf.float32, trainable=True)
+        'trainable_variable', dtype=tf.float32, trainable=True
+    )
 
   def call(self, observations, step_type, network_state=None):
     return self.var1 + self.var2 + observations, ()
@@ -75,19 +75,26 @@ class NoInitNetwork(MockNetwork):
 class GnarlyNetwork(network.Network):
 
   def __init__(self):
-    k1 = tf.keras.Sequential([
-        tf.keras.layers.Dense(
-            32,
-            kernel_regularizer=tf.keras.regularizers.l1_l2(l1=1e-5, l2=1e-4),
-            bias_regularizer=tf.keras.regularizers.l2(1e-4),
-        ),
-        tf.keras.layers.Dense(64),
-        tf.keras.layers.BatchNormalization()
-    ], name='a')
+    k1 = tf.keras.Sequential(
+        [
+            tf.keras.layers.Dense(
+                32,
+                kernel_regularizer=tf.keras.regularizers.l1_l2(
+                    l1=1e-5, l2=1e-4
+                ),
+                bias_regularizer=tf.keras.regularizers.l2(1e-4),
+            ),
+            tf.keras.layers.Dense(64),
+            tf.keras.layers.BatchNormalization(),
+        ],
+        name='a',
+    )
     k2 = tf.keras.layers.Dense(12, name='b')
     super(GnarlyNetwork, self).__init__(
         input_tensor_spec=tf.TensorSpec(dtype=tf.float32, shape=(2,)),
-        state_spec=(), name=None)
+        state_spec=(),
+        name=None,
+    )
     self._k1 = k1
     self._k2 = k2
 
@@ -171,7 +178,8 @@ class NetworkTest(tf.test.TestCase):
     losses = net.losses
     trainable_weight_names = sorted([w.name for w in net.trainable_weights])
     non_trainable_weight_names = sorted(
-        [w.name for w in net.non_trainable_weights])
+        [w.name for w in net.non_trainable_weights]
+    )
     self.assertEqual(layer_names, ['a', 'b'])
     self.assertLen(losses, 2)
     for loss in losses:
@@ -179,18 +187,24 @@ class NetworkTest(tf.test.TestCase):
       self.assertEqual(loss.shape, ())
     self.assertEqual(
         [x.lstrip('gnarly_network/') for x in trainable_weight_names],
-        ['batch_normalization/beta:0',
-         'batch_normalization/gamma:0',
-         'dense/bias:0',
-         'dense/kernel:0',
-         'dense_1/bias:0',
-         'dense_1/kernel:0',
-         'b/bias:0',
-         'b/kernel:0'])
+        [
+            'batch_normalization/beta:0',
+            'batch_normalization/gamma:0',
+            'dense/bias:0',
+            'dense/kernel:0',
+            'dense_1/bias:0',
+            'dense_1/kernel:0',
+            'b/bias:0',
+            'b/kernel:0',
+        ],
+    )
     self.assertEqual(
         [x.lstrip('gnarly_network/') for x in non_trainable_weight_names],
-        ['batch_normalization/moving_mean:0',
-         'batch_normalization/moving_variance:0'])
+        [
+            'batch_normalization/moving_mean:0',
+            'batch_normalization/moving_variance:0',
+        ],
+    )
 
   def test_dont_complain_if_no_network_state_in_call_signature(self):
     net = NetworkNoExtraKeywordsInCallSignature()
@@ -230,8 +244,7 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
           lambda: tf.keras.layers.LSTMCell(3),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
-          [tf.TensorSpec((3,), tf.float32),
-           tf.TensorSpec((3,), tf.float32)],
+          [tf.TensorSpec((3,), tf.float32), tf.TensorSpec((3,), tf.float32)],
       ),
       (
           'LSTMCellInRNN',
@@ -239,53 +252,49 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
               tf.keras.layers.RNN(
                   tf.keras.layers.LSTMCell(3),
                   return_state=True,
-                  return_sequences=True)
+                  return_sequences=True,
+              )
           ),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
-          [tf.TensorSpec((3,), tf.float32),
-           tf.TensorSpec((3,), tf.float32)],
+          [tf.TensorSpec((3,), tf.float32), tf.TensorSpec((3,), tf.float32)],
       ),
       (
           'LSTM',
           lambda: rnn_wrapper.RNNWrapper(
-              tf.keras.layers.LSTM(
-                  3,
-                  return_state=True,
-                  return_sequences=True)
+              tf.keras.layers.LSTM(3, return_state=True, return_sequences=True)
           ),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
-          [tf.TensorSpec((3,), tf.float32),
-           tf.TensorSpec((3,), tf.float32)],
+          [tf.TensorSpec((3,), tf.float32), tf.TensorSpec((3,), tf.float32)],
       ),
       (
           'TimeDistributed',
           lambda: tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(3)),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
-          ()
+          (),
       ),
       (
           'Conv2D',
           lambda: tf.keras.layers.Conv2D(2, 3),
           tf.TensorSpec((28, 28, 5), tf.float32),
           tf.TensorSpec((26, 26, 2), tf.float32),
-          ()
+          (),
       ),
       (
           'SequentialOfDense',
           lambda: tf.keras.Sequential([tf.keras.layers.Dense(3)] * 2),
           tf.TensorSpec((5,), tf.float32),
           tf.TensorSpec((3,), tf.float32),
-          ()
+          (),
       ),
       (
           'NormalDistribution',
-          lambda: tf.keras.Sequential(
-              [tf.keras.layers.Dense(3),
-               tf.keras.layers.Lambda(
-                   lambda x: tfd.Normal(loc=x, scale=x**2))]),
+          lambda: tf.keras.Sequential([
+              tf.keras.layers.Dense(3),
+              tf.keras.layers.Lambda(lambda x: tfd.Normal(loc=x, scale=x**2)),
+          ]),
           tf.TensorSpec((5,), tf.float32),
           distribution_utils.DistributionSpecV2(
               event_shape=tf.TensorShape(()),
@@ -295,21 +304,26 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
                   params=dict(
                       loc=tf.TensorSpec((3,), tf.float32),
                       scale=tf.TensorSpec((3,), tf.float32),
-                  ))),
-          ()
+                  ),
+              ),
+          ),
+          (),
       ),
   )
   # pylint: enable=g-long-λ
-  def testKerasLayerCreate(self, layer_fn, input_spec, expected_output_spec,
-                           expected_state_spec):
+  def testKerasLayerCreate(
+      self, layer_fn, input_spec, expected_output_spec, expected_state_spec
+  ):
     layer = layer_fn()
     with self.assertRaisesRegex(ValueError, 'an input_spec is required'):
       network.create_variables(layer)
     output_spec = network.create_variables(layer, input_spec)
     self.assertTrue(layer.built)
     self.assertEqual(
-        output_spec, expected_output_spec,
-        '\n{}\nvs.\n{}\n'.format(output_spec, expected_output_spec))
+        output_spec,
+        expected_output_spec,
+        '\n{}\nvs.\n{}\n'.format(output_spec, expected_output_spec),
+    )
     output_spec_2 = network.create_variables(layer, input_spec)
     self.assertEqual(output_spec_2, expected_output_spec)
     state_spec = getattr(layer, '_network_state_spec', None)
@@ -319,15 +333,17 @@ class CreateVariablesTest(parameterized.TestCase, tf.test.TestCase):
 class MockStateFullNetwork(BaseNetwork):
 
   def __init__(self, input_spec, state_spec):
-    super(MockStateFullNetwork, self).__init__(input_spec,
-                                               state_spec=state_spec,
-                                               name='statefullmock')
+    super(MockStateFullNetwork, self).__init__(
+        input_spec, state_spec=state_spec, name='statefullmock'
+    )
 
   def build(self, *args, **kwargs):
     self.var = common.create_variable(
-        'trainable_variable', dtype=tf.float32, trainable=True)
+        'trainable_variable', dtype=tf.float32, trainable=True
+    )
     self.state = common.create_variable(
-        'state', dtype=tf.float32, trainable=False)
+        'state', dtype=tf.float32, trainable=False
+    )
 
   def call(self, observations, network_state=None):
     return self.var + observations, self.state + network_state
@@ -396,6 +412,7 @@ class StateFullNetworkTest(tf.test.TestCase):
 
     self.assertEqual(self.evaluate(outputs), 1.0)
     self.assertEqual(self.evaluate(new_state), 0.0)
+
 
 if __name__ == '__main__':
   tf.test.main()

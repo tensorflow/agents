@@ -52,7 +52,7 @@ def SetDisplayFromWebTest():
   assert res
 
   # If we find "/tmp/.X11-unix/X1", then we will set DISPLAY to be ":1".
-  display = ":" + res[0][len(pattern)-1:]
+  display = ":" + res[0][len(pattern) - 1 :]
   os.environ["DISPLAY"] = display
   logging.info("Set DISPLAY=%s", display)
 

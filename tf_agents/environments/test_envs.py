@@ -21,11 +21,9 @@ from __future__ import print_function
 
 import gin
 import numpy as np
-
 from tf_agents import specs
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
-
 from tf_agents.typing import types
 
 
@@ -54,16 +52,16 @@ class CountingEnv(py_environment.PyEnvironment):
 
   def _step(self, action):
     del action  # Unused.
-    self._current_step = np.array(1 + self._current_step,
-                                  dtype=self._dtype)
+    self._current_step = np.array(1 + self._current_step, dtype=self._dtype)
     if self._current_step < self._steps_per_episode:
       return ts.transition(self._get_observation(), 0)  # pytype: disable=wrong-arg-types
     return ts.termination(self._get_observation(), 1)  # pytype: disable=wrong-arg-types
 
   def _get_observation(self):
     if self._episodes:
-      return np.array(10 * self._episodes + self._current_step,
-                      dtype=self._dtype)
+      return np.array(
+          10 * self._episodes + self._current_step, dtype=self._dtype
+      )
     return self._current_step
 
   def _reset(self):
@@ -91,8 +89,10 @@ class EpisodeCountingEnv(py_environment.PyEnvironment):
     super(EpisodeCountingEnv, self).__init__(handle_auto_reset=True)
 
   def observation_spec(self):
-    return (specs.BoundedArraySpec((), dtype=np.int32),
-            specs.BoundedArraySpec((), dtype=np.int32))
+    return (
+        specs.BoundedArraySpec((), dtype=np.int32),
+        specs.BoundedArraySpec((), dtype=np.int32),
+    )
 
   def action_spec(self):
     return specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
@@ -105,8 +105,10 @@ class EpisodeCountingEnv(py_environment.PyEnvironment):
     return ts.termination(self._get_observation(), 1)  # pytype: disable=wrong-arg-types
 
   def _get_observation(self):
-    return (np.array(self._episodes, dtype=np.int32),
-            np.array(self._steps, dtype=np.int32))
+    return (
+        np.array(self._episodes, dtype=np.int32),
+        np.array(self._steps, dtype=np.int32),
+    )
 
   def _reset(self):
     if self._current_time_step and self._current_time_step.is_last():
@@ -139,16 +141,18 @@ class NestedCountingEnv(py_environment.PyEnvironment):
   def observation_spec(self) -> types.NestedArraySpec:
     return {
         'total_steps': specs.BoundedArraySpec((), dtype=np.int32),
-        'current_steps': specs.BoundedArraySpec((), dtype=np.int32)
+        'current_steps': specs.BoundedArraySpec((), dtype=np.int32),
     }
 
   def action_spec(self) -> types.NestedArraySpec:
     if self._nested_action:
       return {
-          'foo':
-              specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1),
-          'bar':
-              specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
+          'foo': specs.BoundedArraySpec(
+              (), dtype=np.int32, minimum=0, maximum=1
+          ),
+          'bar': specs.BoundedArraySpec(
+              (), dtype=np.int32, minimum=0, maximum=1
+          ),
       }
     else:
       return specs.BoundedArraySpec((), dtype=np.int32, minimum=0, maximum=1)
@@ -162,10 +166,10 @@ class NestedCountingEnv(py_environment.PyEnvironment):
 
   def _get_observation(self):
     return {
-        'total_steps':
-            np.array(10 * self._episodes + self._current_step, dtype=np.int32),
-        'current_steps':
-            self._current_step
+        'total_steps': np.array(
+            10 * self._episodes + self._current_step, dtype=np.int32
+        ),
+        'current_steps': self._current_step,
     }
 
   def _reset(self):

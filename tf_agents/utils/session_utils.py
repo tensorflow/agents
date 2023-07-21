@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A class to create objects which needs a session to be functional.
-
-"""
+"""A class to create objects which needs a session to be functional."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -120,7 +118,9 @@ class SessionUser(object):
       raise AttributeError(
           "No TensorFlow session-like object was set on this {!r}, and none "
           "could be retrieved using 'tf.get_default_session()'.".format(
-              self.__class__.__name__))
+              self.__class__.__name__
+          )
+      )
     return default_session
 
   @session.setter

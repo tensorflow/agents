@@ -51,21 +51,25 @@ class DqnMnih15Return(PerfZeroBenchmark):
     output_dir = self._get_test_output_dir('pongAt3M')
     start_time_sec = time.time()
     dqn_train_eval_atari.train_eval(
-        output_dir, eval_interval=10000, num_iterations=750000)
+        output_dir, eval_interval=10000, num_iterations=750000
+    )
     wall_time_sec = time.time() - start_time_sec
     event_file = utils.find_event_log(os.path.join(output_dir, 'eval'))
     values, _ = utils.extract_event_log_values(
-        event_file, 'Metrics/AverageReturn/EnvironmentSteps')
+        event_file, 'Metrics/AverageReturn/EnvironmentSteps'
+    )
     # Min/Max ranges are very large to only hard fail if very broken. The system
     # monitoring the results owns looking for anomalies.
     metric_3m = self.build_metric(
         'average_return_at_env_step3000000',
         values[3000000],
         min_value=-14,
-        max_value=21)
+        max_value=21,
+    )
 
     self.report_benchmark(
-        wall_time=wall_time_sec, metrics=[metric_3m], extras={})
+        wall_time=wall_time_sec, metrics=[metric_3m], extras={}
+    )
 
 
 if __name__ == '__main__':

@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.environments import environment_utilities
 from tf_agents.bandits.environments import stationary_stochastic_py_environment as sspe
 from tf_agents.drivers import dynamic_episode_driver
@@ -36,15 +35,18 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testPolicyState(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
 
     num_episodes_observer = driver_test_utils.NumEpisodesObserver()
     num_steps_observer = driver_test_utils.NumStepsObserver()
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
-        env, policy, observers=[num_episodes_observer, num_steps_observer])
+        env, policy, observers=[num_episodes_observer, num_steps_observer]
+    )
     run_driver = driver.run()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -56,15 +58,18 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testContinuePreviusRun(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
 
     num_episodes_observer = driver_test_utils.NumEpisodesObserver()
     num_steps_observer = driver_test_utils.NumStepsObserver()
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
-        env, policy, observers=[num_episodes_observer, num_steps_observer])
+        env, policy, observers=[num_episodes_observer, num_steps_observer]
+    )
     time_step, policy_state = driver.run()
     time_step, policy_state = driver.run(time_step, policy_state)
 
@@ -77,19 +82,23 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testOneStepUpdatesObservers(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
     num_episodes_observer = driver_test_utils.NumEpisodesObserver()
     num_steps_observer = driver_test_utils.NumStepsObserver()
     num_steps_transition_observer = (
-        driver_test_utils.NumStepsTransitionObserver())
+        driver_test_utils.NumStepsTransitionObserver()
+    )
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env,
         policy,
         observers=[num_episodes_observer, num_steps_observer],
-        transition_observers=[num_steps_transition_observer])
+        transition_observers=[num_steps_transition_observer],
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     for _ in range(5):
@@ -102,19 +111,23 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testMultiStepUpdatesObservers(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
     num_episodes_observer = driver_test_utils.NumEpisodesObserver()
     num_steps_observer = driver_test_utils.NumStepsObserver()
     num_steps_transition_observer = (
-        driver_test_utils.NumStepsTransitionObserver())
+        driver_test_utils.NumStepsTransitionObserver()
+    )
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env,
         policy,
         observers=[num_episodes_observer, num_steps_observer],
-        transition_observers=[num_steps_transition_observer])
+        transition_observers=[num_steps_transition_observer],
+    )
 
     run_driver = driver.run(num_episodes=5)
 
@@ -127,22 +140,28 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testTwoStepObservers(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
     num_episodes_observer0 = driver_test_utils.NumEpisodesObserver(
-        variable_scope='observer0')
+        variable_scope='observer0'
+    )
     num_episodes_observer1 = driver_test_utils.NumEpisodesObserver(
-        variable_scope='observer1')
+        variable_scope='observer1'
+    )
     num_steps_transition_observer = (
-        driver_test_utils.NumStepsTransitionObserver())
+        driver_test_utils.NumStepsTransitionObserver()
+    )
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env,
         policy,
         num_episodes=5,
         observers=[num_episodes_observer0, num_episodes_observer1],
-        transition_observers=[num_steps_transition_observer])
+        transition_observers=[num_steps_transition_observer],
+    )
     run_driver = driver.run()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -153,13 +172,16 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
 
   def testOneStepReplayBufferObservers(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
     replay_buffer = driver_test_utils.make_replay_buffer(policy)
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
-        env, policy, num_episodes=1, observers=[replay_buffer.add_batch])
+        env, policy, num_episodes=1, observers=[replay_buffer.add_batch]
+    )
 
     run_driver = driver.run if tf.executing_eagerly() else driver.run()
 
@@ -174,22 +196,28 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
     self.assertAllEqual(trajectories.action, [[1, 2, 1, 1, 2, 1, 1, 2, 1]])
     self.assertAllEqual(trajectories.observation, [[0, 1, 3, 0, 1, 3, 0, 1, 3]])
     self.assertAllEqual(trajectories.policy_info, [[2, 4, 2, 2, 4, 2, 2, 4, 2]])
-    self.assertAllEqual(trajectories.next_step_type,
-                        [[1, 2, 0, 1, 2, 0, 1, 2, 0]])
-    self.assertAllEqual(trajectories.reward,
-                        [[1., 1., 0., 1., 1., 0., 1., 1., 0.]])
-    self.assertAllEqual(trajectories.discount,
-                        [[1., 0., 1, 1, 0, 1., 1., 0., 1.]])
+    self.assertAllEqual(
+        trajectories.next_step_type, [[1, 2, 0, 1, 2, 0, 1, 2, 0]]
+    )
+    self.assertAllEqual(
+        trajectories.reward, [[1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0]]
+    )
+    self.assertAllEqual(
+        trajectories.discount, [[1.0, 0.0, 1, 1, 0, 1.0, 1.0, 0.0, 1.0]]
+    )
 
   def testMultiStepReplayBufferObservers(self):
     env = tf_py_environment.TFPyEnvironment(
-        driver_test_utils.PyEnvironmentMock())
-    policy = driver_test_utils.TFPolicyMock(env.time_step_spec(),
-                                            env.action_spec())
+        driver_test_utils.PyEnvironmentMock()
+    )
+    policy = driver_test_utils.TFPolicyMock(
+        env.time_step_spec(), env.action_spec()
+    )
     replay_buffer = driver_test_utils.make_replay_buffer(policy)
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
-        env, policy, num_episodes=3, observers=[replay_buffer.add_batch])
+        env, policy, num_episodes=3, observers=[replay_buffer.add_batch]
+    )
 
     run_driver = driver.run()
     rb_gather_all = replay_buffer.gather_all()
@@ -202,15 +230,17 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
     self.assertAllEqual(trajectories.action, [[1, 2, 1, 1, 2, 1, 1, 2, 1]])
     self.assertAllEqual(trajectories.observation, [[0, 1, 3, 0, 1, 3, 0, 1, 3]])
     self.assertAllEqual(trajectories.policy_info, [[2, 4, 2, 2, 4, 2, 2, 4, 2]])
-    self.assertAllEqual(trajectories.next_step_type,
-                        [[1, 2, 0, 1, 2, 0, 1, 2, 0]])
-    self.assertAllEqual(trajectories.reward,
-                        [[1., 1., 0., 1., 1., 0., 1., 1., 0.]])
-    self.assertAllEqual(trajectories.discount,
-                        [[1., 0., 1., 1., 0., 1., 1., 0., 1.]])
+    self.assertAllEqual(
+        trajectories.next_step_type, [[1, 2, 0, 1, 2, 0, 1, 2, 0]]
+    )
+    self.assertAllEqual(
+        trajectories.reward, [[1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0]]
+    )
+    self.assertAllEqual(
+        trajectories.discount, [[1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]]
+    )
 
   def testBanditEnvironment(self):
-
     def _context_sampling_fn():
       return np.array([[5, -5], [2, -2]])
 
@@ -220,22 +250,26 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
     ]
     batch_size = 2
     py_env = sspe.StationaryStochasticPyEnvironment(
-        _context_sampling_fn, reward_fns, batch_size=batch_size)
+        _context_sampling_fn, reward_fns, batch_size=batch_size
+    )
     env = tf_py_environment.TFPyEnvironment(py_env)
-    policy = random_tf_policy.RandomTFPolicy(env.time_step_spec(),
-                                             env.action_spec())
+    policy = random_tf_policy.RandomTFPolicy(
+        env.time_step_spec(), env.action_spec()
+    )
 
     steps_per_loop = 4
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=policy.trajectory_spec,
         batch_size=batch_size,
-        max_length=steps_per_loop)
+        max_length=steps_per_loop,
+    )
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
         env,
         policy,
         num_episodes=steps_per_loop * batch_size,
-        observers=[replay_buffer.add_batch])
+        observers=[replay_buffer.add_batch],
+    )
 
     run_driver = driver.run()
     rb_gather_all = replay_buffer.gather_all()
@@ -245,8 +279,9 @@ class DynamicEpisodeDriverTest(test_utils.TestCase):
     trajectories = self.evaluate(rb_gather_all)
 
     self.assertAllEqual(trajectories.step_type, [[0, 0, 0, 0], [0, 0, 0, 0]])
-    self.assertAllEqual(trajectories.next_step_type,
-                        [[2, 2, 2, 2], [2, 2, 2, 2]])
+    self.assertAllEqual(
+        trajectories.next_step_type, [[2, 2, 2, 2], [2, 2, 2, 2]]
+    )
 
 
 if __name__ == '__main__':

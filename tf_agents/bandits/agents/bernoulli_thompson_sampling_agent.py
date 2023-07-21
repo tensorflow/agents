@@ -15,11 +15,10 @@
 
 """An Thompson sampling agent for Bernoulli bandit problems."""
 
-from typing import Optional, Text, Sequence
+from typing import Optional, Sequence, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents import data_converter
 from tf_agents.agents import tf_agent
 from tf_agents.bandits.policies import bernoulli_thompson_sampling_policy as bernoulli_policy
@@ -32,10 +31,12 @@ from tf_agents.utils import nest_utils
 class BernoulliBanditVariableCollection(tf.Module):
   """A collection of variables used by `BernoulliThompsonSamplingAgent`."""
 
-  def __init__(self,
-               num_actions: int,
-               dtype: tf.DType = tf.float32,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      num_actions: int,
+      dtype: tf.DType = tf.float32,
+      name: Optional[Text] = None,
+  ):
     """Initializes an instance of `BernoulliBanditVariableCollection`.
 
     It creates all the variables needed for `BernoulliThompsonSamplingAgent`.
@@ -51,14 +52,18 @@ class BernoulliBanditVariableCollection(tf.Module):
     tf.Module.__init__(self, name=name)
     # It holds the `alpha` parameter of the beta distribution of each arm.
     self.alpha = [
-        tf.compat.v2.Variable(tf.ones([], dtype=dtype),
-                              name='alpha_{}'.format(k)) for k in range(
-                                  num_actions)]
+        tf.compat.v2.Variable(
+            tf.ones([], dtype=dtype), name='alpha_{}'.format(k)
+        )
+        for k in range(num_actions)
+    ]
     # It holds the `beta` parameter of the beta distribution of each arm.
     self.beta = [
-        tf.compat.v2.Variable(tf.ones([], dtype=dtype),
-                              name='beta_{}'.format(k)) for k in range(
-                                  num_actions)]
+        tf.compat.v2.Variable(
+            tf.ones([], dtype=dtype), name='beta_{}'.format(k)
+        )
+        for k in range(num_actions)
+    ]
 
 
 @gin.configurable
@@ -81,9 +86,11 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
       dtype: tf.DType = tf.float32,
       batch_size: Optional[int] = 1,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       emit_policy_info: Sequence[Text] = (),
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Bernoulli Thompson Sampling Agent.
 
     Args:
@@ -117,18 +124,22 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
     tf.Module.__init__(self, name=name)
     common.tf_agents_gauge.get_cell('TFABandit').set(True)
     self._observation_and_action_constraint_splitter = (
-        observation_and_action_constraint_splitter)
+        observation_and_action_constraint_splitter
+    )
     self._num_actions = policy_utilities.get_num_actions_from_tensor_spec(
-        action_spec)
+        action_spec
+    )
 
     self._dtype = dtype
     if variable_collection is None:
       variable_collection = BernoulliBanditVariableCollection(
-          num_actions=self._num_actions,
-          dtype=dtype)
+          num_actions=self._num_actions, dtype=dtype
+      )
     elif not isinstance(variable_collection, BernoulliBanditVariableCollection):
-      raise TypeError('Parameter `variable_collection` should be '
-                      'of type `BernoulliBanditVariableCollection`.')
+      raise TypeError(
+          'Parameter `variable_collection` should be '
+          'of type `BernoulliBanditVariableCollection`.'
+      )
     self._variable_collection = variable_collection
     self._alpha = variable_collection.alpha
     self._beta = variable_collection.beta
@@ -139,16 +150,19 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
         self._alpha,
         self._beta,
         observation_and_action_constraint_splitter,
-        emit_policy_info=emit_policy_info)
+        emit_policy_info=emit_policy_info,
+    )
 
     super(BernoulliThompsonSamplingAgent, self).__init__(
         time_step_spec,
         action_spec,
         policy,
         collect_policy=policy,
-        train_sequence_length=None)
+        train_sequence_length=None,
+    )
     self._as_trajectory = data_converter.AsTrajectory(
-        self.data_context, sequence_length=None)
+        self.data_context, sequence_length=None
+    )
 
   def _initialize(self):
     tf.compat.v1.variables_initializer(self.variables)
@@ -164,21 +178,28 @@ class BernoulliThompsonSamplingAgent(tf_agent.TFAgent):
   def _train(self, experience, weights):
     experience = self._as_trajectory(experience)
     reward, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.reward, self._time_step_spec.reward)
+        experience.reward, self._time_step_spec.reward
+    )
     reward = tf.clip_by_value(reward, clip_value_min=0.0, clip_value_max=1.0)
     action, _ = nest_utils.flatten_multi_batched_nested_tensors(
-        experience.action, self._action_spec)
+        experience.action, self._action_spec
+    )
 
     partitioned_rewards = tf.dynamic_partition(
-        reward, action, self._num_actions)
+        reward, action, self._num_actions
+    )
     for k in range(self._num_actions):
       tf.compat.v1.assign_add(
-          self._alpha[k], tf.cast(
-              tf.reduce_sum(partitioned_rewards[k]), dtype=self._dtype))
+          self._alpha[k],
+          tf.cast(tf.reduce_sum(partitioned_rewards[k]), dtype=self._dtype),
+      )
       tf.compat.v1.assign_add(
-          self._beta[k], tf.cast(
-              tf.reduce_sum(1.0 - partitioned_rewards[k]), dtype=self._dtype))
+          self._beta[k],
+          tf.cast(
+              tf.reduce_sum(1.0 - partitioned_rewards[k]), dtype=self._dtype
+          ),
+      )
 
     self.train_step_counter.assign_add(self._batch_size)
-    loss = -1. * tf.reduce_sum(reward)
+    loss = -1.0 * tf.reduce_sum(reward)
     return tf_agent.LossInfo(loss=(loss), extra=())

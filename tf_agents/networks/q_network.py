@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 
@@ -36,27 +35,30 @@ def validate_specs(action_spec, observation_spec):
 
   if flat_action_spec[0].shape not in [(), (1,)]:
     raise ValueError(
-        'Network only supports action_specs with shape in [(), (1,)])')
+        'Network only supports action_specs with shape in [(), (1,)])'
+    )
 
 
 @gin.configurable
 class QNetwork(network.Network):
   """Feed Forward network."""
 
-  def __init__(self,
-               input_tensor_spec,
-               action_spec,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               fc_layer_params=(75, 40),
-               dropout_layer_params=None,
-               activation_fn=tf.keras.activations.relu,
-               kernel_initializer=None,
-               batch_squash=True,
-               dtype=tf.float32,
-               q_layer_activation_fn=None,
-               name='QNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      action_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
+      conv_layer_params=None,
+      fc_layer_params=(75, 40),
+      dropout_layer_params=None,
+      activation_fn=tf.keras.activations.relu,
+      kernel_initializer=None,
+      batch_squash=True,
+      dtype=tf.float32,
+      q_layer_activation_fn=None,
+      name='QNetwork',
+  ):
     """Creates an instance of `QNetwork`.
 
     Args:
@@ -65,14 +67,14 @@ class QNetwork(network.Network):
       action_spec: A nest of `tensor_spec.BoundedTensorSpec` representing the
         actions.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
-        of tensors and combines them. Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        of tensors and combines them. Good options include `tf.keras.layers.Add`
+        and `tf.keras.layers.Concatenate(axis=-1)`. This layer must not be
+        already built. For more details see the documentation of
+        `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -113,20 +115,22 @@ class QNetwork(network.Network):
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
         batch_squash=batch_squash,
-        dtype=dtype)
+        dtype=dtype,
+    )
 
     q_value_layer = tf.keras.layers.Dense(
         num_actions,
         activation=q_layer_activation_fn,
         kernel_initializer=tf.random_uniform_initializer(
-            minval=-0.03, maxval=0.03),
+            minval=-0.03, maxval=0.03
+        ),
         bias_initializer=tf.constant_initializer(-0.2),
-        dtype=dtype)
+        dtype=dtype,
+    )
 
     super(QNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     self._encoder = encoder
     self._q_value_layer = q_value_layer
@@ -145,7 +149,10 @@ class QNetwork(network.Network):
       A tuple `(logits, network_state)`.
     """
     state, network_state = self._encoder(
-        observation, step_type=step_type, network_state=network_state,
-        training=training)
+        observation,
+        step_type=step_type,
+        network_state=network_state,
+        training=training,
+    )
     q_value = self._q_value_layer(state, training=training)
     return q_value, network_state

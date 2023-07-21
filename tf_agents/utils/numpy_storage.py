@@ -116,11 +116,14 @@ class NumpyState(base.Trackable):
       except AttributeError:
         value = _NumpyWrapper(value)
         self._track_trackable(value, name=name, overwrite=True)
-    elif (name not in ('_self_setattr_tracking', '_self_update_uid',
-                       # TODO(b/130295584): Remove these non-_self aliases when
-                       # sync issues are resolved.
-                       '_setattr_tracking', '_update_uid')
-          and getattr(self, '_setattr_tracking', True)):
+    elif name not in (
+        '_self_setattr_tracking',
+        '_self_update_uid',
+        # TODO(b/130295584): Remove these non-_self aliases when
+        # sync issues are resolved.
+        '_setattr_tracking',
+        '_update_uid',
+    ) and getattr(self, '_setattr_tracking', True):
       # Mixing restore()-created attributes with user-added checkpointable
       # objects is tricky, since we can't use the `_lookup_dependency` trick to
       # re-create attributes (we might accidentally steal the restoration for
@@ -129,10 +132,14 @@ class NumpyState(base.Trackable):
       # `_lookup_dependency` to figure out whether we should create a NumPy
       # array for the attribute or not.
       raise NotImplementedError(
-          ('Assigned %s to the %s property of %s, which is not a NumPy array. '
-           'Currently mixing NumPy arrays and other checkpointable objects is '
-           'not supported. File a feature request if this limitation bothers '
-           'you.') % (value, name, self))
+          (
+              'Assigned %s to the %s property of %s, which is not a NumPy'
+              ' array. Currently mixing NumPy arrays and other checkpointable'
+              ' objects is not supported. File a feature request if this'
+              ' limitation bothers you.'
+          )
+          % (value, name, self)
+      )
     super(NumpyState, self).__setattr__(name, value)
 
 
@@ -188,12 +195,16 @@ class NumpyStorage(tf.Module):
       ValueError: If data_spec is not an instance or nest of ArraySpecs.
     """
     self._capacity = capacity
-    if not all([
-        isinstance(spec, array_spec.ArraySpec)
-        for spec in tf.nest.flatten(data_spec)
-    ]):
-      raise ValueError('The data_spec parameter must be an instance or nest of '
-                       'array_spec.ArraySpec. Got: {}'.format(data_spec))
+    if not all(
+        [
+            isinstance(spec, array_spec.ArraySpec)
+            for spec in tf.nest.flatten(data_spec)
+        ]
+    ):
+      raise ValueError(
+          'The data_spec parameter must be an instance or nest of '
+          'array_spec.ArraySpec. Got: {}'.format(data_spec)
+      )
     self._data_spec = data_spec
     self._flat_specs = tf.nest.flatten(data_spec)
     self._np_state = NumpyState()

@@ -32,7 +32,6 @@ from absl import logging
 import gin
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.keras_layers import permanent_variable_rate_dropout
 from tf_agents.networks import network
 from tf_agents.networks import utils
@@ -64,13 +63,17 @@ def _copy_layer(layer):
 
   # pylint:disable=unidiomatic-typecheck
   if type(layer) == tf.compat.v1.keras.layers.DenseFeatures:
-    raise ValueError('DenseFeatures V1 is not supported. '
-                     'Use tf.compat.v2.keras.layers.DenseFeatures instead.')
+    raise ValueError(
+        'DenseFeatures V1 is not supported. '
+        'Use tf.compat.v2.keras.layers.DenseFeatures instead.'
+    )
   if layer.built:
     logging.warning(
-        'Beware: Copying a layer that has already been built: \'%s\'.  '
-        'This can lead to subtle bugs because the original layer\'s weights '
-        'will not be used in the copy.', layer.name)
+        "Beware: Copying a layer that has already been built: '%s'.  "
+        "This can lead to subtle bugs because the original layer's weights "
+        'will not be used in the copy.',
+        layer.name,
+    )
   # Get a fresh copy so we don't modify an incoming layer in place.  Weights
   # will not be shared.
   return type(layer).from_config(layer.get_config())
@@ -80,20 +83,22 @@ def _copy_layer(layer):
 class EncodingNetwork(network.Network):
   """Feed Forward network with CNN and FNN layers."""
 
-  def __init__(self,
-               input_tensor_spec,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               fc_layer_params=None,
-               dropout_layer_params=None,
-               activation_fn=tf.keras.activations.relu,
-               weight_decay_params=None,
-               kernel_initializer=None,
-               batch_squash=True,
-               dtype=tf.float32,
-               name='EncodingNetwork',
-               conv_type=CONV_TYPE_2D):
+  def __init__(
+      self,
+      input_tensor_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
+      conv_layer_params=None,
+      fc_layer_params=None,
+      dropout_layer_params=None,
+      activation_fn=tf.keras.activations.relu,
+      weight_decay_params=None,
+      kernel_initializer=None,
+      batch_squash=True,
+      dtype=tf.float32,
+      name='EncodingNetwork',
+      conv_type=CONV_TYPE_2D,
+  ):
     """Creates an instance of `EncodingNetwork`.
 
     Network supports calls with shape outer_rank + input_tensor_spec.shape. Note
@@ -153,9 +158,9 @@ class EncodingNetwork(network.Network):
         `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`. This
         layer must not be already built.
       conv_layer_params: Optional list of convolution layers parameters, where
-        each item is either a length-three tuple indicating
-        `(filters, kernel_size, stride)` or a length-four tuple indicating
-        `(filters, kernel_size, stride, dilation_rate)`.
+        each item is either a length-three tuple indicating `(filters,
+        kernel_size, stride)` or a length-four tuple indicating `(filters,
+        kernel_size, stride, dilation_rate)`.
       fc_layer_params: Optional list of fully_connected parameters, where each
         item is the number of units in the layer.
       dropout_layer_params: Optional list of dropout layer parameters, each item
@@ -202,18 +207,22 @@ class EncodingNetwork(network.Network):
         input_nest = [input_tensor_spec]
       nest.assert_shallow_structure(preprocessing_layers, input_nest)
 
-    if (len(tf.nest.flatten(input_tensor_spec)) > 1 and
-        preprocessing_combiner is None):
+    if (
+        len(tf.nest.flatten(input_tensor_spec)) > 1
+        and preprocessing_combiner is None
+    ):
       raise ValueError(
           'preprocessing_combiner layer is required when more than 1 '
-          'input_tensor_spec is provided.')
+          'input_tensor_spec is provided.'
+      )
 
     if preprocessing_combiner is not None:
       preprocessing_combiner = _copy_layer(preprocessing_combiner)
 
     if not kernel_initializer:
       kernel_initializer = tf.compat.v1.variance_scaling_initializer(
-          scale=2.0, mode='fan_in', distribution='truncated_normal')
+          scale=2.0, mode='fan_in', distribution='truncated_normal'
+      )
 
     layers = []
 
@@ -223,8 +232,9 @@ class EncodingNetwork(network.Network):
       elif conv_type == '1d':
         conv_layer_type = tf.keras.layers.Conv1D
       else:
-        raise ValueError('unsupported conv type of %s. Use 1d or 2d' % (
-            conv_type))
+        raise ValueError(
+            'unsupported conv type of %s. Use 1d or 2d' % (conv_type)
+        )
 
       for config in conv_layer_params:
         if len(config) == 4:
@@ -234,7 +244,8 @@ class EncodingNetwork(network.Network):
           dilation_rate = (1, 1) if conv_type == '2d' else (1,)
         else:
           raise ValueError(
-              'only 3 or 4 elements permitted in conv_layer_params tuples')
+              'only 3 or 4 elements permitted in conv_layer_params tuples'
+          )
         layers.append(
             conv_layer_type(
                 filters=filters,
@@ -243,7 +254,9 @@ class EncodingNetwork(network.Network):
                 dilation_rate=dilation_rate,
                 activation=activation_fn,
                 kernel_initializer=kernel_initializer,
-                dtype=dtype))
+                dtype=dtype,
+            )
+        )
 
     layers.append(tf.keras.layers.Flatten())
 
@@ -252,19 +265,24 @@ class EncodingNetwork(network.Network):
         dropout_layer_params = [None] * len(fc_layer_params)
       else:
         if len(dropout_layer_params) != len(fc_layer_params):
-          raise ValueError('Dropout and fully connected layer parameter lists'
-                           'have different lengths (%d vs. %d.)' %
-                           (len(dropout_layer_params), len(fc_layer_params)))
+          raise ValueError(
+              'Dropout and fully connected layer parameter lists'
+              'have different lengths (%d vs. %d.)'
+              % (len(dropout_layer_params), len(fc_layer_params))
+          )
       if weight_decay_params is None:
         weight_decay_params = [None] * len(fc_layer_params)
       else:
         if len(weight_decay_params) != len(fc_layer_params):
-          raise ValueError('Weight decay and fully connected layer parameter '
-                           'lists have different lengths (%d vs. %d.)' %
-                           (len(weight_decay_params), len(fc_layer_params)))
+          raise ValueError(
+              'Weight decay and fully connected layer parameter '
+              'lists have different lengths (%d vs. %d.)'
+              % (len(weight_decay_params), len(fc_layer_params))
+          )
 
       for num_units, dropout_params, weight_decay in zip(
-          fc_layer_params, dropout_layer_params, weight_decay_params):
+          fc_layer_params, dropout_layer_params, weight_decay_params
+      ):
         kernal_regularizer = None
         if weight_decay is not None:
           kernal_regularizer = tf.keras.regularizers.l2(weight_decay)
@@ -274,23 +292,29 @@ class EncodingNetwork(network.Network):
                 activation=activation_fn,
                 kernel_initializer=kernel_initializer,
                 kernel_regularizer=kernal_regularizer,
-                dtype=dtype))
+                dtype=dtype,
+            )
+        )
         if not isinstance(dropout_params, dict):
           dropout_params = {'rate': dropout_params} if dropout_params else None
 
         if dropout_params is not None:
           layers.append(
               permanent_variable_rate_dropout.PermanentVariableRateDropout(
-                  **dropout_params))
+                  **dropout_params
+              )
+          )
 
     super(EncodingNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec, state_spec=(), name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     # Pull out the nest structure of the preprocessing layers. This avoids
     # saving the original kwarg layers as a class attribute which Keras would
     # then track.
-    self._preprocessing_nest = tf.nest.map_structure(lambda l: None,
-                                                     preprocessing_layers)
+    self._preprocessing_nest = tf.nest.map_structure(
+        lambda l: None, preprocessing_layers
+    )
     self._flat_preprocessing_layers = flat_preprocessing_layers
     self._preprocessing_combiner = preprocessing_combiner
     self._postprocessing_layers = layers
@@ -302,7 +326,8 @@ class EncodingNetwork(network.Network):
 
     if self._batch_squash:
       outer_rank = nest_utils.get_outer_rank(
-          observation, self.input_tensor_spec)
+          observation, self.input_tensor_spec
+      )
       batch_squash = utils.BatchSquash(outer_rank)
       observation = tf.nest.map_structure(batch_squash.flatten, observation)
 
@@ -312,7 +337,8 @@ class EncodingNetwork(network.Network):
       processed = []
       for obs, layer in zip(
           nest.flatten_up_to(self._preprocessing_nest, observation),
-          self._flat_preprocessing_layers):
+          self._flat_preprocessing_layers,
+      ):
         processed.append(layer(obs, training=training))
       if len(processed) == 1 and self._preprocessing_combiner is None:
         # If only one observation is passed and the preprocessing_combiner

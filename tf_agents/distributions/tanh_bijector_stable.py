@@ -49,7 +49,8 @@ class Tanh(bijector.Bijector):
         forward_min_event_ndims=0,
         validate_args=validate_args,
         parameters=parameters,
-        name=name)
+        name=name,
+    )
 
   def _forward(self, x):
     return tf.nn.tanh(x)
@@ -57,9 +58,11 @@ class Tanh(bijector.Bijector):
   def _inverse(self, y):
     # 0.99999997 is the maximum value such that atanh(x) is valid for both
     # tf.float32 and tf.float64
-    y = tf.where(tf.less_equal(tf.abs(y), 1.),
-                 tf.clip_by_value(y, -0.99999997, 0.99999997),
-                 y)
+    y = tf.where(
+        tf.less_equal(tf.abs(y), 1.0),
+        tf.clip_by_value(y, -0.99999997, 0.99999997),
+        y,
+    )
     return tf.atanh(y)
 
   def _forward_log_det_jacobian(self, x):
@@ -75,5 +78,7 @@ class Tanh(bijector.Bijector):
     #    = 2 * (log(2) - x - log(e^-2x + 1))
     #    = 2 * (log(2) - x - softplus(-2x))
     return 2.0 * (
-        tf.math.log(tf.constant(2.0, dtype=x.dtype)) - x - tf.nn.softplus(
-            -2.0 * x))
+        tf.math.log(tf.constant(2.0, dtype=x.dtype))
+        - x
+        - tf.nn.softplus(-2.0 * x)
+    )

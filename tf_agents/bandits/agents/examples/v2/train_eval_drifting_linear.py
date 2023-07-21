@@ -13,17 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""End-to-end test for bandits against a drifting linear environment.
-"""
+"""End-to-end test for bandits against a drifting linear environment."""
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import os
+
 from absl import app
 from absl import flags
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 from tf_agents.bandits.agents import lin_ucb_agent
@@ -34,11 +33,17 @@ from tf_agents.bandits.environments import non_stationary_stochastic_environment
 from tf_agents.bandits.metrics import tf_metrics as tf_bandit_metrics
 
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_enum(
-    'agent', 'LinUCB', ['LinUCB', 'LinTS'],
-    'Which agent to use. Possible values are `LinUCB` and `LinTS`.')
+    'agent',
+    'LinUCB',
+    ['LinUCB', 'LinTS'],
+    'Which agent to use. Possible values are `LinUCB` and `LinTS`.',
+)
 
 FLAGS = flags.FLAGS
 tfd = tfp.distributions
@@ -62,21 +67,25 @@ def main(unused_argv):
     observation_shape = [CONTEXT_DIM]
     overall_shape = [BATCH_SIZE] + observation_shape
     observation_distribution = tfd.Normal(
-        loc=tf.zeros(overall_shape), scale=tf.ones(overall_shape))
+        loc=tf.zeros(overall_shape), scale=tf.ones(overall_shape)
+    )
     action_shape = [NUM_ACTIONS]
     observation_to_reward_shape = observation_shape + action_shape
     observation_to_reward_distribution = tfd.Normal(
         loc=tf.zeros(observation_to_reward_shape),
-        scale=tf.ones(observation_to_reward_shape))
+        scale=tf.ones(observation_to_reward_shape),
+    )
     drift_distribution = tfd.Normal(loc=DRIFT_MEAN, scale=DRIFT_VARIANCE)
     additive_reward_distribution = tfd.Normal(
         loc=tf.zeros(action_shape),
-        scale=(REWARD_NOISE_VARIANCE * tf.ones(action_shape)))
+        scale=(REWARD_NOISE_VARIANCE * tf.ones(action_shape)),
+    )
     environment_dynamics = dle.DriftingLinearDynamics(
         observation_distribution,
         observation_to_reward_distribution,
         drift_distribution,
-        additive_reward_distribution)
+        additive_reward_distribution,
+    )
     environment = nse.NonStationaryStochasticEnvironment(environment_dynamics)
 
     if FLAGS.agent == 'LinUCB':
@@ -86,19 +95,23 @@ def main(unused_argv):
           alpha=AGENT_ALPHA,
           gamma=0.95,
           emit_log_probability=False,
-          dtype=tf.float32)
+          dtype=tf.float32,
+      )
     elif FLAGS.agent == 'LinTS':
       agent = lin_ts_agent.LinearThompsonSamplingAgent(
           time_step_spec=environment.time_step_spec(),
           action_spec=environment.action_spec(),
           alpha=AGENT_ALPHA,
           gamma=0.95,
-          dtype=tf.float32)
+          dtype=tf.float32,
+      )
 
     regret_metric = tf_bandit_metrics.RegretMetric(
-        environment.environment_dynamics.compute_optimal_reward)
+        environment.environment_dynamics.compute_optimal_reward
+    )
     suboptimal_arms_metric = tf_bandit_metrics.SuboptimalArmsMetric(
-        environment.environment_dynamics.compute_optimal_action)
+        environment.environment_dynamics.compute_optimal_action
+    )
 
     trainer.train(
         root_dir=FLAGS.root_dir,
@@ -106,7 +119,8 @@ def main(unused_argv):
         environment=environment,
         training_loops=TRAINING_LOOPS,
         steps_per_loop=STEPS_PER_LOOP,
-        additional_metrics=[regret_metric, suboptimal_arms_metric])
+        additional_metrics=[regret_metric, suboptimal_arms_metric],
+    )
 
 
 if __name__ == '__main__':

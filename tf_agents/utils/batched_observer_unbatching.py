@@ -51,15 +51,21 @@ class BatchedObserverUnbatching(object):
   Note that the batch size is assumed to be fixed and it is not validated.
   """
 
-  def __init__(self, create_delegated_observer_fn: Callable[[], Callable[
-      [trajectory_lib.Trajectory], None]], batch_size: int):
+  def __init__(
+      self,
+      create_delegated_observer_fn: Callable[
+          [], Callable[[trajectory_lib.Trajectory], None]
+      ],
+      batch_size: int,
+  ):
     self._delegated_observers = [
         create_delegated_observer_fn() for _ in range(batch_size)
     ]
 
   def __call__(self, batched_trajectory: trajectory_lib.Trajectory):
     unbatched_trajectories = nest_utils.unstack_nested_arrays(
-        batched_trajectory)
+        batched_trajectory
+    )
     for obs, traj in zip(self._delegated_observers, unbatched_trajectories):
       # The for loop can be optimized by parallelizing running delegated
       # observers in the future.

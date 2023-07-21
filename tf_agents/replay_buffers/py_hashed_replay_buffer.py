@@ -27,7 +27,6 @@ import pickle
 import threading
 
 from absl import logging
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.replay_buffers import py_uniform_replay_buffer
@@ -75,8 +74,9 @@ class FrameBuffer(tf.train.experimental.PythonState):
   def compress(self, observation, split_axis=-1):
     # e.g. When split_axis is -1, turns an array of size 84x84x4
     # into a list of arrays of size 84x84x1.
-    frame_list = np.split(observation, observation.shape[split_axis],
-                          split_axis)
+    frame_list = np.split(
+        observation, observation.shape[split_axis], split_axis
+    )
     return np.array([self.add_frame(f) for f in frame_list])
 
   def decompress(self, observation, split_axis=-1):
@@ -112,9 +112,9 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
   def __init__(self, data_spec, capacity, log_interval=None):
     if not isinstance(data_spec, trajectory.Trajectory):
       raise ValueError(
-          'data_spec must be the spec of a trajectory: {}'.format(data_spec))
-    super(PyHashedReplayBuffer, self).__init__(
-        data_spec, capacity)
+          'data_spec must be the spec of a trajectory: {}'.format(data_spec)
+      )
+    super(PyHashedReplayBuffer, self).__init__(data_spec, capacity)
 
     self._frame_buffer = FrameBuffer()
     self._lock_frame_buffer = threading.Lock()
@@ -123,7 +123,8 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
   def _encoded_data_spec(self):
     observation = self._data_spec.observation
     observation = array_spec.ArraySpec(
-        shape=(observation.shape[-1],), dtype=np.int64)
+        shape=(observation.shape[-1],), dtype=np.int64
+    )
     return self._data_spec._replace(observation=observation)
 
   def _encode(self, traj):
@@ -142,10 +143,16 @@ class PyHashedReplayBuffer(py_uniform_replay_buffer.PyUniformReplayBuffer):
     with self._lock_frame_buffer:
       observation = self._frame_buffer.compress(traj.observation)
 
-    if (self._log_interval and
-        self._np_state.item_count % self._log_interval == 0):
-      logging.info('%s', 'Effective Replay buffer frame count: {}'.format(
-          len(self._frame_buffer)))
+    if (
+        self._log_interval
+        and self._np_state.item_count % self._log_interval == 0
+    ):
+      logging.info(
+          '%s',
+          'Effective Replay buffer frame count: {}'.format(
+              len(self._frame_buffer)
+          ),
+      )
 
     return traj._replace(observation=observation)
 

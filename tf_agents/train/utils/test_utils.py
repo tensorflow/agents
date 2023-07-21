@@ -21,7 +21,6 @@ from absl import logging
 import numpy as np
 import reverb
 import tensorflow as tf
-
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.environments import suite_gym
@@ -57,25 +56,31 @@ def configure_logical_cpus():
         tf.config.experimental.VirtualDeviceConfiguration() for _ in range(4)
     ]
     tf.config.experimental.set_virtual_device_configuration(
-        first_cpu, logical_devices=logical_devices)
+        first_cpu, logical_devices=logical_devices
+    )
     logging.info(
         'No current virtual device configuration. Defining 4 virtual CPUs on '
-        'the first physical one.')
+        'the first physical one.'
+    )
   except RuntimeError:
     current_config = tf.config.experimental.get_virtual_device_configuration(
-        first_cpu)
+        first_cpu
+    )
     logging.warn(
         'The following virtual device configuration already exists: %s which '
         'resulted this call to fail with `RuntimeError` since it is not '
         'possible to reconfigure it after runtime initialization. It is '
-        'probably safe to ignore.', current_config)
+        'probably safe to ignore.',
+        current_config,
+    )
 
 
 def get_cartpole_env_and_specs():
   env = suite_gym.load('CartPole-v0')
 
-  _, action_tensor_spec, time_step_tensor_spec = (
-      spec_utils.get_tensor_specs(env))
+  _, action_tensor_spec, time_step_tensor_spec = spec_utils.get_tensor_specs(
+      env
+  )
 
   return env, action_tensor_spec, time_step_tensor_spec
 
@@ -88,22 +93,28 @@ def build_dummy_sequential_net(fc_layer_params, action_spec):
       tf.keras.layers.Dense,
       activation=None,
       kernel_initializer=tf.random_uniform_initializer(
-          minval=-0.03, maxval=0.03),
-      bias_initializer=tf.constant_initializer(-0.2))
+          minval=-0.03, maxval=0.03
+      ),
+      bias_initializer=tf.constant_initializer(-0.2),
+  )
 
   dense = functools.partial(
       tf.keras.layers.Dense,
       activation=tf.keras.activations.relu,
       kernel_initializer=tf.compat.v1.variance_scaling_initializer(
-          scale=2.0, mode='fan_in', distribution='truncated_normal'))
+          scale=2.0, mode='fan_in', distribution='truncated_normal'
+      ),
+  )
 
   return sequential.Sequential(
       [dense(num_units) for num_units in fc_layer_params]
-      + [logits(num_actions)])
+      + [logits(num_actions)]
+  )
 
 
-def create_ppo_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
-                                    batch_size):
+def create_ppo_agent_and_dataset_fn(
+    action_spec, time_step_spec, train_step, batch_size
+):
   """Builds and returns a dummy PPO Agent, dataset and dataset function."""
   del action_spec  # Unused.
   del time_step_spec  # Unused.
@@ -117,10 +128,12 @@ def create_ppo_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
       obs_spec,
       act_spec,
       fc_layer_params=(100,),
-      activation_fn=tf.keras.activations.tanh)
+      activation_fn=tf.keras.activations.tanh,
+  )
 
   value_net = value_network.ValueNetwork(
-      obs_spec, fc_layer_params=(100,), activation_fn=tf.keras.activations.tanh)
+      obs_spec, fc_layer_params=(100,), activation_fn=tf.keras.activations.tanh
+  )
 
   agent = ppo_clip_agent.PPOClipAgent(
       ts_spec,
@@ -138,69 +151,84 @@ def create_ppo_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
       debug_summaries=False,
       summarize_grads_and_vars=False,
       train_step_counter=train_step,
-      compute_value_and_advantage_in_train=False)
+      compute_value_and_advantage_in_train=False,
+  )
 
   def _create_experience(_):
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32,
+    )
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
         step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
     action_distribution_parameters = {
         'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
         'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
     }
-    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
-                              dtype=tf.float32)
+    value_preds = tf.constant(
+        [[9.0, 15.0, 21.0], [9.0, 15.0, 21.0]], dtype=tf.float32
+    )
 
     policy_info = {
         'dist_params': action_distribution_parameters,
     }
     policy_info['value_prediction'] = value_preds
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type,
+        observations,
+        actions,
+        policy_info,
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
     return agent._preprocess(experience)  # pylint: disable=protected-access
 
-  dataset = tf.data.Dataset.from_tensor_slices([[i] for i in range(100)
-                                               ]).map(_create_experience)
+  dataset = tf.data.Dataset.from_tensor_slices([[i] for i in range(100)]).map(
+      _create_experience
+  )
   dataset = tf.data.Dataset.zip((dataset, tf.data.experimental.Counter()))
   dataset_fn = lambda: dataset
 
   return agent, dataset, dataset_fn, agent.training_data_spec
 
 
-def create_dqn_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
-                                    batch_size):
+def create_dqn_agent_and_dataset_fn(
+    action_spec, time_step_spec, train_step, batch_size
+):
   """Builds and returns a dataset function for DQN Agent."""
-  q_net = build_dummy_sequential_net(fc_layer_params=(100,),
-                                     action_spec=action_spec)
+  q_net = build_dummy_sequential_net(
+      fc_layer_params=(100,), action_spec=action_spec
+  )
 
   agent = dqn_agent.DqnAgent(
       time_step_spec,
       action_spec,
       q_network=q_net,
       optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-      train_step_counter=train_step)
+      train_step_counter=train_step,
+  )
   agent.initialize()
 
   def make_item(_):
     traj = tensor_spec.sample_spec_nest(
-        agent.collect_data_spec, seed=123, outer_dims=[2])
+        agent.collect_data_spec, seed=123, outer_dims=[2]
+    )
 
     def scale_observation_only(item):
       # Scale float values in the sampled item by large value to avoid NaNs.
       if item.dtype == tf.float32:
-        return tf.math.divide(item, 1.e+22)
+        return tf.math.divide(item, 1.0e22)
       else:
         return item
 
@@ -209,9 +237,10 @@ def create_dqn_agent_and_dataset_fn(action_spec, time_step_spec, train_step,
   l = []
   for i in range(100):
     l.append([i])
-  dataset = tf.data.Dataset.zip(
-      (tf.data.Dataset.from_tensor_slices(l).map(make_item),
-       tf.data.experimental.Counter()))
+  dataset = tf.data.Dataset.zip((
+      tf.data.Dataset.from_tensor_slices(l).map(make_item),
+      tf.data.experimental.Counter(),
+  ))
   dataset_fn = lambda: dataset.batch(batch_size)
 
   return agent, dataset, dataset_fn, agent.collect_data_spec
@@ -221,7 +250,8 @@ def build_actor(root_dir, env, agent, rb_observer, train_step):
   """Builds the Actor."""
   tf_collect_policy = agent.collect_policy
   collect_policy = py_tf_eager_policy.PyTFEagerPolicy(
-      tf_collect_policy, use_tf_function=True)
+      tf_collect_policy, use_tf_function=True
+  )
   temp_dir = root_dir + 'actor'
   test_actor = actor.Actor(
       env,
@@ -230,7 +260,8 @@ def build_actor(root_dir, env, agent, rb_observer, train_step):
       steps_per_run=1,
       metrics=actor.collect_metrics(10),
       summary_dir=temp_dir,
-      observers=[rb_observer])
+      observers=[rb_observer],
+  )
 
   return test_actor
 
@@ -241,37 +272,40 @@ def get_actor_thread(test_case, reverb_server_port, num_iterations=10):
   def build_and_run_actor():
     root_dir = test_case.create_tempdir().full_path
     env, action_tensor_spec, time_step_tensor_spec = (
-        get_cartpole_env_and_specs())
+        get_cartpole_env_and_specs()
+    )
 
     train_step = train_utils.create_train_step()
 
-    q_net = build_dummy_sequential_net(fc_layer_params=(100,),
-                                       action_spec=action_tensor_spec)
+    q_net = build_dummy_sequential_net(
+        fc_layer_params=(100,), action_spec=action_tensor_spec
+    )
 
     agent = dqn_agent.DqnAgent(
         time_step_tensor_spec,
         action_tensor_spec,
         q_network=q_net,
         optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        train_step_counter=train_step)
+        train_step_counter=train_step,
+    )
 
-    _, rb_observer = (
-        replay_buffer_utils.get_reverb_buffer_and_observer(
-            agent.collect_data_spec,
-            table_name=reverb_replay_buffer.DEFAULT_TABLE,
-            sequence_length=2,
-            reverb_server_address='localhost:{}'.format(reverb_server_port)))
+    _, rb_observer = replay_buffer_utils.get_reverb_buffer_and_observer(
+        agent.collect_data_spec,
+        table_name=reverb_replay_buffer.DEFAULT_TABLE,
+        sequence_length=2,
+        reverb_server_address='localhost:{}'.format(reverb_server_port),
+    )
 
     variable_container = reverb_variable_container.ReverbVariableContainer(
         server_address='localhost:{}'.format(reverb_server_port),
-        table_names=[reverb_variable_container.DEFAULT_TABLE])
+        table_names=[reverb_variable_container.DEFAULT_TABLE],
+    )
 
-    test_actor = build_actor(
-        root_dir, env, agent, rb_observer, train_step)
+    test_actor = build_actor(root_dir, env, agent, rb_observer, train_step)
 
     variables_dict = {
         reverb_variable_container.POLICY_KEY: agent.collect_policy.variables(),
-        reverb_variable_container.TRAIN_STEP_KEY: train_step
+        reverb_variable_container.TRAIN_STEP_KEY: train_step,
     }
     variable_container.update(variables_dict)
 
@@ -298,7 +332,8 @@ def check_variables_different(test_case, old_vars_numpy, new_vars_numpy):
     return not np.equal(a, b).all()
 
   vars_changed = tf.nest.flatten(
-      tf.nest.map_structure(changed, old_vars_numpy, new_vars_numpy))
+      tf.nest.map_structure(changed, old_vars_numpy, new_vars_numpy)
+  )
 
   # Assert if any of the variable changed.
   test_case.assertTrue(np.any(vars_changed))
@@ -320,27 +355,31 @@ def check_variables_same(test_case, old_vars_numpy, new_vars_numpy):
     return np.equal(a, b).all()
 
   vars_same = tf.nest.flatten(
-      tf.nest.map_structure(same, old_vars_numpy, new_vars_numpy))
+      tf.nest.map_structure(same, old_vars_numpy, new_vars_numpy)
+  )
 
   # Assert if all of the variables are the same.
   test_case.assertTrue(np.all(vars_same))
 
 
 def create_reverb_server_for_replay_buffer_and_variable_container(
-    collect_policy, train_step, replay_buffer_capacity, port):
+    collect_policy, train_step, replay_buffer_capacity, port
+):
   """Sets up one reverb server for replay buffer and variable container."""
   # Create the signature for the variable container holding the policy weights.
   variables = {
       reverb_variable_container.POLICY_KEY: collect_policy.variables(),
-      reverb_variable_container.TRAIN_STEP_KEY: train_step
+      reverb_variable_container.TRAIN_STEP_KEY: train_step,
   }
   variable_container_signature = tf.nest.map_structure(
       lambda variable: tf.TensorSpec(variable.shape, dtype=variable.dtype),
-      variables)
+      variables,
+  )
 
   # Create the signature for the replay buffer holding observed experience.
   replay_buffer_signature = tensor_spec.from_spec(
-      collect_policy.collect_data_spec)
+      collect_policy.collect_data_spec
+  )
   replay_buffer_signature = tensor_spec.add_outer_dim(replay_buffer_signature)
 
   # Crete and start the replay buffer and variable container server.
@@ -366,5 +405,6 @@ def create_reverb_server_for_replay_buffer_and_variable_container(
               signature=variable_container_signature,
           ),
       ],
-      port=port)
+      port=port,
+  )
   return server

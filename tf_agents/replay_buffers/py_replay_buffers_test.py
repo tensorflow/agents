@@ -99,14 +99,19 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     shape = (15, 15, self._stack_count)
     observation_spec = array_spec.ArraySpec(shape, np.int32, 'obs')
     time_step_spec = ts.time_step_spec(observation_spec)
-    action_spec = policy_step.PolicyStep(array_spec.BoundedArraySpec(
-        shape=(), dtype=np.int32, minimum=0, maximum=1, name='action'))
+    action_spec = policy_step.PolicyStep(
+        array_spec.BoundedArraySpec(
+            shape=(), dtype=np.int32, minimum=0, maximum=1, name='action'
+        )
+    )
     self._trajectory_spec = trajectory.from_transition(
-        time_step_spec, action_spec, time_step_spec)
+        time_step_spec, action_spec, time_step_spec
+    )
 
     self._capacity = 32
     self._replay_buffer = rb_cls(
-        data_spec=self._trajectory_spec, capacity=self._capacity)
+        data_spec=self._trajectory_spec, capacity=self._capacity
+    )
 
   def _fill_replay_buffer(self):
     # Generate N frames: the value of pixels is the frame index.
@@ -120,24 +125,30 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     # Add stack of frames to the replay buffer.
     time_steps = []
     for k in range(len(single_frames) - self._stack_count + 1):
-      observation = np.concatenate(single_frames[k:k + self._stack_count],
-                                   axis=-1)
+      observation = np.concatenate(
+          single_frames[k : k + self._stack_count], axis=-1
+      )
       time_steps.append(ts.transition(observation, reward=0.0))
 
     self._transition_count = len(time_steps) - 1
     dummy_action = policy_step.PolicyStep(np.int32(0))
     for k in range(self._transition_count):
-      self._replay_buffer.add_batch(nest_utils.batch_nested_array(
-          trajectory.from_transition(
-              time_steps[k], dummy_action, time_steps[k + 1])))
+      self._replay_buffer.add_batch(
+          nest_utils.batch_nested_array(
+              trajectory.from_transition(
+                  time_steps[k], dummy_action, time_steps[k + 1]
+              )
+          )
+      )
 
   def _generate_replay_buffer(self, rb_cls):
     self._create_replay_buffer(rb_cls)
     self._fill_replay_buffer()
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testEmptyBuffer(self, rb_cls):
     self._create_replay_buffer(rb_cls=rb_cls)
     ds = self._replay_buffer.as_dataset()
@@ -147,9 +158,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       get_next = tf.compat.v1.data.make_one_shot_iterator(ds).get_next()
       self.evaluate(get_next)
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testEmptyBufferBatchSize(self, rb_cls):
     self._create_replay_buffer(rb_cls=rb_cls)
     ds = self._replay_buffer.as_dataset(sample_batch_size=2)
@@ -159,9 +171,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       get_next = tf.compat.v1.data.make_one_shot_iterator(ds).get_next()
       self.evaluate(get_next)
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testEmptyBufferNumSteps(self, rb_cls):
     self._create_replay_buffer(rb_cls=rb_cls)
     ds = self._replay_buffer.as_dataset(num_steps=2)
@@ -171,9 +184,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       get_next = tf.compat.v1.data.make_one_shot_iterator(ds).get_next()
       self.evaluate(get_next)
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testReplayBufferCircular(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -185,19 +199,23 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     for _ in range(200):
       traj = next_trajectory()
       self.assertLessEqual(min_value, traj.observation[0, 0, 0])
-      self.assertAllEqual(traj.observation[:, :, 0] + 1,
-                          traj.observation[:, :, 1])
-      self.assertAllEqual(traj.observation[:, :, 0] + 2,
-                          traj.observation[:, :, 2])
-      self.assertAllEqual(traj.observation[:, :, 0] + 3,
-                          traj.observation[:, :, 3])
+      self.assertAllEqual(
+          traj.observation[:, :, 0] + 1, traj.observation[:, :, 1]
+      )
+      self.assertAllEqual(
+          traj.observation[:, :, 0] + 2, traj.observation[:, :, 2]
+      )
+      self.assertAllEqual(
+          traj.observation[:, :, 0] + 3, traj.observation[:, :, 3]
+      )
 
   def testSampleDoesNotCrossHead(self):
     np.random.seed(12345)
 
     data_spec = array_spec.ArraySpec((), np.int32)
     replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
-        data_spec=data_spec, capacity=10)
+        data_spec=data_spec, capacity=10
+    )
 
     # Seed RB with 5 elements to move head to position 5.
     for _ in range(5):
@@ -224,9 +242,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     for i in range(9):
       self.assertAlmostEqual(10000 / 9, sample_frequency[i], delta=150)
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testSampleBatches(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -239,9 +258,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(traj.observation.shape, (5, 15, 15, 4))
     self.assertEqual(traj.step_type.shape, (5,))
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testSampleBatchesWithNumSteps(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -255,9 +275,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(traj.observation.shape, (5, 3, 15, 15, 4))
     self.assertEqual(traj.action.shape, (5, 3))
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testNumStepsNoBatching(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
@@ -271,9 +292,10 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(traj.observation.shape, (3, 15, 15, 4))
     self.assertEqual(traj.action.shape, (3,))
 
-  @parameterized.named_parameters(
-      [('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
-       ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer)])
+  @parameterized.named_parameters([
+      ('WithoutHashing', py_uniform_replay_buffer.PyUniformReplayBuffer),
+      ('WithHashing', py_hashed_replay_buffer.PyHashedReplayBuffer),
+  ])
   def testCheckpointable(self, rb_cls):
     self._generate_replay_buffer(rb_cls=rb_cls)
     self.assertEqual(32, self._replay_buffer.size)
@@ -284,8 +306,9 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       saver = tf.train.Checkpoint(rb=self._replay_buffer)
       save_path = saver.save(prefix)
 
-      loaded_rb = (
-          rb_cls(data_spec=self._trajectory_spec, capacity=self._capacity))
+      loaded_rb = rb_cls(
+          data_spec=self._trajectory_spec, capacity=self._capacity
+      )
       loader = tf.train.Checkpoint(rb=loaded_rb)
       loader.restore(save_path).initialize_or_restore()
       self.assertEqual(32, loaded_rb.size)
@@ -297,12 +320,15 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
       for _ in range(200):
         traj = next_trajectory()
         self.assertLessEqual(min_value, traj.observation[0, 0, 0])
-        self.assertAllEqual(traj.observation[:, :, 0] + 1,
-                            traj.observation[:, :, 1])
-        self.assertAllEqual(traj.observation[:, :, 0] + 2,
-                            traj.observation[:, :, 2])
-        self.assertAllEqual(traj.observation[:, :, 0] + 3,
-                            traj.observation[:, :, 3])
+        self.assertAllEqual(
+            traj.observation[:, :, 0] + 1, traj.observation[:, :, 1]
+        )
+        self.assertAllEqual(
+            traj.observation[:, :, 0] + 2, traj.observation[:, :, 2]
+        )
+        self.assertAllEqual(
+            traj.observation[:, :, 0] + 3, traj.observation[:, :, 3]
+        )
 
 
 if __name__ == '__main__':

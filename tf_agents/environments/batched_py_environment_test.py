@@ -25,7 +25,6 @@ import functools
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
@@ -53,7 +52,8 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
   @property
   def action_spec(self):
     return array_spec.BoundedArraySpec(
-        [7], dtype=np.float32, minimum=-1.0, maximum=1.0)
+        [7], dtype=np.float32, minimum=-1.0, maximum=1.0
+    )
 
   @property
   def observation_spec(self):
@@ -61,19 +61,25 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
   def _make_batched_py_environment(self, multithreading, num_envs=3):
     self.time_step_spec = ts.time_step_spec(self.observation_spec)
-    constructor = functools.partial(random_py_environment.RandomPyEnvironment,
-                                    self.observation_spec, self.action_spec)
+    constructor = functools.partial(
+        random_py_environment.RandomPyEnvironment,
+        self.observation_spec,
+        self.action_spec,
+    )
     return batched_py_environment.BatchedPyEnvironment(
         envs=[constructor() for _ in range(num_envs)],
-        multithreading=multithreading)
+        multithreading=multithreading,
+    )
 
   def _make_batched_mock_gym_py_environment(self, multithreading, num_envs=3):
     self.time_step_spec = ts.time_step_spec(self.observation_spec)
-    constructor = functools.partial(GymWrapperEnvironmentMock,
-                                    self.observation_spec, self.action_spec)
+    constructor = functools.partial(
+        GymWrapperEnvironmentMock, self.observation_spec, self.action_spec
+    )
     return batched_py_environment.BatchedPyEnvironment(
         envs=[constructor() for _ in range(num_envs)],
-        multithreading=multithreading)
+        multithreading=multithreading,
+    )
 
   @parameterized.parameters(*COMMON_PARAMETERS)
   def test_close_no_hang_after_init(self, multithreading):
@@ -94,14 +100,17 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     num_envs = 5
     rng = np.random.RandomState()
     gym_env = self._make_batched_mock_gym_py_environment(
-        multithreading, num_envs=num_envs)
+        multithreading, num_envs=num_envs
+    )
     gym_env.reset()
     info = gym_env.get_info()
     self.assertEqual(info, {})
-    action = np.stack([
-        array_spec.sample_bounded_spec(self.action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    action = np.stack(
+        [
+            array_spec.sample_bounded_spec(self.action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
     gym_env.step(action)
     info = gym_env.get_info()
     self.assertAllEqual(info['last_action'], action)
@@ -114,10 +123,12 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     action_spec = env.action_spec()
     observation_spec = env.observation_spec()
     rng = np.random.RandomState()
-    action = np.stack([
-        array_spec.sample_bounded_spec(action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    action = np.stack(
+        [
+            array_spec.sample_bounded_spec(action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
     env.reset()
 
     # Take one step and assert observation is batched the right way.
@@ -129,18 +140,21 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
 
     # Take another step and assert that observations have the same shape.
     time_step2 = env.step(action)
-    self.assertAllEqual(time_step.observation.shape,
-                        time_step2.observation.shape)
+    self.assertAllEqual(
+        time_step.observation.shape, time_step2.observation.shape
+    )
     env.close()
 
   def test_unstack_actions(self):
     num_envs = 5
     action_spec = self.action_spec
     rng = np.random.RandomState()
-    batched_action = np.array([
-        array_spec.sample_bounded_spec(action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    batched_action = np.array(
+        [
+            array_spec.sample_bounded_spec(action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
 
     # Test that actions are correctly unstacked when just batched in np.array.
     unstacked_actions = batched_py_environment.unstack_actions(batched_action)
@@ -151,18 +165,22 @@ class BatchedPyEnvironmentTest(tf.test.TestCase, parameterized.TestCase):
     num_envs = 5
     action_spec = self.action_spec
     rng = np.random.RandomState()
-    batched_action = np.array([
-        array_spec.sample_bounded_spec(action_spec, rng)
-        for _ in range(num_envs)
-    ])
+    batched_action = np.array(
+        [
+            array_spec.sample_bounded_spec(action_spec, rng)
+            for _ in range(num_envs)
+        ]
+    )
 
     # Test that actions are correctly unstacked when nested in namedtuple.
     class NestedAction(
-        collections.namedtuple('NestedAction', ['action', 'other_var'])):
+        collections.namedtuple('NestedAction', ['action', 'other_var'])
+    ):
       pass
 
     nested_action = NestedAction(
-        action=batched_action, other_var=np.array([13.0] * num_envs))
+        action=batched_action, other_var=np.array([13.0] * num_envs)
+    )
     unstacked_actions = batched_py_environment.unstack_actions(nested_action)
     for nested_action in unstacked_actions:
       self.assertAllEqual(action_spec.shape, nested_action.action.shape)  # pytype: disable=attribute-error

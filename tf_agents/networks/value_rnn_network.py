@@ -33,7 +33,6 @@ from __future__ import print_function
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import lstm_encoding_network
 from tf_agents.networks import network
 
@@ -42,18 +41,20 @@ from tf_agents.networks import network
 class ValueRnnNetwork(network.Network):
   """Recurrent value network. Reduces to 1 value output per batch item."""
 
-  def __init__(self,
-               input_tensor_spec,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               input_fc_layer_params=(75, 40),
-               input_dropout_layer_params=None,
-               lstm_size=(40,),
-               output_fc_layer_params=(75, 40),
-               activation_fn=tf.keras.activations.relu,
-               dtype=tf.float32,
-               name='ValueRnnNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
+      conv_layer_params=None,
+      input_fc_layer_params=(75, 40),
+      input_dropout_layer_params=None,
+      lstm_size=(40,),
+      output_fc_layer_params=(75, 40),
+      activation_fn=tf.keras.activations.relu,
+      dtype=tf.float32,
+      name='ValueRnnNetwork',
+  ):
     """Creates an instance of `ValueRnnNetwork`.
 
     Network supports calls with shape outer_rank + input_tensor_shape.shape.
@@ -63,14 +64,14 @@ class ValueRnnNetwork(network.Network):
       input_tensor_spec: A nest of `tensor_spec.TensorSpec` representing the
         input observations.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
         of tensors and combines them.  Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`. This
+        layer must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -104,29 +105,32 @@ class ValueRnnNetwork(network.Network):
         output_fc_layer_params=output_fc_layer_params,
         activation_fn=activation_fn,
         dtype=dtype,
-        name=name)
+        name=name,
+    )
 
     postprocessing_layers = tf.keras.layers.Dense(
         1,
         activation=None,
         kernel_initializer=tf.random_uniform_initializer(
-            minval=-0.03, maxval=0.03))
+            minval=-0.03, maxval=0.03
+        ),
+    )
 
     super(ValueRnnNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=lstm_encoder.state_spec,
-        name=name)
+        name=name,
+    )
 
     self._lstm_encoder = lstm_encoder
     self._postprocessing_layers = postprocessing_layers
 
-  def call(self,
-           observation,
-           step_type=None,
-           network_state=(),
-           training=False):
+  def call(self, observation, step_type=None, network_state=(), training=False):
     state, network_state = self._lstm_encoder(
-        observation, step_type=step_type, network_state=network_state,
-        training=training)
+        observation,
+        step_type=step_type,
+        network_state=network_state,
+        training=training,
+    )
     value = self._postprocessing_layers(state, training=training)
     return tf.squeeze(value, -1), network_state

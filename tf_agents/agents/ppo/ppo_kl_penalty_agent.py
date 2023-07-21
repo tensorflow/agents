@@ -54,7 +54,6 @@ from typing import Optional, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.networks import network
 from tf_agents.trajectories import time_step as ts
@@ -102,7 +101,8 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
       aggregate_losses_across_replicas: bool = True,
       summarize_grads_and_vars: bool = False,
       train_step_counter: Optional[tf.Variable] = None,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a PPO Agent implementing the KL penalty loss.
 
     Args:
@@ -122,25 +122,24 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
       adaptive_kl_target: Desired KL target for policy updates. If actual KL is
         far from this target, adaptive_kl_beta will be updated. You should tune
         this for your environment. 0.01 was found to perform well for Mujoco.
-      adaptive_kl_tolerance: A tolerance for adaptive_kl_beta. Mean KL above
-        `(1 + tol) * adaptive_kl_target`, or below
-        `(1 - tol) * adaptive_kl_target`,
+      adaptive_kl_tolerance: A tolerance for adaptive_kl_beta. Mean KL above `(1
+        + tol) * adaptive_kl_target`, or below `(1 - tol) * adaptive_kl_target`,
         will cause `adaptive_kl_beta` to be updated. `0.5` was chosen
-        heuristically in the paper, but the algorithm is not very
-        sensitive to it.
+        heuristically in the paper, but the algorithm is not very sensitive to
+        it.
       optimizer: Optimizer to use for the agent, default to using
         `tf.compat.v1.train.AdamOptimizer`.
       use_gae: If `True`, uses generalized advantage estimation for computing
         per-timestep advantage. Else, just subtracts value predictions from
         empirical return.
       use_td_lambda_return: If `True`, uses `td_lambda_return` for training
-        value function; here:
-        `td_lambda_return = gae_advantage + value_predictions`.
-        `use_gae` must be set to `True` as well to enable TD -lambda returns. If
-        `use_td_lambda_return` is set to True while `use_gae` is False, the
-        empirical return will be used and a warning will be logged.
+        value function; here: `td_lambda_return = gae_advantage +
+        value_predictions`. `use_gae` must be set to `True` as well to enable TD
+        -lambda returns. If `use_td_lambda_return` is set to True while
+        `use_gae` is False, the empirical return will be used and a warning will
+        be logged.
       lambda_value: Lambda parameter for TD-lambda computation. Default to
-       `0.95` which is the value used for all environments from the paper.
+        `0.95` which is the value used for all environments from the paper.
       discount_factor: Discount factor for return computation. Default to `0.99`
         which is the value used for all environments from the paper.
       value_pred_loss_coef: Multiplier for value prediction loss to balance with
@@ -155,8 +154,8 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         weights. Default to `0.0` because no L2 regularization was applied on
         the policy network weights in the PPO paper.
       value_function_l2_reg: Coefficient for l2 regularization of unshared value
-       function weights. Default to `0.0` because no L2 regularization was
-       applied on the policy network weights in the PPO paper.
+        function weights. Default to `0.0` because no L2 regularization was
+        applied on the policy network weights in the PPO paper.
       shared_vars_l2_reg: Coefficient for l2 regularization of weights shared
         between actor_net and value_net. Default to `0.0` because no L2
         regularization was applied on either network in the PPO paper.
@@ -167,37 +166,26 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         convert the observation spec received from the environment to tf.float32
         before creating the networks. Otherwise, the normalized input to the
         network (float32) will have a different dtype as what the network
-        expects, resulting in a mismatch error.
-
-        Example usage:
-          ```python
-          observation_tensor_spec, action_spec, time_step_tensor_spec = (
-            spec_utils.get_tensor_specs(env))
-          normalized_observation_tensor_spec = tf.nest.map_structure(
-            lambda s: tf.TensorSpec(
-              dtype=tf.float32, shape=s.shape, name=s.name
-            ),
-            observation_tensor_spec
-          )
-
-          actor_net = actor_distribution_network.ActorDistributionNetwork(
-            normalized_observation_tensor_spec, ...)
-          value_net = value_network.ValueNetwork(
-            normalized_observation_tensor_spec, ...)
-          # Note that the agent still uses the original time_step_tensor_spec
-          # from the environment.
-          agent = ppo_clip_agent.PPOClipAgent(
-            time_step_tensor_spec, action_spec, actor_net, value_net, ...)
-          ```
+        expects, resulting in a mismatch error.  Example usage: ```python
+        observation_tensor_spec, action_spec, time_step_tensor_spec = (
+        spec_utils.get_tensor_specs(env)) normalized_observation_tensor_spec =
+        tf.nest.map_structure( lambda s: tf.TensorSpec( dtype=tf.float32,
+        shape=s.shape, name=s.name ), observation_tensor_spec )  actor_net =
+        actor_distribution_network.ActorDistributionNetwork(
+        normalized_observation_tensor_spec, ...) value_net =
+        value_network.ValueNetwork( normalized_observation_tensor_spec, ...) #
+        Note that the agent still uses the original time_step_tensor_spec # from
+        the environment. agent = ppo_clip_agent.PPOClipAgent(
+        time_step_tensor_spec, action_spec, actor_net, value_net, ...) ```
       normalize_rewards: If `True`, keeps moving variance of rewards and
         normalizes incoming rewards. While not mentioned directly in the PPO
         paper, reward normalization was implemented in OpenAI baselines and
         (Ilyas et al., 2018) pointed out that it largely improves performance.
         You may refer to Figure 1 of https://arxiv.org/pdf/1811.02553.pdf for a
-          comparison with and without reward scaling.
+        comparison with and without reward scaling.
       reward_norm_clipping: Value above and below to clip normalized reward.
-        Additional optimization proposed in (Ilyas et al., 2018) set to
-        `5` or `10`.
+        Additional optimization proposed in (Ilyas et al., 2018) set to `5` or
+        `10`.
       log_prob_clipping: +/- value for clipping log probs to prevent inf / NaN
         values.  Default: no clipping.
       gradient_clipping: Norm length to clip gradients.  Default: no clipping.
@@ -210,10 +198,10 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
         not used in the paper.  kl_cutoff_coef is the coefficient to mulitply by
         the KL cutoff loss term, before adding to the total loss function.
       kl_cutoff_factor: Only meaningful when `kl_cutoff_coef > 0.0`. A multipler
-        used for calculating the KL cutoff ( =
-        `kl_cutoff_factor * adaptive_kl_target`). If policy KL averaged across
-        the batch changes more than the cutoff, a squared cutoff loss would
-        be added to the loss function.
+        used for calculating the KL cutoff ( = `kl_cutoff_factor *
+        adaptive_kl_target`). If policy KL averaged across the batch changes
+        more than the cutoff, a squared cutoff loss would be added to the loss
+        function.
       check_numerics: If true, adds `tf.debugging.check_numerics` to help find
         NaN / Inf values. For debugging only.
       debug_summaries: A bool to gather debug summaries.
@@ -247,7 +235,8 @@ class PPOKLPenaltyAgent(ppo_agent.PPOAgent):
     """
     if kl_cutoff_coef > 0.0 and kl_cutoff_factor is None:
       raise ValueError(
-          'kl_cutoff_factor needs to be set if kl_cutoff_coef is non-zero.')
+          'kl_cutoff_factor needs to be set if kl_cutoff_coef is non-zero.'
+      )
 
     super(PPOKLPenaltyAgent, self).__init__(
         time_step_spec,

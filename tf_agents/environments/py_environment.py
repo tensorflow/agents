@@ -28,7 +28,6 @@ from typing import Any, Optional, Text
 
 import numpy as np
 import six
-
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -60,7 +59,8 @@ class PyEnvironment(object):
     self._handle_auto_reset = handle_auto_reset
     self._current_time_step = None
     common.assert_members_are_not_overridden(
-        base_cls=PyEnvironment, instance=self, denylist=('reset', 'step'))
+        base_cls=PyEnvironment, instance=self, denylist=('reset', 'step')
+    )
 
   @property
   def batched(self) -> bool:
@@ -98,7 +98,9 @@ class PyEnvironment(object):
     if self.batched:
       raise RuntimeError(
           'Environment %s marked itself as batched but did not override the '
-          'batch_size property' % type(self))
+          'batch_size property'
+          % type(self)
+      )
     return None
 
   def should_reset(self, current_time_step: ts.TimeStep) -> bool:
@@ -158,7 +160,8 @@ class PyEnvironment(object):
       An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
     """
     return array_spec.BoundedArraySpec(
-        shape=(), dtype=np.float32, minimum=0., maximum=1., name='discount')
+        shape=(), dtype=np.float32, minimum=0.0, maximum=1.0, name='discount'
+    )
 
   def time_step_spec(self) -> ts.TimeStep:
     """Describes the `TimeStep` fields returned by `step()`.
@@ -225,8 +228,9 @@ class PyEnvironment(object):
         observation: A NumPy array, or a nested dict, list or tuple of arrays
           corresponding to `observation_spec()`.
     """
-    if (self._current_time_step is None or
-        self.should_reset(self._current_time_step)):
+    if self._current_time_step is None or self.should_reset(
+        self._current_time_step
+    ):
       return self.reset()
 
     self._current_time_step = self._step(action)
@@ -319,8 +323,9 @@ class PyEnvironment(object):
     Returns:
       state: The current state of the environment.
     """
-    raise NotImplementedError('This environment has not implemented '
-                              '`get_state()`.')
+    raise NotImplementedError(
+        'This environment has not implemented `get_state()`.'
+    )
 
   def set_state(self, state: Any) -> None:
     """Restores the environment to a given `state`.
@@ -330,8 +335,9 @@ class PyEnvironment(object):
     Args:
       state: A state to restore the environment to.
     """
-    raise NotImplementedError('This environment has not implemented '
-                              '`set_state()`.')
+    raise NotImplementedError(
+        'This environment has not implemented `set_state()`.'
+    )
 
   #  These methods are to be implemented by subclasses:
 

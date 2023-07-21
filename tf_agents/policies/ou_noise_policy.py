@@ -35,12 +35,14 @@ tfd = tfp.distributions
 class OUNoisePolicy(tf_policy.TFPolicy):
   """Actor Policy with Ornstein Uhlenbeck (OU) exploration noise."""
 
-  def __init__(self,
-               wrapped_policy: tf_policy.TFPolicy,
-               ou_stddev: types.Float = 1.0,
-               ou_damping: types.Float = 1.0,
-               clip: bool = True,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      wrapped_policy: tf_policy.TFPolicy,
+      ou_stddev: types.Float = 1.0,
+      ou_damping: types.Float = 1.0,
+      clip: bool = True,
+      name: Optional[Text] = None,
+  ):
     """Builds an OUNoisePolicy wrapping wrapped_policy.
 
     Args:
@@ -63,7 +65,8 @@ class OUNoisePolicy(tf_policy.TFPolicy):
         wrapped_policy.policy_state_spec,
         wrapped_policy.info_spec,
         clip=clip,
-        name=name)
+        name=name,
+    )
     self._ou_stddev = ou_stddev
     self._ou_damping = ou_damping
     self._ou_process = None
@@ -80,20 +83,24 @@ class OUNoisePolicy(tf_policy.TFPolicy):
           lambda: tf.zeros(action_spec.shape, dtype=action_spec.dtype),
           self._ou_damping,
           self._ou_stddev,
-          seed=seed_stream())
+          seed=seed_stream(),
+      )
 
     if self._ou_process is None:
-      self._ou_process = tf.nest.map_structure(_create_ou_process,
-                                               self._action_spec)
+      self._ou_process = tf.nest.map_structure(
+          _create_ou_process, self._action_spec
+      )
 
-    action_step = self._wrapped_policy.action(time_step, policy_state,
-                                              seed_stream())
+    action_step = self._wrapped_policy.action(
+        time_step, policy_state, seed_stream()
+    )
 
     def _add_ou_noise(action, ou_process):
       return action + ou_process()
 
-    actions = tf.nest.map_structure(_add_ou_noise, action_step.action,
-                                    self._ou_process)
+    actions = tf.nest.map_structure(
+        _add_ou_noise, action_step.action, self._ou_process
+    )
     return policy_step.PolicyStep(actions, action_step.state, action_step.info)
 
   def _distribution(self, time_step, policy_state):

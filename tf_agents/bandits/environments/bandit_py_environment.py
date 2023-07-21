@@ -20,10 +20,9 @@ from __future__ import print_function
 
 import abc
 from typing import Optional, Text
+
 import numpy as np
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
@@ -42,11 +41,13 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
   returned by step(action) will contain the reward and the next observation.
   """
 
-  def __init__(self,
-               observation_spec: types.NestedArray,
-               action_spec: types.NestedArray,
-               reward_spec: Optional[types.NestedArray] = None,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      observation_spec: types.NestedArray,
+      action_spec: types.NestedArray,
+      reward_spec: Optional[types.NestedArray] = None,
+      name: Optional[Text] = None,
+  ):
     self._observation_spec = observation_spec
     self._action_spec = action_spec
     self._reward_spec = reward_spec
@@ -61,8 +62,11 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
     Returns:
       A time step of type FIRST containing an observation.
     """
-    return ts.restart(self._observe(), batch_size=self.batch_size,
-                      reward_spec=self.reward_spec())
+    return ts.restart(
+        self._observe(),
+        batch_size=self.batch_size,
+        reward_spec=self.reward_spec(),
+    )
 
   def _step(self, action: types.NestedArray) -> ts.TimeStep:
     """Returns a time step containing the reward for the action taken.
@@ -91,8 +95,9 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
     return self._reward_spec
 
   def _empty_observation(self):
-    return tf.nest.map_structure(lambda x: np.zeros(x.shape, x.dtype),
-                                 self.observation_spec())
+    return tf.nest.map_structure(
+        lambda x: np.zeros(x.shape, x.dtype), self.observation_spec()
+    )
 
   @abc.abstractmethod
   def _apply_action(self, action: types.NestedArray) -> types.Float:

@@ -22,7 +22,6 @@ returned.
 
 import gin
 import tensorflow as tf
-
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
@@ -33,16 +32,18 @@ from tf_agents.utils import common
 class ActorNetwork(network.Network):
   """Creates an actor network."""
 
-  def __init__(self,
-               input_tensor_spec,
-               output_tensor_spec,
-               fc_layer_params=None,
-               dropout_layer_params=None,
-               conv_layer_params=None,
-               activation_fn=tf.keras.activations.relu,
-               kernel_initializer=None,
-               last_kernel_initializer=None,
-               name='ActorNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      output_tensor_spec,
+      fc_layer_params=None,
+      dropout_layer_params=None,
+      conv_layer_params=None,
+      activation_fn=tf.keras.activations.relu,
+      kernel_initializer=None,
+      last_kernel_initializer=None,
+      name='ActorNetwork',
+  ):
     """Creates an instance of `ActorNetwork`.
 
     Args:
@@ -67,7 +68,7 @@ class ActorNetwork(network.Network):
       kernel_initializer: kernel initializer for all layers except for the value
         regression layer. If None, a VarianceScaling initializer will be used.
       last_kernel_initializer: kernel initializer for the value regression
-         layer. If None, a RandomUniform initializer will be used.
+        layer. If None, a RandomUniform initializer will be used.
       name: A string representing name of the network.
 
     Raises:
@@ -76,9 +77,8 @@ class ActorNetwork(network.Network):
     """
 
     super(ActorNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     output_tensor_spec = tensor_spec.from_spec(output_tensor_spec)
 
@@ -95,10 +95,12 @@ class ActorNetwork(network.Network):
 
     if kernel_initializer is None:
       kernel_initializer = tf.compat.v1.keras.initializers.VarianceScaling(
-          scale=1. / 3., mode='fan_in', distribution='uniform')
+          scale=1.0 / 3.0, mode='fan_in', distribution='uniform'
+      )
     if last_kernel_initializer is None:
       last_kernel_initializer = tf.keras.initializers.RandomUniform(
-          minval=-0.003, maxval=0.003)
+          minval=-0.003, maxval=0.003
+      )
 
     # TODO(kbanoop): Replace mlp_layers with encoding networks.
     self._mlp_layers = utils.mlp_layers(
@@ -107,14 +109,17 @@ class ActorNetwork(network.Network):
         dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
-        name='input_mlp')
+        name='input_mlp',
+    )
 
     self._mlp_layers.append(
         tf.keras.layers.Dense(
             flat_action_spec[0].shape.num_elements(),
             activation=tf.keras.activations.tanh,
             kernel_initializer=last_kernel_initializer,
-            name='action'))
+            name='action',
+        )
+    )
 
     self._output_tensor_spec = output_tensor_spec
 
@@ -126,7 +131,8 @@ class ActorNetwork(network.Network):
       output = layer(output, training=training)
 
     actions = common.scale_to_spec(output, self._single_action_spec)
-    output_actions = tf.nest.pack_sequence_as(self._output_tensor_spec,
-                                              [actions])
+    output_actions = tf.nest.pack_sequence_as(
+        self._output_tensor_spec, [actions]
+    )
 
     return output_actions, network_state

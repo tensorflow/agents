@@ -15,12 +15,11 @@
 
 """Implements the Linear Thompson Sampling bandit algorithm.
 
-  Reference:
-  "Thompson Sampling for Contextual Bandits with Linear Payoffs",
-  Shipra Agrawal, Navin Goyal, ICML 2013. The actual algorithm implemented is
-  `Algorithm 3` from the supplementary material of the paper from
-  `http://proceedings.mlr.press/v28/agrawal13-supp.pdf`.
-
+Reference:
+"Thompson Sampling for Contextual Bandits with Linear Payoffs",
+Shipra Agrawal, Navin Goyal, ICML 2013. The actual algorithm implemented is
+`Algorithm 3` from the supplementary material of the paper from
+`http://proceedings.mlr.press/v28/agrawal13-supp.pdf`.
 """
 
 from __future__ import absolute_import
@@ -31,7 +30,6 @@ from typing import Optional, Sequence, Text
 
 import gin
 import tensorflow as tf
-
 from tf_agents.bandits.agents import linear_bandit_agent as lin_agent
 from tf_agents.typing import types
 
@@ -54,25 +52,29 @@ class LinearThompsonSamplingAgent(lin_agent.LinearBanditAgent):
   action.
   """
 
-  def __init__(self,
-               time_step_spec: types.TimeStep,
-               action_spec: types.BoundedTensorSpec,
-               variable_collection: Optional[
-                   lin_agent.LinearBanditVariableCollection] = None,
-               alpha: float = 1.0,
-               gamma: float = 1.0,
-               use_eigendecomp: bool = False,
-               tikhonov_weight: float = 1.0,
-               add_bias: bool = False,
-               emit_policy_info: Sequence[Text] = (),
-               observation_and_action_constraint_splitter: Optional[
-                   types.Splitter] = None,
-               accepts_per_arm_features: bool = False,
-               debug_summaries: bool = False,
-               summarize_grads_and_vars: bool = False,
-               enable_summaries: bool = True,
-               dtype: tf.DType = tf.float32,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      time_step_spec: types.TimeStep,
+      action_spec: types.BoundedTensorSpec,
+      variable_collection: Optional[
+          lin_agent.LinearBanditVariableCollection
+      ] = None,
+      alpha: float = 1.0,
+      gamma: float = 1.0,
+      use_eigendecomp: bool = False,
+      tikhonov_weight: float = 1.0,
+      add_bias: bool = False,
+      emit_policy_info: Sequence[Text] = (),
+      observation_and_action_constraint_splitter: Optional[
+          types.Splitter
+      ] = None,
+      accepts_per_arm_features: bool = False,
+      debug_summaries: bool = False,
+      summarize_grads_and_vars: bool = False,
+      enable_summaries: bool = True,
+      dtype: tf.DType = tf.float32,
+      name: Optional[Text] = None,
+  ):
     """Initialize an instance of `LinearThompsonSamplingAgent`.
 
     Args:
@@ -84,8 +86,8 @@ class LinearThompsonSamplingAgent(lin_agent.LinearBanditAgent):
         instance of `LinearBanditVariableCollection` will be created.
       alpha: (float) positive scalar. This is the exploration parameter that
         multiplies the confidence intervals.
-      gamma: a float forgetting factor in [0.0, 1.0]. When set to
-        1.0, the algorithm does not forget.
+      gamma: a float forgetting factor in [0.0, 1.0]. When set to 1.0, the
+        algorithm does not forget.
       use_eigendecomp: whether to use eigen-decomposition or not. The default
         solver is Conjugate Gradient.
       tikhonov_weight: (float) tikhonov regularization term.
@@ -118,7 +120,8 @@ class LinearThompsonSamplingAgent(lin_agent.LinearBanditAgent):
     """
     super(LinearThompsonSamplingAgent, self).__init__(
         exploration_policy=(
-            lin_agent.ExplorationPolicy.linear_thompson_sampling_policy),
+            lin_agent.ExplorationPolicy.linear_thompson_sampling_policy
+        ),
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         variable_collection=variable_collection,
@@ -130,10 +133,12 @@ class LinearThompsonSamplingAgent(lin_agent.LinearBanditAgent):
         emit_policy_info=emit_policy_info,
         emit_log_probability=False,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=accepts_per_arm_features,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
         enable_summaries=enable_summaries,
         dtype=dtype,
-        name=name)
+        name=name,
+    )

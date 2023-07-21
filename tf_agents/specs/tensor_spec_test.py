@@ -39,19 +39,18 @@ TYPE_PARAMETERS = (
 
 def example_nested_array_spec(dtype):
   return {
-      "spec_1":
-          array_spec.ArraySpec((2, 3), dtype),
-      "bounded_spec_1":
-          array_spec.BoundedArraySpec((2, 3), dtype, -10, 10),
-      "bounded_spec_2":
-          array_spec.BoundedArraySpec((2, 3), dtype, -10, -10),
-      "bounded_array_spec_3":
-          array_spec.BoundedArraySpec((2,), dtype, [-10, -10], [10, 10]),
-      "bounded_array_spec_4":
-          array_spec.BoundedArraySpec((2,), dtype, [-10, -9], [10, 9]),
+      "spec_1": array_spec.ArraySpec((2, 3), dtype),
+      "bounded_spec_1": array_spec.BoundedArraySpec((2, 3), dtype, -10, 10),
+      "bounded_spec_2": array_spec.BoundedArraySpec((2, 3), dtype, -10, -10),
+      "bounded_array_spec_3": array_spec.BoundedArraySpec(
+          (2,), dtype, [-10, -10], [10, 10]
+      ),
+      "bounded_array_spec_4": array_spec.BoundedArraySpec(
+          (2,), dtype, [-10, -9], [10, 9]
+      ),
       "dict_spec": {
           "spec_2": array_spec.ArraySpec((2, 3), dtype),
-          "bounded_spec_2": array_spec.BoundedArraySpec((2, 3), dtype, -10, 10)
+          "bounded_spec_2": array_spec.BoundedArraySpec((2, 3), dtype, -10, 10),
       },
       "tuple_spec": (
           array_spec.ArraySpec((2, 3), dtype),
@@ -59,9 +58,10 @@ def example_nested_array_spec(dtype):
       ),
       "list_spec": [
           array_spec.ArraySpec((2, 3), dtype),
-          (array_spec.ArraySpec(
-              (2, 3), dtype), array_spec.BoundedArraySpec((2, 3), dtype, -10,
-                                                          10)),
+          (
+              array_spec.ArraySpec((2, 3), dtype),
+              array_spec.BoundedArraySpec((2, 3), dtype, -10, 10),
+          ),
       ],
   }
 
@@ -70,38 +70,39 @@ def example_nested_tensor_spec(dtype, outer_dims=()):
   minval = 0 if dtype == tf.uint8 else -10
   maxval = 255 if dtype == tf.uint8 else 10
   return {
-      "spec_1":
-          tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
-      "bounded_spec_1":
-          tensor_spec.BoundedTensorSpec(outer_dims + (2, 3), dtype, minval,
-                                        maxval),
-      "bounded_spec_2":
-          tensor_spec.BoundedTensorSpec(outer_dims + (2, 3), dtype, minval,
-                                        minval),
-      "bounded_array_spec_3":
-          tensor_spec.BoundedTensorSpec(outer_dims + (2,), dtype,
-                                        [minval, minval], [maxval, maxval]),
-      "bounded_array_spec_4":
-          tensor_spec.BoundedTensorSpec(outer_dims + (2,), dtype,
-                                        [minval, minval + 1],
-                                        [maxval, maxval - 1]),
+      "spec_1": tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
+      "bounded_spec_1": tensor_spec.BoundedTensorSpec(
+          outer_dims + (2, 3), dtype, minval, maxval
+      ),
+      "bounded_spec_2": tensor_spec.BoundedTensorSpec(
+          outer_dims + (2, 3), dtype, minval, minval
+      ),
+      "bounded_array_spec_3": tensor_spec.BoundedTensorSpec(
+          outer_dims + (2,), dtype, [minval, minval], [maxval, maxval]
+      ),
+      "bounded_array_spec_4": tensor_spec.BoundedTensorSpec(
+          outer_dims + (2,), dtype, [minval, minval + 1], [maxval, maxval - 1]
+      ),
       "dict_spec": {
-          "spec_2":
-              tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
-          "bounded_spec_2":
-              tensor_spec.BoundedTensorSpec(outer_dims + (2, 3), dtype, minval,
-                                            maxval)
+          "spec_2": tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
+          "bounded_spec_2": tensor_spec.BoundedTensorSpec(
+              outer_dims + (2, 3), dtype, minval, maxval
+          ),
       },
       "tuple_spec": (
           tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
-          tensor_spec.BoundedTensorSpec(outer_dims + (2, 3), dtype, minval,
-                                        maxval),
+          tensor_spec.BoundedTensorSpec(
+              outer_dims + (2, 3), dtype, minval, maxval
+          ),
       ),
       "list_spec": [
           tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
-          (tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
-           tensor_spec.BoundedTensorSpec(outer_dims + (2, 3), dtype, minval,
-                                         maxval)),
+          (
+              tensor_spec.TensorSpec(outer_dims + (2, 3), dtype),
+              tensor_spec.BoundedTensorSpec(
+                  outer_dims + (2, 3), dtype, minval, maxval
+              ),
+          ),
       ],
   }
 
@@ -122,8 +123,9 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     # Exclude non integer types and uint8 (has special sampling logic).
     if not dtype.is_integer or dtype == tf.uint8:
       return
-    spec = tensor_spec.BoundedTensorSpec((2, 3), dtype, dtype.max - 1,
-                                         dtype.max)
+    spec = tensor_spec.BoundedTensorSpec(
+        (2, 3), dtype, dtype.max - 1, dtype.max
+    )
     sample = tensor_spec.sample_spec_nest(spec)
     sample_ = self.evaluate(sample)
     self.assertEqual(sample_.shape, (2, 3))
@@ -149,9 +151,11 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
 
     sample_ = self.evaluate(sample)
     self.assertTrue(
-        np.all(sample_ >= bounded.minimum), (sample_.min(), sample_.max()))
+        np.all(sample_ >= bounded.minimum), (sample_.min(), sample_.max())
+    )
     self.assertTrue(
-        np.all(sample_ <= bounded.maximum), (sample_.min(), sample_.max()))
+        np.all(sample_ <= bounded.maximum), (sample_.min(), sample_.max())
+    )
 
   def testBoundedTensorSpecSample(self, dtype):
     if dtype == tf.string or dtype == tf.bool:
@@ -169,7 +173,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     outer_dims = (4, 3)
     self.assertEqual(
         tensor_spec.add_outer_dims_nest(nested_spec, outer_dims),
-        example_nested_tensor_spec(dtype, outer_dims))
+        example_nested_tensor_spec(dtype, outer_dims),
+    )
 
   def testAddOuterShapeWhenNotTupleOrListThrows(self, dtype):
     if dtype == tf.string:
@@ -199,7 +204,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     outer_dim = 4
     self.assertEqual(
         tensor_spec.add_outer_dim(nested_spec, outer_dim),
-        example_nested_tensor_spec(dtype, (outer_dim,)))
+        example_nested_tensor_spec(dtype, (outer_dim,)),
+    )
 
   def testAddOuterDimNoneToSpecs(self, dtype):
     if dtype == tf.string:
@@ -208,7 +214,8 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     outer_dim = None
     self.assertEqual(
         tensor_spec.add_outer_dim(nested_spec, outer_dim),
-        example_nested_tensor_spec(dtype, (outer_dim,)))
+        example_nested_tensor_spec(dtype, (outer_dim,)),
+    )
 
   def testNestSample(self, dtype):
     if dtype == tf.string or dtype == tf.bool:
@@ -245,9 +252,11 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     self.assertTrue(np.all(sample_["list_spec"][1][0] >= spec_1.minimum))
     self.assertTrue(np.all(sample_["list_spec"][1][0] <= spec_1.maximum))
     self.assertTrue(
-        np.all(sample_["list_spec"][1][1] >= bounded_spec_1.minimum))
+        np.all(sample_["list_spec"][1][1] >= bounded_spec_1.minimum)
+    )
     self.assertTrue(
-        np.all(sample_["list_spec"][1][1] <= bounded_spec_1.maximum))
+        np.all(sample_["list_spec"][1][1] <= bounded_spec_1.maximum)
+    )
 
   def testNestSampleOuterDims(self, dtype):
     # Can't add another level of parameterized args because the test class is
@@ -266,14 +275,18 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     sample = tensor_spec.sample_spec_nest(nested_spec, outer_dims=outer_dims)
     bounded = tensor_spec.BoundedTensorSpec.from_spec(nested_spec["spec_1"])
     sample_ = self.evaluate(sample)
-    self.assertEqual((2, 3) + tuple(nested_spec["spec_1"].shape.as_list()),
-                     sample_["spec_1"].shape)
+    self.assertEqual(
+        (2, 3) + tuple(nested_spec["spec_1"].shape.as_list()),
+        sample_["spec_1"].shape,
+    )
     self.assertTrue(np.all(sample_["spec_1"] >= bounded.minimum))
     self.assertTrue(np.all(sample_["spec_1"] <= bounded.maximum))
 
     bounded_spec_1 = nested_spec["bounded_spec_1"]
-    self.assertEqual((2, 3) + tuple(bounded_spec_1.shape.as_list()),
-                     sample_["bounded_spec_1"].shape)
+    self.assertEqual(
+        (2, 3) + tuple(bounded_spec_1.shape.as_list()),
+        sample_["bounded_spec_1"].shape,
+    )
     self.assertTrue(np.all(sample_["bounded_spec_1"] >= bounded_spec_1.minimum))
     self.assertTrue(np.all(sample_["bounded_spec_1"] <= bounded_spec_1.maximum))
 
@@ -281,48 +294,59 @@ class BoundedTensorSpecSampleTest(tf.test.TestCase, parameterized.TestCase):
     tensor_spec_2 = sample_["dict_spec"]["spec_2"]
     self.assertEqual(
         (2, 3) + tuple(nested_spec["dict_spec"]["spec_2"].shape.as_list()),
-        tensor_spec_2.shape)
+        tensor_spec_2.shape,
+    )
     self.assertTrue(np.all(tensor_spec_2 >= bounded.minimum))
     self.assertTrue(np.all(tensor_spec_2 <= bounded.maximum))
     self.assertIn("bounded_spec_2", sample_["dict_spec"])
     sampled_bounded_spec_2 = sample_["dict_spec"]["bounded_spec_2"]
     self.assertEqual(
-        (2, 3) +
-        tuple(nested_spec["dict_spec"]["bounded_spec_2"].shape.as_list()),
-        sampled_bounded_spec_2.shape)
+        (2, 3)
+        + tuple(nested_spec["dict_spec"]["bounded_spec_2"].shape.as_list()),
+        sampled_bounded_spec_2.shape,
+    )
     self.assertTrue(np.all(sampled_bounded_spec_2 >= bounded.minimum))
     self.assertTrue(np.all(sampled_bounded_spec_2 <= bounded.maximum))
 
     self.assertIn("tuple_spec", sample_)
     self.assertEqual(
         (2, 3) + tuple(nested_spec["tuple_spec"][0].shape.as_list()),
-        sample_["tuple_spec"][0].shape)
+        sample_["tuple_spec"][0].shape,
+    )
     self.assertTrue(np.all(sample_["tuple_spec"][0] >= bounded.minimum))
     self.assertTrue(np.all(sample_["tuple_spec"][0] <= bounded.maximum))
     tuple_bounded_spec = nested_spec["tuple_spec"][1]
-    self.assertEqual((2, 3) + tuple(tuple_bounded_spec.shape.as_list()),
-                     sample_["tuple_spec"][1].shape)
+    self.assertEqual(
+        (2, 3) + tuple(tuple_bounded_spec.shape.as_list()),
+        sample_["tuple_spec"][1].shape,
+    )
     self.assertTrue(
-        np.all(sample_["tuple_spec"][1] >= tuple_bounded_spec.minimum))
+        np.all(sample_["tuple_spec"][1] >= tuple_bounded_spec.minimum)
+    )
     self.assertTrue(
-        np.all(sample_["tuple_spec"][1] <= tuple_bounded_spec.maximum))
+        np.all(sample_["tuple_spec"][1] <= tuple_bounded_spec.maximum)
+    )
 
     self.assertIn("list_spec", sample_)
     self.assertEqual(
         (2, 3) + tuple(nested_spec["list_spec"][0].shape.as_list()),
-        sample_["list_spec"][0].shape)
+        sample_["list_spec"][0].shape,
+    )
     self.assertTrue(np.all(sample_["list_spec"][0] >= bounded.minimum))
     self.assertTrue(np.all(sample_["list_spec"][0] <= bounded.maximum))
     self.assertEqual(
         (2, 3) + tuple(nested_spec["list_spec"][1][0].shape.as_list()),
-        sample_["list_spec"][1][0].shape)
+        sample_["list_spec"][1][0].shape,
+    )
     self.assertTrue(np.all(sample_["list_spec"][1][0] >= bounded.minimum))
     self.assertTrue(np.all(sample_["list_spec"][1][0] <= bounded.maximum))
     list_bounded_spec = nested_spec["list_spec"][1][1]
     self.assertTrue(
-        np.all(sample_["list_spec"][1][1] >= list_bounded_spec.minimum))
+        np.all(sample_["list_spec"][1][1] >= list_bounded_spec.minimum)
+    )
     self.assertTrue(
-        np.all(sample_["list_spec"][1][1] <= list_bounded_spec.maximum))
+        np.all(sample_["list_spec"][1][1] <= list_bounded_spec.maximum)
+    )
 
     def _test_batched_shape(sample_, spec_):
       self.assertSequenceEqual(sample_.shape, outer_dims + tuple(spec_.shape))
@@ -363,7 +387,8 @@ class TensorSpecZeroTest(tf.test.TestCase, parameterized.TestCase):
       self.skipTest("Not compatible with string type.")
     nested_spec = example_nested_tensor_spec(dtype)
     zeros = tensor_spec.zero_spec_nest(
-        nested_spec, outer_dims=[tf.constant(8, dtype=tf.int32)])
+        nested_spec, outer_dims=[tf.constant(8, dtype=tf.int32)]
+    )
     zeros_ = self.evaluate(zeros)
 
     def check_shape_and_zero(spec, value):
@@ -401,7 +426,8 @@ class TensorSpecTypeTest(tf.test.TestCase, parameterized.TestCase):
       self.skipTest("Not compatible with string or bool type.")
     spec = tensor_spec.TensorSpec((2, 3), dtype=dtype)
     self.assertIs(
-        tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True)
+        tensor_spec.is_discrete(spec) ^ tensor_spec.is_continuous(spec), True
+    )
 
 
 class FromSpecTest(tf.test.TestCase):

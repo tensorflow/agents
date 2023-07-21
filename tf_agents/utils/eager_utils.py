@@ -52,12 +52,11 @@ from __future__ import print_function
 import copy
 import functools
 import inspect
-from absl import logging
 
+from absl import logging
 import numpy as np
 import six
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.utils import common
 
 from tensorflow.python.util import tf_decorator  # pylint:disable=g-direct-tensorflow-import  # TF internal
@@ -105,7 +104,8 @@ class Future(object):
         # For unbound methods we require self/cls as args[0].
         if not args:
           raise ValueError(
-              'func_or_method is unbond, but not class/instance provided.')
+              'func_or_method is unbond, but not class/instance provided.'
+          )
         else:
           self._self = args[0]
           self._args = args[1:]
@@ -116,13 +116,14 @@ class Future(object):
     Args:
       *args: List of extra arguments.
       **kwargs: Dict of extra keyword arguments.
+
     Returns:
       The result of func_or_method(*args, **kwargs).
     """
     # By default use the init args.
     call_args = args or self._args
     call_kwargs = copy.copy(self._kwargs)
-    for arg_name in self._arg_names[:len(args)]:
+    for arg_name in self._arg_names[: len(args)]:
       # Remove any original kwargs replaced by new positional args.
       call_kwargs.pop(arg_name, None)
     call_kwargs.update(kwargs)
@@ -187,11 +188,13 @@ def add_variables_summaries(grads_and_vars, step):
         var_values = var
       var_name = var.name.replace(':', '_')
       tf.compat.v2.summary.histogram(
-          name=var_name + '_value', data=var_values, step=step)
+          name=var_name + '_value', data=var_values, step=step
+      )
       tf.compat.v2.summary.scalar(
           name=var_name + '_value_norm',
           data=tf.linalg.global_norm([var_values]),
-          step=step)
+          step=step,
+      )
 
 
 def add_gradients_summaries(grads_and_vars, step):
@@ -210,11 +213,13 @@ def add_gradients_summaries(grads_and_vars, step):
           grad_values = grad
         var_name = var.name.replace(':', '_')
         tf.compat.v2.summary.histogram(
-            name=var_name + '_gradient', data=grad_values, step=step)
+            name=var_name + '_gradient', data=grad_values, step=step
+        )
         tf.compat.v2.summary.scalar(
             name=var_name + '_gradient_norm',
             data=tf.linalg.global_norm([grad_values]),
-            step=step)
+            step=step,
+        )
       else:
         logging.info('Var %s has no gradient', var.name)
 
@@ -243,37 +248,41 @@ def clip_gradient_norms(gradients_to_variables, max_norm):
 
 def clip_gradient_norms_fn(max_norm):
   """Returns a `transform_grads_fn` function for gradient clipping."""
+
   def clip_norms(gradients_to_variables):
     return clip_gradient_norms(gradients_to_variables, max_norm)
+
   return clip_norms
 
 
-def create_train_step(loss,
-                      optimizer,
-                      global_step=_USE_GLOBAL_STEP,
-                      total_loss_fn=None,
-                      update_ops=None,
-                      variables_to_train=None,
-                      transform_grads_fn=None,
-                      summarize_gradients=False,
-                      gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
-                      aggregation_method=None,
-                      check_numerics=True):
+def create_train_step(
+    loss,
+    optimizer,
+    global_step=_USE_GLOBAL_STEP,
+    total_loss_fn=None,
+    update_ops=None,
+    variables_to_train=None,
+    transform_grads_fn=None,
+    summarize_gradients=False,
+    gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
+    aggregation_method=None,
+    check_numerics=True,
+):
   """Creates a train_step that evaluates the gradients and returns the loss.
 
   Args:
-    loss: A (possibly nested tuple of) `Tensor` or function representing
-      the loss.
+    loss: A (possibly nested tuple of) `Tensor` or function representing the
+      loss.
     optimizer: A tf.Optimizer to use for computing the gradients.
     global_step: A `Tensor` representing the global step variable. If left as
       `_USE_GLOBAL_STEP`, then tf.train.get_or_create_global_step() is used.
-    total_loss_fn: Function to call on loss value to access the final
-     item to minimize.
+    total_loss_fn: Function to call on loss value to access the final item to
+      minimize.
     update_ops: An optional list of updates to execute. If `update_ops` is
       `None`, then the update ops are set to the contents of the
       `tf.GraphKeys.UPDATE_OPS` collection. If `update_ops` is not `None`, but
-      it doesn't contain all of the update ops in `tf.GraphKeys.UPDATE_OPS`,
-      a warning will be displayed.
+      it doesn't contain all of the update ops in `tf.GraphKeys.UPDATE_OPS`, a
+      warning will be displayed.
     variables_to_train: an optional list of variables to train. If None, it will
       default to all tf.trainable_variables().
     transform_grads_fn: A function which takes a single argument, a list of
@@ -312,7 +321,8 @@ def create_train_step(loss,
     # loss conditioned on executing the train op.
     with tf.control_dependencies(tf.nest.flatten(loss)):
       loss = tf.nest.map_structure(
-          lambda t: tf.identity(t, 'loss_pre_train'), loss)
+          lambda t: tf.identity(t, 'loss_pre_train'), loss
+      )
     train_op = create_train_op(
         total_loss_fn(loss),
         optimizer,
@@ -323,11 +333,13 @@ def create_train_step(loss,
         summarize_gradients=summarize_gradients,
         gate_gradients=gate_gradients,
         aggregation_method=aggregation_method,
-        check_numerics=check_numerics)
+        check_numerics=check_numerics,
+    )
 
     with tf.control_dependencies([train_op]):
       return tf.nest.map_structure(
-          lambda t: tf.identity(t, 'loss_post_train'), loss)
+          lambda t: tf.identity(t, 'loss_post_train'), loss
+      )
 
   if global_step is _USE_GLOBAL_STEP:
     global_step = tf.compat.v1.train.get_or_create_global_step()
@@ -365,16 +377,18 @@ def create_train_step(loss,
   return loss_value
 
 
-def create_train_op(total_loss,
-                    optimizer,
-                    global_step=_USE_GLOBAL_STEP,
-                    update_ops=None,
-                    variables_to_train=None,
-                    transform_grads_fn=None,
-                    summarize_gradients=False,
-                    gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
-                    aggregation_method=None,
-                    check_numerics=True):
+def create_train_op(
+    total_loss,
+    optimizer,
+    global_step=_USE_GLOBAL_STEP,
+    update_ops=None,
+    variables_to_train=None,
+    transform_grads_fn=None,
+    summarize_gradients=False,
+    gate_gradients=tf.compat.v1.train.Optimizer.GATE_OP,
+    aggregation_method=None,
+    check_numerics=True,
+):
   """Creates an `Operation` that evaluates the gradients and returns the loss.
 
   Args:
@@ -385,8 +399,8 @@ def create_train_op(total_loss,
     update_ops: An optional list of updates to execute. If `update_ops` is
       `None`, then the update ops are set to the contents of the
       `tf.GraphKeys.UPDATE_OPS` collection. If `update_ops` is not `None`, but
-      it doesn't contain all of the update ops in `tf.GraphKeys.UPDATE_OPS`,
-      a warning will be displayed.
+      it doesn't contain all of the update ops in `tf.GraphKeys.UPDATE_OPS`, a
+      warning will be displayed.
     variables_to_train: an optional list of variables to train. If None, it will
       default to all tf.trainable_variables().
     transform_grads_fn: A function which takes a single argument, a list of
@@ -408,7 +422,8 @@ def create_train_op(total_loss,
 
   # Update ops use GraphKeys.UPDATE_OPS collection if update_ops is None.
   global_update_ops = set(
-      tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS))
+      tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
+  )
   if update_ops is None:
     update_ops = global_update_ops
   else:
@@ -416,7 +431,8 @@ def create_train_op(total_loss,
   if not global_update_ops.issubset(update_ops):
     tf.compat.v1.logging.warning(
         'update_ops in create_train_op does not contain all the '
-        'update_ops in GraphKeys.UPDATE_OPS')
+        'update_ops in GraphKeys.UPDATE_OPS'
+    )
 
   # Make sure update_ops are computed before total_loss.
   if update_ops:
@@ -442,7 +458,8 @@ def create_train_op(total_loss,
       total_loss,
       variables_to_train,
       gate_gradients=gate_gradients,
-      aggregation_method=aggregation_method)
+      aggregation_method=aggregation_method,
+  )
 
   if transform_grads_fn:
     grads = transform_grads_fn(grads)
@@ -458,8 +475,9 @@ def create_train_op(total_loss,
   with tf.name_scope('train_op'):
     # Make sure total_loss is valid.
     if check_numerics:
-      total_loss = tf.debugging.check_numerics(total_loss,
-                                               'LossTensor is inf or nan')
+      total_loss = tf.debugging.check_numerics(
+          total_loss, 'LossTensor is inf or nan'
+      )
 
     # Ensure the train_tensor computes grad_updates.
     with tf.control_dependencies([grad_updates]):
@@ -533,18 +551,22 @@ def np_function(func=None, output_dtypes=None):
       arrays as outputs.
     output_dtypes: Optional list of dtypes or a function that maps input dtypes
       to output dtypes. Examples: output_dtypes=[tf.float32],
-      output_dtypes=lambda x: x (outputs have the same dtype as inputs).
-      If it is not provided in Graph mode the `func` would be called to infer
-      the output dtypes.
+      output_dtypes=lambda x: x (outputs have the same dtype as inputs). If it
+      is not provided in Graph mode the `func` would be called to infer the
+      output dtypes.
+
   Returns:
     A wrapped function that can be used with TF code.
   """
+
   def decorated(func):
     """Decorated func."""
     dtype_map = {}
+
     def wrapper(*args, **kwargs):
       """Wrapper to add nested input and outputs support."""
       func_with_kwargs = functools.partial(func, **kwargs)
+
       def func_flat_outputs(*args):
         return tf.nest.flatten(func_with_kwargs(*args))
 
@@ -555,7 +577,8 @@ def np_function(func=None, output_dtypes=None):
 
       if tf.executing_eagerly():
         result = func_with_kwargs(
-            *tf.nest.map_structure(lambda x: x.numpy(), args))
+            *tf.nest.map_structure(lambda x: x.numpy(), args)
+        )
         convert = lambda x: x if x is None else tf.convert_to_tensor(value=x)
         return tf.nest.map_structure(convert, result)
       else:
@@ -563,7 +586,8 @@ def np_function(func=None, output_dtypes=None):
         if input_dtypes not in dtype_map:
           if output_dtypes is None:
             dummy_args = tf.nest.map_structure(
-                lambda x: np.ones(x.shape, x.dtype.as_numpy_dtype), args)
+                lambda x: np.ones(x.shape, x.dtype.as_numpy_dtype), args
+            )
             dtype_map[input_dtypes] = compute_output_dtypes(*dummy_args)
           elif isinstance(output_dtypes, (list, tuple)):
             # output_dtypes define the output dtypes.
@@ -579,15 +603,17 @@ def np_function(func=None, output_dtypes=None):
                 dtype_map[input_dtypes] = output_dtypes(*input_dtypes)
               else:
                 raise ValueError(
-                    'output_dtypes not a list of dtypes or a callable.')
+                    'output_dtypes not a list of dtypes or a callable.'
+                )
 
       flat_output_dtypes = tf.nest.flatten(dtype_map[input_dtypes])
-      flat_outputs = tf.py_function(func_flat_outputs,
-                                    inp=args,
-                                    Tout=flat_output_dtypes)
+      flat_outputs = tf.py_function(
+          func_flat_outputs, inp=args, Tout=flat_output_dtypes
+      )
       return tf.nest.pack_sequence_as(dtype_map[input_dtypes], flat_outputs)
 
     return tf_decorator.make_decorator(func, wrapper)
+
   # This code path is for the `foo = np_function(foo, ...)` use case
   if func is not None:
     return decorated(func)
@@ -607,6 +633,7 @@ def dataset_iterator(dataset):
 
   Args:
     dataset: a `tf.data.Dataset`.
+
   Returns:
     A `tf.data.Iterator` if Graph mode is enabled; a tf.data.EagerIterator if
     in eager mode.
@@ -630,6 +657,7 @@ def get_next(iterator):
   Args:
     iterator: a `tf.data.Iterator` if in Graph mode; a `tf.data.EagerIterator`
       if in eager mode.
+
   Returns:
     A `tf.data.Iterator` if Graph mode is enabled; a Python iterator if in eager
     mode.

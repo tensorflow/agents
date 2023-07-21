@@ -24,15 +24,17 @@ from typing import Any, Callable, Optional, Sequence, Text
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
 from tf_agents.networks import q_network
 from tf_agents.typing import types
 
 
-class QBanditNetworkResult(collections.namedtuple(
-    'QBanditNetworkResult', ('q_value_logits', 'log_variance'))):
+class QBanditNetworkResult(
+    collections.namedtuple(
+        'QBanditNetworkResult', ('q_value_logits', 'log_variance')
+    )
+):
   pass
 
 
@@ -49,14 +51,16 @@ class HeteroscedasticQNetwork(network.Network):
       conv_layer_params: Optional[Sequence[Any]] = None,
       fc_layer_params: Sequence[int] = (75, 40),
       dropout_layer_params: Optional[Sequence[float]] = None,
-      activation_fn: Callable[[types.Tensor],
-                              types.Tensor] = tf.keras.activations.relu,
+      activation_fn: Callable[
+          [types.Tensor], types.Tensor
+      ] = tf.keras.activations.relu,
       kernel_initializer: Optional[tf.keras.initializers.Initializer] = None,
       batch_squash: bool = True,
       min_variance: float = 0.1,
       max_variance: float = 10000.0,
       dtype: tf.DType = tf.float32,
-      name: Text = 'HeteroscedasticQNetwork'):
+      name: Text = 'HeteroscedasticQNetwork',
+  ):
     """Creates an instance of `HeteroscedasticQNetwork`.
 
     Args:
@@ -116,19 +120,21 @@ class HeteroscedasticQNetwork(network.Network):
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
         batch_squash=batch_squash,
-        dtype=dtype)
+        dtype=dtype,
+    )
 
     q_value_layer = tf.keras.layers.Dense(
         num_actions,
         activation=None,
         kernel_initializer=tf.random_uniform_initializer(
-            minval=-0.03, maxval=0.03),
-        bias_initializer=tf.constant_initializer(-0.2))
+            minval=-0.03, maxval=0.03
+        ),
+        bias_initializer=tf.constant_initializer(-0.2),
+    )
 
     super(HeteroscedasticQNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     self._encoder = encoder
     self._q_value_layer = q_value_layer
@@ -137,8 +143,10 @@ class HeteroscedasticQNetwork(network.Network):
         num_actions,
         activation=None,
         kernel_initializer=tf.random_uniform_initializer(
-            minval=-0.03, maxval=0.03),
-        dtype=dtype)
+            minval=-0.03, maxval=0.03
+        ),
+        dtype=dtype,
+    )
 
     self._min_variance = min_variance
     self._max_variance = max_variance
@@ -156,11 +164,14 @@ class HeteroscedasticQNetwork(network.Network):
       An instance of `QBanditNetworkResult`.
     """
     state, network_state = self._encoder(
-        observation, step_type=step_type, network_state=network_state)
+        observation, step_type=step_type, network_state=network_state
+    )
 
     log_variance = tf.clip_by_value(
-        self._log_variance_layer(state), tf.math.log(self._min_variance),
-        tf.math.log(self._max_variance))
+        self._log_variance_layer(state),
+        tf.math.log(self._min_variance),
+        tf.math.log(self._max_variance),
+    )
 
     q_value_logits = self._q_value_layer(state)
 

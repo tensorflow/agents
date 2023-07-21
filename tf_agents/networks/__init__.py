@@ -32,7 +32,6 @@ from tf_agents.networks import sequential
 from tf_agents.networks import utils
 from tf_agents.networks import value_network
 from tf_agents.networks import value_rnn_network
-
 from tf_agents.networks.nest_map import NestFlatten
 from tf_agents.networks.nest_map import NestMap
 from tf_agents.networks.network import Network

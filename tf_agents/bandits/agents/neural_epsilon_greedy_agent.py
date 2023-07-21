@@ -17,7 +17,6 @@
 
 Implements an agent based on a neural network that predicts arm rewards.
 The policy adds epsilon greedy exploration.
-
 """
 
 from __future__ import absolute_import
@@ -28,7 +27,6 @@ from typing import Iterable, Optional, Sequence, Text, Tuple
 
 import gin
 import tensorflow as tf
-
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.policies import constraints as constr
 from tf_agents.policies import epsilon_greedy_policy
@@ -37,7 +35,8 @@ from tf_agents.typing import types
 
 @gin.configurable
 class NeuralEpsilonGreedyAgent(
-    greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
+    greedy_reward_prediction_agent.GreedyRewardPredictionAgent
+):
   """A neural network based epsilon greedy agent.
 
   This agent receives a neural network that it trains to predict rewards. The
@@ -53,7 +52,8 @@ class NeuralEpsilonGreedyAgent(
       optimizer: types.Optimizer,
       epsilon: float,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       accepts_per_arm_features: bool = False,
       constraints: Iterable[constr.NeuralConstraint] = (),
       # Params for training.
@@ -68,7 +68,8 @@ class NeuralEpsilonGreedyAgent(
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
       info_fields_to_inherit_from_greedy: Sequence[Text] = (),
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Neural Epsilon Greedy Agent.
 
     For more details about the Laplacian smoothing regularization, please see
@@ -79,10 +80,10 @@ class NeuralEpsilonGreedyAgent(
       action_spec: A nest of `BoundedTensorSpec` representing the actions.
       reward_network: A `tf_agents.network.Network` to be used by the agent. The
         network will be called with call(observation, step_type) and it is
-        expected to provide a reward prediction for all actions.
-        *Note*: when using `observation_and_action_constraint_splitter`, make
-        sure the `reward_network` is compatible with the network-specific half
-        of the output of the `observation_and_action_constraint_splitter`. In
+        expected to provide a reward prediction for all actions. *Note*: when
+        using `observation_and_action_constraint_splitter`, make sure the
+        `reward_network` is compatible with the network-specific half of the
+        output of the `observation_and_action_constraint_splitter`. In
         particular, `observation_and_action_constraint_splitter` will be called
         on the observation before passing to the network.
       optimizer: The optimizer to use for training.
@@ -139,7 +140,8 @@ class NeuralEpsilonGreedyAgent(
         reward_network=reward_network,
         optimizer=optimizer,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         accepts_per_arm_features=accepts_per_arm_features,
         constraints=constraints,
         error_loss_fn=error_loss_fn,
@@ -151,9 +153,11 @@ class NeuralEpsilonGreedyAgent(
         train_step_counter=train_step_counter,
         laplacian_matrix=laplacian_matrix,
         laplacian_smoothing_weight=laplacian_smoothing_weight,
-        name=name)
+        name=name,
+    )
     self._policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
         self._policy,
         epsilon=epsilon,
-        info_fields_to_inherit_from_greedy=info_fields_to_inherit_from_greedy)
+        info_fields_to_inherit_from_greedy=info_fields_to_inherit_from_greedy,
+    )
     self._collect_policy = self._policy

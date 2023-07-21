@@ -37,12 +37,19 @@ from tf_agents.train import actor
 from tf_agents.train import learner
 from tf_agents.train.utils import train_utils
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_string('variable_container_server_address', None,
-                    'Variable container server address.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
+flags.DEFINE_string(
+    'variable_container_server_address',
+    None,
+    'Variable container server address.',
+)
 flags.DEFINE_integer(
-    'task', 0, 'Identifier of the collect task. Must be unique in a job.')
+    'task', 0, 'Identifier of the collect task. Must be unique in a job.'
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_bindings', None, 'Gin binding parameters.')
 
@@ -55,14 +62,15 @@ def evaluate(
     environment_name: Text,
     policy: py_tf_eager_policy.PyTFEagerPolicyBase,
     variable_container: reverb_variable_container.ReverbVariableContainer,
-    suite_load_fn: Callable[[Text],
-                            py_environment.PyEnvironment] = suite_mujoco.load,
+    suite_load_fn: Callable[
+        [Text], py_environment.PyEnvironment
+    ] = suite_mujoco.load,
     additional_metrics: Optional[Iterable[py_metric.PyStepMetric]] = None,
     is_running: Optional[Callable[[], bool]] = None,
     eval_interval: int = 1000,
     eval_episodes: int = 1,
     # TODO(b/178225158): Deprecate in favor of the reporting libray when ready.
-    return_reporting_fn: Optional[Callable[[int, float], None]] = None
+    return_reporting_fn: Optional[Callable[[int, float], None]] = None,
 ) -> None:
   """Evaluates a policy iteratively fetching weights from variable container.
 
@@ -94,7 +102,7 @@ def evaluate(
   train_step = train_utils.create_train_step()
   variables = {
       reverb_variable_container.POLICY_KEY: policy.variables(),
-      reverb_variable_container.TRAIN_STEP_KEY: train_step
+      reverb_variable_container.TRAIN_STEP_KEY: train_step,
   }
   variable_container.update(variables)
   prev_train_step_value = train_step.numpy()
@@ -116,20 +124,23 @@ def evaluate(
       summary_dir=summary_dir,
       summary_interval=eval_interval,
       metrics=metrics + additional_metrics,
-      name='eval_actor')
+      name='eval_actor',
+  )
 
   # Run the experience evaluation loop.
   last_eval_step = 0
   while is_running():
-
     # Eval every step if no `eval_interval` is set, or if on the first step, or
     # if the step is equal or greater than `last_eval_step` + `eval_interval`.
     # It is very possible when logging a specific interval that the steps evaled
     # will not be exact, e.g. 1001 and then 2003 vs. 1000 and then 2000.
-    if (train_step.numpy() == 0 or
-        train_step.numpy() >= eval_interval + last_eval_step):
-      logging.info('Evaluating using greedy policy at step: %d',
-                   train_step.numpy())
+    if (
+        train_step.numpy() == 0
+        or train_step.numpy() >= eval_interval + last_eval_step
+    ):
+      logging.info(
+          'Evaluating using greedy policy at step: %d', train_step.numpy()
+      )
       eval_actor.run()
       last_eval_step = train_step.numpy()
 
@@ -140,7 +151,8 @@ def evaluate(
       return train_step.numpy() <= prev_train_step_value
 
     train_utils.wait_for_predicate(
-        wait_predicate_fn=is_train_step_the_same_or_behind)
+        wait_predicate_fn=is_train_step_the_same_or_behind
+    )
     prev_train_step_value = train_step.numpy()
 
     # Optionally report the average return metric via a callback.
@@ -151,7 +163,7 @@ def evaluate(
 def run_eval(
     root_dir: Text,
     # TODO(b/178225158): Deprecate in favor of the reporting libray when ready.
-    return_reporting_fn: Optional[Callable[[int, float], None]] = None
+    return_reporting_fn: Optional[Callable[[int, float], None]] = None,
 ) -> None:
   """Load the policy and evaluate it.
 
@@ -161,20 +173,26 @@ def run_eval(
       average_return)` which reports the average return to a custom destination.
   """
   # Wait for the greedy policy to become available, then load it.
-  greedy_policy_dir = os.path.join(root_dir, learner.POLICY_SAVED_MODEL_DIR,
-                                   learner.GREEDY_POLICY_SAVED_MODEL_DIR)
+  greedy_policy_dir = os.path.join(
+      root_dir,
+      learner.POLICY_SAVED_MODEL_DIR,
+      learner.GREEDY_POLICY_SAVED_MODEL_DIR,
+  )
   policy = train_utils.wait_for_policy(
-      greedy_policy_dir, load_specs_from_pbtxt=True)
+      greedy_policy_dir, load_specs_from_pbtxt=True
+  )
 
   # Create the variable container. The weights of the greedy policy is updated
   # from it periodically.
   variable_container = reverb_variable_container.ReverbVariableContainer(
       FLAGS.variable_container_server_address,
-      table_names=[reverb_variable_container.DEFAULT_TABLE])
+      table_names=[reverb_variable_container.DEFAULT_TABLE],
+  )
 
   # Prepare summary directory.
-  summary_dir = os.path.join(FLAGS.root_dir, learner.TRAIN_DIR, 'eval',
-                             str(FLAGS.task))
+  summary_dir = os.path.join(
+      FLAGS.root_dir, learner.TRAIN_DIR, 'eval', str(FLAGS.task)
+  )
 
   # Run the evaluation.
   evaluate(
@@ -182,7 +200,8 @@ def run_eval(
       environment_name=gin.REQUIRED,
       policy=policy,
       variable_container=variable_container,
-      return_reporting_fn=return_reporting_fn)
+      return_reporting_fn=return_reporting_fn,
+  )
 
 
 def main(unused_argv: Sequence[Text]) -> None:
@@ -195,5 +214,6 @@ def main(unused_argv: Sequence[Text]) -> None:
 
 if __name__ == '__main__':
   flags.mark_flags_as_required(
-      ['root_dir', 'variable_container_server_address'])
+      ['root_dir', 'variable_container_server_address']
+  )
   multiprocessing.handle_main(functools.partial(app.run, main))

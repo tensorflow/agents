@@ -22,12 +22,10 @@ from __future__ import print_function
 from absl import flags
 from absl.testing import parameterized
 from absl.testing.absltest import mock
-
 import numpy as np
 from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
 from tf_agents.agents.ppo import ppo_agent
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import random_tf_environment
@@ -53,22 +51,22 @@ FLAGS = flags.FLAGS
 
 class DummyActorNet(network.DistributionNetwork):
 
-  def __init__(self,
-               input_spec,
-               action_spec,
-               preprocessing_layers=None,
-               name=None):
+  def __init__(
+      self, input_spec, action_spec, preprocessing_layers=None, name=None
+  ):
     output_spec = self._get_normal_distribution_spec(action_spec)
     super(DummyActorNet, self).__init__(
-        input_spec, (), output_spec=output_spec, name='DummyActorNet')
+        input_spec, (), output_spec=output_spec, name='DummyActorNet'
+    )
     self._action_spec = action_spec
     self._flat_action_spec = tf.nest.flatten(self._action_spec)[0]
 
     self._dummy_layers = (preprocessing_layers or []) + [
         tf.keras.layers.Dense(
             self._flat_action_spec.shape.num_elements() * 2,
-            kernel_initializer=tf.constant_initializer([[2.0, 1.0], [1.0, 1.0]
-                                                       ]),
+            kernel_initializer=tf.constant_initializer(
+                [[2.0, 1.0], [1.0, 1.0]]
+            ),
             bias_initializer=tf.constant_initializer([5.0, 5.0]),
             activation=None,
         )
@@ -80,7 +78,8 @@ class DummyActorNet(network.DistributionNetwork):
     input_param_spec = {  # pylint: disable=g-complex-comprehension
         name: tensor_spec.TensorSpec(
             shape=properties.shape_fn(sample_spec.shape),
-            dtype=sample_spec.dtype)
+            dtype=sample_spec.dtype,
+        )
         for name, properties in param_properties.items()
     }
 
@@ -99,7 +98,8 @@ class DummyActorNet(network.DistributionNetwork):
         return tfp.distributions.Normal(*args, **kwargs)
 
     return distribution_spec.DistributionSpec(
-        distribution_builder, input_param_spec, sample_spec=sample_spec)
+        distribution_builder, input_param_spec, sample_spec=sample_spec
+    )
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
@@ -108,8 +108,9 @@ class DummyActorNet(network.DistributionNetwork):
     # Calls coming from agent.train() have a time dimension. Direct loss calls
     # may not have a time dimension. In order to make BatchSquash work, we need
     # to specify the outer dimension properly.
-    has_time_dim = nest_utils.get_outer_rank(inputs,
-                                             self.input_tensor_spec) == 2
+    has_time_dim = (
+        nest_utils.get_outer_rank(inputs, self.input_tensor_spec) == 2
+    )
     outer_rank = 2 if has_time_dim else 1
     batch_squash = network_utils.BatchSquash(outer_rank)
     hidden_state = batch_squash.flatten(hidden_state)
@@ -123,44 +124,45 @@ class DummyActorNet(network.DistributionNetwork):
     actions = tf.nest.pack_sequence_as(self._action_spec, [actions])
     stdevs = tf.nest.pack_sequence_as(self._action_spec, [stdevs])
 
-    return self.output_spec.build_distribution(
-        loc=actions, scale=stdevs), network_state
+    return (
+        self.output_spec.build_distribution(loc=actions, scale=stdevs),
+        network_state,
+    )
 
 
 def create_sequential_actor_net(ndims: int):
-
   def create_dist(loc_and_scale):
     return {
-        'my_action':
-            tfp.bijectors.Tanh()(tfp.distributions.MultivariateNormalDiag(
+        'my_action': tfp.bijectors.Tanh()(
+            tfp.distributions.MultivariateNormalDiag(
                 loc=loc_and_scale[..., :ndims],
                 scale_diag=0.01 + tf.math.softplus(loc_and_scale[..., ndims:]),
                 validate_args=True,
                 name='my_action_normal',
-            ))
+            )
+        )
     }
 
   return sequential.Sequential([
       tf.keras.layers.Dense(4),
       tf.keras.layers.Dense(ndims * 2),
-      tf.keras.layers.Lambda(create_dist)
+      tf.keras.layers.Lambda(create_dist),
   ])
 
 
 class DummyValueNet(network.Network):
 
-  def __init__(self,
-               observation_spec,
-               preprocessing_layers=None,
-               name=None,
-               outer_rank=1):
+  def __init__(
+      self, observation_spec, preprocessing_layers=None, name=None, outer_rank=1
+  ):
     super(DummyValueNet, self).__init__(observation_spec, (), 'DummyValueNet')
     self._outer_rank = outer_rank
     self._dummy_layers = (preprocessing_layers or []) + [
         tf.keras.layers.Dense(
             1,
             kernel_initializer=tf.constant_initializer([2, 1]),
-            bias_initializer=tf.constant_initializer([5]))
+            bias_initializer=tf.constant_initializer([5]),
+        )
     ]
 
   def call(self, inputs, step_type=None, network_state=()):
@@ -221,12 +223,15 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     # Ensure that there are 4 CPU devices available for the mirrored strategy.
     physical_devices = tf.config.list_physical_devices('CPU')
     try:
-      tf.config.set_logical_device_configuration(physical_devices[0], [
-          tf.config.LogicalDeviceConfiguration(),
-          tf.config.LogicalDeviceConfiguration(),
-          tf.config.LogicalDeviceConfiguration(),
-          tf.config.LogicalDeviceConfiguration(),
-      ])
+      tf.config.set_logical_device_configuration(
+          physical_devices[0],
+          [
+              tf.config.LogicalDeviceConfiguration(),
+              tf.config.LogicalDeviceConfiguration(),
+              tf.config.LogicalDeviceConfiguration(),
+              tf.config.LogicalDeviceConfiguration(),
+          ],
+      )
       logical_devices = tf.config.list_logical_devices('CPU')
       assert len(logical_devices) == 4
     except RuntimeError:
@@ -240,12 +245,13 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._obs_spec, self._action_spec),
         value_net=DummyValueNet(self._obs_spec),
-        check_numerics=True)
+        check_numerics=True,
+    )
     agent.initialize()
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testComputeAdvantagesNoGae(self, strategy_fn):
     with strategy_fn().scope():
       agent = ppo_agent.PPOAgent(
@@ -255,26 +261,32 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           actor_net=DummyActorNet(self._obs_spec, self._action_spec),
           value_net=DummyValueNet(self._obs_spec),
           normalize_observations=False,
-          use_gae=False)
+          use_gae=False,
+      )
       agent.initialize()
     rewards = tf.constant([[1.0] * 9, [1.0] * 9])
-    discounts = tf.constant([[1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
-                             [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0]])
-    returns = tf.constant([[5.0, 4.0, 3.0, 2.0, 1.0, 3.439, 2.71, 1.9, 1.0],
-                           [3.0, 4.0, 7.0, 2.0, -1.0, 5.439, 2.71, -2.9, 1.0]])
+    discounts = tf.constant([
+        [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
+        [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
+    ])
+    returns = tf.constant([
+        [5.0, 4.0, 3.0, 2.0, 1.0, 3.439, 2.71, 1.9, 1.0],
+        [3.0, 4.0, 7.0, 2.0, -1.0, 5.439, 2.71, -2.9, 1.0],
+    ])
     value_preds = tf.constant([
         [3.0] * 10,
         [3.0] * 10,
     ])  # One extra for final time_step.
 
     expected_advantages = returns - value_preds[:, :-1]
-    advantages = agent.compute_advantages(rewards, returns, discounts,
-                                          value_preds)
+    advantages = agent.compute_advantages(
+        rewards, returns, discounts, value_preds
+    )
     self.assertAllClose(expected_advantages, advantages)
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testComputeAdvantagesWithGae(self, strategy_fn):
     gae_lambda = 0.95
     with strategy_fn().scope():
@@ -289,28 +301,54 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           value_net=DummyValueNet(self._obs_spec),
           normalize_observations=False,
           use_gae=True,
-          lambda_value=gae_lambda)
+          lambda_value=gae_lambda,
+      )
       agent.initialize()
     rewards = tf.constant([[1.0] * 9, [1.0] * 9])
-    discounts = tf.constant([[1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
-                             [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0]])
-    returns = tf.constant([[5.0, 4.0, 3.0, 2.0, 1.0, 3.439, 2.71, 1.9, 1.0],
-                           [5.0, 4.0, 3.0, 2.0, 1.0, 3.439, 2.71, 1.9, 1.0]])
-    value_preds = tf.constant([[3.0] * 10,
-                               [3.0] * 10])  # One extra for final time_step.
+    discounts = tf.constant([
+        [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
+        [1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.0],
+    ])
+    returns = tf.constant([
+        [5.0, 4.0, 3.0, 2.0, 1.0, 3.439, 2.71, 1.9, 1.0],
+        [5.0, 4.0, 3.0, 2.0, 1.0, 3.439, 2.71, 1.9, 1.0],
+    ])
+    value_preds = tf.constant(
+        [[3.0] * 10, [3.0] * 10]
+    )  # One extra for final time_step.
 
-    gae_vals = tf.constant([[
-        2.0808625, 1.13775, 0.145, -0.9, -2.0, 0.56016475, -0.16355, -1.01, -2.0
-    ], [
-        2.0808625, 1.13775, 0.145, -0.9, -2.0, 0.56016475, -0.16355, -1.01, -2.0
-    ]])
-    advantages = agent.compute_advantages(rewards, returns, discounts,
-                                          value_preds)
+    gae_vals = tf.constant([
+        [
+            2.0808625,
+            1.13775,
+            0.145,
+            -0.9,
+            -2.0,
+            0.56016475,
+            -0.16355,
+            -1.01,
+            -2.0,
+        ],
+        [
+            2.0808625,
+            1.13775,
+            0.145,
+            -0.9,
+            -2.0,
+            0.56016475,
+            -0.16355,
+            -1.01,
+            -2.0,
+        ],
+    ])
+    advantages = agent.compute_advantages(
+        rewards, returns, discounts, value_preds
+    )
     self.assertAllClose(gae_vals, advantages)
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testSequencePreprocess(self, strategy_fn):
     with strategy_fn().scope():
       counter = common.create_variable('test_train_counter')
@@ -330,43 +368,55 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           use_gae=False,
           use_td_lambda_return=False,
           compute_value_and_advantage_in_train=False,
-          train_step_counter=counter)
+          train_step_counter=counter,
+      )
       agent.initialize()
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32,
+    )
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
         step_type=tf.constant(
-            [[mid_time_step_val] * n_time_steps] * batch_size, dtype=tf.int32),
+            [[mid_time_step_val] * n_time_steps] * batch_size, dtype=tf.int32
+        ),
         reward=tf.constant([[1] * n_time_steps] * batch_size, dtype=tf.float32),
         discount=tf.constant(
-            [[1] * n_time_steps] * batch_size, dtype=tf.float32),
-        observation=observations)
+            [[1] * n_time_steps] * batch_size, dtype=tf.float32
+        ),
+        observation=observations,
+    )
     actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
     old_action_distribution_parameters = {
-        'loc':
-            tf.constant(
-                [[[0.0]] * n_time_steps] * batch_size, dtype=tf.float32),
-        'scale':
-            tf.constant(
-                [[[1.0]] * n_time_steps] * batch_size, dtype=tf.float32),
+        'loc': tf.constant(
+            [[[0.0]] * n_time_steps] * batch_size, dtype=tf.float32
+        ),
+        'scale': tf.constant(
+            [[[1.0]] * n_time_steps] * batch_size, dtype=tf.float32
+        ),
     }
 
-    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
-                              dtype=tf.float32)
+    value_preds = tf.constant(
+        [[9.0, 15.0, 21.0], [9.0, 15.0, 21.0]], dtype=tf.float32
+    )
     policy_info = {
         'dist_params': old_action_distribution_parameters,
         'value_prediction': value_preds,
     }
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type,
+        observations,
+        actions,
+        policy_info,
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
 
     returned_experience = agent.preprocess_sequence(experience)
     self.evaluate(tf.compat.v1.initialize_all_variables())
@@ -374,25 +424,36 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllClose(observations, returned_experience.observation)
     self.assertAllClose(actions, returned_experience.action)
 
-    expected_value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
-                                       dtype=tf.float32)
+    expected_value_preds = tf.constant(
+        [[9.0, 15.0, 21.0], [9.0, 15.0, 21.0]], dtype=tf.float32
+    )
     (_, _, next_time_steps) = trajectory.to_transition(experience)
     expected_returns, expected_advantages = agent.compute_return_and_advantage(
-        next_time_steps, expected_value_preds)
-    self.assertAllClose(old_action_distribution_parameters,
-                        returned_experience.policy_info['dist_params'])
-    self.assertEqual((batch_size, n_time_steps),
-                     returned_experience.policy_info['return'].shape)
-    self.assertAllClose(expected_returns,
-                        returned_experience.policy_info['return'][:, :-1])
-    self.assertEqual((batch_size, n_time_steps),
-                     returned_experience.policy_info['advantage'].shape)
-    self.assertAllClose(expected_advantages,
-                        returned_experience.policy_info['advantage'][:, :-1])
+        next_time_steps, expected_value_preds
+    )
+    self.assertAllClose(
+        old_action_distribution_parameters,
+        returned_experience.policy_info['dist_params'],
+    )
+    self.assertEqual(
+        (batch_size, n_time_steps),
+        returned_experience.policy_info['return'].shape,
+    )
+    self.assertAllClose(
+        expected_returns, returned_experience.policy_info['return'][:, :-1]
+    )
+    self.assertEqual(
+        (batch_size, n_time_steps),
+        returned_experience.policy_info['advantage'].shape,
+    )
+    self.assertAllClose(
+        expected_advantages,
+        returned_experience.policy_info['advantage'][:, :-1],
+    )
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testSequencePreprocessNotBatched(self, strategy_fn):
     with strategy_fn().scope():
       counter = common.create_variable('test_train_counter')
@@ -411,17 +472,20 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           use_gae=False,
           use_td_lambda_return=False,
           compute_value_and_advantage_in_train=False,
-          train_step_counter=counter)
+          train_step_counter=counter,
+      )
       agent.initialize()
     observations = tf.constant([[1, 2], [3, 4], [5, 6]], dtype=tf.float32)
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
         step_type=tf.constant(
-            [mid_time_step_val] * n_time_steps, dtype=tf.int32),
+            [mid_time_step_val] * n_time_steps, dtype=tf.int32
+        ),
         reward=tf.constant([1] * n_time_steps, dtype=tf.float32),
         discount=tf.constant([1] * n_time_steps, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = tf.constant([[0], [1], [1]], dtype=tf.float32)
 
     old_action_distribution_parameters = {
@@ -429,15 +493,20 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'scale': tf.constant([[1.0]] * n_time_steps, dtype=tf.float32),
     }
 
-    value_preds = tf.constant([9., 15., 21.], dtype=tf.float32)
+    value_preds = tf.constant([9.0, 15.0, 21.0], dtype=tf.float32)
     policy_info = {
         'dist_params': old_action_distribution_parameters,
         'value_prediction': value_preds,
     }
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type,
+        observations,
+        actions,
+        policy_info,
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
 
     returned_experience = agent.preprocess_sequence(experience)
     self.evaluate(tf.compat.v1.initialize_all_variables())
@@ -445,16 +514,23 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllClose(observations, returned_experience.observation)
     self.assertAllClose(actions, returned_experience.action)
 
-    self.assertAllClose(old_action_distribution_parameters,
-                        returned_experience.policy_info['dist_params'])
-    self.assertEqual(n_time_steps,
-                     returned_experience.policy_info['return'].shape)
-    self.assertAllClose([40.4821, 30.79],
-                        returned_experience.policy_info['return'][:-1])
-    self.assertEqual(n_time_steps,
-                     returned_experience.policy_info['advantage'].shape)
-    self.assertAllClose([31.482101, 15.790001],
-                        returned_experience.policy_info['advantage'][:-1])
+    self.assertAllClose(
+        old_action_distribution_parameters,
+        returned_experience.policy_info['dist_params'],
+    )
+    self.assertEqual(
+        n_time_steps, returned_experience.policy_info['return'].shape
+    )
+    self.assertAllClose(
+        [40.4821, 30.79], returned_experience.policy_info['return'][:-1]
+    )
+    self.assertEqual(
+        n_time_steps, returned_experience.policy_info['advantage'].shape
+    )
+    self.assertAllClose(
+        [31.482101, 15.790001],
+        returned_experience.policy_info['advantage'][:-1],
+    )
 
   @parameterized.named_parameters(
       ('DefaultOneEpochValueInTrain', _default, 1, True, True),
@@ -465,9 +541,15 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
       ('OneDeviceIncompEpisodesReturnNonZeroLoss', _one_device, 1, False, True),
       ('MirroredOneEpochValueInTrain', _mirrored, 1, True, True),
       ('MirroredFiveEpochsValueInCollect', _mirrored, 5, False, False),
-      ('MirroredIncompEpisodesReturnNonZeroLoss', _mirrored, 1, False, True))
-  def testTrain(self, strategy_fn, num_epochs, use_td_lambda_return,
-                compute_value_and_advantage_in_train):
+      ('MirroredIncompEpisodesReturnNonZeroLoss', _mirrored, 1, False, True),
+  )
+  def testTrain(
+      self,
+      strategy_fn,
+      num_epochs,
+      use_td_lambda_return,
+      compute_value_and_advantage_in_train,
+  ):
     # Mock the build_train_op to return an op for incrementing this counter.
     with strategy_fn().scope():
       counter = common.create_variable('test_train_counter')
@@ -485,39 +567,50 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           use_gae=use_td_lambda_return,
           use_td_lambda_return=use_td_lambda_return,
           compute_value_and_advantage_in_train=(
-              compute_value_and_advantage_in_train),
-          train_step_counter=counter)
+              compute_value_and_advantage_in_train
+          ),
+          train_step_counter=counter,
+      )
       agent.initialize()
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32,
+    )
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
         step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
     action_distribution_parameters = {
         'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
         'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
     }
-    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
-                              dtype=tf.float32)
+    value_preds = tf.constant(
+        [[9.0, 15.0, 21.0], [9.0, 15.0, 21.0]], dtype=tf.float32
+    )
 
     policy_info = {
         'dist_params': action_distribution_parameters,
     }
     if not compute_value_and_advantage_in_train:
       policy_info['value_prediction'] = value_preds
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type,
+        observations,
+        actions,
+        policy_info,
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
     if not compute_value_and_advantage_in_train:
       experience = agent._preprocess(experience)
 
@@ -536,15 +629,18 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertNotEqual(
         loss_numpy,
         0.0,
-        msg=('Loss is exactly zero, looks like no training '
-             'was performed due to incomplete episodes.'))
+        msg=(
+            'Loss is exactly zero, looks like no training '
+            'was performed due to incomplete episodes.'
+        ),
+    )
 
     # Assert that train_op ran increment_counter num_epochs times.
     self.assertEqual(num_epochs, self.evaluate(counter))
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testGetEpochLoss(self, strategy_fn):
     with strategy_fn().scope():
       agent = ppo_agent.PPOAgent(
@@ -562,13 +658,15 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           importance_ratio_clipping=10,
       )
       agent.initialize()
-    observations = tf.constant([[1, 2], [3, 4], [1, 2], [3, 4]],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [[1, 2], [3, 4], [1, 2], [3, 4]], dtype=tf.float32
+    )
     time_steps = ts.restart(observations, batch_size=2)
     actions = tf.constant([[0], [1], [0], [1]], dtype=tf.float32)
     returns = tf.constant([1.9, 1.0, 1.9, 1.0], dtype=tf.float32)
-    sample_action_log_probs = tf.constant([0.9, 0.3, 0.9, 0.3],
-                                          dtype=tf.float32)
+    sample_action_log_probs = tf.constant(
+        [0.9, 0.3, 0.9, 0.3], dtype=tf.float32
+    )
     advantages = tf.constant([1.9, 1.0, 1.9, 1.0], dtype=tf.float32)
     weights = tf.constant([1.0, 1.0, 0.0, 0.0], dtype=tf.float32)
     sample_action_distribution_parameters = {
@@ -586,12 +684,19 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         sample_action_distribution_parameters,
         weights,
         train_step,
-        debug_summaries=False)
+        debug_summaries=False,
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     total_loss, extra_loss_info = self.evaluate(loss_info)
-    (policy_gradient_loss, value_estimation_loss, l2_regularization_loss,
-     entropy_reg_loss, kl_penalty_loss, clip_fraction) = extra_loss_info
+    (
+        policy_gradient_loss,
+        value_estimation_loss,
+        l2_regularization_loss,
+        entropy_reg_loss,
+        kl_penalty_loss,
+        clip_fraction,
+    ) = extra_loss_info
 
     # Check loss values are as expected. Factor of 2/4 is because four timesteps
     # were included in the data, but two were masked out. Reduce_means in losses
@@ -603,23 +708,32 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_kl_penalty_loss = 0.0
     expected_clip_fraction = 0.0
     self.assertAllClose(
-        expected_pg_loss + expected_ve_loss + expected_l2_loss +
-        expected_ent_loss + expected_kl_penalty_loss,
+        expected_pg_loss
+        + expected_ve_loss
+        + expected_l2_loss
+        + expected_ent_loss
+        + expected_kl_penalty_loss,
         total_loss,
         atol=0.001,
-        rtol=0.001)
+        rtol=0.001,
+    )
     self.assertAllClose(expected_pg_loss, policy_gradient_loss)
     self.assertAllClose(expected_ve_loss, value_estimation_loss)
     self.assertAllClose(
-        expected_l2_loss, l2_regularization_loss, atol=0.001, rtol=0.001)
+        expected_l2_loss, l2_regularization_loss, atol=0.001, rtol=0.001
+    )
     self.assertAllClose(expected_ent_loss, entropy_reg_loss)
     self.assertAllClose(expected_kl_penalty_loss, kl_penalty_loss)
     self.assertAllClose(expected_clip_fraction, clip_fraction)
 
   @parameterized.named_parameters(
-      ('DefaultIsZero', _default, 0), ('DefaultNotZero', _default, 1),
-      ('OneDeviceIsZero', _one_device, 0), ('OneDeviceNotZero', _one_device, 1),
-      ('MirroredIsZero', _mirrored, 0), ('MirroredNotZero', _mirrored, 1))
+      ('DefaultIsZero', _default, 0),
+      ('DefaultNotZero', _default, 1),
+      ('OneDeviceIsZero', _one_device, 0),
+      ('OneDeviceNotZero', _one_device, 1),
+      ('MirroredIsZero', _mirrored, 0),
+      ('MirroredNotZero', _mirrored, 1),
+  )
   def testL2RegularizationLoss(self, strategy_fn, not_zero):
     l2_reg = 1e-4 * not_zero
     with strategy_fn().scope():
@@ -644,11 +758,17 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     sample_action_log_probs = tf.constant([[0.9], [0.3]], dtype=tf.float32)
     advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
     current_policy_distribution, unused_network_state = DummyActorNet(
-        self._obs_spec, self._action_spec)(time_steps.observation,
-                                           time_steps.step_type, ())
+        self._obs_spec, self._action_spec
+    )(time_steps.observation, time_steps.step_type, ())
     weights = tf.ones_like(advantages)
-    agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
-                               advantages, current_policy_distribution, weights)
+    agent.policy_gradient_loss(
+        time_steps,
+        actions,
+        sample_action_log_probs,
+        advantages,
+        current_policy_distribution,
+        weights,
+    )
     agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request L2 regularization loss.
@@ -656,7 +776,8 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_loss = l2_reg * ((2**2 + 1) + (2**2 + 1 + 1 + 1))
     # Make sure the network is built before we try to get variables.
     agent.policy.action(
-        tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
+        tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,))
+    )
     loss = agent.l2_regularization_loss()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -664,16 +785,21 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   @parameterized.named_parameters(
-      ('DefaultIsZero', _default, 0), ('DefaultNotZero', _default, 1),
-      ('OneDeviceIsZero', _one_device, 0), ('OneDeviceNotZero', _one_device, 1),
-      ('MirroredIsZero', _mirrored, 0), ('MirroredNotZero', _mirrored, 1))
+      ('DefaultIsZero', _default, 0),
+      ('DefaultNotZero', _default, 1),
+      ('OneDeviceIsZero', _one_device, 0),
+      ('OneDeviceNotZero', _one_device, 1),
+      ('MirroredIsZero', _mirrored, 0),
+      ('MirroredNotZero', _mirrored, 1),
+  )
   def testL2RegularizationLossWithSharedVariables(self, strategy_fn, not_zero):
     policy_l2_reg = 4e-4 * not_zero
     value_function_l2_reg = 2e-4 * not_zero
     shared_vars_l2_reg = 1e-4 * not_zero
     with strategy_fn().scope():
       actor_net, value_net = _create_joint_actor_value_networks(
-          self._obs_spec, self._action_spec)
+          self._obs_spec, self._action_spec
+      )
       agent = ppo_agent.PPOAgent(
           self._time_step_spec,
           self._action_spec,
@@ -696,21 +822,31 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     sample_action_log_probs = tf.constant([[0.9], [0.3]], dtype=tf.float32)
     advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
     current_policy_distribution, unused_network_state = DummyActorNet(
-        self._obs_spec, self._action_spec)(time_steps.observation,
-                                           time_steps.step_type, ())
+        self._obs_spec, self._action_spec
+    )(time_steps.observation, time_steps.step_type, ())
     weights = tf.ones_like(advantages)
-    agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
-                               advantages, current_policy_distribution, weights)
+    agent.policy_gradient_loss(
+        time_steps,
+        actions,
+        sample_action_log_probs,
+        advantages,
+        current_policy_distribution,
+        weights,
+    )
     agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request L2 regularization loss.
     # Value function weights are [2, 1], actor net weights are [2, 1, 1, 1],
     # shared weights are [3, 1, 1, 1].
-    expected_loss = value_function_l2_reg * (2**2 + 1) + policy_l2_reg * (
-        2**2 + 1 + 1 + 1) + shared_vars_l2_reg * (3**2 + 1 + 1 + 1)
+    expected_loss = (
+        value_function_l2_reg * (2**2 + 1)
+        + policy_l2_reg * (2**2 + 1 + 1 + 1)
+        + shared_vars_l2_reg * (3**2 + 1 + 1 + 1)
+    )
     # Make sure the network is built before we try to get variables.
     agent.policy.action(
-        tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,)))
+        tensor_spec.sample_spec_nest(self._time_step_spec, outer_dims=(2,))
+    )
     loss = agent.l2_regularization_loss()
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
@@ -718,9 +854,13 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertAllClose(loss_, expected_loss)
 
   @parameterized.named_parameters(
-      ('DefaultIsZero', _default, 0), ('DefaultNotZero', _default, 1),
-      ('OneDeviceIsZero', _one_device, 0), ('OneDeviceNotZero', _one_device, 1),
-      ('MirroredIsZero', _mirrored, 0), ('MirroredNotZero', _mirrored, 1))
+      ('DefaultIsZero', _default, 0),
+      ('DefaultNotZero', _default, 1),
+      ('OneDeviceIsZero', _one_device, 0),
+      ('OneDeviceNotZero', _one_device, 1),
+      ('MirroredIsZero', _mirrored, 0),
+      ('MirroredNotZero', _mirrored, 1),
+  )
   def testEntropyRegularizationLoss(self, strategy_fn, not_zero):
     ent_reg = 0.1 * not_zero
     with strategy_fn().scope():
@@ -745,10 +885,16 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     advantages = tf.constant([1.9, 1.0], dtype=tf.float32)
     weights = tf.ones_like(advantages)
     current_policy_distribution, unused_network_state = DummyActorNet(
-        self._obs_spec, self._action_spec)(time_steps.observation,
-                                           time_steps.step_type, ())
-    agent.policy_gradient_loss(time_steps, actions, sample_action_log_probs,
-                               advantages, current_policy_distribution, weights)
+        self._obs_spec, self._action_spec
+    )(time_steps.observation, time_steps.step_type, ())
+    agent.policy_gradient_loss(
+        time_steps,
+        actions,
+        sample_action_log_probs,
+        advantages,
+        current_policy_distribution,
+        weights,
+    )
     agent.value_estimation_loss(time_steps, returns, weights)
 
     # Now request entropy regularization loss.
@@ -756,17 +902,20 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     expected_loss = -3.70111 * ent_reg
     outer_rank = nest_utils.get_outer_rank(time_steps, agent.time_step_spec)
     entropy = tf.cast(
-        common.entropy(current_policy_distribution, agent.action_spec,
-                       outer_rank), tf.float32)
+        common.entropy(
+            current_policy_distribution, agent.action_spec, outer_rank
+        ),
+        tf.float32,
+    )
     loss = agent.entropy_regularization_loss(time_steps, entropy, weights)
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testValueEstimationLoss(self, strategy_fn):
     with strategy_fn().scope():
       agent = ppo_agent.PPOAgent(
@@ -792,9 +941,9 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     loss_ = self.evaluate(loss)
     self.assertAllClose(loss_, expected_loss)
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testPolicyGradientLoss(self, strategy_fn):
     with strategy_fn().scope():
       actor_net = DummyActorNet(self._obs_spec, self._action_spec)
@@ -818,12 +967,18 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     weights = tf.ones_like(advantages)
 
     current_policy_distribution, unused_network_state = actor_net(
-        time_steps.observation, time_steps.step_type, ())
+        time_steps.observation, time_steps.step_type, ()
+    )
 
     expected_loss = -0.0164646133
-    loss = agent.policy_gradient_loss(time_steps, actions,
-                                      sample_action_log_probs, advantages,
-                                      current_policy_distribution, weights)
+    loss = agent.policy_gradient_loss(
+        time_steps,
+        actions,
+        sample_action_log_probs,
+        advantages,
+        current_policy_distribution,
+        weights,
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
@@ -833,9 +988,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         self._time_step_spec.observation,
         self._action_spec,
-        fc_layer_params=None)
+        fc_layer_params=None,
+    )
     value_net = value_network.ValueNetwork(
-        self._time_step_spec.observation, fc_layer_params=None)
+        self._time_step_spec.observation, fc_layer_params=None
+    )
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -848,9 +1005,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     )
 
     agent.kl_cutoff_loss = mock.MagicMock(
-        return_value=tf.constant(3.0, dtype=tf.float32))
+        return_value=tf.constant(3.0, dtype=tf.float32)
+    )
     agent.adaptive_kl_loss = mock.MagicMock(
-        return_value=tf.constant(4.0, dtype=tf.float32))
+        return_value=tf.constant(4.0, dtype=tf.float32)
+    )
 
     observations = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=2)
@@ -859,33 +1018,41 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         'scale': tf.constant([[1.0], [1.0]], dtype=tf.float32),
     }
     current_policy_distribution, unused_network_state = DummyActorNet(
-        self._obs_spec, self._action_spec)(time_steps.observation,
-                                           time_steps.step_type, ())
+        self._obs_spec, self._action_spec
+    )(time_steps.observation, time_steps.step_type, ())
     weights = tf.ones_like(time_steps.discount)
 
     expected_kl_penalty_loss = 7.0
 
-    kl_penalty_loss = agent.kl_penalty_loss(time_steps,
-                                            action_distribution_parameters,
-                                            current_policy_distribution,
-                                            weights)
+    kl_penalty_loss = agent.kl_penalty_loss(
+        time_steps,
+        action_distribution_parameters,
+        current_policy_distribution,
+        weights,
+    )
     self.evaluate(tf.compat.v1.global_variables_initializer())
     kl_penalty_loss_ = self.evaluate(kl_penalty_loss)
     self.assertEqual(expected_kl_penalty_loss, kl_penalty_loss_)
 
   @parameterized.named_parameters(
-      ('DefaultIsZero', _default, 0), ('DefaultNotZero', _default, 1),
-      ('OneDeviceIsZero', _one_device, 0), ('OneDeviceNotZero', _one_device, 1),
-      ('MirroredIsZero', _mirrored, 0), ('MirroredNotZero', _mirrored, 1))
+      ('DefaultIsZero', _default, 0),
+      ('DefaultNotZero', _default, 1),
+      ('OneDeviceIsZero', _one_device, 0),
+      ('OneDeviceNotZero', _one_device, 1),
+      ('MirroredIsZero', _mirrored, 0),
+      ('MirroredNotZero', _mirrored, 1),
+  )
   def testKlCutoffLoss(self, strategy_fn, not_zero):
     kl_cutoff_coef = 30.0 * not_zero
     with strategy_fn().scope():
       actor_net = actor_distribution_network.ActorDistributionNetwork(
           self._time_step_spec.observation,
           self._action_spec,
-          fc_layer_params=None)
+          fc_layer_params=None,
+      )
       value_net = value_network.ValueNetwork(
-          self._time_step_spec.observation, fc_layer_params=None)
+          self._time_step_spec.observation, fc_layer_params=None
+      )
       agent = ppo_agent.PPOAgent(
           self._time_step_spec,
           self._action_spec,
@@ -897,26 +1064,29 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
           kl_cutoff_coef=kl_cutoff_coef,
       )
       agent.initialize()
-    kl_divergence = tf.constant([[1.5, -0.5, 6.5, -1.5, -2.3]],
-                                dtype=tf.float32)
-    expected_kl_cutoff_loss = kl_cutoff_coef * (.24**2)  # (0.74 - 0.5) ^ 2
+    kl_divergence = tf.constant(
+        [[1.5, -0.5, 6.5, -1.5, -2.3]], dtype=tf.float32
+    )
+    expected_kl_cutoff_loss = kl_cutoff_coef * (0.24**2)  # (0.74 - 0.5) ^ 2
 
     loss = agent.kl_cutoff_loss(kl_divergence)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     loss_ = self.evaluate(loss)
     self.assertAllClose([loss_], [expected_kl_cutoff_loss])
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testAdaptiveKlLoss(self, strategy_fn):
     with strategy_fn().scope():
       actor_net = actor_distribution_network.ActorDistributionNetwork(
           self._time_step_spec.observation,
           self._action_spec,
-          fc_layer_params=None)
+          fc_layer_params=None,
+      )
       value_net = value_network.ValueNetwork(
-          self._time_step_spec.observation, fc_layer_params=None)
+          self._time_step_spec.observation, fc_layer_params=None
+      )
       agent = ppo_agent.PPOAgent(
           self._time_step_spec,
           self._action_spec,
@@ -950,17 +1120,19 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     loss_2 = self.evaluate(agent.adaptive_kl_loss([100.0]))
     self.assertLess(loss_1, loss_2)
 
-  @parameterized.named_parameters(('Default', _default),
-                                  ('OneDevice', _one_device),
-                                  ('Mirrored', _mirrored))
+  @parameterized.named_parameters(
+      ('Default', _default), ('OneDevice', _one_device), ('Mirrored', _mirrored)
+  )
   def testUpdateAdaptiveKlBeta(self, strategy_fn):
     with strategy_fn().scope():
       actor_net = actor_distribution_network.ActorDistributionNetwork(
           self._time_step_spec.observation,
           self._action_spec,
-          fc_layer_params=None)
+          fc_layer_params=None,
+      )
       value_net = value_network.ValueNetwork(
-          self._time_step_spec.observation, fc_layer_params=None)
+          self._time_step_spec.observation, fc_layer_params=None
+      )
       agent = ppo_agent.PPOAgent(
           self._time_step_spec,
           self._action_spec,
@@ -993,13 +1165,15 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
 
   def testPolicy(self):
     value_net = value_network.ValueNetwork(
-        self._time_step_spec.observation, fc_layer_params=None)
+        self._time_step_spec.observation, fc_layer_params=None
+    )
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
         tf.compat.v1.train.AdamOptimizer(),
         actor_net=DummyActorNet(self._obs_spec, self._action_spec),
-        value_net=value_net)
+        value_net=value_net,
+    )
     observations = tf.constant([[1, 2]], dtype=tf.float32)
     time_steps = ts.restart(observations, batch_size=1)
     action_step = agent.policy.action(time_steps)
@@ -1014,12 +1188,14 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         self._action_spec,
         input_fc_layer_params=None,
         output_fc_layer_params=None,
-        lstm_size=(20,))
+        lstm_size=(20,),
+    )
     value_net = value_rnn_network.ValueRnnNetwork(
         self._time_step_spec.observation,
         input_fc_layer_params=None,
         output_fc_layer_params=None,
-        lstm_size=(10,))
+        lstm_size=(10,),
+    )
     global_step = tf.compat.v1.train.get_or_create_global_step()
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
@@ -1032,18 +1208,22 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     )
     # Use a random env, policy, and replay buffer to collect training data.
     random_env = random_tf_environment.RandomTFEnvironment(
-        self._time_step_spec, self._action_spec, batch_size=1)
+        self._time_step_spec, self._action_spec, batch_size=1
+    )
     collection_policy = random_tf_policy.RandomTFPolicy(
         self._time_step_spec,
         self._action_spec,
-        info_spec=agent.collect_policy.info_spec)
+        info_spec=agent.collect_policy.info_spec,
+    )
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-        collection_policy.trajectory_spec, batch_size=1, max_length=7)
+        collection_policy.trajectory_spec, batch_size=1, max_length=7
+    )
     collect_driver = dynamic_episode_driver.DynamicEpisodeDriver(
         random_env,
         collection_policy,
         observers=[replay_buffer.add_batch],
-        num_episodes=1)
+        num_episodes=1,
+    )
 
     # In graph mode: finish building the graph so the optimizer
     # variables are created.
@@ -1071,9 +1251,11 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         self._action_spec,
         input_fc_layer_params=None,
         output_fc_layer_params=None,
-        lstm_size=(20,))
+        lstm_size=(20,),
+    )
     value_net = value_network.ValueNetwork(
-        self._time_step_spec.observation, fc_layer_params=None)
+        self._time_step_spec.observation, fc_layer_params=None
+    )
     agent = ppo_agent.PPOAgent(
         self._time_step_spec,
         self._action_spec,
@@ -1082,38 +1264,47 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         value_net=value_net,
         num_epochs=1,
         train_step_counter=counter,
-        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train
+        compute_value_and_advantage_in_train=compute_value_and_advantage_in_train,
     )
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32,
+    )
 
     mid_time_step_val = ts.StepType.MID.tolist()
     time_steps = ts.TimeStep(
         step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
     action_distribution_parameters = {
         'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
         'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
     }
-    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
-                              dtype=tf.float32)
+    value_preds = tf.constant(
+        [[9.0, 15.0, 21.0], [9.0, 15.0, 21.0]], dtype=tf.float32
+    )
 
     policy_info = {
         'dist_params': action_distribution_parameters,
     }
     if not compute_value_and_advantage_in_train:
       policy_info['value_prediction'] = value_preds
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type,
+        observations,
+        actions,
+        policy_info,
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
     if not compute_value_and_advantage_in_train:
       experience = agent._preprocess(experience)
 
@@ -1130,41 +1321,55 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertNotEqual(
         loss_numpy,
         0.0,
-        msg=('Loss is exactly zero, looks like no training '
-             'was performed due to incomplete episodes.'))
+        msg=(
+            'Loss is exactly zero, looks like no training '
+            'was performed due to incomplete episodes.'
+        ),
+    )
 
   def testAgentDoesNotFailWhenNestedObservationActionAndDebugSummaries(self):
     summary_writer = tf.compat.v2.summary.create_file_writer(
-        FLAGS.test_tmpdir, flush_millis=10000)
+        FLAGS.test_tmpdir, flush_millis=10000
+    )
     summary_writer.set_as_default()
 
-    nested_obs_spec = (self._obs_spec, self._obs_spec, {
-        'a': self._obs_spec,
-        'b': self._obs_spec,
-    })
+    nested_obs_spec = (
+        self._obs_spec,
+        self._obs_spec,
+        {
+            'a': self._obs_spec,
+            'b': self._obs_spec,
+        },
+    )
     nested_time_spec = ts.time_step_spec(nested_obs_spec)
 
-    nested_act_spec = (self._action_spec, {
-        'c': self._action_spec,
-        'd': self._action_spec
-    })
+    nested_act_spec = (
+        self._action_spec,
+        {'c': self._action_spec, 'd': self._action_spec},
+    )
 
     class NestedActorNet(network.DistributionNetwork):
 
       def __init__(self, dummy_model):
-        output_spec = (dummy_model.output_spec, {
-            'c': dummy_model.output_spec,
-            'd': dummy_model.output_spec,
-        })
+        output_spec = (
+            dummy_model.output_spec,
+            {
+                'c': dummy_model.output_spec,
+                'd': dummy_model.output_spec,
+            },
+        )
         super(NestedActorNet, self).__init__(
-            dummy_model.input_tensor_spec, (),
+            dummy_model.input_tensor_spec,
+            (),
             output_spec=output_spec,
-            name='NestedActorNet')
+            name='NestedActorNet',
+        )
         self.dummy_model = dummy_model
 
       def call(self, inputs, network_state, *args, **kwargs):
         dummy_ans, _ = self.dummy_model(
-            inputs, network_state=network_state, *args, **kwargs)
+            inputs, network_state=network_state, *args, **kwargs
+        )
         return (dummy_ans, {'c': dummy_ans, 'd': dummy_ans}), ()
 
     dummy_model = DummyActorNet(nested_obs_spec, self._action_spec)
@@ -1175,57 +1380,78 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         actor_net=NestedActorNet(dummy_model),
         value_net=DummyValueNet(nested_obs_spec),
         compute_value_and_advantage_in_train=False,
-        debug_summaries=True)
+        debug_summaries=True,
+    )
 
-    observations = tf.constant([
-        [[1, 2], [3, 4], [5, 6]],
-        [[1, 2], [3, 4], [5, 6]],
-    ],
-                               dtype=tf.float32)
+    observations = tf.constant(
+        [
+            [[1, 2], [3, 4], [5, 6]],
+            [[1, 2], [3, 4], [5, 6]],
+        ],
+        dtype=tf.float32,
+    )
 
-    observations = (observations, observations, {
-        'a': observations,
-        'b': observations,
-    })
+    observations = (
+        observations,
+        observations,
+        {
+            'a': observations,
+            'b': observations,
+        },
+    )
 
     time_steps = ts.TimeStep(
         step_type=tf.constant([[1] * 3] * 2, dtype=tf.int32),
         reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
         discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-        observation=observations)
+        observation=observations,
+    )
     actions = tf.constant([[[0], [1], [1]], [[0], [1], [1]]], dtype=tf.float32)
 
-    actions = (actions, {
-        'c': actions,
-        'd': actions,
-    })
+    actions = (
+        actions,
+        {
+            'c': actions,
+            'd': actions,
+        },
+    )
 
     action_distribution_parameters = {
         'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
         'scale': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
     }
-    action_distribution_parameters = (action_distribution_parameters, {
-        'c': action_distribution_parameters,
-        'd': action_distribution_parameters,
-    })
+    action_distribution_parameters = (
+        action_distribution_parameters,
+        {
+            'c': action_distribution_parameters,
+            'd': action_distribution_parameters,
+        },
+    )
 
-    value_preds = tf.constant([[9., 15., 21.], [9., 15., 21.]],
-                              dtype=tf.float32)
+    value_preds = tf.constant(
+        [[9.0, 15.0, 21.0], [9.0, 15.0, 21.0]], dtype=tf.float32
+    )
     policy_info = {
         'dist_params': action_distribution_parameters,
         'value_prediction': value_preds,
     }
 
-    experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                       actions, policy_info,
-                                       time_steps.step_type, time_steps.reward,
-                                       time_steps.discount)
+    experience = trajectory.Trajectory(
+        time_steps.step_type,
+        observations,
+        actions,
+        policy_info,
+        time_steps.step_type,
+        time_steps.reward,
+        time_steps.discount,
+    )
     experience = agent._preprocess(experience)
 
     agent.train(experience)
 
-  @parameterized.named_parameters(('FeedTrajectory', False),
-                                  ('FeedTransition', True))
+  @parameterized.named_parameters(
+      ('FeedTrajectory', False), ('FeedTransition', True)
+  )
   def testTrainWithNonLegacyActorNetwork(self, feed_transition):
     if not tf.executing_eagerly():
       self.skipTest('Skipping test: sequential networks not supported in TF1')
@@ -1250,7 +1476,8 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
         adaptive_kl_tolerance=0.5,
         check_numerics=True,
         compute_value_and_advantage_in_train=False,
-        train_step_counter=counter)
+        train_step_counter=counter,
+    )
     agent.initialize()
 
     experience = _create_experience_trajectory_my_action()
@@ -1271,30 +1498,36 @@ class PPOAgentTest(parameterized.TestCase, test_utils.TestCase):
     self.assertNotEqual(
         loss_numpy,
         0.0,
-        msg=('Loss is exactly zero, looks like no training '
-             'was performed due to incomplete episodes.'))
+        msg=(
+            'Loss is exactly zero, looks like no training '
+            'was performed due to incomplete episodes.'
+        ),
+    )
 
     # Assert that train_op ran increment_counter num_epochs times.
     self.assertEqual(num_epochs, self.evaluate(counter))
 
 
 def _create_experience_trajectory_my_action() -> trajectory.Trajectory:
-  observations = tf.constant([
-      [[1, 2], [3, 4], [5, 6]],
-      [[1, 2], [3, 4], [5, 6]],
-  ],
-                             dtype=tf.float32)
+  observations = tf.constant(
+      [
+          [[1, 2], [3, 4], [5, 6]],
+          [[1, 2], [3, 4], [5, 6]],
+      ],
+      dtype=tf.float32,
+  )
 
   mid_time_step_val = ts.StepType.MID.tolist()
   time_steps = ts.TimeStep(
       step_type=tf.constant([[mid_time_step_val] * 3] * 2, dtype=tf.int32),
       reward=tf.constant([[1] * 3] * 2, dtype=tf.float32),
       discount=tf.constant([[1] * 3] * 2, dtype=tf.float32),
-      observation=observations)
+      observation=observations,
+  )
   actions = {
-      'my_action':
-          tf.constant([[[0.1], [0.9], [0.1]], [[0.9], [0.1], [0.9]]],
-                      dtype=tf.float32)
+      'my_action': tf.constant(
+          [[[0.1], [0.9], [0.1]], [[0.9], [0.1], [0.9]]], dtype=tf.float32
+      )
   }
 
   action_distribution_parameters = {
@@ -1302,20 +1535,27 @@ def _create_experience_trajectory_my_action() -> trajectory.Trajectory:
           'bijector': {},
           'distribution': {
               'loc': tf.constant([[[0.0]] * 3] * 2, dtype=tf.float32),
-              'scale_diag': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32)
-          }
+              'scale_diag': tf.constant([[[1.0]] * 3] * 2, dtype=tf.float32),
+          },
       }
   }
-  value_preds = tf.constant([[0.9, 1.5, 2.1], [0.9, 1.5, 2.1]],
-                            dtype=tf.float32)
+  value_preds = tf.constant(
+      [[0.9, 1.5, 2.1], [0.9, 1.5, 2.1]], dtype=tf.float32
+  )
 
   policy_info = {
       'dist_params': action_distribution_parameters,
   }
   policy_info['value_prediction'] = value_preds
-  experience = trajectory.Trajectory(time_steps.step_type, observations,
-                                     actions, policy_info, time_steps.step_type,
-                                     time_steps.reward, time_steps.discount)
+  experience = trajectory.Trajectory(
+      time_steps.step_type,
+      observations,
+      actions,
+      policy_info,
+      time_steps.step_type,
+      time_steps.reward,
+      time_steps.discount,
+  )
   return experience
 
 

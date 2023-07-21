@@ -17,7 +17,6 @@
 
 import gin
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.networks import network
 from tf_agents.networks import utils
 
@@ -26,21 +25,23 @@ from tf_agents.networks import utils
 class CriticNetwork(network.Network):
   """Creates a critic network."""
 
-  def __init__(self,
-               input_tensor_spec,
-               observation_conv_layer_params=None,
-               observation_fc_layer_params=None,
-               observation_dropout_layer_params=None,
-               action_fc_layer_params=None,
-               action_dropout_layer_params=None,
-               joint_fc_layer_params=None,
-               joint_dropout_layer_params=None,
-               activation_fn=tf.nn.relu,
-               output_activation_fn=None,
-               kernel_initializer=None,
-               last_kernel_initializer=None,
-               last_layer=None,
-               name='CriticNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      observation_conv_layer_params=None,
+      observation_fc_layer_params=None,
+      observation_dropout_layer_params=None,
+      action_fc_layer_params=None,
+      action_dropout_layer_params=None,
+      joint_fc_layer_params=None,
+      joint_dropout_layer_params=None,
+      activation_fn=tf.nn.relu,
+      output_activation_fn=None,
+      kernel_initializer=None,
+      last_kernel_initializer=None,
+      last_layer=None,
+      name='CriticNetwork',
+  ):
     """Creates an instance of `CriticNetwork`.
 
     Args:
@@ -91,7 +92,7 @@ class CriticNetwork(network.Network):
       kernel_initializer: kernel initializer for all layers except for the value
         regression layer. If None, a VarianceScaling initializer will be used.
       last_kernel_initializer: kernel initializer for the value regression
-         layer. If None, a RandomUniform initializer will be used.
+        layer. If None, a RandomUniform initializer will be used.
       last_layer: An optional custom last layer.
       name: A string representing name of the network.
 
@@ -100,9 +101,8 @@ class CriticNetwork(network.Network):
         observation.
     """
     super(CriticNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
+        input_tensor_spec=input_tensor_spec, state_spec=(), name=name
+    )
 
     observation_spec, action_spec = input_tensor_spec
 
@@ -116,10 +116,12 @@ class CriticNetwork(network.Network):
 
     if kernel_initializer is None:
       kernel_initializer = tf.compat.v1.keras.initializers.VarianceScaling(
-          scale=1. / 3., mode='fan_in', distribution='uniform')
+          scale=1.0 / 3.0, mode='fan_in', distribution='uniform'
+      )
     if last_kernel_initializer is None:
       last_kernel_initializer = tf.keras.initializers.RandomUniform(
-          minval=-0.003, maxval=0.003)
+          minval=-0.003, maxval=0.003
+      )
 
     # TODO(kbanoop): Replace mlp_layers with encoding networks.
     self._observation_layers = utils.mlp_layers(
@@ -128,7 +130,8 @@ class CriticNetwork(network.Network):
         observation_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
-        name='observation_encoding')
+        name='observation_encoding',
+    )
 
     self._action_layers = utils.mlp_layers(
         None,
@@ -136,7 +139,8 @@ class CriticNetwork(network.Network):
         action_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
-        name='action_encoding')
+        name='action_encoding',
+    )
 
     self._joint_layers = utils.mlp_layers(
         None,
@@ -144,14 +148,16 @@ class CriticNetwork(network.Network):
         joint_dropout_layer_params,
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
-        name='joint_mlp')
+        name='joint_mlp',
+    )
 
     if not last_layer:
       last_layer = tf.keras.layers.Dense(
           1,
           activation=output_activation_fn,
           kernel_initializer=last_kernel_initializer,
-          name='value')
+          name='value',
+      )
     self._joint_layers.append(last_layer)
 
   def call(self, inputs, step_type=(), network_state=(), training=False):

@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.bandits.environments import dataset_utilities
 
 
@@ -30,8 +29,12 @@ class DatasetUtilitiesTest(tf.test.TestCase):
   def testOneHot(self):
     data = np.array([[1, 2], [1, 3], [2, 2], [1, 1]], dtype=np.int32)
     encoded = dataset_utilities._one_hot(data)
-    expected = [[1, 0, 0, 1, 0], [1, 0, 0, 0, 1], [0, 1, 0, 1, 0],
-                [1, 0, 1, 0, 0]]
+    expected = [
+        [1, 0, 0, 1, 0],
+        [1, 0, 0, 0, 1],
+        [0, 1, 0, 1, 0],
+        [1, 0, 1, 0, 0],
+    ]
     np.testing.assert_array_equal(encoded, expected)
 
   def testRewardDistribution(self):
@@ -40,8 +43,9 @@ class DatasetUtilitiesTest(tf.test.TestCase):
         r_eat_safe=5.0,
         r_eat_poison_bad=-35.0,
         r_eat_poison_good=5.0,
-        prob_poison_bad=0.5)
-    self.assertAllEqual(reward_distr.mean(), [[0, -15.], [0, 5.]])
+        prob_poison_bad=0.5,
+    )
+    self.assertAllEqual(reward_distr.mean(), [[0, -15.0], [0, 5.0]])
 
 
 if __name__ == '__main__':

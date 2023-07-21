@@ -40,16 +40,17 @@ def create_per_arm_observation_spec(
     global_dim: int,
     per_arm_dim: int,
     max_num_actions: Optional[int] = None,
-    add_num_actions_feature: bool = False) -> types.NestedTensorSpec:
+    add_num_actions_feature: bool = False,
+) -> types.NestedTensorSpec:
   """Creates an observation spec with per-arm features and possibly action mask.
 
   Args:
     global_dim: (int) The global feature dimension.
     per_arm_dim: (int) The per-arm feature dimension.
     max_num_actions: If specified (int), this is the maximum number of actions
-      in any sample, and the num_actions dimension of the per-arm features
-      will be set to this number. The actual number of actions for a given
-      sample can be lower than this parameter: it can be specified via the
+      in any sample, and the num_actions dimension of the per-arm features will
+      be set to this number. The actual number of actions for a given sample can
+      be lower than this parameter: it can be specified via the
       NUM_ACTIONS_FEATURE_KEY, or an action mask.
     add_num_actions_feature: (bool) whether to use the `num_actions` feature key
       to encode the number of actions per sample.
@@ -58,24 +59,27 @@ def create_per_arm_observation_spec(
     A nested structure of observation spec.
   """
   global_obs_spec = tensor_spec.TensorSpec((global_dim,), tf.float32)
-  arm_obs_spec = tensor_spec.TensorSpec((max_num_actions, per_arm_dim),
-                                        tf.float32)
-  observation_spec = {GLOBAL_FEATURE_KEY: global_obs_spec,
-                      PER_ARM_FEATURE_KEY: arm_obs_spec}
+  arm_obs_spec = tensor_spec.TensorSpec(
+      (max_num_actions, per_arm_dim), tf.float32
+  )
+  observation_spec = {
+      GLOBAL_FEATURE_KEY: global_obs_spec,
+      PER_ARM_FEATURE_KEY: arm_obs_spec,
+  }
   if add_num_actions_feature:
-    observation_spec.update({
-        NUM_ACTIONS_FEATURE_KEY:
-            tensor_spec.BoundedTensorSpec((),
-                                          minimum=1,
-                                          maximum=max_num_actions,
-                                          dtype=tf.int32)
-    })
+    observation_spec.update(
+        {
+            NUM_ACTIONS_FEATURE_KEY: tensor_spec.BoundedTensorSpec(
+                (), minimum=1, maximum=max_num_actions, dtype=tf.int32
+            )
+        }
+    )
   return observation_spec
 
 
 def get_context_dims_from_spec(
-    context_spec: types.NestedTensorSpec,
-    accepts_per_arm_features: bool) -> Tuple[int, int]:
+    context_spec: types.NestedTensorSpec, accepts_per_arm_features: bool
+) -> Tuple[int, int]:
   """Returns the global and per-arm context dimensions.
 
   If the policy accepts per-arm features, this function returns the tuple of

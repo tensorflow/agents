@@ -31,16 +31,18 @@ class RandomPyPolicyTest(test_utils.TestCase):
   def setUp(self):
     super(RandomPyPolicyTest, self).setUp()
     self._time_step_spec = time_step.time_step_spec(
-        observation_spec=array_spec.ArraySpec((1,), np.int32))
+        observation_spec=array_spec.ArraySpec((1,), np.int32)
+    )
     self._time_step = time_step.restart(observation=np.array([1]))
 
   def testGeneratesActions(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=self._time_step_spec, action_spec=action_spec)
+        time_step_spec=self._time_step_spec, action_spec=action_spec
+    )
 
     action_step = policy.action(self._time_step)
     tf.nest.assert_same_structure(action_spec, action_step.action)
@@ -53,12 +55,13 @@ class RandomPyPolicyTest(test_utils.TestCase):
   def testGeneratesBatchedActions(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
     policy = random_py_policy.RandomPyPolicy(
         time_step_spec=self._time_step_spec,
         action_spec=action_spec,
-        outer_dims=(3,))
+        outer_dims=(3,),
+    )
 
     action_step = policy.action(self._time_step)
     tf.nest.assert_same_structure(action_spec, action_step.action)
@@ -73,15 +76,18 @@ class RandomPyPolicyTest(test_utils.TestCase):
   def testGeneratesBatchedActionsWithoutSpecifyingOuterDims(self):
     action_spec = [
         array_spec.BoundedArraySpec((2, 3), np.int32, -10, 10),
-        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10)
+        array_spec.BoundedArraySpec((1, 2), np.int32, -10, 10),
     ]
     time_step_spec = time_step.time_step_spec(
-        observation_spec=array_spec.ArraySpec((1,), np.int32))
+        observation_spec=array_spec.ArraySpec((1,), np.int32)
+    )
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=time_step_spec, action_spec=action_spec)
+        time_step_spec=time_step_spec, action_spec=action_spec
+    )
 
     action_step = policy.action(
-        time_step.restart(np.array([[1], [2], [3]], dtype=np.int32)))
+        time_step.restart(np.array([[1], [2], [3]], dtype=np.int32))
+    )
     tf.nest.assert_same_structure(action_spec, action_step.action)
     self.assertEqual((3, 2, 3), action_step.action[0].shape)
     self.assertEqual((3, 1, 2), action_step.action[1].shape)
@@ -93,14 +99,16 @@ class RandomPyPolicyTest(test_utils.TestCase):
 
   def testPolicyStateSpecIsEmpty(self):
     policy = random_py_policy.RandomPyPolicy(
-        time_step_spec=self._time_step_spec, action_spec=[])
+        time_step_spec=self._time_step_spec, action_spec=[]
+    )
     self.assertEqual(policy.policy_state_spec, ())
 
   def testMasking(self):
     batch_size = 1000
 
     time_step_spec = time_step.time_step_spec(
-        observation_spec=array_spec.ArraySpec((1,), np.int32))
+        observation_spec=array_spec.ArraySpec((1,), np.int32)
+    )
     action_spec = array_spec.BoundedArraySpec((), np.int64, -5, 5)
 
     # We create a fixed mask here for testing purposes. Normally the mask would
@@ -113,7 +121,9 @@ class RandomPyPolicyTest(test_utils.TestCase):
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         observation_and_action_constraint_splitter=(
-            lambda obs: (obs, batched_mask)))
+            lambda obs: (obs, batched_mask)
+        ),
+    )
 
     my_time_step = time_step.restart(time_step_spec, batch_size)
     action_step = policy.action(my_time_step)
@@ -124,8 +134,9 @@ class RandomPyPolicyTest(test_utils.TestCase):
     action_ = self.evaluate(action_step.action)
     self.assertTrue(np.all(action_ >= -5))
     self.assertTrue(np.all(action_ <= 5))
-    self.assertAllEqual(np_mask[action_ - action_spec.minimum],
-                        np.ones([batch_size]))
+    self.assertAllEqual(
+        np_mask[action_ - action_spec.minimum], np.ones([batch_size])
+    )
 
     # Ensure that all valid actions occur somewhere within the batch. Because we
     # sample 1000 times, the chance of this failing for any particular action is

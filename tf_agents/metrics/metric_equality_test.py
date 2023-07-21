@@ -23,7 +23,6 @@ import numpy as np
 from six.moves import range
 from six.moves import zip
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import random_py_environment
@@ -44,36 +43,39 @@ class MetricEqualityTest(test_utils.TestCase):
     python_metrics = [
         tf_py_metric.TFPyMetric(
             py_metrics.AverageReturnMetric(
-                buffer_size=buffer_size, batch_size=batch_size)),
+                buffer_size=buffer_size, batch_size=batch_size
+            )
+        ),
         tf_py_metric.TFPyMetric(
             py_metrics.AverageEpisodeLengthMetric(
-                buffer_size=buffer_size, batch_size=batch_size)),
+                buffer_size=buffer_size, batch_size=batch_size
+            )
+        ),
     ]
     if batch_size is None:
       batch_size = 1
     tensorflow_metrics = [
         tf_metrics.AverageReturnMetric(
-            buffer_size=buffer_size, batch_size=batch_size),
+            buffer_size=buffer_size, batch_size=batch_size
+        ),
         tf_metrics.AverageEpisodeLengthMetric(
-            buffer_size=buffer_size, batch_size=batch_size),
+            buffer_size=buffer_size, batch_size=batch_size
+        ),
     ]
 
     return python_metrics, tensorflow_metrics
 
   def setUp(self):
     super(MetricEqualityTest, self).setUp()
-    observation_spec = array_spec.BoundedArraySpec((1,),
-                                                   dtype=np.float32,
-                                                   minimum=0,
-                                                   maximum=10)
-    self._action_spec = array_spec.BoundedArraySpec((1,),
-                                                    dtype=np.float32,
-                                                    minimum=0,
-                                                    maximum=10)
-    reward_spec = array_spec.BoundedArraySpec((),
-                                              dtype=np.float32,
-                                              minimum=0,
-                                              maximum=10)
+    observation_spec = array_spec.BoundedArraySpec(
+        (1,), dtype=np.float32, minimum=0, maximum=10
+    )
+    self._action_spec = array_spec.BoundedArraySpec(
+        (1,), dtype=np.float32, minimum=0, maximum=10
+    )
+    reward_spec = array_spec.BoundedArraySpec(
+        (), dtype=np.float32, minimum=0, maximum=10
+    )
     time_step_spec = ts.time_step_spec(observation_spec)
     self._time_step_spec = time_step_spec._replace(reward=reward_spec)
 
@@ -81,45 +83,54 @@ class MetricEqualityTest(test_utils.TestCase):
     self._tensor_time_step_spec = tensor_spec.from_spec(self._time_step_spec)
 
     self._env = random_py_environment.RandomPyEnvironment(
-        observation_spec, self._action_spec)
+        observation_spec, self._action_spec
+    )
     self._tf_env = tf_py_environment.TFPyEnvironment(self._env)
-    self._policy = random_tf_policy.RandomTFPolicy(self._tensor_time_step_spec,
-                                                   self._tensor_action_spec)
+    self._policy = random_tf_policy.RandomTFPolicy(
+        self._tensor_time_step_spec, self._tensor_action_spec
+    )
 
   def test_metric_results_equal(self):
     python_metrics, tensorflow_metrics = self._build_metrics()
     observers = python_metrics + tensorflow_metrics
     driver = dynamic_step_driver.DynamicStepDriver(
-        self._tf_env, self._policy, observers=observers, num_steps=1000)
+        self._tf_env, self._policy, observers=observers, num_steps=1000
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(driver.run())
 
-    for python_metric, tensorflow_metric in zip(python_metrics,
-                                                tensorflow_metrics):
+    for python_metric, tensorflow_metric in zip(
+        python_metrics, tensorflow_metrics
+    ):
       python_result = self.evaluate(python_metric.result())
       tensorflow_result = self.evaluate(tensorflow_metric.result())
       self.assertEqual(python_result, tensorflow_result)
 
   def test_metric_results_equal_with_batched_env(self):
     env_ctor = lambda: random_py_environment.RandomPyEnvironment(  # pylint: disable=g-long-lambda
-        self._time_step_spec.observation, self._action_spec)
+        self._time_step_spec.observation, self._action_spec
+    )
     batch_size = 5
     env = batched_py_environment.BatchedPyEnvironment(
-        [env_ctor() for _ in range(batch_size)])
+        [env_ctor() for _ in range(batch_size)]
+    )
     tf_env = tf_py_environment.TFPyEnvironment(env)
 
     python_metrics, tensorflow_metrics = self._build_metrics(
-        batch_size=batch_size)
+        batch_size=batch_size
+    )
     observers = python_metrics + tensorflow_metrics
     driver = dynamic_step_driver.DynamicStepDriver(
-        tf_env, self._policy, observers=observers, num_steps=1000)
+        tf_env, self._policy, observers=observers, num_steps=1000
+    )
 
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.evaluate(driver.run())
 
-    for python_metric, tensorflow_metric in zip(python_metrics,
-                                                tensorflow_metrics):
+    for python_metric, tensorflow_metric in zip(
+        python_metrics, tensorflow_metrics
+    ):
       python_result = self.evaluate(python_metric.result())
       tensorflow_result = self.evaluate(tensorflow_metric.result())
       self.assertEqual(python_result, tensorflow_result)

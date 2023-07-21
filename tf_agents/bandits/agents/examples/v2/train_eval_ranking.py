@@ -29,26 +29,52 @@ from tf_agents.specs import bandit_spec_utils
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_string('policy_type', 'cosine_distance',
-                    'The type of policy used.')
-flags.DEFINE_string('feedback_model', 'cascading', 'The feedback model. Only '
-                    '`cascading` is implemented at the moment.')
-flags.DEFINE_string('click_model', 'ghost_actions', 'The way diversity is '
-                    'encouraged. Possible values are `ghost_actions` and '
-                    '`distance_based`.')
-flags.DEFINE_float('distance_threshold', 10.0, 'If the diversity model is '
-                   '`distance_based`, this is the distance threshold.')
-flags.DEFINE_string('env_type', 'base', 'The environment used. Possible values'
-                    ' are `base` and `exp_pos_pias`.')
-flags.DEFINE_string('bias_type', '', 'Whether the agent models the positional '
-                    'bias with the basis or the exponent changes. If unset, the'
-                    ' agent applies no positional bias.')
-flags.DEFINE_float('bias_severity', 1.0, 'The severity of the bias adjustment '
-                   'by the agent.')
-flags.DEFINE_bool('bias_positive_only', False, 'If set to True, only positive '
-                  'training samples will be bias-adjusted.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
+flags.DEFINE_string(
+    'policy_type', 'cosine_distance', 'The type of policy used.'
+)
+flags.DEFINE_string(
+    'feedback_model',
+    'cascading',
+    'The feedback model. Only `cascading` is implemented at the moment.',
+)
+flags.DEFINE_string(
+    'click_model',
+    'ghost_actions',
+    'The way diversity is '
+    'encouraged. Possible values are `ghost_actions` and '
+    '`distance_based`.',
+)
+flags.DEFINE_float(
+    'distance_threshold',
+    10.0,
+    'If the diversity model is '
+    '`distance_based`, this is the distance threshold.',
+)
+flags.DEFINE_string(
+    'env_type',
+    'base',
+    'The environment used. Possible values are `base` and `exp_pos_pias`.',
+)
+flags.DEFINE_string(
+    'bias_type',
+    '',
+    'Whether the agent models the positional '
+    'bias with the basis or the exponent changes. If unset, the'
+    ' agent applies no positional bias.',
+)
+flags.DEFINE_float(
+    'bias_severity', 1.0, 'The severity of the bias adjustment by the agent.'
+)
+flags.DEFINE_bool(
+    'bias_positive_only',
+    False,
+    'If set to True, only positive training samples will be bias-adjusted.',
+)
 
 FLAGS = flags.FLAGS
 
@@ -67,7 +93,6 @@ LR = 0.05
 
 
 def main(unused_argv):
-
   def _global_sampling_fn():
     return np.random.randint(-1, 1, [GLOBAL_DIM]).astype(np.float32)
 
@@ -77,19 +102,21 @@ def main(unused_argv):
 
   def _relevance_fn(global_obs, item_obs):
     min_dim = min(GLOBAL_DIM, ITEM_DIM)
-    dot_prod = np.dot(global_obs[:min_dim],
-                      item_obs[:min_dim]).astype(np.float32)
+    dot_prod = np.dot(global_obs[:min_dim], item_obs[:min_dim]).astype(
+        np.float32
+    )
     return 1 / (1 + np.exp(-dot_prod))
 
   if FLAGS.env_type == 'exp_pos_bias':
-    positional_biases = list(1.0 / np.arange(1, NUM_SLOTS + 1)**1.3)
+    positional_biases = list(1.0 / np.arange(1, NUM_SLOTS + 1) ** 1.3)
     env = ranking_environment.ExplicitPositionalBiasRankingEnvironment(
         _global_sampling_fn,
         _item_sampling_fn,
         _relevance_fn,
         NUM_ITEMS,
         positional_biases,
-        batch_size=BATCH_SIZE)
+        batch_size=BATCH_SIZE,
+    )
     feedback_model = ranking_agent.FeedbackModel.SCORE_VECTOR
   elif FLAGS.env_type == 'base':
     # Inner product with the excess dimensions ignored.
@@ -99,15 +126,17 @@ def main(unused_argv):
     if FLAGS.feedback_model == 'cascading':
       feedback_model = ranking_agent.FeedbackModel.CASCADING
     else:
-      raise NotImplementedError('Feedback model {} not implemented'.format(
-          FLAGS.feedback_model))
+      raise NotImplementedError(
+          'Feedback model {} not implemented'.format(FLAGS.feedback_model)
+      )
     if FLAGS.click_model == 'ghost_actions':
       click_model = ranking_environment.ClickModel.GHOST_ACTIONS
     elif FLAGS.click_model == 'distance_based':
       click_model = ranking_environment.ClickModel.DISTANCE_BASED
     else:
-      raise NotImplementedError('Diversity mode {} not implemented'.format(
-          FLAGS.click_mode))
+      raise NotImplementedError(
+          'Diversity mode {} not implemented'.format(FLAGS.click_mode)
+      )
 
     env = ranking_environment.RankingPyEnvironment(
         _global_sampling_fn,
@@ -120,14 +149,17 @@ def main(unused_argv):
         feedback_model=feedback_model.value,
         click_model=click_model,
         distance_threshold=FLAGS.distance_threshold,
-        batch_size=BATCH_SIZE)
+        batch_size=BATCH_SIZE,
+    )
 
   environment = tf_py_environment.TFPyEnvironment(env)
 
   obs_spec = environment.observation_spec()
   network = (
       global_and_arm_feature_network.create_feed_forward_common_tower_network(
-          obs_spec, (40, 10), (40, 10), (20, 10)))
+          obs_spec, (40, 10), (40, 10), (20, 10)
+      )
+  )
   if FLAGS.policy_type == 'cosine_distance':
     policy_type = ranking_agent.RankingPolicyType.COSINE_DISTANCE
   elif FLAGS.policy_type == 'no_penalty':
@@ -135,8 +167,9 @@ def main(unused_argv):
   elif FLAGS.policy_type == 'descending_scores':
     policy_type = ranking_agent.RankingPolicyType.DESCENDING_SCORES
   else:
-    raise NotImplementedError('Policy type {} is not implemented'.format(
-        FLAGS.policy_type))
+    raise NotImplementedError(
+        'Policy type {} is not implemented'.format(FLAGS.policy_type)
+    )
   positional_bias_type = FLAGS.bias_type or None
   agent = ranking_agent.RankingAgent(
       time_step_spec=environment.time_step_spec(),
@@ -148,7 +181,8 @@ def main(unused_argv):
       positional_bias_type=positional_bias_type,
       positional_bias_severity=FLAGS.bias_severity,
       positional_bias_positive_only=FLAGS.bias_positive_only,
-      summarize_grads_and_vars=True)
+      summarize_grads_and_vars=True,
+  )
 
   def order_items_from_action_fn(orig_trajectory):
     """Puts the features of the selected items in the recommendation order.
@@ -164,30 +198,37 @@ def main(unused_argv):
       The modified trajectory that contains slotted item features.
     """
     item_obs = orig_trajectory.observation[
-        bandit_spec_utils.PER_ARM_FEATURE_KEY]
+        bandit_spec_utils.PER_ARM_FEATURE_KEY
+    ]
     action = orig_trajectory.action
     if isinstance(
         orig_trajectory.observation[bandit_spec_utils.PER_ARM_FEATURE_KEY],
-        tensor_spec.TensorSpec):
+        tensor_spec.TensorSpec,
+    ):
       dtype = orig_trajectory.observation[
-          bandit_spec_utils.PER_ARM_FEATURE_KEY].dtype
+          bandit_spec_utils.PER_ARM_FEATURE_KEY
+      ].dtype
       shape = [
-          NUM_SLOTS, orig_trajectory.observation[
-              bandit_spec_utils.PER_ARM_FEATURE_KEY].shape[-1]
+          NUM_SLOTS,
+          orig_trajectory.observation[
+              bandit_spec_utils.PER_ARM_FEATURE_KEY
+          ].shape[-1],
       ]
       new_observation = {
-          bandit_spec_utils.GLOBAL_FEATURE_KEY:
-              orig_trajectory.observation[bandit_spec_utils.GLOBAL_FEATURE_KEY],
-          bandit_spec_utils.PER_ARM_FEATURE_KEY:
-              tensor_spec.TensorSpec(dtype=dtype, shape=shape)
+          bandit_spec_utils.GLOBAL_FEATURE_KEY: orig_trajectory.observation[
+              bandit_spec_utils.GLOBAL_FEATURE_KEY
+          ],
+          bandit_spec_utils.PER_ARM_FEATURE_KEY: tensor_spec.TensorSpec(
+              dtype=dtype, shape=shape
+          ),
       }
     else:
       slotted_items = tf.gather(item_obs, action, batch_dims=1)
       new_observation = {
-          bandit_spec_utils.GLOBAL_FEATURE_KEY:
-              orig_trajectory.observation[bandit_spec_utils.GLOBAL_FEATURE_KEY],
-          bandit_spec_utils.PER_ARM_FEATURE_KEY:
-              slotted_items
+          bandit_spec_utils.GLOBAL_FEATURE_KEY: orig_trajectory.observation[
+              bandit_spec_utils.GLOBAL_FEATURE_KEY
+          ],
+          bandit_spec_utils.PER_ARM_FEATURE_KEY: slotted_items,
       }
     return trajectory.Trajectory(
         step_type=orig_trajectory.step_type,
@@ -196,7 +237,8 @@ def main(unused_argv):
         policy_info=(),
         next_step_type=orig_trajectory.next_step_type,
         reward=orig_trajectory.reward,
-        discount=orig_trajectory.discount)
+        discount=orig_trajectory.discount,
+    )
 
   trainer.train(
       root_dir=FLAGS.root_dir,
@@ -205,7 +247,8 @@ def main(unused_argv):
       training_loops=TRAINING_LOOPS,
       steps_per_loop=STEPS_PER_LOOP,
       training_data_spec_transformation_fn=order_items_from_action_fn,
-      save_policy=False)
+      save_policy=False,
+  )
 
 
 if __name__ == '__main__':

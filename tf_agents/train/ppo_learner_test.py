@@ -23,7 +23,6 @@ from absl import flags
 from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
-
 from tf_agents.agents import tf_agent
 from tf_agents.agents.ppo import ppo_actor_network
 from tf_agents.agents.ppo import ppo_agent
@@ -42,18 +41,16 @@ FLAGS = flags.FLAGS
 class FakePPOAgent(ppo_agent.PPOAgent):
 
   def __init__(self):
-
-    observation_tensor_spec = tf.TensorSpec(
-        shape=[1], dtype=tf.float32)
+    observation_tensor_spec = tf.TensorSpec(shape=[1], dtype=tf.float32)
     action_tensor_spec = tensor_spec.BoundedTensorSpec([2], tf.float32, -1, 1)
 
     actor_net_builder = ppo_actor_network.PPOActorNetwork()
     actor_net = actor_net_builder.create_sequential_actor_net(
-        fc_layer_units=(1,),
-        action_tensor_spec=action_tensor_spec)
+        fc_layer_units=(1,), action_tensor_spec=action_tensor_spec
+    )
     value_net = value_network.ValueNetwork(
-        observation_tensor_spec,
-        fc_layer_params=(1,))
+        observation_tensor_spec, fc_layer_params=(1,)
+    )
 
     super(FakePPOAgent, self).__init__(
         time_step_spec=ts.time_step_spec(observation_tensor_spec),
@@ -78,7 +75,7 @@ class FakePPOAgent(ppo_agent.PPOAgent):
     # is excluded.
     if self.train_called_times > 0:
       self.experiences.append(experience)
-    return tf_agent.LossInfo(0., 0.)
+    return tf_agent.LossInfo(0.0, 0.0)
 
 
 def _create_trajectories(n_time_steps, batch_size):
@@ -88,39 +85,48 @@ def _create_trajectories(n_time_steps, batch_size):
   #  [20., 21., ... n_time_steps.],
   #  [ ...                       ],
   #  [10*batch_size., ... 10*batch_size+n_time_steps.]]
-  observation_array = np.asarray([
-      np.arange(n_time_steps) + 10 * i for i in range(batch_size)
-  ])
+  observation_array = np.asarray(
+      [np.arange(n_time_steps) + 10 * i for i in range(batch_size)]
+  )
   # Adding an inner most dimension to fit the observation spec defined above.
   observation_array = np.expand_dims(observation_array, axis=2)
   observations = tf.convert_to_tensor(observation_array, dtype=tf.float32)
 
   default_tensor = tf.constant(
-      [[1] * n_time_steps] * batch_size, dtype=tf.float32)
+      [[1] * n_time_steps] * batch_size, dtype=tf.float32
+  )
   mid_time_step_val = ts.StepType.MID.tolist()
   time_steps = ts.TimeStep(
       step_type=tf.constant(
-          [[mid_time_step_val] * n_time_steps] * batch_size, dtype=tf.int32),
+          [[mid_time_step_val] * n_time_steps] * batch_size, dtype=tf.int32
+      ),
       reward=default_tensor,
       discount=default_tensor,
-      observation=observations)
+      observation=observations,
+  )
   actions = tf.constant([[[1]] * n_time_steps] * batch_size, dtype=tf.float32)
   policy_info = {
       'dist_params': {
-          'loc':
-              tf.constant(
-                  [[[1]] * n_time_steps] * batch_size, dtype=tf.float32),
-          'scale':
-              tf.constant(
-                  [[[1]] * n_time_steps] * batch_size, dtype=tf.float32)
+          'loc': tf.constant(
+              [[[1]] * n_time_steps] * batch_size, dtype=tf.float32
+          ),
+          'scale': tf.constant(
+              [[[1]] * n_time_steps] * batch_size, dtype=tf.float32
+          ),
       },
       'value_prediction': default_tensor,
       'return': default_tensor,
       'advantage': default_tensor,
   }
-  return trajectory.Trajectory(time_steps.step_type, observations, actions,
-                               policy_info, time_steps.step_type,
-                               time_steps.reward, time_steps.discount)
+  return trajectory.Trajectory(
+      time_steps.step_type,
+      observations,
+      actions,
+      policy_info,
+      time_steps.step_type,
+      time_steps.reward,
+      time_steps.discount,
+  )
 
 
 def _concat_and_flatten(traj, multiplier):
@@ -129,9 +135,11 @@ def _concat_and_flatten(traj, multiplier):
   Args:
     traj: a `Trajectory` shaped [batch_size, num_steps, ...].
     multiplier: the number of times to concatenate the input trajectory.
+
   Returns:
     a flattened `Trajectory` shaped [multiplier * batch_size * num_steps, ...].
   """
+
   def concat_and_flatten_tensor(tensor):
     multiplied_component_list = [tensor] * multiplier
     concat_tensor = tf.concat(multiplied_component_list, axis=0)
@@ -157,11 +165,17 @@ def _get_expected_minibatch(all_traj, minibatch_size, current_iteration):
   """
   expected_traj = tf.nest.map_structure(
       # pylint: disable=g-long-lambda
-      lambda x: x[minibatch_size * current_iteration:minibatch_size *
-                  (current_iteration + 1)], all_traj)
+      lambda x: x[
+          minibatch_size
+          * current_iteration : minibatch_size
+          * (current_iteration + 1)
+      ],
+      all_traj,
+  )
   # Add time dimension to be consistent with the input to agent.train.
-  expected_traj = tf.nest.map_structure(lambda x: tf.expand_dims(x, 1),
-                                        expected_traj)
+  expected_traj = tf.nest.map_structure(
+      lambda x: tf.expand_dims(x, 1), expected_traj
+  )
   return expected_traj
 
 
@@ -185,15 +199,23 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
       ('TwoEpochsNoMinibatch', 2, 1, None, 2),
       ('ParallelTwoEpochsNoMinibatch', 2, 3, None, 2),
   )
-  def test_one_element_dataset(self, num_epochs, num_parallel_environments,
-                               minibatch_size, expected_train_times):
+  def test_one_element_dataset(
+      self,
+      num_epochs,
+      num_parallel_environments,
+      minibatch_size,
+      expected_train_times,
+  ):
     # Create a dataset with one element that is a length 100 sequence. This
     # simulates a Reverb dataset if only one sequence was collected.
     traj = _create_trajectories(
-        n_time_steps=100, batch_size=num_parallel_environments)
+        n_time_steps=100, batch_size=num_parallel_environments
+    )
     info = ()
 
-    dataset_fn = lambda: tf.data.Dataset.from_tensors((traj, info),)
+    dataset_fn = lambda: tf.data.Dataset.from_tensors(
+        (traj, info),
+    )
 
     fake_agent = FakePPOAgent()
 
@@ -208,7 +230,8 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         minibatch_size=minibatch_size,
         # Disable shuffling to have deterministic input into agent.train.
         shuffle_buffer_size=1,
-        triggers=None)
+        triggers=None,
+    )
     learner.run()
 
     # Check that fake agent was called the expected number of times.
@@ -219,7 +242,8 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
       concated_traj = _concat_and_flatten(traj, multiplier=num_epochs)
       for i in range(expected_train_times):
         expected_traj = _get_expected_minibatch(
-            concated_traj, minibatch_size, current_iteration=i)
+            concated_traj, minibatch_size, current_iteration=i
+        )
         received_traj = fake_agent.experiences[i]
         tf.nest.map_structure(self.assertAllClose, received_traj, expected_traj)
     else:
@@ -236,17 +260,21 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
       ('TwoEpochsNoMinibatch', 2, 1, None, 6),
       ('ParallelTwoEpochsNoMinibatch', 2, 3, None, 6),
   )
-  def test_multi_element_dataset_minibatch(self, num_epochs,
-                                           num_parallel_environments,
-                                           minibatch_size,
-                                           expected_train_times):
+  def test_multi_element_dataset_minibatch(
+      self,
+      num_epochs,
+      num_parallel_environments,
+      minibatch_size,
+      expected_train_times,
+  ):
     num_episodes = 3
     # Create a dataset with three elements. Each element represents an collected
     # episode of length 40.
     get_shape = lambda x: x.shape
     get_dtype = lambda x: tf.as_dtype(x.dtype)
     traj = _create_trajectories(
-        n_time_steps=40, batch_size=num_parallel_environments)
+        n_time_steps=40, batch_size=num_parallel_environments
+    )
     unused_info = ()
     shapes = tf.nest.map_structure(get_shape, (traj, unused_info))
     dtypes = tf.nest.map_structure(get_dtype, (traj, unused_info))
@@ -275,7 +303,8 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         minibatch_size=minibatch_size,
         # Disable shuffling to have deterministic input into agent.train.
         shuffle_buffer_size=1,
-        triggers=None)
+        triggers=None,
+    )
     learner.run()
 
     # Check that fake agent was called the expected number of times.
@@ -284,11 +313,13 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
     # Check that agent.train() is receiving the expected trajectories.
     if minibatch_size:
       concated_traj = _concat_and_flatten(
-          traj, multiplier=num_episodes * num_epochs)
+          traj, multiplier=num_episodes * num_epochs
+      )
 
       for i in range(expected_train_times):
         expected_traj = _get_expected_minibatch(
-            concated_traj, minibatch_size, current_iteration=i)
+            concated_traj, minibatch_size, current_iteration=i
+        )
         received_traj = fake_agent.experiences[i]
         tf.nest.map_structure(self.assertAllClose, received_traj, expected_traj)
     else:
@@ -298,9 +329,8 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         tf.nest.map_structure(self.assertAllClose, received_traj, expected_traj)
 
   @parameterized.named_parameters(
-      ('SequentialIterations', 1),
-      ('ParallelIterations', 4)
-      )
+      ('SequentialIterations', 1), ('ParallelIterations', 4)
+  )
   def test_parallel_iterations_run(self, parallel_iterations):
     num_episodes = 3
     # Create a dataset with three elements. Each element represents an collected
@@ -336,13 +366,15 @@ class PpoLearnerTest(parameterized.TestCase, test_utils.TestCase):
         minibatch_size=10,
         # Disable shuffling to have deterministic input into agent.train.
         shuffle_buffer_size=1,
-        triggers=None)
+        triggers=None,
+    )
     loss = learner.run(parallel_iterations=parallel_iterations)
 
     # Check that fake agent was called the expected number of times.
     self.assertEqual(fake_agent.train_called_times, 48)
 
     self.assertAllEqual(loss, (0.0, 0.0))
+
 
 if __name__ == '__main__':
   tf.compat.v1.enable_v2_behavior()

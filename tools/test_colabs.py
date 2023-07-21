@@ -22,20 +22,25 @@ import sys
 from absl import app
 from absl import flags
 from absl import logging
-
 from nbconvert.preprocessors import CellExecutionError
 from nbconvert.preprocessors import ExecutePreprocessor
 import nbformat
 
-flags.DEFINE_string('single_colab', None,
-                    'Path to a single colab to run.')
-flags.DEFINE_string('output_dir', '/tmp/notebook_tests',
-                    'Full path for executed notebooks and artifacts.')
-flags.DEFINE_boolean('debug', False,
-                     'Debug logging if true. Otherwise info only.')
-flags.DEFINE_boolean('override_pip_install_agents', True,
-                     'If true a replace is done to prevent notebooks from '
-                     'installing tf-agents (often tf-agents-nightly)')
+flags.DEFINE_string('single_colab', None, 'Path to a single colab to run.')
+flags.DEFINE_string(
+    'output_dir',
+    '/tmp/notebook_tests',
+    'Full path for executed notebooks and artifacts.',
+)
+flags.DEFINE_boolean(
+    'debug', False, 'Debug logging if true. Otherwise info only.'
+)
+flags.DEFINE_boolean(
+    'override_pip_install_agents',
+    True,
+    'If true a replace is done to prevent notebooks from '
+    'installing tf-agents (often tf-agents-nightly)',
+)
 FLAGS = flags.FLAGS
 
 
@@ -58,17 +63,22 @@ def execute_test(file_path, result_path):
       if FLAGS.override_pip_install_agents:
         # Replaces pip install tf-agents with a noop. If this gets any bigger,
         # refactor
-        filedata = filedata.replace('pip install tf-agents-nightly[reverb]',
-                                    'pip --version')
-        filedata = filedata.replace('pip install tf-agents-nightly',
-                                    'pip --version')
-        filedata = filedata.replace('pip install tf-agents[reverb]',
-                                    'pip --version')
-        filedata = filedata.replace('pip install --pre tf-agents[reverb]',
-                                    'pip --version')
+        filedata = filedata.replace(
+            'pip install tf-agents-nightly[reverb]', 'pip --version'
+        )
+        filedata = filedata.replace(
+            'pip install tf-agents-nightly', 'pip --version'
+        )
+        filedata = filedata.replace(
+            'pip install tf-agents[reverb]', 'pip --version'
+        )
+        filedata = filedata.replace(
+            'pip install --pre tf-agents[reverb]', 'pip --version'
+        )
         filedata = filedata.replace('pip install tf-agents', 'pip --version')
-        filedata = filedata.replace('pip install --pre tf-agents',
-                                    'pip --version')
+        filedata = filedata.replace(
+            'pip install --pre tf-agents', 'pip --version'
+        )
       nb = nbformat.reads(filedata, as_version=4)
 
       ep = ExecutePreprocessor(timeout=3600, kernel_name='python3')
@@ -95,8 +105,9 @@ def get_test_suite():
     for filename in filenames:
       if filename.endswith('ipynb'):
         if '7_SAC_minitaur_tutorial.ipynb' in filename:
-          logging.info('Skipping 7_SAC_minitaur_tutorial.ipynb. '
-                       'It takes 8 hours to run.')
+          logging.info(
+              'Skipping 7_SAC_minitaur_tutorial.ipynb. It takes 8 hours to run.'
+          )
           continue
         test_notebooks.append(os.path.join(dirpath, filename))
       else:
@@ -119,8 +130,9 @@ def run():
   filenames.sort()
   for filename in filenames:
     logging.info('Testing %s ...', filename)
-    result_path = os.path.join(FLAGS.output_dir,
-                               'executed_' + os.path.basename(filename))
+    result_path = os.path.join(
+        FLAGS.output_dir, 'executed_' + os.path.basename(filename)
+    )
     if execute_test(filename, result_path):
       passed.append(filename)
     else:

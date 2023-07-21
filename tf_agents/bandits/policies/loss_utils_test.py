@@ -39,23 +39,28 @@ class LossUtilsTest(tf.test.TestCase):
     # We see that the value `y_pred = 5` minimizes the loss.
 
     p_loss = loss_utils.pinball_loss(
-        y_true, y_pred=3 * tf.ones_like(y_true), quantile=0.5)
+        y_true, y_pred=3 * tf.ones_like(y_true), quantile=0.5
+    )
     self.assertNear(24.0, 9.0 / 0.5 * self.evaluate(p_loss), err=1e-3)
 
     p_loss = loss_utils.pinball_loss(
-        y_true, y_pred=4 * tf.ones_like(y_true), quantile=0.5)
+        y_true, y_pred=4 * tf.ones_like(y_true), quantile=0.5
+    )
     self.assertNear(21.0, 9.0 / 0.5 * self.evaluate(p_loss), err=1e-3)
 
     p_loss = loss_utils.pinball_loss(
-        y_true, y_pred=5 * tf.ones_like(y_true), quantile=0.5)
+        y_true, y_pred=5 * tf.ones_like(y_true), quantile=0.5
+    )
     self.assertNear(20.0, 9.0 / 0.5 * self.evaluate(p_loss), err=1e-3)
 
     p_loss = loss_utils.pinball_loss(
-        y_true, y_pred=6 * tf.ones_like(y_true), quantile=0.5)
+        y_true, y_pred=6 * tf.ones_like(y_true), quantile=0.5
+    )
     self.assertNear(21.0, 9.0 / 0.5 * self.evaluate(p_loss), err=1e-3)
 
     p_loss = loss_utils.pinball_loss(
-        y_true, y_pred=7 * tf.ones_like(y_true), quantile=0.5)
+        y_true, y_pred=7 * tf.ones_like(y_true), quantile=0.5
+    )
     self.assertNear(24.0, 9.0 / 0.5 * self.evaluate(p_loss), err=1e-3)
 
 

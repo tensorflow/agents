@@ -37,12 +37,14 @@ def _ensure_tf_install():  # pylint: disable=g-statement-before-imports
     import tensorflow as tf
   except (ImportError, ModuleNotFoundError):
     # Print more informative error message, then reraise.
-    print("\n\nFailed to import TensorFlow. Please note that TensorFlow is not "
-          "installed by default when you install TF Agents. This is so that "
-          "users can decide whether to install the GPU-enabled TensorFlow "
-          "package. To use TF Agents, please install the most recent version "
-          "of TensorFlow, by following instructions at "
-          "https://tensorflow.org/install.\n\n")
+    print(
+        "\n\nFailed to import TensorFlow. Please note that TensorFlow is not "
+        "installed by default when you install TF Agents. This is so that "
+        "users can decide whether to install the GPU-enabled TensorFlow "
+        "package. To use TF Agents, please install the most recent version "
+        "of TensorFlow, by following instructions at "
+        "https://tensorflow.org/install.\n\n"
+    )
     raise
 
   import distutils.version
@@ -53,14 +55,16 @@ def _ensure_tf_install():  # pylint: disable=g-statement-before-imports
   required_tensorflow_version = "2.2.0"
 
   tf_version = tf.version.VERSION
-  if (distutils.version.LooseVersion(tf_version) <
-      distutils.version.LooseVersion(required_tensorflow_version)):
+  if distutils.version.LooseVersion(
+      tf_version
+  ) < distutils.version.LooseVersion(required_tensorflow_version):
     raise ImportError(
         "This version of TF Agents requires TensorFlow "
         "version >= {required}; Detected an installation of version {present}. "
         "Please upgrade TensorFlow to proceed.".format(
-            required=required_tensorflow_version,
-            present=tf_version))
+            required=required_tensorflow_version, present=tf_version
+        )
+    )
 
 
 _ensure_tf_install()

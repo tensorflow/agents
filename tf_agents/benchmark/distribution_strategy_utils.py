@@ -23,9 +23,9 @@ from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
-def get_distribution_strategy(distribution_strategy="default",
-                              num_gpus=0,
-                              num_packs=-1):
+def get_distribution_strategy(
+    distribution_strategy="default", num_gpus=0, num_packs=-1
+):
   """Return a DistributionStrategy for running the model.
 
   Args:
@@ -49,18 +49,22 @@ def get_distribution_strategy(distribution_strategy="default",
   distribution_strategy = distribution_strategy.lower()
   if distribution_strategy == "off":
     if num_gpus > 1:
-      raise ValueError("When {} GPUs are specified, distribution_strategy "
-                       "cannot be set to 'off'.".format(num_gpus))
+      raise ValueError(
+          "When {} GPUs are specified, distribution_strategy "
+          "cannot be set to 'off'.".format(num_gpus)
+      )
     return None
 
-  if (distribution_strategy == "one_device" or
-      (distribution_strategy == "default" and num_gpus <= 1)):
+  if distribution_strategy == "one_device" or (
+      distribution_strategy == "default" and num_gpus <= 1
+  ):
     if num_gpus == 0:
       return tf.distribute.OneDeviceStrategy("device:CPU:0")
     else:
       if num_gpus > 1:
-        raise ValueError("`OneDeviceStrategy` can not be used for more than "
-                         "one device.")
+        raise ValueError(
+            "`OneDeviceStrategy` can not be used for more than one device."
+        )
       return tf.distribute.OneDeviceStrategy("device:GPU:0")
 
   if distribution_strategy in ("mirrored", "default"):
@@ -73,8 +77,9 @@ def get_distribution_strategy(distribution_strategy="default",
     cross_device_ops = None
     if num_packs > -1:
       cross_device_ops = tf.distribute.NcclAllReduce(num_packs=num_packs)
-    return tf.distribute.MirroredStrategy(devices=devices,
-                                          cross_device_ops=cross_device_ops)
+    return tf.distribute.MirroredStrategy(
+        devices=devices, cross_device_ops=cross_device_ops
+    )
 
 
 def strategy_scope_context(strategy):

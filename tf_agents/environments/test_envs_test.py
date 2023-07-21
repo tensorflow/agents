@@ -82,7 +82,9 @@ class NestedCountingEnvTest(test_utils.TestCase):
           {
               'total_steps': episode * 10 + step,
               'current_steps': step,
-          }, time_step.observation)
+          },
+          time_step.observation,
+      )
       while not time_step.is_last():
         time_step = env.step(0)
         step += 1
@@ -90,12 +92,16 @@ class NestedCountingEnvTest(test_utils.TestCase):
             {
                 'total_steps': episode * 10 + step,
                 'current_steps': step,
-            }, time_step.observation)
+            },
+            time_step.observation,
+        )
       self.assertCountEqual(
           {
               'total_steps': episode * 10 + steps_per_episode,
               'current_steps': steps_per_episode,
-          }, time_step.observation)
+          },
+          time_step.observation,
+      )
 
   def test_validate_specs(self):
     env = test_envs.NestedCountingEnv(steps_per_episode=15)

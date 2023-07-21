@@ -16,12 +16,12 @@
 """Utilities for managing distrubtion strategies."""
 from absl import flags
 from absl import logging
-
 import tensorflow.compat.v2 as tf
 
 TPU = flags.DEFINE_string('tpu', None, 'BNS address for the TPU')
-USE_GPU = flags.DEFINE_bool('use_gpu', False, 'If True a MirroredStrategy '
-                            'will be used.')
+USE_GPU = flags.DEFINE_bool(
+    'use_gpu', False, 'If True a MirroredStrategy will be used.'
+)
 
 
 def get_strategy(tpu, use_gpu):
@@ -52,8 +52,9 @@ def get_strategy(tpu, use_gpu):
       strategy = tf.distribute.TPUStrategy(resolver)
     else:
       strategy = tf.distribute.MirroredStrategy()
-    logging.info('Devices after getting strategy:\n%s',
-                 tf.config.list_logical_devices())
+    logging.info(
+        'Devices after getting strategy:\n%s', tf.config.list_logical_devices()
+    )
   else:
     strategy = tf.distribute.get_strategy()
 

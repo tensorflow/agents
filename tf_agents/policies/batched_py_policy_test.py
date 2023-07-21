@@ -20,10 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from absl.testing import parameterized
-
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.policies import batched_py_policy
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
@@ -31,34 +29,38 @@ from tf_agents.trajectories import policy_step as ps
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
 
-MT_PARAMETERS = ({'multithreading': False},
-                 {'multithreading': True})
-NP_PARAMETERS = ({'multithreading': False, 'num_policies': 1},
-                 {'multithreading': True, 'num_policies': 1},
-                 {'multithreading': False, 'num_policies': 5},
-                 {'multithreading': True, 'num_policies': 5},
-                )
+MT_PARAMETERS = ({'multithreading': False}, {'multithreading': True})
+NP_PARAMETERS = (
+    {'multithreading': False, 'num_policies': 1},
+    {'multithreading': True, 'num_policies': 1},
+    {'multithreading': False, 'num_policies': 5},
+    {'multithreading': True, 'num_policies': 5},
+)
 
 
 class MockPyPolicy(py_policy.PyPolicy):
 
-  def __init__(self,
-               time_step_spec: ts.TimeStep,
-               action_spec: types.NestedArraySpec,
-               policy_state_spec: types.NestedArraySpec = (),
-               info_spec: types.NestedArraySpec = ()):
+  def __init__(
+      self,
+      time_step_spec: ts.TimeStep,
+      action_spec: types.NestedArraySpec,
+      policy_state_spec: types.NestedArraySpec = (),
+      info_spec: types.NestedArraySpec = (),
+  ):
     seed = 987654321
     self._rng = np.random.RandomState(seed)
     super(MockPyPolicy, self).__init__(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
-        policy_state_spec=policy_state_spec)
+        policy_state_spec=policy_state_spec,
+    )
 
-  def _action(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
-              time_step: ts.TimeStep,
-              policy_state: types.NestedArray) -> ps.PolicyStep:
-    random_action = array_spec.sample_spec_nest(
-        self._action_spec, self._rng)
+  def _action(
+      self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
+      time_step: ts.TimeStep,
+      policy_state: types.NestedArray,
+  ) -> ps.PolicyStep:
+    random_action = array_spec.sample_spec_nest(self._action_spec, self._rng)
 
     return ps.PolicyStep(random_action, policy_state)
 
@@ -68,26 +70,32 @@ class BatchedPyPolicyTest(tf.test.TestCase, parameterized.TestCase):
   @property
   def time_step_spec(self):
     return ts.time_step_spec(
-        observation_spec=array_spec.ArraySpec((1,), np.int32))
+        observation_spec=array_spec.ArraySpec((1,), np.int32)
+    )
 
   @property
   def action_spec(self):
     return array_spec.BoundedArraySpec(
-        [7], dtype=np.float32, minimum=-1.0, maximum=1.0)
+        [7], dtype=np.float32, minimum=-1.0, maximum=1.0
+    )
 
   @property
   def policy_state_spec(self):
     return array_spec.BoundedArraySpec(
-        [3], dtype=np.int16, minimum=-7.0, maximum=7.0)
+        [3], dtype=np.int16, minimum=-7.0, maximum=7.0
+    )
 
   def _make_batched_py_policy(self, multithreading, num_policies=3):
     policies = []
     for _ in range(num_policies):
-      policies.append(MockPyPolicy(self.time_step_spec,
-                                   self.action_spec,
-                                   self.policy_state_spec))
+      policies.append(
+          MockPyPolicy(
+              self.time_step_spec, self.action_spec, self.policy_state_spec
+          )
+      )
     return batched_py_policy.BatchedPyPolicy(
-        policies=policies, multithreading=multithreading)
+        policies=policies, multithreading=multithreading
+    )
 
   @parameterized.parameters(*MT_PARAMETERS)
   def test_close_no_hang_after_init(self, multithreading):
@@ -102,8 +110,9 @@ class BatchedPyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters(*NP_PARAMETERS)
   def test_get_initial_state(self, multithreading, num_policies):
-    policy = self._make_batched_py_policy(multithreading,
-                                          num_policies=num_policies)
+    policy = self._make_batched_py_policy(
+        multithreading, num_policies=num_policies
+    )
     policy_state = policy.get_initial_state()
     # Expect policy_state.shape[0] to be batch_size aka num_policies.
     # The remaining dimensions should match the policy_state_spec.
@@ -112,11 +121,13 @@ class BatchedPyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   @parameterized.parameters(*NP_PARAMETERS)
   def test_action(self, multithreading, num_policies):
-    policy = self._make_batched_py_policy(multithreading,
-                                          num_policies=num_policies)
-    time_steps = np.array([
-        ts.restart(observation=np.array([1]))
-        for _ in range(num_policies)], dtype=object)
+    policy = self._make_batched_py_policy(
+        multithreading, num_policies=num_policies
+    )
+    time_steps = np.array(
+        [ts.restart(observation=np.array([1])) for _ in range(num_policies)],
+        dtype=object,
+    )
 
     # Call policy.action() and assert PolicySteps are batched correctly.
     policy_step = policy.action(time_steps)
@@ -124,8 +135,9 @@ class BatchedPyPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
     # Take another step and assert that actions have the same shape.
     policy_step2 = policy.action(time_steps)
-    self.assertAllEqual(policy_step.action.shape[0],
-                        policy_step2.action.shape[0])
+    self.assertAllEqual(
+        policy_step.action.shape[0], policy_step2.action.shape[0]
+    )
 
 
 if __name__ == '__main__':

@@ -28,6 +28,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import policy_step
 from tf_agents.trajectories import time_step
 from tf_agents.utils import test_utils
+
 from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 tfd = tfp.distributions
@@ -51,35 +52,42 @@ class CategoricalPolicyTest(test_utils.TestCase, parameterized.TestCase):
           observation_shape=[1],
           batch_size=1,
           weights=np.ones(10),
-          inverse_temperature=1.),
+          inverse_temperature=1.0,
+      ),
       dict(
           observation_shape=[2, 1, 3],
           batch_size=32,
           weights=np.arange(17),
-          inverse_temperature=10.),
+          inverse_temperature=10.0,
+      ),
   )
-  def testActionShape(self, observation_shape, batch_size, weights,
-                      inverse_temperature):
+  def testActionShape(
+      self, observation_shape, batch_size, weights, inverse_temperature
+  ):
     observation_spec = tensor_spec.TensorSpec(
-        shape=observation_shape, dtype=tf.float32, name='observation_spec')
+        shape=observation_shape, dtype=tf.float32, name='observation_spec'
+    )
     time_step_spec = time_step.time_step_spec(observation_spec)
 
     weights = tf.compat.v2.Variable(weights, dtype=tf.float32)
     inverse_temperature = tf.compat.v2.Variable(
-        inverse_temperature, dtype=tf.float32)
+        inverse_temperature, dtype=tf.float32
+    )
 
     action_spec = tensor_spec.BoundedTensorSpec(
         shape=(),
         dtype=tf.int32,
         minimum=0,
         maximum=tf.compat.dimension_value(weights.shape[0]) - 1,
-        name='action')
+        name='action',
+    )
 
-    policy = categorical_policy.CategoricalPolicy(weights, time_step_spec,
-                                                  action_spec,
-                                                  inverse_temperature)
-    observation_step = _get_dummy_observation_step(observation_shape,
-                                                   batch_size)
+    policy = categorical_policy.CategoricalPolicy(
+        weights, time_step_spec, action_spec, inverse_temperature
+    )
+    observation_step = _get_dummy_observation_step(
+        observation_shape, batch_size
+    )
     action_time_step = policy.action(observation_step)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_time_step.action.shape.as_list(), [batch_size])
@@ -88,10 +96,12 @@ class CategoricalPolicyTest(test_utils.TestCase, parameterized.TestCase):
       dict(observation_shape=[1], batch_size=1, weights=np.ones(10)),
       dict(observation_shape=[2, 1, 3], batch_size=32, weights=np.arange(17)),
   )
-  def testVariableWeightsDefaultTemp(self, observation_shape, batch_size,
-                                     weights):
+  def testVariableWeightsDefaultTemp(
+      self, observation_shape, batch_size, weights
+  ):
     observation_spec = tensor_spec.TensorSpec(
-        shape=observation_shape, dtype=tf.float32, name='observation_spec')
+        shape=observation_shape, dtype=tf.float32, name='observation_spec'
+    )
     time_step_spec = time_step.time_step_spec(observation_spec)
 
     weights = tf.compat.v2.Variable(weights, dtype=tf.float32)
@@ -100,52 +110,63 @@ class CategoricalPolicyTest(test_utils.TestCase, parameterized.TestCase):
         dtype=tf.int32,
         minimum=0,
         maximum=tf.compat.dimension_value(weights.shape[0]) - 1,
-        name='action')
-    policy = categorical_policy.CategoricalPolicy(weights, time_step_spec,
-                                                  action_spec)
-    observation_step = _get_dummy_observation_step(observation_shape,
-                                                   batch_size)
+        name='action',
+    )
+    policy = categorical_policy.CategoricalPolicy(
+        weights, time_step_spec, action_spec
+    )
+    observation_step = _get_dummy_observation_step(
+        observation_shape, batch_size
+    )
     action_time_step = policy.action(observation_step)
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertAllEqual(action_time_step.action.shape.as_list(), [batch_size])
 
   @parameterized.parameters(
-      dict(observation_shape=[1], weights=np.array([0., 1.]), seed=934585),
+      dict(observation_shape=[1], weights=np.array([0.0, 1.0]), seed=934585),
       dict(observation_shape=[2, 1, 3], weights=np.arange(10), seed=345789),
   )
   def testInverseTempUpdate(self, observation_shape, weights, seed):
     """Test that temperature updates perform as expected as it is increased."""
     observation_spec = tensor_spec.TensorSpec(
-        shape=observation_shape, dtype=tf.float32, name='observation_spec')
+        shape=observation_shape, dtype=tf.float32, name='observation_spec'
+    )
     time_step_spec = time_step.time_step_spec(observation_spec)
 
     weight_var = tf.compat.v2.Variable(weights, dtype=tf.float32)
     inverse_temperature_var = tf.compat.v2.Variable(
-        TEMP_UPDATE_TEST_INITIAL_INVERSE_TEMP, dtype=tf.float32)
+        TEMP_UPDATE_TEST_INITIAL_INVERSE_TEMP, dtype=tf.float32
+    )
     action_spec = tensor_spec.BoundedTensorSpec(
         shape=(),
         dtype=tf.int64,
         minimum=0,
         maximum=tf.compat.dimension_value(weight_var.shape[0]) - 1,
-        name='action')
-    policy = categorical_policy.CategoricalPolicy(weight_var, time_step_spec,
-                                                  action_spec,
-                                                  inverse_temperature_var)
-    observation_step = _get_dummy_observation_step(observation_shape,
-                                                   TEMP_UPDATE_TEST_BATCH_SIZE)
+        name='action',
+    )
+    policy = categorical_policy.CategoricalPolicy(
+        weight_var, time_step_spec, action_spec, inverse_temperature_var
+    )
+    observation_step = _get_dummy_observation_step(
+        observation_shape, TEMP_UPDATE_TEST_BATCH_SIZE
+    )
     tf.compat.v1.set_random_seed(seed)
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     # Set the inverse temperature to a large value.
     self.evaluate(
-        tf.compat.v1.assign(inverse_temperature_var,
-                            TEMP_UPDATE_TEST_FINAL_INVERSE_TEMP))
+        tf.compat.v1.assign(
+            inverse_temperature_var, TEMP_UPDATE_TEST_FINAL_INVERSE_TEMP
+        )
+    )
 
     final_action_time_step = self.evaluate(
-        policy.action(observation_step, seed=seed))
+        policy.action(observation_step, seed=seed)
+    )
     self.assertAllEqual(
         final_action_time_step.action,
-        np.full([TEMP_UPDATE_TEST_BATCH_SIZE], np.argmax(weights)))
+        np.full([TEMP_UPDATE_TEST_BATCH_SIZE], np.argmax(weights)),
+    )
 
   @parameterized.named_parameters(
       dict(
@@ -153,43 +174,52 @@ class CategoricalPolicyTest(test_utils.TestCase, parameterized.TestCase):
           observation_shape=[1],
           batch_size=1,
           weights=np.ones(10, dtype=np.float32),
-          inverse_temperature=1.,
-          seed=48579),
+          inverse_temperature=1.0,
+          seed=48579,
+      ),
       dict(
           testcase_name='_low_to_high',
           observation_shape=[3],
           batch_size=32,
           weights=np.linspace(-2, 2, 20, dtype=np.float32),
-          inverse_temperature=2.,
-          seed=37595),
+          inverse_temperature=2.0,
+          seed=37595,
+      ),
   )
-  def testActionProbabilities(self, observation_shape, batch_size, weights,
-                              inverse_temperature, seed):
+  def testActionProbabilities(
+      self, observation_shape, batch_size, weights, inverse_temperature, seed
+  ):
     observation_spec = tensor_spec.TensorSpec(
-        shape=observation_shape, dtype=tf.float32, name='observation_spec')
+        shape=observation_shape, dtype=tf.float32, name='observation_spec'
+    )
     time_step_spec = time_step.time_step_spec(observation_spec)
     action_spec = tensor_spec.BoundedTensorSpec(
         shape=(),
         dtype=tf.int32,
         minimum=0,
         maximum=tf.compat.dimension_value(weights.shape[0]) - 1,
-        name='action')
-    policy = categorical_policy.CategoricalPolicy(weights, time_step_spec,
-                                                  action_spec,
-                                                  inverse_temperature)
-    observation_step = _get_dummy_observation_step(observation_shape,
-                                                   batch_size)
+        name='action',
+    )
+    policy = categorical_policy.CategoricalPolicy(
+        weights, time_step_spec, action_spec, inverse_temperature
+    )
+    observation_step = _get_dummy_observation_step(
+        observation_shape, batch_size
+    )
     action_time_step = policy.action(observation_step, seed=seed)
 
     logits = inverse_temperature * weights
     z = tf.reduce_logsumexp(logits)
     expected_logprob = logits - z
     expected_action_prob = tf.exp(
-        tf.gather(expected_logprob, action_time_step.action))
+        tf.gather(expected_logprob, action_time_step.action)
+    )
     actual_action_prob = tf.exp(
-        policy_step.get_log_probability(action_time_step.info))
+        policy_step.get_log_probability(action_time_step.info)
+    )
     expected_action_prob_val, actual_action_prob_val = self.evaluate(
-        [expected_action_prob, actual_action_prob])
+        [expected_action_prob, actual_action_prob]
+    )
     self.assertAllClose(expected_action_prob_val, actual_action_prob_val)
 
 

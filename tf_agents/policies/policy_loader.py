@@ -59,7 +59,8 @@ def load(saved_model_path: Text, checkpoint_path: Optional[Text] = None):
     A `tf_agents.policies.SavedModelPyTFEagerPolicy`.
   """
   policy = py_tf_eager_policy.SavedModelPyTFEagerPolicy(
-      saved_model_path, load_specs_from_pbtxt=True)
+      saved_model_path, load_specs_from_pbtxt=True
+  )
   if checkpoint_path:
     policy.update_from_checkpoint(checkpoint_path)
   return policy
@@ -77,8 +78,9 @@ def _copy_dir(from_dir, name, to_dir):
     _copy_file(from_dir_name, file_name, to_dir_name)
 
 
-def materialize_saved_model(saved_model_path: Text, checkpoint_path: Text,
-                            output_path: Text):
+def materialize_saved_model(
+    saved_model_path: Text, checkpoint_path: Text, output_path: Text
+):
   """Materializes a full saved model for a policy.
 
   Some training processes generate a full saved model only at step 0, and then
@@ -140,6 +142,7 @@ def materialize_saved_model(saved_model_path: Text, checkpoint_path: Text,
   tf.io.gfile.makedirs(output_path)
   _copy_dir(checkpoint_path, tf.saved_model.VARIABLES_DIRECTORY, output_path)
   _copy_dir(saved_model_path, tf.saved_model.ASSETS_DIRECTORY, output_path)
-  _copy_file(saved_model_path, tf.saved_model.SAVED_MODEL_FILENAME_PB,
-             output_path)
+  _copy_file(
+      saved_model_path, tf.saved_model.SAVED_MODEL_FILENAME_PB, output_path
+  )
   _copy_file(saved_model_path, policy_saver.POLICY_SPECS_PBTXT, output_path)

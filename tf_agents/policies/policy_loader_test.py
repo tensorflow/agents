@@ -17,7 +17,6 @@
 import os
 
 import numpy as np
-
 import tensorflow.compat.v2 as tf
 from tf_agents.networks import network
 from tf_agents.policies import greedy_policy
@@ -35,7 +34,8 @@ class AddNet(network.Network):
 
   def __init__(self):
     super(AddNet, self).__init__(
-        tensor_spec.TensorSpec((), tf.float32), (), 'add_net')
+        tensor_spec.TensorSpec((), tf.float32), (), 'add_net'
+    )
     self.var = tf.Variable(0.0, dtype=tf.float32)
 
   def call(self, observation, step_type=None, network_state=(), training=False):
@@ -56,10 +56,12 @@ class PolicyLoaderTest(test_utils.TestCase):
     tf_action_spec = tensor_spec.BoundedTensorSpec((), np.float32, 0, 3)
     self.net = AddNet()
     self.policy = greedy_policy.GreedyPolicy(
-        q_policy.QPolicy(tf_time_step_spec, tf_action_spec, self.net))
+        q_policy.QPolicy(tf_time_step_spec, tf_action_spec, self.net)
+    )
     self.train_step = common.create_variable('train_step', initial_value=0)
     self.saver = policy_saver.PolicySaver(
-        self.policy, train_step=self.train_step)
+        self.policy, train_step=self.train_step
+    )
 
   def _createModelsOnDisk(self):
     saved_model_dir = os.path.join(self.root_dir, 'policy')
@@ -86,8 +88,9 @@ class PolicyLoaderTest(test_utils.TestCase):
   def testMaterialize(self):
     saved_path, ckpt_at_path_1 = self._createModelsOnDisk()
     materialized_path = os.path.join(self.root_dir, 'material/001')
-    policy_loader.materialize_saved_model(saved_path, ckpt_at_path_1,
-                                          materialized_path)
+    policy_loader.materialize_saved_model(
+        saved_path, ckpt_at_path_1, materialized_path
+    )
     policy_at_1 = policy_loader.load(materialized_path)
     self.assertEqual(1, policy_at_1.get_train_step())
     self.assertEqual(10, policy_at_1.variables()[0].numpy())

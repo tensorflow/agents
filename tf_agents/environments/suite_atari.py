@@ -40,16 +40,21 @@ DEFAULT_ATARI_GYM_WRAPPERS = (atari_preprocessing.AtariPreprocessing,)
 # As soon as this functionality in TF-Agents is ready and verified, this set of
 # wrappers will be removed.
 DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING = DEFAULT_ATARI_GYM_WRAPPERS + (
-    atari_wrappers.FrameStack4,)
-gin.constant('DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING',
-             DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
+    atari_wrappers.FrameStack4,
+)
+gin.constant(
+    'DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING',
+    DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING,
+)
 
 
 @gin.configurable
-def game(name: Text = 'Pong',
-         obs_type: Text = 'image',
-         mode: Text = 'NoFrameskip',
-         version: Text = 'v0') -> Text:
+def game(
+    name: Text = 'Pong',
+    obs_type: Text = 'image',
+    mode: Text = 'NoFrameskip',
+    version: Text = 'v0',
+) -> Text:
   """Generates the full name for the game.
 
   Args:
@@ -75,9 +80,10 @@ def load(
     discount: types.Int = 1.0,
     max_episode_steps: Optional[types.Int] = None,
     gym_env_wrappers: Sequence[
-        types.GymEnvWrapper] = DEFAULT_ATARI_GYM_WRAPPERS,
+        types.GymEnvWrapper
+    ] = DEFAULT_ATARI_GYM_WRAPPERS,
     env_wrappers: Sequence[types.PyEnvWrapper] = (),
-    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None
+    spec_dtype_map: Optional[Dict[gym.Space, np.dtype]] = None,
 ) -> py_environment.PyEnvironment:
   """Loads the selected environment and wraps it with the specified wrappers."""
   if spec_dtype_map is None:
@@ -97,4 +103,5 @@ def load(
       time_limit_wrapper=atari_wrappers.AtariTimeLimit,
       env_wrappers=env_wrappers,
       spec_dtype_map=spec_dtype_map,
-      auto_reset=False)
+      auto_reset=False,
+  )

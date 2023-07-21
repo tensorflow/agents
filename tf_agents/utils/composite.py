@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utilities for dealing with CompositeTensors.
-"""
+"""Utilities for dealing with CompositeTensors."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -40,8 +39,11 @@ def reshape(t, shape):  # pylint: disable=redefined-outer-name
   Returns:
     The reshaped tensor.
   """
-  return (tf.sparse.reshape(t, shape) if isinstance(t, tf.SparseTensor)
-          else tf.reshape(t, shape))
+  return (
+      tf.sparse.reshape(t, shape)
+      if isinstance(t, tf.SparseTensor)
+      else tf.reshape(t, shape)
+  )
 
 
 def squeeze(t, axis):
@@ -62,19 +64,29 @@ def squeeze(t, axis):
     # Fill in a dummy value if there are no elements in the tensor.
     indices_axis = t.indices[:, axis]
     all_zero = tf.reduce_all(tf.equal(indices_axis, 0))
-    with tf.control_dependencies([
-        tf.Assert(
-            all_zero,
-            ['Unable to squeeze SparseTensor {} axis {} '
-             'because indices are not all equal to 0:', indices_axis])]):
+    with tf.control_dependencies(
+        [
+            tf.Assert(
+                all_zero,
+                [
+                    (
+                        'Unable to squeeze SparseTensor {} axis {} '
+                        'because indices are not all equal to 0:'
+                    ),
+                    indices_axis,
+                ],
+            )
+        ]
+    ):
       return tf.SparseTensor(
           indices=tf.concat(
-              (t.indices[:, :axis], t.indices[:, axis + 1:]),
-              axis=1),
+              (t.indices[:, :axis], t.indices[:, axis + 1 :]), axis=1
+          ),
           values=t.values,
           dense_shape=tf.concat(
-              (t.dense_shape[:axis], t.dense_shape[axis + 1:]),
-              axis=0))
+              (t.dense_shape[:axis], t.dense_shape[axis + 1 :]), axis=0
+          ),
+      )
   else:
     return tf.squeeze(t, [axis])
 
@@ -96,17 +108,21 @@ def expand_dims(t, axis):
     if tf.is_tensor(axis) or axis != 0:
       raise NotImplementedError(
           'Can only expand_dims on SparseTensor {} on static axis 0, '
-          'but received axis {}'.format(t, axis))
+          'but received axis {}'.format(t, axis)
+      )
     n_elem = (
-        t.indices.shape[0] or tf.get_static_shape(t.dense_shape)[0]
-        or tf.shape(t.indices)[0])
+        t.indices.shape[0]
+        or tf.get_static_shape(t.dense_shape)[0]
+        or tf.shape(t.indices)[0]
+    )
     shape_ = tf.cast(t.shape, tf.int64)
     return tf.SparseTensor(
-        indices=tf.concat((tf.zeros([n_elem, 1], dtype=tf.int64),
-                           t.indices),
-                          axis=1),
+        indices=tf.concat(
+            (tf.zeros([n_elem, 1], dtype=tf.int64), t.indices), axis=1
+        ),
         values=t.values,
-        dense_shape=tf.concat(([1], shape_), axis=0))
+        dense_shape=tf.concat(([1], shape_), axis=0),
+    )
   else:
     return tf.expand_dims(t, axis)
 
@@ -133,29 +149,30 @@ def slice_from(tensor, axis, start):
   if isinstance(tensor, tf.SparseTensor):
     if not tf.is_tensor(start) and start < 0:
       start = tensor.dense_shape[axis] + start
-    all_but_first = tf.reshape(
-        tf.where(tensor.indices[:, axis] >= start),
-        [-1])
+    all_but_first = tf.reshape(tf.where(tensor.indices[:, axis] >= start), [-1])
     indices = tf.gather(tensor.indices, all_but_first)
     indices = tf.unstack(indices, axis=1)
-    indices = tf.stack(indices[:axis]
-                       + [indices[axis] - start]
-                       + indices[axis + 1:],
-                       axis=1)
+    indices = tf.stack(
+        indices[:axis] + [indices[axis] - start] + indices[axis + 1 :], axis=1
+    )
     new_shape = tf.unstack(tensor.dense_shape)
     new_shape[axis] = new_shape[axis] - start
     return tf.SparseTensor(
         indices=indices,
         values=tf.gather(tensor.values, all_but_first),
-        dense_shape=tf.stack(new_shape))
+        dense_shape=tf.stack(new_shape),
+    )
   else:
     ndims = len(tensor.shape)
     if ndims is None:
       raise ValueError(
-          'Unable to slice a tensor with unknown rank: {}'.format(tensor))
-    slices = tuple([slice(None)] * axis
-                   + [slice(start, None)]
-                   + [slice(None)] * (ndims - axis - 1))
+          'Unable to slice a tensor with unknown rank: {}'.format(tensor)
+      )
+    slices = tuple(
+        [slice(None)] * axis
+        + [slice(start, None)]
+        + [slice(None)] * (ndims - axis - 1)
+    )
     return tensor[slices]
 
 
@@ -181,21 +198,23 @@ def slice_to(tensor, axis, end):
   if isinstance(tensor, tf.SparseTensor):
     if not tf.is_tensor(end) and end < 0:
       end = tensor.dense_shape[axis] + end
-    all_but_first = tf.reshape(
-        tf.where(tensor.indices[:, axis] < end),
-        [-1])
+    all_but_first = tf.reshape(tf.where(tensor.indices[:, axis] < end), [-1])
     new_shape = tf.unstack(tensor.dense_shape)
     new_shape[axis] = end
     return tf.SparseTensor(
         indices=tf.gather(tensor.indices, all_but_first),
         values=tf.gather(tensor.values, all_but_first),
-        dense_shape=tf.stack(new_shape))
+        dense_shape=tf.stack(new_shape),
+    )
   else:
     ndims = len(tensor.shape)
     if ndims is None:
       raise ValueError(
-          'Unable to slice a tensor with unknown rank: {}'.format(tensor))
-    slices = tuple([slice(None)] * axis
-                   + [slice(None, end)]
-                   + [slice(None)] * (ndims - axis - 1))
+          'Unable to slice a tensor with unknown rank: {}'.format(tensor)
+      )
+    slices = tuple(
+        [slice(None)] * axis
+        + [slice(None, end)]
+        + [slice(None)] * (ndims - axis - 1)
+    )
     return tensor[slices]

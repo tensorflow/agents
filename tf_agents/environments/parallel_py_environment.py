@@ -25,12 +25,10 @@ import traceback
 from typing import Any, Callable, Sequence, Text, Union
 
 from absl import logging
-
 import cloudpickle
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.environments import py_environment
 from tf_agents.system import system_multiprocessing as multiprocessing
 from tf_agents.trajectories import time_step as ts
@@ -55,11 +53,13 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
   access global variables.
   """
 
-  def __init__(self,
-               env_constructors: Sequence[EnvConstructor],
-               start_serially: bool = True,
-               blocking: bool = False,
-               flatten: bool = False):
+  def __init__(
+      self,
+      env_constructors: Sequence[EnvConstructor],
+      start_serially: bool = True,
+      blocking: bool = False,
+      flatten: bool = False,
+  ):
     """Batch together environments and simulate them in external processes.
 
     The environments can be different but must use the same action and
@@ -80,9 +80,11 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
       raise TypeError(
           'Found non-callable `env_constructors` in `ParallelPyEnvironment` '
           '__init__ call. Did you accidentally pass in environment instances '
-          'instead of constructors? Got: {}'.format(env_constructors))
-    self._envs = [ProcessPyEnvironment(ctor, flatten=flatten)
-                  for ctor in env_constructors]
+          'instead of constructors? Got: {}'.format(env_constructors)
+      )
+    self._envs = [
+        ProcessPyEnvironment(ctor, flatten=flatten) for ctor in env_constructors
+    ]
     self._num_envs = len(env_constructors)
     self._blocking = blocking
     self._start_serially = start_serially
@@ -125,7 +127,7 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
   def action_spec(self) -> types.NestedArraySpec:
     return self._action_spec
 
-  def time_step_spec(self)  -> ts.TimeStep:
+  def time_step_spec(self) -> ts.TimeStep:
     return self._time_step_spec
 
   def _reset(self):
@@ -153,7 +155,8 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     """
     time_steps = [
         env.step(action, self._blocking)
-        for env, action in zip(self._envs, self._unstack_actions(actions))]
+        for env, action in zip(self._envs, self._unstack_actions(actions))
+    ]
     # When blocking is False we get promises that need to be called.
     if not self._blocking:
       time_steps = [promise() for promise in time_steps]
@@ -170,10 +173,12 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     """Given a list of TimeStep, combine to one with a batch dimension."""
     if self._flatten:
       return nest_utils.fast_map_structure_flatten(
-          lambda *arrays: np.stack(arrays), self._time_step_spec, *time_steps)
+          lambda *arrays: np.stack(arrays), self._time_step_spec, *time_steps
+      )
     else:
       return nest_utils.fast_map_structure(
-          lambda *arrays: np.stack(arrays), *time_steps)
+          lambda *arrays: np.stack(arrays), *time_steps
+      )
 
   def _unstack_actions(self, batched_actions):
     """Returns a list of actions from potentially nested batch of actions."""
@@ -191,7 +196,8 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     """Seeds the parallel environments."""
     if len(seeds) != len(self._envs):
       raise ValueError(
-          'Number of seeds should match the number of parallel_envs.')
+          'Number of seeds should match the number of parallel_envs.'
+      )
 
     promises = [env.call('seed', seed) for seed, env in zip(seeds, self._envs)]
     # Block until all envs are seeded.
@@ -201,8 +207,8 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
     """Renders the environment.
 
     Args:
-      mode: Rendering mode. Currently only 'rgb_array' is supported because
-        this is a batched environment.
+      mode: Rendering mode. Currently only 'rgb_array' is supported because this
+        is a batched environment.
 
     Returns:
       An ndarray of shape [batch_size, width, height, 3] denoting RGB images
@@ -212,8 +218,9 @@ class ParallelPyEnvironment(py_environment.PyEnvironment):
         or any other mode than `rgb_array` is given.
     """
     if mode != 'rgb_array':
-      raise NotImplementedError('Only rgb_array rendering mode is supported. '
-                                'Got %s' % mode)
+      raise NotImplementedError(
+          'Only rgb_array rendering mode is supported. Got %s' % mode
+      )
     imgs = [env.render(mode, blocking=self._blocking) for env in self._envs]
     if not self._blocking:
       imgs = [promise() for promise in imgs]
@@ -366,9 +373,9 @@ class ProcessPyEnvironment(object):
     if self._process.is_alive():
       self._process.join(5)
 
-  def step(self,
-           action: types.NestedArray,
-           blocking: bool = True) -> Union[ts.TimeStep, Promise]:
+  def step(
+      self, action: types.NestedArray, blocking: bool = True
+  ) -> Union[ts.TimeStep, Promise]:
     """Step the environment.
 
     Args:
@@ -400,9 +407,9 @@ class ProcessPyEnvironment(object):
     else:
       return promise
 
-  def render(self,
-             mode: Text = 'rgb_array',
-             blocking: bool = True) -> Union[types.NestedArray, Promise]:
+  def render(
+      self, mode: Text = 'rgb_array', blocking: bool = True
+  ) -> Union[types.NestedArray, Promise]:
     """Renders the environment.
 
     Args:
@@ -417,8 +424,9 @@ class ProcessPyEnvironment(object):
         or any other modes than `rgb_array` is given.
     """
     if mode != 'rgb_array':
-      raise NotImplementedError('Only rgb_array rendering mode is supported. '
-                                'Got %s' % mode)
+      raise NotImplementedError(
+          'Only rgb_array rendering mode is supported. Got %s' % mode
+      )
     promise = self.call('render')
     if blocking:
       return promise()

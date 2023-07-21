@@ -38,7 +38,7 @@ class TrainEvalLibTest(test_utils.TestCase):
         importance_ratio_clipping=0.2,
         lambda_value=0.95,
         discount_factor=0.99,
-        entropy_regularization=0.,
+        entropy_regularization=0.0,
         value_pred_loss_coef=0.5,
         use_gae=True,
         use_td_lambda_return=True,
@@ -50,7 +50,8 @@ class TrainEvalLibTest(test_utils.TestCase):
         # Others
         policy_save_interval=0,
         summary_interval=0,
-        eval_interval=0)
+        eval_interval=0,
+    )
 
 
 if __name__ == '__main__':

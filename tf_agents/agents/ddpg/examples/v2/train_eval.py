@@ -38,11 +38,9 @@ import time
 from absl import app
 from absl import flags
 from absl import logging
-
 import gin
 from six.moves import range
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.ddpg import ddpg_agent
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import parallel_py_environment
@@ -57,10 +55,14 @@ from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_integer('num_iterations', 100000,
-                     'Total number train/eval iterations to perform.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
+flags.DEFINE_integer(
+    'num_iterations', 100000, 'Total number train/eval iterations to perform.'
+)
 flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 
@@ -109,40 +111,45 @@ def train_eval(
     summaries_flush_secs=10,
     debug_summaries=False,
     summarize_grads_and_vars=False,
-    eval_metrics_callback=None):
-
+    eval_metrics_callback=None,
+):
   """A simple train and eval for DDPG."""
   root_dir = os.path.expanduser(root_dir)
   train_dir = os.path.join(root_dir, 'train')
   eval_dir = os.path.join(root_dir, 'eval')
 
   train_summary_writer = tf.compat.v2.summary.create_file_writer(
-      train_dir, flush_millis=summaries_flush_secs * 1000)
+      train_dir, flush_millis=summaries_flush_secs * 1000
+  )
   train_summary_writer.set_as_default()
 
   eval_summary_writer = tf.compat.v2.summary.create_file_writer(
-      eval_dir, flush_millis=summaries_flush_secs * 1000)
+      eval_dir, flush_millis=summaries_flush_secs * 1000
+  )
   eval_metrics = [
       tf_metrics.AverageReturnMetric(buffer_size=num_eval_episodes),
-      tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes)
+      tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
 
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
-      lambda: tf.math.equal(global_step % summary_interval, 0)):
+      lambda: tf.math.equal(global_step % summary_interval, 0)
+  ):
     if num_parallel_environments > 1:
       tf_env = tf_py_environment.TFPyEnvironment(
           parallel_py_environment.ParallelPyEnvironment(
-              [lambda: env_load_fn(env_name)] * num_parallel_environments))
+              [lambda: env_load_fn(env_name)] * num_parallel_environments
+          )
+      )
     else:
       tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(env_name))
     eval_env_name = eval_env_name or env_name
     eval_tf_env = tf_py_environment.TFPyEnvironment(env_load_fn(eval_env_name))
 
     actor_net = create_actor_network(actor_fc_layers, tf_env.action_spec())
-    critic_net = create_critic_network(critic_obs_fc_layers,
-                                       critic_action_fc_layers,
-                                       critic_joint_fc_layers)
+    critic_net = create_critic_network(
+        critic_obs_fc_layers, critic_action_fc_layers, critic_joint_fc_layers
+    )
 
     tf_agent = ddpg_agent.DdpgAgent(
         tf_env.time_step_spec(),
@@ -150,9 +157,11 @@ def train_eval(
         actor_network=actor_net,
         critic_network=critic_net,
         actor_optimizer=tf.compat.v1.train.AdamOptimizer(
-            learning_rate=actor_learning_rate),
+            learning_rate=actor_learning_rate
+        ),
         critic_optimizer=tf.compat.v1.train.AdamOptimizer(
-            learning_rate=critic_learning_rate),
+            learning_rate=critic_learning_rate
+        ),
         ou_stddev=ou_stddev,
         ou_damping=ou_damping,
         target_update_tau=target_update_tau,
@@ -164,7 +173,8 @@ def train_eval(
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
         summarize_grads_and_vars=summarize_grads_and_vars,
-        train_step_counter=global_step)
+        train_step_counter=global_step,
+    )
     tf_agent.initialize()
 
     train_metrics = [
@@ -180,19 +190,22 @@ def train_eval(
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         tf_agent.collect_data_spec,
         batch_size=tf_env.batch_size,
-        max_length=replay_buffer_capacity)
+        max_length=replay_buffer_capacity,
+    )
 
     initial_collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch],
-        num_steps=initial_collect_steps)
+        num_steps=initial_collect_steps,
+    )
 
     collect_driver = dynamic_step_driver.DynamicStepDriver(
         tf_env,
         collect_policy,
         observers=[replay_buffer.add_batch] + train_metrics,
-        num_steps=collect_steps_per_iteration)
+        num_steps=collect_steps_per_iteration,
+    )
 
     if use_tf_functions:
       initial_collect_driver.run = common.function(initial_collect_driver.run)
@@ -202,7 +215,9 @@ def train_eval(
     # Collect initial replay data.
     logging.info(
         'Initializing replay buffer by collecting experience for %d steps with '
-        'a random policy.', initial_collect_steps)
+        'a random policy.',
+        initial_collect_steps,
+    )
     initial_collect_driver.run()
 
     results = metric_utils.eager_compute(
@@ -226,9 +241,8 @@ def train_eval(
 
     # Dataset generates trajectories with shape [Bx2x...]
     dataset = replay_buffer.as_dataset(
-        num_parallel_calls=3,
-        sample_batch_size=batch_size,
-        num_steps=2).prefetch(3)
+        num_parallel_calls=3, sample_batch_size=batch_size, num_steps=2
+    ).prefetch(3)
     iterator = iter(dataset)
 
     def train_step():
@@ -249,18 +263,21 @@ def train_eval(
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
-        logging.info('step = %d, loss = %f', global_step.numpy(),
-                     train_loss.loss)
+        logging.info(
+            'step = %d, loss = %f', global_step.numpy(), train_loss.loss
+        )
         steps_per_sec = (global_step.numpy() - timed_at_step) / time_acc
         logging.info('%.3f steps/sec', steps_per_sec)
         tf.compat.v2.summary.scalar(
-            name='global_steps_per_sec', data=steps_per_sec, step=global_step)
+            name='global_steps_per_sec', data=steps_per_sec, step=global_step
+        )
         timed_at_step = global_step.numpy()
         time_acc = 0
 
       for train_metric in train_metrics:
         train_metric.tf_summaries(
-            train_step=global_step, step_metrics=train_metrics[:2])
+            train_step=global_step, step_metrics=train_metrics[:2]
+        )
 
       if global_step.numpy() % eval_interval == 0:
         results = metric_utils.eager_compute(
@@ -283,7 +300,9 @@ dense = functools.partial(
     tf.keras.layers.Dense,
     activation=tf.keras.activations.relu,
     kernel_initializer=tf.compat.v1.variance_scaling_initializer(
-        scale=1./ 3.0, mode='fan_in', distribution='uniform'))
+        scale=1.0 / 3.0, mode='fan_in', distribution='uniform'
+    ),
+)
 
 
 def create_identity_layer():
@@ -308,46 +327,55 @@ def create_actor_network(fc_layer_units, action_spec):
       num_actions,
       activation=tf.keras.activations.tanh,
       kernel_initializer=tf.keras.initializers.RandomUniform(
-          minval=-0.003, maxval=0.003))
+          minval=-0.003, maxval=0.003
+      ),
+  )
 
   scaling_layer = tf.keras.layers.Lambda(
-      lambda x: common.scale_to_spec(x, flat_action_spec))
+      lambda x: common.scale_to_spec(x, flat_action_spec)
+  )
   return sequential.Sequential(fc_layers + [action_fc_layer, scaling_layer])
 
 
-def create_critic_network(obs_fc_layer_units,
-                          action_fc_layer_units,
-                          joint_fc_layer_units):
+def create_critic_network(
+    obs_fc_layer_units, action_fc_layer_units, joint_fc_layer_units
+):
   """Create a critic network for DDPG."""
 
   def split_inputs(inputs):
     return {'observation': inputs[0], 'action': inputs[1]}
 
-  obs_network = create_fc_network(
-      obs_fc_layer_units) if obs_fc_layer_units else create_identity_layer()
-  action_network = create_fc_network(
-      action_fc_layer_units
-  ) if action_fc_layer_units else create_identity_layer()
-  joint_network = create_fc_network(
-      joint_fc_layer_units) if joint_fc_layer_units else create_identity_layer(
-      )
+  obs_network = (
+      create_fc_network(obs_fc_layer_units)
+      if obs_fc_layer_units
+      else create_identity_layer()
+  )
+  action_network = (
+      create_fc_network(action_fc_layer_units)
+      if action_fc_layer_units
+      else create_identity_layer()
+  )
+  joint_network = (
+      create_fc_network(joint_fc_layer_units)
+      if joint_fc_layer_units
+      else create_identity_layer()
+  )
   value_fc_layer = tf.keras.layers.Dense(
       1,
       activation=None,
       kernel_initializer=tf.keras.initializers.RandomUniform(
-          minval=-0.003, maxval=0.003))
+          minval=-0.003, maxval=0.003
+      ),
+  )
 
   return sequential.Sequential([
       tf.keras.layers.Lambda(split_inputs),
-      nest_map.NestMap({
-          'observation': obs_network,
-          'action': action_network
-      }),
+      nest_map.NestMap({'observation': obs_network, 'action': action_network}),
       nest_map.NestFlatten(),
       tf.keras.layers.Concatenate(),
       joint_network,
       value_fc_layer,
-      inner_reshape.InnerReshape([1], [])
+      inner_reshape.InnerReshape([1], []),
   ])
 
 
@@ -356,6 +384,7 @@ def main(_):
   logging.set_verbosity(logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_param)
   train_eval(FLAGS.root_dir, num_iterations=FLAGS.num_iterations)
+
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')

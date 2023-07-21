@@ -25,6 +25,7 @@ from __future__ import division
 from __future__ import print_function
 
 from typing import Optional, Text
+
 import gin
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
@@ -49,11 +50,13 @@ def is_available() -> bool:
 
 
 @gin.configurable
-def load(bsuite_id: Text,
-         record: bool = True,
-         save_path: Optional[Text] = None,
-         logging_mode: Text = 'csv',
-         overwrite: bool = False) -> py_environment.PyEnvironment:
+def load(
+    bsuite_id: Text,
+    record: bool = True,
+    save_path: Optional[Text] = None,
+    logging_mode: Text = 'csv',
+    overwrite: bool = False,
+) -> py_environment.PyEnvironment:
   """Loads the selected environment.
 
   Args:
@@ -61,8 +64,8 @@ def load(bsuite_id: Text,
       `bsuite_id` "deep_sea/7" will be 7th level of the "deep_sea" task.
     record: whether to log bsuite results.
     save_path: the directory to save bsuite results.
-    logging_mode: which form of logging to use for bsuite results
-      ['csv', 'sqlite', 'terminal'].
+    logging_mode: which form of logging to use for bsuite results ['csv',
+      'sqlite', 'terminal'].
     overwrite: overwrite csv logging if found.
 
   Returns:
@@ -73,7 +76,8 @@ def load(bsuite_id: Text,
         bsuite_id=bsuite_id,
         save_path=save_path,
         logging_mode=logging_mode,
-        overwrite=overwrite)
+        overwrite=overwrite,
+    )
   else:
     raw_env = bsuite.load_from_id(bsuite_id=bsuite_id)
   gym_env = gym_wrapper.GymFromDMEnv(raw_env)

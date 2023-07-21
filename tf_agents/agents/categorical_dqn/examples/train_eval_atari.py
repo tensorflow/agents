@@ -54,11 +54,9 @@ import os
 from absl import app
 from absl import flags
 from absl import logging
-
 import gin
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.agents.categorical_dqn import categorical_dqn_agent
 from tf_agents.environments import batched_py_environment
 from tf_agents.environments import suite_atari
@@ -78,26 +76,43 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import timer
 
-flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
-                    'Root directory for writing logs/summaries/checkpoints.')
+flags.DEFINE_string(
+    'root_dir',
+    os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
+    'Root directory for writing logs/summaries/checkpoints.',
+)
 flags.DEFINE_string('game_name', 'Pong', 'Name of Atari game to run.')
-flags.DEFINE_integer('num_iterations', None,
-                     'Number of train/eval iterations to run.')
-flags.DEFINE_integer('initial_collect_steps', None,
-                     'Number of frames to ALE frames to process before '
-                     'beginning to train. Since this is in ALE frames, there '
-                     'will be initial_collect_steps/4 items in the replay '
-                     'buffer when training starts.')
-flags.DEFINE_integer('replay_buffer_capacity', None,
-                     'Maximum number of items to store in the replay buffer.')
-flags.DEFINE_integer('train_steps_per_iteration', None,
-                     'Number of ALE frames to run through for each iteration '
-                     'of training.')
-flags.DEFINE_integer('n_step_update', None, 'The number of steps to consider '
-                     'when computing TD error and TD loss.')
-flags.DEFINE_integer('eval_steps_per_iteration', None,
-                     'Number of ALE frames to run through for each iteration '
-                     'of evaluation.')
+flags.DEFINE_integer(
+    'num_iterations', None, 'Number of train/eval iterations to run.'
+)
+flags.DEFINE_integer(
+    'initial_collect_steps',
+    None,
+    'Number of frames to ALE frames to process before '
+    'beginning to train. Since this is in ALE frames, there '
+    'will be initial_collect_steps/4 items in the replay '
+    'buffer when training starts.',
+)
+flags.DEFINE_integer(
+    'replay_buffer_capacity',
+    None,
+    'Maximum number of items to store in the replay buffer.',
+)
+flags.DEFINE_integer(
+    'train_steps_per_iteration',
+    None,
+    'Number of ALE frames to run through for each iteration of training.',
+)
+flags.DEFINE_integer(
+    'n_step_update',
+    None,
+    'The number of steps to consider when computing TD error and TD loss.',
+)
+flags.DEFINE_integer(
+    'eval_steps_per_iteration',
+    None,
+    'Number of ALE frames to run through for each iteration of evaluation.',
+)
 FLAGS = flags.FLAGS
 
 # AtariPreprocessing runs 4 frames at a time, max-pooling over the last 2
@@ -111,11 +126,14 @@ class AtariCategoricalQNetwork(network.Network):
 
   def __init__(self, input_tensor_spec, action_spec, **kwargs):
     super(AtariCategoricalQNetwork, self).__init__(
-        input_tensor_spec, state_spec=())
+        input_tensor_spec, state_spec=()
+    )
     input_tensor_spec = tf.TensorSpec(
-        dtype=tf.float32, shape=input_tensor_spec.shape)
+        dtype=tf.float32, shape=input_tensor_spec.shape
+    )
     self._categorical_q_network = categorical_q_network.CategoricalQNetwork(
-        input_tensor_spec, action_spec, **kwargs)
+        input_tensor_spec, action_spec, **kwargs
+    )
 
   @property
   def num_atoms(self):
@@ -129,7 +147,8 @@ class AtariCategoricalQNetwork(network.Network):
     # a preprocessing layer instead.
     state = state / 255
     return self._categorical_q_network(
-        state, step_type=step_type, network_state=network_state)
+        state, step_type=step_type, network_state=network_state
+    )
 
 
 def log_metric(metric, prefix):
@@ -176,7 +195,8 @@ class TrainEval(object):
       summaries_flush_secs=10,
       debug_summaries=True,
       summarize_grads_and_vars=True,
-      eval_metrics_callback=None):
+      eval_metrics_callback=None,
+  ):
     """A simple Atari train and eval for DQN.
 
     Args:
@@ -215,8 +235,7 @@ class TrainEval(object):
         iteration of evaluation.
       eval_epsilon_greedy: Epsilon value to use for the evaluation policy (0 ==
         totally greedy policy).
-      log_interval: Log stats to the terminal every log_interval training
-        steps.
+      log_interval: Log stats to the terminal every log_interval training steps.
       summary_interval: Write TF summaries every summary_interval training
         steps.
       summaries_flush_secs: Flush summaries to disk every summaries_flush_secs
@@ -229,8 +248,9 @@ class TrainEval(object):
         the evaluation.
     """
     self._update_period = update_period / ATARI_FRAME_SKIP
-    self._train_steps_per_iteration = (train_steps_per_iteration
-                                       / ATARI_FRAME_SKIP)
+    self._train_steps_per_iteration = (
+        train_steps_per_iteration / ATARI_FRAME_SKIP
+    )
     self._do_eval = do_eval
     self._eval_steps_per_iteration = eval_steps_per_iteration / ATARI_FRAME_SKIP
     self._eval_epsilon_greedy = eval_epsilon_greedy
@@ -241,37 +261,47 @@ class TrainEval(object):
     self._eval_metrics_callback = eval_metrics_callback
 
     with gin.unlock_config():
-      gin.bind_parameter(('tf_agents.environments.atari_preprocessing.'
-                          'AtariPreprocessing.terminal_on_life_loss'),
-                         terminal_on_life_loss)
+      gin.bind_parameter(
+          (
+              'tf_agents.environments.atari_preprocessing.'
+              'AtariPreprocessing.terminal_on_life_loss'
+          ),
+          terminal_on_life_loss,
+      )
 
     root_dir = os.path.expanduser(root_dir)
     train_dir = os.path.join(root_dir, 'train')
     eval_dir = os.path.join(root_dir, 'eval')
 
     train_summary_writer = tf.compat.v2.summary.create_file_writer(
-        train_dir, flush_millis=summaries_flush_secs * 1000)
+        train_dir, flush_millis=summaries_flush_secs * 1000
+    )
     train_summary_writer.set_as_default()
     self._train_summary_writer = train_summary_writer
 
     self._eval_summary_writer = None
     if self._do_eval:
       self._eval_summary_writer = tf.compat.v2.summary.create_file_writer(
-          eval_dir, flush_millis=summaries_flush_secs * 1000)
+          eval_dir, flush_millis=summaries_flush_secs * 1000
+      )
       self._eval_metrics = [
           py_metrics.AverageReturnMetric(
-              name='PhaseAverageReturn', buffer_size=np.inf),
+              name='PhaseAverageReturn', buffer_size=np.inf
+          ),
           py_metrics.AverageEpisodeLengthMetric(
-              name='PhaseAverageEpisodeLength', buffer_size=np.inf),
+              name='PhaseAverageEpisodeLength', buffer_size=np.inf
+          ),
       ]
 
     self._global_step = tf.compat.v1.train.get_or_create_global_step()
     with tf.compat.v2.summary.record_if(
-        lambda: tf.math.equal(self._global_step % self._summary_interval, 0)):
+        lambda: tf.math.equal(self._global_step % self._summary_interval, 0)
+    ):
       self._env = suite_atari.load(
           env_name,
           max_episode_steps=max_episode_frames / ATARI_FRAME_SKIP,
-          gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
+          gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING,
+      )
       self._env = batched_py_environment.BatchedPyEnvironment([self._env])
 
       observation_spec = tensor_spec.from_spec(self._env.observation_spec())
@@ -283,7 +313,8 @@ class TrainEval(object):
             1.0,
             self._global_step,
             epsilon_decay_period / ATARI_FRAME_SKIP / self._update_period,
-            end_learning_rate=epsilon_greedy)
+            end_learning_rate=epsilon_greedy,
+        )
 
       with tf.device('/gpu:0'):
         optimizer = tf.compat.v1.train.RMSPropOptimizer(
@@ -291,12 +322,14 @@ class TrainEval(object):
             decay=0.95,
             momentum=0.0,
             epsilon=0.00001,
-            centered=True)
+            centered=True,
+        )
         categorical_q_net = AtariCategoricalQNetwork(
             observation_spec,
             action_spec,
             conv_layer_params=conv_layer_params,
-            fc_layer_params=fc_layer_params)
+            fc_layer_params=fc_layer_params,
+        )
         agent = categorical_dqn_agent.CategoricalDqnAgent(
             time_step_spec,
             action_spec,
@@ -306,33 +339,39 @@ class TrainEval(object):
             n_step_update=n_step_update,
             target_update_tau=target_update_tau,
             target_update_period=(
-                target_update_period / ATARI_FRAME_SKIP / self._update_period),
+                target_update_period / ATARI_FRAME_SKIP / self._update_period
+            ),
             gamma=gamma,
             reward_scale_factor=reward_scale_factor,
             gradient_clipping=gradient_clipping,
             debug_summaries=debug_summaries,
             summarize_grads_and_vars=summarize_grads_and_vars,
-            train_step_counter=self._global_step)
+            train_step_counter=self._global_step,
+        )
 
         self._collect_policy = py_tf_policy.PyTFPolicy(agent.collect_policy)
 
         if self._do_eval:
           self._eval_policy = py_tf_policy.PyTFPolicy(
               epsilon_greedy_policy.EpsilonGreedyPolicy(
-                  policy=agent.policy,
-                  epsilon=self._eval_epsilon_greedy))
+                  policy=agent.policy, epsilon=self._eval_epsilon_greedy
+              )
+          )
 
         py_observation_spec = self._env.observation_spec()
         py_time_step_spec = ts.time_step_spec(py_observation_spec)
         py_action_spec = policy_step.PolicyStep(self._env.action_spec())
         data_spec = trajectory.from_transition(
-            py_time_step_spec, py_action_spec, py_time_step_spec)
+            py_time_step_spec, py_action_spec, py_time_step_spec
+        )
         self._replay_buffer = py_hashed_replay_buffer.PyHashedReplayBuffer(
-            data_spec=data_spec, capacity=replay_buffer_capacity)
+            data_spec=data_spec, capacity=replay_buffer_capacity
+        )
 
       with tf.device('/cpu:0'):
         ds = self._replay_buffer.as_dataset(
-            sample_batch_size=batch_size, num_steps=n_step_update + 1)
+            sample_batch_size=batch_size, num_steps=n_step_update + 1
+        )
         ds = ds.prefetch(4)
         ds = ds.apply(tf.data.experimental.prefetch_to_device('/gpu:0'))
 
@@ -354,9 +393,11 @@ class TrainEval(object):
         # rather than the rolling average of the last 10 episodes.
         self._train_phase_metrics = [
             py_metrics.AverageReturnMetric(
-                name='PhaseAverageReturn', buffer_size=np.inf),
+                name='PhaseAverageReturn', buffer_size=np.inf
+            ),
             py_metrics.AverageEpisodeLengthMetric(
-                name='PhaseAverageEpisodeLength', buffer_size=np.inf),
+                name='PhaseAverageEpisodeLength', buffer_size=np.inf
+            ),
         ]
         self._iteration_metric = py_metrics.CounterMetric(name='Iteration')
 
@@ -364,19 +405,24 @@ class TrainEval(object):
         # generated.
         with tf.compat.v2.summary.record_if(True):
           self._steps_per_second_ph = tf.compat.v1.placeholder(
-              tf.float32, shape=(), name='steps_per_sec_ph')
+              tf.float32, shape=(), name='steps_per_sec_ph'
+          )
           self._steps_per_second_summary = tf.compat.v2.summary.scalar(
-              name='global_steps_per_sec', data=self._steps_per_second_ph,
-              step=self._global_step)
+              name='global_steps_per_sec',
+              data=self._steps_per_second_ph,
+              step=self._global_step,
+          )
 
           for metric in self._train_metrics:
             metric.tf_summaries(
-                train_step=self._global_step, step_metrics=self._step_metrics)
+                train_step=self._global_step, step_metrics=self._step_metrics
+            )
 
           for metric in self._train_phase_metrics:
             metric.tf_summaries(
                 train_step=self._global_step,
-                step_metrics=(self._iteration_metric,))
+                step_metrics=(self._iteration_metric,),
+            )
           self._iteration_metric.tf_summaries(train_step=self._global_step)
 
           if self._do_eval:
@@ -384,7 +430,8 @@ class TrainEval(object):
               for metric in self._eval_metrics:
                 metric.tf_summaries(
                     train_step=self._global_step,
-                    step_metrics=(self._iteration_metric,))
+                    step_metrics=(self._iteration_metric,),
+                )
 
         self._train_checkpointer = common.Checkpointer(
             ckpt_dir=train_dir,
@@ -392,16 +439,22 @@ class TrainEval(object):
             global_step=self._global_step,
             optimizer=optimizer,
             metrics=metric_utils.MetricsGroup(
-                self._train_metrics + self._train_phase_metrics +
-                [self._iteration_metric], 'train_metrics'))
+                self._train_metrics
+                + self._train_phase_metrics
+                + [self._iteration_metric],
+                'train_metrics',
+            ),
+        )
         self._policy_checkpointer = common.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'policy'),
             policy=agent.policy,
-            global_step=self._global_step)
+            global_step=self._global_step,
+        )
         self._rb_checkpointer = common.Checkpointer(
             ckpt_dir=os.path.join(train_dir, 'replay_buffer'),
             max_to_keep=1,
-            replay_buffer=self._replay_buffer)
+            replay_buffer=self._replay_buffer,
+        )
 
         self._init_agent_op = agent.initialize()
 
@@ -411,7 +464,8 @@ class TrainEval(object):
   def run(self):
     """Execute the train/eval loop."""
     with tf.compat.v1.Session(
-        config=tf.compat.v1.ConfigProto(allow_soft_placement=True)) as sess:
+        config=tf.compat.v1.ConfigProto(allow_soft_placement=True)
+    ) as sess:
       # Initialize the graph.
       self._initialize_graph(sess)
 
@@ -425,11 +479,13 @@ class TrainEval(object):
           metric.reset()
         while env_steps < self._train_steps_per_iteration:
           env_steps += self._run_episode(
-              sess, self._train_metrics + self._train_phase_metrics, train=True)
+              sess, self._train_metrics + self._train_phase_metrics, train=True
+          )
         for metric in self._train_phase_metrics:
           log_metric(metric, prefix='Train/Metrics')
         py_metric.run_summaries(
-            self._train_phase_metrics + [self._iteration_metric])
+            self._train_phase_metrics + [self._iteration_metric]
+        )
 
         global_step_val = sess.run(self._global_step)
 
@@ -440,12 +496,14 @@ class TrainEval(object):
             metric.reset()
           while env_steps < self._eval_steps_per_iteration:
             env_steps += self._run_episode(
-                sess, self._eval_metrics, train=False)
+                sess, self._eval_metrics, train=False
+            )
 
           py_metric.run_summaries(self._eval_metrics + [self._iteration_metric])
           if self._eval_metrics_callback:
-            results = dict((metric.name, metric.result())
-                           for metric in self._eval_metrics)
+            results = dict(
+                (metric.name, metric.result()) for metric in self._eval_metrics
+            )
             self._eval_metrics_callback(results, global_step_val)
           for metric in self._eval_metrics:
             log_metric(metric, prefix='Eval/Metrics')
@@ -490,15 +548,17 @@ class TrainEval(object):
     logging.info('Collecting initial experience...')
     time_step_spec = ts.time_step_spec(self._env.observation_spec())
     random_policy = random_py_policy.RandomPyPolicy(
-        time_step_spec, self._env.action_spec())
+        time_step_spec, self._env.action_spec()
+    )
     time_step = self._env.reset()
     while self._replay_buffer.size < self._initial_collect_steps:
       if self.game_over():
         time_step = self._env.reset()
       action_step = random_policy.action(time_step)
       next_time_step = self._env.step(action_step.action)
-      self._replay_buffer.add_batch(trajectory.from_transition(
-          time_step, action_step, next_time_step))
+      self._replay_buffer.add_batch(
+          trajectory.from_transition(time_step, action_step, next_time_step)
+      )
       time_step = next_time_step
     logging.info('Done.')
 
@@ -508,10 +568,7 @@ class TrainEval(object):
     time_step = self._env.reset()
     while True:
       with self._collect_timer:
-        time_step = self._collect_step(
-            time_step,
-            metric_observers,
-            train=train)
+        time_step = self._collect_step(time_step, metric_observers, train=train)
         env_steps += 1
 
       if self.game_over():
@@ -532,8 +589,7 @@ class TrainEval(object):
 
   def _store_to_rb(self, traj):
     # Clip the reward to (-1, 1) to normalize rewards in training.
-    traj = traj._replace(
-        reward=np.asarray(np.clip(traj.reward, -1, 1)))
+    traj = traj._replace(reward=np.asarray(np.clip(traj.reward, -1, 1)))
     self._replay_buffer.add_batch(traj)
 
   def _collect_step(self, time_step, metric_observers, train=False):
@@ -566,9 +622,12 @@ class TrainEval(object):
     if next_time_step.is_last() and not self.game_over():
       # Update metrics as if this is a mid-episode step.
       next_time_step = ts.transition(
-          next_time_step.observation, next_time_step.reward)
-      self._observe(metric_observers, trajectory.from_transition(
-          time_step, action_step, next_time_step))
+          next_time_step.observation, next_time_step.reward
+      )
+      self._observe(
+          metric_observers,
+          trajectory.from_transition(time_step, action_step, next_time_step),
+      )
 
       # Produce the next step as if this is the first step of an episode and
       # store to RB as such. The next_time_step will be a MID time step.
@@ -579,8 +638,9 @@ class TrainEval(object):
       with self._step_timer:
         next_time_step = self._env.step(action_step.action)
       if train:
-        self._store_to_rb(trajectory.from_transition(
-            time_step, action_step, next_time_step))
+        self._store_to_rb(
+            trajectory.from_transition(time_step, action_step, next_time_step)
+        )
 
       # Update metrics as if this is a mid-episode step.
       time_step = ts.transition(time_step.observation, reward)
@@ -601,16 +661,23 @@ class TrainEval(object):
       logging.info('step = %d, loss = %f', global_step_val, total_loss.loss)
       logging.info('%s', 'action_time = {}'.format(self._action_timer.value()))
       logging.info('%s', 'step_time = {}'.format(self._step_timer.value()))
-      logging.info('%s', 'observer_time = {}'.format(
-          self._observer_timer.value()))
-      steps_per_sec = ((global_step_val - self._timed_at_step) /
-                       (self._collect_timer.value()
-                        + self._train_timer.value()))
-      sess.run(self._steps_per_second_summary,
-               feed_dict={self._steps_per_second_ph: steps_per_sec})
+      logging.info(
+          '%s', 'observer_time = {}'.format(self._observer_timer.value())
+      )
+      steps_per_sec = (global_step_val - self._timed_at_step) / (
+          self._collect_timer.value() + self._train_timer.value()
+      )
+      sess.run(
+          self._steps_per_second_summary,
+          feed_dict={self._steps_per_second_ph: steps_per_sec},
+      )
       logging.info('%.3f steps/sec', steps_per_sec)
-      logging.info('%s', 'collect_time = {}, train_time = {}'.format(
-          self._collect_timer.value(), self._train_timer.value()))
+      logging.info(
+          '%s',
+          'collect_time = {}, train_time = {}'.format(
+              self._collect_timer.value(), self._train_timer.value()
+          ),
+      )
       for metric in self._train_metrics:
         log_metric(metric, prefix='Train/Metrics')
       self._timed_at_step = global_step_val
@@ -642,8 +709,9 @@ def get_run_args():
 def main(_):
   logging.set_verbosity(logging.INFO)
   tf.compat.v1.enable_resource_variables()
-  TrainEval(FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name),
-            **get_run_args()).run()
+  TrainEval(
+      FLAGS.root_dir, suite_atari.game(name=FLAGS.game_name), **get_run_args()
+  ).run()
 
 
 if __name__ == '__main__':

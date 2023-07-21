@@ -57,23 +57,29 @@ def get_environment_and_optimal_functions_by_name(environment_name, batch_size):
     num_actions = 5
     action_reward_fns = (
         environment_utilities.sliding_linear_reward_fn_generator(
-            context_dim, num_actions, 0.1))
+            context_dim, num_actions, 0.1
+        )
+    )
     py_env = (
-        stationary_stochastic_py_environment
-        .StationaryStochasticPyEnvironment(
+        stationary_stochastic_py_environment.StationaryStochasticPyEnvironment(
             functools.partial(
                 environment_utilities.context_sampling_fn,
                 batch_size=batch_size,
-                context_dim=context_dim),
+                context_dim=context_dim,
+            ),
             action_reward_fns,
-            batch_size=batch_size))
+            batch_size=batch_size,
+        )
+    )
     optimal_reward_fn = functools.partial(
         environment_utilities.tf_compute_optimal_reward,
-        per_action_reward_fns=action_reward_fns)
+        per_action_reward_fns=action_reward_fns,
+    )
 
     optimal_action_fn = functools.partial(
         environment_utilities.tf_compute_optimal_action,
-        per_action_reward_fns=action_reward_fns)
+        per_action_reward_fns=action_reward_fns,
+    )
     environment = tf_py_environment.TFPyEnvironment(py_env)
   elif environment_name == 'wheel':
     delta = 0.5
@@ -81,18 +87,20 @@ def get_environment_and_optimal_functions_by_name(environment_name, batch_size):
     std_base = [0.001] * 5
     mu_high = 0.5
     std_high = 0.001
-    py_env = wheel_py_environment.WheelPyEnvironment(delta, mu_base, std_base,
-                                                     mu_high, std_high,
-                                                     batch_size)
+    py_env = wheel_py_environment.WheelPyEnvironment(
+        delta, mu_base, std_base, mu_high, std_high, batch_size
+    )
     environment = tf_py_environment.TFPyEnvironment(py_env)
     optimal_reward_fn = functools.partial(
         environment_utilities.tf_wheel_bandit_compute_optimal_reward,
         delta=delta,
         mu_inside=mu_base[0],
-        mu_high=mu_high)
+        mu_high=mu_high,
+    )
     optimal_action_fn = functools.partial(
         environment_utilities.tf_wheel_bandit_compute_optimal_action,
-        delta=delta)
+        delta=delta,
+    )
   return (environment, optimal_reward_fn, optimal_action_fn)
 
 
@@ -108,72 +116,81 @@ def get_agent_by_name(agent_name, time_step_spec, action_spec):
   Returns:
     The desired agent.
   """
-  accepts_per_arm_features = isinstance(
-      time_step_spec.observation,
-      dict) and 'per_arm' in time_step_spec.observation
+  accepts_per_arm_features = (
+      isinstance(time_step_spec.observation, dict)
+      and 'per_arm' in time_step_spec.observation
+  )
   if agent_name == 'LinUCB':
     return lin_ucb_agent.LinearUCBAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         dtype=tf.float32,
-        accepts_per_arm_features=accepts_per_arm_features)
+        accepts_per_arm_features=accepts_per_arm_features,
+    )
   elif agent_name == 'LinTS':
     return lin_ts_agent.LinearThompsonSamplingAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         dtype=tf.float32,
-        accepts_per_arm_features=accepts_per_arm_features)
+        accepts_per_arm_features=accepts_per_arm_features,
+    )
   elif agent_name == 'epsGreedy':
     if accepts_per_arm_features:
-      network = (
-          global_and_arm_feature_network
-          .create_feed_forward_common_tower_network(time_step_spec.observation,
-                                                    (20, 20), (20, 20),
-                                                    (20, 20)))
+      network = global_and_arm_feature_network.create_feed_forward_common_tower_network(
+          time_step_spec.observation, (20, 20), (20, 20), (20, 20)
+      )
     else:
       network = q_network.QNetwork(
           input_tensor_spec=time_step_spec.observation,
           action_spec=action_spec,
-          fc_layer_params=(50, 50, 50))
+          fc_layer_params=(50, 50, 50),
+      )
     return neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
         epsilon=0.1,
-        accepts_per_arm_features=accepts_per_arm_features)
+        accepts_per_arm_features=accepts_per_arm_features,
+    )
   elif agent_name == 'mix':
     assert not accepts_per_arm_features, 'Per-arm mixture agent not supported.'
     emit_policy_info = (policy_utilities.InfoFields.PREDICTED_REWARDS_MEAN,)
     network = q_network.QNetwork(
         input_tensor_spec=time_step_spec.observation,
         action_spec=action_spec,
-        fc_layer_params=(50, 50, 50))
+        fc_layer_params=(50, 50, 50),
+    )
     agent_epsgreedy = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
         emit_policy_info=emit_policy_info,
-        epsilon=0.1)
+        epsilon=0.1,
+    )
     agent_linucb = lin_ucb_agent.LinearUCBAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         emit_policy_info=emit_policy_info,
-        dtype=tf.float32)
+        dtype=tf.float32,
+    )
     agent_random = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
         emit_policy_info=emit_policy_info,
-        epsilon=1.)
+        epsilon=1.0,
+    )
     agent_halfrandom = neural_epsilon_greedy_agent.NeuralEpsilonGreedyAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         reward_network=network,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=0.05),
         emit_policy_info=emit_policy_info,
-        epsilon=0.5)
+        epsilon=0.5,
+    )
     return exp3_mixture_agent.Exp3MixtureAgent(
-        (agent_epsgreedy, agent_linucb, agent_random, agent_halfrandom))
+        (agent_epsgreedy, agent_linucb, agent_random, agent_halfrandom)
+    )

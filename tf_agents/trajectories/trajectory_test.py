@@ -20,7 +20,6 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.drivers import test_utils as drivers_test_utils
 from tf_agents.environments import tf_py_environment
@@ -106,8 +105,9 @@ class TrajectoryTest(test_utils.TestCase):
     policy_info = ()
     reward = tf.constant([1.0, 1.0, 2.0])
     discount = tf.constant([1.0, 1.0, 1.0])
-    traj = trajectory.single_step(observation, action, policy_info, reward,
-                                  discount)
+    traj = trajectory.single_step(
+        observation, action, policy_info, reward, discount
+    )
     self.assertTrue(tf.is_tensor(traj.step_type))
     traj_val = self.evaluate(traj)
     self.assertAllEqual(traj_val.step_type, [ts.StepType.FIRST] * 3)
@@ -119,8 +119,9 @@ class TrajectoryTest(test_utils.TestCase):
     policy_info = ()
     reward = np.array([1.0, 1.0, 2.0])
     discount = np.array([1.0, 1.0, 1.0])
-    traj = trajectory.single_step(observation, action, policy_info, reward,
-                                  discount)
+    traj = trajectory.single_step(
+        observation, action, policy_info, reward, discount
+    )
     self.assertFalse(tf.is_tensor(traj.step_type))
     self.assertAllEqual(traj.step_type, [ts.StepType.FIRST] * 3)
     self.assertAllEqual(traj.next_step_type, [ts.StepType.LAST] * 3)
@@ -131,16 +132,15 @@ class TrajectoryTest(test_utils.TestCase):
     policy_info = ()
     reward = tf.random.uniform((4,))
     traj = trajectory.from_episode(
-        observation, action, policy_info, reward, discount=None)
+        observation, action, policy_info, reward, discount=None
+    )
     self.assertTrue(tf.is_tensor(traj.step_type))
     traj_val, obs_val, reward_val = self.evaluate((traj, observation, reward))
     first = ts.StepType.FIRST
     mid = ts.StepType.MID
     last = ts.StepType.LAST
-    self.assertAllEqual(
-        traj_val.step_type, [first, mid, mid, mid])
-    self.assertAllEqual(
-        traj_val.next_step_type, [mid, mid, mid, last])
+    self.assertAllEqual(traj_val.step_type, [first, mid, mid, mid])
+    self.assertAllEqual(traj_val.next_step_type, [mid, mid, mid, last])
     self.assertAllClose(traj_val.observation, obs_val)
     self.assertAllEqual(traj_val.reward, reward_val)
     self.assertAllEqual(traj_val.discount, [1.0, 1.0, 1.0, 1.0])
@@ -149,21 +149,21 @@ class TrajectoryTest(test_utils.TestCase):
     observation = tf.SparseTensor(
         indices=tf.random.uniform((7, 2), maxval=9, dtype=tf.int64),
         values=tf.random.uniform((7,)),
-        dense_shape=[4, 10])  # The 4 is important, it must match reward length.
+        dense_shape=[4, 10],
+    )  # The 4 is important, it must match reward length.
     action = ()
     policy_info = ()
     reward = tf.random.uniform((4,))
     traj = trajectory.from_episode(
-        observation, action, policy_info, reward, discount=None)
+        observation, action, policy_info, reward, discount=None
+    )
     self.assertTrue(tf.is_tensor(traj.step_type))
     traj_val, obs_val, reward_val = self.evaluate((traj, observation, reward))
     first = ts.StepType.FIRST
     mid = ts.StepType.MID
     last = ts.StepType.LAST
-    self.assertAllEqual(
-        traj_val.step_type, [first, mid, mid, mid])
-    self.assertAllEqual(
-        traj_val.next_step_type, [mid, mid, mid, last])
+    self.assertAllEqual(traj_val.step_type, [first, mid, mid, mid])
+    self.assertAllEqual(traj_val.next_step_type, [mid, mid, mid, last])
     self.assertAllClose(traj_val.observation, obs_val)
     self.assertAllEqual(traj_val.reward, reward_val)
     self.assertAllEqual(traj_val.discount, [1.0, 1.0, 1.0, 1.0])
@@ -174,15 +174,14 @@ class TrajectoryTest(test_utils.TestCase):
     policy_info = ()
     reward = np.random.rand(4)
     traj = trajectory.from_episode(
-        observation, action, policy_info, reward, discount=None)
+        observation, action, policy_info, reward, discount=None
+    )
     self.assertFalse(tf.is_tensor(traj.step_type))
     first = ts.StepType.FIRST
     mid = ts.StepType.MID
     last = ts.StepType.LAST
-    self.assertAllEqual(
-        traj.step_type, [first, mid, mid, mid])
-    self.assertAllEqual(
-        traj.next_step_type, [mid, mid, mid, last])
+    self.assertAllEqual(traj.step_type, [first, mid, mid, mid])
+    self.assertAllEqual(traj.next_step_type, [mid, mid, mid, last])
     self.assertAllEqual(traj.observation, observation)
     self.assertAllEqual(traj.reward, reward)
     self.assertAllEqual(traj.discount, [1.0, 1.0, 1.0, 1.0])
@@ -201,7 +200,8 @@ class TrajectoryTest(test_utils.TestCase):
         # reward at step 2 is an invalid dummy reward.
         reward=np.array([[0.0, 1.0, 2.0]]),
         discount=np.array([[1.0, 1.0, 0.0]]),
-        policy_info=np.array([[1.0, 2.0, 3.0]]))
+        policy_info=np.array([[1.0, 2.0, 3.0]]),
+    )
 
     transition = trajectory.to_transition(traj)
     self.assertIsInstance(transition, trajectory.Transition)
@@ -234,7 +234,8 @@ class TrajectoryTest(test_utils.TestCase):
         # reward & discount values at step 1 is an invalid dummy reward.
         reward=np.array([[-1.0, 0.0]]),
         discount=np.array([[0.9, 0.0]]),
-        policy_info=np.array([[10.0, 20.0]]))
+        policy_info=np.array([[10.0, 20.0]]),
+    )
 
     transition = trajectory.to_n_step_transition(traj, gamma=0.5)
     self.assertIsInstance(transition, trajectory.Transition)
@@ -270,7 +271,8 @@ class TrajectoryTest(test_utils.TestCase):
         # reward & discount values at step 3 is an invalid dummy reward.
         reward=np.array([[-1.0, 1.0, 2.0, 0.0]]),
         discount=np.array([[0.9, 0.95, 1.0, 0.0]]),
-        policy_info=np.array([[10.0, 20.0, 30.0, 40.0]]))
+        policy_info=np.array([[10.0, 20.0, 30.0, 40.0]]),
+    )
 
     transition = trajectory.to_n_step_transition(traj, gamma=gamma)
     self.assertIsInstance(transition, trajectory.Transition)
@@ -287,23 +289,28 @@ class TrajectoryTest(test_utils.TestCase):
     #   == -1.0 + 1.0*0.5*(0.9) + 2.0*(0.5**2)*(0.9*0.95)
     self.assertAllEqual(
         next_time_steps.reward,
-        np.array([-1.0 + 1.0 * gamma * 0.9 + 2.0 * gamma**2 * 0.9 * 0.95]))
+        np.array([-1.0 + 1.0 * gamma * 0.9 + 2.0 * gamma**2 * 0.9 * 0.95]),
+    )
     # gamma**2 * (d0 * d1 * d2)
     self.assertAllEqual(
-        next_time_steps.discount, np.array([gamma**2 * (0.9 * 0.95 * 1.0)]))
+        next_time_steps.discount, np.array([gamma**2 * (0.9 * 0.95 * 1.0)])
+    )
 
     self.assertAllEqual(policy_steps.action, np.array([11.0]))
     self.assertAllEqual(policy_steps.info, np.array([10.0]))
 
   def testToTransitionHandlesTrajectoryFromDriverCorrectly(self):
     env = tf_py_environment.TFPyEnvironment(
-        drivers_test_utils.PyEnvironmentMock())
+        drivers_test_utils.PyEnvironmentMock()
+    )
     policy = drivers_test_utils.TFPolicyMock(
-        env.time_step_spec(), env.action_spec())
+        env.time_step_spec(), env.action_spec()
+    )
     replay_buffer = drivers_test_utils.make_replay_buffer(policy)
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
-        env, policy, num_episodes=3, observers=[replay_buffer.add_batch])
+        env, policy, num_episodes=3, observers=[replay_buffer.add_batch]
+    )
 
     run_driver = driver.run()
     rb_gather_all = replay_buffer.gather_all()
@@ -316,13 +323,16 @@ class TrajectoryTest(test_utils.TestCase):
     self.assertIsInstance(transitions, trajectory.Transition)
     time_steps, policy_step, next_time_steps = transitions
 
-    self.assertAllEqual(time_steps.observation,
-                        trajectories.observation[:, :-1])
+    self.assertAllEqual(
+        time_steps.observation, trajectories.observation[:, :-1]
+    )
     self.assertAllEqual(time_steps.step_type, trajectories.step_type[:, :-1])
-    self.assertAllEqual(next_time_steps.observation,
-                        trajectories.observation[:, 1:])
-    self.assertAllEqual(next_time_steps.step_type,
-                        trajectories.step_type[:, 1:])
+    self.assertAllEqual(
+        next_time_steps.observation, trajectories.observation[:, 1:]
+    )
+    self.assertAllEqual(
+        next_time_steps.step_type, trajectories.step_type[:, 1:]
+    )
     self.assertAllEqual(next_time_steps.reward, trajectories.reward[:, :-1])
     self.assertAllEqual(next_time_steps.discount, trajectories.discount[:, :-1])
 
@@ -331,9 +341,11 @@ class TrajectoryTest(test_utils.TestCase):
 
   def testToTransitionSpec(self):
     env = tf_py_environment.TFPyEnvironment(
-        drivers_test_utils.PyEnvironmentMock())
+        drivers_test_utils.PyEnvironmentMock()
+    )
     policy = drivers_test_utils.TFPolicyMock(
-        env.time_step_spec(), env.action_spec())
+        env.time_step_spec(), env.action_spec()
+    )
     trajectory_spec = policy.trajectory_spec
     transition_spec = trajectory.to_transition_spec(trajectory_spec)
     self.assertIsInstance(transition_spec, trajectory.Transition)

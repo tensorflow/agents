@@ -37,11 +37,13 @@ class PenalizedPlackettLuce(tfd.PlackettLuce):
   of already chosen items.
   """
 
-  def __init__(self,
-               features: types.Tensor,
-               num_slots: int,
-               logits: types.Tensor,
-               penalty_mixture_coefficient: float = 1.):
+  def __init__(
+      self,
+      features: types.Tensor,
+      num_slots: int,
+      logits: types.Tensor,
+      penalty_mixture_coefficient: float = 1.0,
+  ):
     """Initializes an instance of PenalizedPlackettLuce.
 
     Args:
@@ -57,8 +59,12 @@ class PenalizedPlackettLuce(tfd.PlackettLuce):
     self._penalty_mixture_coefficient = penalty_mixture_coefficient
     super(PenalizedPlackettLuce, self).__init__(scores=logits)
 
-  def _penalizer_fn(self, logits: types.Float, features: types.Float,
-                    slots: Sequence[types.Int]):
+  def _penalizer_fn(
+      self,
+      logits: types.Float,
+      features: types.Float,
+      slots: Sequence[types.Int],
+  ):
     """Downscores items by their similarity to already selected items.
 
     Args:
@@ -100,29 +106,37 @@ class CosinePenalizedPlackettLuce(PenalizedPlackettLuce):
     # the policy always has to be taken together with the `num_actions`
     # observation, to know how many slots are filled with valid items.
     slotted_features = tf.gather(
-        features, tf.minimum(slot_tensor, num_items - 1), batch_dims=1)
+        features, tf.minimum(slot_tensor, num_items - 1), batch_dims=1
+    )
 
     # Calculate the similarity between all pairs from
     # `slotted_features x all_features`.
-    all_sims = tf.keras.losses.cosine_similarity(
-        tf.repeat(features, num_slotted, axis=1),
-        tf.tile(slotted_features, [1, num_items, 1])) - 1
+    all_sims = (
+        tf.keras.losses.cosine_similarity(
+            tf.repeat(features, num_slotted, axis=1),
+            tf.tile(slotted_features, [1, num_items, 1]),
+        )
+        - 1
+    )
 
     sim_matrix = tf.reshape(all_sims, shape=[-1, num_items, num_slotted])
     similarity_boosts = tf.reduce_min(sim_matrix, axis=-1)
     adjusted_logits = logits + (
-        self._penalty_mixture_coefficient * similarity_boosts)
+        self._penalty_mixture_coefficient * similarity_boosts
+    )
     return adjusted_logits
 
 
 class NoPenaltyPlackettLuce(tfd.PlackettLuce):
   """Identical to PlackettLuce, with input signature modified to our needs."""
 
-  def __init__(self,
-               features: types.Tensor,
-               num_slots: int,
-               logits: types.Tensor,
-               penalty_mixture_coefficient: float = 1.):
+  def __init__(
+      self,
+      features: types.Tensor,
+      num_slots: int,
+      logits: types.Tensor,
+      penalty_mixture_coefficient: float = 1.0,
+  ):
     """Initializes an instance of NoPenaltyPlackettLuce.
 
     Args:
@@ -137,7 +151,8 @@ class NoPenaltyPlackettLuce(tfd.PlackettLuce):
 
   def sample(self, sample_shape=(), seed=None, name='sample', **kwargs):
     return super(NoPenaltyPlackettLuce, self).sample(
-        sample_shape, seed, name, **kwargs)[:, :self._num_slots]
+        sample_shape, seed, name, **kwargs
+    )[:, : self._num_slots]
 
 
 class RankingPolicy(tf_policy.TFPolicy):
@@ -159,15 +174,17 @@ class RankingPolicy(tf_policy.TFPolicy):
   `num_items` many items, which should be greater than or equal to `num_slots`.
   """
 
-  def __init__(self,
-               num_items: int,
-               num_slots: int,
-               time_step_spec: types.TimeStep,
-               network: types.Network,
-               item_sampler: tfd.Distribution,
-               penalty_mixture_coefficient: float = 1.,
-               logits_temperature: float = 1.,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      num_items: int,
+      num_slots: int,
+      time_step_spec: types.TimeStep,
+      network: types.Network,
+      item_sampler: tfd.Distribution,
+      penalty_mixture_coefficient: float = 1.0,
+      logits_temperature: float = 1.0,
+      name: Optional[Text] = None,
+  ):
     """Initializes an instance of `RankingPolicy`.
 
     Args:
@@ -187,22 +204,27 @@ class RankingPolicy(tf_policy.TFPolicy):
       name: The name of this policy instance.
     """
     action_spec = tensor_spec.BoundedTensorSpec(
-        shape=(num_slots,), dtype=tf.int32, minimum=0, maximum=num_items - 1)
+        shape=(num_slots,), dtype=tf.int32, minimum=0, maximum=num_items - 1
+    )
     info_spec = policy_utils.PolicyInfo(
         predicted_rewards_mean=tensor_spec.TensorSpec(
-            shape=(num_slots,), dtype=tf.float32))
+            shape=(num_slots,), dtype=tf.float32
+        )
+    )
     network.create_variables()
     self._network = network
     assert num_slots <= num_items, (
         'The number of slots have to be less than or equal to the number of '
-        'items.')
+        'items.'
+    )
     self._num_slots = num_slots
     self._num_items = num_items
     self._item_sampler = item_sampler
     self._penalty_mixture_coefficient = penalty_mixture_coefficient
     if logits_temperature <= 0:
       raise ValueError(
-          f'logits_temperature must be positive; was {logits_temperature}')
+          f'logits_temperature must be positive; was {logits_temperature}'
+      )
     self._logits_temperature = logits_temperature
     if bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY in time_step_spec.observation:
       self._use_num_actions = True
@@ -212,7 +234,8 @@ class RankingPolicy(tf_policy.TFPolicy):
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         name=name,
-        info_spec=info_spec)
+        info_spec=info_spec,
+    )
 
   @property
   def num_slots(self):
@@ -223,20 +246,27 @@ class RankingPolicy(tf_policy.TFPolicy):
     scores, _ = self._network(observation, time_step.step_type, policy_state)
     if self._use_num_actions:
       num_actions = time_step.observation[
-          bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY]
+          bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY
+      ]
       masked_scores = tf.where(
-          tf.sequence_mask(num_actions, maxlen=self._num_items), scores,
-          tf.fill(tf.shape(scores), -np.inf))
+          tf.sequence_mask(num_actions, maxlen=self._num_items),
+          scores,
+          tf.fill(tf.shape(scores), -np.inf),
+      )
     else:
       masked_scores = scores
     masked_scores = masked_scores / self._logits_temperature
     return policy_step.PolicyStep(
-        self._item_sampler(observation[bandit_spec_utils.PER_ARM_FEATURE_KEY],
-                           self._num_slots, masked_scores,
-                           self._penalty_mixture_coefficient),
+        self._item_sampler(
+            observation[bandit_spec_utils.PER_ARM_FEATURE_KEY],
+            self._num_slots,
+            masked_scores,
+            self._penalty_mixture_coefficient,
+        ),
         (),
         # TODO(b/197787556): potentially add other side info tensors
-        policy_utils.PolicyInfo(predicted_rewards_mean=scores))
+        policy_utils.PolicyInfo(predicted_rewards_mean=scores),
+    )
 
 
 class PenalizeCosineDistanceRankingPolicy(RankingPolicy):
@@ -246,14 +276,16 @@ class PenalizeCosineDistanceRankingPolicy(RankingPolicy):
   also misses tunable parameters such as weights of the penalties vs raw scores.
   """
 
-  def __init__(self,
-               num_items: int,
-               num_slots: int,
-               time_step_spec: types.TimeStep,
-               network: types.Network,
-               penalty_mixture_coefficient: float = 1.,
-               logits_temperature: float = 1.,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      num_items: int,
+      num_slots: int,
+      time_step_spec: types.TimeStep,
+      network: types.Network,
+      penalty_mixture_coefficient: float = 1.0,
+      logits_temperature: float = 1.0,
+      name: Optional[Text] = None,
+  ):
     super(PenalizeCosineDistanceRankingPolicy, self).__init__(
         num_items=num_items,
         num_slots=num_slots,
@@ -262,18 +294,21 @@ class PenalizeCosineDistanceRankingPolicy(RankingPolicy):
         item_sampler=CosinePenalizedPlackettLuce,
         penalty_mixture_coefficient=penalty_mixture_coefficient,
         logits_temperature=logits_temperature,
-        name=name)
+        name=name,
+    )
 
 
 class NoPenaltyRankingPolicy(RankingPolicy):
 
-  def __init__(self,
-               num_items: int,
-               num_slots: int,
-               time_step_spec: types.TimeStep,
-               network: types.Network,
-               logits_temperature: float = 1.,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      num_items: int,
+      num_slots: int,
+      time_step_spec: types.TimeStep,
+      network: types.Network,
+      logits_temperature: float = 1.0,
+      name: Optional[Text] = None,
+  ):
     super(NoPenaltyRankingPolicy, self).__init__(
         num_items=num_items,
         num_slots=num_slots,
@@ -281,13 +316,19 @@ class NoPenaltyRankingPolicy(RankingPolicy):
         network=network,
         item_sampler=NoPenaltyPlackettLuce,
         logits_temperature=logits_temperature,
-        name=name)
+        name=name,
+    )
 
 
 class DescendingScoreSampler(tf.Module):
 
-  def __init__(self, unused_features: types.Tensor, num_slots: int,
-               scores: types.Tensor, unused_penalty_mixture_coefficient: float):
+  def __init__(
+      self,
+      unused_features: types.Tensor,
+      num_slots: int,
+      scores: types.Tensor,
+      unused_penalty_mixture_coefficient: float,
+  ):
     self._scores = scores
     self._num_slots = num_slots
 
@@ -298,16 +339,19 @@ class DescendingScoreSampler(tf.Module):
 class DescendingScoreRankingPolicy(RankingPolicy):
   """A policy that is deterministically ranks elements based on their scores."""
 
-  def __init__(self,
-               num_items: int,
-               num_slots: int,
-               time_step_spec: types.TimeStep,
-               network: types.Network,
-               name: Optional[Text] = None):
+  def __init__(
+      self,
+      num_items: int,
+      num_slots: int,
+      time_step_spec: types.TimeStep,
+      network: types.Network,
+      name: Optional[Text] = None,
+  ):
     super(DescendingScoreRankingPolicy, self).__init__(
         num_items=num_items,
         num_slots=num_slots,
         time_step_spec=time_step_spec,
         network=network,
         item_sampler=DescendingScoreSampler,
-        name=name)
+        name=name,
+    )

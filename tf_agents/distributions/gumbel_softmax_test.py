@@ -19,9 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-
 from tf_agents.distributions import gumbel_softmax
 
 
@@ -29,9 +27,8 @@ class GumbelSoftmaxTest(tf.test.TestCase):
 
   def testLogProb(self):
     temperature = 0.8
-    logits = [.3, .1, .4]
-    dist = gumbel_softmax.GumbelSoftmax(
-        temperature, logits, validate_args=True)
+    logits = [0.3, 0.1, 0.4]
+    dist = gumbel_softmax.GumbelSoftmax(temperature, logits, validate_args=True)
     x = tf.constant([0, 0, 1])
     log_prob = self.evaluate(dist.log_prob(x))
     expected_log_prob = -0.972918868065
@@ -39,20 +36,21 @@ class GumbelSoftmaxTest(tf.test.TestCase):
 
   def testSample(self):
     temperature = 0.8
-    logits = [.3, .1, .4]
+    logits = [0.3, 0.1, 0.4]
     dist = gumbel_softmax.GumbelSoftmax(
-        temperature, logits, dtype=tf.int64, validate_args=True)
+        temperature, logits, dtype=tf.int64, validate_args=True
+    )
     actions = dist.convert_to_one_hot(dist.sample())
     self.assertEqual(actions.dtype, tf.int64)
     self.assertEqual(self.evaluate(tf.reduce_sum(actions, axis=-1)), 1)
 
   def testMode(self):
     temperature = 1.0
-    logits = [.3, .1, .4]
-    dist = gumbel_softmax.GumbelSoftmax(
-        temperature, logits, validate_args=True)
-    self.assertAllEqual(self.evaluate(dist.mode()),
-                        self.evaluate(tf.constant([0, 0, 1])))
+    logits = [0.3, 0.1, 0.4]
+    dist = gumbel_softmax.GumbelSoftmax(temperature, logits, validate_args=True)
+    self.assertAllEqual(
+        self.evaluate(dist.mode()), self.evaluate(tf.constant([0, 0, 1]))
+    )
 
 
 if __name__ == '__main__':

@@ -23,7 +23,6 @@ import gin
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
 from tf_agents.networks import categorical_projection_network
 from tf_agents.networks import encoding_network
 from tf_agents.networks import network
@@ -34,14 +33,17 @@ from tf_agents.utils import nest_utils
 
 def _categorical_projection_net(action_spec, logits_init_output_factor=0.1):
   return categorical_projection_network.CategoricalProjectionNetwork(
-      action_spec, logits_init_output_factor=logits_init_output_factor)
+      action_spec, logits_init_output_factor=logits_init_output_factor
+  )
 
 
-def _normal_projection_net(action_spec,
-                           init_action_stddev=0.35,
-                           init_means_output_factor=0.1,
-                           seed_stream_class=tfp.util.SeedStream,
-                           seed=None):
+def _normal_projection_net(
+    action_spec,
+    init_action_stddev=0.35,
+    init_means_output_factor=0.1,
+    seed_stream_class=tfp.util.SeedStream,
+    seed=None,
+):
   std_bias_initializer_value = np.log(np.exp(init_action_stddev) - 1)
 
   return normal_projection_network.NormalProjectionNetwork(
@@ -50,7 +52,8 @@ def _normal_projection_net(action_spec,
       std_bias_initializer_value=std_bias_initializer_value,
       scale_distribution=False,
       seed_stream_class=seed_stream_class,
-      seed=seed)
+      seed=seed,
+  )
 
 
 @gin.configurable
@@ -63,23 +66,25 @@ class ActorDistributionNetwork(network.DistributionNetwork):
   cannot be returned.
   """
 
-  def __init__(self,
-               input_tensor_spec,
-               output_tensor_spec,
-               preprocessing_layers=None,
-               preprocessing_combiner=None,
-               conv_layer_params=None,
-               fc_layer_params=(200, 100),
-               dropout_layer_params=None,
-               activation_fn=tf.keras.activations.relu,
-               kernel_initializer=None,
-               seed_stream_class=tfp.util.SeedStream,
-               seed=None,
-               batch_squash=True,
-               dtype=tf.float32,
-               discrete_projection_net=_categorical_projection_net,
-               continuous_projection_net=_normal_projection_net,
-               name='ActorDistributionNetwork'):
+  def __init__(
+      self,
+      input_tensor_spec,
+      output_tensor_spec,
+      preprocessing_layers=None,
+      preprocessing_combiner=None,
+      conv_layer_params=None,
+      fc_layer_params=(200, 100),
+      dropout_layer_params=None,
+      activation_fn=tf.keras.activations.relu,
+      kernel_initializer=None,
+      seed_stream_class=tfp.util.SeedStream,
+      seed=None,
+      batch_squash=True,
+      dtype=tf.float32,
+      discrete_projection_net=_categorical_projection_net,
+      continuous_projection_net=_normal_projection_net,
+      name='ActorDistributionNetwork',
+  ):
     """Creates an instance of `ActorDistributionNetwork`.
 
     Args:
@@ -88,14 +93,14 @@ class ActorDistributionNetwork(network.DistributionNetwork):
       output_tensor_spec: A nest of `tensor_spec.BoundedTensorSpec` representing
         the output.
       preprocessing_layers: (Optional.) A nest of `tf.keras.layers.Layer`
-        representing preprocessing for the different observations.
-        All of these layers must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        representing preprocessing for the different observations. All of these
+        layers must not be already built. For more details see the documentation
+        of `networks.EncodingNetwork`.
       preprocessing_combiner: (Optional.) A keras layer that takes a flat list
-        of tensors and combines them. Good options include
-        `tf.keras.layers.Add` and `tf.keras.layers.Concatenate(axis=-1)`.
-        This layer must not be already built. For more details see
-        the documentation of `networks.EncodingNetwork`.
+        of tensors and combines them. Good options include `tf.keras.layers.Add`
+        and `tf.keras.layers.Concatenate(axis=-1)`. This layer must not be
+        already built. For more details see the documentation of
+        `networks.EncodingNetwork`.
       conv_layer_params: Optional list of convolution layers parameters, where
         each item is a length-three tuple indicating (filters, kernel_size,
         stride).
@@ -145,7 +150,8 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         activation_fn=activation_fn,
         kernel_initializer=kernel_initializer,
         batch_squash=batch_squash,
-        dtype=dtype)
+        dtype=dtype,
+    )
 
     def map_proj(spec):
       if tensor_spec.is_discrete(spec):
@@ -158,14 +164,16 @@ class ActorDistributionNetwork(network.DistributionNetwork):
         return continuous_projection_net(spec, **kwargs)
 
     projection_networks = tf.nest.map_structure(map_proj, output_tensor_spec)
-    output_spec = tf.nest.map_structure(lambda proj_net: proj_net.output_spec,
-                                        projection_networks)
+    output_spec = tf.nest.map_structure(
+        lambda proj_net: proj_net.output_spec, projection_networks
+    )
 
     super(ActorDistributionNetwork, self).__init__(
         input_tensor_spec=input_tensor_spec,
         state_spec=(),
         output_spec=output_spec,
-        name=name)
+        name=name,
+    )
 
     self._encoder = encoder
     self._projection_networks = projection_networks
@@ -175,24 +183,24 @@ class ActorDistributionNetwork(network.DistributionNetwork):
   def output_tensor_spec(self):
     return self._output_tensor_spec
 
-  def call(self,
-           observations,
-           step_type,
-           network_state,
-           training=False,
-           mask=None):
+  def call(
+      self, observations, step_type, network_state, training=False, mask=None
+  ):
     state, network_state = self._encoder(
         observations,
         step_type=step_type,
         network_state=network_state,
-        training=training)
+        training=training,
+    )
     outer_rank = nest_utils.get_outer_rank(observations, self.input_tensor_spec)
 
     def call_projection_net(proj_net):
       distribution, _ = proj_net(
-          state, outer_rank, training=training, mask=mask)
+          state, outer_rank, training=training, mask=mask
+      )
       return distribution
 
     output_actions = tf.nest.map_structure(
-        call_projection_net, self._projection_networks)
+        call_projection_net, self._projection_networks
+    )
     return output_actions, network_state

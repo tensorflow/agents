@@ -27,7 +27,6 @@ from typing import Iterable, Optional, Text, Tuple
 
 import gin
 import tensorflow as tf
-
 from tf_agents.bandits.agents import greedy_reward_prediction_agent
 from tf_agents.bandits.networks import heteroscedastic_q_network
 from tf_agents.bandits.policies import constraints as constr
@@ -39,7 +38,8 @@ from tf_agents.typing import types
 # with other APIs which take a reward network at initialisation
 @gin.configurable
 class DropoutThompsonSamplingAgent(
-    greedy_reward_prediction_agent.GreedyRewardPredictionAgent):
+    greedy_reward_prediction_agent.GreedyRewardPredictionAgent
+):
   """A neural network based Thompson sampling agent.
 
   This agent receives parameters for a neural network and trains it to predict
@@ -57,7 +57,8 @@ class DropoutThompsonSamplingAgent(
       network_layers: Tuple[int, ...],
       dropout_only_top_layer: bool = True,
       observation_and_action_constraint_splitter: Optional[
-          types.Splitter] = None,
+          types.Splitter
+      ] = None,
       constraints: Iterable[constr.BaseConstraint] = (),
       # Params for training.
       error_loss_fn: types.LossFn = tf.compat.v1.losses.mean_squared_error,
@@ -71,7 +72,8 @@ class DropoutThompsonSamplingAgent(
       train_step_counter: Optional[tf.Variable] = None,
       laplacian_matrix: Optional[types.Float] = None,
       laplacian_smoothing_weight: float = 0.001,
-      name: Optional[Text] = None):
+      name: Optional[Text] = None,
+  ):
     """Creates a Dropout Thompson Sampling Agent.
 
     For more details about the Laplacian smoothing regularization, please see
@@ -139,7 +141,8 @@ class DropoutThompsonSamplingAgent(
       dropout_layer_params = [dropout_param] * len(fc_layer_params)
     if observation_and_action_constraint_splitter is not None:
       input_tensor_spec, _ = observation_and_action_constraint_splitter(
-          time_step_spec.observation)
+          time_step_spec.observation
+      )
     else:
       input_tensor_spec = time_step_spec.observation
 
@@ -148,13 +151,15 @@ class DropoutThompsonSamplingAgent(
           input_tensor_spec=input_tensor_spec,
           action_spec=action_spec,
           fc_layer_params=fc_layer_params,
-          dropout_layer_params=dropout_layer_params)
+          dropout_layer_params=dropout_layer_params,
+      )
     else:
       reward_network = q_network.QNetwork(
           input_tensor_spec=input_tensor_spec,
           action_spec=action_spec,
           fc_layer_params=fc_layer_params,
-          dropout_layer_params=dropout_layer_params)
+          dropout_layer_params=dropout_layer_params,
+      )
 
     super(DropoutThompsonSamplingAgent, self).__init__(
         time_step_spec=time_step_spec,
@@ -162,7 +167,8 @@ class DropoutThompsonSamplingAgent(
         reward_network=reward_network,
         optimizer=optimizer,
         observation_and_action_constraint_splitter=(
-            observation_and_action_constraint_splitter),
+            observation_and_action_constraint_splitter
+        ),
         constraints=constraints,
         error_loss_fn=error_loss_fn,
         gradient_clipping=gradient_clipping,
@@ -173,7 +179,8 @@ class DropoutThompsonSamplingAgent(
         train_step_counter=train_step_counter,
         laplacian_matrix=laplacian_matrix,
         laplacian_smoothing_weight=laplacian_smoothing_weight,
-        name=name)
+        name=name,
+    )
 
   def _train(self, experience, weights):
     if callable(self._dropout_rate):
@@ -181,5 +188,6 @@ class DropoutThompsonSamplingAgent(
     else:
       dropout = self._dropout_rate
     tf.compat.v2.summary.scalar(
-        name='dropout', data=dropout, step=self.train_step_counter)
+        name='dropout', data=dropout, step=self.train_step_counter
+    )
     return super(DropoutThompsonSamplingAgent, self)._train(experience, weights)
