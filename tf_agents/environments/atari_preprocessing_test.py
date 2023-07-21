@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,8 +25,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from gym import core as gym_core
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.environments import atari_preprocessing as preprocessing
 
 
@@ -34,7 +35,7 @@ class MockALE(object):
   """Mock internal ALE for testing."""
 
   def __init__(self):
-    pass
+    self.screen_value = 0
 
   def lives(self):
     return 1
@@ -43,7 +44,7 @@ class MockALE(object):
     screen.fill(self.screen_value)
 
 
-class MockEnvironment(object):
+class MockEnvironment(gym_core.Env):
   """Mock environment for testing."""
 
   def __init__(self, screen_size=10, max_steps=10):
@@ -51,6 +52,7 @@ class MockEnvironment(object):
     self.screen_size = screen_size
     self.ale = MockALE()
     self.observation_space = np.empty((screen_size, screen_size))
+    self.action_space = np.empty((5,))
     self.game_over = False
 
   def reset(self):
@@ -71,7 +73,7 @@ class MockEnvironment(object):
     self.ale.screen_value -= 2
     return (self.get_observation(), reward, is_terminal, unused)
 
-  def render(self, mode):
+  def render(self, mode):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     pass
 
 

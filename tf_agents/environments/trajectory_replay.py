@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,11 +19,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-from tf_agents.environments import time_step as ts
+import gin
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
-import gin.tf
 
 
 @gin.configurable
@@ -42,14 +43,14 @@ class TrajectoryReplay(object):
     assuming it saw the observations from the given trajectory.
 
     Args:
-      policy: A tf_policy.Base policy.
+      policy: A tf_policy.TFPolicy policy.
       time_major: If `True`, the tensors in `trajectory` passed to method `run`
         are assumed to have shape `[time, batch, ...]`.  Otherwise (default)
         they are assumed to have shape `[batch, time, ...]`.
 
     Raises:
       ValueError:
-        If policy is not an instance of tf_policy.Base.
+        If policy is not an instance of tf_policy.TFPolicy.
     """
     self._policy = policy
     self._time_major = time_major
@@ -111,8 +112,8 @@ class TrajectoryReplay(object):
     if policy_state is None:
       policy_state = self._policy.get_initial_state(batch_size)
     else:
-      tf.nest.assert_same_structure(policy_state,
-                                    self._policy.policy_state_spec)
+      nest_utils.assert_same_structure(policy_state,
+                                       self._policy.policy_state_spec)
 
     if not self._time_major:
       # Make trajectory time-major.

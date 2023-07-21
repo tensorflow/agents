@@ -1,0 +1,2 @@
+train_eval.env_name = 'Reacher-v2'
+train_eval.eval_episodes = 100

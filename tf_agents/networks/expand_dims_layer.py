@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,13 +19,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 class ExpandDims(tf.keras.layers.Layer):
   """Expands dims along a particular axis.
 
-  Arguments:
+  Args:
       axis: Axis to expand.  A new dim is added before this axis.
          May be a negative value.  Must not be a tensor.
 
@@ -47,7 +47,7 @@ class ExpandDims(tf.keras.layers.Layer):
 
   def compute_output_shape(self, input_shape):
     input_shape = tf.TensorShape(input_shape)
-    if input_shape.ndims is None:
+    if input_shape.rank is None:
       return input_shape
     input_shape = input_shape.as_list()
     if self.axis == -1:

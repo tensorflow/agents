@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,16 +21,17 @@ from __future__ import print_function
 
 import collections
 import functools
-import multiprocessing.dummy as dummy_multiprocessing
 import time
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import parallel_py_environment
+from tf_agents.environments import py_environment
 from tf_agents.environments import random_py_environment
-from tf_agents.environments import time_step as ts
 from tf_agents.specs import array_spec
+from tf_agents.system import system_multiprocessing as multiprocessing
+from tf_agents.trajectories import time_step as ts
 
 
 class SlowStartingEnvironment(random_py_environment.RandomPyEnvironment):
@@ -43,9 +44,6 @@ class SlowStartingEnvironment(random_py_environment.RandomPyEnvironment):
 
 class ParallelPyEnvironmentTest(tf.test.TestCase):
 
-  def setUp(self):
-    parallel_py_environment.multiprocessing = dummy_multiprocessing
-
   def _set_default_specs(self):
     self.observation_spec = array_spec.ArraySpec((3, 3), np.float32)
     self.time_step_spec = ts.time_step_spec(self.observation_spec)
@@ -57,13 +55,15 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
   def _make_parallel_py_environment(self,
                                     constructor=None,
                                     num_envs=2,
+                                    start_serially=True,
                                     blocking=True):
     self._set_default_specs()
     constructor = constructor or functools.partial(
         random_py_environment.RandomPyEnvironment, self.observation_spec,
         self.action_spec)
     return parallel_py_environment.ParallelPyEnvironment(
-        env_constructors=[constructor] * num_envs, blocking=blocking)
+        env_constructors=[constructor] * num_envs, blocking=blocking,
+        start_serially=start_serially)
 
   def test_close_no_hang_after_init(self):
     env = self._make_parallel_py_environment()
@@ -102,20 +102,31 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
                         time_step2.observation.shape)
     env.close()
 
+  def test_checks_constructors(self):
+    self._set_default_specs()
+    # pytype: disable=wrong-arg-types
+    with self.assertRaisesRegex(TypeError, '.*non-callable.*'):
+      parallel_py_environment.ParallelPyEnvironment([
+          random_py_environment.RandomPyEnvironment(self.observation_spec,
+                                                    self.action_spec)
+      ])
+    # pytype: enable=wrong-arg-types
+
   def test_non_blocking_start_processes_in_parallel(self):
     self._set_default_specs()
     constructor = functools.partial(
         SlowStartingEnvironment,
         self.observation_spec,
         self.action_spec,
-        time_sleep=1.0)
+        time_sleep=5.0)
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=10, blocking=False)
+        constructor=constructor, num_envs=2, start_serially=False,
+        blocking=False)
     end_time = time.time()
     self.assertLessEqual(
         end_time - start_time,
-        5.0,
+        10.0,
         msg=('Expected all processes to start together, '
              'got {} wait time').format(end_time - start_time))
     env.close()
@@ -129,7 +140,8 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
         time_sleep=1.0)
     start_time = time.time()
     env = self._make_parallel_py_environment(
-        constructor=constructor, num_envs=10, blocking=True)
+        constructor=constructor, num_envs=10, start_serially=True,
+        blocking=True)
     end_time = time.time()
     self.assertGreater(
         end_time - start_time,
@@ -176,6 +188,28 @@ class ParallelPyEnvironmentTest(tf.test.TestCase):
       self.assertAllEqual(action_spec.shape, nested_action.action.shape)
       self.assertEqual(13.0, nested_action.other_var)
     env.close()
+
+  def test_seedable(self):
+    seeds = [0, 1]
+    env = self._make_parallel_py_environment()
+    env.seed(seeds)
+    self.assertEqual(
+        np.random.RandomState(0).get_state()[1][-1],
+        env._envs[0].access('_rng').get_state()[1][-1])
+
+    self.assertEqual(
+        np.random.RandomState(1).get_state()[1][-1],
+        env._envs[1].access('_rng').get_state()[1][-1])
+    env.close()
+
+  def test_render(self):
+    num_envs = 2
+    env = self._make_parallel_py_environment(num_envs=num_envs)
+    img = env.render('rgb_array')
+    self.assertEqual(img.shape, (num_envs, 2, 2, 3))
+    self.assertEqual(img.dtype, np.uint8)
+    with self.assertRaisesRegex(NotImplementedError, 'Only rgb_array'):
+      self.evaluate(env.render('human'))
 
 
 class ProcessPyEnvironmentTest(tf.test.TestCase):
@@ -235,27 +269,42 @@ class ProcessPyEnvironmentTest(tf.test.TestCase):
       env.step(array_spec.sample_bounded_spec(action_spec, rng))
 
 
-class MockEnvironmentCrashInInit(object):
+class MockEnvironmentCrashInInit(py_environment.PyEnvironment):
   """Raise an error when instantiated."""
 
   def __init__(self, *unused_args, **unused_kwargs):
     raise RuntimeError()
 
+  def observation_spec(self):
+    return []
+
   def action_spec(self):
     return []
 
+  def _reset(self):
+    return ()
 
-class MockEnvironmentCrashInReset(object):
+  def _step(self, action):
+    return ()
+
+
+class MockEnvironmentCrashInReset(py_environment.PyEnvironment):
   """Raise an error when instantiated."""
 
   def __init__(self, *unused_args, **unused_kwargs):
     pass
+
+  def observation_spec(self):
+    return []
 
   def action_spec(self):
     return []
 
   def _reset(self):
     raise RuntimeError()
+
+  def _step(self, action):
+    return ()
 
 
 class MockEnvironmentCrashInStep(random_py_environment.RandomPyEnvironment):
@@ -280,4 +329,4 @@ class MockEnvironmentCrashInStep(random_py_environment.RandomPyEnvironment):
 
 
 if __name__ == '__main__':
-  tf.test.main()
+  multiprocessing.handle_test_main(tf.test.main)

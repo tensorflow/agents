@@ -1,0 +1,2 @@
+train_eval.env_name = 'Walker2d-v2'
+train_eval.initial_collect_steps = 1000

@@ -1,0 +1,7 @@
+train_eval.reward_scale_factor = 0.1
+train_eval.softmax_temperature = 50.0
+train_eval.use_lagrange_cql_alpha = False
+train_eval.actor_learning_rate = 3e-4
+train_eval.critic_learning_rate = 3e-4
+train_eval.action_clipping = (-0.995, 0.995)
+train_eval.bc_steps = 10000

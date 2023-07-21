@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Define distributions for spaces where not all actions are valid."""
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
 
 
@@ -65,9 +65,11 @@ class MaskedCategorical(tfp.distributions.Categorical):
         Otherwise use given value.
       name: Python `str` name prefixed to Ops created by this class.
     """
+    parameters = dict(locals())
     logits = tf.convert_to_tensor(value=logits)
     mask = tf.convert_to_tensor(value=mask)
     self._mask = tf.cast(mask, tf.bool)  # Nonzero values are True
+    self._neg_inf = neg_inf
     if probs is not None:
       raise ValueError('Must provide masked predictions as logits.'
                        ' Probs are accepted for API compatibility with '
@@ -77,8 +79,8 @@ class MaskedCategorical(tfp.distributions.Categorical):
       neg_inf = logits.dtype.min
     neg_inf = tf.cast(
         tf.fill(dims=tf.shape(input=logits), value=neg_inf), logits.dtype)
+    logits = tf.compat.v2.where(self._mask, logits, neg_inf)
 
-    logits = tf.where(self._mask, logits, neg_inf)
     super(MaskedCategorical, self).__init__(
         logits=logits,
         probs=None,
@@ -86,12 +88,17 @@ class MaskedCategorical(tfp.distributions.Categorical):
         validate_args=validate_args,
         allow_nan_stats=allow_nan_stats,
         name=name)
+    self._parameters = parameters
 
   def _entropy(self):
-    entropy = tf.nn.log_softmax(self.logits) * self.probs
+    entropy = tf.nn.log_softmax(self.logits) * self.probs_parameter()
     # Replace the (potentially -inf) values with 0s before summing.
-    entropy = tf.where(self._mask, entropy, tf.zeros_like(entropy))
+    entropy = tf.compat.v1.where(self._mask, entropy, tf.zeros_like(entropy))
     return -tf.reduce_sum(input_tensor=entropy, axis=-1)
+
+  @classmethod
+  def _parameter_properties(cls, dtype, num_classes=None):
+    return dict(logits=tfp.util.ParameterProperties(event_ndims=1))
 
   @property
   def mask(self):

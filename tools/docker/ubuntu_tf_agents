@@ -1,0 +1,98 @@
+# Multipurpose docker for building and running TF-Agents. This docker is
+# designed for flexibility.
+#
+# Example usage:
+#
+#  Note: Commands are to be run from the root of the repo.
+#
+#  Builds a docker with the most recent nightly version of TF-Agents.
+#    docker build -t tf_agents/core \
+#      -f tools/docker/ubuntu_tf_agents ./tools/docker
+#
+#  Builds a docker without TF-Agents. Used to build TF-Agents.
+#    docker build -t tf_agents/release_build \
+#      --build-arg tensorflow_pip_spec="" \
+#      --build-arg tf_agents_pip_spec="" \
+#      -f tools/docker/ubuntu_tf_agents ./tools/docker
+#
+#  Builds a docker with a local TF-Agents .whl file.
+#    docker build -t tf_agents/release_test \
+#      --build-arg local_tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl \
+#      --build-arg tf_agents_pip_spec=tf_agents-0.4.0-py3-none-any.whl  \
+#      -f tools/docker/ubuntu_tf_agents ./tools/docker
+#
+FROM tensorflow/tensorflow:nightly-gpu as base
+
+LABEL maintainer="Toby Boyd <tobyboyd@google.com>"
+ARG tf_agents_pip_spec="tf-agents-nightly[reverb]"
+ARG tensorflow_pip_spec="tf-nightly"
+ARG local_tf_agents_pip_spec=""
+ARG python_version="python3"
+COPY ${local_tf_agents_pip_spec} ${local_tf_agents_pip_spec}
+
+# Pick up some TF dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      cmake \
+      zlib1g-dev \
+      libpng-dev \
+      lsb-core \
+      vim \
+      less \
+      git \
+      ca-certificates \
+      wget \
+      zip \
+      xvfb \
+      freeglut3-dev \
+      ffmpeg \
+      python3-opencv \
+      gfortran \
+      libopenblas-dev \
+      liblapack-dev
+
+# Install google-cloud-sdk which is only used for nightly testing.
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg]" \
+  " http://packages.cloud.google.com/apt cloud-sdk main" | \
+  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+  curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
+  apt-key --keyring /usr/share/keyrings/cloud.google.gpg  add - && \
+  apt-get update -y && apt-get install google-cloud-sdk -y
+
+RUN curl -O https://bootstrap.pypa.io/get-pip.py
+
+RUN $python_version get-pip.py
+
+# Removes default TensorFlow so a specific version can be installed.
+RUN $python_version -m pip uninstall -y tensorflow tensorflow-gpu tf-nightly tf-nightly-gpu
+
+# Only installs the packages if one is passed.
+RUN if [ -n "${tensorflow_pip_spec}" ] ; then $python_version -m pip install ${tensorflow_pip_spec}; fi
+RUN if [ -n "${tf_agents_pip_spec}" ] ; then $python_version -m pip install ${tf_agents_pip_spec}; fi
+RUN $python_version -m pip install wheel \
+      opencv-python \
+      gym \
+      # b/248257418
+      ale-py==0.7.5 \
+      atari-py \
+      pybullet \
+      gin-config \
+      virtualenv \
+      matplot \
+      absl-py \
+      mock \
+      scipy \
+# Only used for nightly testing.
+# `protobuf` pinned because TensorFlow is picky.
+      cloud-tpu-client \
+      protobuf==4.21.12 \
+      google-api-core \
+      google-cloud-bigquery \
+      psutil
+
+######################################################
+# Installs Jupyter notebook.
+######################################################
+RUN $python_version -m pip install jupyter
+RUN $python_version -m pip install ipykernel
+
+RUN $python_version -m pip freeze

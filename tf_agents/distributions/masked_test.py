@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Tests masked distributions."""
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.distributions import masked
 
@@ -27,10 +27,10 @@ class MaskedCategoricalTest(tf.test.TestCase):
                                             mask=[True, False, True])
     copy = distribution.copy()
     with self.cached_session() as s:
-      probs_np = s.run(copy.probs)
-      logits_np = s.run(copy.logits)
-      ref_probs_np = s.run(distribution.probs)
-      ref_logits_np = s.run(distribution.logits)
+      probs_np = s.run(copy.probs_parameter())
+      logits_np = s.run(copy.logits_parameter())
+      ref_probs_np = s.run(distribution.probs_parameter())
+      ref_logits_np = s.run(distribution.logits_parameter())
     self.assertAllEqual(ref_logits_np, logits_np)
     self.assertAllEqual(ref_probs_np, probs_np)
 
@@ -41,8 +41,8 @@ class MaskedCategoricalTest(tf.test.TestCase):
     sample = distribution.sample()
     results = []
 
-    probs_tensor = distribution.probs
-    logits_tensor = distribution.logits
+    probs_tensor = distribution.probs_parameter()
+    logits_tensor = distribution.logits_parameter()
 
     with self.cached_session() as s:
       probs_np = s.run(probs_tensor)

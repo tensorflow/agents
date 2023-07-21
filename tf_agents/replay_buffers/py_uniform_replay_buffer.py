@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,12 +30,11 @@ from __future__ import print_function
 import threading
 
 import numpy as np
-import tensorflow as tf
-
-from tf_agents.replay_buffers import numpy_storage
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.replay_buffers import replay_buffer
 from tf_agents.specs import array_spec
 from tf_agents.utils import nest_utils
+from tf_agents.utils import numpy_storage
 
 
 class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
@@ -91,6 +90,10 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
   @property
   def size(self):
     return self._np_state.size
+
+  def _num_frames(self):
+    raise NotImplementedError(
+        'num_frames is not yet implemented in PyUniformReplayBuffer')
 
   def _add_batch(self, items):
     outer_shape = nest_utils.get_outer_array_shape(items, self._data_spec)
@@ -155,7 +158,9 @@ class PyUniformReplayBuffer(replay_buffer.ReplayBuffer):
       return nest_utils.stack_nested_arrays(samples)
 
   def _as_dataset(self, sample_batch_size=None, num_steps=None,
-                  num_parallel_calls=None):
+                  sequence_preprocess_fn=None, num_parallel_calls=None):
+    if sequence_preprocess_fn is not None:
+      raise NotImplementedError('sequence_preprocess_fn is not supported.')
     if num_parallel_calls is not None:
       raise NotImplementedError('PyUniformReplayBuffer does not support '
                                 'num_parallel_calls (must be None).')

@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,14 +20,14 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import network
 
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
 class DummyActionNet(network.Network):
@@ -39,12 +39,12 @@ class DummyActionNet(network.Network):
         name='DummyActionNet')
     self._output_tensor_spec = output_tensor_spec
     single_action_spec = tf.nest.flatten(output_tensor_spec)[0]
-    self._layers = [
+    self._sub_layers = [
         tf.keras.layers.Dense(
             single_action_spec.shape.num_elements(),
             activation=tf.nn.tanh,
-            kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-            bias_initializer=tf.compat.v1.initializers.constant([5]),
+            kernel_initializer=tf.constant_initializer([2, 1]),
+            bias_initializer=tf.constant_initializer([5]),
         ),
     ]
 
@@ -52,7 +52,7 @@ class DummyActionNet(network.Network):
     del step_type
 
     states = tf.cast(tf.nest.flatten(observations)[0], tf.float32)
-    for layer in self.layers:
+    for layer in self._sub_layers:
       states = layer(states)
 
     single_action_spec = tf.nest.flatten(self._output_tensor_spec)[0]
@@ -66,7 +66,7 @@ class DummyActionNet(network.Network):
             network_state)
 
 
-class OuNoisePolicyTest(tf.test.TestCase):
+class OuNoisePolicyTest(test_utils.TestCase):
 
   def setUp(self):
     super(OuNoisePolicyTest, self).setUp()

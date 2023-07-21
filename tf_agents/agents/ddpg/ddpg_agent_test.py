@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,13 +19,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import ddpg_agent
-from tf_agents.environments import time_step as ts
 from tf_agents.networks import network
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
+from tf_agents.utils import test_utils
 
 
 class DummyActorNetwork(network.Network):
@@ -49,8 +52,8 @@ class DummyActorNetwork(network.Network):
     self._layer = tf.keras.layers.Dense(
         self._single_action_spec.shape.num_elements(),
         activation=activation,
-        kernel_initializer=tf.compat.v1.initializers.constant([2, 1]),
-        bias_initializer=tf.compat.v1.initializers.constant([5]),
+        kernel_initializer=tf.constant_initializer([2, 1]),
+        bias_initializer=tf.constant_initializer([5]),
         name='action')
 
   def call(self, observations, step_type=(), network_state=()):
@@ -78,10 +81,10 @@ class DummyCriticNetwork(network.Network):
     self._action_layer = tf.keras.layers.Flatten()
     self._joint_layer = tf.keras.layers.Dense(
         1,
-        kernel_initializer=tf.compat.v1.initializers.constant([1, 3, 2]),
-        bias_initializer=tf.compat.v1.initializers.constant([4]))
+        kernel_initializer=tf.constant_initializer([1, 3, 2]),
+        bias_initializer=tf.constant_initializer([4]))
 
-  def call(self, inputs, step_type=None, network_state=None):
+  def call(self, inputs, step_type=None, network_state=()):
     observations, actions = inputs
     del step_type
     observations = self._obs_layer(tf.nest.flatten(observations)[0])
@@ -92,7 +95,7 @@ class DummyCriticNetwork(network.Network):
     return q_value, network_state
 
 
-class DdpgAgentTest(tf.test.TestCase):
+class DdpgAgentTest(test_utils.TestCase):
 
   def setUp(self):
     super(DdpgAgentTest, self).setUp()
@@ -120,53 +123,51 @@ class DdpgAgentTest(tf.test.TestCase):
     self.assertIsNotNone(agent.collect_policy)
 
   def testCriticLoss(self):
-    with tf.compat.v2.summary.record_if(False):
-      agent = ddpg_agent.DdpgAgent(
-          self._time_step_spec,
-          self._action_spec,
-          actor_network=self._unbounded_actor_net,
-          critic_network=self._critic_net,
-          actor_optimizer=None,
-          critic_optimizer=None,
-      )
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._unbounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=None,
+        critic_optimizer=None,
+    )
 
-      observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
-      time_steps = ts.restart(observations, batch_size=2)
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
 
-      actions = [tf.constant([[5], [6]], dtype=tf.float32)]
+    actions = [tf.constant([[5], [6]], dtype=tf.float32)]
 
-      rewards = tf.constant([10, 20], dtype=tf.float32)
-      discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
-      next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
-      next_time_steps = ts.transition(next_observations, rewards, discounts)
+    rewards = tf.constant([10, 20], dtype=tf.float32)
+    discounts = tf.constant([0.9, 0.9], dtype=tf.float32)
+    next_observations = [tf.constant([[5, 6], [7, 8]], dtype=tf.float32)]
+    next_time_steps = ts.transition(next_observations, rewards, discounts)
 
-      expected_loss = 59.6
-      loss = agent.critic_loss(time_steps, actions, next_time_steps)
+    expected_loss = 59.6
+    loss = agent.critic_loss(time_steps, actions, next_time_steps)
 
-      self.evaluate(tf.compat.v1.global_variables_initializer())
-      loss_ = self.evaluate(loss)
-      self.assertAllClose(loss_, expected_loss)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
 
   def testActorLoss(self):
-    with tf.compat.v2.summary.record_if(False):
-      agent = ddpg_agent.DdpgAgent(
-          self._time_step_spec,
-          self._action_spec,
-          actor_network=self._unbounded_actor_net,
-          critic_network=self._critic_net,
-          actor_optimizer=None,
-          critic_optimizer=None,
-      )
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._unbounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=None,
+        critic_optimizer=None,
+    )
 
-      observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
-      time_steps = ts.restart(observations, batch_size=2)
+    observations = [tf.constant([[1, 2], [3, 4]], dtype=tf.float32)]
+    time_steps = ts.restart(observations, batch_size=2)
 
-      expected_loss = 4.0
-      loss = agent.actor_loss(time_steps)
+    expected_loss = 4.0
+    loss = agent.actor_loss(time_steps)
 
-      self.evaluate(tf.compat.v1.global_variables_initializer())
-      loss_ = self.evaluate(loss)
-      self.assertAllClose(loss_, expected_loss)
+    self.evaluate(tf.compat.v1.global_variables_initializer())
+    loss_ = self.evaluate(loss)
+    self.assertAllClose(loss_, expected_loss)
 
   def testPolicy(self):
     agent = ddpg_agent.DdpgAgent(
@@ -187,6 +188,55 @@ class DdpgAgentTest(tf.test.TestCase):
     actions_ = self.evaluate(action_step.action)
     self.assertTrue(all(actions_[0] <= self._action_spec[0].maximum))
     self.assertTrue(all(actions_[0] >= self._action_spec[0].minimum))
+
+  def testAgentTrajectoryTrain(self):
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._bounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+    )
+
+    trajectory_spec = trajectory.Trajectory(
+        step_type=self._time_step_spec.step_type,
+        observation=self._time_step_spec.observation,
+        action=self._action_spec,
+        policy_info=(),
+        next_step_type=self._time_step_spec.step_type,
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'),
+        discount=self._time_step_spec.discount)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        trajectory_spec, outer_dims=(3, 2))
+    agent.train(sample_trajectory_experience)
+
+  def testAgentTransitionTrain(self):
+    agent = ddpg_agent.DdpgAgent(
+        self._time_step_spec,
+        self._action_spec,
+        actor_network=self._bounded_actor_net,
+        critic_network=self._critic_net,
+        actor_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+        critic_optimizer=tf.compat.v1.train.AdamOptimizer(0.001),
+    )
+
+    time_step_spec = self._time_step_spec._replace(
+        reward=tensor_spec.BoundedTensorSpec(
+            [], tf.float32, minimum=0.0, maximum=1.0, name='reward'))
+
+    transition_spec = trajectory.Transition(
+        time_step=time_step_spec,
+        action_step=policy_step.PolicyStep(action=self._action_spec,
+                                           state=(),
+                                           info=()),
+        next_time_step=time_step_spec)
+
+    sample_trajectory_experience = tensor_spec.sample_spec_nest(
+        transition_spec, outer_dims=(3,))
+    agent.train(sample_trajectory_experience)
 
 
 if __name__ == '__main__':

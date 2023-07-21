@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,15 +19,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
+from collections import abc
+import io
+import gin
 
 import numpy as np
-import tensorflow as tf
+from PIL import Image
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.utils import nest_utils
 
 
-def get_example_encoder(spec):
+def get_example_encoder(spec, compress_image=False, image_quality=95):
   """Get example encoder function for the given spec.
 
   Given a spec, returns an example encoder function. The example encoder
@@ -59,6 +62,10 @@ def get_example_encoder(spec):
 
   Args:
     spec: list/tuple/nest of ArraySpecs describing a single example.
+    compress_image: Whether to compress image. It is assumed that any uint8
+      tensor of rank 3 with shape (w,h,c) is an image.
+    image_quality: An optional int. Defaults to 95. Quality of the compression
+      from 0 to 100 (higher is better and slower).
 
   Returns:
     Function
@@ -68,7 +75,9 @@ def get_example_encoder(spec):
     ```
   """
   # pylint: disable=g-complex-comprehension
-  feature_encoders = [(path, _get_feature_encoder(spec.shape, spec.dtype))
+  feature_encoders = [(path,
+                       _get_feature_encoder(spec.shape, spec.dtype,
+                                            compress_image, image_quality))
                       for (path,
                            spec) in nest_utils.flatten_with_joined_paths(spec)]
 
@@ -76,6 +85,12 @@ def get_example_encoder(spec):
 
   def _example_encoder(features_nest):
     flat_features = tf.nest.flatten(features_nest)
+    if len(flat_features) != len(feature_encoders):
+      raise ValueError(
+          'Encoding failed: The number of items to encode does not match the '
+          'number of encoders generated. Num features %d, num_encoders:%d' %
+          (len(flat_features), len(feature_encoders)))
+
     feature_dict = {
         path: feature_encoder(feature)
         for feature, (path,
@@ -86,13 +101,16 @@ def get_example_encoder(spec):
   return _example_encoder
 
 
-def get_example_serializer(spec):
+def get_example_serializer(spec, compress_image=False, image_quality=95):
   """Returns string serializer of example protos."""
-  encoder = get_example_encoder(spec)
+  encoder = get_example_encoder(
+      spec, compress_image=compress_image, image_quality=image_quality)
   return lambda features_nest: encoder(features_nest).SerializeToString()
 
 
-def get_example_decoder(example_spec, batched=False):
+def get_example_decoder(example_spec,
+                        batched=False,
+                        compress_image=False):
   """Get an example decoder function for a nested spec.
 
   Given a spec, returns an example decoder function. The decoder function parses
@@ -102,6 +120,9 @@ def get_example_decoder(example_spec, batched=False):
     example_spec: list/tuple/nest of ArraySpecs describing a single example.
     batched: Boolean indicating if the decoder will receive batches of
       serialized data.
+    compress_image: Whether to decompress image. It is assumed that any uint8
+      tensor of rank 3 with shape (w,h,c) is an image.
+      If the tensor was compressed in the encoder, it needs to be decompressed.
 
   Returns:
     Function
@@ -114,7 +135,8 @@ def get_example_decoder(example_spec, batched=False):
   parsers = []
 
   for (path, spec) in nest_utils.flatten_with_joined_paths(example_spec):
-    feature, parser = _get_feature_parser(spec.shape, spec.dtype)
+    feature, parser = _get_feature_parser(spec.shape, spec.dtype,
+                                          compress_image)
     features_dict[path] = feature
     parsers.append((path, parser))
 
@@ -127,6 +149,11 @@ def get_example_decoder(example_spec, batched=False):
       decoded_features = []
 
       dtypes = [s.dtype for s in tf.nest.flatten(example_spec)]
+      if len(parsers) != len(dtypes):
+        raise ValueError(
+            'Decoding failed: Number of parsers (%d) does not match the number '
+            'of items in the example_spec (%d)' % (len(parsers), len(dtypes)))
+
       for (path, parser), dtype in zip(parsers, dtypes):
         decoded_features.append(
             tf.map_fn(parser, raw_features[path], dtype=dtype))
@@ -144,7 +171,7 @@ def get_example_decoder(example_spec, batched=False):
 
 def _validate_shape(shape):
   """Check that shape is a valid array shape."""
-  if not isinstance(shape, collections.Iterable):
+  if not isinstance(shape, abc.Iterable):
     raise TypeError('shape must be a tuple or other iterable object, not %s' %
                     type(shape).__name__)
 
@@ -177,10 +204,36 @@ def _check_shape_and_dtype(value, shape, dtype):
                      (shape, dtype.name, value.shape, value_dtype.name))
 
 
-def _get_feature_encoder(shape, dtype):
-  """Get feature encoder function for shape and dtype."""
+@gin.configurable
+def _get_feature_encoder(shape, dtype, compress_image=False, image_quality=95):
+  """Get feature encoder function for shape and dtype.
+
+  Args:
+    shape: An array shape
+    dtype: A list of dtypes.
+    compress_image: Whether to compress image. It is assumed that any uint8
+      tensor of rank 3 with shape (w,h,c) is an image.
+    image_quality: An optional int. Defaults to 95. Quality of the compression
+      from 0 to 100 (higher is better and slower).
+
+  Returns:
+    A tf.train.Feature encoder.
+  """
   shape = _validate_shape(shape)
   dtype = _validate_dtype(dtype)
+
+  if compress_image and len(shape) == 3 and dtype == tf.uint8:
+    def _encode_to_jpeg_bytes_list(value):
+      if shape[-1] == 1:
+        im = Image.fromarray(value[:, :, 0])
+      else:
+        im = Image.fromarray(value)
+      out = io.BytesIO()
+      im.save(out, format='jpeg', quality=image_quality)
+      return tf.train.Feature(
+          bytes_list=tf.train.BytesList(value=[out.getvalue()]))
+
+    return _encode_to_jpeg_bytes_list
 
   if dtype == tf.float32:  # Serialize float32 to FloatList.
 
@@ -203,23 +256,38 @@ def _get_feature_encoder(shape, dtype):
 
     return _encode_to_int64_list
   else:  # Serialize anything else to BytesList in little endian order.
-    le_dtype = dtype.as_numpy_dtype().newbyteorder('L')
+    le_dtype = dtype.as_numpy_dtype(0).newbyteorder('L')
 
     def _encode_to_bytes_list(value):
       value = np.asarray(value)
       _check_shape_and_dtype(value, shape, dtype)
       bytes_list_value = np.require(
-          value, dtype=le_dtype, requirements='C').tostring()
+          value, dtype=le_dtype, requirements='C').tobytes()
       return tf.train.Feature(
           bytes_list=tf.train.BytesList(value=[bytes_list_value]))
 
     return _encode_to_bytes_list
 
 
-def _get_feature_parser(shape, dtype):
-  """Get tf.train.Features entry and decoder function for parsing feature."""
+@gin.configurable
+def _get_feature_parser(shape, dtype, compress_image=False):
+  """Get tf.train.Features entry and decoder function for parsing feature.
+
+  Args:
+    shape: An array shape
+    dtype: A list of dtypes.
+    compress_image: Whether to decompress image. It is assumed that any uint8
+      tensor of rank 3 with shape (w,h,c) is an image.
+      If the tensor was compressed in the encoder, it needs to be decompressed.
+
+  Returns:
+    A tuple containing tf.io.FixedLenFeature decoder and decode function.
+  """
   shape = _validate_shape(shape)
   dtype = _validate_dtype(dtype)
+
+  if compress_image and len(shape) == 3 and dtype == tf.uint8:
+    return (tf.io.FixedLenFeature(shape=[], dtype=tf.string), tf.io.decode_jpeg)
 
   if dtype == tf.float32:
     return (tf.io.FixedLenFeature(shape=shape, dtype=tf.float32), lambda x: x)

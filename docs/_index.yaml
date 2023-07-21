@@ -1,0 +1,77 @@
+# Copyright 2018 The TF-Agents Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+book_path: /agents/_book.yaml
+project_path: /agents/_project.yaml
+description: A library for reinforcement learning in TensorFlow. TF-Agents makes designing,
+ implementing and testing new RL algorithms easier.
+landing_page:
+  custom_css_path: /site-assets/css/style.css
+  rows:
+  - heading: Agents is a library for reinforcement learning in TensorFlow.
+    items:
+    - classname: devsite-landing-row-50
+      description: >
+        TF-Agents makes designing, implementing and testing new RL algorithms easier,
+        by providing well tested modular components that can be modified and extended.
+        It enables fast code iteration, with good test integration and benchmarking.
+
+      code_block: |
+        <pre class = "prettyprint">
+        import tensorflow as tf
+        from tf_agents.networks import q_network
+        from tf_agents.agents.dqn import dqn_agent
+
+        q_net = q_network.QNetwork(
+          train_env.observation_spec(),
+          train_env.action_spec(),
+          fc_layer_params=(100,))
+
+        agent = dqn_agent.DqnAgent(
+          train_env.time_step_spec(),
+          train_env.action_spec(),
+          q_network=q_net,
+          optimizer=optimizer,
+          td_errors_loss_fn=common.element_wise_squared_loss,
+          train_step_counter=tf.Variable(0))
+
+        agent.initialize()
+        </pre>
+        {% dynamic if request.tld != 'cn' %}
+        <a class="colab-button" target="_blank" href="https://colab.sandbox.google.com/github/tensorflow/agents/blob/master/docs/tutorials/1_dqn_tutorial.ipynb">Run in a <span>Notebook</span></a>
+        {% dynamic endif %}
+
+  - classname: devsite-landing-row-cards
+    items:
+    - heading: "Reinforcement Learning with TF-Agents video series"
+      youtube_id: 52DTXidSVWc
+      buttons:
+      - label: Watch the video series
+        path: https://www.youtube.com/watch?v=52DTXidSVWc&list=PLQY2H8rRoyvxWE6bWx8XiMvyZFgg_25Q_&index=2
+    - heading: "Reinforcement Learning with TF-Agents"
+      youtube_id: -TTziY7EmUA
+      buttons:
+      - label: Watch the TF Dev Summit 2019 video
+        path: https://www.youtube.com/watch?v=-TTziY7EmUA
+    - heading: "Inside TF-Agents"
+      youtube_id: U7g7-Jzj9qo
+      buttons:
+      - label: Watch the video
+        path: https://www.youtube.com/watch?v=U7g7-Jzj9qo
+    - heading: "TF-Agents on GitHub"
+      path: https://github.com/tensorflow/agents
+      image_path: /resources/images/github-card-16x9.png
+      buttons:
+      - label: "View on GitHub"
+        path: https://github.com/tensorflow/agents

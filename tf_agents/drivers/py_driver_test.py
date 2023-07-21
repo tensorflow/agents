@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,15 +18,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
 from absl.testing import parameterized
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.drivers import py_driver
 from tf_agents.drivers import test_utils as driver_test_utils
 from tf_agents.environments import batched_py_environment
-from tf_agents.environments import trajectory
+from tf_agents.trajectories import trajectory
 
 
 class MockReplayBufferObserver(object):
@@ -60,10 +59,11 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     ]
 
   @parameterized.named_parameters(
-      [('NoneStepsTwoEpisodes', None, 2, 5),
+      [('NoneStepsOneEpisodes', None, 1, 3),
+       ('NoneStepsTwoEpisodes', None, 2, 6),
        ('TwoStepsTwoEpisodes', 2, 2, 2),
        ('FourStepsTwoEpisodes', 4, 2, 5),
-       ('FourStepsOneEpisodes', 4, 1, 2),
+       ('FourStepsOneEpisodes', 4, 1, 3),
        ('FourStepsNoneEpisodes', 4, None, 5),
       ])
   def testRunOnce(self, max_steps, max_episodes, expected_steps):
@@ -75,6 +75,7 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
         env,
         policy,
         observers=[replay_buffer_observer],
+        transition_observers=[],
         max_steps=max_steps,
         max_episodes=max_episodes,
     )
@@ -85,8 +86,58 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:expected_steps])
 
-  def testMultipleRunMaxSteps(self):
+  @parameterized.named_parameters(
+      [('NoneStepsOneEpisodes', None, 1, 2),
+       ('NoneStepsTwoEpisodes', None, 2, 5),
+       ('TwoStepsTwoEpisodes', 2, 2, 2),
+       ('FourStepsTwoEpisodes', 4, 2, 5),
+       ('FourStepsOneEpisodes', 4, 1, 2),
+       ('FourStepsNoneEpisodes', 4, None, 5),
+      ])
+  def testRunOnceTransitionObserver(
+      self, max_steps, max_episodes, expected_steps):
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    transition_replay_buffer_observer = MockReplayBufferObserver()
+    driver = py_driver.PyDriver(
+        env,
+        policy,
+        observers=[],
+        transition_observers=[transition_replay_buffer_observer],
+        max_steps=max_steps,
+        max_episodes=max_episodes,
+        end_episode_on_boundary=False
+    )
 
+    initial_time_step = env.reset()
+    initial_policy_state = policy.get_initial_state()
+    driver.run(initial_time_step, initial_policy_state)
+
+    transitions = transition_replay_buffer_observer.gather_all()
+    self.assertLen(transitions, expected_steps)
+    # TimeStep, Action, NextTimeStep
+    self.assertLen(transitions[0], 3)
+
+  def testRunInfoObserver(self):
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    infos = []
+    driver = py_driver.PyDriver(
+        env,
+        policy,
+        observers=[],
+        transition_observers=[],
+        info_observers=[infos.append],
+        max_steps=2,
+    )
+    initial_time_step = env.reset()
+    initial_policy_state = policy.get_initial_state()
+    driver.run(initial_time_step, initial_policy_state)
+    self.assertEqual(infos, [{'mock': 1}, {'mock': 1}])
+
+  def testMultipleRunMaxSteps(self):
     num_steps = 3
     num_expected_steps = 4
 
@@ -110,9 +161,8 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
     self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
 
   def testMultipleRunMaxEpisodes(self):
-
     num_episodes = 2
-    num_expected_steps = 5
+    num_expected_steps = 6
 
     env = driver_test_utils.PyEnvironmentMock()
     policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
@@ -132,6 +182,29 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
       time_step, policy_state = driver.run(time_step, policy_state)
     trajectories = replay_buffer_observer.gather_all()
     self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
+
+  def testPolicyStateReset(self):
+    num_episodes = 2
+    num_expected_steps = 6
+
+    env = driver_test_utils.PyEnvironmentMock()
+    policy = driver_test_utils.PyPolicyMock(env.time_step_spec(),
+                                            env.action_spec())
+    replay_buffer_observer = MockReplayBufferObserver()
+    driver = py_driver.PyDriver(
+        env,
+        policy,
+        observers=[replay_buffer_observer],
+        max_steps=None,
+        max_episodes=num_episodes,
+    )
+
+    time_step = env.reset()
+    policy_state = policy.get_initial_state()
+    time_step, policy_state = driver.run(time_step, policy_state)
+    trajectories = replay_buffer_observer.gather_all()
+    self.assertEqual(trajectories, self._trajectories[:num_expected_steps])
+    self.assertEqual(num_episodes, policy.get_initial_state_call_count)
 
   @parameterized.named_parameters([
       ('NoneStepsNoneEpisodes', None, None),
@@ -156,7 +229,7 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
   @parameterized.named_parameters([
       ('FourStepsNoneEpisodesBoundaryNotCounted', 4, None, 2),
       ('FiveStepsNoneEpisodesBoundaryNotCounted', 5, None, 3),
-      ('NoneStepsTwoEpisodesBoundaryNotCounted', None, 2, 3),
+      ('NoneStepsTwoEpisodesBoundaryNotCounted', None, 2, 4),
       ('TwoStepsTwoEpisodesBoundaryNotCounted', 2, 2, 1),
       ('FourStepsTwoEpisodesBoundaryNotCounted', 4, 2, 2),
   ])
@@ -186,7 +259,15 @@ class PyDriverTest(parameterized.TestCase, tf.test.TestCase):
             policy_info=np.array([4, 2]),
             next_step_type=np.array([0, 2]),
             reward=np.array([0., 1.]),
-            discount=np.array([1., 0.]))
+            discount=np.array([1., 0.])),
+        trajectory.Trajectory(
+            step_type=np.array([0, 2]),
+            observation=np.array([0, 4]),
+            action=np.array([2, 2]),
+            policy_info=np.array([4, 4]),
+            next_step_type=np.array([1, 0]),
+            reward=np.array([1., 0.]),
+            discount=np.array([1., 1.]))
     ]
 
     env1 = driver_test_utils.PyEnvironmentMock(final_state=3)

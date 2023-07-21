@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,11 +19,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents import specs
 from tf_agents.environments import tf_environment
-from tf_agents.environments import time_step as ts
+from tf_agents.trajectories import time_step as ts
 from tf_agents.utils import common
 
 FIRST = ts.StepType.FIRST
@@ -69,11 +69,11 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
       return (tf.constant(LAST, dtype=tf.int32),
               tf.constant(1.0, dtype=tf.float32),
               tf.constant(0.0, dtype=tf.float32))
-    state_value = tf.mod(self._state.value(), 3)
+    state_value = tf.math.mod(self._state.value(), 3)
     step_type, reward, discount = tf.case(
-        {tf.equal(state_value, FIRST): first,
-         tf.equal(state_value, MID): mid,
-         tf.equal(state_value, LAST): last},
+        [(tf.equal(state_value, FIRST), first),
+         (tf.equal(state_value, MID), mid),
+         (tf.equal(state_value, LAST), last)],
         exclusive=True, strict=True)
     return ts.TimeStep(step_type, reward, discount, state_value)
 
@@ -92,11 +92,11 @@ class TFEnvironmentMock(tf_environment.TFEnvironment):
     with tf.control_dependencies([state_assign]):
       state_value = self._state.value()
       increase_steps = tf.cond(
-          pred=tf.equal(tf.mod(state_value, 3), FIRST),
+          pred=tf.equal(tf.math.mod(state_value, 3), FIRST),
           true_fn=self.steps.value,
           false_fn=lambda: self.steps.assign_add(1))
       increase_episodes = tf.cond(
-          pred=tf.equal(tf.mod(state_value, 3), LAST),
+          pred=tf.equal(tf.math.mod(state_value, 3), LAST),
           true_fn=lambda: self.episodes.assign_add(1),
           false_fn=self.episodes.value)
     with tf.control_dependencies([increase_steps, increase_episodes]):

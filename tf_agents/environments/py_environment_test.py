@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.environments import random_py_environment
 from tf_agents.specs import array_spec
@@ -50,6 +50,22 @@ class PyEnvironmentTest(tf.test.TestCase):
     time_step = random_env.step(action=np.ones((1,)))
     current_time_step = random_env.current_time_step()
     tf.nest.map_structure(self.assertAllEqual, time_step, current_time_step)
+
+  def testAutoReset(self):
+    obs_spec = array_spec.BoundedArraySpec((1,), np.int32)
+    action_spec = array_spec.BoundedArraySpec((1,), np.int32)
+
+    random_env = random_py_environment.RandomPyEnvironment(
+        observation_spec=obs_spec, action_spec=action_spec)
+
+    time_step = random_env.reset()
+    while not time_step.is_last():
+      time_step = random_env.step(action=np.ones((1,)))
+    # End of episode
+    self.assertTrue(time_step.is_last())
+    # Automatic reset
+    time_step = random_env.step(action=np.ones((1,)))
+    self.assertTrue(time_step.is_first())
 
 
 if __name__ == '__main__':

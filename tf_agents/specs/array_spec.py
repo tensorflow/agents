@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,8 +20,9 @@ from __future__ import print_function
 
 import numbers
 
+import gin
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 
 def sample_bounded_spec(spec, rng):
@@ -32,7 +33,7 @@ def sample_bounded_spec(spec, rng):
     rng: A numpy RandomState to use for the sampling.
 
   Returns:
-    An np.array sample of the requested space.
+    An np.array sample of the requested spec.
   """
   tf_dtype = tf.as_dtype(spec.dtype)
   low = spec.minimum
@@ -43,8 +44,8 @@ def sample_bounded_spec(spec, rng):
       # The min-max interval cannot be represented by the np.float64. This is a
       # problem only for np.float64, np.float32 works as expected.
       # Spec bounds are set to read only so we can't use argumented assignment.
-      low = low / 2  # pylint: disable=g-no-augmented-assignment
-      high = high / 2  # pylint: disable=g-no-augmented-assignment
+      low = low / 2
+      high = high / 2
     return rng.uniform(
         low,
         high,
@@ -55,21 +56,28 @@ def sample_bounded_spec(spec, rng):
     if spec.dtype == np.int64 and np.any(high - low < 0):
       # The min-max interval cannot be represented by the tf_dtype. This is a
       # problem only for int64.
-      low = low / 2  # pylint: disable=g-no-augmented-assignment
-      high = high / 2  # pylint: disable=g-no-augmented-assignment
+      low = low / 2
+      high = high / 2
 
-    if high < tf_dtype.max:
-      high = high + 1  # pylint: disable=g-no-augmented-assignment
+    if np.any(high < tf_dtype.max):
+      high = np.where(high < tf_dtype.max, high + 1, high)
     elif spec.dtype != np.int64 or spec.dtype != np.uint64:
       # We can still +1 the high if we cast it to the larger dtype.
       high = high.astype(np.int64) + 1
 
-    return rng.randint(
-        low,
-        high,
-        size=spec.shape,
-        dtype=spec.dtype,
-    )
+    if low.size == 1 and high.size == 1:
+      return rng.randint(
+          low,
+          high,
+          size=spec.shape,
+          dtype=spec.dtype,
+      )
+    else:
+      return np.reshape(
+          np.array([
+              rng.randint(low, high, size=1, dtype=spec.dtype)
+              for low, high in zip(low.flatten(), high.flatten())
+          ]), spec.shape)
 
 
 def sample_spec_nest(structure, rng, outer_dims=()):
@@ -107,19 +115,33 @@ def check_arrays_nest(arrays, spec):
   """
   # Check that arrays and spec has the same structure.
   try:
-    tf.nest.assert_same_structure(arrays, spec)
+    assert_arrays_spec_nest(arrays, spec)
+    return True
   except (TypeError, ValueError):
     return False
 
-  def check_array(spec, array):
+
+def assert_arrays_spec_nest(arrays, spec):
+  """Check that the arrays conform to the spec.
+
+  Args:
+    arrays: A NumPy array, or a nested dict, list or tuple of arrays.
+    spec: An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+
+  Raise:
+    A TypeError or ValueError describing the mismatch.
+  """
+  tf.nest.assert_same_structure(arrays, spec)
+
+  def assert_array_spec(array, spec):
     if not isinstance(spec, ArraySpec):
-      return False
-    return spec.check_array(array)
+      raise TypeError(f'The spec "{spec}" is not an ArraySpec, instead '
+                      f'"{type(spec)}"')
+    if not spec.check_array(array):
+      raise ValueError(f'The value "{array}" does not match spec: {spec}')
 
   # Check all the elements in arrays match to their spec
-  checks = tf.nest.map_structure(check_array, spec, arrays)
-  # Only return True if all the checks pass.
-  return all(tf.nest.flatten(checks))
+  tf.nest.map_structure(assert_array_spec, arrays, spec)
 
 
 def add_outer_dims_nest(structure, outer_dims):
@@ -134,6 +156,7 @@ def add_outer_dims_nest(structure, outer_dims):
   return tf.nest.map_structure(add_outer_dims, structure)
 
 
+@gin.configurable
 class ArraySpec(object):
   """Describes a numpy array or scalar shape and dtype.
 
@@ -141,6 +164,8 @@ class ArraySpec(object):
   returns, before that array exists.
   The equivalent version describing a `tf.Tensor` is `TensorSpec`.
   """
+
+  __hash__ = None
   __slots__ = ('_shape', '_dtype', '_name')
 
   def __init__(self, shape, dtype, name=None):
@@ -206,6 +231,9 @@ class ArraySpec(object):
     else:
       return False
 
+  def __reduce__(self):
+    return (ArraySpec, (self.shape, self.dtype, self.name))
+
   @staticmethod
   def from_array(array, name=None):
     """Construct a spec from the given array or number."""
@@ -221,7 +249,14 @@ class ArraySpec(object):
     """Construct a spec from the given spec."""
     return ArraySpec(spec.shape, spec.dtype, spec.name)
 
+  def replace(self, shape=None, dtype=None, name=None):
+    shape = self.shape if shape is None else shape
+    dtype = self.dtype if dtype is None else dtype
+    name = self.name if name is None else name
+    return ArraySpec(shape, dtype, name)
 
+
+@gin.configurable
 class BoundedArraySpec(ArraySpec):
   """An `ArraySpec` that specifies minimum and maximum values.
 
@@ -247,6 +282,7 @@ class BoundedArraySpec(ArraySpec):
   ```
   """
 
+  __hash__ = None
   __slots__ = ('_minimum', '_maximum')
 
   def __init__(self, shape, dtype, minimum=None, maximum=None, name=None):
@@ -340,6 +376,13 @@ class BoundedArraySpec(ArraySpec):
     """Returns a NumPy array specifying the maximum bounds (inclusive)."""
     return self._maximum
 
+  @property
+  def num_values(self):
+    """Returns the number of values for discrete BoundedArraySpec."""
+    if is_discrete(self):
+      return (np.broadcast_to(self.maximum, shape=self.shape) -
+              np.broadcast_to(self.minimum, shape=self.shape) + 1)
+
   def __repr__(self):
     template = ('BoundedArraySpec(shape={}, dtype={}, name={}, '
                 'minimum={}, maximum={})')
@@ -358,14 +401,28 @@ class BoundedArraySpec(ArraySpec):
     return (super(BoundedArraySpec, self).check_array(array) and
             np.all(array >= self.minimum) and np.all(array <= self.maximum))
 
+  def replace(self, shape=None, dtype=None,
+              minimum=None, maximum=None,
+              name=None):
+    shape = self.shape if shape is None else shape
+    dtype = self.dtype if dtype is None else dtype
+    minimum = self.minimum if minimum is None else minimum
+    maximum = self.maximum if maximum is None else maximum
+    name = self.name if name is None else name
+    return BoundedArraySpec(shape, dtype, minimum, maximum, name)
+
+  def __reduce__(self):
+    return (BoundedArraySpec, (self.shape, self.dtype, self.minimum,
+                               self.maximum, self.name))
+
 
 def is_bounded(spec):
   return isinstance(spec, BoundedArraySpec)
 
 
 def is_discrete(spec):
-  return np.issubdtype(spec.dtype, np.integer)
+  return issubclass(np.dtype(spec).type, np.integer)
 
 
 def is_continuous(spec):
-  return np.issubdtype(spec.dtype, np.float)
+  return issubclass(np.dtype(spec).type, np.floating)

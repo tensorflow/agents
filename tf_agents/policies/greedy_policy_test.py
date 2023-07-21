@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,17 +21,17 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 import tensorflow_probability as tfp
-
-from tf_agents.environments import time_step as ts
 from tf_agents.policies import greedy_policy
-from tf_agents.policies import policy_step
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
-class DistributionPolicy(tf_policy.Base):
+class DistributionPolicy(tf_policy.TFPolicy):
   """A policy which always returns the configured distribution."""
 
   def __init__(self, distribution, time_step_spec, action_spec, name=None):
@@ -39,7 +39,7 @@ class DistributionPolicy(tf_policy.Base):
     super(DistributionPolicy, self).__init__(
         time_step_spec, action_spec, name=name)
 
-  def _action(self, time_step, policy_state, seed):
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     raise NotImplementedError('Not implemented.')
 
   def _distribution(self, time_step, policy_state):
@@ -49,7 +49,7 @@ class DistributionPolicy(tf_policy.Base):
     return []
 
 
-class GreedyPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class GreedyPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(GreedyPolicyTest, self).setUp()

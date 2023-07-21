@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,12 +19,13 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+from typing import Any, Text
 
 import gym
 import numpy as np
-
-from tf_agents.environments import time_step as ts
+from tf_agents.environments import py_environment
 from tf_agents.environments import wrappers
+from tf_agents.trajectories import time_step as ts
 
 
 class FrameStack4(gym.Wrapper):
@@ -32,7 +33,7 @@ class FrameStack4(gym.Wrapper):
 
   STACK_SIZE = 4
 
-  def __init__(self, env):
+  def __init__(self, env: gym.Env):
     super(FrameStack4, self).__init__(env)
     self._env = env
     self._frames = collections.deque(maxlen=FrameStack4.STACK_SIZE)
@@ -41,20 +42,20 @@ class FrameStack4(gym.Wrapper):
     self.observation_space = gym.spaces.Box(
         low=0, high=255, shape=shape, dtype=np.uint8)
 
-  def __getattr__(self, name):
+  def __getattr__(self, name: Text) -> Any:
     """Forward all other calls to the base environment."""
     return getattr(self._env, name)
 
   def _generate_observation(self):
     return np.concatenate(self._frames, axis=2)
 
-  def _reset(self):
+  def reset(self) -> np.ndarray:
     observation = self._env.reset()
     for _ in range(FrameStack4.STACK_SIZE):
       self._frames.append(observation)
     return self._generate_observation()
 
-  def _step(self, action):
+  def step(self, action: np.ndarray) -> np.ndarray:
     observation, reward, done, info = self._env.step(action)
     self._frames.append(observation)
     return self._generate_observation(), reward, done, info
@@ -71,7 +72,7 @@ class AtariTimeLimit(wrappers.PyEnvironmentBaseWrapper):
   environment to keep going.
   """
 
-  def __init__(self, env, duration):
+  def __init__(self, env: py_environment.PyEnvironment, duration: int):
     super(AtariTimeLimit, self).__init__(env)
     self._duration = duration
     self._num_steps = 0
@@ -93,5 +94,24 @@ class AtariTimeLimit(wrappers.PyEnvironmentBaseWrapper):
     return time_step
 
   @property
-  def game_over(self):
+  def game_over(self) -> bool:
     return self._num_steps >= self._duration or self.gym.game_over
+
+
+class FireOnReset(gym.Wrapper):
+  """Start every episode with action 1 (FIRE) + another action (2).
+
+  In some environments (e.g., BeamRider, Breakout, Tennis) nothing
+  happens until the player presses the FIRE button. This wrapper can
+  be helpful in those environments, but it is not necessary.
+  """
+
+  def reset(self) -> np.ndarray:
+    observation = self.env.reset()
+    # The following code is from https://github.com/openai/gym/...
+    # ...blob/master/gym/wrappers/atari_preprocessing.py
+    action_meanings = self.env.unwrapped.get_action_meanings()
+    if action_meanings[1] == 'FIRE' and len(action_meanings) >= 3:
+      self.env.step(1)
+      observation, _, _, _ = self.env.step(2)
+    return observation

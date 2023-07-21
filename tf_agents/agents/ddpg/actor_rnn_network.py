@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,17 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Sample recurrent Actor network to use with DDPG agents."""
+"""Sample recurrent Actor network to use with DDPG agents.
+
+Note: This network scales actions to fit the given spec by using `tanh`. Due to
+the nature of the `tanh` function, actions near the spec bounds cannot be
+returned.
+"""
 
 import functools
 import gin
-import tensorflow as tf
-
-from tf_agents.environments import time_step
-from tf_agents.networks import dynamic_unroll_layer
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.networks import network
 from tf_agents.networks import utils
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
@@ -117,7 +121,7 @@ class ActorRnnNetwork(network.Network):
     self._action_layers = action_layers
 
   # TODO(kbanoop): Standardize argument names across different networks.
-  def call(self, observation, step_type, network_state=None):
+  def call(self, observation, step_type, network_state=(), training=False):
     num_outer_dims = nest_utils.get_outer_rank(observation,
                                                self.input_tensor_spec)
     if num_outer_dims not in (1, 2):
@@ -137,7 +141,7 @@ class ActorRnnNetwork(network.Network):
     states = batch_squash.flatten(states)  # [B, T, ...] -> [B x T, ...]
 
     for layer in self._input_layers:
-      states = layer(states)
+      states = layer(states, training=training)
 
     states = batch_squash.unflatten(states)  # [B x T, ...] -> [B, T, ...]
 
@@ -146,17 +150,18 @@ class ActorRnnNetwork(network.Network):
     # Unroll over the time sequence.
     states, network_state = self._dynamic_unroll(
         states,
-        reset_mask,
-        initial_state=network_state)
+        reset_mask=reset_mask,
+        initial_state=network_state,
+        training=training)
 
     states = batch_squash.flatten(states)  # [B, T, ...] -> [B x T, ...]
 
     for layer in self._output_layers:
-      states = layer(states)
+      states = layer(states, training=training)
 
     actions = []
     for layer, spec in zip(self._action_layers, self._flat_action_spec):
-      action = layer(states)
+      action = layer(states, training=training)
       action = common.scale_to_spec(action, spec)
       action = batch_squash.unflatten(action)  # [B x T, ...] -> [B, T, ...]
       if not has_time_dim:

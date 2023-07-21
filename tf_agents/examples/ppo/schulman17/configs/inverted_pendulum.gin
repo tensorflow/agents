@@ -1,0 +1,2 @@
+train_eval.env_name = 'InvertedPendulum-v2'
+train_eval.eval_episodes = 100

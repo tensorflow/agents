@@ -7,3 +7,7 @@ node_modules
 __pycache__
 *.swp
 .vscode/
+.idea/
+.eggs/
+*.egg-info/
+/.vs

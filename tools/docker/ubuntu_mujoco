@@ -1,0 +1,66 @@
+# Docker for running tf-agents with MuJoCo.
+#
+# MuJoCo no longer requires a license. A permanent license is installed by this
+# build script.
+#
+# Example usage:
+#  This docker builds on the core tf-agents docker.
+#
+#  Build a docker with nightly version of TF-Agents and Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
+#    -f tools/docker/ubuntu_tf_agents ./tools/docker
+#
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#      ./tools/docker
+#
+#
+#  Build a docker with latest stable TF-Agents and Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents[reverb] \
+#    --build-arg tensorflow_pip_spec=tensorflow \
+#    -f tools/docker/ubuntu_tf_agents ./tools/docker
+#
+#    docker build -t tf_agents/mujoco -f ./tools/docker/ubuntu_mujoco \
+#      ./tools/docker
+#
+FROM tf_agents/core as mujoco
+ARG python_version="python3"
+
+# Prerequisites for MuJoCo.
+RUN apt-get update && apt-get install -y \
+  --no-install-recommends \
+  libglew-dev \
+  libosmesa6-dev \
+  patchelf
+
+RUN mkdir -p /root/.mujoco \
+    && wget https://storage.googleapis.com/rl-infra-public/mujoco/mujoco200_linux.zip -O mujoco.zip \
+    && unzip mujoco.zip -d /root/.mujoco \
+    && mv /root/.mujoco/mujoco200_linux /root/.mujoco/mujoco200 \
+    && rm mujoco.zip
+
+# On some hosts LD_LIBRARY_PATH is unset when running the container. After hours
+# of internet research along with trial and error, a root cause was not found.
+# It works fine on google cloud instances but fails on my workstation, which
+# worked fine on my workstation a few months ago. `docker inspect` shows
+# LD_LIBRARY_PATH is set in the container config. If you get the following
+# message when trying to use MuJoCo, use the work around below:
+#
+#       Please add following line to .bashrc:
+#       export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/.mujoco/mujoco200/bin
+#
+# Starting docker with the arguments below resolved the issue when
+# LD_LIBRARY_PATH would not stay set:
+#    docker run --rm -it tf_agents/mujoco /bin/bash -c \
+#    "LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin python3 foo.py --bar 10"
+ENV LD_LIBRARY_PATH "/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}"
+# When LD_LIBRARY_PATH is not sticky, this sets it on login.
+RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}' >> /etc/bash.bashrc
+
+# Copies Mujoco key into image.
+RUN wget https://storage.googleapis.com/rl-infra-public/mujoco/mjkey.txt -P /root/.mujoco/
+
+# LD_LIBRARY_PATH is redunanty but needed on hosts where LD_LIBRARY_PATH is
+# not sticky. See comments above.
+RUN LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin $python_version -m pip install -U 'mujoco-py<2.1,>=2.0'

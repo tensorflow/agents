@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,7 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
@@ -96,6 +96,14 @@ class ArraySpecNestSampleTest(tf.test.TestCase, parameterized.TestCase):
     sample = array_spec.sample_spec_nest(spec, self.rng)
     self.assertTrue(np.all(sample >= -10))
     self.assertTrue(np.all(sample <= 10))
+
+  def testBoundedArraySpecSampleMultipleBounds(self, dtype):
+    spec = array_spec.BoundedArraySpec((2,), dtype, [-10, 1], [10, 3])
+    sample = array_spec.sample_spec_nest(spec, self.rng)
+    self.assertGreaterEqual(sample[0], -10)
+    self.assertLessEqual(sample[0], 10)
+    self.assertGreaterEqual(sample[1], 1)
+    self.assertLessEqual(sample[1], 3)
 
   def testBoundedArraySpecNoBounds(self, dtype):
     spec = array_spec.ArraySpec((2, 3), dtype)
@@ -282,6 +290,22 @@ class ArraySpecTest(parameterized.TestCase):
   def testCheckArrayNoMatch(self, array):
     spec = array_spec.ArraySpec((2,), np.int64)
     self.assertFalse(spec.check_array(array))
+
+  @parameterized.named_parameters(*TYPE_PARAMETERS)
+  def testReplaceDtype(self, dtype):
+    spec = array_spec.ArraySpec(tuple(), np.double).replace(dtype=dtype)
+    self.assertEqual(spec.dtype, dtype)
+
+  def testReplace(self):
+    spec = array_spec.ArraySpec(tuple(), np.double)
+    new_spec = spec.replace(shape=(2,))
+    self.assertEqual(new_spec.shape, (2,))
+    new_spec = new_spec.replace(dtype=np.int8)
+    self.assertEqual(new_spec.dtype, np.int8)
+    new_spec = new_spec.replace(name="name")
+    self.assertEqual(new_spec.name, "name")
+    exp_spec = array_spec.ArraySpec((2,), np.int8, name="name")
+    self.assertEqual(exp_spec, new_spec)
 
 
 class BoundedArraySpecTest(parameterized.TestCase):
@@ -487,6 +511,39 @@ class BoundedArraySpecTest(parameterized.TestCase):
     self.assertFalse(np.any(np.isinf(sample)))
     hist, _ = np.histogram(sample, bins=100, range=(0, 100))
     self.assertTrue(np.all(hist > 0))
+
+  def testReplace(self):
+    spec = array_spec.BoundedArraySpec(tuple(), np.int8, minimum=0, maximum=1)
+    new_spec = spec.replace(shape=(2,))
+    self.assertEqual(new_spec.shape, (2,))
+    new_spec = new_spec.replace(dtype=np.int32)
+    self.assertEqual(new_spec.dtype, np.int32)
+    new_spec = new_spec.replace(name="name")
+    self.assertEqual(new_spec.name, "name")
+    new_spec = new_spec.replace(minimum=-1)
+    self.assertEqual(new_spec.minimum, -1)
+    new_spec = new_spec.replace(maximum=0)
+    self.assertEqual(new_spec.maximum, 0)
+    exp_spec = array_spec.BoundedArraySpec((2,), np.int32,
+                                           minimum=-1, maximum=0, name="name")
+    self.assertEqual(exp_spec, new_spec)
+
+  @parameterized.named_parameters(*TYPE_PARAMETERS)
+  def testNumValues(self, dtype):
+    spec = array_spec.BoundedArraySpec(tuple(), dtype, minimum=0, maximum=9)
+    num_values = spec.num_values
+    if array_spec.is_discrete(spec):
+      self.assertEqual(10, num_values)
+    else:
+      self.assertEqual(None, num_values)
+
+  def testNumValuesVector(self):
+    spec = array_spec.BoundedArraySpec((2,), np.int32, [0, 0], [1, 1])
+    self.assertTrue(np.all([2, 2] == spec.num_values))
+    spec = spec.replace(minimum=1)
+    self.assertTrue(np.all([1, 1] == spec.num_values))
+    spec = spec.replace(maximum=2)
+    self.assertTrue(np.all([2, 2] == spec.num_values))
 
 
 @parameterized.named_parameters(*TYPE_PARAMETERS)

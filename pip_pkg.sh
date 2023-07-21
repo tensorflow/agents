@@ -16,6 +16,14 @@
 set -e
 set -x
 
+# Requiring PYTHON_VERSION (path to the python binary to use) mitigates the risk
+# of testing/building the modules with one version of Python and packaging the
+# wheel with another.
+if [ -z "$PYTHON_VERSION" ]; then
+  echo "ENV var PYTHON_VERSION must point to an installed python binary."
+  exit 1
+fi
+
 PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
 
 if [[ $# -lt 1 ]] ; then
@@ -37,7 +45,7 @@ DEST=$(cd "$DEST" && pwd)
 # specifies the output dir) to setup.py, e.g.,
 #  ./pip_pkg /tmp/tf_agents_pkg --release
 # passes `--release` to setup.py.
-python setup.py bdist_wheel --universal ${@:2} --dist-dir="$DEST" >/dev/null
+$PYTHON_VERSION setup.py bdist_wheel ${@:2} --dist-dir="$DEST" >/dev/null
 
 set +x
 echo -e "\nBuild complete. Wheel files are in $DEST"

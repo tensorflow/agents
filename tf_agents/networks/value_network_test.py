@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.networks import value_network
 from tf_agents.specs import tensor_spec
@@ -31,7 +31,8 @@ class ValueNetworkTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testBuilds(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.int32, 0, 1)
+    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
+                                                     1)
     observation = tensor_spec.sample_spec_nest(
         observation_spec, outer_dims=(1,))
 
@@ -59,7 +60,8 @@ class ValueNetworkTest(tf.test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes()
   def testHandlesExtraOuterDims(self):
-    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.int32, 0, 1)
+    observation_spec = tensor_spec.BoundedTensorSpec((8, 8, 3), tf.float32, 0,
+                                                     1)
     observation = tensor_spec.sample_spec_nest(
         observation_spec, outer_dims=(3, 3, 2))
 
@@ -68,6 +70,28 @@ class ValueNetworkTest(tf.test.TestCase):
 
     value, _ = net(observation)
     self.assertEqual([3, 3, 2], value.shape.as_list())
+
+  @test_util.run_in_graph_and_eager_modes()
+  def testHandlePreprocessingLayers(self):
+    observation_spec = (tensor_spec.TensorSpec([1], tf.float32),
+                        tensor_spec.TensorSpec([], tf.float32))
+    observation = tensor_spec.sample_spec_nest(
+        observation_spec, outer_dims=(3,))
+
+    preprocessing_layers = (tf.keras.layers.Dense(4),
+                            tf.keras.Sequential([
+                                tf.keras.layers.Reshape((1,)),
+                                tf.keras.layers.Dense(4)
+                            ]))
+
+    net = value_network.ValueNetwork(
+        observation_spec,
+        preprocessing_layers=preprocessing_layers,
+        preprocessing_combiner=tf.keras.layers.Add())
+
+    value, _ = net(observation)
+    self.assertEqual([3], value.shape.as_list())
+    self.assertGreater(len(net.trainable_variables), 4)
 
 
 if __name__ == '__main__':

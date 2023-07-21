@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,15 +24,15 @@ import os
 from absl import flags
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.networks import network
 from tf_agents.policies import actor_policy
 from tf_agents.policies import ou_noise_policy
 from tf_agents.policies import py_tf_policy
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
 class DummyNet(network.Network):
@@ -46,27 +46,27 @@ class DummyNet(network.Network):
       state_spec = tensor_spec.TensorSpec(shape=(1,), dtype=tf.float32)
     else:
       state_spec = ()
-    super(DummyNet, self).__init__(input_tensor_spec=None,
-                                   state_spec=state_spec,
-                                   name=name)
+    super(DummyNet, self).__init__(
+        input_tensor_spec=tensor_spec.TensorSpec([2], tf.float32, 'obs'),
+        state_spec=state_spec,
+        name=name)
 
     kernel_initializer = None
     bias_initializer = None
     if use_constant_initializer:
-      kernel_initializer = tf.compat.v1.initializers.constant(
-          [[1, 200], [3, 4]], verify_shape=True)
-      bias_initializer = tf.compat.v1.initializers.constant([1, 1],
-                                                            verify_shape=True)
+      kernel_initializer = tf.constant_initializer([[1, 200], [3, 4]])
+      bias_initializer = tf.constant_initializer([1, 1])
 
     # Store custom layers that can be serialized through the Checkpointable API.
-    self._dummy_layers = []
-    self._dummy_layers.append(
+    self._dummy_layers = [
         tf.keras.layers.Dense(
             num_actions,
             kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer))
+            bias_initializer=bias_initializer)
+    ]
 
-  def call(self, inputs, unused_step_type=None, network_state=()):
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
     inputs = tf.cast(inputs, tf.float32)
     for layer in self._dummy_layers:
       inputs = layer(inputs)
@@ -99,7 +99,7 @@ def fast_map_structure(func, *structure):
   return tf.nest.pack_sequence_as(structure[0], [func(*x) for x in entries])
 
 
-class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
+class PyTFPolicyTest(test_utils.TestCase, parameterized.TestCase):
 
   def setUp(self):
     super(PyTFPolicyTest, self).setUp()
@@ -107,7 +107,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
     self._time_step_spec = ts.time_step_spec(self._obs_spec)
     self._action_spec = tensor_spec.BoundedTensorSpec([], tf.int32, 0, 1,
                                                       'action')
-    self._float_action_spec = tensor_spec.BoundedTensorSpec([], tf.float32,
+    self._float_action_spec = tensor_spec.BoundedTensorSpec([1], tf.float32,
                                                             0, 1, 'action')
     self._tf_policy = q_policy.QPolicy(
         self._time_step_spec,
@@ -123,6 +123,8 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(expected_action_spec, policy.action_spec)
 
   def testRaiseValueErrorWithoutSession(self):
+    if tf.executing_eagerly():
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     with self.assertRaisesRegexp(
         AttributeError,
@@ -132,7 +134,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAssignSession(self, batch_size):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     policy.session = tf.compat.v1.Session()
@@ -144,7 +146,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testZeroState(self, batch_size):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
     expected_initial_state = np.zeros([batch_size or 1, 1], dtype=np.float32)
@@ -156,7 +158,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
   @parameterized.parameters([{'batch_size': None}, {'batch_size': 5}])
   def testAction(self, batch_size):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     single_observation = np.array([1, 2], dtype=np.float32)
     time_steps = ts.restart(single_observation)
@@ -202,9 +204,11 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       policy_saved.session = tf.compat.v1.Session(graph=policy_saved_graph)
       policy_saved.initialize(batch_size)
       policy_saved.save(policy_dir=policy_save_path, graph=policy_saved_graph)
-      self.assertEqual(
-          set(tf.io.gfile.listdir(policy_save_path)),
-          set(['checkpoint', 'ckpt-0.data-00000-of-00001', 'ckpt-0.index']))
+      # Verify that index files were written. There will also be some number of
+      # data files, but this depends on the number of devices.
+      self.assertContainsSubset(
+          set(['checkpoint', 'ckpt-0.index']),
+          set(tf.io.gfile.listdir(policy_save_path)))
 
     # Construct a policy to be restored under another tf.Graph instance.
     policy_restore_graph = tf.Graph()
@@ -237,7 +241,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   def testDeferredBatchingAction(self):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     # Construct policy without providing batch_size.
     tf_policy = q_policy.QPolicy(
@@ -263,7 +267,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
 
   def testDeferredBatchingStateful(self):
     if tf.executing_eagerly():
-      self.skipTest('b/123770140')
+      self.skipTest('b/123770140: Handling sessions with eager mode is buggy')
 
     # Construct policy without providing batch_size.
     policy = py_tf_policy.PyTFPolicy(self._tf_policy)
@@ -339,8 +343,7 @@ class PyTFPolicyTest(tf.test.TestCase, parameterized.TestCase):
       # 3). Restoring the actor policy while checking that all variables in
       # the checkpoint were found in the graph should fail.
       with self.assertRaisesRegexp(
-          AssertionError,
-          'Some Python objects were not bound to checkpointed values*'):
+          AssertionError, 'not bound to checkpointed values*'):
         policy_restored.restore(
             policy_dir=actor_policy_save_path,
             graph=policy_restore_graph)

@@ -1,0 +1,41 @@
+# Docker for running tf-agents with atari and user provided ROMs.
+#
+# For current details on installing ROMs for ale-py read their instructions:
+# https://github.com/mgbellemare/Arcade-Learning-Environment
+#
+# Example usage:
+#  This docker builds on the core tf-agents docker.
+#
+#  Builds a core tf-agents image with the nightly version of TF-Agents and
+#  Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents-nightly[reverb] \
+#    -f ./tools/docker/ubuntu_tf_agents ./tools/docker
+#
+#  Builds a docker that installs user provided ROMs located in
+#  ./tools/docker/roms into the ale-py package.
+#    docker build -t tf_agents/atari -f ./tools/docker/ubuntu_atari \
+#      ./tools/docker
+#
+#
+#  Builds a core tf-agents docker with the latest stable TF-Agents and
+#  Tensorflow.
+#    docker build --pull -t tf_agents/core \
+#    --build-arg tf_agents_pip_spec=tf-agents[reverb] \
+#    --build-arg tensorflow_pip_spec=tensorflow \
+#    -f ./tools/docker/ubuntu_tf_agents ./tools/docker
+#
+#  Builds a docker that installs user provided ROMs located in
+#  ./tools/docker/roms into the ale-py package.
+#    docker build -t tf_agents/atari -f ./tools/docker/ubuntu_atari \
+#      ./tools/docker
+#
+FROM tf_agents/core as tf_agents_core
+ARG rom_dir=roms
+ARG python_version="python3"
+
+# Copies ROMs into image.
+COPY ${rom_dir} /roms
+
+# Installs the ROMs into the ale-py python package.
+RUN ale-import-roms /roms

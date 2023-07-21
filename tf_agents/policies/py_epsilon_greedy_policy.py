@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,48 +20,45 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
+from typing import Optional
 
-from tf_agents.policies import policy_step
+import numpy as np
 from tf_agents.policies import py_policy
 from tf_agents.policies import random_py_policy
+from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 
 
-class EpsilonGreedyPolicy(py_policy.Base):
+class EpsilonGreedyPolicy(py_policy.PyPolicy):
   """Implementation of the epsilon-greedy policy."""
 
-  def __init__(self, greedy_policy,
-               epsilon,
-               random_policy=None,
-               epsilon_decay_end_count=None,
-               epsilon_decay_end_value=None,
-               random_seed=None):
+  def __init__(self,
+               greedy_policy: py_policy.PyPolicy,
+               epsilon: types.Float,
+               random_policy: Optional[random_py_policy.RandomPyPolicy] = None,
+               epsilon_decay_end_count: Optional[types.Float] = None,
+               epsilon_decay_end_value: Optional[types.Float] = None,
+               random_seed: Optional[types.Seed] = None):
     """Initializes the epsilon-greedy policy.
 
     Args:
-
-      greedy_policy: An instance of py_policy.Base to use as the greedy policy.
-
+      greedy_policy: An instance of py_policy.PyPolicy to use as the greedy
+        policy.
       epsilon: The probability 0.0 <= epsilon <= 1.0 with which an
         action will be selected at random.
-
       random_policy: An instance of random_py_policy.RandomPyPolicy to
         use as the random policy, if None is provided, a
         RandomPyPolicy will be automatically created with the
         greedy_policy's action_spec and observation_spec and
         random_seed.
-
       epsilon_decay_end_count: if set, anneal the epislon every time
         this policy is used, until it hits the epsilon_decay_end_value.
-
       epsilon_decay_end_value: the value of epislon to use when the
         policy usage count hits epsilon_decay_end_count.
-
       random_seed: seed used to create numpy.random.RandomState.
         /dev/urandom will be used if it's None.
 
     Raises:
-
       ValueError: If epsilon is not between 0.0 and 1.0. Or if
       epsilon_decay_end_value is invalid when epsilon_decay_end_count is
       set.
@@ -94,9 +91,14 @@ class EpsilonGreedyPolicy(py_policy.Base):
     # Total times action method has been called.
     self._count = 0
 
+    super(EpsilonGreedyPolicy, self).__init__(greedy_policy.time_step_spec,
+                                              greedy_policy.action_spec,
+                                              greedy_policy.policy_state_spec,
+                                              greedy_policy.info_spec)
+
   def _get_initial_state(self, batch_size):
-    self._random_policy.reset(batch_size=batch_size)
-    return self._greedy_policy.reset(batch_size=batch_size)
+    self._random_policy.get_initial_state(batch_size=batch_size)
+    return self._greedy_policy.get_initial_state(batch_size=batch_size)
 
   def _get_epsilon(self):
     if self._epsilon_decay_end_count is not None:
@@ -111,7 +113,13 @@ class EpsilonGreedyPolicy(py_policy.Base):
   def _random_function(self):
     return self._rng.rand()
 
-  def _action(self, time_step, policy_state=()):
+  def _action(self,
+              time_step,
+              policy_state=(),
+              seed: Optional[types.Seed] = None):
+    if seed is not None:
+      raise NotImplementedError(
+          'seed is not supported; but saw seed: {}'.format(seed))
     self._count += 1
     # _random_function()'s range should be [0, 1), so if epsilon is 1,
     # we should always use random policy, and if epislon is 0, it

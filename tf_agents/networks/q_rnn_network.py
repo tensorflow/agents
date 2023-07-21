@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,13 +19,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import gin
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tensorflow.keras import layers
 
-from tf_agents.agents.dqn import q_network
 from tf_agents.networks import lstm_encoding_network
-
-import gin.tf
+from tf_agents.networks import q_network
 
 
 @gin.configurable
@@ -40,9 +39,11 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
       preprocessing_combiner=None,
       conv_layer_params=None,
       input_fc_layer_params=(75, 40),
-      lstm_size=(40,),
+      lstm_size=None,
       output_fc_layer_params=(75, 40),
       activation_fn=tf.keras.activations.relu,
+      rnn_construction_fn=None,
+      rnn_construction_kwargs=None,
       dtype=tf.float32,
       name='QRnnNetwork',
   ):
@@ -73,6 +74,17 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         each item is the number of units in the layer. These are applied on top
         of the recurrent layer.
       activation_fn: Activation function, e.g. tf.keras.activations.relu,.
+      rnn_construction_fn: (Optional.) Alternate RNN construction function, e.g.
+        tf.keras.layers.LSTM, tf.keras.layers.CuDNNLSTM. It is invalid to
+        provide both rnn_construction_fn and lstm_size.
+      rnn_construction_kwargs: (Optional.) Dictionary or arguments to pass to
+        rnn_construction_fn.
+
+        The RNN will be constructed via:
+
+        ```
+        rnn_layer = rnn_construction_fn(**rnn_construction_kwargs)
+        ```
       dtype: The dtype to use by the convolution, LSTM, and fully connected
         layers.
       name: A string representing name of the network.
@@ -81,6 +93,8 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
       ValueError: If any of `preprocessing_layers` is already built.
       ValueError: If `preprocessing_combiner` is already built.
       ValueError: If `action_spec` contains more than one action.
+      ValueError: If neither `lstm_size` nor `rnn_construction_fn` are provided.
+      ValueError: If both `lstm_size` and `rnn_construction_fn` are provided.
     """
     q_network.validate_specs(action_spec, input_tensor_spec)
     action_spec = tf.nest.flatten(action_spec)[0]
@@ -89,9 +103,9 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
     q_projection = layers.Dense(
         num_actions,
         activation=None,
-        kernel_initializer=tf.compat.v1.initializers.random_uniform(
+        kernel_initializer=tf.random_uniform_initializer(
             minval=-0.03, maxval=0.03),
-        bias_initializer=tf.compat.v1.initializers.constant(-0.2),
+        bias_initializer=tf.constant_initializer(-0.2),
         dtype=dtype,
         name='num_action_project/dense')
 
@@ -104,6 +118,8 @@ class QRnnNetwork(lstm_encoding_network.LSTMEncodingNetwork):
         lstm_size=lstm_size,
         output_fc_layer_params=output_fc_layer_params,
         activation_fn=activation_fn,
+        rnn_construction_fn=rnn_construction_fn,
+        rnn_construction_kwargs=rnn_construction_kwargs,
         dtype=dtype,
         name=name)
 

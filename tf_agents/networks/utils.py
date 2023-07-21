@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,29 +18,27 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import typing
+
+import numpy as np
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+from tf_agents.keras_layers import permanent_variable_rate_dropout
+from tf_agents.typing import types
+from tf_agents.utils import composite
 
 
-def maybe_permanent_dropout(rate, noise_shape=None, seed=None, permanent=False):
-  """Adds a Keras dropout layer with the option of applying it at inference.
-
-  Args:
-    rate: the probability of dropping an input.
-    noise_shape: 1D integer tensor representing the dropout mask multiplied to
-      the input.
-    seed: A Python integer to use as random seed.
-    permanent: If set, applies dropout during inference and not only during
-      training. This flag is used for approximated Bayesian inference.
-  Returns:
-    A function adding a dropout layer according to the parameters for the given
-      input.
-  """
-  if permanent:
-    def _keras_dropout(x):
-      return tf.keras.dropout(
-          x, level=rate, noise_shape=noise_shape, seed=seed)
-    return tf.keras.layers.Lambda(_keras_dropout)
-  return tf.keras.layers.Dropout(rate, noise_shape, seed)
+def check_single_floating_network_output(
+    output_spec: types.NestedSpec,
+    expected_output_shape: typing.Tuple[int, ...],
+    label: typing.Text):
+  expected_output_shape = tuple(int(x) for x in expected_output_shape)
+  if not (isinstance(output_spec, tf.TensorSpec)
+          and output_spec.shape == expected_output_shape
+          and output_spec.dtype.is_floating):
+    raise ValueError(
+        'Expected {} to emit a floating point tensor with inner dims '
+        '{}; but saw network output spec: {}'
+        .format(label, expected_output_shape, output_spec))
 
 
 class BatchSquash(object):
@@ -72,16 +70,29 @@ class BatchSquash(object):
       if self._batch_dims == 1:
         return tensor
 
-      self._original_tensor_shape = tf.shape(input=tensor)
+      self._original_tensor_shape = composite.shape(tensor)
 
       if tensor.shape[self._batch_dims:].is_fully_defined():
-        return tf.reshape(tensor,
-                          [-1] + tensor.shape[self._batch_dims:].as_list())
+        return composite.reshape(
+            tensor, [-1] + tensor.shape[self._batch_dims:].as_list())
 
-      return tf.reshape(
+      reshaped = composite.reshape(
           tensor,
-          tf.concat([[-1], tf.shape(input=tensor)[self._batch_dims:]], axis=0),
+          tf.concat([[-1], composite.shape(tensor)[self._batch_dims:]], axis=0),
       )
+      # If the batch dimensions are all defined but the rest are undefined,
+      # `reshaped` will have None as the first squashed dim since we are calling
+      # tf.shape above. Since we know how many batch_dims we have, we can check
+      # if all the elements we want to squash are defined, allowing us to
+      # call ensure_shape to set the shape of the squashed dim. Note that this
+      # is only implemented for tf.Tensor and not SparseTensors.
+      if (isinstance(tensor, tf.Tensor) and
+          tensor.shape[:self._batch_dims].is_fully_defined()):
+        return tf.ensure_shape(
+            reshaped,
+            [np.prod(tensor.shape[:self._batch_dims], dtype=np.int64)] +
+            tensor.shape[self._batch_dims:])
+      return reshaped
 
   def unflatten(self, tensor):
     """Unflattens the tensor's batch_dims using the cached shape."""
@@ -93,11 +104,11 @@ class BatchSquash(object):
         raise ValueError('Please call flatten before unflatten.')
 
       # pyformat: disable
-      return tf.reshape(
+      return composite.reshape(
           tensor,
           tf.concat([
               self._original_tensor_shape[:self._batch_dims],
-              tf.shape(input=tensor)[1:]], axis=0)
+              composite.shape(tensor)[1:]], axis=0)
       )
       # pyformat: enable
 
@@ -107,6 +118,7 @@ def mlp_layers(conv_layer_params=None,
                dropout_layer_params=None,
                activation_fn=tf.keras.activations.relu,
                kernel_initializer=None,
+               weight_decay_params=None,
                name=None):
   """Generates conv and fc layers to encode into a hidden state.
 
@@ -119,7 +131,7 @@ def mlp_layers(conv_layer_params=None,
     dropout_layer_params: Optional list of dropout layer parameters, each item
       is the fraction of input units to drop or a dictionary of parameters
       according to the keras.Dropout documentation. The additional parameter
-      `permanent', if set to True, allows to apply dropout at inference for
+      `permanent`, if set to True, allows to apply dropout at inference for
       approximated Bayesian inference. The dropout layers are interleaved with
       the fully connected layers; there is a dropout layer after each fully
       connected layer, except if the entry in the list is None. This list must
@@ -128,6 +140,8 @@ def mlp_layers(conv_layer_params=None,
     kernel_initializer: Initializer to use for the kernels of the conv and
       dense layers. If none is provided a default variance_scaling_initializer
       is used.
+    weight_decay_params: Optional list of weight decay params for the fully
+      connected layer.
     name: Name for the mlp layers.
 
   Returns:
@@ -150,7 +164,7 @@ def mlp_layers(conv_layer_params=None,
             kernel_size=kernel_size,
             strides=strides,
             activation=activation_fn,
-            kernel_initializer=kernel_initializer,
+            kernel_initializer=clone_initializer(kernel_initializer),
             name='/'.join([name, 'conv2d']) if name else None)
         for (filters, kernel_size, strides) in conv_layer_params
     ])
@@ -164,16 +178,43 @@ def mlp_layers(conv_layer_params=None,
         raise ValueError('Dropout and full connected layer parameter lists have'
                          ' different lengths (%d vs. %d.)' %
                          (len(dropout_layer_params), len(fc_layer_params)))
-    for num_units, dropout_params in zip(fc_layer_params, dropout_layer_params):
+
+    if weight_decay_params is None:
+      weight_decay_params = [None] * len(fc_layer_params)
+    else:
+      if len(weight_decay_params) != len(fc_layer_params):
+        raise ValueError('Weight decay and fully connected layer parameter '
+                         'lists have different lengths (%d vs. %d.)' %
+                         (len(weight_decay_params), len(fc_layer_params)))
+
+    for i, (num_units, dropout_params, weight_decay) in enumerate(zip(
+        fc_layer_params, dropout_layer_params, weight_decay_params)):
+      kernel_regularizer = None
+      if weight_decay is not None:
+        kernel_regularizer = tf.keras.regularizers.l2(weight_decay)
       layers.append(tf.keras.layers.Dense(
           num_units,
           activation=activation_fn,
-          kernel_initializer=kernel_initializer,
-          name='/'.join([name, 'dense']) if name else None))
+          kernel_initializer=clone_initializer(kernel_initializer),
+          kernel_regularizer=kernel_regularizer,
+          name='/'.join([name, 'dense%d' % i]) if name else None))
       if not isinstance(dropout_params, dict):
         dropout_params = {'rate': dropout_params} if dropout_params else None
 
       if dropout_params is not None:
-        layers.append(maybe_permanent_dropout(**dropout_params))
+        layers.append(
+            permanent_variable_rate_dropout.PermanentVariableRateDropout(
+                **dropout_params))
 
   return layers
+
+
+def clone_initializer(initializer):
+  # Keras initializer is going to be stateless, which mean reusing the same
+  # initializer will produce same init value when the shapes are the same.
+  if isinstance(initializer, tf.keras.initializers.Initializer):
+    return initializer.__class__.from_config(initializer.get_config())
+  # When the input is string/dict or other serialized configs, caller will
+  # create a new keras Initializer instance based on that, and we don't need to
+  # do anything
+  return initializer

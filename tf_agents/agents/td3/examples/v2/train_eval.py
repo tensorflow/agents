@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,9 @@ r"""Train and Eval TD3.
 To run:
 
 ```bash
-tf_agents/agents/td3/examples/v2/train_eval -- \
+tensorboard --logdir $HOME/tmp/td3/gym/HalfCheetah-v2/ --port 2223 &
+
+python tf_agents/agents/td3/examples/v2/train_eval.py \
   --root_dir=$HOME/tmp/td3/gym/HalfCheetah-v2/ \
   --num_iterations=2000000 \
   --alsologtostderr
@@ -37,7 +39,9 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import tensorflow as tf
+import gin
+from six.moves import range
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import actor_network
 from tf_agents.agents.ddpg import critic_network
@@ -45,11 +49,10 @@ from tf_agents.agents.td3 import td3_agent
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_mujoco
 from tf_agents.environments import tf_py_environment
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
-import gin.tf
 
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
@@ -75,17 +78,16 @@ def train_eval(
     initial_collect_steps=1000,
     collect_steps_per_iteration=1,
     replay_buffer_capacity=100000,
-    ou_stddev=0.2,
-    ou_damping=0.15,
+    exploration_noise_std=0.1,
     # Params for target update
     target_update_tau=0.05,
     target_update_period=5,
     # Params for train
     train_steps_per_iteration=1,
     batch_size=64,
+    actor_update_period=2,
     actor_learning_rate=1e-4,
     critic_learning_rate=1e-3,
-    dqda_clipping=None,
     td_errors_loss_fn=tf.compat.v1.losses.huber_loss,
     gamma=0.995,
     reward_scale_factor=1.0,
@@ -145,15 +147,14 @@ def train_eval(
         tf_env.action_spec(),
         actor_network=actor_net,
         critic_network=critic_net,
-        actor_optimizer=tf.compat.v1.train.AdamOptimizer(
+        actor_optimizer=tf.keras.optimizers.Adam(
             learning_rate=actor_learning_rate),
-        critic_optimizer=tf.compat.v1.train.AdamOptimizer(
+        critic_optimizer=tf.keras.optimizers.Adam(
             learning_rate=critic_learning_rate),
-        ou_stddev=ou_stddev,
-        ou_damping=ou_damping,
+        exploration_noise_std=exploration_noise_std,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
-        dqda_clipping=dqda_clipping,
+        actor_update_period=actor_update_period,
         td_errors_loss_fn=td_errors_loss_fn,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
@@ -228,6 +229,13 @@ def train_eval(
         num_steps=2).prefetch(3)
     iterator = iter(dataset)
 
+    def train_step():
+      experience, _ = next(iterator)
+      return tf_agent.train(experience)
+
+    if use_tf_functions:
+      train_step = common.function(train_step)
+
     for _ in range(num_iterations):
       start_time = time.time()
       time_step, policy_state = collect_driver.run(
@@ -235,8 +243,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _ = next(iterator)
-        train_loss = tf_agent.train(experience)
+        train_loss = train_step()
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:

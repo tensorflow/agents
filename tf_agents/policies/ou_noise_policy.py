@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,26 +19,28 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-import tensorflow_probability as tfp
+from typing import Optional, Text
 
-from tf_agents.policies import policy_step
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+import tensorflow_probability as tfp
 from tf_agents.policies import tf_policy
 from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 tfd = tfp.distributions
 
 
-class OUNoisePolicy(tf_policy.Base):
+class OUNoisePolicy(tf_policy.TFPolicy):
   """Actor Policy with Ornstein Uhlenbeck (OU) exploration noise."""
 
   def __init__(self,
-               wrapped_policy,
-               ou_stddev=1.0,
-               ou_damping=1.0,
-               clip=True,
-               name=None):
+               wrapped_policy: tf_policy.TFPolicy,
+               ou_stddev: types.Float = 1.0,
+               ou_damping: types.Float = 1.0,
+               clip: bool = True,
+               name: Optional[Text] = None):
     """Builds an OUNoisePolicy wrapping wrapped_policy.
 
     Args:
@@ -70,8 +72,8 @@ class OUNoisePolicy(tf_policy.Base):
   def _variables(self):
     return self._wrapped_policy.variables()
 
-  def _action(self, time_step, policy_state, seed):
-    seed_stream = tfd.SeedStream(seed=seed, salt='ou_noise')
+  def _action(self, time_step, policy_state, seed):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
+    seed_stream = tfp.util.SeedStream(seed=seed, salt='ou_noise')
 
     def _create_ou_process(action_spec):
       return common.OUProcess(

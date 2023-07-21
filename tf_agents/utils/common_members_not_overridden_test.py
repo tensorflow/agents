@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,18 +19,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.utils import common
 
 
 class Base(object):
 
-  def __init__(self, white_list=(), black_list=()):
+  def __init__(self, allowlist=(), denylist=()):
     common.assert_members_are_not_overridden(
         base_cls=Base,
         instance=self,
-        white_list=white_list,
-        black_list=black_list)
+        allowlist=allowlist,
+        denylist=denylist)
 
   def method1(self):
     pass
@@ -39,17 +39,17 @@ class Base(object):
     pass
 
 
-def child_class(cls, white_list=(), black_list=()):
+def child_class(cls, allowlist=(), denylist=()):
 
   class ChildNoOverrides(Base):
 
     def __init__(self):
-      super(ChildNoOverrides, self).__init__(white_list, black_list)
+      super(ChildNoOverrides, self).__init__(allowlist, denylist)
 
   class ChildOverrideMethod1(Base):
 
     def __init__(self):
-      super(ChildOverrideMethod1, self).__init__(white_list, black_list)
+      super(ChildOverrideMethod1, self).__init__(allowlist, denylist)
 
     def method1(self):
       return 1
@@ -57,7 +57,7 @@ def child_class(cls, white_list=(), black_list=()):
   class ChildOverrideBoth(Base):
 
     def __init__(self):
-      super(ChildOverrideBoth, self).__init__(white_list, black_list)
+      super(ChildOverrideBoth, self).__init__(allowlist, denylist)
 
     def method1(self):
       return 1
@@ -84,28 +84,28 @@ class AssertMembersAreNotOverriddenTest(tf.test.TestCase):
     with self.assertRaises(ValueError):
       child_cls()
 
-  def testWhiteListedCanBeOverridden(self):
-    child_cls = child_class('ChildOverrideMethod1', white_list=('method1',))
+  def testAllowListedCanBeOverridden(self):
+    child_cls = child_class('ChildOverrideMethod1', allowlist=('method1',))
     child_cls()
 
-  def testNonWhiteListedCannotBeOverridden(self):
-    child_cls = child_class('ChildOverrideBoth', white_list=('method1',))
+  def testNonAllowListedCannotBeOverridden(self):
+    child_cls = child_class('ChildOverrideBoth', allowlist=('method1',))
     with self.assertRaises(ValueError):
       child_cls()
 
-  def testNonBlackListedCanBeOverridden(self):
-    child_cls = child_class('ChildOverrideMethod1', black_list=('method2',))
+  def testNonDenyListedCanBeOverridden(self):
+    child_cls = child_class('ChildOverrideMethod1', denylist=('method2',))
     child_cls()
 
-  def testBlackListedCannotBeOverridden(self):
-    child_cls = child_class('ChildOverrideBoth', black_list=('method2',))
+  def testDenyListedCannotBeOverridden(self):
+    child_cls = child_class('ChildOverrideBoth', denylist=('method2',))
     with self.assertRaises(ValueError):
       child_cls()
 
-  def testWhiteListAndBlackListRaisesError(self):
+  def testAllowListAndDenyListRaisesError(self):
     child_cls = child_class('ChildNoOverrides',
-                            white_list=('method1',),
-                            black_list=('method2',))
+                            allowlist=('method1',),
+                            denylist=('method2',))
     with self.assertRaises(ValueError):
       child_cls()
 

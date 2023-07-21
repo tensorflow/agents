@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,22 +18,26 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from typing import Sequence, Tuple, Optional
 from absl import logging
 
 import numpy as np
 
-from tf_agents.environments import time_step as ts
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_policy
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
 from tensorflow.python.util import nest  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
-class ScriptedPyPolicy(py_policy.Base):
+class ScriptedPyPolicy(py_policy.PyPolicy):
   """Returns actions from the given configuration."""
 
-  def __init__(self, time_step_spec, action_spec, action_script):
+  def __init__(self, time_step_spec: ts.TimeStep,
+               action_spec: types.NestedArraySpec,
+               action_script: Sequence[Tuple[int, types.NestedArray]]):
     """Instantiates the scripted policy.
 
     The Action  script can be configured through gin. e.g:
@@ -73,8 +77,9 @@ class ScriptedPyPolicy(py_policy.Base):
     # how many times it has been performed.
     return [0, 0]
 
-  def _action(self, time_step, policy_state):
+  def _action(self, time_step, policy_state, seed: Optional[types.Seed] = None):
     del time_step  # Unused.
+    del seed  # Unused.
     if policy_state is None:
       policy_state = [0, 0]
 

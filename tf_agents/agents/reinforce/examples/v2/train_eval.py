@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,9 +18,11 @@ r"""Train and Eval REINFORCE.
 To run:
 
 ```bash
-python tf_agents/agents/reinforce/examples/train_eval.py \
- --root_dir=$HOME/tmp/reinforce/gym/ \
- --alsologtostderr
+tensorboard --logdir $HOME/tmp/reinforce/gym/CartPole-v0/ --port 2223 &
+
+python tf_agents/agents/reinforce/examples/v2/train_eval.py \
+  --root_dir=$HOME/tmp/reinforce/gym/CartPole-v0/ \
+  --alsologtostderr
 ```
 """
 
@@ -35,21 +37,23 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import tensorflow as tf
+from six.moves import range
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.reinforce import reinforce_agent
 from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import value_network
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 
 flags.DEFINE_string('root_dir', os.getenv('TEST_UNDECLARED_OUTPUTS_DIR'),
                     'Root directory for writing logs/summaries/checkpoints.')
-flags.DEFINE_integer('num_iterations', 100000,
+flags.DEFINE_integer('num_iterations', 500,
                      'Total number train/eval iterations to perform.')
 FLAGS = flags.FLAGS
 
@@ -58,15 +62,19 @@ def train_eval(
     root_dir,
     env_name='CartPole-v0',
     num_iterations=1000,
-    fc_layers=(100,),
+    actor_fc_layers=(100,),
+    value_net_fc_layers=(100,),
+    use_value_network=False,
     use_tf_functions=True,
     # Params for collect
     collect_episodes_per_iteration=2,
     replay_buffer_capacity=2000,
     # Params for train
     learning_rate=1e-3,
+    gamma=0.9,
     gradient_clipping=None,
     normalize_returns=True,
+    value_estimation_loss_coef=0.2,
     # Params for eval
     num_eval_episodes=10,
     eval_interval=100,
@@ -101,13 +109,21 @@ def train_eval(
     actor_net = actor_distribution_network.ActorDistributionNetwork(
         tf_env.time_step_spec().observation,
         tf_env.action_spec(),
-        fc_layer_params=fc_layers)
+        fc_layer_params=actor_fc_layers)
+
+    if use_value_network:
+      value_net = value_network.ValueNetwork(
+          tf_env.time_step_spec().observation,
+          fc_layer_params=value_net_fc_layers)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
     tf_agent = reinforce_agent.ReinforceAgent(
         tf_env.time_step_spec(),
         tf_env.action_spec(),
         actor_network=actor_net,
+        value_network=value_net if use_value_network else None,
+        value_estimation_loss_coef=value_estimation_loss_coef,
+        gamma=gamma,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
         normalize_returns=normalize_returns,
         gradient_clipping=gradient_clipping,
@@ -138,11 +154,16 @@ def train_eval(
         observers=[replay_buffer.add_batch] + train_metrics,
         num_episodes=collect_episodes_per_iteration)
 
+    def train_step():
+      experience = replay_buffer.gather_all()
+      return tf_agent.train(experience)
+
     if use_tf_functions:
       # To speed up collect use TF function.
       collect_driver.run = common.function(collect_driver.run)
       # To speed up train use TF function.
       tf_agent.train = common.function(tf_agent.train)
+      train_step = common.function(train_step)
 
     # Compute evaluation metrics.
     metrics = metric_utils.eager_compute(
@@ -170,8 +191,7 @@ def train_eval(
           time_step=time_step,
           policy_state=policy_state,
       )
-      experience = replay_buffer.gather_all()
-      total_loss = tf_agent.train(experience)
+      total_loss = train_step()
       replay_buffer.clear()
       time_acc += time.time() - start_time
 
@@ -184,6 +204,10 @@ def train_eval(
             name='global_steps_per_sec', data=steps_per_sec, step=global_step)
         timed_at_step = global_step_val
         time_acc = 0
+
+      for train_metric in train_metrics:
+        train_metric.tf_summaries(
+            train_step=global_step, step_metrics=train_metrics[:2])
 
       if global_step_val % eval_interval == 0:
         metrics = metric_utils.eager_compute(

@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,19 +25,20 @@ This includes:
   . Resizing the image before it is provided to the agent.
 
 """
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from gym.spaces.box import Box
-import numpy as np
-import gin.tf
 import cv2
+import gin
+import gym
+from gym import core as gym_core
+from gym.spaces import box
+import numpy as np
 
 
 @gin.configurable
-class AtariPreprocessing(object):
+class AtariPreprocessing(gym_core.Wrapper):
   """A class implementing image preprocessing for Atari 2600 agents.
 
   Specifically, this provides the following subset from the JAIR paper
@@ -54,14 +55,14 @@ class AtariPreprocessing(object):
   """
 
   def __init__(self,
-               environment,
-               frame_skip=4,
-               terminal_on_life_loss=False,
-               screen_size=84):
+               env: gym.Env,
+               frame_skip: int = 4,
+               terminal_on_life_loss: bool = False,
+               screen_size: int = 84):
     """Constructor for an Atari 2600 preprocessor.
 
     Args:
-      environment: Gym environment whose observations are preprocessed.
+      env: Gym environment whose observations are preprocessed.
       frame_skip: int, the frequency at which the agent experiences the game.
       terminal_on_life_loss: bool, If True, the step() method returns
         is_terminal=True whenever a life is lost. See Mnih et al. 2015.
@@ -70,6 +71,16 @@ class AtariPreprocessing(object):
     Raises:
       ValueError: if frame_skip or screen_size are not strictly positive.
     """
+    super(AtariPreprocessing, self).__init__(env)
+
+    # Return the observation space adjusted to match the shape of the processed
+    # observations.
+    self.observation_space = box.Box(
+        low=0,
+        high=255,
+        shape=(screen_size, screen_size, 1),
+        dtype=np.uint8)
+
     if frame_skip <= 0:
       raise ValueError(
           'Frame skip should be strictly positive, got {}'.format(frame_skip))
@@ -77,12 +88,11 @@ class AtariPreprocessing(object):
       raise ValueError('Target screen size should be strictly positive, got {}'
                        .format(screen_size))
 
-    self.environment = environment
     self.terminal_on_life_loss = terminal_on_life_loss
     self.frame_skip = frame_skip
     self.screen_size = screen_size
 
-    obs_dims = self.environment.observation_space
+    obs_dims = self.env.observation_space
     # Stores temporary observations used for pooling over two successive
     # frames.
     self.screen_buffer = [
@@ -93,60 +103,21 @@ class AtariPreprocessing(object):
     self.game_over = False
     self.lives = 0  # Will need to be set by reset().
 
-  @property
-  def observation_space(self):
-    # Return the observation space adjusted to match the shape of the processed
-    # observations.
-    return Box(
-        low=0,
-        high=255,
-        shape=(self.screen_size, self.screen_size, 1),
-        dtype=np.uint8)
-
-  @property
-  def action_space(self):
-    return self.environment.action_space
-
-  @property
-  def reward_range(self):
-    return self.environment.reward_range
-
-  @property
-  def metadata(self):
-    return self.environment.metadata
-
-  def reset(self):
+  def reset(self) -> np.ndarray:
     """Resets the environment.
 
     Returns:
       observation: numpy array, the initial observation emitted by the
         environment.
     """
-    self.environment.reset()
-    self.lives = self.environment.ale.lives()
+    self.env.reset()
+    self.lives = self.env.ale.lives()
     self.game_over = False
     self._fetch_grayscale_observation(self.screen_buffer[0])
     self.screen_buffer[1].fill(0)
     return self._pool_and_resize()
 
-  def render(self, mode):
-    """Renders the current screen, before preprocessing.
-
-    This calls the Gym API's render() method.
-
-    Args:
-      mode: Mode argument for the environment's render() method.
-        Valid values (str) are:
-          'rgb_array': returns the raw ALE image.
-          'human': renders to display via the Gym renderer.
-
-    Returns:
-      if mode='rgb_array': numpy array, the most recent screen.
-      if mode='human': bool, whether the rendering was successful.
-    """
-    return self.environment.render(mode)
-
-  def step(self, action):
+  def step(self, action: np.ndarray) -> np.ndarray:
     """Applies the given action in the environment.
 
     Remarks:
@@ -172,11 +143,11 @@ class AtariPreprocessing(object):
     for time_step in range(self.frame_skip):
       # We bypass the Gym observation altogether and directly fetch the
       # grayscale image from the ALE. This is a little faster.
-      _, reward, game_over, info = self.environment.step(action)
+      _, reward, game_over, info = self.env.step(action)
       accumulated_reward += reward
 
       if self.terminal_on_life_loss:
-        new_lives = self.environment.ale.lives()
+        new_lives = self.env.ale.lives()
         is_terminal = game_over or new_lives < self.lives
         self.lives = new_lives
       else:
@@ -186,7 +157,9 @@ class AtariPreprocessing(object):
         break
       # We max-pool over the last two frames, in grayscale.
       elif time_step >= self.frame_skip - 2:
-        t = time_step - (self.frame_skip - 2)
+        # When frame_skip==1, taking a max ensures that it's still
+        # screen_buffer[0] that holds the fetched observation
+        t = time_step - max(self.frame_skip - 2, 0)
         self._fetch_grayscale_observation(self.screen_buffer[t])
 
     # Pool the last two observations.
@@ -206,7 +179,7 @@ class AtariPreprocessing(object):
     Returns:
       observation: numpy array, the current observation in grayscale.
     """
-    self.environment.ale.getScreenGrayscale(output)
+    self.env.ale.getScreenGrayscale(output)
     return output
 
   def _pool_and_resize(self):

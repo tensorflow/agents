@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,23 +18,30 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from absl.testing import absltest
 from absl.testing.absltest import mock
-
-from tf_agents.policies import policy_step
 from tf_agents.policies import py_epsilon_greedy_policy
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.utils import test_utils
 
 
-class EpsilonGreedyPolicyTest(absltest.TestCase):
+class EpsilonGreedyPolicyTest(test_utils.TestCase):
 
   def setUp(self):
+    super(EpsilonGreedyPolicyTest, self).setUp()
     self.greedy_policy = mock.MagicMock()
     self.random_policy = mock.MagicMock()
+    self.greedy_policy.time_step_spec = ts.time_step_spec()
+    self.greedy_policy.action_spec = ()
+    self.greedy_policy.info_spec = ()
+    self.greedy_policy.policy_state_spec = ()
+    self.random_policy.time_step_spec = ts.time_step_spec()
+    self.random_policy.action_spec = ()
+    self.random_policy.info_spec = ()
+    self.random_policy.policy_state_spec = ()
     self.random_policy.action.return_value = policy_step.PolicyStep(0, ())
 
   def testCtorAutoRandomPolicy(self):
-    self.greedy_policy.action_spec = mock.MagicMock()
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
         self.greedy_policy, 0.5)
     self.assertEqual(self.greedy_policy.action_spec,
@@ -61,8 +68,10 @@ class EpsilonGreedyPolicyTest(absltest.TestCase):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
         self.greedy_policy, 0.5, random_policy=self.random_policy)
     policy.get_initial_state()
-    self.greedy_policy.reset.assert_called_once_with(batch_size=None)
-    self.random_policy.reset.assert_called_once_with(batch_size=None)
+    self.greedy_policy.get_initial_state.assert_called_once_with(
+        batch_size=None)
+    self.random_policy.get_initial_state.assert_called_once_with(
+        batch_size=None)
 
   def testActionAlwaysRandom(self):
     policy = py_epsilon_greedy_policy.EpsilonGreedyPolicy(
@@ -143,4 +152,4 @@ class EpsilonGreedyPolicyTest(absltest.TestCase):
 
 
 if __name__ == '__main__':
-  absltest.main()
+  test_utils.main()

@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,14 +22,11 @@ from __future__ import print_function
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.metrics import py_metrics
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import nest_utils
-
-from tensorflow.python.framework import test_util  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
 
 class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
@@ -157,7 +154,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
       ('AverageEpisodeLengthMetric', py_metrics.AverageEpisodeLengthMetric,
        2.5))
   def testBatchSizeProvided(self, metric_class, expected_result):
-    metric = py_metrics.AverageReturnMetric(batch_size=2)
+    metric = metric_class(batch_size=2)
 
     metric(nest_utils.stack_nested_arrays([
         trajectory.boundary((), (), (), 0., 1.),
@@ -174,7 +171,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
     metric(nest_utils.stack_nested_arrays([
         trajectory.boundary((), (), (), 0., 1.),
         trajectory.first((), (), (), 1., 1.)]))
-    self.assertEqual(metric.result(), 5.0)
+    self.assertEqual(metric.result(), expected_result)
 
   def testCounterMetricIncrements(self):
     counter = py_metrics.CounterMetric()
@@ -189,7 +186,6 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
     counter()
     self.assertEqual(1, counter.result())
 
-  @test_util.run_in_graph_and_eager_modes()
   def testSaveRestore(self):
     metrics = [
         py_metrics.AverageReturnMetric(),
@@ -218,7 +214,7 @@ class PyMetricsTest(tf.test.TestCase, parameterized.TestCase):
 class NumpyDequeTest(tf.test.TestCase):
 
   def testSimple(self):
-    buf = py_metrics.NumpyDeque(maxlen=10, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=10, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -226,7 +222,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(4, buf.mean())
 
   def testFullLength(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -234,7 +230,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(4, buf.mean())
 
   def testPastMaxLen(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.add(5)
@@ -244,7 +240,7 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(7, buf.mean())
 
   def testClear(self):
-    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     buf.add(2)
     buf.add(3)
     buf.clear()
@@ -252,18 +248,31 @@ class NumpyDequeTest(tf.test.TestCase):
     self.assertEqual(5, buf.mean())
 
   def testUnbounded(self):
-    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     for i in range(101):
       buf.add(i)
     self.assertEqual(50, buf.mean())
 
   def testUnboundedClear(self):
-    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)
+    buf = py_metrics.NumpyDeque(maxlen=np.inf, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
     for i in range(101):
       buf.add(i)
     buf.clear()
     buf.add(4)
     buf.add(6)
+    self.assertEqual(5, buf.mean())
+
+  def testLast(self):
+    buf = py_metrics.NumpyDeque(maxlen=4, dtype=np.float64)  # pytype: disable=wrong-arg-types  # numpy-scalars
+
+    buf.add(2)
+    self.assertEqual(2, buf.last)
+
+    buf.add(3)
+    self.assertEqual(3, buf.last)
+    buf.clear()
+
+    buf.add(5)
     self.assertEqual(5, buf.mean())
 
 

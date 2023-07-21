@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,17 +20,25 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-from absl import logging
+from typing import Any, Optional, Sequence, Text, Union
 
+from absl import logging
 import numpy as np
 import six
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.metrics import tf_metric
+from tf_agents.trajectories import trajectory as traj
+from tf_agents.typing import types
 from tf_agents.utils import common
 
 
-def run_summaries(metrics, session=None):
+PyMetricType = types.ForwardRef('PyMetric')  # pylint: disable=invalid-name
+MetricType = Union[tf_metric.TFStepMetric, PyMetricType]
+
+
+def run_summaries(metrics: Sequence[PyMetricType],
+                  session: Optional[tf.compat.v1.Session] = None):
   """Execute summary ops for py_metrics.
 
   Args:
@@ -67,7 +75,7 @@ def run_summaries(metrics, session=None):
 class PyMetric(tf.Module):
   """Defines the interface for metrics."""
 
-  def __init__(self, name, prefix='Metrics'):
+  def __init__(self, name: Text, prefix: Text = 'Metrics'):
     """Creates a metric."""
     super(PyMetric, self).__init__(name)
     self._prefix = prefix
@@ -75,7 +83,7 @@ class PyMetric(tf.Module):
     self._summary_op = None
 
   @property
-  def prefix(self):
+  def prefix(self) -> Text:
     """Prefix for the metric."""
     return self._prefix
 
@@ -84,14 +92,16 @@ class PyMetric(tf.Module):
     """Resets internal stat gathering variables used to compute the metric."""
 
   @abc.abstractmethod
-  def result(self):
+  def result(self) -> Any:
     """Evaluates the current value of the metric."""
 
   def log(self):
     tag = common.join_scope(self.prefix, self.name)
     logging.info('%s', '{0} = {1}'.format(tag, self.result()))
 
-  def tf_summaries(self, train_step=None, step_metrics=()):
+  def tf_summaries(self,
+                   train_step: types.Int = None,
+                   step_metrics: Sequence[MetricType] = ()) -> tf.Operation:
     """Build TF summary op and placeholder for this metric.
 
     To execute the op, call py_metric.run_summaries.
@@ -141,7 +151,7 @@ class PyMetric(tf.Module):
     return self._summary_op
 
   @property
-  def summary_placeholder(self):
+  def summary_placeholder(self) -> tf.compat.v1.placeholder:
     """TF placeholder to be used for the result of this metric."""
     if self._summary_placeholder is None:
       result = self.result()
@@ -154,12 +164,12 @@ class PyMetric(tf.Module):
     return self._summary_placeholder
 
   @property
-  def summary_op(self):
+  def summary_op(self) -> tf.Operation:
     """TF summary op for this metric."""
     return self._summary_op
 
   @staticmethod
-  def aggregate(metrics):
+  def aggregate(metrics: Sequence[PyMetricType]) -> types.Float:
     """Aggregates a list of metrics.
 
     The default behaviour is to return the average of the metrics.
@@ -190,7 +200,7 @@ class PyStepMetric(PyMetric):
   """Defines the interface for metrics that operate on trajectories."""
 
   @abc.abstractmethod
-  def call(self, trajectory):
+  def call(self, trajectory: traj.Trajectory):
     """Processes a trajectory to update the metric.
 
     Args:

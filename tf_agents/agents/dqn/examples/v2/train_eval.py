@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,19 +18,21 @@ r"""Train and Eval DQN.
 To run DQN on CartPole:
 
 ```bash
-tf_agents/agents/dqn/examples/train_eval_gym \
- --root_dir=$HOME/tmp/dqn/gym/cart-pole/ \
- --alsologtostderr
+tensorboard --logdir $HOME/tmp/dqn/gym/CartPole-v0/ --port 2223 &
+
+python tf_agents/agents/dqn/examples/v2/train_eval.py \
+  --root_dir=$HOME/tmp/dqn/gym/CartPole-v0/ \
+  --alsologtostderr
 ```
 
 To run DQN-RNNs on MaskedCartPole:
 
 ```bash
-tf_agents/agents/dqn/examples/train_eval_gym \
- --root_dir=$HOME/tmp/dqn/gym/masked-cart-pole/ \
- --gin_param='train_eval.env_name="MaskedCartPole-v0"' \
- --gin_param='train_eval.train_sequence_length=10' \
- --alsologtostderr
+python tf_agents/agents/dqn/examples/v2/train_eval.py \
+  --root_dir=$HOME/tmp/dqn_rnn/gym/MaskedCartPole-v0/ \
+  --gin_param='train_eval.env_name="MaskedCartPole-v0"' \
+  --gin_param='train_eval.train_sequence_length=10' \
+  --alsologtostderr
 ```
 
 """
@@ -39,6 +41,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import functools
 import os
 import time
 
@@ -47,17 +50,18 @@ from absl import flags
 from absl import logging
 
 import gin
-import tensorflow as tf
+from six.moves import range
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.dqn import dqn_agent
-from tf_agents.agents.dqn import q_network
 from tf_agents.drivers import dynamic_step_driver
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments.examples import masked_cartpole  # pylint: disable=unused-import
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
+from tf_agents.keras_layers import dynamic_unroll_layer
 from tf_agents.metrics import tf_metrics
-from tf_agents.networks import q_rnn_network
+from tf_agents.networks import sequential
 from tf_agents.policies import random_tf_policy
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
@@ -70,6 +74,8 @@ flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 
 FLAGS = flags.FLAGS
+
+KERAS_LSTM_FUSED = 2
 
 
 @gin.configurable
@@ -97,6 +103,7 @@ def train_eval(
     train_steps_per_iteration=1,
     batch_size=64,
     learning_rate=1e-3,
+    n_step_update=1,
     gamma=0.99,
     reward_scale_factor=1.0,
     gradient_clipping=None,
@@ -137,18 +144,23 @@ def train_eval(
     tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
     eval_tf_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
+    if train_sequence_length != 1 and n_step_update != 1:
+      raise NotImplementedError(
+          'train_eval does not currently support n-step updates with stateful '
+          'networks (i.e., RNNs)')
+
+    action_spec = tf_env.action_spec()
+    num_actions = action_spec.maximum - action_spec.minimum + 1
+
     if train_sequence_length > 1:
-      q_net = q_rnn_network.QRnnNetwork(
-          tf_env.observation_spec(),
-          tf_env.action_spec(),
-          input_fc_layer_params=input_fc_layer_params,
-          lstm_size=lstm_size,
-          output_fc_layer_params=output_fc_layer_params)
+      q_net = create_recurrent_network(
+          input_fc_layer_params,
+          lstm_size,
+          output_fc_layer_params,
+          num_actions)
     else:
-      q_net = q_network.QNetwork(
-          tf_env.observation_spec(),
-          tf_env.action_spec(),
-          fc_layer_params=fc_layer_params)
+      q_net = create_feedforward_network(fc_layer_params, num_actions)
+      train_sequence_length = n_step_update
 
     # TODO(b/127301657): Decay epsilon based on global step, cf. cl/188907839
     tf_agent = dqn_agent.DqnAgent(
@@ -156,10 +168,11 @@ def train_eval(
         tf_env.action_spec(),
         q_network=q_net,
         epsilon_greedy=epsilon_greedy,
+        n_step_update=n_step_update,
         target_update_tau=target_update_tau,
         target_update_period=target_update_period,
         optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
-        td_errors_loss_fn=dqn_agent.element_wise_squared_loss,
+        td_errors_loss_fn=common.element_wise_squared_loss,
         gamma=gamma,
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
@@ -250,6 +263,13 @@ def train_eval(
         num_steps=train_sequence_length + 1).prefetch(3)
     iterator = iter(dataset)
 
+    def train_step():
+      experience, _ = next(iterator)
+      return tf_agent.train(experience)
+
+    if use_tf_functions:
+      train_step = common.function(train_step)
+
     for _ in range(num_iterations):
       start_time = time.time()
       time_step, policy_state = collect_driver.run(
@@ -257,8 +277,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _ = next(iterator)
-        train_loss = tf_agent.train(experience)
+        train_loss = train_step()
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:
@@ -298,6 +317,44 @@ def train_eval(
           eval_metrics_callback(results, global_step.numpy())
         metric_utils.log_metrics(eval_metrics)
     return train_loss
+
+
+logits = functools.partial(
+    tf.keras.layers.Dense,
+    activation=None,
+    kernel_initializer=tf.random_uniform_initializer(minval=-0.03, maxval=0.03),
+    bias_initializer=tf.constant_initializer(-0.2))
+
+
+dense = functools.partial(
+    tf.keras.layers.Dense,
+    activation=tf.keras.activations.relu,
+    kernel_initializer=tf.compat.v1.variance_scaling_initializer(
+        scale=2.0, mode='fan_in', distribution='truncated_normal'))
+
+
+fused_lstm_cell = functools.partial(
+    tf.keras.layers.LSTMCell, implementation=KERAS_LSTM_FUSED)
+
+
+def create_feedforward_network(fc_layer_units, num_actions):
+  return sequential.Sequential(
+      [dense(num_units) for num_units in fc_layer_units]
+      + [logits(num_actions)])
+
+
+def create_recurrent_network(
+    input_fc_layer_units,
+    lstm_size,
+    output_fc_layer_units,
+    num_actions):
+  rnn_cell = tf.keras.layers.StackedRNNCells(
+      [fused_lstm_cell(s) for s in lstm_size])
+  return sequential.Sequential(
+      [dense(num_units) for num_units in input_fc_layer_units]
+      + [dynamic_unroll_layer.DynamicUnroll(rnn_cell)]
+      + [dense(num_units) for num_units in output_fc_layer_units]
+      + [logits(num_actions)])
 
 
 def main(_):

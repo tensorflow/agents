@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,8 +18,11 @@ r"""Train and Eval DDPG.
 To run:
 
 ```bash
-tf_agents/google/agents/ddpg/examples/v2/train_eval_rnn -- \
+tensorboard --logdir $HOME/tmp/ddpg_rnn/dm/CartPole-Balance/ --port 2223 &
+
+python tf_agents/agents/ddpg/examples/v2/train_eval_rnn.py \
   --root_dir=$HOME/tmp/ddpg_rnn/dm/CartPole-Balance/ \
+  --num_iterations=100000 \
   --alsologtostderr
 ```
 """
@@ -37,7 +40,8 @@ from absl import flags
 from absl import logging
 
 import gin
-import tensorflow as tf
+from six.moves import range
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import actor_rnn_network
 from tf_agents.agents.ddpg import critic_rnn_network
@@ -46,7 +50,7 @@ from tf_agents.drivers import dynamic_episode_driver
 from tf_agents.environments import suite_dm_control
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments import wrappers
-from tf_agents.metrics import metric_utils
+from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
@@ -68,7 +72,7 @@ def train_eval(
     root_dir,
     env_name='cartpole',
     task_name='balance',
-    observations_whitelist='position',
+    observations_allowlist='position',
     num_iterations=100000,
     actor_fc_layers=(400, 300),
     actor_output_fc_layers=(100,),
@@ -130,11 +134,11 @@ def train_eval(
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
-    if observations_whitelist is not None:
+    if observations_allowlist is not None:
       env_wrappers = [
           functools.partial(
               wrappers.FlattenObservationsWrapper,
-              observations_whitelist=[observations_whitelist])
+              observations_allowlist=[observations_allowlist])
       ]
     else:
       env_wrappers = []
@@ -182,7 +186,8 @@ def train_eval(
         reward_scale_factor=reward_scale_factor,
         gradient_clipping=gradient_clipping,
         debug_summaries=debug_summaries,
-        summarize_grads_and_vars=summarize_grads_and_vars)
+        summarize_grads_and_vars=summarize_grads_and_vars,
+        train_step_counter=global_step)
     tf_agent.initialize()
 
     train_metrics = [
@@ -249,6 +254,13 @@ def train_eval(
         num_steps=train_sequence_length + 1).prefetch(3)
     iterator = iter(dataset)
 
+    def train_step():
+      experience, _ = next(iterator)
+      return tf_agent.train(experience)
+
+    if use_tf_functions:
+      train_step = common.function(train_step)
+
     for _ in range(num_iterations):
       start_time = time.time()
       time_step, policy_state = collect_driver.run(
@@ -256,8 +268,7 @@ def train_eval(
           policy_state=policy_state,
       )
       for _ in range(train_steps_per_iteration):
-        experience, _ = next(iterator)
-        train_loss = tf_agent.train(experience, train_step_counter=global_step)
+        train_loss = train_step()
       time_acc += time.time() - start_time
 
       if global_step.numpy() % log_interval == 0:

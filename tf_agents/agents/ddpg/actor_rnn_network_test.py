@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,12 +20,11 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.agents.ddpg import actor_rnn_network
-from tf_agents.environments import time_step as ts
 from tf_agents.specs import tensor_spec
-
+from tf_agents.trajectories import time_step as ts
 from tensorflow.python.framework import test_util  # TF internal
 
 
@@ -50,7 +49,8 @@ class ActorRnnNetworkTest(tf.test.TestCase):
         lstm_size=(3,),
         output_fc_layer_params=(5,))
 
-    actions, network_state = net(time_step.observation, time_step.step_type)
+    actions, network_state = net(time_step.observation, time_step.step_type,
+                                 net.get_initial_state(batch_size=1))
     self.evaluate(tf.compat.v1.global_variables_initializer())
     self.assertEqual([1, 2], actions[0].shape.as_list())
     self.assertEqual([1, 3], actions[1].shape.as_list())
@@ -106,7 +106,8 @@ class ActorRnnNetworkTest(tf.test.TestCase):
         output_fc_layer_params=(5,),
         lstm_size=(3,))
 
-    actions, _ = net(time_step.observation, time_step.step_type)
+    actions, _ = net(time_step.observation, time_step.step_type,
+                     net.get_initial_state(batch_size=1))
     self.evaluate(tf.compat.v1.global_variables_initializer())
 
     for (action, spec) in zip(actions, action_spec):

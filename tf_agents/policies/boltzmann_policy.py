@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,25 +19,30 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+from typing import Optional, Text
+
+import gin
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 
 from tf_agents.policies import tf_policy
-
-import gin.tf
+from tf_agents.typing import types
 
 
 @gin.configurable
-class BoltzmannPolicy(tf_policy.Base):
+class BoltzmannPolicy(tf_policy.TFPolicy):
   """Returns boltzmann samples of a given policy.
 
   The wrapped policy must expose a distribution parameterized by logits.
   """
 
-  def __init__(self, policy, temperature=1.0, name=None):
+  def __init__(self,
+               policy: tf_policy.TFPolicy,
+               temperature: types.FloatOrReturningFloat = 1.0,
+               name: Optional[Text] = None):
     """Builds a BoltzmannPolicy wrapping the given policy.
 
     Args:
-      policy: A policy implementing the tf_policy.Base interface, using
+      policy: A policy implementing the tf_policy.TFPolicy interface, using
         a distribution parameterized by logits.
       temperature: Tensor or function that returns the temperature for sampling
         when `action` is called. This parameter applies when the action spec is
@@ -46,12 +51,14 @@ class BoltzmannPolicy(tf_policy.Base):
       name: The name of this policy. All variables in this module will fall
         under that name. Defaults to the class name.
     """
-    super(BoltzmannPolicy, self).__init__(policy.time_step_spec,
-                                          policy.action_spec,
-                                          policy.policy_state_spec,
-                                          policy.info_spec,
-                                          clip=False,
-                                          name=name)
+    super(BoltzmannPolicy, self).__init__(
+        policy.time_step_spec,
+        policy.action_spec,
+        policy.policy_state_spec,
+        policy.info_spec,
+        emit_log_probability=policy.emit_log_probability,
+        clip=False,
+        name=name)
     self._temperature = temperature
     self._wrapped_policy = policy
 

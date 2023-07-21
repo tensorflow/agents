@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,14 +22,13 @@ import os
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
-
-from tf_agents.environments import time_step as ts
-from tf_agents.environments import trajectory
-from tf_agents.policies import policy_step
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
 from tf_agents.replay_buffers import py_hashed_replay_buffer
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import array_spec
+from tf_agents.trajectories import policy_step
+from tf_agents.trajectories import time_step as ts
+from tf_agents.trajectories import trajectory
 from tf_agents.utils import nest_utils
 
 
@@ -233,8 +232,9 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
 
     ds = self._replay_buffer.as_dataset(sample_batch_size=5)
     next_trajectory = next_dataset_element(self, ds)
-    self.assertEqual(list(ds.output_shapes.observation), [5, 15, 15, 4])
-    self.assertEqual(list(ds.output_shapes.action), [5])
+    ds_structure = tf.data.experimental.get_structure(ds)
+    self.assertEqual(list(ds_structure.observation.shape), [5, 15, 15, 4])
+    self.assertEqual(list(ds_structure.action.shape), [5])
     traj = next_trajectory()
     self.assertEqual(traj.observation.shape, (5, 15, 15, 4))
     self.assertEqual(traj.step_type.shape, (5,))
@@ -246,8 +246,9 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
     ds = self._replay_buffer.as_dataset(sample_batch_size=5, num_steps=3)
-    self.assertEqual(list(ds.output_shapes.observation), [5, 3, 15, 15, 4])
-    self.assertEqual(list(ds.output_shapes.action), [5, 3])
+    ds_structure = tf.data.experimental.get_structure(ds)
+    self.assertEqual(list(ds_structure.observation.shape), [5, 3, 15, 15, 4])
+    self.assertEqual(list(ds_structure.action.shape), [5, 3])
     next_trajectory = next_dataset_element(self, ds)
 
     traj = next_trajectory()
@@ -261,8 +262,9 @@ class PyUniformReplayBufferTest(parameterized.TestCase, tf.test.TestCase):
     self._generate_replay_buffer(rb_cls=rb_cls)
 
     ds = self._replay_buffer.as_dataset(num_steps=3)
-    self.assertEqual(list(ds.output_shapes.observation), [3, 15, 15, 4])
-    self.assertEqual(list(ds.output_shapes.action), [3])
+    ds_structure = tf.data.experimental.get_structure(ds)
+    self.assertEqual(list(ds_structure.observation.shape), [3, 15, 15, 4])
+    self.assertEqual(list(ds_structure.action.shape), [3])
     next_trajectory = next_dataset_element(self, ds)
 
     traj = next_trajectory()

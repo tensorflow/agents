@@ -1,11 +1,11 @@
 # coding=utf-8
-# Copyright 2018 The TF-Agents Authors.
+# Copyright 2020 The TF-Agents Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,7 +31,7 @@ Example of usage:
     train_step_op = eager_utils.create_train_step(loss_op, optimizer)
     # Compute the loss and apply gradients to the variables using the optimizer.
     with tf.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       for _ in range(num_train_steps):
         loss_value = sess.run(train_step_op)
 
@@ -56,7 +56,9 @@ from absl import logging
 
 import numpy as np
 import six
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
+
+from tf_agents.utils import common
 
 from tensorflow.python.util import tf_decorator  # pylint:disable=g-direct-tensorflow-import  # TF internal
 
@@ -150,6 +152,7 @@ def future_in_eager_mode(func_or_method):
     loss = loss_fn(inputs)
     # Now loss is a Future callable.
     loss_value = loss()
+  ```
 
   Args:
     func_or_method: A function or method to decorate.
@@ -177,19 +180,18 @@ def add_variables_summaries(grads_and_vars, step):
     step: Variable to use for summaries.
   """
   with tf.name_scope('summarize_vars'):
-    for grad, var in grads_and_vars:
-      if grad is not None:
-        if isinstance(var, tf.IndexedSlices):
-          var_values = var.values
-        else:
-          var_values = var
-        var_name = var.name.replace(':', '_')
-        tf.compat.v2.summary.histogram(
-            name=var_name + '_value', data=var_values, step=step)
-        tf.compat.v2.summary.scalar(
-            name=var_name + '_value_norm',
-            data=tf.linalg.global_norm([var_values]),
-            step=step)
+    for _, var in grads_and_vars:
+      if isinstance(var, tf.IndexedSlices):
+        var_values = var.values
+      else:
+        var_values = var
+      var_name = var.name.replace(':', '_')
+      tf.compat.v2.summary.histogram(
+          name=var_name + '_value', data=var_values, step=step)
+      tf.compat.v2.summary.scalar(
+          name=var_name + '_value_norm',
+          data=tf.linalg.global_norm([var_values]),
+          step=step)
 
 
 def add_gradients_summaries(grads_and_vars, step):
@@ -293,12 +295,14 @@ def create_train_step(loss,
       loss values.
   Raises:
     ValueError: if loss is not callable.
+    RuntimeError: if resource variables are not enabled.
   """
   if total_loss_fn is None:
     total_loss_fn = lambda x: x
   if not callable(total_loss_fn):
     raise ValueError('`total_loss_fn` should be a function.')
-
+  if not common.resource_variables_enabled():
+    raise RuntimeError(common.MISSING_RESOURCE_VARIABLES_ERROR)
   if not tf.executing_eagerly():
     if callable(loss):
       loss = loss()
@@ -307,20 +311,23 @@ def create_train_step(loss,
     # Calculate loss first, then calculate train op, then return the original
     # loss conditioned on executing the train op.
     with tf.control_dependencies(tf.nest.flatten(loss)):
-      train_op = create_train_op(
-          total_loss_fn(loss),
-          optimizer,
-          global_step=global_step,
-          update_ops=update_ops,
-          variables_to_train=variables_to_train,
-          transform_grads_fn=transform_grads_fn,
-          summarize_gradients=summarize_gradients,
-          gate_gradients=gate_gradients,
-          aggregation_method=aggregation_method,
-          check_numerics=check_numerics)
+      loss = tf.nest.map_structure(
+          lambda t: tf.identity(t, 'loss_pre_train'), loss)
+    train_op = create_train_op(
+        total_loss_fn(loss),
+        optimizer,
+        global_step=global_step,
+        update_ops=update_ops,
+        variables_to_train=variables_to_train,
+        transform_grads_fn=transform_grads_fn,
+        summarize_gradients=summarize_gradients,
+        gate_gradients=gate_gradients,
+        aggregation_method=aggregation_method,
+        check_numerics=check_numerics)
 
     with tf.control_dependencies([train_op]):
-      return tf.nest.map_structure(lambda t: tf.identity(t, 'loss'), loss)
+      return tf.nest.map_structure(
+          lambda t: tf.identity(t, 'loss_post_train'), loss)
 
   if global_step is _USE_GLOBAL_STEP:
     global_step = tf.compat.v1.train.get_or_create_global_step()
@@ -340,7 +347,7 @@ def create_train_step(loss,
     variables_to_train = variables_to_train()
   variables_to_train = tf.nest.flatten(variables_to_train)
   grads = tape.gradient(total_loss_value, variables_to_train)
-  grads_and_vars = zip(grads, variables_to_train)
+  grads_and_vars = list(zip(grads, variables_to_train))
 
   if transform_grads_fn:
     grads_and_vars = transform_grads_fn(grads_and_vars)
@@ -457,12 +464,6 @@ def create_train_op(total_loss,
     # Ensure the train_tensor computes grad_updates.
     with tf.control_dependencies([grad_updates]):
       train_op = tf.identity(total_loss, name='train_op')
-
-  # Add the operation used for training to the 'train_op' collection
-  # TODO(b/123908876) Remove use of collections.
-  train_ops = tf.compat.v1.get_collection_ref(tf.compat.v1.GraphKeys.TRAIN_OP)
-  if train_op not in train_ops:
-    train_ops.append(train_op)
 
   return train_op
 
@@ -612,7 +613,11 @@ def dataset_iterator(dataset):
   """
   if tf.executing_eagerly():
     return iter(dataset)
-  return tf.compat.v1.data.make_one_shot_iterator(dataset)
+  try:
+    iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
+  except ValueError:
+    iterator = tf.compat.v1.data.make_initializable_iterator(dataset)
+  return iterator
 
 
 def get_next(iterator):

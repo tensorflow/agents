@@ -36,8 +36,8 @@ See the [TF Agents style guide](STYLE_GUIDE.md).
 
 ## Unit tests
 
-All TF Agents code-paths must be unit-tested.  See existing unit tests
-for recommended test setup.
+All TF Agents code-paths must be unit-tested.  See existing unit tests for
+recommended test setup.
 
 Unit tests ensure new features (a) work correctly and (b) guard against future
 breaking changes (thus lower maintenance costs).
