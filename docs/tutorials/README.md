@@ -1,4 +1,4 @@
-# Tutorial
+# Tutorials
 
 0. [Introduction to RL and Deep Q Networks](https://github.com/tensorflow/agents/blob/master/docs/tutorials/0_intro_rl.ipynb)
 1. [Train a Deep Q Network with TF-Agents](https://github.com/tensorflow/agents/blob/master/docs/tutorials/1_dqn_tutorial.ipynb)
