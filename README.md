@@ -44,7 +44,7 @@ the Environment, and how to learn/train that Policy from collected experience.
 Currently the following algorithms are available under TF-Agents:
 
 *   [DQN: __Human level control through deep reinforcement learning__ Mnih et
-    al., 2015](https://deepmind.com/research/dqn/)
+    al., 2015]([https://deepmind.com/research/dqn/](https://www.deepmind.com/publications/human-level-control-through-deep-reinforcement-learning))
 *   [DDQN: __Deep Reinforcement Learning with Double Q-learning__ Hasselt et
     al., 2015](https://arxiv.org/abs/1509.06461)
 *   [DDPG: __Continuous control with deep reinforcement learning__ Lillicrap et
