@@ -281,7 +281,7 @@ class ActionRepeat(PyEnvironmentBaseWrapper):
 class FlattenActionWrapper(PyEnvironmentBaseWrapper):
   """Flattens the action."""
 
-  def __init__(self, env: py_environment.PyEnvironment, flat_dtype=None, handle_auto_reset):
+  def __init__(self, env: py_environment.PyEnvironment, flat_dtype=None, handle_auto_reset: bool = False):
     """Creates a FlattenActionWrapper.
 
     Args:
@@ -1085,7 +1085,7 @@ class OneHotActionWrapper(PyEnvironmentBaseWrapper):
   """Converts discrete action to one_hot format."""
 
   def __init__(self, env: py_environment.PyEnvironment, handle_auto_reset: bool = False):
-    super(OneHotActionWrapper, self).__init__(env, handle_auto_reset: bool = False)
+    super(OneHotActionWrapper, self).__init__(env, handle_auto_reset)
 
     def convert_to_one_hot(spec):
       """Convert spec to one_hot format."""
@@ -1157,7 +1157,7 @@ class ExtraDisabledActionsWrapper(PyEnvironmentBaseWrapper):
       env: The environment to wrap.
       num_extra_actions: The number of extra actions to add.
     """
-    super(ExtraDisabledActionsWrapper, self).__init__(env, handle_auto_reset: bool = False)
+    super(ExtraDisabledActionsWrapper, self).__init__(env, handle_auto_reset)
     orig_action_spec = env.action_spec()
     self._action_spec = array_spec.BoundedArraySpec(
         shape=orig_action_spec.shape,
