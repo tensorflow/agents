@@ -525,7 +525,7 @@ class TFAgent(tf.Module):
       return self.collect_data_spec
 
   @property
-  def train_sequence_length(self) -> int:
+  def train_sequence_length(self) -> Optional[int]:
     """The number of time steps needed in experience tensors passed to `train`.
 
     Train requires experience to be a `Trajectory` containing tensors shaped

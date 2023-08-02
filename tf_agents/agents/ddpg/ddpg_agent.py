@@ -307,6 +307,8 @@ class DdpgAgent(tf_agent.TFAgent):
     return tf_agent.LossInfo(total_loss, DdpgInfo(actor_loss, critic_loss))
 
   def _apply_gradients(self, gradients, variables, optimizer):
+    if optimizer is None:
+      raise ValueError('Optimizer is undefined.')
     # Tuple is used for py3, where zip is a generator producing values once.
     grads_and_vars = tuple(zip(gradients, variables))
     if self._gradient_clipping is not None:

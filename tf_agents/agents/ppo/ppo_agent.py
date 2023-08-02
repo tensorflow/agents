@@ -832,6 +832,9 @@ class PPOAgent(tf_agent.TFAgent):
     return self._preprocess(experience)
 
   def _train(self, experience, weights):
+    if self._optimizer is None:
+      raise ValueError('Optimizer is undefined.')
+
     experience = self._as_trajectory(experience)
 
     if self._compute_value_and_advantage_in_train:

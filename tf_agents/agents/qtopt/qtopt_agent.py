@@ -418,6 +418,7 @@ class QtOptAgent(tf_agent.TFAgent):
         self._q_network.variables, self._target_q_network.variables, tau=1.0
     )
     if self._enable_td3:
+      assert self._target_q_network_delayed is not None  # When _enable_td3.
       common.soft_variables_update(
           self._q_network.variables,
           self._target_q_network_delayed.variables,
@@ -481,6 +482,7 @@ class QtOptAgent(tf_agent.TFAgent):
     with tf.name_scope('update_targets_delayed'):
 
       def update_delayed():
+        assert self._target_q_network_delayed is not None
         return common.soft_variables_update(
             self._target_q_network.variables,
             self._target_q_network_delayed.variables,
@@ -511,6 +513,8 @@ class QtOptAgent(tf_agent.TFAgent):
     with tf.name_scope('update_targets_delayed'):
 
       def update_delayed():
+        assert self._target_q_network_delayed is not None
+        assert self._target_q_network_delayed_2 is not None
         return common.soft_variables_update(
             self._target_q_network_delayed.variables,
             self._target_q_network_delayed_2.variables,
