@@ -196,7 +196,7 @@ class RankingPyEnvironment(bandit_py_environment.BanditPyEnvironment):
     return True
 
   @property
-  def batch_size(self) -> int:
+  def batch_size(self) -> Optional[int]:
     return self._batch_size
 
   def _observe(self) -> types.NestedArray:

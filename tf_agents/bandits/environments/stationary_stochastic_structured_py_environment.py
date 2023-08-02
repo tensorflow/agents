@@ -128,7 +128,7 @@ class StationaryStochasticStructuredPyEnvironment(
     return True
 
   @property
-  def batch_size(self) -> int:
+  def batch_size(self) -> Optional[int]:
     return self._batch_size
 
   def _generate_batch_of_observations(self, generator_fn, num_samples):

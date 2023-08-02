@@ -116,7 +116,7 @@ class PiecewiseBernoulliPyEnvironment(
     )
 
   @property
-  def batch_size(self) -> int:
+  def batch_size(self) -> Optional[int]:
     return self._batch_size
 
   @property

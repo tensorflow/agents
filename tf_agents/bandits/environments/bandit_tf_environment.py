@@ -146,5 +146,5 @@ class BanditTFEnvironment(tf_environment.TFEnvironment):
     """Returns an observation."""
 
   @property
-  def name(self) -> Text:
+  def name(self) -> Optional[Text]:
     return self._name

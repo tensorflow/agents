@@ -116,5 +116,5 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
     """Returns an observation."""
 
   @property
-  def name(self) -> Text:
+  def name(self) -> Optional[Text]:
     return self._name
