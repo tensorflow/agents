@@ -279,7 +279,7 @@ class SavedModelPyTFEagerPolicy(PyTFEagerPolicyBase):
       # In case the checkpoint format is not as expected.
       self._train_step_from_last_restored_checkpoint_path = None
     logging.info(
-        'Checkpoint path: %s, train step: %d',
+        'Checkpoint path: %s, train step: %s',
         checkpoint_path,
         self._train_step_from_last_restored_checkpoint_path,
     )
