@@ -72,7 +72,7 @@ RUN $python_version -m pip install wheel \
       opencv-python \
       gym \
       # b/248257418
-      ale-py==0.7.5 \
+      ale-py==0.8.0 \
       atari-py \
       pybullet \
       gin-config \
