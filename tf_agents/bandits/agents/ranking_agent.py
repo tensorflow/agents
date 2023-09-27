@@ -331,7 +331,7 @@ class RankingAgent(tf_agent.TFAgent):
 
     est_reward = self._scoring_network(flat_obs, training)[0]
     loss_output = self._error_loss_fn(
-        est_reward, score, reduction=tf.compat.v1.losses.Reduction.NONE
+        score, est_reward, reduction=tf.compat.v1.losses.Reduction.NONE
     )
     if len(list(loss_output.shape)) == 1:
       # In case the loss is an aggregate over all slots, we only use one weight

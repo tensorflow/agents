@@ -198,7 +198,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
           'num_items': 13,
           'num_slots': 11,
           'non_click_score': 0,
-          'loss': 'softmax_cross_entropy',
+          'loss': 'sigmoid_cross_entropy',
       },
   ])
   def testTrainAgentScoreFeedback(
@@ -215,7 +215,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
     if not tf.executing_eagerly():
       self.skipTest('Only works in eager mode.')
     obs_spec = bandit_spec_utils.create_per_arm_observation_spec(
-        global_dim, item_dim, num_items
+        global_dim, item_dim, num_items, add_num_actions_feature=True
     )
     scoring_net = (
         global_and_arm_feature_network.create_feed_forward_common_tower_network(
@@ -230,7 +230,7 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
     )
     if non_click_score is not None:
       with self.assertRaisesRegex(ValueError, 'Parameter `non_click_score`'):
-        agent = ranking_agent.RankingAgent(
+        _ = ranking_agent.RankingAgent(
             time_step_spec=time_step_spec,
             action_spec=action_spec,
             scoring_network=scoring_net,
@@ -241,20 +241,14 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
         )
       non_click_score = None
 
-    def loss_fn(logits, labels, reduction):
-      del reduction
-      return tf.nn.softmax_cross_entropy_with_logits(
-          labels=labels, logits=logits
-      )
-
     agent = ranking_agent.RankingAgent(
         time_step_spec=time_step_spec,
         action_spec=action_spec,
         scoring_network=scoring_net,
         policy_type=policy_type,
         error_loss_fn=(
-            loss_fn
-            if loss == 'softmax_cross_entropy'
+            tf.compat.v1.losses.sigmoid_cross_entropy
+            if loss == 'sigmoid_cross_entropy'
             else tf.compat.v1.losses.mean_squared_error
         ),
         feedback_model=ranking_agent.FeedbackModel.SCORE_VECTOR,
@@ -269,14 +263,24 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
         tf.range(batch_size * num_slots * item_dim, dtype=tf.float32),
         [batch_size, num_slots, item_dim],
     )
+    num_actions = tf.constant(num_slots - 1, shape=[batch_size], dtype=tf.int32)
+
     observations = {
         bandit_spec_utils.GLOBAL_FEATURE_KEY: global_obs,
         bandit_spec_utils.PER_ARM_FEATURE_KEY: item_obs,
+        bandit_spec_utils.NUM_ACTIONS_FEATURE_KEY: num_actions,
     }
     scores = tf.reshape(
         tf.range(batch_size * num_slots, dtype=tf.float32),
         shape=[batch_size, num_slots],
     )
+    if loss == 'sigmoid_cross_entropy':
+      scores = tf.where(
+          tf.greater(scores, tf.reduce_mean(scores)),
+          tf.ones_like(scores, dtype=tf.float32),
+          tf.zeros_like(scores, dtype=tf.float32),
+      )
+
     initial_step, final_step = _get_initial_and_final_steps(
         observations, scores
     )
@@ -290,8 +294,10 @@ class RankingAgentTest(test_utils.TestCase, parameterized.TestCase):
         ),
     )
     experience = _get_experience(initial_step, action_step, final_step)
-    weights = tf.range(batch_size, dtype=tf.float32)
-    agent.train(experience, weights)
+    for i in range(10):
+      self.assertGreaterEqual(
+          agent.train(experience).loss, 0, msg=f'Train step {i}'
+      )
 
   @parameterized.parameters([
       {
