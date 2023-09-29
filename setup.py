@@ -212,7 +212,7 @@ def get_test_packages():
       'opencv-python >= 3.4.1.15',
       'pybullet',
       'scipy >= 1.1.0',
-      'tensorflow_datasets',
+      #'tensorflow-datasets >= 4.9.3',
   ]
   return test_packages
 
@@ -300,8 +300,6 @@ def run_setup():
           'Intended Audience :: Education',
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: Apache Software License',
-          'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: 3.9',
           'Programming Language :: Python :: 3.10',
           'Programming Language :: Python :: 3.11',
