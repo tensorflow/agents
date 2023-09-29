@@ -212,7 +212,6 @@ def get_test_packages():
       'opencv-python >= 3.4.1.15',
       'pybullet',
       'scipy >= 1.1.0',
-      'tensorflow_datasets',
   ]
   return test_packages
 
